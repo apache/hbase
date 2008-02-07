@@ -48,6 +48,7 @@
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>
   <property name="build.examples" location="${build.dir}/examples"/>
+  <property name="build.src" value="${build.dir}/src"/>
   <property name="build.docs" value="${build.dir}/docs"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
@@ -136,7 +137,7 @@
    <!--Compile whats under src and generated java classes made from jsp-->
    <javac
     encoding="${build.encoding}"
-    srcdir="${src.dir}"
+    srcdir="${src.dir};${build.src}"
     includes="**/*.java"
     destdir="${build.classes}"
     debug="${javac.debug}"

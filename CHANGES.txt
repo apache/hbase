@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Trunk (unreleased changes)
+Release 0.1.0
 
   INCOMPATIBLE CHANGES
    HADOOP-2750 Deprecated methods startBatchUpdate, commitBatch, abortBatch, 
@@ -22,6 +22,7 @@ Trunk (unreleased changes)
                (Bryan Duxbury & Stack)
    HADOOP-2773 Master marks region offline when it is recovering from a region
                server death
+   HBASE-425   Fix doc. so it accomodates new hbase untethered context
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
