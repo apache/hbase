@@ -23,6 +23,7 @@ Release 0.1.0
    HADOOP-2773 Master marks region offline when it is recovering from a region
                server death
    HBASE-425   Fix doc. so it accomodates new hbase untethered context
+   HBase-421   TestRegionServerExit broken
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
