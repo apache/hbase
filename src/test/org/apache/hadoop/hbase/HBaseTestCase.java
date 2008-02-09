@@ -113,9 +113,8 @@ public abstract class HBaseTestCase extends TestCase {
           fs.delete(testDir);
         }
       } else {
-        this.testDir = fs.makeQualified(
-            new Path(conf.get(HConstants.HBASE_DIR, HConstants.DEFAULT_HBASE_DIR))
-        );
+        this.testDir =
+          this.fs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
       }
     } catch (Exception e) {
       LOG.fatal("error during setup", e);
@@ -147,10 +146,10 @@ public abstract class HBaseTestCase extends TestCase {
   protected HRegion createNewHRegion(HTableDescriptor desc, Text startKey,
       Text endKey) throws IOException {
     
-    FileSystem fs = FileSystem.get(conf);
-    Path rootdir = fs.makeQualified(
-        new Path(conf.get(HConstants.HBASE_DIR, HConstants.DEFAULT_HBASE_DIR)));
-    fs.mkdirs(rootdir);
+    FileSystem filesystem = FileSystem.get(conf);
+    Path rootdir = filesystem.makeQualified(
+        new Path(conf.get(HConstants.HBASE_DIR)));
+    filesystem.mkdirs(rootdir);
     
     return HRegion.createHRegion(new HRegionInfo(desc, startKey, endKey),
         rootdir, conf);

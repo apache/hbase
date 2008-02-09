@@ -24,6 +24,7 @@ Release 0.1.0
                server death
    HBASE-425   Fix doc. so it accomodates new hbase untethered context
    HBase-421   TestRegionServerExit broken
+   HBASE-426   hbase can't find remote filesystem
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
