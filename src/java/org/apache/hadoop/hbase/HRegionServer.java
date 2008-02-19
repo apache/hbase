@@ -343,9 +343,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       reportSplit(oldRegionInfo, newRegions[0].getRegionInfo(),
         newRegions[1].getRegionInfo());
       LOG.info("region split, META updated, and report to master all" +
-        " successful. Old region=" + oldRegionInfo.getRegionName() +
-        ", new regions: " + newRegions[0].getRegionName() + ", " +
-        newRegions[1].getRegionName() + ". Split took " +
+        " successful. Old region=" + oldRegionInfo.toString() +
+        ", new regions: " + newRegions[0].toString() + ", " +
+        newRegions[1].toString() + ". Split took " +
         StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
       
       // Do not serve the new regions. Let the Master assign them.

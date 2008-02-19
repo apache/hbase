@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release 0.1.0
+Unreleased
 
   INCOMPATIBLE CHANGES
    HADOOP-2750 Deprecated methods startBatchUpdate, commitBatch, abortBatch, 
@@ -26,6 +26,8 @@ Release 0.1.0
    HBase-421   TestRegionServerExit broken
    HBASE-426   hbase can't find remote filesystem
    HBASE-446   Fully qualified hbase.rootdir doesn't work
+   HBASE-428   Under continuous upload of rows, WrongRegionExceptions are
+               thrown that reach the client even after retries
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
