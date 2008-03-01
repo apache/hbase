@@ -33,6 +33,7 @@ Unreleased
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
                repetition of retry-on-failure logic (thanks to Peter Dolan and
                Bryan Duxbury)
+   HBASE-281   Shell should allow deletions in .META. and -ROOT- tables
 
 Release 0.16.0
 
