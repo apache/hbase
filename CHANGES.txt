@@ -34,6 +34,7 @@ Unreleased
                repetition of retry-on-failure logic (thanks to Peter Dolan and
                Bryan Duxbury)
    HBASE-281   Shell should allow deletions in .META. and -ROOT- tables
+   HBASE-480   Tool to manually merge two regions
 
 Release 0.16.0
 
