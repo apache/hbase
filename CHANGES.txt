@@ -35,6 +35,7 @@ Unreleased
                Bryan Duxbury)
    HBASE-281   Shell should allow deletions in .META. and -ROOT- tables
    HBASE-480   Tool to manually merge two regions
+   HBASE-477   Add support for an HBASE_CLASSPATH
 
 Release 0.16.0
 
