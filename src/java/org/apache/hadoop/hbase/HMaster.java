@@ -407,11 +407,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
 
     protected void checkAssigned(final HRegionInfo info,
-      final String serverName, final long startCode) throws IOException {
-      
+      final String serverName, final long startCode)
+    throws IOException {
       // Skip region - if ...
-      if(info.isOffline()                                 // offline
-          || killedRegions.contains(info.getRegionName()) // queued for offline
+      if (info.isOffline()                                 // offline
+          || killedRegions.contains(info.getRegionName())  // queued for offline
           || regionsToDelete.contains(info.getRegionName())) { // queued for delete
 
         unassignedRegions.remove(info);
@@ -424,9 +424,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           Map<Text, HRegionInfo> regionsToKill = killList.get(serverName);
           if (regionsToKill != null &&
               regionsToKill.containsKey(info.getRegionName())) {
-
             // Skip if region is on kill list
-            if(LOG.isDebugEnabled()) {
+            if (LOG.isDebugEnabled()) {
               LOG.debug("not assigning region (on kill list): " +
                   info.getRegionName());
             }
@@ -438,21 +437,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
 
       /*
-       * If the server is not dead and either:
-       *   the stored info is not null and the start code does not match
-       * or:
-       *   the stored info is null and the region is neither unassigned nor pending
-       * then:
+       * If the server is a dead server or its startcode is off -- either null
+       * or doesn't match the start code for the address -- then add it to the
+       * list of unassigned regions IF not already there (or pending open).
        */ 
-      if (!deadServer &&
-          ((storedInfo != null && storedInfo.getStartCode() != startCode) ||
-              (storedInfo == null &&
-                  !unassignedRegions.containsKey(info) &&
-                  !pendingRegions.contains(info.getRegionName())
-              )
-          )
-        ) {
-
+      if (!deadServer && !unassignedRegions.containsKey(info) &&
+            !pendingRegions.contains(info.getRegionName())
+          && (storedInfo == null || storedInfo.getStartCode() != startCode)) {
         // The current assignment is invalid
         if (LOG.isDebugEnabled()) {
           LOG.debug("Current assignment of " + info.getRegionName() +
@@ -503,13 +494,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       super(true, metaRescanInterval, closed);
     }
 
+    // Don't retry if we get an error while scanning. Errors are most often
+    // caused by the server going away. Wait until next rescan interval when
+    // things should be back to normal
     private boolean scanRoot() {
-      // Don't retry if we get an error while scanning. Errors are most often
-      // caused by the server going away. Wait until next rescan interval when
-      // things should be back to normal
       boolean scanSuccessful = false;
       synchronized (rootRegionLocation) {
-        while(!closed.get() && rootRegionLocation.get() == null) {
+        while (!closed.get() && rootRegionLocation.get() == null) {
           // rootRegionLocation will be filled in when we get an 'open region'
           // regionServerReport message from the HRegionServer that has been
           // allocated the ROOT region below.
@@ -639,7 +630,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /** Set by root scanner to indicate the number of meta regions */
   volatile AtomicInteger numberOfMetaRegions = new AtomicInteger();
 
-  /** Work for the meta scanner is queued up here */
+  /** Initial work for the meta scanner is queued up here */
   volatile BlockingQueue<MetaRegion> metaRegionsToScan =
     new LinkedBlockingQueue<MetaRegion>();
 
@@ -668,10 +659,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       super(false, metaRescanInterval, closed);
     }
 
+    // Don't retry if we get an error while scanning. Errors are most often
+    // caused by the server going away. Wait until next rescan interval when
+    // things should be back to normal
     private boolean scanOneMetaRegion(MetaRegion region) {
-      // Don't retry if we get an error while scanning. Errors are most often
-      // caused by the server going away. Wait until next rescan interval when
-      // things should be back to normal
       boolean scanSuccessful = false;
       while (!closed.get() && !rootScanned &&
           rootRegionLocation.get() == null) {
@@ -713,7 +704,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     @Override
     protected boolean initialScan() {
       MetaRegion region = null;
-      while (!closed.get() && region == null && !metaRegionsScanned()) {
+      // Keep going if not closed, metaRegionsToScan has been emptied (or it
+      // hasn't gotten anything in it yet) and all meta regions are onlined
+      // (root and meta).
+      while (!closed.get() &&
+          (region == null || metaRegionsToScan.size() > 0) &&
+          !metaRegionsScanned()) {
         try {
           region =
             metaRegionsToScan.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);

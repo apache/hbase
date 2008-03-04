@@ -28,6 +28,7 @@ Unreleased
    HBASE-446   Fully qualified hbase.rootdir doesn't work
    HBASE-428   Under continuous upload of rows, WrongRegionExceptions are
                thrown that reach the client even after retries
+   HBASE-490   Doubly-assigned .META.; master uses one and clients another
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
