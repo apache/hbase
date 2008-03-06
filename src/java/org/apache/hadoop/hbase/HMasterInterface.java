@@ -34,9 +34,10 @@ public interface HMasterInterface extends VersionedProtocol {
    * Interface version.
    * Version was incremented to 2 when we brought the hadoop RPC local to hbase
    * -- HADOOP-2495 and then to 3 when we changed the RPC to send codes instead
-   * of actual class names (HADOOP-2519).
+   * of actual class names (HADOOP-2519).  Set to 4 for release of 0.1.0 so we
+   * cannot mistakenly connect with an hbase from 0.16.0 contrib.
    */
-  public static final long versionID = 3L;
+  public static final long versionID = 4L;
 
   /** @return true if master is available */
   public boolean isMasterRunning();

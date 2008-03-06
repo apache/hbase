@@ -9,6 +9,8 @@ Unreleased
                Jim Kellerman)
    HADOOP-2786 Move hbase out of hadoop core
    HBASE-403   Fix build after move of hbase in svn
+   HBASE-494   Up IPC version on 0.1 branch so we cannot mistakenly connect
+               with a hbase from 0.16.0
 
   NEW FEATURES
 
