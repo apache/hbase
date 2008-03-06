@@ -32,6 +32,7 @@ Unreleased
                thrown that reach the client even after retries
    HBASE-490   Doubly-assigned .META.; master uses one and clients another
    HBASE-496   impossible state for createLease writes 400k lines in about 15mins
+   HBASE-472   Passing on edits, we dump all to log
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
