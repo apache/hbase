@@ -1017,8 +1017,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       try {
         this.requestCount.set(0);
         this.serverInfo.setLoad(new HServerLoad(0, onlineRegions.size()));
-        result = this.hbaseMaster.regionServerStartup(serverInfo);
         lastMsg = System.currentTimeMillis();
+        result = this.hbaseMaster.regionServerStartup(serverInfo);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Done telling master we are up");
         }
