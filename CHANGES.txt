@@ -35,6 +35,7 @@ Unreleased
    HBASE-472   Passing on edits, we dump all to log
    HBASE-79    When HBase needs to be migrated, it should display a message on
                stdout, not just in the logs
+   HBASE-495   No server address listed in .META.
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid

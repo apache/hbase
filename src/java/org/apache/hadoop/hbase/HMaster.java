@@ -1263,55 +1263,72 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * HMasterRegionInterface
    */
 
-  /** {@inheritDoc} */
   @SuppressWarnings("unused")
   public HbaseMapWritable regionServerStartup(HServerInfo serverInfo)
-    throws IOException {
+  throws IOException {
 
     String s = serverInfo.getServerAddress().toString().trim();
     LOG.info("received start message from: " + s);
-
-    HServerLoad load = serversToLoad.remove(s);
+    // Do the lease check up here. There might already be one out on this
+    // server expecially if it just shutdown and came back up near-immediately
+    // after.
+    long serverLabel = -1;
+    if (!closed.get()) {
+      serverLabel = getServerLabel(s);
+      this.serverLeases.createLease(serverLabel, serverLabel,
+        new ServerExpirer(s));
+    }
+    // Now, in below, if an exception, clear the lease we just setup.
+    try {
+      registerRegionServer(s, serverInfo);
+      return createConfigurationSubset();
+    } finally {
+      if (serverLabel != -1) {
+        this.serverLeases.cancelLease(serverLabel, serverLabel);
+      }
+    }
+  }
+  
+  /* Register the newly reporting regionserver with out local data structures
+   * that keep up load, server address to server info, etc.
+   * @param serverAddress
+   * @param serverInfo
+   */
+  private void registerRegionServer(final String serverAddress,
+      final HServerInfo serverInfo) {
+    HServerLoad load = serversToLoad.remove(serverAddress);
     if (load != null) {
       // The startup message was from a known server.
       // Remove stale information about the server's load.
       Set<String> servers = loadToServers.get(load);
       if (servers != null) {
-        servers.remove(s);
+        servers.remove(serverAddress);
         loadToServers.put(load, servers);
       }
     }
 
-    HServerInfo storedInfo = serversToServerInfo.remove(s);
+    HServerInfo storedInfo = serversToServerInfo.remove(serverAddress);
     if (storedInfo != null && !closed.get()) {
       // The startup message was from a known server with the same name.
       // Timeout the old one right away.
-      HServerAddress root = rootRegionLocation.get();
+      HServerAddress root = this.rootRegionLocation.get();
       if (root != null && root.equals(storedInfo.getServerAddress())) {
         unassignRootRegion();
       }
-      delayedToDoQueue.put(new ProcessServerShutdown(storedInfo));
+      this.delayedToDoQueue.put(new ProcessServerShutdown(storedInfo));
     }
 
-    // record new server
-
+    // Record new server
     load = new HServerLoad();
     serverInfo.setLoad(load);
-    serversToServerInfo.put(s, serverInfo);
-    serversToLoad.put(s, load);
+    this.serversToServerInfo.put(serverAddress, serverInfo);
+    this.serversToLoad.put(serverAddress, load);
     Set<String> servers = loadToServers.get(load);
     if (servers == null) {
       servers = new HashSet<String>();
     }
-    servers.add(s);
-    loadToServers.put(load, servers);
-
-    if (!closed.get()) {
-      long serverLabel = getServerLabel(s);
-      serverLeases.createLease(serverLabel, serverLabel, new ServerExpirer(s));
-    }
-    
-    return createConfigurationSubset();
+    servers.add(serverAddress);
+    this.loadToServers.put(load, servers);
   }
   
   /**
@@ -1989,13 +2006,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       return "ProcessServerShutdown of " + this.deadServer.toString();
     }
 
-    /** Finds regions that the dead region server was serving */
+    /* Finds regions that the dead region server was serving
+     */
     private void scanMetaRegion(HRegionInterface server, long scannerId,
-        Text regionName) throws IOException {
-
+        Text regionName)
+    throws IOException {
       ArrayList<ToDoEntry> toDoList = new ArrayList<ToDoEntry>();
       HashSet<HRegionInfo> regions = new HashSet<HRegionInfo>();
-
       try {
         while (true) {
           HbaseMapWritable values = null;
@@ -2013,9 +2030,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           RowMap rm = toRowMap(values);
           Text row = rm.getRow();
           SortedMap<Text, byte[]> map = rm.getMap();
-          if (LOG.isDebugEnabled() && row != null) {
-            LOG.debug("shutdown scanner looking at " + row.toString());
-          }
 
           // Check server name.  If null, be conservative and treat as though
           // region had been on shutdown server (could be null because we
@@ -2029,11 +2043,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           }
           if (serverName.length() > 0 &&
               deadServerName.compareTo(serverName) != 0) {
-            // This isn't the server you're looking for - move along
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Server name " + serverName + " is not same as " +
-                  deadServerName + ": Passing");
-            }
             continue;
           }
 
@@ -2043,9 +2052,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             continue;
           }
           LOG.info(info.getRegionName() + " was on shutdown server <" +
-              serverName + "> (or server is null). Marking unassigned in " +
-          "meta and clearing pendingRegions");
-
+            serverName + "> (or server is null -- " + server.toString() +
+            " --). Marking unassigned in meta and clearing pendingRegions");
           if (info.isMetaTable()) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("removing meta region " + info.getRegionName() +
