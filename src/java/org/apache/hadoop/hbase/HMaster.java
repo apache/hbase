@@ -878,8 +878,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         fs.mkdirs(rootdir);
         FSUtils.setVersion(fs, rootdir);
       } else if (!FSUtils.checkVersion(fs, rootdir)) {
-        throw new IOException("File system needs upgrade. Run " +
-          "the '${HBASE_HOME}/bin/hbase migrate' script");
+        // Output on stdout so user sees it in terminal.
+        String message = "File system needs to be upgraded. Run " +
+          "the '${HBASE_HOME}/bin/hbase migrate' script.";
+        System.out.println("WARNING! " + message + " Master shutting down...");
+        throw new IOException(message);
       }
 
       if (!fs.exists(rootRegionDir)) {
