@@ -1266,29 +1266,20 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   @SuppressWarnings("unused")
   public HbaseMapWritable regionServerStartup(HServerInfo serverInfo)
   throws IOException {
-
     String s = serverInfo.getServerAddress().toString().trim();
     LOG.info("received start message from: " + s);
     // Do the lease check up here. There might already be one out on this
     // server expecially if it just shutdown and came back up near-immediately
     // after.
-    long serverLabel = -1;
     if (!closed.get()) {
-      serverLabel = getServerLabel(s);
+      long serverLabel = getServerLabel(s);
       this.serverLeases.createLease(serverLabel, serverLabel,
         new ServerExpirer(s));
     }
-    // Now, in below, if an exception, clear the lease we just setup.
-    try {
-      registerRegionServer(s, serverInfo);
-      return createConfigurationSubset();
-    } finally {
-      if (serverLabel != -1) {
-        this.serverLeases.cancelLease(serverLabel, serverLabel);
-      }
-    }
+    registerRegionServer(s, serverInfo);
+    return createConfigurationSubset();
   }
-  
+
   /* Register the newly reporting regionserver with out local data structures
    * that keep up load, server address to server info, etc.
    * @param serverAddress
