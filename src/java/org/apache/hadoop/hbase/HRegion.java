@@ -1851,22 +1851,17 @@ public class HRegion implements HConstants {
    * Delete a region's meta information from the passed
    * <code>meta</code> region.
    * 
-   * @param srvr META server to be updated
+   * @param server META server to be updated
    * @param metaRegionName Meta region name
    * @param regionNmae HRegion to remove from <code>meta</code>
    *
    * @throws IOException
    * @see {@link #addRegionToMETA(HRegion, HRegion)}
    */
-  static void removeRegionFromMETA(final HRegionInterface srvr,
+  static void removeRegionFromMETA(final HRegionInterface server,
       final Text metaRegionName, final Text regionName)
   throws IOException {
-    BatchUpdate b = new BatchUpdate(rand.nextLong());
-    long lockid = b.startUpdate(regionName);
-    for (int i = 0; i < ALL_META_COLUMNS.length; i++) {
-      b.delete(lockid, ALL_META_COLUMNS[i]);
-    }
-    srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+    server.deleteAll(metaRegionName, regionName, LATEST_TIMESTAMP);
   }
 
   /**

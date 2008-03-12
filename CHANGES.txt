@@ -38,6 +38,7 @@ Unreleased
    HBASE-495   No server address listed in .META.
    HBASE-433 HBASE-251 Region server should delete restore log after successful
                restore, Stuck replaying the edits of crashed machine.
+   HBASE-27    hregioninfo cell empty in meta table
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid

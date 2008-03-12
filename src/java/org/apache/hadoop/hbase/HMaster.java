@@ -215,6 +215,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // scan we go check if parents can be removed.
       Map<HRegionInfo, SortedMap<Text, byte[]>> splitParents =
         new HashMap<HRegionInfo, SortedMap<Text, byte[]>>();
+      List<Text> emptyRows = new ArrayList<Text>();
       try {
         regionServer = connection.getHRegionConnection(region.getServer());
         scannerId =
@@ -229,10 +230,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           }
 
           // TODO: Why does this have to be a sorted map?
-          SortedMap<Text, byte[]> results = toRowMap(values).getMap();
-          
-          HRegionInfo info = getHRegionInfo(results);
+          RowMap m = toRowMap(values);
+          SortedMap<Text, byte[]> results = m.getMap();
+
+          Text row = m.getRow();
+          HRegionInfo info = getHRegionInfo(row, results);
           if (info == null) {
+            emptyRows.add(row);
             continue;
           }
 
@@ -272,12 +276,23 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           }
         } catch (IOException e) {
           LOG.error("Closing scanner",
-            RemoteExceptionHandler.checkIOException(e));
+              RemoteExceptionHandler.checkIOException(e));
         }
       }
 
-      // Scan is finished.  Take a look at split parents to see if any we can
-      // clean up.
+      // Scan is finished.
+      
+      // First clean up any meta region rows which had null HRegionInfo's
+
+      if (emptyRows.size() > 0) {
+        LOG.warn("Found " + emptyRows.size() +
+            " rows with empty HRegionInfo while scanning meta region " +
+            region.getRegionName());
+        deleteEmptyMetaRows(regionServer, region.getRegionName(), emptyRows);
+      }
+
+      // Take a look at split parents to see if any we can clean up.
+      
       if (splitParents.size() > 0) {
         for (Map.Entry<HRegionInfo, SortedMap<Text, byte[]>> e:
             splitParents.entrySet()) {
@@ -356,7 +371,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
      * @return True if still has references to parent.
      * @throws IOException
      */
-    protected boolean hasReferences(final Text metaRegionName, 
+    private boolean hasReferences(final Text metaRegionName, 
       final HRegionInterface srvr, final Text parent,
       SortedMap<Text, byte[]> rowContent, final Text splitColumn)
     throws IOException {
@@ -1263,6 +1278,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * HMasterRegionInterface
    */
 
+  /** {@inheritDoc} */
   @SuppressWarnings("unused")
   public HbaseMapWritable regionServerStartup(HServerInfo serverInfo)
   throws IOException {
@@ -2002,8 +2018,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     private void scanMetaRegion(HRegionInterface server, long scannerId,
         Text regionName)
     throws IOException {
-      ArrayList<ToDoEntry> toDoList = new ArrayList<ToDoEntry>();
-      HashSet<HRegionInfo> regions = new HashSet<HRegionInfo>();
+      List<ToDoEntry> toDoList = new ArrayList<ToDoEntry>();
+      Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
+      List<Text> emptyRows = new ArrayList<Text>();
       try {
         while (true) {
           HbaseMapWritable values = null;
@@ -2038,8 +2055,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           }
 
           // Bingo! Found it.
-          HRegionInfo info = getHRegionInfo(map);
+          HRegionInfo info = getHRegionInfo(row, map);
           if (info == null) {
+            emptyRows.add(row);
             continue;
           }
           LOG.info(info.getRegionName() + " was on shutdown server <" +
@@ -2099,6 +2117,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         }
       }
 
+      // Scan complete. Remove any rows which had empty HRegionInfo
+      
+      if (emptyRows.size() > 0) {
+        LOG.warn("Found " + emptyRows.size() +
+            " rows with empty HRegionInfo while scanning meta region " +
+            regionName);
+        deleteEmptyMetaRows(server, regionName, emptyRows);
+      }
+      
       // Update server in root/meta entries
       for (ToDoEntry e: toDoList) {
         if (e.deleteRegion) {
@@ -2697,6 +2724,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
                 server.openScanner(m.getRegionName(), COLUMN_FAMILY_ARRAY,
                     tableName, System.currentTimeMillis(), null);
 
+              List<Text> emptyRows = new ArrayList<Text>();
               try {
                 while (true) {
                   HbaseMapWritable values = server.next(scannerId);
@@ -2705,10 +2733,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
                   }
                   RowMap rm = toRowMap(values);
                   SortedMap<Text, byte[]> map = rm.getMap();
-                  HRegionInfo info = getHRegionInfo(map);
+                  Text row = rm.getRow();
+                  HRegionInfo info = getHRegionInfo(row, map);
                   if (info == null) {
+                    emptyRows.add(row);
                     throw new IOException(COL_REGIONINFO + " not found on " +
-                      rm.getRow());
+                      row);
                   }
                   String serverName = Writables.bytesToString(map.get(COL_SERVER));
                   long startCode = Writables.bytesToLong(map.get(COL_STARTCODE));
@@ -2734,6 +2764,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
                 scannerId = -1L;
               }
 
+              // Get rid of any rows that have a null HRegionInfo
+              
+              if (emptyRows.size() > 0) {
+                LOG.warn("Found " + emptyRows.size() +
+                    " rows with empty HRegionInfo while scanning meta region " +
+                    m.getRegionName());
+                deleteEmptyMetaRows(server, m.getRegionName(), emptyRows);
+              }
+              
               if (!tableExists) {
                 throw new IOException(tableName + " does not exist");
               }
@@ -3120,20 +3159,28 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /*
    * Data structure used to return results out of the toRowMap method.
    */
-  private class RowMap {
-    final Text row;
-    final SortedMap<Text, byte[]> map;
+  private static class RowMap {
+    private final Text row;
+    private final SortedMap<Text, byte[]> map;
     
-    private RowMap(final Text r, final SortedMap<Text, byte[]> m) {
+    /**
+     * Constructor
+     * 
+     * @param r the row
+     * @param m the map of column names to values
+     */
+    RowMap(final Text r, final SortedMap<Text, byte[]> m) {
       this.row = r;
       this.map = m;
     }
 
-    private Text getRow() {
+    /** @return the row */
+    Text getRow() {
       return this.row;
     }
 
-    private SortedMap<Text, byte[]> getMap() {
+    /** @return the column value map */
+    SortedMap<Text, byte[]> getMap() {
       return this.map;
     }
   }
@@ -3171,19 +3218,44 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * Get HRegionInfo from passed META map of row values.
    * Returns null if none found (and logs fact that expected COL_REGIONINFO
    * was missing).  Utility method used by scanners of META tables.
+   * @param row name of the row
    * @param map Map to do lookup in.
    * @return Null or found HRegionInfo.
    * @throws IOException
    */
-  protected HRegionInfo getHRegionInfo(final Map<Text, byte[]> map)
+  protected HRegionInfo getHRegionInfo(final Text row,
+      final Map<Text, byte[]> map)
   throws IOException {
     byte [] bytes = map.get(COL_REGIONINFO);
     if (bytes == null) {
-      LOG.warn(COL_REGIONINFO.toString() + " is empty; has keys: " +
-        map.keySet().toString());
+      LOG.warn(COL_REGIONINFO.toString() + " is empty for row: " + row +
+          "; has keys: " + map.keySet().toString());
       return null;
     }
     return (HRegionInfo)Writables.getWritable(bytes, new HRegionInfo());
+  }
+  
+  /*
+   * When we find rows in a meta region that has an empty HRegionInfo, we
+   * clean them up here.
+   * 
+   * @param server connection to server serving meta region
+   * @param metaRegionName name of the meta region we scanned
+   * @param emptyRows the row keys that had empty HRegionInfos
+   */
+  protected void deleteEmptyMetaRows(HRegionInterface server, 
+      Text metaRegionName,
+      List<Text> emptyRows) {
+    for (Text regionName: emptyRows) {
+      try {
+        HRegion.removeRegionFromMETA(server, metaRegionName, regionName);
+        LOG.warn("Removed region: " + regionName + " from meta region: " +
+            metaRegionName + " because HRegionInfo was empty");
+      } catch (IOException e) {
+        LOG.error("deleting region: " + regionName + " from meta region: " +
+            metaRegionName, e);
+      }
+    }
   }
 
   /*
