@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
@@ -35,6 +34,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -494,7 +494,15 @@ public class HLog implements HConstants {
    */
   static void splitLog(Path rootDir, Path srcDir, FileSystem fs,
     Configuration conf) throws IOException {
-    Path logfiles[] = fs.listPaths(new Path[] { srcDir });
+    if (!fs.exists(srcDir)) {
+      // Nothing to do
+      return;
+    }
+    FileStatus logfiles[] = fs.listStatus(srcDir);
+    if (logfiles == null || logfiles.length == 0) {
+      // Nothing to do
+      return;
+    }
     LOG.info("splitting " + logfiles.length + " log(s) in " +
       srcDir.toString());
     Map<Text, SequenceFile.Writer> logWriters =
@@ -503,17 +511,18 @@ public class HLog implements HConstants {
       for (int i = 0; i < logfiles.length; i++) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Splitting " + i + " of " + logfiles.length + ": " +
-            logfiles[i]);
+            logfiles[i].getPath());
         }
         // Check for empty file.
-        if (fs.getFileStatus(logfiles[i]).getLen() <= 0) {
+        if (logfiles[i].getLen() <= 0) {
           LOG.info("Skipping " + logfiles[i].toString() +
-            " because zero length");
+              " because zero length");
           continue;
         }
         HLogKey key = new HLogKey();
         HLogEdit val = new HLogEdit();
-        SequenceFile.Reader in = new SequenceFile.Reader(fs, logfiles[i], conf);
+        SequenceFile.Reader in =
+          new SequenceFile.Reader(fs, logfiles[i].getPath(), conf);
         try {
           int count = 0;
           for (; in.next(key, val); count++) {
@@ -528,6 +537,17 @@ public class HLog implements HConstants {
                   ),
                   HREGION_OLDLOGFILE_NAME
               );
+              
+              Path oldlogfile = null;
+              SequenceFile.Reader old = null;
+              if (fs.exists(logfile)) {
+                LOG.warn("Old log file " + logfile +
+                    " already exists. Copying existing file to new file");
+                oldlogfile = new Path(logfile.toString() + ".old");
+                fs.rename(logfile, oldlogfile);
+                old = new SequenceFile.Reader(fs, oldlogfile, conf);
+              }
+              
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Creating new log file writer for path " + logfile +
                   "; map content " + logWriters.toString());
@@ -537,8 +557,22 @@ public class HLog implements HConstants {
               // Use copy of regionName; regionName object is reused inside in
               // HStoreKey.getRegionName so its content changes as we iterate.
               logWriters.put(new Text(regionName), w);
+              
+              if (old != null) {
+                // Copy from existing log file
+                HLogKey oldkey = new HLogKey();
+                HLogEdit oldval = new HLogEdit();
+                for (; old.next(oldkey, oldval); count++) {
+                  if (LOG.isDebugEnabled() && count > 0 && count % 10000 == 0) {
+                    LOG.debug("Copied " + count + " edits");
+                  }
+                  w.append(oldkey, oldval);
+                }
+                old.close();
+                fs.delete(oldlogfile);
+              }
             }
-            if (count % 10000 == 0 && count > 0 && LOG.isDebugEnabled()) {
+            if (LOG.isDebugEnabled() && count > 0 && count % 10000 == 0) {
               LOG.debug("Applied " + count + " edits");
             }
             w.append(key, val);
@@ -556,13 +590,13 @@ public class HLog implements HConstants {
       }
     }
 
-    if (fs.exists(srcDir)) {
-      if (!fs.delete(srcDir)) {
-        LOG.error("Cannot delete: " + srcDir);
-        if (!FileUtil.fullyDelete(new File(srcDir.toString()))) {
-          throw new IOException("Cannot delete: " + srcDir);
-        }
-      }
+    try {
+      FileUtil.fullyDelete(fs, srcDir);
+    } catch (IOException e) {
+      e = RemoteExceptionHandler.checkIOException(e);
+      IOException io = new IOException("Cannot delete: " + srcDir);
+      io.initCause(e);
+      throw io;
     }
     LOG.info("log file splitting completed for " + srcDir.toString());
   }
