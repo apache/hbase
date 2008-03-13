@@ -928,7 +928,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.maxRegionOpenTime =
-      conf.getLong("hbase.hbasemaster.maxregionopen", 30 * 1000);
+      conf.getLong("hbase.hbasemaster.maxregionopen", 60 * 1000);
 
     this.leaseTimeout = conf.getInt("hbase.master.lease.period", 30 * 1000);
     this.serverLeases = new Leases(this.leaseTimeout, 
@@ -1639,33 +1639,26 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
       case HMsg.MSG_REPORT_CLOSE:
         LOG.info(info.getServerAddress().toString() + " no longer serving " +
-            region.getRegionName());
-
+          region);
         if (region.getRegionName().compareTo(
             HRegionInfo.rootRegionInfo.getRegionName()) == 0) {
-
           // Root region
-
           if (region.isOffline()) {
             // Can't proceed without root region. Shutdown.
             LOG.fatal("root region is marked offline");
             shutdown();
           }
           unassignRootRegion();
-
         } else {
           boolean reassignRegion = !region.isOffline();
           boolean deleteRegion = false;
-
           if (killedRegions.remove(region.getRegionName())) {
             reassignRegion = false;
           }
-
           if (regionsToDelete.remove(region.getRegionName())) {
             reassignRegion = false;
             deleteRegion = true;
           }
-
           if (region.isMetaTable()) {
             // Region is part of the meta table. Remove it from onlineMetaRegions
             onlineMetaRegions.remove(region.getStartKey());
@@ -1674,9 +1667,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           // NOTE: we cannot put the region into unassignedRegions as that
           //       could create a race with the pending close if it gets 
           //       reassigned before the close is processed.
-
           unassignedRegions.remove(region);
-
           try {
             toDoQueue.put(new ProcessRegionClose(region, reassignRegion,
                 deleteRegion));
@@ -2233,7 +2224,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             if (LOG.isDebugEnabled()) {
               LOG.debug("process server shutdown scanning " +
                   r.getRegionName() + " on " + r.getServer() + " " +
-                  Thread.currentThread().getName());
+                  Thread.currentThread().getName() + " attempt " + tries);
             }
             server = connection.getHRegionConnection(r.getServer());
 
@@ -2357,7 +2348,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     /** {@inheritDoc} */
     @Override
     public String toString() {
-      return "ProcessRegionClose of " + this.regionInfo.getRegionName();
+      return "ProcessRegionClose of " + this.regionInfo.getRegionName() +
+        ", " + this.reassignRegion + ", " + this.deleteRegion;
     }
 
     @Override
@@ -2382,7 +2374,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           if (deleteRegion) {
             HRegion.removeRegionFromMETA(getMetaServer(), metaRegionName,
               regionInfo.getRegionName());
-          } else {
+          } else if (!this.reassignRegion) {
             HRegion.offlineRegionInMETA(getMetaServer(), metaRegionName,
               regionInfo);
           }
@@ -2549,6 +2541,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   private void createTable(final HRegionInfo newRegion) throws IOException {
     Text tableName = newRegion.getTableDesc().getName();
+    // TODO: Not thread safe check.
     if (tableInCreation.contains(tableName)) {
       throw new TableExistsException("Table " + tableName + " in process "
           + "of being created");
