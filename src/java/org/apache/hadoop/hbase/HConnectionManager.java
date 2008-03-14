@@ -250,54 +250,58 @@ public class HConnectionManager implements HConstants {
 
       // scan over the each meta region
       do {
-        try{
-          // turn the start row into a location
-          metaLocation = locateRegion(META_TABLE_NAME, startRow);
+        for (int triesSoFar = 0; triesSoFar < numRetries; triesSoFar++) {
+          try{
+            // turn the start row into a location
+            metaLocation = locateRegion(META_TABLE_NAME, startRow);
 
-          // connect to the server hosting the .META. region
-          server = getHRegionConnection(metaLocation.getServerAddress());
+            // connect to the server hosting the .META. region
+            server = getHRegionConnection(metaLocation.getServerAddress());
 
-          // open a scanner over the meta region
-          scannerId = server.openScanner(
-            metaLocation.getRegionInfo().getRegionName(),
-            COLUMN_FAMILY_ARRAY, startRow, LATEST_TIMESTAMP,
-            null);
-          
-          // iterate through the scanner, accumulating unique table names
-          while (true) {
-            HbaseMapWritable values = server.next(scannerId);
-            if (values == null || values.size() == 0) {
-              break;
-            }
-            for (Map.Entry<Writable, Writable> e: values.entrySet()) {
-              HStoreKey key = (HStoreKey) e.getKey();
-              if (key.getColumn().equals(COL_REGIONINFO)) {
-                HRegionInfo info = new HRegionInfo();
-                info = (HRegionInfo) Writables.getWritable(
-                    ((ImmutableBytesWritable) e.getValue()).get(), info);
+            // open a scanner over the meta region
+            scannerId = server.openScanner(
+              metaLocation.getRegionInfo().getRegionName(),
+              COLUMN_FAMILY_ARRAY, startRow, LATEST_TIMESTAMP,
+              null);
 
-                // Only examine the rows where the startKey is zero length   
-                if (info.getStartKey().getLength() == 0) {
-                  uniqueTables.add(info.getTableDesc());
+            // iterate through the scanner, accumulating unique table names
+            while (true) {
+              HbaseMapWritable values = server.next(scannerId);
+              if (values == null || values.size() == 0) {
+                break;
+              }
+              for (Map.Entry<Writable, Writable> e: values.entrySet()) {
+                HStoreKey key = (HStoreKey) e.getKey();
+                if (key.getColumn().equals(COL_REGIONINFO)) {
+                  HRegionInfo info = new HRegionInfo();
+                  info = (HRegionInfo) Writables.getWritable(
+                      ((ImmutableBytesWritable) e.getValue()).get(), info);
+
+                  // Only examine the rows where the startKey is zero length   
+                  if (info.getStartKey().getLength() == 0) {
+                    uniqueTables.add(info.getTableDesc());
+                  }
                 }
               }
             }
-          }
-          
-          server.close(scannerId);
-          scannerId = -1L;
-          
-          // advance the startRow to the end key of the current region
-          startRow = metaLocation.getRegionInfo().getEndKey();          
-        } catch (IOException e) {
-          // Retry once.
-          metaLocation = relocateRegion(META_TABLE_NAME, startRow);
-          continue;
-        }
-        finally {
-          if (scannerId != -1L) {
+
             server.close(scannerId);
+            scannerId = -1L;
+
+            // advance the startRow to the end key of the current region
+            startRow = metaLocation.getRegionInfo().getEndKey();
+            // break out of the retry loop
+            break;
+          } catch (IOException e) {
+            // Retry once.
+            metaLocation = relocateRegion(META_TABLE_NAME, startRow);
+            continue;
           }
+          finally {
+            if (scannerId != -1L) {
+              server.close(scannerId);
+            }
+          }          
         }
       } while (startRow.compareTo(LAST_ROW) != 0);
       
