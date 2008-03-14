@@ -19,8 +19,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.DataInput;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -780,7 +783,14 @@ public class HStoreFile implements HConstants {
       } else {
         reset();
         Writable value = new ImmutableBytesWritable();
-        key = super.getClosest(midkey, value, true);
+        WritableComparable k = super.getClosest(midkey, value, true);
+        ByteArrayOutputStream byteout = new ByteArrayOutputStream();
+        DataOutputStream out = new DataOutputStream(byteout);
+        k.write(out);
+        ByteArrayInputStream bytein =
+          new ByteArrayInputStream(byteout.toByteArray());
+        DataInputStream in = new DataInputStream(bytein);
+        key.readFields(in);
       }
     }
 
