@@ -51,6 +51,7 @@ Unreleased
    HBASE-281   Shell should allow deletions in .META. and -ROOT- tables
    HBASE-480   Tool to manually merge two regions
    HBASE-477   Add support for an HBASE_CLASSPATH
+   HBASE-515   At least double default timeouts between regionserver and master
 
 Release 0.16.0
 
