@@ -13,6 +13,8 @@ Unreleased
                with a hbase from 0.16.0
 
   NEW FEATURES
+   HBASE-506   When an exception has to escape ServerCallable due to exhausted retries, 
+               show all the exceptions that lead to this situation
 
   OPTIMIZATIONS
 
