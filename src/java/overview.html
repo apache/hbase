@@ -139,6 +139,99 @@ adjustments to the filesystem data under <code>hbase.rootdir</code> necessary to
 the hbase version (It does not change your install unless you explicitly ask it to).
 </p>
 
+<h2><a name="client_example">Example API Usage</a></h2>
+<p>Once you have a running HBase, you probably want a way to hook your application up to it. 
+  If your application is in Java, then you should use the Java API. Here's an example of what 
+  a simple client might look like. (This example assumes that you've created a table called
+  "myTable" with a column family called "myColumnFamily".)
+</p>
+
+<div style="background-color: #cccccc; padding: 2px">
+<code><pre>
+import org.apache.hadoop.hbase.HTable;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.HScannerInterface;
+import org.apache.hadoop.io.Text;
+import java.io.IOException;
+
+public class MyClient {
+
+  public static void main(String args[]) throws IOException {
+    // You need a configuration object to tell the client where to connect.
+    // But don't worry, the defaults are pulled from the local config file.
+    HBaseConfiguration config = new HBaseConfiguration();
+
+    // This instantiates an HTable object that connects you to the "myTable"
+    // table. 
+    HTable table = new HTable(config, new Text("myTable"));
+
+    // Tell the table that you'll be updating row "myRow". The lockId you get
+    // back uniquely identifies your batch of updates. (Note, however, that 
+    // only one update can be in progress at a time. This is fixed in HBase
+    // version 0.2.0.)
+    long lockId = table.startUpdate(new Text("myRow"));
+
+    // The HTable#put method takes the lockId you got from startUpdate, a Text
+    // that describes what cell you want to put a value into, and a byte array
+    // that is the value you want to store. Note that if you want to store 
+    // strings, you have to getBytes() from the string for HBase to understand
+    // how to store it. (The same goes for primitives like ints and longs and
+    // user-defined classes - you must find a way to reduce it to bytes.)
+    table.put(lockId, new Text("myColumnFamily:columnQualifier1"), 
+      "columnQualifier1 value!".getBytes());
+
+    // Deletes are batch operations in HBase as well. 
+    table.delete(lockId, new Text("myColumnFamily:cellIWantDeleted"));
+
+    // Once you've done all the puts you want, you need to commit the results.
+    // The HTable#commit method takes the lockId that you got from startUpdate
+    // and pushes the batch of changes you made into HBase.
+    table.commit(lockId);
+
+    // Alternately, if you decide that you don't want the changes you've been
+    // accumulating anymore, you can use the HTable#abort method.
+    // table.abort(lockId);
+
+    // Now, to retrieve the data we just wrote. Just like when we store them,
+    // the values that come back are byte arrays. If you happen to know that
+    // the value contained is a string and want an actual string, then you 
+    // must convert it yourself.
+    byte[] valueBytes = table.get(new Text("myRow"), 
+      new Text("myColumnFamily:columnQualifier1"));
+    String valueStr = new String(valueBytes);
+    
+    // Sometimes, you won't know the row you're looking for. In this case, you
+    // use a Scanner. This will give you cursor-like interface to the contents
+    // of the table.
+    HStoreKey row = new HStoreKey();
+    SortedMap<Text, byte[]> columns = new TreeMap<Text, byte[]>();
+    HScannerInterface scanner = 
+      // we want to get back only "myColumnFamily:columnQualifier1" when we iterate
+      table.obtainScanner(new Text[]{new Text("myColumnFamily:columnQualifier1")}, 
+      // we want to start scanning from an empty Text, meaning the beginning of
+      // the table
+      new Text(""));
+      
+    // Now, for the actual iteration.
+    while(scanner.next(row, columns)) {
+      // print out the row we found and the columns we were looking for
+      System.out.println("Found row: " + row.getRow() + " with value: " +
+       new String(columns.get("myColumnFamily:columnQualifier1")));
+    }
+  }
+}
+</pre></code>
+</div>
+
+<p>There are many other methods for putting data into and getting data out of 
+  HBase, but these examples should get you started. See the HTable javadoc for
+  more methods. Additionally, there are methods for managing tables in the 
+  HBaseAdmin class.</p>
+
+<p>If your client is NOT Java, then you should consider the Thrift or REST 
+  libraries.</p>
+
 <h2><a name="related" >Related Documentation</a></h2>
 <ul>
   <li><a href="http://wiki.apache.org/lucene-hadoop/Hbase">HBase Home Page</a>

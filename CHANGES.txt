@@ -54,7 +54,9 @@ Unreleased
    HBASE-480   Tool to manually merge two regions
    HBASE-477   Add support for an HBASE_CLASSPATH
    HBASE-515   At least double default timeouts between regionserver and master
-
+   HBASE-482   package-level javadoc should have example client or at least 
+               point at the FAQ
+               
 Release 0.16.0
 
   2008/02/04   HBase is now a subproject of Hadoop. The first HBase release as
