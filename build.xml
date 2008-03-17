@@ -36,9 +36,10 @@
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
   <property name="docs.dir" value="${basedir}/docs"/>
+  <property name="docs.src" value="${basedir}/src/docs"/>
 
   <property name="test.output" value="no"/>
-  <property name="test.timeout" value="900000"/>
+  <property name="test.timeout" value="600000"/>
 
   <property name="build.dir" location="${basedir}/build"/>
   <property name="build.bin" location="${build.dir}/bin"/>
@@ -48,10 +49,10 @@
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>
   <property name="build.examples" location="${build.dir}/examples"/>
-  <property name="build.src" value="${build.dir}/src"/>
   <property name="build.docs" value="${build.dir}/docs"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
+  <property name="build.src" value="${build.dir}/src"/>
 
   <property name="test.build.dir" value="${build.dir}/test"/>
   <property name="test.log.dir" value="${test.build.dir}/logs"/>
@@ -186,13 +187,11 @@
     <chmod perm="ugo+x" type="file">
       <fileset dir="${dist.dir}/bin" />
     </chmod>
-    <!--Uncomment when we have a docs dir
     <mkdir dir="${dist.dir}/docs" />
     <copy todir="${dist.dir}/docs">
       <fileset dir="${docs.dir}" />
       <fileset dir="${build.docs}"/>
     </copy>
-    -->
     <copy todir="${dist.dir}">
       <fileset dir=".">
         <include name="*.txt" />
@@ -248,8 +247,22 @@
   </target>
 
   <!-- ================================================================== -->
-  <!-- Javadoc                                                            -->
+  <!-- Doc                                                                -->
   <!-- ================================================================== -->
+  <target name="docs" depends="forrest.check" description="Generate forrest-based documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
+    <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest" failonerror="true" />
+    <copy todir="${docs.dir}">
+      <fileset dir="${docs.src}/build/site/" />
+    </copy>
+    <style basedir="${conf.dir}" destdir="${docs.dir}"
+           includes="hadoop-default.xml" style="conf/configuration.xsl"/>
+  </target>
+
+  <target name="forrest.check" unless="forrest.home">
+    <fail message="'forrest.home' is not defined. Please pass -Dforrest.home=&lt;base of Apache Forrest installation&gt; to Ant on the command-line." />
+  </target>
+
+  <!-- Javadoc -->
   <target name="javadoc" description="Generate javadoc">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
@@ -277,16 +290,14 @@
   <!-- Run unit tests                                                     -->
   <!-- ================================================================== -->
   <path id="test.classpath">
-    <pathelement location="${build.test}" />
-    <pathelement location="${src.test}"/>
     <!-- ============  *  *  *  *  *  N O T E  *  *  *  *  * ============
            ${src.test} *must* come before rest of class path. Otherwise
                     the test hbase-site.xml will not be found.
          ============  *  *  *  *  *  N O T E  *  *  *  *  * ============ -->
+    <pathelement location="${src.test}"/>
+    <pathelement location="${build.test}" />
     <path refid="classpath"/>
-    <pathelement location="${conf.dir}"/>
     <pathelement location="${build.dir}"/>
-    <pathelement location="${build.webapps}"/>
   </path>
 
   <target name="compile-test" depends="compile" > 
@@ -321,12 +332,7 @@
       <sysproperty key="build.test" value="${build.test}"/>
       <sysproperty key="contrib.name" value="${name}"/>
       
-      <!-- requires fork=yes for: 
-        relative File paths to use the specified user.dir 
-        classpath to use build/contrib/*.jar
-      -->
       <sysproperty key="user.dir" value="${build.test}/data"/>
-      
       <sysproperty key="fs.default.name" value="${fs.default.name}"/>
       <sysproperty key="hadoop.test.localoutputfile" value="${hadoop.test.localoutputfile}"/>
       <sysproperty key="test.log.dir" value="${hadoop.log.dir}"/> 
