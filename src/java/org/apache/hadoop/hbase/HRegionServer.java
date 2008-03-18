@@ -534,16 +534,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           try {
             LOG.info("Rolling hlog. Number of entries: " + log.getNumEntries());
             log.rollWriter();
-            
           } catch (IOException ex) {
             LOG.error("Log rolling failed",
               RemoteExceptionHandler.checkIOException(ex));
             checkFileSystem();
-            
           } catch (Exception ex) {
             LOG.error("Log rolling failed", ex);
             checkFileSystem();
-            
           } finally {
             rollLog = false;
           }

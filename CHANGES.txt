@@ -58,7 +58,8 @@ Unreleased
    HBASE-515   At least double default timeouts between regionserver and master
    HBASE-482   package-level javadoc should have example client or at least 
                point at the FAQ
-               
+   HBASE-497   RegionServer needs to recover if datanode goes down
+              
 Release 0.16.0
 
   2008/02/04   HBase is now a subproject of Hadoop. The first HBase release as
