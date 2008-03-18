@@ -59,6 +59,7 @@ Unreleased
    HBASE-482   package-level javadoc should have example client or at least 
                point at the FAQ
    HBASE-497   RegionServer needs to recover if datanode goes down
+   HBASE-530   Upgrade hadoop to 0.16.1 in 0.1 branch
               
 Release 0.16.0
 
