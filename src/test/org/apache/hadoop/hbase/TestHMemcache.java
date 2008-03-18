@@ -123,7 +123,8 @@ public class TestHMemcache extends TestCase {
     for (int i = 0; i < ROW_COUNT; i++) {
       HStoreKey hsk = new HStoreKey(getRowName(i));
       TreeMap<Text, byte []> all = new TreeMap<Text, byte[]>();
-      this.hmemcache.getFull(hsk, all);
+      Map<Text, Long> deletes = new TreeMap<Text, Long>();
+      this.hmemcache.getFull(hsk, deletes, all);
       isExpectedRow(i, all);
     }
   }

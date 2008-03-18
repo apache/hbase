@@ -45,7 +45,8 @@ Unreleased
                startcode of -1 in .META.
    HBASE-516   HStoreFile.finalKey does not update the final key if it is not
                the top region of a split region
-
+   HBASE-524   Problems with getFull
+   
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
                repetition of retry-on-failure logic (thanks to Peter Dolan and

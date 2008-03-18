@@ -218,6 +218,111 @@ public class TestGet2 extends HBaseTestCase {
     }
   }
   
+  public void testGetFullMultiMapfile() throws IOException {
+    HRegion region = null;
+    HRegionIncommon region_incommon = null;
+    Map<Text, byte[]> results = null;
+    
+    try {
+      HTableDescriptor htd = createTableDescriptor(getName());
+      HRegionInfo hri = new HRegionInfo(htd, null, null);
+      region = createNewHRegion(htd, null, null);
+      region_incommon = new HRegionIncommon(region);
+     
+      //
+      // Test ordering issue
+      //
+      Text row = new Text("row1");
+     
+      // write some data
+      long lockid = region_incommon.startBatchUpdate(row);
+      region_incommon.put(lockid, COLUMNS[0], "olderValue".getBytes());
+      region_incommon.commit(lockid);
+
+      // flush
+      region.flushcache();
+      
+      // assert that getFull gives us the older value
+      results = region.getFull(row);
+      assertEquals("olderValue", new String(results.get(COLUMNS[0])));
+      
+      // write a new value for the cell
+      lockid = region_incommon.startBatchUpdate(row);
+      region_incommon.put(lockid, COLUMNS[0], "newerValue".getBytes());
+      region_incommon.commit(lockid);
+      
+      // flush
+      region.flushcache();
+      
+      // assert that getFull gives us the later value
+      results = region.getFull(row);
+      assertEquals("newerValue", new String(results.get(COLUMNS[0])));
+     
+      //
+      // Test the delete masking issue
+      //
+      Text row2 = new Text("row2");
+      Text cell1 = new Text(COLUMNS[0].toString() + "a");
+      Text cell2 = new Text(COLUMNS[0].toString() + "b");
+      Text cell3 = new Text(COLUMNS[0].toString() + "c");
+      
+      // write some data at two columns
+      lockid = region_incommon.startBatchUpdate(row2);
+      region_incommon.put(lockid, cell1, "column0 value".getBytes());
+      region_incommon.put(lockid, cell2, "column1 value".getBytes());
+      region_incommon.commit(lockid);
+      
+      // flush
+      region.flushcache();
+      
+      // assert i get both columns
+      results = region.getFull(row2);
+      assertEquals("Should have two columns in the results map", 2, results.size());
+      assertEquals("column0 value", new String(results.get(cell1)));
+      assertEquals("column1 value", new String(results.get(cell2)));
+      
+      // write a delete for the first column
+      lockid = region_incommon.startBatchUpdate(row2);
+      region_incommon.delete(lockid, cell1);
+      region_incommon.put(lockid, cell2, "column1 new value".getBytes());      
+      region_incommon.commit(lockid);
+            
+      // flush
+      region.flushcache(); 
+      
+      // assert i get the second column only
+      results = region.getFull(row2);
+      assertEquals("Should have one column in the results map", 1, results.size());
+      assertNull("column0 value", results.get(cell1));
+      assertEquals("column1 new value", new String(results.get(cell2)));
+      
+      //
+      // Include a delete and value from the memcache in the mix
+      //
+      lockid = region_incommon.startBatchUpdate(row2);
+      region_incommon.delete(lockid, cell2);      
+      region_incommon.put(lockid, cell3, "column2 value!".getBytes());
+      region_incommon.commit(lockid);
+      
+      // assert i get the third column only
+      results = region.getFull(row2);
+      assertEquals("Should have one column in the results map", 1, results.size());
+      assertNull("column0 value", results.get(cell1));
+      assertNull("column1 value", results.get(cell2));
+      assertEquals("column2 value!", new String(results.get(cell3)));
+      
+    } finally {
+      if (region != null) {
+        try {
+          region.close();
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+        region.getLog().closeAndDelete();
+      }
+    }  
+  }
+  
   
   private void assertCellValueEquals(final HRegion region, final Text row,
     final Text column, final long timestamp, final String value)
