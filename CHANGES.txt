@@ -46,6 +46,7 @@ Unreleased
    HBASE-516   HStoreFile.finalKey does not update the final key if it is not
                the top region of a split region
    HBASE-524   Problems with getFull
+   HBASE-514   table 'does not exist' when it does
    
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid

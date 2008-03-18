@@ -159,6 +159,7 @@ public class TestGet2 extends HBaseTestCase {
       Text t10 = new Text("010");
       Text t20 = new Text("020");
       Text t30 = new Text("030");
+      Text t35 = new Text("035");
       Text t40 = new Text("040");
       
       long lockid = region_incommon.startBatchUpdate(t10);
@@ -172,6 +173,15 @@ public class TestGet2 extends HBaseTestCase {
       lockid = region_incommon.startBatchUpdate(t30);
       region_incommon.put(lockid, COLUMNS[0], "t30 bytes".getBytes());
       region_incommon.commit(lockid);
+
+
+      lockid = region_incommon.startBatchUpdate(t35);
+      region_incommon.put(lockid, COLUMNS[0], "t35 bytes".getBytes());
+      region_incommon.commit(lockid);
+      
+      lockid = region_incommon.startBatchUpdate(t35);
+      region_incommon.delete(lockid, COLUMNS[0]);
+      region_incommon.commit(lockid);
       
       lockid = region_incommon.startBatchUpdate(t40);
       region_incommon.put(lockid, COLUMNS[0], "t40 bytes".getBytes());
@@ -180,31 +190,41 @@ public class TestGet2 extends HBaseTestCase {
       // try finding "015"
       Text t15 = new Text("015");
       Map<Text, byte[]> results = 
-        region.getClosestRowBefore(t15, HConstants.LATEST_TIMESTAMP);
+        region.getClosestRowBefore(t15);
       assertEquals(new String(results.get(COLUMNS[0])), "t10 bytes");
 
       // try "020", we should get that row exactly
-      results = region.getClosestRowBefore(t20, HConstants.LATEST_TIMESTAMP);
+      results = region.getClosestRowBefore(t20);
       assertEquals(new String(results.get(COLUMNS[0])), "t20 bytes");
+
+      // try "038", should skip deleted "035" and get "030"
+      Text t38 = new Text("038");
+      results = region.getClosestRowBefore(t38);
+      assertEquals(new String(results.get(COLUMNS[0])), "t30 bytes");
 
       // try "050", should get stuff from "040"
       Text t50 = new Text("050");
-      results = region.getClosestRowBefore(t50, HConstants.LATEST_TIMESTAMP);
+      results = region.getClosestRowBefore(t50);
       assertEquals(new String(results.get(COLUMNS[0])), "t40 bytes");
 
       // force a flush
       region.flushcache();
 
       // try finding "015"      
-      results = region.getClosestRowBefore(t15, HConstants.LATEST_TIMESTAMP);
+      results = region.getClosestRowBefore(t15);
       assertEquals(new String(results.get(COLUMNS[0])), "t10 bytes");
 
       // try "020", we should get that row exactly
-      results = region.getClosestRowBefore(t20, HConstants.LATEST_TIMESTAMP);
+      results = region.getClosestRowBefore(t20);
       assertEquals(new String(results.get(COLUMNS[0])), "t20 bytes");
 
+      // try "038", should skip deleted "035" and get "030"
+      results = region.getClosestRowBefore(t38);
+      assertNotNull("get for 038 shouldn't be null", results.get(COLUMNS[0]));
+      assertEquals(new String(results.get(COLUMNS[0])), "t30 bytes");
+
       // try "050", should get stuff from "040"
-      results = region.getClosestRowBefore(t50, HConstants.LATEST_TIMESTAMP);
+      results = region.getClosestRowBefore(t50);
       assertEquals(new String(results.get(COLUMNS[0])), "t40 bytes");
     } finally {
       if (region != null) {
