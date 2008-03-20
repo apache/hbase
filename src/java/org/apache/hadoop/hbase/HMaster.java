@@ -46,6 +46,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -343,9 +344,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       if (!hasReferencesA && !hasReferencesB) {
         LOG.info("Deleting region " + parent.getRegionName() +
           " because daughter splits no longer hold references");
-        if (!HRegion.deleteRegion(fs, rootdir, parent)) {
-          LOG.warn("Deletion of " + parent.getRegionName() + " failed");
-        }
+        HRegion.deleteRegion(fs, rootdir, parent);
         
         HRegion.removeRegionFromMETA(srvr, metaRegionName,
           parent.getRegionName());
@@ -390,7 +389,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         // Look for reference files.  Call listPaths with an anonymous
         // instance of PathFilter.
 
-        Path [] ps = fs.listPaths(p,
+        FileStatus [] ps = fs.listStatus(p,
             new PathFilter () {
               public boolean accept(Path path) {
                 return HStore.isReference(path);
@@ -892,12 +891,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       if(! fs.exists(rootdir)) {
         fs.mkdirs(rootdir);
         FSUtils.setVersion(fs, rootdir);
-      } else if (!FSUtils.checkVersion(fs, rootdir)) {
-        // Output on stdout so user sees it in terminal.
-        String message = "File system needs to be upgraded. Run " +
-          "the '${HBASE_HOME}/bin/hbase migrate' script.";
-        System.out.println("WARNING! " + message + " Master shutting down...");
-        throw new IOException(message);
+      } else {
+        FSUtils.checkVersion(fs, rootdir, true);
       }
 
       if (!fs.exists(rootRegionDir)) {
@@ -984,8 +979,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   protected boolean checkFileSystem() {
     if (fsOk) {
-      if (!FSUtils.isFileSystemAvailable(fs)) {
-        LOG.fatal("Shutting down HBase cluster: file system not available");
+      try {
+        FSUtils.checkFileSystemAvailable(fs);
+      } catch (IOException e) {
+        LOG.fatal("Shutting down HBase cluster: file system not available", e);
         closed.set(true);
         fsOk = false;
       }

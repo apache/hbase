@@ -1629,17 +1629,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @return false if file system is not available
    */
   protected boolean checkFileSystem() {
-    if (this.fsOk) {
+    if (this.fsOk && fs != null) {
       try {
-        if (fs != null && !FSUtils.isFileSystemAvailable(fs)) {
-          LOG.fatal("Shutting down HRegionServer: file system not available");
-          this.abortRequested = true;
-          this.stopRequested.set(true);
-          fsOk = false;
-        }
-      } catch (Exception e) {
-        LOG.error("Failed get of filesystem", e);
-        LOG.fatal("Shutting down HRegionServer: file system not available");
+        FSUtils.checkFileSystemAvailable(fs);
+      } catch (IOException e) {
+        LOG.fatal("Shutting down HRegionServer: file system not available", e);
         this.abortRequested = true;
         this.stopRequested.set(true);
         fsOk = false;

@@ -60,6 +60,7 @@ Release 0.1.0
                point at the FAQ
    HBASE-497   RegionServer needs to recover if datanode goes down
    HBASE-456   Clearly state which ports need to be opened in order to run HBase
+   HBASE-483   Merge tool won't merge two overlapping regions
               
 Release 0.16.0
 

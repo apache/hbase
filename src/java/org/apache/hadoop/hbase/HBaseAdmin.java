@@ -543,4 +543,17 @@ public class HBaseAdmin implements HConstants {
     Text tableKey = new Text(tableName.toString() + ",,99999999999999");
     return connection.locateRegion(META_TABLE_NAME, tableKey);
   }
+  
+  /**
+   * Check to see if HBase is running. Throw an exception if not.
+   *
+   * @param conf
+   * @throws MasterNotRunningException
+   */
+  public static void checkHBaseAvailable(HBaseConfiguration conf)
+  throws MasterNotRunningException {
+    HBaseConfiguration copyOfConf = new HBaseConfiguration(conf);
+    copyOfConf.setInt("hbase.client.retries.number", 1);
+    new HBaseAdmin(copyOfConf);
+  }
 }

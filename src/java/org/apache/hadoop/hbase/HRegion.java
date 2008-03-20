@@ -37,7 +37,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchOperation;
@@ -92,11 +94,10 @@ public class HRegion implements HConstants {
   final AtomicBoolean closed = new AtomicBoolean(false);
 
   /**
-   * Merge two HRegions.  They must be available on the current
-   * HRegionServer. Returns a brand-new active HRegion, also
-   * running on the current HRegionServer.
+   * Merge two HRegions.  The regions must be adjacent and must not overlap.
+   * @return a brand-new active HRegion
    */
-  static HRegion closeAndMerge(final HRegion srcA, final HRegion srcB)
+  static HRegion mergeAdjacent(final HRegion srcA, final HRegion srcB)
   throws IOException {
 
     HRegion a = srcA;
@@ -104,7 +105,6 @@ public class HRegion implements HConstants {
 
     // Make sure that srcA comes first; important for key-ordering during
     // write of the merged file.
-    FileSystem fs = srcA.getFilesystem();
     if (srcA.getStartKey() == null) {
       if (srcB.getStartKey() == null) {
         throw new IOException("Cannot merge two regions with null start key");
@@ -119,49 +119,117 @@ public class HRegion implements HConstants {
     if (! a.getEndKey().equals(b.getStartKey())) {
       throw new IOException("Cannot merge non-adjacent regions");
     }
+    return merge(a, b);
+  }
 
+  /**
+   * Merge two regions whether they are adjacent or not.
+   * 
+   * @param a region a
+   * @param b region b
+   * @return new merged region
+   * @throws IOException
+   */
+  public static HRegion merge(HRegion a, HRegion b) throws IOException {
+    if (!a.getRegionInfo().getTableDesc().getName().equals(
+        b.getRegionInfo().getTableDesc().getName())) {
+      throw new IOException("Regions do not belong to the same table");
+    }
+    FileSystem fs = a.getFilesystem();
+
+    // Make sure each region's cache is empty
+    
+    a.flushcache();
+    b.flushcache();
+    
+    // Compact each region so we only have one store file per family
+    
+    a.compactStores();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Files for region: " + a.getRegionName());
+      listPaths(fs, a.getRegionDir());
+    }
+    b.compactStores();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Files for region: " + b.getRegionName());
+      listPaths(fs, b.getRegionDir());
+    }
+    
     HBaseConfiguration conf = a.getConf();
     HTableDescriptor tabledesc = a.getTableDesc();
     HLog log = a.getLog();
     Path basedir = a.getBaseDir();
-    Text startKey = a.getStartKey();
-    Text endKey = b.getEndKey();
-    Path merges = new Path(a.getRegionDir(), MERGEDIR);
-    if(! fs.exists(merges)) {
-      fs.mkdirs(merges);
-    }
+    Text startKey = a.getStartKey().equals(EMPTY_TEXT) ||
+      b.getStartKey().equals(EMPTY_TEXT) ? EMPTY_TEXT :
+        a.getStartKey().compareTo(b.getStartKey()) <= 0 ?
+            a.getStartKey() : b.getStartKey();
+    Text endKey = a.getEndKey().equals(EMPTY_TEXT) ||
+      b.getEndKey().equals(EMPTY_TEXT) ? EMPTY_TEXT :
+        a.getEndKey().compareTo(b.getEndKey()) <= 0 ?
+            b.getEndKey() : a.getEndKey();
 
     HRegionInfo newRegionInfo = new HRegionInfo(tabledesc, startKey, endKey);
-    Path newRegionDir =
-      HRegion.getRegionDir(merges, newRegionInfo.getEncodedName());
+    LOG.info("Creating new region " + newRegionInfo.toString());
+    String encodedRegionName = newRegionInfo.getEncodedName(); 
+    Path newRegionDir = HRegion.getRegionDir(a.getBaseDir(), encodedRegionName);
     if(fs.exists(newRegionDir)) {
       throw new IOException("Cannot merge; target file collision at " +
           newRegionDir);
     }
+    fs.mkdirs(newRegionDir);
 
     LOG.info("starting merge of regions: " + a.getRegionName() + " and " +
-        b.getRegionName() + " into new region " + newRegionInfo.toString());
+        b.getRegionName() + " into new region " + newRegionInfo.toString() +
+        " with start key <" + startKey + "> and end key <" + endKey + ">");
 
+    // Move HStoreFiles under new region directory
+    
     Map<Text, List<HStoreFile>> byFamily =
       new TreeMap<Text, List<HStoreFile>>();
     byFamily = filesByFamily(byFamily, a.close());
     byFamily = filesByFamily(byFamily, b.close());
     for (Map.Entry<Text, List<HStoreFile>> es : byFamily.entrySet()) {
       Text colFamily = es.getKey();
+      makeColumnFamilyDirs(fs, basedir, encodedRegionName, colFamily, tabledesc);
+      
+      // Because we compacted the source regions we should have no more than two
+      // HStoreFiles per family and there will be no reference stores
+
       List<HStoreFile> srcFiles = es.getValue();
-      HStoreFile dst = new HStoreFile(conf, fs, merges,
-          newRegionInfo.getEncodedName(), colFamily, -1, null);
-      dst.mergeStoreFiles(srcFiles, fs, conf);
+      if (srcFiles.size() == 2) {
+        long seqA = srcFiles.get(0).loadInfo(fs);
+        long seqB = srcFiles.get(1).loadInfo(fs);
+        if (seqA == seqB) {
+          // We can't have duplicate sequence numbers
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Adjusting sequence number of storeFile " +
+                srcFiles.get(1));
+          }
+          srcFiles.get(1).writeInfo(fs, seqB - 1);
+        }
+      }
+      for (HStoreFile hsf: srcFiles) {
+        HStoreFile dst = new HStoreFile(conf, fs, basedir,
+            newRegionInfo.getEncodedName(), colFamily, -1, null);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Renaming " + hsf + " to " + dst);
+        }
+        hsf.rename(fs, dst);
+      }
     }
-
-    // Done
-    // Construction moves the merge files into place under region.
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Files for new region");
+      listPaths(fs, newRegionDir);
+    }
     HRegion dstRegion = new HRegion(basedir, log, fs, conf, newRegionInfo,
-        newRegionDir, null);
-
-    // Get rid of merges directory
-
-    fs.delete(merges);
+        null, null);
+    dstRegion.compactStores();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Files for new region");
+      listPaths(fs, dstRegion.getRegionDir());
+    }
+    deleteRegion(fs, a.getRegionDir());
+    deleteRegion(fs, b.getRegionDir());
 
     LOG.info("merge completed. New region is " + dstRegion.getRegionName());
 
@@ -185,6 +253,38 @@ public class HRegion implements HConstants {
       v.add(src);
     }
     return byFamily;
+  }
+
+  /*
+   * Method to list files in use by region
+   */
+  static void listFiles(FileSystem fs, HRegion r) throws IOException {
+    listPaths(fs, r.getRegionDir());
+  }
+  
+  /*
+   * List the files under the specified directory
+   * 
+   * @param fs
+   * @param dir
+   * @throws IOException
+   */
+  private static void listPaths(FileSystem fs, Path dir) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      FileStatus[] stats = fs.listStatus(dir);
+      if (stats == null || stats.length == 0) {
+        return;
+      }
+      for (int i = 0; i < stats.length; i++) {
+        String path = stats[i].getPath().toString();
+        if (stats[i].isDir()) {
+          LOG.debug("d " + path);
+          listPaths(fs, stats[i].getPath());
+        } else {
+          LOG.debug("f " + path + " size=" + stats[i].getLen());
+        }
+      }
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -349,8 +449,8 @@ public class HRegion implements HConstants {
     return this.regionInfo;
   }
 
-  /** returns true if region is closed */
-  boolean isClosed() {
+  /** @return true if region is closed */
+  public boolean isClosed() {
     return this.closed.get();
   }
   
@@ -390,7 +490,7 @@ public class HRegion implements HConstants {
       final RegionUnavailableListener listener) throws IOException {
     Text regionName = this.regionInfo.getRegionName(); 
     if (isClosed()) {
-      LOG.info("region " + regionName + " already closed");
+      LOG.warn("region " + regionName + " already closed");
       return null;
     }
     synchronized (splitLock) {
@@ -767,8 +867,10 @@ public class HRegion implements HConstants {
    * Note that no locking is necessary at this level because compaction only
    * conflicts with a region split, and that cannot happen because the region
    * server does them sequentially and not in parallel.
+   * 
+   * @throws IOException
    */
-  boolean compactStores() throws IOException {
+  public boolean compactStores() throws IOException {
     if (this.closed.get()) {
       return false;
     }
@@ -1493,17 +1595,11 @@ public class HRegion implements HConstants {
 
   /** Make sure this is a valid row for the HRegion */
   private void checkRow(Text row) throws IOException {
-    if(((regionInfo.getStartKey().getLength() == 0)
-        || (regionInfo.getStartKey().compareTo(row) <= 0))
-        && ((regionInfo.getEndKey().getLength() == 0)
-            || (regionInfo.getEndKey().compareTo(row) > 0))) {
-      // all's well
-      
-    } else {
+    if(!rowIsInRange(regionInfo, row)) {
       throw new WrongRegionException("Requested row out of range for " +
-        "HRegion " + regionInfo.getRegionName() + ", startKey='" +
-        regionInfo.getStartKey() + "', getEndKey()='" + regionInfo.getEndKey() +
-        "', row='" + row + "'");
+          "HRegion " + regionInfo.getRegionName() + ", startKey='" +
+          regionInfo.getStartKey() + "', getEndKey()='" +
+          regionInfo.getEndKey() + "', row='" + row + "'");
     }
   }
   
@@ -1806,7 +1902,7 @@ public class HRegion implements HConstants {
    * 
    * @throws IOException
    */
-  static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
+  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
       final HBaseConfiguration conf) throws IOException {
     Path tableDir =
       HTableDescriptor.getTableDir(rootDir, info.getTableDesc().getName());
@@ -1819,6 +1915,26 @@ public class HRegion implements HConstants {
   }
   
   /**
+   * Convenience method to open a HRegion.
+   * @param info Info for region to be opened.
+   * @param rootDir Root directory for HBase instance
+   * @param log HLog for region to use
+   * @param conf
+   * @return new HRegion
+   * 
+   * @throws IOException
+   */
+  public static HRegion openHRegion(final HRegionInfo info, final Path rootDir,
+      final HLog log, final HBaseConfiguration conf) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Opening region: " + info);
+    }
+    return new HRegion(
+        HTableDescriptor.getTableDir(rootDir, info.getTableDesc().getName()),
+        log, FileSystem.get(conf), conf, info, null, null);
+  }
+  
+  /**
    * Inserts a new region's meta information into the passed
    * <code>meta</code> region. Used by the HMaster bootstrap code adding
    * new table to ROOT table.
@@ -1827,9 +1943,8 @@ public class HRegion implements HConstants {
    * @param r HRegion to add to <code>meta</code>
    *
    * @throws IOException
-   * @see {@link #removeRegionFromMETA(HRegion, HRegion)}
    */
-  static void addRegionToMETA(HRegion meta, HRegion r) throws IOException {
+  public static void addRegionToMETA(HRegion meta, HRegion r) throws IOException {
     meta.checkResources();
     // The row key is the region name
     Text row = r.getRegionName();
@@ -1855,7 +1970,6 @@ public class HRegion implements HConstants {
    * @param regionNmae HRegion to remove from <code>meta</code>
    *
    * @throws IOException
-   * @see {@link #addRegionToMETA(HRegion, HRegion)}
    */
   static void removeRegionFromMETA(final HRegionInterface server,
       final Text metaRegionName, final Text regionName)
@@ -1870,7 +1984,6 @@ public class HRegion implements HConstants {
    * @param info HRegion to update in <code>meta</code>
    *
    * @throws IOException
-   * @see {@link #addRegionToMETA(HRegion, HRegion)}
    */
   static void offlineRegionInMETA(final HRegionInterface srvr,
       final Text metaRegionName, final HRegionInfo info)
@@ -1893,22 +2006,25 @@ public class HRegion implements HConstants {
    * @param rootdir qualified path of HBase root directory
    * @param info HRegionInfo for region to be deleted
    * @throws IOException
-   * @return True if deleted.
    */
-  static boolean deleteRegion(FileSystem fs, Path rootdir, HRegionInfo info)
+  static void deleteRegion(FileSystem fs, Path rootdir, HRegionInfo info)
   throws IOException {
-    Path p = HRegion.getRegionDir(rootdir, info);
+    deleteRegion(fs, HRegion.getRegionDir(rootdir, info));
+  }
+
+  private static void deleteRegion(FileSystem fs, Path regiondir)
+  throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("DELETING region " + p.toString());
+      LOG.debug("DELETING region " + regiondir.toString());
     }
-    return fs.delete(p);
+    FileUtil.fullyDelete(fs, regiondir);
   }
 
   /**
    * Computes the Path of the HRegion
    * 
    * @param tabledir qualified path for table
-   * @param name region file name ENCODED!
+   * @param name ENCODED region name
    * @return Path of HRegion directory
    * @see HRegionInfo#encodeRegionName(Text)
    */
@@ -1928,5 +2044,44 @@ public class HRegion implements HConstants {
         HTableDescriptor.getTableDir(rootdir, info.getTableDesc().getName()),
         info.getEncodedName()
     );
+  }
+
+  /**
+   * Determines if the specified row is within the row range specified by the
+   * specified HRegionInfo
+   *  
+   * @param info HRegionInfo that specifies the row range
+   * @param row row to be checked
+   * @return true if the row is within the range specified by the HRegionInfo
+   */
+  public static boolean rowIsInRange(HRegionInfo info, Text row) {
+    return ((info.getStartKey().getLength() == 0) ||
+        (info.getStartKey().compareTo(row) <= 0)) &&
+        ((info.getEndKey().getLength() == 0) ||
+            (info.getEndKey().compareTo(row) > 0));
+  }
+  
+  /**
+   * Make the directories for a specific column family
+   * 
+   * @param fs the file system
+   * @param basedir base directory where region will live (usually the table dir)
+   * @param encodedRegionName encoded region name
+   * @param colFamily the column family
+   * @param tabledesc table descriptor of table
+   * @throws IOException
+   */
+  public static void makeColumnFamilyDirs(FileSystem fs, Path basedir,
+      String encodedRegionName, Text colFamily, HTableDescriptor tabledesc)
+  throws IOException {
+    fs.mkdirs(HStoreFile.getMapDir(basedir, encodedRegionName,
+        colFamily));
+    fs.mkdirs(HStoreFile.getInfoDir(basedir, encodedRegionName,
+        colFamily));
+    if (tabledesc.families().get(new Text(colFamily + ":")).getBloomFilter()
+        != null) {
+      fs.mkdirs(HStoreFile.getFilterDir(basedir, encodedRegionName,
+          colFamily));
+    }
   }
 }

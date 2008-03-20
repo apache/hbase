@@ -21,7 +21,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 import java.io.IOException;
 
@@ -29,8 +28,6 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -51,15 +48,13 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import org.apache.hadoop.hbase.FileSystemVersionException;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HLog;
 import org.apache.hadoop.hbase.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStore;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 
 /**
@@ -72,6 +67,9 @@ public class Migrate extends Configured implements Tool {
   private static final String OLD_PREFIX = "hregion_";
 
   private final HBaseConfiguration conf;
+  FileSystem fs;
+  Path rootdir;
+  MetaUtils utils;
 
   /** Action to take when an extra file or unrecoverd log file is found */
   private static String ACTIONS = "abort|ignore|delete|prompt";
@@ -117,7 +115,6 @@ public class Migrate extends Configured implements Tool {
   public Migrate(HBaseConfiguration conf) {
     super(conf);
     this.conf = conf;
-    conf.setInt("hbase.client.retries.number", 1);
   }
   
   /** {@inheritDoc} */
@@ -127,40 +124,42 @@ public class Migrate extends Configured implements Tool {
     }
 
     try {
-      FileSystem fs = FileSystem.get(conf);               // get DFS handle
-
+      // Verify file system is up.
+      fs = FileSystem.get(this.conf);                   // get DFS handle
       LOG.info("Verifying that file system is available...");
-      if (!FSUtils.isFileSystemAvailable(fs)) {
-        throw new IOException(
-            "Filesystem must be available for upgrade to run.");
-      }
+      FSUtils.checkFileSystemAvailable(fs);
+    } catch (IOException e) {
+      LOG.fatal("File system is not available", e);
+      return -1;
+    }
+    
+    // Verify HBase is down
+    LOG.info("Verifying that HBase is not running...");
+    try {
+      HBaseAdmin.checkHBaseAvailable(conf);
+      LOG.fatal("HBase cluster must be off-line.");
+      return -1;
+    } catch (MasterNotRunningException e) {
+      // Expected. Ignore.
+    }
+    
+    try {
 
-      LOG.info("Verifying that HBase is not running...");
-      try {
-        HBaseAdmin admin = new HBaseAdmin(conf);
-        if (admin.isMasterRunning()) {
-          throw new IllegalStateException(
-            "HBase cluster must be off-line during upgrade.");
-        }
-      } catch (MasterNotRunningException e) {
-        // ignore
-      }
+      // Initialize MetaUtils and and get the root of the HBase installation
+      
+      this.utils = new MetaUtils(conf);
+      this.rootdir = utils.initialize();
 
       LOG.info("Starting upgrade" + (readOnly ? " check" : ""));
 
-      Path rootdir =
-        fs.makeQualified(new Path(this.conf.get(HConstants.HBASE_DIR)));
-
-      if (!fs.exists(rootdir)) {
-        throw new FileNotFoundException("HBase root directory " +
-            rootdir.toString() + " does not exist.");
-      }
-
       // See if there is a file system version file
 
-      if (FSUtils.checkVersion(fs, rootdir)) {
+      try {
+        FSUtils.checkVersion(fs, rootdir, false);
         LOG.info("No upgrade necessary.");
         return 0;
+      } catch (FileSystemVersionException e) {
+        // This is ok, just means that something needs to be upgraded.
       }
 
       // check to see if new root region dir exists
@@ -174,21 +173,21 @@ public class Migrate extends Configured implements Tool {
       if (!newRootRegion) {
         // find root region
 
-        Path rootRegion = new Path(rootdir, 
-            OLD_PREFIX + HRegionInfo.rootRegionInfo.getEncodedName());
+        String rootRegion = OLD_PREFIX +
+          HRegionInfo.rootRegionInfo.getEncodedName();
 
-        if (!fs.exists(rootRegion)) {
+        if (!fs.exists(new Path(rootdir, rootRegion))) {
           throw new IOException("Cannot find root region " +
               rootRegion.toString());
         } else if (readOnly) {
           migrationNeeded = true;
         } else {
-          migrateRegionDir(fs, rootdir, HConstants.ROOT_TABLE_NAME, rootRegion);
-          scanRootRegion(fs, rootdir);
+          migrateRegionDir(HConstants.ROOT_TABLE_NAME, rootRegion);
+          scanRootRegion();
 
           // scan for left over regions
 
-          extraRegions(fs, rootdir);
+          extraRegions();
         }
       }
 
@@ -201,9 +200,15 @@ public class Migrate extends Configured implements Tool {
         LOG.info("Upgrade needed.");
       }
       return 0;
+      
     } catch (Exception e) {
       LOG.fatal("Upgrade" +  (readOnly ? " check" : "") + " failed", e);
       return -1;
+      
+    } finally {
+      if (utils != null && utils.isInitialized()) {
+        utils.shutdown();
+      }
     }
   }
 
@@ -277,8 +282,7 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  private void migrateRegionDir(FileSystem fs, Path rootdir, Text tableName,
-      Path oldPath) throws IOException {
+  void migrateRegionDir(Text tableName, String oldPath) throws IOException {
 
     // Create directory where table will live
 
@@ -287,9 +291,9 @@ public class Migrate extends Configured implements Tool {
 
     // Move the old region directory under the table directory
 
-    Path newPath =
-      new Path(tableDir, oldPath.getName().substring(OLD_PREFIX.length()));
-    fs.rename(oldPath, newPath);
+    Path newPath = new Path(tableDir,
+        oldPath.substring(OLD_PREFIX.length()));
+    fs.rename(new Path(rootdir, oldPath), newPath);
 
     processRegionSubDirs(fs, newPath);
   }
@@ -323,101 +327,38 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  private void scanRootRegion(FileSystem fs, Path rootdir) throws IOException {
-    HLog log = new HLog(fs, new Path(rootdir, HConstants.HREGION_LOGDIR_NAME),
-        conf, null);
-
-    try {
-      // Open root region so we can scan it
-
-      HRegion rootRegion = new HRegion(
-          new Path(rootdir, HConstants.ROOT_TABLE_NAME.toString()), log, fs, conf,
-          HRegionInfo.rootRegionInfo, null, null);
-
-      try {
-        HScannerInterface rootScanner = rootRegion.getScanner(
-            HConstants.COL_REGIONINFO_ARRAY, HConstants.EMPTY_START_ROW,
-            HConstants.LATEST_TIMESTAMP, null);
-
-        try {
-          HStoreKey key = new HStoreKey();
-          SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-          while (rootScanner.next(key, results)) {
-            HRegionInfo info = Writables.getHRegionInfoOrNull(
-                results.get(HConstants.COL_REGIONINFO));
-            if (info == null) {
-              LOG.warn("region info is null for row " + key.getRow() +
-                  " in table " + HConstants.ROOT_TABLE_NAME);
-              continue;
-            }
-
-            // First move the meta region to where it should be and rename
-            // subdirectories as necessary
-
-            migrateRegionDir(fs, rootdir, HConstants.META_TABLE_NAME,
-                new Path(rootdir, OLD_PREFIX + info.getEncodedName()));
-
-            // Now scan and process the meta table
-
-            scanMetaRegion(fs, rootdir, log, info);
-          }
-
-        } finally {
-          rootScanner.close();
-        }
-
-      } finally {
-        rootRegion.close();
-      }
-
-    } finally {
-      log.closeAndDelete();
-    }
-  }
-  
-  private void scanMetaRegion(FileSystem fs, Path rootdir, HLog log,
-      HRegionInfo info) throws IOException {
-
-    HRegion metaRegion = new HRegion(
-        new Path(rootdir, info.getTableDesc().getName().toString()), log, fs,
-        conf, info, null, null);
-
-    try {
-      HScannerInterface metaScanner = metaRegion.getScanner(
-          HConstants.COL_REGIONINFO_ARRAY, HConstants.EMPTY_START_ROW,
-          HConstants.LATEST_TIMESTAMP, null);
-
-      try {
-        HStoreKey key = new HStoreKey();
-        SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-        while (metaScanner.next(key, results)) {
-          HRegionInfo region = Writables.getHRegionInfoOrNull(
-              results.get(HConstants.COL_REGIONINFO));
-          if (region == null) {
-            LOG.warn("region info is null for row " + key.getRow() +
-                " in table " + HConstants.META_TABLE_NAME);
-            continue;
-          }
-
-          // Move the region to where it should be and rename
+  private void scanRootRegion() throws IOException {
+    utils.scanRootRegion(
+      new MetaUtils.ScannerListener() {
+        public boolean processRow(HRegionInfo info) throws IOException {
+          // First move the meta region to where it should be and rename
           // subdirectories as necessary
 
-          migrateRegionDir(fs, rootdir, region.getTableDesc().getName(),
-              new Path(rootdir, OLD_PREFIX + region.getEncodedName()));
+          migrateRegionDir(HConstants.META_TABLE_NAME,
+              OLD_PREFIX + info.getEncodedName());
 
-          results.clear();
+          // Now scan and process the meta region
+
+          utils.scanMetaRegion(info,
+            new MetaUtils.ScannerListener() {
+              public boolean processRow(HRegionInfo tableInfo)
+              throws IOException {
+                // Move the region to where it should be and rename
+                // subdirectories as necessary
+
+                migrateRegionDir(tableInfo.getTableDesc().getName(),
+                    OLD_PREFIX + tableInfo.getEncodedName());
+                return true;
+              }
+            }
+          );
+          return true;
         }
-
-      } finally {
-        metaScanner.close();
       }
-
-    } finally {
-      metaRegion.close();
-    }
+    );
   }
   
-  private void extraRegions(FileSystem fs, Path rootdir) throws IOException {
+  private void extraRegions() throws IOException {
     FileStatus[] stats = fs.listStatus(rootdir);
     if (stats == null || stats.length == 0) {
       throw new IOException("No files found under root directory " +
