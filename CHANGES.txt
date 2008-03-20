@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Unreleased
+Release 0.1.0
 
   INCOMPATIBLE CHANGES
    HADOOP-2750 Deprecated methods startBatchUpdate, commitBatch, abortBatch, 
@@ -59,7 +59,6 @@ Unreleased
    HBASE-482   package-level javadoc should have example client or at least 
                point at the FAQ
    HBASE-497   RegionServer needs to recover if datanode goes down
-   HBASE-530   Upgrade hadoop to 0.16.1 in 0.1 branch
    HBASE-456   Clearly state which ports need to be opened in order to run HBase
               
 Release 0.16.0
