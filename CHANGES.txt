@@ -47,6 +47,7 @@ Release 0.1.0
                the top region of a split region
    HBASE-524   Problems with getFull
    HBASE-514   table 'does not exist' when it does
+   HBASE-537   Wait for hdfs to exit safe mode
    
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
