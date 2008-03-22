@@ -62,6 +62,10 @@ Release 0.1.0
    HBASE-497   RegionServer needs to recover if datanode goes down
    HBASE-456   Clearly state which ports need to be opened in order to run HBase
    HBASE-483   Merge tool won't merge two overlapping regions
+   HBASE-476   RegexpRowFilter behaves incorectly when there are multiple store
+               files (Clint Morgan via Jim Kellerman)
+   HBASE-527   RegexpRowFilter does not work when there are columns from 
+               multiple families (Clint Morgan via Jim Kellerman)
               
 Release 0.16.0
 

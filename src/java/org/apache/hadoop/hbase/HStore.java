@@ -30,8 +30,6 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Map.Entry;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
@@ -226,8 +224,7 @@ public class HStore implements HConstants {
      * preceeds it.
      */
     void getRowKeyAtOrBefore(final Text row, 
-      SortedMap<HStoreKey, Long> candidateKeys)
-    throws IOException{
+      SortedMap<HStoreKey, Long> candidateKeys) {
       this.lock.readLock().lock();
       
       try {
@@ -2527,11 +2524,6 @@ public class HStore implements HConstants {
                   && !multipleMatchers
                   && (keys[i].getTimestamp() != chosenTimestamp)) {
                 break;
-              }
-
-              // Filter out null criteria columns that are not null
-              if (dataFilter != null) {
-                filtered = dataFilter.filterNotNull(resultSets[i]);
               }
 
               // NOTE: We used to do results.putAll(resultSets[i]);
