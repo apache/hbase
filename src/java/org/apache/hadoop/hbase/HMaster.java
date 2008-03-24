@@ -888,7 +888,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       String message = "Waiting for dfs to exit safe mode...";
       while (((DistributedFileSystem) fs).setSafeMode(
           FSConstants.SafeModeAction.SAFEMODE_GET)) {
-        System.out.println(message);
         LOG.info(message);
         try {
           Thread.sleep(this.threadWakeFrequency);
