@@ -1634,7 +1634,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             } else {
               // Note that the table has been assigned and is waiting for the
               // meta table to be updated.
-
               pendingRegions.add(region.getRegionName());
 
               // Queue up an update to note the region location.
@@ -1693,21 +1692,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         break;
 
       case HMsg.MSG_REPORT_SPLIT:
-        // A region has split.
-
         HRegionInfo newRegionA = incomingMsgs[++i].getRegionInfo();
-        unassignedRegions.put(newRegionA, ZERO_L);
-
+        addToUnassignedRegions(newRegionA);
         HRegionInfo newRegionB = incomingMsgs[++i].getRegionInfo();
-        unassignedRegions.put(newRegionB, ZERO_L);
-
-        LOG.info("region " + region.getRegionName() +
-            " split. New regions are: " + newRegionA.getRegionName() + ", " +
-            newRegionB.getRegionName());
+        addToUnassignedRegions(newRegionB);
+        LOG.info("Region " + region.getRegionName() + " split; new regions: " +
+          newRegionA.getRegionName() + ", " + newRegionB.getRegionName());
 
         if (region.isMetaTable()) {
           // A meta region has split.
-
           onlineMetaRegions.remove(region.getStartKey());
           numberOfMetaRegions.incrementAndGet();
         }
@@ -1734,6 +1727,19 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return returnMsgs.toArray(new HMsg[returnMsgs.size()]);
   }
   
+  /*
+   * @param hri Add to unassigned regions but make sure its not in pending
+   * else can end up double-assigning
+   * @see HBASE-534
+   */
+  private void addToUnassignedRegions(final HRegionInfo hri) {
+    synchronized(this.unassignedRegions) {
+      if (!this.unassignedRegions.containsKey(hri) &&
+          !this.pendingRegions.contains(hri.getRegionName())) {
+        this.unassignedRegions.put(hri, ZERO_L);
+      }
+    }
+  }
   /*
    * Assigns regions to region servers attempting to balance the load across
    * all region servers
