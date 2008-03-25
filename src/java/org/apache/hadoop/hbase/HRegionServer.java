@@ -482,6 +482,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     
     /** {@inheritDoc} */
     public void flushRequested(HRegion region) {
+      if (region == null) {
+          return;
+      }
       QueueEntry e = new QueueEntry(region, System.currentTimeMillis());
       synchronized (flushQueue) {
         if (flushQueue.contains(e)) {
