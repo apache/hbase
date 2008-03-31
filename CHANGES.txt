@@ -1,6 +1,10 @@
 HBase Change Log
 
 
+  BUG FIXES
+   HBASE-550   EOF trying to read reconstruction log stops region deployment
+
+
 Release 0.1.0
 
   INCOMPATIBLE CHANGES
