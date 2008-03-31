@@ -3,7 +3,8 @@ HBase Change Log
 
   BUG FIXES
    HBASE-550   EOF trying to read reconstruction log stops region deployment
-
+   HBASE-551   Master stuck splitting server logs in shutdown loop; on each
+               iteration, edits are aggregated up into the millions
 
 Release 0.1.0
 
