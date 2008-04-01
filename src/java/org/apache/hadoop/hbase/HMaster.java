@@ -1567,10 +1567,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
       case HMsg.MSG_REPORT_PROCESS_OPEN:
         synchronized (unassignedRegions) {
-          // Region server has acknowledged request to open region.
+          // Region server is reporting in that its working on region open
+          // (We can get more than one of these messages if region is replaying
+          // a bunch of edits and taking a while to open).
           // Extend region open time by max region open time.
-          unassignedRegions.put(region,
-              System.currentTimeMillis() + this.maxRegionOpenTime);
+          this.unassignedRegions.put(region,
+            Long.valueOf(System.currentTimeMillis() + this.maxRegionOpenTime));
         }
         break;
         
