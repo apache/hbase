@@ -105,6 +105,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   final int threadWakeFrequency; 
   final int numRetries;
   final long maxRegionOpenTime;
+  
+  // How many regions to assign a server at a time.
+  private final int maxAssignInOneGo;
 
   volatile DelayQueue<RegionServerOperation> delayedToDoQueue =
     new DelayQueue<RegionServerOperation>();
@@ -966,6 +969,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     unassignRootRegion();
 
     this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
+    
+    this.maxAssignInOneGo =
+      this.conf.getInt("hbase.master.regions.percheckin", 10);
     
     // We're almost open for business
     this.closed.set(false);
@@ -1847,6 +1853,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           nregions = nRegionsToAssign;
         }
 
+        if (nregions > this.maxAssignInOneGo) {
+          nregions = this.maxAssignInOneGo;
+        }
         now = System.currentTimeMillis();
         for (HRegionInfo regionInfo: regionsToAssign) {
           LOG.info("assigning region " + regionInfo.getRegionName() +
@@ -1903,11 +1912,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   private void assignRegionsToOneServer(final Set<HRegionInfo> regionsToAssign,
       final String serverName, final ArrayList<HMsg> returnMsgs) {
     long now = System.currentTimeMillis();
+    int count = 0;
     for (HRegionInfo regionInfo: regionsToAssign) {
       LOG.info("assigning region " + regionInfo.getRegionName() +
           " to the only server " + serverName);
       this.unassignedRegions.put(regionInfo, Long.valueOf(now));
       returnMsgs.add(new HMsg(HMsg.MSG_REGION_OPEN, regionInfo));
+      if (count++ >= this.maxAssignInOneGo) {
+        break;
+      }
     }
   }
   
