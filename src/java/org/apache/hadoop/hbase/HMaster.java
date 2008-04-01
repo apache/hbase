@@ -2212,6 +2212,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
               throw RemoteExceptionHandler.checkIOException(e);
             }
           }
+          sleeper.sleep();
         }
         if (LOG.isDebugEnabled()) {
           LOG.debug("process server shutdown scanning root region on " +
@@ -2268,6 +2269,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             throw RemoteExceptionHandler.checkIOException(e);
           }
         }
+        sleeper.sleep();
       }
       return true;
     }
@@ -2404,8 +2406,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           if (tries == numRetries - 1) {
             throw RemoteExceptionHandler.checkIOException(e);
           }
-          continue;
         }
+        sleeper.sleep();
       }
 
       if (reassignRegion) {
@@ -2511,6 +2513,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             throw RemoteExceptionHandler.checkIOException(e);
           }
         }
+        sleeper.sleep();
       }
       return true;
     }
@@ -2556,6 +2559,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           throw RemoteExceptionHandler.checkIOException(e);
         }
       }
+      sleeper.sleep();
     }
   }
 
@@ -2802,6 +2806,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             checkFileSystem();
             throw RemoteExceptionHandler.checkIOException(e);
           }
+          sleeper.sleep();
           continue;
         }
         break;

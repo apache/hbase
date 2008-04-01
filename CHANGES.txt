@@ -7,6 +7,7 @@ HBase Change Log
    HBASE-505   Region assignments should never time out so long as the region
                server reports that it is processing the open request
    HBASE-552   Fix bloom filter bugs (Andrzej Bialecki via Jim Kellerman)
+   HBASE-507   Add sleep between retries
 
   NEW FEATURES
    HBASE-548   Tool to online single region
