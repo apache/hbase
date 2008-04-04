@@ -13,6 +13,8 @@ HBase Change Log
    HBASE-547   UI shows hadoop version, not hbase version
    HBASE-561   HBase package does not include LICENSE.txt nor build.xml
    HBASE-556   Add 0.16.2 to hbase branch -- if it works
+   HBASE-563   TestRowFilterAfterWrite erroneously sets master address to
+               0.0.0.0:60100 rather than relying on conf
 
   NEW FEATURES
    HBASE-548   Tool to online single region
