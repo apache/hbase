@@ -12,6 +12,7 @@ HBase Change Log
                havoc of reassignments because open processing is done in series
    HBASE-547   UI shows hadoop version, not hbase version
    HBASE-561   HBase package does not include LICENSE.txt nor build.xml
+   HBASE-556   Add 0.16.2 to hbase branch -- if it works
 
   NEW FEATURES
    HBASE-548   Tool to online single region
