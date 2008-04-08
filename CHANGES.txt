@@ -1,5 +1,7 @@
 HBase Change Log
 
+Release 0.1.1
+
   BUG FIXES
    HBASE-550   EOF trying to read reconstruction log stops region deployment
    HBASE-551   Master stuck splitting server logs in shutdown loop; on each
