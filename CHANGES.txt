@@ -15,7 +15,7 @@ HBase Change Log
    HBASE-556   Add 0.16.2 to hbase branch -- if it works
    HBASE-563   TestRowFilterAfterWrite erroneously sets master address to
                0.0.0.0:60100 rather than relying on conf
-   HBASE-544   filters generate StackOverflowException
+   HBASE-554   filters generate StackOverflowException
    HBASE-567   Reused BatchUpdate instances accumulate BatchOperations
 
   NEW FEATURES
