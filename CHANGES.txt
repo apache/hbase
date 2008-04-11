@@ -1,5 +1,8 @@
 HBase Change Log
 
+Unreleased changes
+  BUG FIXES
+
 Release 0.1.1
 
   BUG FIXES
