@@ -2,6 +2,7 @@ HBase Change Log
 
 Unreleased changes
   BUG FIXES
+   HBASE-577   NPE getting scanner
 
 Release 0.1.1
 
