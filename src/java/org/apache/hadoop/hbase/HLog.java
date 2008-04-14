@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.FileNotFoundException;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -589,8 +590,11 @@ public class HLog implements HConstants {
             LOG.debug("Applied " + count + " total edits");
           }
         } catch (IOException e) {
-          LOG.warn("Exception processing " + logfiles[i].getPath() +
-            " -- continuing. Possible DATA LOSS!", e);
+          e = RemoteExceptionHandler.checkIOException(e);
+          if (!(e instanceof EOFException)) {
+            LOG.warn("Exception processing " + logfiles[i].getPath() +
+                " -- continuing. Possible DATA LOSS!", e);
+          }
         } finally {
           try {
             in.close();

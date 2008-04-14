@@ -4,6 +4,8 @@ Unreleased changes
   BUG FIXES
    HBASE-577   NPE getting scanner
    HBASE-574   HBase does not load hadoop native libs (Rong-En Fan via Stack).
+   HBASE-11    Unexpected exits corrupt DFS - best we can do until we have at
+               least a subset of HADOOP-1700
    HBASE-573   HBase does not read hadoop-*.xml for dfs configuration after
                moving out hadoop/contrib
 
