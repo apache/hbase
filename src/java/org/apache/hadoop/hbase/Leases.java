@@ -133,17 +133,18 @@ public class Leases {
    * @param holderId id of lease holder
    * @param resourceId id of resource being leased
    * @param listener listener that will process lease expirations
+   * @throws LeaseStillHeldException 
    */
   public void createLease(final long holderId, final long resourceId,
-      final LeaseListener listener) {
+      final LeaseListener listener)
+  throws LeaseStillHeldException {
     LeaseName name = null;
     synchronized(leases) {
       synchronized(sortedLeases) {
         Lease lease = new Lease(holderId, resourceId, listener);
         name = lease.getLeaseName();
         if(leases.get(name) != null) {
-          throw new AssertionError("Impossible state for createLease(): " +
-            "Lease " + name + " is still held.");
+          throw new LeaseStillHeldException(name.toString());
         }
         leases.put(name, lease);
         sortedLeases.add(lease);
@@ -298,6 +299,22 @@ public class Leases {
       }
       // Objects are equal
       return 0;
+    }
+  }
+
+  /**
+   * Thrown if we are asked create a lease but lease on passed name already
+   * exists.
+   */
+  public static class LeaseStillHeldException extends IOException {
+    private final String leaseName;
+    
+    public LeaseStillHeldException(final String name) {
+      this.leaseName = name;
+    }
+    
+    public String getName() {
+      return this.leaseName;
     }
   }
   

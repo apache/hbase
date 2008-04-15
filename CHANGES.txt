@@ -8,6 +8,8 @@ Unreleased changes
                least a subset of HADOOP-1700
    HBASE-573   HBase does not read hadoop-*.xml for dfs configuration after
                moving out hadoop/contrib
+   HBASE-12    when hbase regionserver restarts, it says "impossible state for
+               createLease()"
 
 Release 0.1.1 - 04/11/2008
 

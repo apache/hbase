@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Member;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -49,6 +50,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.AlreadyBeingCreatedException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
@@ -1039,11 +1041,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           LOG.debug("Done telling master we are up");
         }
         break;
-      } catch(IOException e) {
+      } catch (Leases.LeaseStillHeldException e) {
+        LOG.info("Lease " + e.getName() + " already held on master. Check " +
+          "DNS configuration so that all region servers are" +
+          "reporting their true IPs and not 127.0.0.1. Otherwise, this" +
+          "problem should resolve itself after the lease period of " +
+          this.conf.get("hbase.master.lease.period")
+          + " seconds expires over on the master");
+      } catch (IOException e) {
         LOG.warn("error telling master we are up", e);
-        sleeper.sleep(lastMsg);
-        continue;
       }
+      sleeper.sleep(lastMsg);
     }
     return result;
   }
