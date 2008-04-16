@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Member;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -50,7 +49,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.dfs.AlreadyBeingCreatedException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
@@ -254,8 +252,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           if (e == null) {
             continue;
           }
-          e.getRegion().compactIfNeeded();
-          split(e.getRegion());
+          synchronized (compactSplitLock) { // Don't interrupt us while working
+            e.getRegion().compactIfNeeded();
+            split(e.getRegion());
+          }
         } catch (InterruptedException ex) {
           continue;
         } catch (IOException ex) {

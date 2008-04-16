@@ -11,6 +11,7 @@ Unreleased changes
    HBASE-12    when hbase regionserver restarts, it says "impossible state for
                createLease()"
    HBASE-575   master dies with stack overflow error if rootdir isn't qualified
+   HBASE-500   Regionserver stuck on exit
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
