@@ -12,6 +12,8 @@ Unreleased changes
                createLease()"
    HBASE-575   master dies with stack overflow error if rootdir isn't qualified
    HBASE-500   Regionserver stuck on exit
+   HBASE-582   HBase 554 forgot to clear results on each iteration caused by a filter
+               (Clint Morgan via Stack)
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
