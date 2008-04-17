@@ -18,6 +18,7 @@ Unreleased changes
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
+   HBASE-578   Upgrade branch to 0.16.3 hadoop.
 
 
 Release 0.1.1 - 04/11/2008
