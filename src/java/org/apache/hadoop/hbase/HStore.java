@@ -21,12 +21,15 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Map.Entry;
@@ -39,8 +42,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -69,77 +72,105 @@ public class HStore implements HConstants {
   static final Log LOG = LogFactory.getLog(HStore.class);
 
   /**
-   * The Memcache holds in-memory modifications to the HRegion.  This is really a
-   * wrapper around a TreeMap that helps us when staging the Memcache out to disk.
+   * The Memcache holds in-memory modifications to the HRegion.
+   * Keeps a current map.  When asked to flush the map, current map is moved
+   * to snapshot and is cleared.  We continue to serve edits out of new map
+   * and backing snapshot until flusher reports in that the flush succeeded. At
+   * this point we let the snapshot go.
    */
   static class Memcache {
-
     // Note that since these structures are always accessed with a lock held,
-    // no additional synchronization is required.
+    // so no additional synchronization is required.
 
-    @SuppressWarnings("hiding")
-    private final SortedMap<HStoreKey, byte[]> memcache =
-      Collections.synchronizedSortedMap(new TreeMap<HStoreKey, byte []>());
-      
-    volatile SortedMap<HStoreKey, byte[]> snapshot;
-      
-    @SuppressWarnings("hiding")
-    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    // The currently active sorted map of edits.
+    private volatile SortedMap<HStoreKey, byte[]> mc =
+      createSynchronizedSortedMap();
+ 
+    // Snapshot of memcache.  Made for flusher.
+    private volatile SortedMap<HStoreKey, byte[]> snapshot =
+      createSynchronizedSortedMap();
 
-    /**
-     * Constructor
+    private final ReentrantReadWriteLock mc_lock = new ReentrantReadWriteLock();
+
+    /*
+     * Utility method.
+     * @return sycnhronized sorted map of HStoreKey to byte arrays.
      */
-    Memcache() {
-      snapshot = 
-        Collections.synchronizedSortedMap(new TreeMap<HStoreKey, byte []>());
+    private static SortedMap<HStoreKey, byte[]> createSynchronizedSortedMap() {
+      return Collections.synchronizedSortedMap(new TreeMap<HStoreKey, byte []>());
     }
 
     /**
      * Creates a snapshot of the current Memcache
      */
-    void snapshot() {
-      this.lock.writeLock().lock();
+    SortedMap<HStoreKey, byte[]> snapshot() {
+      this.mc_lock.writeLock().lock();
       try {
-        synchronized (memcache) {
-          if (memcache.size() != 0) {
-            snapshot.putAll(memcache);
-            memcache.clear();
-          }
+        // If snapshot has entries, then flusher failed or didn't call cleanup.
+        if (this.snapshot.size() > 0) {
+          LOG.debug("Returning existing snapshot. Either the snapshot was run " +
+            "by the region -- normal operation but to be fixed -- or there is " +
+            "another ongoing flush or did we fail last attempt?");
+          return this.snapshot;
         }
+        // We used to synchronize on the memcache here but we're inside a
+        // write lock so removed it. Comment is left in case removal was a
+        // mistake. St.Ack
+        if (this.mc.size() != 0) {
+          this.snapshot = this.mc;
+          this.mc = createSynchronizedSortedMap();
+        }
+        return this.snapshot;
       } finally {
-        this.lock.writeLock().unlock();
+        this.mc_lock.writeLock().unlock();
       }
     }
-    
-    /**
-     * @return memcache snapshot
-     */
-    SortedMap<HStoreKey, byte[]> getSnapshot() {
-      this.lock.writeLock().lock();
-      try {
-        SortedMap<HStoreKey, byte[]> currentSnapshot = snapshot;
-        snapshot = 
-          Collections.synchronizedSortedMap(new TreeMap<HStoreKey, byte []>());
-        
-        return currentSnapshot;
 
-      } finally {
-        this.lock.writeLock().unlock();
-      }
-    }
+   /**
+    * Return the current snapshot.
+    * @return Return snapshot.
+    * @see {@link #snapshot()}
+    * @see {@link #clearSnapshot(SortedMap)}
+    */
+   SortedMap<HStoreKey, byte[]> getSnapshot() {
+     return this.snapshot;
+   }
+
+   /**
+    * The passed snapshot was successfully persisted; it can be let go.
+    * @param ss The snapshot to clean out.
+    * @throws UnexpectedException
+    * @see {@link #snapshot()}
+    */
+   void clearSnapshot(final SortedMap<HStoreKey, byte []> ss)
+   throws UnexpectedException {
+     this.mc_lock.writeLock().lock();
+     try {
+       if (this.snapshot != ss) {
+         throw new UnexpectedException("Current snapshot is " +
+           this.snapshot + ", was passed " + ss);
+       }
+       // OK. Passed in snapshot is same as current snapshot.  If not-empty,
+       // create a new snapshot and let the old one go.
+       if (ss.size() != 0) {
+         this.snapshot = createSynchronizedSortedMap();
+       }
+     } finally {
+       this.mc_lock.writeLock().unlock();
+     }
+   }
     
     /**
-     * Store a value.  
+     * Write an update
      * @param key
      * @param value
      */
     void add(final HStoreKey key, final byte[] value) {
-      this.lock.readLock().lock();
+      this.mc_lock.readLock().lock();
       try {
-        memcache.put(key, value);
-        
+        mc.put(key, value);
       } finally {
-        this.lock.readLock().unlock();
+        this.mc_lock.readLock().unlock();
       }
     }
   
@@ -150,22 +181,83 @@ public class HStore implements HConstants {
      * @return An array of byte arrays ordered by timestamp.
      */
     List<byte[]> get(final HStoreKey key, final int numVersions) {
-      this.lock.readLock().lock();
+      this.mc_lock.readLock().lock();
       try {
         List<byte []> results;
-        synchronized (memcache) {
-          results = internalGet(memcache, key, numVersions);
+        // The synchronizations here are because internalGet iterates
+       synchronized (this.mc) {
+         results = internalGet(this.mc, key, numVersions);
         }
         synchronized (snapshot) {
           results.addAll(results.size(),
               internalGet(snapshot, key, numVersions - results.size()));
         }
         return results;
-        
       } finally {
-        this.lock.readLock().unlock();
+        this.mc_lock.readLock().unlock();
       }
     }
+   
+   
+   /**
+    * @param a
+    * @param b
+    * @return Return lowest of a or b or null if both a and b are null
+    */
+   @SuppressWarnings("unchecked")
+   private WritableComparable getLowest(final WritableComparable a,
+       final WritableComparable b) {
+     if (a == null) {
+       return b;
+     }
+     if (b == null) {
+       return a;
+     }
+     return a.compareTo(b) <= 0? a: b;
+   }
+ 
+   /**
+    * @param row Find the row that comes after this one.
+    * @return Next row or null if none found
+    */
+   Text getNextRow(final Text row) {
+     this.mc_lock.readLock().lock();
+     try {
+       return (Text)getLowest(getNextRow(row, this.mc),
+         getNextRow(row, this.snapshot));
+     } finally {
+       this.mc_lock.readLock().unlock();
+     }
+   }
+   
+   /*
+    * @param row Find row that follows this one.
+    * @param map Map to look in for a row beyond <code>row</code>.
+    * This method synchronizes on passed map while iterating it.
+    * @return Next row or null if none found.
+    */
+   private Text getNextRow(final Text row,
+       final SortedMap<HStoreKey, byte []> map) {
+     Text result = null;
+     // Synchronize on the map to make the tailMap making 'safe'.
+     synchronized (map) {
+       // Make an HSK with maximum timestamp so we get past most of the current
+       // rows cell entries.
+       HStoreKey hsk = new HStoreKey(row, HConstants.LATEST_TIMESTAMP);
+       SortedMap<HStoreKey, byte []> tailMap = map.tailMap(hsk);
+       // Iterate until we fall into the next row; i.e. move off current row
+       for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
+         HStoreKey itKey = es.getKey();
+         if (itKey.getRow().compareTo(row) <= 0) {
+           continue;
+         }
+         // Note: Not suppressing deletes.
+         result = itKey.getRow();
+         break;
+       }
+     }
+     return result;
+   }
 
     /**
      * Return all the available columns for the given key.  The key indicates a 
@@ -178,17 +270,17 @@ public class HStore implements HConstants {
     void getFull(HStoreKey key, Map<Text, Long> deletes, 
       SortedMap<Text, byte[]> results) {
       
-      this.lock.readLock().lock();
+      this.mc_lock.readLock().lock();
       try {
-        synchronized (memcache) {
-          internalGetFull(memcache, key, deletes, results);
+        synchronized (mc) {
+          internalGetFull(mc, key, deletes, results);
         }
         synchronized (snapshot) {
           internalGetFull(snapshot, key, deletes, results);
         }
 
       } finally {
-        this.lock.readLock().unlock();
+        this.mc_lock.readLock().unlock();
       }
     }
 
@@ -224,20 +316,23 @@ public class HStore implements HConstants {
     /**
      * Find the key that matches <i>row</i> exactly, or the one that immediately
      * preceeds it.
+     * @param row Row to look for.
+     * @param candidateKeys Map of candidate keys (Accumulation over lots of
+     * lookup over stores and memcaches)
      */
     void getRowKeyAtOrBefore(final Text row, 
       SortedMap<HStoreKey, Long> candidateKeys) {
-      this.lock.readLock().lock();
+      this.mc_lock.readLock().lock();
       
       try {
-        synchronized (memcache) {
-          internalGetRowKeyAtOrBefore(memcache, row, candidateKeys);
+        synchronized (mc) {
+          internalGetRowKeyAtOrBefore(mc, row, candidateKeys);
         }
         synchronized (snapshot) {
           internalGetRowKeyAtOrBefore(snapshot, row, candidateKeys);
         }
       } finally {
-        this.lock.readLock().unlock();
+        this.mc_lock.readLock().unlock();
       }
     }
 
@@ -396,11 +491,11 @@ public class HStore implements HConstants {
      * @throws IOException
      */
     List<HStoreKey> getKeys(final HStoreKey origin, final int versions) {
-      this.lock.readLock().lock();
+      this.mc_lock.readLock().lock();
       try {
         List<HStoreKey> results;
-        synchronized (memcache) {
-          results = internalGetKeys(this.memcache, origin, versions);
+        synchronized (mc) {
+          results = internalGetKeys(this.mc, origin, versions);
         }
         synchronized (snapshot) {
           results.addAll(results.size(), internalGetKeys(snapshot, origin,
@@ -410,7 +505,7 @@ public class HStore implements HConstants {
         return results;
         
       } finally {
-        this.lock.readLock().unlock();
+        this.mc_lock.readLock().unlock();
       }
     }
 
@@ -470,31 +565,20 @@ public class HStore implements HConstants {
      * the cell has been deleted.
      */
     boolean isDeleted(final HStoreKey key) {
-      return HLogEdit.isDeleted(this.memcache.get(key));
+      return HLogEdit.isDeleted(this.mc.get(key));
     }
 
     /**
      * @return a scanner over the keys in the Memcache
      */
     HInternalScannerInterface getScanner(long timestamp,
-        Text targetCols[], Text firstRow) throws IOException {
-
-      // Here we rely on ReentrantReadWriteLock's ability to acquire multiple
-      // locks by the same thread and to be able to downgrade a write lock to
-      // a read lock. We need to hold a lock throughout this method, but only
-      // need the write lock while creating the memcache snapshot
-      
-      this.lock.writeLock().lock(); // hold write lock during memcache snapshot
-      snapshot();                       // snapshot memcache
-      this.lock.readLock().lock();      // acquire read lock
-      this.lock.writeLock().unlock();   // downgrade to read lock
+       Text targetCols[], Text firstRow)
+    throws IOException {
+      this.mc_lock.readLock().lock();
       try {
-        // Prevent a cache flush while we are constructing the scanner
-
         return new MemcacheScanner(timestamp, targetCols, firstRow);
-      
       } finally {
-        this.lock.readLock().unlock();
+        this.mc_lock.readLock().unlock();
       }
     }
 
@@ -503,115 +587,73 @@ public class HStore implements HConstants {
     // It lets the caller scan the contents of the Memcache.
     //////////////////////////////////////////////////////////////////////////////
 
-    class MemcacheScanner extends HAbstractScanner {
-      SortedMap<HStoreKey, byte []> backingMap;
-      Iterator<HStoreKey> keyIterator;
-
-      @SuppressWarnings("unchecked")
+    private class MemcacheScanner extends HAbstractScanner {
+       private Text currentRow;
+       private Set<Text> columns = null;
+        
       MemcacheScanner(final long timestamp, final Text targetCols[],
-          final Text firstRow) throws IOException {
-
+        final Text firstRow)
+      throws IOException {
+        // Call to super will create ColumnMatchers and whether this is a regex
+        // scanner or not.  Will also save away timestamp.  Also sorts rows.
         super(timestamp, targetCols);
-        try {
-          this.backingMap = new TreeMap<HStoreKey, byte[]>();
-          this.backingMap.putAll(snapshot);
-          this.keys = new HStoreKey[1];
-          this.vals = new byte[1][];
-
-          // Generate list of iterators
-
-          HStoreKey firstKey = new HStoreKey(firstRow);
-            if (firstRow != null && firstRow.getLength() != 0) {
-              keyIterator =
-                backingMap.tailMap(firstKey).keySet().iterator();
-
-            } else {
-              keyIterator = backingMap.keySet().iterator();
-            }
-
-            while (getNext(0)) {
-              if (!findFirstRow(0, firstRow)) {
-                continue;
-              }
-              if (columnMatch(0)) {
-                break;
-              }
-            }
-        } catch (RuntimeException ex) {
-          LOG.error("error initializing Memcache scanner: ", ex);
-          close();
-          IOException e = new IOException("error initializing Memcache scanner");
-          e.initCause(ex);
-          throw e;
-
-        } catch(IOException ex) {
-          LOG.error("error initializing Memcache scanner: ", ex);
-          close();
-          throw ex;
-        }
-      }
-
-      /**
-       * The user didn't want to start scanning at the first row. This method
-       * seeks to the requested row.
-       *
-       * @param i which iterator to advance
-       * @param firstRow seek to this row
-       * @return true if this is the first row
-       */
-      @Override
-      boolean findFirstRow(int i, Text firstRow) {
-        return firstRow.getLength() == 0 ||
-        keys[i].getRow().compareTo(firstRow) >= 0;
-      }
-
-      /**
-       * Get the next value from the specified iterator.
-       * 
-       * @param i Which iterator to fetch next value from
-       * @return true if there is more data available
-       */
-      @Override
-      boolean getNext(int i) {
-        boolean result = false;
-        while (true) {
-          if (!keyIterator.hasNext()) {
-            closeSubScanner(i);
-            break;
-          }
-          // Check key is < than passed timestamp for this scanner.
-          HStoreKey hsk = keyIterator.next();
-          if (hsk == null) {
-            throw new NullPointerException("Unexpected null key");
-          }
-          if (hsk.getTimestamp() <= this.timestamp) {
-            this.keys[i] = hsk;
-            this.vals[i] = backingMap.get(keys[i]);
-            result = true;
-            break;
+        this.currentRow = firstRow;
+        this.columns = null;
+        if (!isWildcardScanner()) {
+          this.columns = new HashSet<Text>();
+          for (int i = 0; i < targetCols.length; i++) {
+            this.columns.add(targetCols[i]);
           }
         }
-        return result;
       }
 
-      /** Shut down an individual map iterator. */
-      @Override
-      void closeSubScanner(int i) {
-        keyIterator = null;
-        keys[i] = null;
-        vals[i] = null;
-        backingMap = null;
-      }
-
-      /** Shut down map iterators */
-      public void close() {
-        if (!scannerClosed) {
-          if(keyIterator != null) {
-            closeSubScanner(0);
-          }
-          scannerClosed = true;
-        }
-      }
+      public boolean next(HStoreKey key, SortedMap<Text, byte []> results)
+      throws IOException {
+         if (this.scannerClosed) {
+           return false;
+       }
+       Map<Text, Long> deletes = new HashMap<Text, Long>();
+       // Catch all row results in here.  These results are ten filtered to
+       // ensure they match column name regexes, or if none, added to results.
+       SortedMap<Text, byte []> rowResults = new TreeMap<Text, byte[]>();
+       if (results.size() > 0) {
+         results.clear();
+       }
+       while (results.size() <= 0 &&
+           (this.currentRow = getNextRow(this.currentRow)) != null) {
+         if (deletes.size() > 0) {
+           deletes.clear();
+         }
+         if (rowResults.size() > 0) {
+           rowResults.clear();
+         }
+         key.setRow(this.currentRow);
+         key.setVersion(this.timestamp);
+         getFull(key, deletes, rowResults);
+         for (Map.Entry<Text, byte[]> e: rowResults.entrySet()) {
+           Text column = e.getKey();
+           byte [] c = e.getValue();
+           if (isWildcardScanner()) {
+             // Check the results match.  We only check columns, not timestamps.
+             // We presume that timestamps have been handled properly when we
+             // called getFull.
+             if (!columnMatch(column)) {
+               continue;
+             }
+           } else if (!this.columns.contains(column)) {
+             // Don't include columns not asked for.
+             continue;
+           }
+           results.put(column, c);
+         }
+       }
+       return results.size() > 0;
+     }
+     public void close() {
+       if (!scannerClosed) {
+         scannerClosed = true;
+       }
+     }
     }
   }
   
@@ -1118,15 +1160,15 @@ public class HStore implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
   // Flush changes to disk
   //////////////////////////////////////////////////////////////////////////////
-
   /**
-   * Prior to doing a cache flush, we need to snapshot the memcache. Locking is
-   * handled by the memcache.
+   * Prior to doing a cache flush, we need to snapshot the memcache.
+   * TODO: This method is ugly.  Why let client of HStore run snapshots.  How
+   * do we know they'll be cleaned up?
    */
   void snapshotMemcache() {
     this.memcache.snapshot();
   }
-  
+    
   /**
    * Write out a brand-new set of items to the disk.
    *
@@ -1141,17 +1183,24 @@ public class HStore implements HConstants {
    * @throws IOException
    */
   void flushCache(final long logCacheFlushId) throws IOException {
-      internalFlushCache(memcache.getSnapshot(), logCacheFlushId);
+    SortedMap<HStoreKey, byte []> cache = this.memcache.snapshot();
+    internalFlushCache(cache, logCacheFlushId);
+    // If an exception happens flushing, we let it out without clearing
+    // the memcache snapshot.  The old snapshot will be returned when we say
+    // 'snapshot', the next time flush comes around.
+    this.memcache.clearSnapshot(cache);
   }
   
   private void internalFlushCache(SortedMap<HStoreKey, byte []> cache,
       long logCacheFlushId) throws IOException {
     
+    // TODO:  We can fail in the below block before we complete adding this
+    // flush to list of store files.  Add cleanup of anything put on filesystem
+    // if we fail.
     synchronized(flushLock) {
       // A. Write the Maps out to the disk
       HStoreFile flushedFile = new HStoreFile(conf, fs, basedir,
         info.getEncodedName(), family.getFamilyName(), -1L, null);
-      String name = flushedFile.toString();
       MapFile.Writer out = flushedFile.getWriter(this.fs, this.compression,
         this.bloomFilter);
       
@@ -1198,7 +1247,7 @@ public class HStore implements HConstants {
             flushedFile.getReader(this.fs, this.bloomFilter));
         this.storefiles.put(flushid, flushedFile);
         if(LOG.isDebugEnabled()) {
-          LOG.debug("Added " + name + " with " + entries +
+          LOG.debug("Added " + flushedFile.toString() + " with " + entries +
             " entries, sequence id " + logCacheFlushId + ", and size " +
             StringUtils.humanReadableInt(flushedFile.length()) + " for " +
             this.storeName);
@@ -1919,7 +1968,7 @@ public class HStore implements HConstants {
       }
       
       // finally, check the memcache
-      memcache.getRowKeyAtOrBefore(row, candidateKeys);
+      this.memcache.getRowKeyAtOrBefore(row, candidateKeys);
       
       // return the best key from candidateKeys
       if (!candidateKeys.isEmpty()) {
@@ -2290,10 +2339,14 @@ public class HStore implements HConstants {
   }
 
   /**
-   * A scanner that iterates through the HStore files
+   * A scanner that iterates through HStore files
    */
   private class StoreFileScanner extends HAbstractScanner {
-    @SuppressWarnings("hiding")
+    // Keys retrieved from the sources
+    private HStoreKey keys[];
+    // Values that correspond to those keys
+    private byte [][] vals;
+
     private MapFile.Reader[] readers;
     
     StoreFileScanner(long timestamp, Text[] targetCols, Text firstRow)
@@ -2335,6 +2388,99 @@ public class HStore implements HConstants {
         throw e;
       }
     }
+   
+   /**
+    * For a particular column i, find all the matchers defined for the column.
+    * Compare the column family and column key using the matchers. The first one
+    * that matches returns true. If no matchers are successful, return false.
+    * 
+    * @param i index into the keys array
+    * @return true if any of the matchers for the column match the column family
+    * and the column key.
+    * @throws IOException
+    */
+   boolean columnMatch(int i) throws IOException {
+     return columnMatch(keys[i].getColumn());
+   }
+ 
+   /**
+    * @param key The key that matched
+    * @param results All the results for <code>key</code>
+    * @return true if a match was found
+    * @throws IOException
+    * 
+    * @see org.apache.hadoop.hbase.regionserver.InternalScanner#next(org.apache.hadoop.hbase.HStoreKey, java.util.SortedMap)
+    */
+   @Override
+   public boolean next(HStoreKey key, SortedMap<Text, byte []> results)
+   throws IOException {
+     if (scannerClosed) {
+       return false;
+     }
+     // Find the next row label (and timestamp)
+     Text chosenRow = null;
+     long chosenTimestamp = -1;
+     for(int i = 0; i < keys.length; i++) {
+       if((keys[i] != null)
+           && (columnMatch(i))
+           && (keys[i].getTimestamp() <= this.timestamp)
+           && ((chosenRow == null)
+               || (keys[i].getRow().compareTo(chosenRow) < 0)
+               || ((keys[i].getRow().compareTo(chosenRow) == 0)
+                   && (keys[i].getTimestamp() > chosenTimestamp)))) {
+         chosenRow = new Text(keys[i].getRow());
+         chosenTimestamp = keys[i].getTimestamp();
+       }
+     }
+ 
+     // Grab all the values that match this row/timestamp
+     boolean insertedItem = false;
+     if(chosenRow != null) {
+       key.setRow(chosenRow);
+       key.setVersion(chosenTimestamp);
+       key.setColumn(new Text(""));
+ 
+       for(int i = 0; i < keys.length; i++) {
+         // Fetch the data
+         while((keys[i] != null)
+             && (keys[i].getRow().compareTo(chosenRow) == 0)) {
+ 
+           // If we are doing a wild card match or there are multiple matchers
+           // per column, we need to scan all the older versions of this row
+           // to pick up the rest of the family members
+           
+           if(!isWildcardScanner()
+               && !isMultipleMatchScanner()
+               && (keys[i].getTimestamp() != chosenTimestamp)) {
+             break;
+           }
+ 
+           if(columnMatch(i)) {              
+             // We only want the first result for any specific family member
+             if(!results.containsKey(keys[i].getColumn())) {
+               results.put(new Text(keys[i].getColumn()), vals[i]);
+               insertedItem = true;
+             }
+           }
+ 
+           if(!getNext(i)) {
+             closeSubScanner(i);
+           }
+         }
+ 
+         // Advance the current scanner beyond the chosen row, to
+         // a valid timestamp, so we're ready next time.
+         
+         while((keys[i] != null)
+             && ((keys[i].getRow().compareTo(chosenRow) <= 0)
+                 || (keys[i].getTimestamp() > this.timestamp)
+                 || (! columnMatch(i)))) {
+           getNext(i);
+         }
+       }
+     }
+     return insertedItem;
+   }
 
     /**
      * The user didn't want to start scanning at the first row. This method
@@ -2344,7 +2490,6 @@ public class HStore implements HConstants {
      * @param firstRow  - seek to this row
      * @return          - true if this is the first row or if the row was not found
      */
-    @Override
     boolean findFirstRow(int i, Text firstRow) throws IOException {
       ImmutableBytesWritable ibw = new ImmutableBytesWritable();
       HStoreKey firstKey
@@ -2367,7 +2512,6 @@ public class HStore implements HConstants {
      * @param i - which reader to fetch next value from
      * @return - true if there is more data available
      */
-    @Override
     boolean getNext(int i) throws IOException {
       boolean result = false;
       ImmutableBytesWritable ibw = new ImmutableBytesWritable();
@@ -2386,7 +2530,6 @@ public class HStore implements HConstants {
     }
     
     /** Close down the indicated reader. */
-    @Override
     void closeSubScanner(int i) {
       try {
         if(readers[i] != null) {

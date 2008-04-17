@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.rmi.UnexpectedException;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.SortedMap;
@@ -72,13 +73,14 @@ public class TestHMemcache extends TestCase {
     }
   }
 
-  private void runSnapshot(final HStore.Memcache hmc) {
+  private void runSnapshot(final HStore.Memcache hmc)
+  throws UnexpectedException {
     // Save off old state.
-    int oldHistorySize = hmc.snapshot.size();
-    hmc.snapshot();
+    int oldHistorySize = hmc.getSnapshot().size();
+    SortedMap<HStoreKey, byte[]> ss = hmc.snapshot();
     // Make some assertions about what just happened.
-    assertTrue("History size has not increased",
-        oldHistorySize < hmc.snapshot.size());
+    assertTrue("History size has not increased", oldHistorySize < ss.size());
+    hmc.clearSnapshot(ss);
   }
 
   /** 
@@ -91,9 +93,8 @@ public class TestHMemcache extends TestCase {
     for (int i = 0; i < snapshotCount; i++) {
       addRows(this.hmemcache);
       runSnapshot(this.hmemcache);
-      this.hmemcache.getSnapshot();
-      assertEquals("History not being cleared", 0,
-          this.hmemcache.snapshot.size());
+      SortedMap<HStoreKey, byte[]> ss = this.hmemcache.getSnapshot();
+      assertEquals("History not being cleared", 0, ss.size());
     }
   }
   
@@ -128,7 +129,41 @@ public class TestHMemcache extends TestCase {
       isExpectedRow(i, all);
     }
   }
-  
+
+  /** Test getNextRow from memcache
+   * @throws UnsupportedEncodingException 
+   */
+  public void testGetNextRow() throws UnsupportedEncodingException {
+    addRows(this.hmemcache);
+    Text closestToEmpty = this.hmemcache.getNextRow(HConstants.EMPTY_TEXT);
+    assertEquals(closestToEmpty, getRowName(0));
+    for (int i = 0; i < ROW_COUNT; i++) {
+      Text nr = this.hmemcache.getNextRow(getRowName(i));
+      if (i + 1 == ROW_COUNT) {
+        assertEquals(nr, null);
+      } else {
+        assertEquals(nr, getRowName(i + 1));
+      }
+    }
+  }
+
+  /** Test getClosest from memcache
+   * @throws UnsupportedEncodingException 
+   */
+  public void testGetClosest() throws UnsupportedEncodingException {
+    addRows(this.hmemcache);
+    Text closestToEmpty = this.hmemcache.getNextRow(HConstants.EMPTY_TEXT);
+    assertEquals(closestToEmpty, getRowName(0));
+    for (int i = 0; i < ROW_COUNT; i++) {
+      Text nr = this.hmemcache.getNextRow(getRowName(i));
+      if (i + 1 == ROW_COUNT) {
+        assertEquals(nr, null);
+      } else {
+        assertEquals(nr, getRowName(i + 1));
+      }
+    }
+  }
+
   /**
    * Test memcache scanner
    * @throws IOException

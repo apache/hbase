@@ -33,7 +33,6 @@ import org.apache.hadoop.io.Text;
 
 /**
  * Abstract base class that implements the HScannerInterface.
- * Used by the concrete HMemcacheScanner and HStoreScanners
  */
 public abstract class HAbstractScanner implements HInternalScannerInterface {
   final Log LOG = LogFactory.getLog(this.getClass().getName());
@@ -111,11 +110,6 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   
   protected boolean scannerClosed = false;                      // True when scanning is done
   
-  // Keys retrieved from the sources
-  protected HStoreKey keys[];
-  // Values that correspond to those keys
-  protected byte [][] vals;
-  
   protected long timestamp;                                     // The timestamp to match entries against
   private boolean wildcardMatch;
   private boolean multipleMatchers;
@@ -145,18 +139,16 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   }
 
   /**
-   * For a particular column i, find all the matchers defined for the column.
+   * For a particular column, find all the matchers defined for the column.
    * Compare the column family and column key using the matchers. The first one
    * that matches returns true. If no matchers are successful, return false.
    * 
-   * @param i index into the keys array
-   * @return true  - if any of the matchers for the column match the column family
-   *                 and the column key.
-   *                 
+   * @param column Column to test
+   * @return true if any of the matchers for the column match the column family
+   * and the column key.
    * @throws IOException
    */
-  boolean columnMatch(int i) throws IOException {
-    Text column = keys[i].getColumn();
+  protected boolean columnMatch(final Text column) throws IOException {
     Vector<ColumnMatcher> matchers =
       okCols.get(HStoreKey.extractFamily(column));
     if(matchers == null) {
@@ -170,18 +162,6 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
     return false;
   }
   
-  /**
-   * If the user didn't want to start scanning at the first row, this method
-   * seeks to the requested row.
-   */
-  abstract boolean findFirstRow(int i, Text firstRow) throws IOException;
-  
-  /** The concrete implementations provide a mechanism to find the next set of values */
-  abstract boolean getNext(int i) throws IOException;
-  
-  /** Mechanism used by concrete implementation to shut down a particular scanner */
-  abstract void closeSubScanner(int i);
-  
   /** {@inheritDoc} */
   public boolean isWildcardScanner() {
     return this.wildcardMatch;
@@ -192,87 +172,9 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
     return this.multipleMatchers;
   }
   
-  /**
-   * Get the next set of values for this scanner.
-   * 
-   * @param key The key that matched
-   * @param results All the results for <code>key</code>
-   * @return true if a match was found
-   * @throws IOException
-   * 
-   * @see org.apache.hadoop.hbase.HScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.SortedMap)
-   */
-  public boolean next(HStoreKey key, SortedMap<Text, byte []> results)
-  throws IOException {
-    if (scannerClosed) {
-      return false;
-    }
-    // Find the next row label (and timestamp)
-    Text chosenRow = null;
-    long chosenTimestamp = -1;
-    for(int i = 0; i < keys.length; i++) {
-      if((keys[i] != null)
-          && (columnMatch(i))
-          && (keys[i].getTimestamp() <= this.timestamp)
-          && ((chosenRow == null)
-              || (keys[i].getRow().compareTo(chosenRow) < 0)
-              || ((keys[i].getRow().compareTo(chosenRow) == 0)
-                  && (keys[i].getTimestamp() > chosenTimestamp)))) {
-        chosenRow = new Text(keys[i].getRow());
-        chosenTimestamp = keys[i].getTimestamp();
-      }
-    }
+  public abstract boolean next(HStoreKey key, SortedMap<Text, byte []> results)
+  throws IOException;
 
-    // Grab all the values that match this row/timestamp
-    boolean insertedItem = false;
-    if(chosenRow != null) {
-      key.setRow(chosenRow);
-      key.setVersion(chosenTimestamp);
-      key.setColumn(new Text(""));
-
-      for(int i = 0; i < keys.length; i++) {
-        // Fetch the data
-        while((keys[i] != null)
-            && (keys[i].getRow().compareTo(chosenRow) == 0)) {
-
-          // If we are doing a wild card match or there are multiple matchers
-          // per column, we need to scan all the older versions of this row
-          // to pick up the rest of the family members
-          
-          if(!wildcardMatch
-              && !multipleMatchers
-              && (keys[i].getTimestamp() != chosenTimestamp)) {
-            break;
-          }
-
-          if(columnMatch(i)) {              
-            // We only want the first result for any specific family member
-            if(!results.containsKey(keys[i].getColumn())) {
-              results.put(new Text(keys[i].getColumn()), vals[i]);
-              insertedItem = true;
-            }
-          }
-
-          if(!getNext(i)) {
-            closeSubScanner(i);
-          }
-        }
-
-        // Advance the current scanner beyond the chosen row, to
-        // a valid timestamp, so we're ready next time.
-        
-        while((keys[i] != null)
-            && ((keys[i].getRow().compareTo(chosenRow) <= 0)
-                || (keys[i].getTimestamp() > this.timestamp)
-                || (! columnMatch(i)))) {
-          getNext(i);
-        }
-      }
-    }
-    return insertedItem;
-  }
-  
-  /** {@inheritDoc} */
   public Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
     throw new UnsupportedOperationException("Unimplemented serverside. " +
       "next(HStoreKey, StortedMap(...) is more efficient");
