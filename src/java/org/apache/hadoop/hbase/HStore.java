@@ -55,6 +55,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.onelab.filter.BloomFilter;
 import org.onelab.filter.CountingBloomFilter;
 import org.onelab.filter.Filter;
@@ -101,26 +102,26 @@ public class HStore implements HConstants {
     }
 
     /**
-     * Creates a snapshot of the current Memcache
+     * Creates a snapshot of the current Memcache.
+     * Snapshot must be cleared by call to {@link #clearSnapshot(SortedMap)}
      */
-    SortedMap<HStoreKey, byte[]> snapshot() {
+    void snapshot() {
       this.mc_lock.writeLock().lock();
       try {
-        // If snapshot has entries, then flusher failed or didn't call cleanup.
+        // If snapshot currently has entries, then flusher failed or didn't call
+        // cleanup.  Log a warning.
         if (this.snapshot.size() > 0) {
-          LOG.debug("Returning existing snapshot. Either the snapshot was run " +
-            "by the region -- normal operation but to be fixed -- or there is " +
-            "another ongoing flush or did we fail last attempt?");
-          return this.snapshot;
+          LOG.debug("Snapshot called again without clearing previous. " +
+            "Doing nothing. Another ongoing flush or did we fail last attempt?");
+        } else {
+          // We used to synchronize on the memcache here but we're inside a
+          // write lock so removed it. Comment is left in case removal was a
+          // mistake. St.Ack
+          if (this.mc.size() != 0) {
+            this.snapshot = this.mc;
+            this.mc = createSynchronizedSortedMap();
+          }
         }
-        // We used to synchronize on the memcache here but we're inside a
-        // write lock so removed it. Comment is left in case removal was a
-        // mistake. St.Ack
-        if (this.mc.size() != 0) {
-          this.snapshot = this.mc;
-          this.mc = createSynchronizedSortedMap();
-        }
-        return this.snapshot;
       } finally {
         this.mc_lock.writeLock().unlock();
       }
@@ -128,6 +129,8 @@ public class HStore implements HConstants {
 
    /**
     * Return the current snapshot.
+    * Called by flusher when it wants to clean up snapshot made by a previous
+     * call to {@link snapshot}
     * @return Return snapshot.
     * @see {@link #snapshot()}
     * @see {@link #clearSnapshot(SortedMap)}
@@ -787,10 +790,6 @@ public class HStore implements HConstants {
       this.bloomFilter = loadOrCreateBloomFilter();
     }
 
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("starting " + storeName);
-    }
-
     // Go through the 'mapdir' and 'infodir' together, make sure that all 
     // MapFiles are in a reliable state.  Every entry in 'mapdir' must have a 
     // corresponding one in 'loginfodir'. Without a corresponding log info
@@ -811,8 +810,8 @@ public class HStore implements HConstants {
     
     this.maxSeqId = getMaxSequenceId(hstoreFiles);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("maximum sequence id for hstore " + storeName + " is " +
-          this.maxSeqId);
+      LOG.debug("Loaded " + hstoreFiles.size() + " file(s) in hstore " +
+        this.storeName + ", max sequence id " + this.maxSeqId);
     }
     
     try {
@@ -836,9 +835,6 @@ public class HStore implements HConstants {
     // taking updates as soon as possible (Once online, can take updates even
     // during a compaction).
 
-    // Move maxSeqId on by one. Why here?  And not in HRegion?
-    this.maxSeqId += 1;
-    
     // Finally, start up all the map readers! (There could be more than one
     // since we haven't compacted yet.)
     for(Map.Entry<Long, HStoreFile> e: this.storefiles.entrySet()) {
@@ -957,10 +953,6 @@ public class HStore implements HConstants {
    */
   private List<HStoreFile> loadHStoreFiles(Path infodir, Path mapdir)
   throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("infodir: " + infodir.toString() + " mapdir: " +
-          mapdir.toString());
-    }
     // Look first at info files.  If a reference, these contain info we need
     // to create the HStoreFile.
     Path infofiles[] = fs.listPaths(new Path[] {infodir});
@@ -999,6 +991,10 @@ public class HStore implements HConstants {
       
       // Found map and sympathetic info file.  Add this hstorefile to result.
       results.add(curfile);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("loaded " + FSUtils.getPath(p) + ", isReference=" +
+          isReference);
+      }
       // Keep list of sympathetic data mapfiles for cleaning info dir in next
       // section.  Make sure path is fully qualified for compare.
       mapfiles.add(mapfile);
@@ -1125,7 +1121,6 @@ public class HStore implements HConstants {
     lock.readLock().lock();
     try {
       this.memcache.add(key, value);
-      
     } finally {
       lock.readLock().unlock();
     }
@@ -1170,29 +1165,31 @@ public class HStore implements HConstants {
   }
     
   /**
-   * Write out a brand-new set of items to the disk.
-   *
-   * We should only store key/vals that are appropriate for the data-columns 
-   * stored in this HStore.
-   *
-   * Also, we are not expecting any reads of this MapFile just yet.
-   *
-   * Return the entire list of HStoreFiles currently used by the HStore.
-   *
+   * Write out current snapshot.  Presumes {@link #snapshot()} has been called
+   * previously.
    * @param logCacheFlushId flush sequence number
+   * @return count of bytes flushed
    * @throws IOException
    */
-  void flushCache(final long logCacheFlushId) throws IOException {
-    SortedMap<HStoreKey, byte []> cache = this.memcache.snapshot();
-    internalFlushCache(cache, logCacheFlushId);
+  long flushCache(final long logCacheFlushId) throws IOException {
+    // Get the snapshot to flush.  Presumes that a call to
+    // this.memcache.snapshot() has happened earlier up in the chain.
+    SortedMap<HStoreKey, byte []> cache = this.memcache.getSnapshot();
+    long flushed = internalFlushCache(cache, logCacheFlushId);
     // If an exception happens flushing, we let it out without clearing
     // the memcache snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
     this.memcache.clearSnapshot(cache);
+    return flushed;
   }
   
-  private void internalFlushCache(SortedMap<HStoreKey, byte []> cache,
+  private long internalFlushCache(SortedMap<HStoreKey, byte []> cache,
       long logCacheFlushId) throws IOException {
+    long flushed = 0;
+    // Don't flush if there are no entries.
+    if (cache.size() == 0) {
+      return flushed;
+    }
     
     // TODO:  We can fail in the below block before we complete adding this
     // flush to list of store files.  Add cleanup of anything put on filesystem
@@ -1223,6 +1220,7 @@ public class HStore implements HConstants {
           if (f.equals(this.family.getFamilyName())) {
             entries++;
             out.append(curkey, new ImmutableBytesWritable(es.getValue()));
+            flushed += HRegion.getEntrySize(curkey, es.getValue());
           }
         }
       } finally {
@@ -1247,15 +1245,15 @@ public class HStore implements HConstants {
             flushedFile.getReader(this.fs, this.bloomFilter));
         this.storefiles.put(flushid, flushedFile);
         if(LOG.isDebugEnabled()) {
-          LOG.debug("Added " + flushedFile.toString() + " with " + entries +
-            " entries, sequence id " + logCacheFlushId + ", and size " +
-            StringUtils.humanReadableInt(flushedFile.length()) + " for " +
-            this.storeName);
+          LOG.debug("Added " + FSUtils.getPath(flushedFile.getMapFilePath()) +
+            " with " + entries +
+            " entries, sequence id " + logCacheFlushId + ", data size " +
+            StringUtils.humanReadableInt(flushed));
         }
       } finally {
         this.lock.writeLock().unlock();
       }
-      return;
+      return flushed;
     }
   }
 
@@ -1306,16 +1304,18 @@ public class HStore implements HConstants {
    */
   boolean compact() throws IOException {
     synchronized (compactLock) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("started compaction of " + storefiles.size() +
-          " files using " + compactionDir.toString() + " for " +
-          this.storeName);
-      }
-
       // Storefiles are keyed by sequence id. The oldest file comes first.
       // We need to return out of here a List that has the newest file first.
       List<HStoreFile> filesToCompact =
         new ArrayList<HStoreFile>(this.storefiles.values());
+      if (filesToCompact.size() == 0) {
+        return true;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("started compaction of " + storefiles.size() +
+          " files " + filesToCompact.toString() + " into " +
+              FSUtils.getPath(compactionDir));
+      }
       Collections.reverse(filesToCompact);
       if (filesToCompact.size() < 1 ||
         (filesToCompact.size() == 1 && !filesToCompact.get(0).isReference())) {
@@ -1379,10 +1379,7 @@ public class HStore implements HConstants {
         // Add info about which file threw exception. It may not be in the
         // exception message so output a message here where we know the
         // culprit.
-        LOG.warn("Failed with " + e.toString() + ": HStoreFile=" +
-          hsf.toString() + (hsf.isReference()? ", Reference=" +
-          hsf.getReference().toString() : "") + " for Store=" +
-          this.storeName);
+        LOG.warn("Failed with " + e.toString() + ": " + hsf.toString());
         closeCompactionReaders(rdrs);
         throw e;
       }
@@ -1638,14 +1635,13 @@ public class HStore implements HConstants {
         HStoreFile finalCompactedFile = new HStoreFile(conf, fs, basedir,
             info.getEncodedName(), family.getFamilyName(), -1, null);
         if(LOG.isDebugEnabled()) {
-          LOG.debug("moving " + compactedFile.toString() + " in " +
-              this.compactionDir.toString() + " to " +
-              finalCompactedFile.toString() + " in " + basedir.toString() +
-              " for " + this.storeName);
+          LOG.debug("moving " +
+            FSUtils.getPath(compactedFile.getMapFilePath()) +
+            " to " + FSUtils.getPath(finalCompactedFile.getMapFilePath()));
         }
         if (!compactedFile.rename(this.fs, finalCompactedFile)) {
           LOG.error("Failed move of compacted file " +
-              finalCompactedFile.toString() + " for " + this.storeName);
+            finalCompactedFile.getMapFilePath().toString());
           return;
         }
 
@@ -2697,7 +2693,7 @@ public class HStore implements HConstants {
 
               // NOTE: We used to do results.putAll(resultSets[i]);
               // but this had the effect of overwriting newer
-              // values with older ones. So now we only insert
+              // values with older onms. So now we only insert
               // a result if the map does not contain the key.
               HStoreKey hsk = new HStoreKey(key.getRow(), EMPTY_TEXT,
                 key.getTimestamp());

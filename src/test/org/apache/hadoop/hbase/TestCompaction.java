@@ -162,6 +162,7 @@ public class TestCompaction extends HBaseTestCase {
     // compacted store and the flush above when we added deletes.  Add more
     // content to be certain.
     createSmallerStoreFile(this.r);
+    LOG.debug("Checking if compaction needed");
     assertTrue(this.r.compactIfNeeded());
     // Assert that the first row is still deleted.
     bytes = this.r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);

@@ -421,7 +421,7 @@ public class HStoreFile implements HConstants {
   @Override
   public String toString() {
     return encodedRegionName + "/" + colFamily + "/" + fileId +
-      (isReference()? "/" + reference.toString(): "");
+      (isReference()? "-" + reference.toString(): "");
   }
   
   /**

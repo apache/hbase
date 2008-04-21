@@ -19,6 +19,8 @@ Unreleased changes
                directory if configuration is not correct
    HBASE-595   RowFilterInterface.rowProcessed() is called *before* fhe final
                filtering decision is made (Clint Morgan via Stack)
+   HBASE-586   HRegion runs HStore memcache snapshotting -- fix it so only HStore
+               knows about workings of memcache
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
