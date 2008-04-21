@@ -2748,9 +2748,6 @@ public class HStore implements HConstants {
         moreToFollow = chosenTimestamp >= 0;
         
         if (dataFilter != null) {
-          if (moreToFollow) {
-            dataFilter.rowProcessed(filtered, chosenRow);
-          }
           if (dataFilter.filterAllRemaining()) {
             moreToFollow = false;
           }

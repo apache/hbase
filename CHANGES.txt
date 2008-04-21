@@ -17,6 +17,8 @@ Unreleased changes
    HBASE-532   Odd interaction between HRegion.get, HRegion.deleteAll and compactions
    HBASE-590   HBase migration tool does not get correct FileSystem or root
                directory if configuration is not correct
+   HBASE-595   RowFilterInterface.rowProcessed() is called *before* fhe final
+               filtering decision is made (Clint Morgan via Stack)
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
