@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,12 +39,11 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Delayed;
-import java.util.concurrent.DelayQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -161,78 +161,22 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     
   }
 
-  /** Queue entry passed to flusher, compactor and splitter threads */
-  class QueueEntry implements Delayed {
-    private final HRegion region;
-    private long expirationTime;
-
-    QueueEntry(HRegion region, long expirationTime) {
-      this.region = region;
-      this.expirationTime = expirationTime;
-    }
-    
-    /** {@inheritDoc} */
-    @Override
-    public boolean equals(Object o) {
-      QueueEntry other = (QueueEntry) o;
-      return this.hashCode() == other.hashCode();
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public int hashCode() {
-      return this.region.getRegionInfo().hashCode();
-    }
-
-    /** {@inheritDoc} */
-    public long getDelay(TimeUnit unit) {
-      return unit.convert(this.expirationTime - System.currentTimeMillis(),
-          TimeUnit.MILLISECONDS);
-    }
-
-    /** {@inheritDoc} */
-    public int compareTo(Delayed o) {
-      long delta = this.getDelay(TimeUnit.MILLISECONDS) -
-        o.getDelay(TimeUnit.MILLISECONDS);
-
-      int value = 0;
-      if (delta > 0) {
-        value = 1;
-        
-      } else if (delta < 0) {
-        value = -1;
-      }
-      return value;
-    }
-
-    /** @return the region */
-    public HRegion getRegion() {
-      return region;
-    }
-
-    /** @param expirationTime the expirationTime to set */
-    public void setExpirationTime(long expirationTime) {
-      this.expirationTime = expirationTime;
-    }
-  }
-
   // Compactions
   final CompactSplitThread compactSplitThread;
-  // Needed during shutdown so we send an interrupt after completion of a
-  // compaction, not in the midst.
-  final Integer compactSplitLock = new Integer(0);
 
-  /** Compact region on request and then run split if appropriate
-   */
+  /** Compact region on request and then run split if appropriate */
   private class CompactSplitThread extends Thread
   implements RegionUnavailableListener {
     private HTable root = null;
     private HTable meta = null;
     private long startTime;
     private final long frequency;
+    private final ReentrantLock workingLock = new ReentrantLock();
     
-    private final BlockingQueue<QueueEntry> compactionQueue =
-      new LinkedBlockingQueue<QueueEntry>();
+    private final BlockingQueue<HRegion> compactionQueue =
+      new LinkedBlockingQueue<HRegion>();
+
+    private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
 
     /** constructor */
     public CompactSplitThread() {
@@ -246,21 +190,28 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     @Override
     public void run() {
       while (!stopRequested.get()) {
-        QueueEntry e = null;
+        HRegion r = null;
         try {
-          e = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
-          if (e == null) {
-            continue;
-          }
-          synchronized (compactSplitLock) { // Don't interrupt us while working
-            e.getRegion().compactIfNeeded();
-            split(e.getRegion());
+          r = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
+          if (r != null) {
+            synchronized (regionsInQueue) {
+              regionsInQueue.remove(r);
+            }
+            workingLock.lock();
+            try {
+              // Don't interrupt us while we are working
+              if (r.compactStores()) {
+                split(r);
+              }
+            } finally {
+              workingLock.unlock();
+            }
           }
         } catch (InterruptedException ex) {
           continue;
         } catch (IOException ex) {
           LOG.error("Compaction failed" +
-              (e != null ? (" for region " + e.getRegion().getRegionName()) : ""),
+              (r != null ? (" for region " + r.getRegionName()) : ""),
               RemoteExceptionHandler.checkIOException(ex));
           if (!checkFileSystem()) {
             break;
@@ -268,25 +219,28 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
         } catch (Exception ex) {
           LOG.error("Compaction failed" +
-              (e != null ? (" for region " + e.getRegion().getRegionName()) : ""),
-              ex);
+              (r != null ? (" for region " + r.getRegionName()) : ""), ex);
           if (!checkFileSystem()) {
             break;
           }
         }
       }
+      regionsInQueue.clear();
+      compactionQueue.clear();
       LOG.info(getName() + " exiting");
     }
     
     /**
-     * @param e QueueEntry for region to be compacted
+     * @param r HRegion store belongs to
      */
-    public void compactionRequested(QueueEntry e) {
-      compactionQueue.add(e);
-    }
-    
-    void compactionRequested(final HRegion r) {
-      compactionRequested(new QueueEntry(r, System.currentTimeMillis()));
+    public void compactionRequested(HRegion r) {
+      LOG.debug("Compaction requested for region: " + r.getRegionName());
+      synchronized (regionsInQueue) {
+        if (!regionsInQueue.contains(r)) {
+          compactionQueue.add(r);
+          regionsInQueue.add(r);
+        }
+      }
     }
     
     private void split(final HRegion region) throws IOException {
@@ -380,20 +334,32 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         lock.writeLock().unlock();
       }
     }
+
+    /**
+     * Only interrupt once it's done with a run through the work loop.
+     */ 
+    public void interruptIfNecessary() {
+      if (workingLock.tryLock()) {
+        this.interrupt();
+      }
+    }
   }
   
   // Cache flushing  
   final Flusher cacheFlusher;
-  // Needed during shutdown so we send an interrupt after completion of a
-  // flush, not in the midst.
-  final Integer cacheFlusherLock = new Integer(0);
-  
-  /** Flush cache upon request */
-  class Flusher extends Thread implements CacheFlushListener {
-    private final DelayQueue<QueueEntry> flushQueue =
-      new DelayQueue<QueueEntry>();
+  /**
+   * Thread that flushes cache on request
+   * @see FlushRequester
+   */
+  private class Flusher extends Thread implements FlushRequester {
+    private final BlockingQueue<HRegion> flushQueue =
+      new LinkedBlockingQueue<HRegion>();
 
+    private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
+    private final ReentrantLock workingLock = new ReentrantLock();
     private final long optionalFlushPeriod;
+    private final long globalMemcacheLimit;
+    private final long globalMemcacheLimitLowMark;
     
     /** constructor */
     public Flusher() {
@@ -401,56 +367,86 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.optionalFlushPeriod = conf.getLong(
         "hbase.regionserver.optionalcacheflushinterval", 30 * 60 * 1000L);
 
+      // default memcache limit of 512MB
+      globalMemcacheLimit = 
+        conf.getLong("hbase.regionserver.globalMemcacheLimit", 512 * 1024 * 1024);
+      // default memcache low mark limit of 256MB, which is half the upper limit
+      globalMemcacheLimitLowMark = 
+        conf.getLong("hbase.regionserver.globalMemcacheLimitLowMark", 
+          globalMemcacheLimit / 2);        
     }
     
     /** {@inheritDoc} */
     @Override
     public void run() {
       while (!stopRequested.get()) {
-        QueueEntry e = null;
+        HRegion r = null;
         try {
-          e = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
-          if (e == null) {
+          enqueueOptionalFlushRegions();
+          r = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
+          if (r == null) {
             continue;
           }
-          synchronized(cacheFlusherLock) { // Don't interrupt while we're working
-            if (e.getRegion().flushcache()) {
-              compactSplitThread.compactionRequested(e);
-            }
-              
-            e.setExpirationTime(System.currentTimeMillis() +
-                optionalFlushPeriod);
-            flushQueue.add(e);
-          }
-          
-          // Now insure that all the active regions are in the queue
-          
-          Set<HRegion> regions = getRegionsToCheck();
-          for (HRegion r: regions) {
-            e = new QueueEntry(r, r.getLastFlushTime() + optionalFlushPeriod);
-            synchronized (flushQueue) {
-              if (!flushQueue.contains(e)) {
-                flushQueue.add(e);
-              }
-            }
-          }
-
-          // Now make sure that the queue only contains active regions
-
-          synchronized (flushQueue) {
-            for (Iterator<QueueEntry> i = flushQueue.iterator(); i.hasNext();  ) {
-              e = i.next();
-              if (!regions.contains(e.getRegion())) {
-                i.remove();
-              }
-            }
+          if (!flushRegion(r, false)) {
+            break;
           }
         } catch (InterruptedException ex) {
           continue;
-
         } catch (ConcurrentModificationException ex) {
           continue;
-
+        } catch (Exception ex) {
+          LOG.error("Cache flush failed" +
+              (r != null ? (" for region " + r.getRegionName()) : ""), ex);
+          if (!checkFileSystem()) {
+            break;
+          }
+        }
+      }
+      regionsInQueue.clear();
+      flushQueue.clear();
+      LOG.info(getName() + " exiting");
+    }
+    
+    /**
+     * Flush a region right away, while respecting concurrency with the async
+     * flushing that is always going on.
+     * 
+     * @param region the region to be flushed
+     * @param removeFromQueue true if the region needs to be removed from the
+     * flush queue. False if called from the main run loop and true if called from
+     * flushSomeRegions to relieve memory pressure from the region server.
+     * 
+     * <p>In the main run loop, regions have already been removed from the flush
+     * queue, and if this method is called for the relief of memory pressure,
+     * this may not be necessarily true. We want to avoid trying to remove 
+     * region from the queue because if it has already been removed, it reqires a
+     * sequential scan of the queue to determine that it is not in the queue.
+     * 
+     * <p>If called from flushSomeRegions, the region may be in the queue but
+     * it may have been determined that the region had a significant amout of 
+     * memory in use and needed to be flushed to relieve memory pressure. In this
+     * case, its flush may preempt the pending request in the queue, and if so,
+     * it needs to be removed from the queue to avoid flushing the region multiple
+     * times.
+     * 
+     * @return true if the region was successfully flushed, false otherwise. If 
+     * false, there will be accompanying log messages explaining why the log was
+     * not flushed.
+     */
+    private boolean flushRegion(HRegion region, boolean removeFromQueue) {
+      synchronized (regionsInQueue) {
+        // take the region out of the set. If removeFromQueue is true, remove it
+        // from the queue too if it is there. This didn't used to be a constraint,
+        // but now that HBASE-512 is in play, we need to try and limit
+        // double-flushing of regions.
+        if (regionsInQueue.remove(region) && removeFromQueue) {
+          flushQueue.remove(region);
+        }
+        workingLock.lock();
+        try {
+          if (region.flushcache()) {
+            compactSplitThread.compactionRequested(region);
+          }
         } catch (DroppedSnapshotException ex) {
           // Cache flush can fail in a few places.  If it fails in a critical
           // section, we get a DroppedSnapshotException and a replay of hlog
@@ -458,42 +454,122 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           // the server.
           LOG.fatal("Replay of hlog required. Forcing server restart", ex);
           if (!checkFileSystem()) {
-            break;
+            return false;
           }
-          HRegionServer.this.stop();
-
+          server.stop();
+          return false;
         } catch (IOException ex) {
           LOG.error("Cache flush failed" +
-              (e != null ? (" for region " + e.getRegion().getRegionName()) : ""),
+              (region != null ? (" for region " + region.getRegionName()) : ""),
               RemoteExceptionHandler.checkIOException(ex));
           if (!checkFileSystem()) {
-            break;
+            return false;
           }
-
-        } catch (Exception ex) {
-          LOG.error("Cache flush failed" +
-              (e != null ? (" for region " + e.getRegion().getRegionName()) : ""),
-              ex);
-          if (!checkFileSystem()) {
-            break;
-          }
+        } finally {
+          workingLock.unlock();
         }
       }
-      flushQueue.clear();
-      LOG.info(getName() + " exiting");
+      return true;
     }
     
-    /** {@inheritDoc} */
-    public void flushRequested(HRegion region) {
-      if (region == null) {
-          return;
+    /**
+     * Find the regions that should be optionally flushed and put them on the
+     * flush queue.
+     */
+    private void enqueueOptionalFlushRegions() {
+      long now = System.currentTimeMillis();
+      // Queue up regions for optional flush if they need it
+      for (HRegion region: getRegionsToCheck()) {
+        optionallyAddRegion(region, now);
       }
-      QueueEntry e = new QueueEntry(region, System.currentTimeMillis());
-      synchronized (flushQueue) {
-        if (flushQueue.contains(e)) {
-          flushQueue.remove(e);
+    }
+    
+    /*
+     * Add region if not already added and if optional flush period has been
+     * exceeded.
+     * @param r Region to add.
+     * @param now The 'now' to use.  Set last flush time to this value.
+     */
+    private void optionallyAddRegion(final HRegion r, final long now) {
+      synchronized (regionsInQueue) {
+        if (!regionsInQueue.contains(r) &&
+            (System.currentTimeMillis() - optionalFlushPeriod) >
+              r.getLastFlushTime()) {
+          addRegion(r, now);
         }
-        flushQueue.add(e);
+      }
+    }
+    
+    /*
+     * Add region if not already added.
+     * @param r Region to add.
+     * @param now The 'now' to use.  Set last flush time to this value.
+     */
+    private void addRegion(final HRegion r, final long now) {
+      synchronized (regionsInQueue) {
+        if (!regionsInQueue.contains(r)) {
+          regionsInQueue.add(r);
+          flushQueue.add(r);
+          r.setLastFlushTime(now);
+        }
+      }
+    }
+
+    /** {@inheritDoc} */
+    public void request(HRegion r) {
+      addRegion(r, System.currentTimeMillis());
+    }
+    
+    /**
+     * Check if the regionserver's memcache memory usage is greater than the 
+     * limit. If so, flush regions with the biggest memcaches until we're down
+     * to the lower limit. This method blocks callers until we're down to a safe
+     * amount of memcache consumption.
+     */
+    public synchronized void reclaimMemcacheMemory() {
+      long globalMemory = getGlobalMemcacheSize();
+      if (globalMemory >= globalMemcacheLimit) {
+        LOG.info("Global cache memory in use " + globalMemory + " >= " +
+            globalMemcacheLimit + " configured maximum." +
+        " Forcing cache flushes to relieve memory pressure.");
+        flushSomeRegions();
+      }
+    }
+    
+    private void flushSomeRegions() {
+      // we'll sort the regions in reverse
+      SortedMap<Long, HRegion> sortedRegions = new TreeMap<Long, HRegion>(
+          new Comparator<Long>() {
+            public int compare(Long a, Long b) {
+              return -1 * a.compareTo(b);
+            }
+          }
+      );
+      
+      // copy over all the regions
+      for (HRegion region : getRegionsToCheck()) {
+        sortedRegions.put(region.memcacheSize.get(), region);
+      }
+      
+      // keep flushing until we hit the low water mark
+      while (getGlobalMemcacheSize() >= globalMemcacheLimitLowMark) {
+        // flush the region with the biggest memcache
+        HRegion biggestMemcacheRegion = 
+          sortedRegions.remove(sortedRegions.firstKey());
+        LOG.info("Force flush of region " + biggestMemcacheRegion.getRegionName());
+        if (!flushRegion(biggestMemcacheRegion, true)) {
+          // Something bad happened - give up.
+          break;
+        }
+      }
+    }
+
+    /**
+     * Only interrupt once it's done with a run through the work loop.
+     */ 
+    void interruptIfNecessary() {
+      if (workingLock.tryLock()) {
+        this.interrupt();
       }
     }
   }
@@ -505,7 +581,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   final Integer logRollerLock = new Integer(0);
   
   /** Runs periodically to determine if the HLog should be rolled */
-  class LogRoller extends Thread implements LogRollListener {
+  private class LogRoller extends Thread implements LogRollListener {
     private final Integer rollLock = new Integer(0);
     private volatile boolean rollLog;
     
@@ -784,12 +860,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive?  If OOME could have exited already
-    synchronized(cacheFlusherLock) {
-      this.cacheFlusher.interrupt();
-    }
-    synchronized (compactSplitLock) {
-      this.compactSplitThread.interrupt();
-    }
+    this.cacheFlusher.interruptIfNecessary();
+    this.compactSplitThread.interruptIfNecessary();
+
     synchronized (logRollerLock) {
       this.logRoller.interrupt();
     }
@@ -1467,6 +1540,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
     try {
+      cacheFlusher.reclaimMemcacheMemory();
       region.batchUpdate(timestamp, b);
     } catch (IOException e) {
       checkFileSystem();
@@ -1616,8 +1690,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return this.requestCount;
   }
 
-  /** @return reference to CacheFlushListener */
-  public CacheFlushListener getCacheFlushListener() {
+  /** @return reference to FlushRequester */
+  public FlushRequester getFlushRequester() {
     return this.cacheFlusher;
   }
   
@@ -1706,12 +1780,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   protected Set<HRegion> getRegionsToCheck() {
     HashSet<HRegion> regionsToCheck = new HashSet<HRegion>();
-    //TODO: is this locking necessary? 
-    lock.readLock().lock();
-    try {
+    synchronized (this.onlineRegions) {
       regionsToCheck.addAll(this.onlineRegions.values());
-    } finally {
-      lock.readLock().unlock();
     }
     // Purge closed regions.
     for (final Iterator<HRegion> i = regionsToCheck.iterator(); i.hasNext();) {
@@ -1738,6 +1808,18 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   protected List<HMsg> getOutboundMsgs() {
     return this.outboundMsgs;
+  }
+  
+  /**
+   * Return the total size of all memcaches in every region.
+   * @return memcache size in bytes
+   */
+  long getGlobalMemcacheSize() {
+    long total = 0;
+    for (HRegion region : getRegionsToCheck()) {
+      total += region.memcacheSize.get();
+    }
+    return total;
   }
   
   //

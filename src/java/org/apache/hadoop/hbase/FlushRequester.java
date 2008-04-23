@@ -25,12 +25,12 @@ package org.apache.hadoop.hbase;
  * determines that a cache flush is needed. A CacheFlushListener (or null)
  * must be passed to the HRegion constructor.
  */
-public interface CacheFlushListener {
+public interface FlushRequester {
 
   /**
    * Tell the listener the cache needs to be flushed.
    * 
    * @param region the HRegion requesting the cache flush
    */
-  void flushRequested(HRegion region);
+  void request(HRegion region);
 }
