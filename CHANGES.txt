@@ -22,6 +22,7 @@ Unreleased changes
    HBASE-586   HRegion runs HStore memcache snapshotting -- fix it so only HStore
                knows about workings of memcache
    HBASE-572   Backport HBASE-512 to 0.1 branch
+   HBASE-588   Still a 'hole' in scanners, even after HBASE-532
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

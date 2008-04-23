@@ -347,6 +347,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   // Cache flushing  
   final Flusher cacheFlusher;
+
   /**
    * Thread that flushes cache on request
    * @see FlushRequester
@@ -354,7 +355,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private class Flusher extends Thread implements FlushRequester {
     private final BlockingQueue<HRegion> flushQueue =
       new LinkedBlockingQueue<HRegion>();
-
     private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
     private final ReentrantLock workingLock = new ReentrantLock();
     private final long optionalFlushPeriod;
@@ -471,7 +471,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       return true;
     }
-    
+
     /**
      * Find the regions that should be optionally flushed and put them on the
      * flush queue.

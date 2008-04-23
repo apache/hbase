@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.Progressable;
@@ -307,6 +308,7 @@ public class HRegion implements HConstants {
   final HRegionInfo regionInfo;
   final Path regiondir;
   private final Path regionCompactionDir;
+  private volatile boolean flushRequested = false;
 
   /*
    * Data structure of write state flags used coordinating flushes,
@@ -325,6 +327,7 @@ public class HRegion implements HConstants {
 
   final int memcacheFlushSize;
   private volatile long lastFlushTime;
+
   final FlushRequester flushListener;
   private final int blockingMemcacheSize;
   final long threadWakeFrequency;
@@ -334,10 +337,11 @@ public class HRegion implements HConstants {
   // Stop updates lock
   private final ReentrantReadWriteLock updateLock =
     new ReentrantReadWriteLock();
+  
   private final Integer splitLock = new Integer(0);
   private final long desiredMaxFileSize;
   private final long minSequenceId;
-  final AtomicInteger activeScannerCount = new AtomicInteger(0);
+  private final AtomicInteger activeScannerCount = new AtomicInteger(0);
 
   //////////////////////////////////////////////////////////////////////////////
   // Constructor
@@ -360,13 +364,14 @@ public class HRegion implements HConstants {
    * @param regionInfo - HRegionInfo that describes the region
    * @param initialFiles If there are initial files (implying that the HRegion
    * is new), then read them from the supplied path.
-   * @param listener an object that implements CacheFlushListener or null
+   * @param requester an object that implements FlushRequester or null
    * @throws IOException
    */
   public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf, 
-      HRegionInfo regionInfo, Path initialFiles, FlushRequester listener)
+
+      HRegionInfo regionInfo, Path initialFiles, FlushRequester requester)
     throws IOException {
-    this(basedir, log, fs, conf, regionInfo, initialFiles, listener, null);
+    this(basedir, log, fs, conf, regionInfo, initialFiles, requester, null);
   }
   
   /**
@@ -386,14 +391,14 @@ public class HRegion implements HConstants {
    * @param regionInfo - HRegionInfo that describes the region
    * @param initialFiles If there are initial files (implying that the HRegion
    * is new), then read them from the supplied path.
-   * @param listener an object that implements CacheFlushListener or null
+   * @param requester an object that implements FlushRequester or null
    * @param reporter Call on a period so hosting server can report we're
    * making progress to master -- otherwise master might think region deploy
    * failed.  Can be null.
    * @throws IOException
    */
   public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf, 
-      HRegionInfo regionInfo, Path initialFiles, FlushRequester listener,
+      HRegionInfo regionInfo, Path initialFiles, FlushRequester requester,
       final Progressable reporter)
     throws IOException {
     
@@ -458,7 +463,7 @@ public class HRegion implements HConstants {
     // By default, we flush the cache when 64M.
     this.memcacheFlushSize = conf.getInt("hbase.hregion.memcache.flush.size",
       1024*1024*64);
-    this.flushListener = listener;
+    this.flushListener = requester;
     this.blockingMemcacheSize = this.memcacheFlushSize *
       conf.getInt("hbase.hregion.memcache.block.multiplier", 1);
 
@@ -552,9 +557,9 @@ public class HRegion implements HConstants {
           }
         }
       }
+
       splitsAndClosesLock.writeLock().lock();
       LOG.debug("new updates and scanners for region " + regionName + " disabled");
-      
       try {
         // Wait for active scanners to finish. The write lock we hold will
         // prevent new scanners from being created.
@@ -564,7 +569,6 @@ public class HRegion implements HConstants {
                 " scanners to finish");
             try {
               activeScannerCount.wait();
-
             } catch (InterruptedException e) {
               // continue
             }
@@ -937,7 +941,8 @@ public class HRegion implements HConstants {
         }
       }
       doRegionCompactionCleanup();
-      LOG.info("compaction completed on region " + getRegionName() + ". " +
+
+      LOG.info("compaction completed on region " + getRegionName() + " in " +
         StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
       return status;
       
@@ -1036,7 +1041,8 @@ public class HRegion implements HConstants {
    */
   private boolean internalFlushcache() throws IOException {
     final long startTime = System.currentTimeMillis();
-
+    // Clear flush flag.
+    this.flushRequested = false;
     // Record latest flush time
     this.lastFlushTime = startTime;
   
@@ -1586,8 +1592,7 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   private void update(final TreeMap<HStoreKey, byte []> updatesByColumn)
-    throws IOException {
-    
+  throws IOException {
     if (updatesByColumn == null || updatesByColumn.size() <= 0) {
       return;
     }
@@ -1595,8 +1600,7 @@ public class HRegion implements HConstants {
     updateLock.readLock().lock();                      // prevent a cache flush
     try {
       this.log.append(regionInfo.getRegionName(),
-          regionInfo.getTableDesc().getName(), updatesByColumn);
-
+        regionInfo.getTableDesc().getName(), updatesByColumn);
       long size = 0;
       for (Map.Entry<HStoreKey, byte[]> e: updatesByColumn.entrySet()) {
         HStoreKey key = e.getKey();
