@@ -1,6 +1,7 @@
 HBase Change Log
 
-Unreleased changes
+Release 0.1.2 - 04/24/2008
+
   BUG FIXES
    HBASE-577   NPE getting scanner
    HBASE-574   HBase does not load hadoop native libs (Rong-En Fan via Stack).
