@@ -24,6 +24,7 @@ Release 0.1.2 - 04/24/2008
                knows about workings of memcache
    HBASE-572   Backport HBASE-512 to 0.1 branch
    HBASE-588   Still a 'hole' in scanners, even after HBASE-532
+   HBASE-604   Don't allow CLASSPATH from environment pollute the hbase CLASSPATH
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

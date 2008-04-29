@@ -98,7 +98,7 @@ if [ "$HBASE_HEAPSIZE" != "" ]; then
 fi
 
 # CLASSPATH initially contains $HBASE_CONF_DIR
-CLASSPATH="${CLASSPATH}:${HBASE_CONF_DIR}"
+CLASSPATH="${HBASE_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 # for developers, add hbase classes to CLASSPATH
