@@ -28,6 +28,8 @@ Release 0.1.2 - 04/24/2008
    HBASE-608   HRegionServer::getThisIP() checks hadoop config var for dns interface name
                (Jim R. Wilson via Stack)
    HBASE-609   Master doesn't see regionserver edits because of clock skew
+   HBASE-607   MultiRegionTable.makeMultiRegionTable is not deterministic enough
+               for regression tests
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

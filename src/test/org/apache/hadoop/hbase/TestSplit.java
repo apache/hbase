@@ -33,9 +33,9 @@ import org.apache.log4j.Logger;
  * {@Link TestHRegion} does a split but this TestCase adds testing of fast
  * split and manufactures odd-ball split scenarios.
  */
-public class TestSplit extends MultiRegionTable {
+public class TestSplit extends HBaseTestCase {
   @SuppressWarnings("hiding")
-  static final Log LOG = LogFactory.getLog(TestSplit.class.getName());
+  static final Log LOG = LogFactory.getLog(TestSplit.class);
   
   /** constructor */
   public TestSplit() {

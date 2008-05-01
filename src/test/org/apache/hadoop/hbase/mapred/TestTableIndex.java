@@ -30,10 +30,8 @@ import junit.textui.TestRunner;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegion;
@@ -43,7 +41,6 @@ import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultiRegionTable;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -75,76 +72,39 @@ public class TestTableIndex extends MultiRegionTable {
     TEXT_OUTPUT_COLUMN
   };
 
-
-  private HTableDescriptor desc;
-
-  private MiniDFSCluster dfsCluster = null;
-  private Path dir;
   private MiniHBaseCluster hCluster = null;
+
+  /** constructor */
+  public TestTableIndex() {
+    super(INPUT_COLUMN);
+    desc = new HTableDescriptor(TABLE_NAME);
+    desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
+    desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
+  }
 
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     // Enable DEBUG-level MR logging.
     Logger.getLogger("org.apache.hadoop.mapred").setLevel(Level.DEBUG);
-    
-    // Make sure the cache gets flushed so we trigger a compaction(s) and
-    // hence splits.
-    conf.setInt("hbase.hregion.memcache.flush.size", 1024 * 1024);
-    
-    // This size should make it so we always split using the addContent
-    // below. After adding all data, the first region is 1.3M
-    conf.setLong("hbase.hregion.max.filesize", 1024 * 1024);
-
-    desc = new HTableDescriptor(TABLE_NAME);
-    desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
-    desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
-
-    dfsCluster = new MiniDFSCluster(conf, 1, true, (String[]) null);
-    // Set the hbase.rootdir to be the home directory in mini dfs.
-    this.conf.set(HConstants.HBASE_DIR,
-      this.dfsCluster.getFileSystem().getHomeDirectory().toString());
 
     // Must call super.setUp after mini dfs cluster is started or else
     // filesystem ends up being local
     
     super.setUp();
 
-    try {
-      dir = new Path("/hbase");
-      fs.mkdirs(dir);
-
-      // Start up HBase cluster
-      hCluster = new MiniHBaseCluster(conf, 1, dfsCluster, true);
-
-      // Create a table.
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      admin.createTable(desc);
-
-      // Populate a table into multiple regions
-      makeMultiRegionTable(conf, hCluster, this.fs, TABLE_NAME, INPUT_COLUMN);
-
-      // Verify table indeed has multiple regions
-      HTable table = new HTable(conf, new Text(TABLE_NAME));
-      Text[] startKeys = table.getStartKeys();
-      assertTrue(startKeys.length > 1);
-    } catch (Exception e) {
-      StaticTestEnvironment.shutdownDfs(dfsCluster);
-      throw e;
-    }
+    // Start up HBase cluster
+    hCluster = new MiniHBaseCluster(conf, 1, dfsCluster, true);
     LOG.debug("\n\n\n\n\t\t\tSetup Complete\n\n\n\n");
   }
 
   /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
-    super.tearDown();
-
     if (hCluster != null) {
       hCluster.shutdown();
     }
-
-    StaticTestEnvironment.shutdownDfs(dfsCluster);
+    super.tearDown();
   }
 
   /**
@@ -318,6 +278,7 @@ public class TestTableIndex extends MultiRegionTable {
         scanner.close();
     }
   }
+
   /**
    * @param args unused
    */

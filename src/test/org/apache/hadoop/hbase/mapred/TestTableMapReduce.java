@@ -20,15 +20,11 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
@@ -37,7 +33,6 @@ import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultiRegionTable;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -55,7 +50,6 @@ public class TestTableMapReduce extends MultiRegionTable {
   private static final Log LOG =
     LogFactory.getLog(TestTableMapReduce.class.getName());
 
-  static final String SINGLE_REGION_TABLE_NAME = "srtest";
   static final String MULTI_REGION_TABLE_NAME = "mrtest";
   static final String INPUT_COLUMN = "contents:";
   static final Text TEXT_INPUT_COLUMN = new Text(INPUT_COLUMN);
@@ -67,46 +61,14 @@ public class TestTableMapReduce extends MultiRegionTable {
     TEXT_OUTPUT_COLUMN
   };
 
-  private MiniDFSCluster dfsCluster = null;
-  private Path dir;
   private MiniHBaseCluster hCluster = null;
-  
-  private static byte[][] values = null;
-  
-  static {
-    try {
-      values = new byte[][] {
-          "0123".getBytes(HConstants.UTF8_ENCODING),
-          "abcd".getBytes(HConstants.UTF8_ENCODING),
-          "wxyz".getBytes(HConstants.UTF8_ENCODING),
-          "6789".getBytes(HConstants.UTF8_ENCODING)
-      };
-    } catch (UnsupportedEncodingException e) {
-      fail();
-    }
-  }
   
   /** constructor */
   public TestTableMapReduce() {
-    super();
-    
-    // Make sure the cache gets flushed so we trigger a compaction(s) and
-    // hence splits.
-    conf.setInt("hbase.hregion.memcache.flush.size", 1024 * 1024);
-
-    // Always compact if there is more than one store file.
-    conf.setInt("hbase.hstore.compactionThreshold", 2);
-
-    // This size should make it so we always split using the addContent
-    // below. After adding all data, the first region is 1.3M
-    conf.setLong("hbase.hregion.max.filesize", 256 * 1024);
-
-    // Make lease timeout longer, lease checks less frequent
-    conf.setInt("hbase.master.lease.period", 10 * 1000);
-    conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
-    
-    // Set client pause to the original default
-    conf.setInt("hbase.client.pause", 10 * 1000);
+    super(INPUT_COLUMN);
+    desc = new HTableDescriptor(MULTI_REGION_TABLE_NAME);
+    desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
+    desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
   }
 
   /**
@@ -114,27 +76,12 @@ public class TestTableMapReduce extends MultiRegionTable {
    */
   @Override
   public void setUp() throws Exception {
-    dfsCluster = new MiniDFSCluster(conf, 1, true, (String[])null);
-    // Set the hbase.rootdir to be the home directory in mini dfs.
-    this.conf.set(HConstants.HBASE_DIR,
-      this.dfsCluster.getFileSystem().getHomeDirectory().toString());
-
-    // Must call super.setup() after starting mini dfs cluster. Otherwise
-    // we get a local file system instead of hdfs
-    
     super.setUp();
-    try {
-      dir = new Path("/hbase");
-      fs.mkdirs(dir);
-      // Start up HBase cluster
-      // Only one region server.  MultiRegionServer manufacturing code below
-      // depends on there being one region server only.
-      hCluster = new MiniHBaseCluster(conf, 1, dfsCluster, true);
-      LOG.info("Master is at " + this.conf.get(HConstants.MASTER_ADDRESS));
-    } catch (Exception e) {
-      StaticTestEnvironment.shutdownDfs(dfsCluster);
-      throw e;
-    }
+    // Start up HBase cluster
+    // Only one region server.  MultiRegionServer manufacturing code below
+    // depends on there being one region server only.
+    hCluster = new MiniHBaseCluster(conf, 1, dfsCluster, true);
+    LOG.info("Master is at " + this.conf.get(HConstants.MASTER_ADDRESS));
   }
 
   /**
@@ -142,11 +89,10 @@ public class TestTableMapReduce extends MultiRegionTable {
    */
   @Override
   public void tearDown() throws Exception {
-    super.tearDown();
     if(hCluster != null) {
       hCluster.shutdown();
     }
-    StaticTestEnvironment.shutdownDfs(dfsCluster);
+    super.tearDown();
   }
 
   /**
@@ -156,7 +102,7 @@ public class TestTableMapReduce extends MultiRegionTable {
     /**
      * Pass the key, and reversed value to reduce
      *
-     * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
+     * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
      */
     @SuppressWarnings("unchecked")
     @Override
@@ -197,154 +143,31 @@ public class TestTableMapReduce extends MultiRegionTable {
   }
   
   /**
-   * Test hbase mapreduce jobs against single region and multi-region tables.
+   * Test hbase mapreduce jobs against a multi-region table.
    * @throws IOException
    */
   public void testTableMapReduce() throws IOException {
-    localTestSingleRegionTable();
-    localTestMultiRegionTable();
-  }
-
-  /*
-   * Test against a single region.
-   * @throws IOException
-   */
-  private void localTestSingleRegionTable() throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(SINGLE_REGION_TABLE_NAME);
-    desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
-    desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
-    
-    // Create a table.
-    HBaseAdmin admin = new HBaseAdmin(this.conf);
-    admin.createTable(desc);
-
-    // insert some data into the test table
-    HTable table = new HTable(conf, new Text(SINGLE_REGION_TABLE_NAME));
+    @SuppressWarnings("deprecation")
+    MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
 
     try {
-      for(int i = 0; i < values.length; i++) {
-        long lockid = table.startUpdate(new Text("row_"
-            + String.format("%1$05d", i)));
+      JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
+      jobConf.setJobName("process column contents");
+      jobConf.setNumMapTasks(2);
+      jobConf.setNumReduceTasks(1);
 
-        try {
-          table.put(lockid, TEXT_INPUT_COLUMN, values[i]);
-          table.commit(lockid, System.currentTimeMillis());
-          lockid = -1;
-        } finally {
-          if (lockid != -1)
-            table.abort(lockid);
-        }
-      }
+      TableMap.initJob(MULTI_REGION_TABLE_NAME, INPUT_COLUMN, 
+          ProcessContentsMapper.class, jobConf);
 
-      LOG.info("Print table contents before map/reduce for " +
-        SINGLE_REGION_TABLE_NAME);
-      scanTable(SINGLE_REGION_TABLE_NAME, true);
-
-      @SuppressWarnings("deprecation")
-      MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
-
-      try {
-        JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
-        jobConf.setJobName("process column contents");
-        jobConf.setNumMapTasks(1);
-        jobConf.setNumReduceTasks(1);
-
-        TableMap.initJob(SINGLE_REGION_TABLE_NAME, INPUT_COLUMN, 
-            ProcessContentsMapper.class, jobConf);
-
-        TableReduce.initJob(SINGLE_REGION_TABLE_NAME,
-            IdentityTableReduce.class, jobConf);
-        LOG.info("Started " + SINGLE_REGION_TABLE_NAME);
-        JobClient.runJob(jobConf);
-
-        LOG.info("Print table contents after map/reduce for " +
-          SINGLE_REGION_TABLE_NAME);
-      scanTable(SINGLE_REGION_TABLE_NAME, true);
+      TableReduce.initJob(MULTI_REGION_TABLE_NAME,
+          IdentityTableReduce.class, jobConf);
+      LOG.info("Started " + MULTI_REGION_TABLE_NAME);
+      JobClient.runJob(jobConf);
 
       // verify map-reduce results
-      verify(SINGLE_REGION_TABLE_NAME);
-      } finally {
-        mrCluster.shutdown();
-      }
+      verify(MULTI_REGION_TABLE_NAME);
     } finally {
-      table.close();
-    }
-  }
-  
-  /*
-   * Test against multiple regions.
-   * @throws IOException
-   */
-  private void localTestMultiRegionTable() throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(MULTI_REGION_TABLE_NAME);
-    desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
-    desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
-    
-    // Create a table.
-    HBaseAdmin admin = new HBaseAdmin(this.conf);
-    admin.createTable(desc);
-
-    // Populate a table into multiple regions
-    makeMultiRegionTable(conf, hCluster, fs, MULTI_REGION_TABLE_NAME,
-        INPUT_COLUMN);
-    
-    // Verify table indeed has multiple regions
-    HTable table = new HTable(conf, new Text(MULTI_REGION_TABLE_NAME));
-    try {
-      Text[] startKeys = table.getStartKeys();
-      assertTrue(startKeys.length > 1);
-
-      @SuppressWarnings("deprecation")
-      MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
-
-      try {
-        JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
-        jobConf.setJobName("process column contents");
-        jobConf.setNumMapTasks(2);
-        jobConf.setNumReduceTasks(1);
-
-        TableMap.initJob(MULTI_REGION_TABLE_NAME, INPUT_COLUMN, 
-            ProcessContentsMapper.class, jobConf);
-
-        TableReduce.initJob(MULTI_REGION_TABLE_NAME,
-            IdentityTableReduce.class, jobConf);
-        LOG.info("Started " + MULTI_REGION_TABLE_NAME);
-        JobClient.runJob(jobConf);
-
-        // verify map-reduce results
-        verify(MULTI_REGION_TABLE_NAME);
-      } finally {
-        mrCluster.shutdown();
-      }
-    } finally {
-      table.close();
-    }
-  }
-
-  private void scanTable(String tableName, boolean printValues)
-  throws IOException {
-    HTable table = new HTable(conf, new Text(tableName));
-    
-    HScannerInterface scanner =
-      table.obtainScanner(columns, HConstants.EMPTY_START_ROW);
-    
-    try {
-      HStoreKey key = new HStoreKey();
-      TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-      
-      while(scanner.next(key, results)) {
-        if (printValues) {
-          LOG.info("row: " + key.getRow());
-
-          for(Map.Entry<Text, byte[]> e: results.entrySet()) {
-            LOG.info(" column: " + e.getKey() + " value: "
-                + new String(e.getValue(), HConstants.UTF8_ENCODING));
-          }
-        }
-      }
-      
-    } finally {
-      scanner.close();
+      mrCluster.shutdown();
     }
   }
 
