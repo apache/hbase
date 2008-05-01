@@ -1042,7 +1042,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @return This servers' IP.
    */
   private String getThisIP() throws UnknownHostException {
-    return DNS.getDefaultIP(conf.get("dfs.datanode.dns.interface","default"));
+    return DNS.getDefaultIP(conf.get("hbase.regionserver.dns.interface","default"));
   }
 
   /**
