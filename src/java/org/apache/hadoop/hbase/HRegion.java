@@ -2027,7 +2027,8 @@ public class HRegion implements HConstants {
    *
    * @throws IOException
    */
-  public static void addRegionToMETA(HRegion meta, HRegion r) throws IOException {
+  public static void addRegionToMETA(HRegion meta, HRegion r)
+  throws IOException {
     meta.checkResources();
     // The row key is the region name
     Text row = r.getRegionName();
@@ -2038,7 +2039,6 @@ public class HRegion implements HConstants {
       TreeMap<HStoreKey, byte[]> edits = new TreeMap<HStoreKey, byte[]>();
       edits.put(key, Writables.getBytes(r.getRegionInfo()));
       meta.update(edits);
-    
     } finally {
       meta.releaseRowLock(row);
     }
@@ -2079,7 +2079,7 @@ public class HRegion implements HConstants {
     b.delete(lockid, COL_STARTCODE);
     // If carrying splits, they'll be in place when we show up on new
     // server.
-    srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+    srvr.batchUpdate(metaRegionName, b);
   }
 
   /**

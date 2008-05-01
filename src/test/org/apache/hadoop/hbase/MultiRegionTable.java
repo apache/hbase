@@ -223,7 +223,7 @@ public class MultiRegionTable extends HBaseTestCase {
     int size = 0;
     Text [] cols = new Text[] {HConstants.COLUMN_FAMILY};
     HScannerInterface s = t.obtainScanner(cols, HConstants.EMPTY_START_ROW,
-      System.currentTimeMillis(), null);
+      HConstants.LATEST_TIMESTAMP, null);
     try {
       HStoreKey curKey = new HStoreKey();
       TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
@@ -249,7 +249,7 @@ public class MultiRegionTable extends HBaseTestCase {
       final HRegionInfo parent)
   throws IOException {  
     HScannerInterface s = t.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY,
-        HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
+        HConstants.EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
     try {
       HStoreKey curKey = new HStoreKey();
       TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();

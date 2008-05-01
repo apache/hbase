@@ -346,7 +346,7 @@ class HMerge implements HConstants {
           HRegionInfo.rootRegionInfo, null, null);
 
       HScannerInterface rootScanner = root.getScanner(COL_REGIONINFO_ARRAY,
-          new Text(), System.currentTimeMillis(), null);
+          new Text(), HConstants.LATEST_TIMESTAMP, null);
       
       try {
         HStoreKey key = new HStoreKey();
@@ -397,7 +397,7 @@ class HMerge implements HConstants {
         b.delete(lockid, COL_STARTCODE);
         b.delete(lockid, COL_SPLITA);
         b.delete(lockid, COL_SPLITB);
-        root.batchUpdate(System.currentTimeMillis(), b);
+        root.batchUpdate(HConstants.LATEST_TIMESTAMP, b);
         lockid = -1L;
 
         if(LOG.isDebugEnabled()) {

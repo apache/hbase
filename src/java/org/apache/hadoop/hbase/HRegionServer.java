@@ -1533,6 +1533,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
 
+  /**
+   * Used by master so it can add an update with the current time of this
+   * server rather than current time on master
+   * {@inheritDoc}
+   */
+  public void batchUpdate(Text regionName, BatchUpdate b)
+  throws IOException {
+    batchUpdate(regionName, System.currentTimeMillis(), b);
+  }
+
   /** {@inheritDoc} */
   public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
     throws IOException {
