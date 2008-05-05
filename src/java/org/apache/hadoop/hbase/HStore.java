@@ -356,7 +356,8 @@ public class HStore implements HConstants {
       // if there are items in the tail map, there's either a direct match to
       // the search key, or a range of values between the first candidate key
       // and the ultimate search key (or the end of the cache)
-      if (!tailMap.isEmpty() && tailMap.firstKey().getRow().compareTo(key) <= 0) {
+      if (!tailMap.isEmpty() &&
+          tailMap.firstKey().getRow().compareTo(key) <= 0) {
         key_iterator = tailMap.keySet().iterator();
 
         // keep looking at cells as long as they are no greater than the 
@@ -519,8 +520,9 @@ public class HStore implements HConstants {
      * equal or older timestamp.  If no keys, returns an empty List. Does not
      * return null.
      */
-    private List<HStoreKey> internalGetKeys(final SortedMap<HStoreKey, byte []> map,
-        final HStoreKey origin, final int versions) {
+    private List<HStoreKey> internalGetKeys(
+        final SortedMap<HStoreKey, byte []> map, final HStoreKey origin,
+        final int versions) {
 
       List<HStoreKey> result = new ArrayList<HStoreKey>();
       SortedMap<HStoreKey, byte []> tailMap = map.tailMap(origin);
@@ -609,6 +611,8 @@ public class HStore implements HConstants {
         }
       }
 
+      /** {@inheritDoc} */
+      @Override
       public boolean next(HStoreKey key, SortedMap<Text, byte []> results)
       throws IOException {
          if (this.scannerClosed) {
@@ -632,6 +636,9 @@ public class HStore implements HConstants {
          key.setRow(this.currentRow);
          key.setVersion(this.timestamp);
          getFull(key, deletes, rowResults);
+         for (Text column: deletes.keySet()) {
+           rowResults.put(column, HLogEdit.deleteBytes.get());
+         }
          for (Map.Entry<Text, byte[]> e: rowResults.entrySet()) {
            Text column = e.getKey();
            byte [] c = e.getValue();
@@ -651,7 +658,9 @@ public class HStore implements HConstants {
        }
        return results.size() > 0;
      }
-     public void close() {
+      
+    /** {@inheritDoc} */
+    public void close() {
        if (!scannerClosed) {
          scannerClosed = true;
        }
@@ -2361,9 +2370,11 @@ public class HStore implements HConstants {
     // Values that correspond to those keys
     private byte [][] vals;
 
+    @SuppressWarnings("hiding")
     private MapFile.Reader[] readers;
 
     // Used around replacement of Readers if they change while we're scanning.
+    @SuppressWarnings("hiding")
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     
     StoreFileScanner(long timestamp, Text[] targetCols, Text firstRow)
@@ -2531,17 +2542,21 @@ public class HStore implements HConstants {
        this.ts = t;
      }
 
+     /** @return the row */
      public Text getRow() {
        return this.row;
      }
 
+     /** @return the timestamp */
      public long getTimestamp() {
        return this.ts;
      }
    }
    
    // Implementation of ChangedReadersObserver
-   public void updateReaders() throws IOException {
+   
+   /** {@inheritDoc} */
+  public void updateReaders() throws IOException {
      this.lock.writeLock().lock();
      try {
        // The keys are currently lined up at the next row to fetch.  Pass in
@@ -2565,8 +2580,8 @@ public class HStore implements HConstants {
      */
     boolean findFirstRow(int i, Text firstRow) throws IOException {
       ImmutableBytesWritable ibw = new ImmutableBytesWritable();
-      HStoreKey firstKey
-        = (HStoreKey)readers[i].getClosest(new HStoreKey(firstRow), ibw);
+      HStoreKey firstKey =
+        (HStoreKey)readers[i].getClosest(new HStoreKey(firstRow), ibw);
       if (firstKey == null) {
         // Didn't find it. Close the scanner and return TRUE
         closeSubScanner(i);

@@ -430,10 +430,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     throws IOException {
       // Skip region - if ...
       if (info.isOffline()                                 // offline
-          || killedRegions.contains(info.getRegionName())  // queued for offline
-          || regionsToDelete.contains(info.getRegionName())) { // queued for delete
+          || killedRegions.contains(info.getRegionName())) {  // queued for offline
 
         unassignedRegions.remove(info);
+        pendingRegions.remove(info);
         return;
       }
       HServerInfo storedInfo = null;
@@ -844,13 +844,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   /** 'killedRegions' contains regions that are in the process of being closed */
   volatile Set<Text> killedRegions =
-    Collections.synchronizedSet(new HashSet<Text>());
-
-  /**
-   * 'regionsToDelete' contains regions that need to be deleted, but cannot be
-   * until the region server closes it
-   */
-  volatile Set<Text> regionsToDelete =
     Collections.synchronizedSet(new HashSet<Text>());
 
   /** Set of tables currently in creation. */
@@ -1414,8 +1407,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
                   } else if (info.isMetaTable()) {
                     onlineMetaRegions.remove(info.getStartKey());
                   }
-
-                  this.unassignedRegions.put(info, ZERO_L);
+                  if (!killedRegions.remove(info.getRegionName())) {
+                    this.unassignedRegions.put(info, ZERO_L);
+                  }
                 }
               }
             }
@@ -1678,13 +1672,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           unassignRootRegion();
         } else {
           boolean reassignRegion = !region.isOffline();
-          boolean deleteRegion = false;
           if (killedRegions.remove(region.getRegionName())) {
             reassignRegion = false;
-          }
-          if (regionsToDelete.remove(region.getRegionName())) {
-            reassignRegion = false;
-            deleteRegion = true;
           }
           if (region.isMetaTable()) {
             // Region is part of the meta table. Remove it from onlineMetaRegions
@@ -1696,8 +1685,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           //       reassigned before the close is processed.
           unassignedRegions.remove(region);
           try {
-            toDoQueue.put(new ProcessRegionClose(region, reassignRegion,
-                deleteRegion));
+            toDoQueue.put(new ProcessRegionClose(region, reassignRegion));
 
           } catch (InterruptedException e) {
             throw new RuntimeException(
@@ -2008,13 +1996,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     private boolean rootRescanned;
 
     private class ToDoEntry {
-      boolean deleteRegion;
       boolean regionOffline;
       Text row;
       HRegionInfo info;
 
       ToDoEntry(Text row, HRegionInfo info) {
-        this.deleteRegion = false;
         this.regionOffline = false;
         this.row = row;
         this.info = info;
@@ -2106,35 +2092,26 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           ToDoEntry todo = new ToDoEntry(row, info);
           toDoList.add(todo);
 
-          if (killList.containsKey(deadServerName)) {
-            HashMap<Text, HRegionInfo> regionsToKill =
-              new HashMap<Text, HRegionInfo>();
-            synchronized (killList) {
+          synchronized (killList) {
+            if (killList.containsKey(deadServerName)) {
+              HashMap<Text, HRegionInfo> regionsToKill =
+                new HashMap<Text, HRegionInfo>();
+
               regionsToKill.putAll(killList.get(deadServerName));
-            }
 
-            if (regionsToKill.containsKey(info.getRegionName())) {
-              regionsToKill.remove(info.getRegionName());
-              killList.put(deadServerName, regionsToKill);
-              unassignedRegions.remove(info);
-              synchronized (regionsToDelete) {
-                if (regionsToDelete.contains(info.getRegionName())) {
-                  // Delete this region
-                  regionsToDelete.remove(info.getRegionName());
-                  todo.deleteRegion = true;
-                } else {
-                  // Mark region offline
-                  todo.regionOffline = true;
-                }
+              if (regionsToKill.containsKey(info.getRegionName())) {
+                regionsToKill.remove(info.getRegionName());
+                killList.put(deadServerName, regionsToKill);
+                unassignedRegions.remove(info);
+                // Mark region offline
+                todo.regionOffline = true;
               }
+
+            } else {
+              // Get region reassigned
+              regions.add(info);
             }
-
-          } else {
-            // Get region reassigned
-            regions.add(info);
-
             // If it was pending, remove.
-            // Otherwise will obstruct its getting reassigned.
             pendingRegions.remove(info.getRegionName());
           }
         }
@@ -2160,9 +2137,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       
       // Update server in root/meta entries
       for (ToDoEntry e: toDoList) {
-        if (e.deleteRegion) {
-          HRegion.removeRegionFromMETA(server, regionName, e.row);
-        } else if (e.regionOffline) {
+        if (e.regionOffline) {
           HRegion.offlineRegionInMETA(server, regionName, e.info);
         }
       }
@@ -2282,6 +2257,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
                   Thread.currentThread().getName());
             }
           }
+          killList.remove(deadServerName);
           deadServers.remove(deadServerName);
           break;
 
@@ -2373,26 +2349,21 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   private class ProcessRegionClose extends ProcessRegionStatusChange {
     private boolean reassignRegion;
-    private boolean deleteRegion;
 
     /**
      * @param regionInfo
      * @param reassignRegion
-     * @param deleteRegion
      */
-    public ProcessRegionClose(HRegionInfo regionInfo, boolean reassignRegion,
-        boolean deleteRegion) {
-
+    public ProcessRegionClose(HRegionInfo regionInfo, boolean reassignRegion) {
       super(regionInfo);
       this.reassignRegion = reassignRegion;
-      this.deleteRegion = deleteRegion;
     }
 
     /** {@inheritDoc} */
     @Override
     public String toString() {
       return "ProcessRegionClose of " + this.regionInfo.getRegionName() +
-        ", " + this.reassignRegion + ", " + this.deleteRegion;
+        ", " + this.reassignRegion;
     }
 
     @Override
@@ -2414,10 +2385,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         }
 
         try {
-          if (deleteRegion) {
-            HRegion.removeRegionFromMETA(getMetaServer(), metaRegionName,
-              regionInfo.getRegionName());
-          } else if (!this.reassignRegion) {
+          if (!this.reassignRegion) {
             HRegion.offlineRegionInMETA(getMetaServer(), metaRegionName,
               regionInfo);
           }
@@ -2435,15 +2403,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         LOG.info("reassign region: " + regionInfo.getRegionName());
 
         unassignedRegions.put(regionInfo, ZERO_L);
-
-      } else if (deleteRegion) {
-        try {
-          HRegion.deleteRegion(fs, rootdir, regionInfo);
-        } catch (IOException e) {
-          e = RemoteExceptionHandler.checkIOException(e);
-          LOG.error("failed delete region " + regionInfo.getRegionName(), e);
-          throw e;
-        }
       }
       return true;
     }
@@ -2775,8 +2734,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
                   HRegionInfo info = getHRegionInfo(row, map);
                   if (info == null) {
                     emptyRows.add(row);
-                    throw new IOException(COL_REGIONINFO + " not found on " +
-                      row);
+                    LOG.error(COL_REGIONINFO + " not found on " + row);
+                    continue;
                   }
                   String serverName = Writables.bytesToString(map.get(COL_SERVER));
                   long startCode = Writables.bytesToLong(map.get(COL_STARTCODE));
@@ -2812,7 +2771,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
               }
               
               if (!tableExists) {
-                throw new IOException(tableName + " does not exist");
+                throw new TableNotFoundException(tableName + " does not exist");
               }
 
               postProcessMeta(m, server);
@@ -2822,6 +2781,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           } // synchronized(metaScannerLock)
 
         } catch (IOException e) {
+          if (e instanceof TableNotFoundException ||
+              e instanceof TableNotDisabledException ||
+              e instanceof InvalidColumnNameException) {
+            throw e;
+          }
           if (tries == numRetries - 1) {
             // No retries left
             checkFileSystem();
@@ -2894,8 +2858,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       for (HRegionInfo i: unservedRegions) {
         if (i.isOffline() && i.isSplit()) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Skipping region " + i.toString() + " because it is " +
-                "offline because it has been split");
+            LOG.debug("Skipping region " + i.toString() +
+                " because it is offline because it has been split");
           }
           continue;
         }
@@ -2917,8 +2881,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         }
 
         if (online) {                         // Bring offline regions on-line
-          if (!unassignedRegions.containsKey(i)) {
-            unassignedRegions.put(i, ZERO_L);
+          killedRegions.remove(i.getRegionName());
+          synchronized (unassignedRegions) {
+            if (!unassignedRegions.containsKey(i)) {
+              unassignedRegions.put(i, ZERO_L);
+            }
           }
 
         } else {                              // Prevent region from getting assigned.
@@ -2943,12 +2910,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         HashMap<Text, HRegionInfo> localKillList =
           new HashMap<Text, HRegionInfo>();
         
-        synchronized (killList) {
-          HashMap<Text, HRegionInfo> killedRegions = killList.get(serverName);
-          if (killedRegions != null) {
-            localKillList.putAll(killedRegions);
-          }
-        }
         for (HRegionInfo i: e.getValue()) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("adding region " + i.getRegionName() +
@@ -2956,12 +2917,18 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           }
           localKillList.put(i.getRegionName(), i);
         }
-        if (localKillList.size() > 0) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("inserted local kill list into kill list for server " +
-                serverName);
+        synchronized (killList) {
+          HashMap<Text, HRegionInfo> killedRegions = killList.get(serverName);
+          if (killedRegions != null) {
+            localKillList.putAll(killedRegions);
           }
-          killList.put(serverName, localKillList);
+          if (localKillList.size() > 0) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("inserted local kill list into kill list for server " +
+                  serverName);
+            }
+            killList.put(serverName, localKillList);
+          }
         }
       }
       servedRegions.clear();
@@ -2976,33 +2943,44 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   /** 
-   * Instantiated to delete a table
-   * Note that it extends ChangeTableState, which takes care of disabling
-   * the table.
+   * Instantiated to delete a table. Table must be disabled first
    */
-  private class TableDelete extends ChangeTableState {
+  private class TableDelete extends TableOperation {
 
     TableDelete(Text tableName) throws IOException {
-      super(tableName, false);
+      super(tableName);
+    }
+
+    @Override
+    protected void processScanItem(
+        @SuppressWarnings("unused") String serverName,
+        @SuppressWarnings("unused") long startCode,
+        final HRegionInfo info) throws IOException {
+      
+      if (isEnabled(info)) {
+        throw new TableNotDisabledException(tableName.toString());
+      }
     }
 
     @Override
     protected void postProcessMeta(MetaRegion m, HRegionInterface server)
-      throws IOException {
-
-      // For regions that are being served, mark them for deletion      
-      
-      for (HashSet<HRegionInfo> s: servedRegions.values()) {
-        for (HRegionInfo i: s) {
-          regionsToDelete.add(i.getRegionName());
-        }
-      }
-
-      // Unserved regions we can delete now
-      
+    throws IOException {
       for (HRegionInfo i: unservedRegions) {
+        // Update meta table
+        
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("updating columns in row: " + i.getRegionName());
+        }
+
+        BatchUpdate b = new BatchUpdate(rand.nextLong());
+        long lockid = b.startUpdate(i.getRegionName());
+        updateRegionInfo(lockid, b, i);
+        server.batchUpdate(m.getRegionName(), b);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("updated columns in row: " + i.getRegionName());
+        }
+
         // Delete the region
-      
         try {
           HRegion.deleteRegion(fs, rootdir, i);
         
@@ -3011,11 +2989,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             RemoteExceptionHandler.checkIOException(e));
         }
       }
-      super.postProcessMeta(m, server);
     }
 
-    @Override
-    protected void updateRegionInfo(BatchUpdate b,
+    private void updateRegionInfo(long lockid, BatchUpdate b,
         @SuppressWarnings("unused") HRegionInfo info) {
       for (int i = 0; i < ALL_META_COLUMNS.length; i++) {
         // Be sure to clean all cells
@@ -3131,9 +3107,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         if (families.get(columnName) != null){
           families.put(columnName, descriptor);
           updateRegionInfo(server, m.getRegionName(), i);          
-        }
-        else{ // otherwise, we have an error.
-          throw new IOException("Column family '" + columnName + 
+        } else{ // otherwise, we have an error.
+          throw new InvalidColumnNameException("Column family '" + columnName + 
             "' doesn't exist, so cannot be modified.");
         }
       }

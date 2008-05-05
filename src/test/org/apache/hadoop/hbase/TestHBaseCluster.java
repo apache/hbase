@@ -65,7 +65,6 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     basic();
     scanner();
     listTables();
-    cleanup();
   }
 
   private static final int FIRST_ROW = 1;
@@ -198,12 +197,5 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     assertEquals(2, families.size());
     assertTrue(families.contains(new Text(CONTENTS)));
     assertTrue(families.contains(new Text(ANCHOR)));
-  }
-  
-  private void cleanup() throws IOException {
-
-    // Delete the table we created
-
-    admin.deleteTable(desc.getName());
   }
 }

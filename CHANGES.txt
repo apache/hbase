@@ -30,7 +30,8 @@ Release 0.1.2 - 04/24/2008
    HBASE-609   Master doesn't see regionserver edits because of clock skew
    HBASE-607   MultiRegionTable.makeMultiRegionTable is not deterministic enough
                for regression tests
-
+   HBASE-478   offlining of table does not run reliably
+   
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
    HBASE-578   Upgrade branch to 0.16.3 hadoop.
