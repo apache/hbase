@@ -1359,10 +1359,11 @@ public class HStore implements HConstants {
    * We don't want to hold the structureLock for the whole time, as a compact() 
    * can be lengthy and we want to allow cache-flushes during this period.
    * @throws IOException
-   * 
+   * @param force True to force a compaction regardless of thresholds (Needed
+   * by merge).
    * @return true if compaction completed successfully
    */
-  boolean compact() throws IOException {
+  boolean compact(final boolean force) throws IOException {
     synchronized (compactLock) {
       // Storefiles are keyed by sequence id. The oldest file comes first.
       // We need to return out of here a List that has the newest file first.
@@ -1371,7 +1372,7 @@ public class HStore implements HConstants {
       if (filesToCompact.size() == 0) {
         return true;
       }
-      if (!hasReferences(filesToCompact) &&
+      if (!force && !hasReferences(filesToCompact) &&
           filesToCompact.size() < compactionThreshold) {
         return false;
       }

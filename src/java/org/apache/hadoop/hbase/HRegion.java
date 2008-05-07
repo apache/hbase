@@ -146,12 +146,12 @@ public class HRegion implements HConstants {
     
     // Compact each region so we only have one store file per family
     
-    a.compactStores();
+    a.compactStores(true);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for region: " + a.getRegionName());
       listPaths(fs, a.getRegionDir());
     }
-    b.compactStores();
+    b.compactStores(true);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for region: " + b.getRegionName());
       listPaths(fs, b.getRegionDir());
@@ -896,7 +896,6 @@ public class HRegion implements HConstants {
       this.fs.delete(this.regionCompactionDir);
     }
   }
-  
   /**
    * Compact all the stores.  This should be called periodically to make sure 
    * the stores are kept manageable.  
@@ -912,10 +911,33 @@ public class HRegion implements HConstants {
    * Note that no locking is necessary at this level because compaction only
    * conflicts with a region split, and that cannot happen because the region
    * server does them sequentially and not in parallel.
-   * 
    * @throws IOException
    */
   public boolean compactStores() throws IOException {
+    return compactStores(false);
+  }
+  
+  /*
+   * Compact all the stores.  This should be called periodically to make sure 
+   * the stores are kept manageable.  
+   *
+   * <p>This operation could block for a long time, so don't call it from a 
+   * time-sensitive thread.
+   *
+   * @return Returns TRUE if the compaction has completed.  FALSE, if the
+   * compaction was not carried out, because the HRegion is busy doing
+   * something else storage-intensive (like flushing the cache). The caller
+   * should check back later.
+   * 
+   * Note that no locking is necessary at this level because compaction only
+   * conflicts with a region split, and that cannot happen because the region
+   * server does them sequentially and not in parallel.
+   * 
+   * @param force True to force a compaction regardless of thresholds (Needed
+   * by merge).
+   * @throws IOException
+   */
+  private boolean compactStores(final boolean force) throws IOException {
     if (this.closed.get()) {
       return false;
     }
@@ -936,7 +958,7 @@ public class HRegion implements HConstants {
       boolean status = true;
       doRegionCompactionPrep();
       for (HStore store : stores.values()) {
-        if(!store.compact()) {
+        if(!store.compact(force)) {
           status = false;
         }
       }
