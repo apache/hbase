@@ -32,6 +32,7 @@ Release 0.1.2 - 04/24/2008
                for regression tests
    HBASE-478   offlining of table does not run reliably
    HBASE-618   We always compact if 2 files, regardless of the compaction threshold setting
+   HBASE-619   Fix 'logs' link in UI
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
