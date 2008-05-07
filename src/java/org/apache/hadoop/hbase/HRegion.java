@@ -932,7 +932,7 @@ public class HRegion implements HConstants {
         }
       }
       long startTime = System.currentTimeMillis();
-      LOG.info("starting compaction on region " + getRegionName());
+      LOG.info("checking compaction on region " + getRegionName());
       boolean status = true;
       doRegionCompactionPrep();
       for (HStore store : stores.values()) {
@@ -942,7 +942,7 @@ public class HRegion implements HConstants {
       }
       doRegionCompactionCleanup();
 
-      LOG.info("compaction completed on region " + getRegionName() + " in " +
+      LOG.info("checking completed on region " + getRegionName() + " in " +
         StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
       return status;
       

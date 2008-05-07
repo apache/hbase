@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.rmi.UnexpectedException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1323,8 +1324,17 @@ public class HStore implements HConstants {
    * @return True if this store has references.
    */
   private boolean hasReferences() {
-    if (this.storefiles != null) {
-      for (HStoreFile hsf: this.storefiles.values()) {
+    return this.storefiles != null && this.storefiles.size() > 0 &&
+      hasReferences(this.storefiles.values());
+  }
+  
+  /*
+   * @param files
+   * @return True if any of the files in <code>files</code> are References.
+   */
+  private boolean hasReferences(Collection<HStoreFile> files) {
+    if (files != null && files.size() > 0) {
+      for (HStoreFile hsf: files) {
         if (hsf.isReference()) {
           return true;
         }
@@ -1361,15 +1371,11 @@ public class HStore implements HConstants {
       if (filesToCompact.size() == 0) {
         return true;
       }
-      Collections.reverse(filesToCompact);
-      if (filesToCompact.size() < 1 ||
-        (filesToCompact.size() == 1 && !filesToCompact.get(0).isReference())) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("nothing to compact for " + this.storeName);
-        }
+      if (!hasReferences(filesToCompact) &&
+          filesToCompact.size() < compactionThreshold) {
         return false;
       }
-
+      Collections.reverse(filesToCompact);
       if (!fs.exists(compactionDir) && !fs.mkdirs(compactionDir)) {
         LOG.warn("Mkdir on " + compactionDir.toString() + " failed");
         return false;
