@@ -942,7 +942,7 @@ public class HRegion implements HConstants {
       }
       doRegionCompactionCleanup();
 
-      LOG.info("checking completed on region " + getRegionName() + " in " +
+      LOG.info("checking compaction completed on region " + getRegionName() + " in " +
         StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
       return status;
       
