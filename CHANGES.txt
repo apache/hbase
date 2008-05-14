@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.1.2 - 04/24/2008
+Release 0.1.2 - 05/13/2008
 
   BUG FIXES
    HBASE-577   NPE getting scanner
