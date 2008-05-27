@@ -595,7 +595,8 @@ public class HLog implements HConstants {
             w.append(key, val);
           }
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Applied " + count + " total edits");
+            LOG.debug("Applied " + count + " total edits from " +
+              logfiles[i].getPath().toString());
           }
         } catch (IOException e) {
           e = RemoteExceptionHandler.checkIOException(e);
