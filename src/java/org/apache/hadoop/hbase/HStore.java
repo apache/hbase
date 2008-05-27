@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.rmi.UnexpectedException;
@@ -846,8 +847,24 @@ public class HStore implements HConstants {
     // Finally, start up all the map readers! (There could be more than one
     // since we haven't compacted yet.)
     for(Map.Entry<Long, HStoreFile> e: this.storefiles.entrySet()) {
-      this.readers.put(e.getKey(),
-        e.getValue().getReader(this.fs, this.bloomFilter));
+      MapFile.Reader r = null;
+      try {
+        r = e.getValue().getReader(this.fs, this.bloomFilter);
+      } catch (EOFException eofe) {
+        LOG.warn("Failed open of reader " + e.toString() + "; attempting fix",
+          eofe);
+        try {
+          // Try fixing this file.. if we can.  
+          MapFile.fix(this.fs, e.getValue().getMapFilePath(),
+            HStoreFile.HbaseMapFile.KEY_CLASS,
+            HStoreFile.HbaseMapFile.VALUE_CLASS, false, this.conf);
+        } catch (Exception fixe) {
+          LOG.warn("Failed fix of " + e.toString() +
+            "...continuing; Probable DATA LOSS!!!", fixe);
+          continue;
+        }
+      }
+      this.readers.put(e.getKey(), r);
     }
   }
   
@@ -991,7 +1008,7 @@ public class HStore implements HConstants {
       if (!fs.exists(mapfile)) {
         fs.delete(curfile.getInfoFilePath());
         LOG.warn("Mapfile " + mapfile.toString() + " does not exist. " +
-          "Cleaned up info file.  Continuing...");
+          "Cleaned up info file.  Continuing...Probable DATA LOSS!!!");
         continue;
       }
       

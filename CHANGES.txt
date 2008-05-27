@@ -2,6 +2,7 @@ HBase Change Log
 
   BUG FIXES
    HBASE-644   DroppedSnapshotException but RegionServer doesn't restart
+   HBASE-645   EOFException opening region (HBASE-550 redux)
 
 Release 0.1.2 - 05/13/2008
 
