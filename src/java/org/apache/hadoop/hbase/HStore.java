@@ -825,13 +825,21 @@ public class HStore implements HConstants {
     
     try {
       doReconstructionLog(reconstructionLog, maxSeqId, reporter);
-    } catch (IOException e) {
-      // Presume we got here because of some HDFS issue or because of a lack of
-      // HADOOP-1700; for now keep going but this is probably not what we want
-      // long term.  If we got here there has been data-loss
+    } catch (EOFException e) {
+      // Presume we got here because of lack of HADOOP-1700; for now keep going
+      // but this is probably not what we want long term.  If we got here there
+      // has been data-loss
       LOG.warn("Exception processing reconstruction log " + reconstructionLog +
         " opening " + this.storeName +
-        " -- continuing.  Probably DATA LOSS!", e);
+        " -- continuing.  Probably lack-of-HADOOP-1700 causing DATA LOSS!", e);
+    } catch (IOException e) {
+      // Presume we got here because of some HDFS issue. Don't just keep going.
+      // Fail to open the HStore.  Probably means we'll fail over and over
+      // again until human intervention but alternative has us skipping logs
+      // and losing edits: HBASE-642.
+      LOG.warn("Exception processing reconstruction log " + reconstructionLog +
+        " opening " + this.storeName, e);
+      throw e;
     }
 
     // By default, we compact if an HStore has more than

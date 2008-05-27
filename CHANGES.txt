@@ -4,6 +4,8 @@ HBase Change Log
    HBASE-644   DroppedSnapshotException but RegionServer doesn't restart
    HBASE-645   EOFException opening region (HBASE-550 redux)
    HBASE-641   Improve master split logging
+   HBASE-642   Splitting log in a hostile environment -- bad hdfs -- we drop
+               write-ahead-log edits
 
 Release 0.1.2 - 05/13/2008
 
