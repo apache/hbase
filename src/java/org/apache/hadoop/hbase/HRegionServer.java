@@ -430,8 +430,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
      * times.
      * 
      * @return true if the region was successfully flushed, false otherwise. If 
-     * false, there will be accompanying log messages explaining why the log was
-     * not flushed.
+     * false, we exit the Flusher thread.
      */
     private boolean flushRegion(HRegion region, boolean removeFromQueue) {
       synchronized (regionsInQueue) {
@@ -451,12 +450,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           // Cache flush can fail in a few places.  If it fails in a critical
           // section, we get a DroppedSnapshotException and a replay of hlog
           // is required. Currently the only way to do this is a restart of
-          // the server.
+          // the server.  Abort because hdfs is probably bad (HBASE-644 is
+          // a case where hdfs was bad but passed the hdfs check).
           LOG.fatal("Replay of hlog required. Forcing server restart", ex);
-          if (!checkFileSystem()) {
-            return false;
-          }
-          server.stop();
+          abort();
           return false;
         } catch (IOException ex) {
           LOG.error("Cache flush failed" +
@@ -771,8 +768,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                       serverInfo.setStartCode(System.currentTimeMillis());
                       log = setupHLog();
                     } catch (IOException e) {
-                      this.abortRequested = true;
-                      this.stopRequested.set(true);
+                      abort();
                       e = RemoteExceptionHandler.checkIOException(e); 
                       LOG.fatal("error restarting server", e);
                       break;
@@ -1047,12 +1043,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /**
    * Sets a flag that will cause all the HRegionServer threads to shut down
-   * in an orderly fashion.  Used by unit tests and called by {@link Flusher}
-   * if it judges server needs to be restarted.
+   * in an orderly fashion.  Used by unit tests.
    */
-  synchronized void stop() {
+  void stop() {
     this.stopRequested.set(true);
-    notifyAll();                        // Wakes run() if it is sleeping
+    synchronized (this) {
+      // Wakes run() if it is sleeping
+      notifyAll();
+    }
   }
   
   /**
@@ -1061,7 +1059,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Used unit testing and on catastrophic events such as HDFS is yanked out
    * from under hbase or we OOME.
    */
-  synchronized void abort() {
+  void abort() {
     this.abortRequested = true;
     stop();
   }
@@ -1776,14 +1774,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         FSUtils.checkFileSystemAvailable(fs);
       } catch (IOException e) {
         LOG.fatal("Shutting down HRegionServer: file system not available", e);
-        this.abortRequested = true;
-        this.stopRequested.set(true);
+        abort();
         fsOk = false;
       }
     }
     return this.fsOk;
   }
- 
+
   /**
    * @return Returns list of non-closed regions hosted on this server.  If no
    * regions to check, returns an empty list.

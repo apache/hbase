@@ -1,5 +1,8 @@
 HBase Change Log
 
+  BUG FIXES
+   HBASE-644   DroppedSnapshotException but RegionServer doesn't restart
+
 Release 0.1.2 - 05/13/2008
 
   BUG FIXES
