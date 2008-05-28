@@ -992,6 +992,14 @@ public class HStore implements HConstants {
     ArrayList<HStoreFile> results = new ArrayList<HStoreFile>(infofiles.length);
     ArrayList<Path> mapfiles = new ArrayList<Path>(infofiles.length);
     for (Path p: infofiles) {
+      // Check for empty info file.  Should never be the case but can happen
+      // after data loss in hdfs for whatever reason (upgrade, etc.): HBASE-646
+      if (this.fs.getFileStatus(p).getLen() <= 0) {
+        LOG.warn("Skipping " + p + " because its empty.  DATA LOSS?  Can " +
+          "this scenario be repaired?  HBASE-646");
+        continue;
+      }
+
       Matcher m = REF_NAME_PARSER.matcher(p.getName());
       /*
        *  *  *  *  *  N O T E  *  *  *  *  *
@@ -1015,13 +1023,20 @@ public class HStore implements HConstants {
       Path mapfile = curfile.getMapFilePath();
       if (!fs.exists(mapfile)) {
         fs.delete(curfile.getInfoFilePath());
-        LOG.warn("Mapfile " + mapfile.toString() + " does not exist. " +
-          "Cleaned up info file.  Continuing...Probable DATA LOSS!!!");
+        LOG.warn("Mapfile " + mapfile.toString() + " does not exist. Cleaned " +
+          "up info file.  Continuing...Probable DATA LOSS!!!");
         continue;
       }
-      
+      if (isEmptyDataFile(mapfile)) {
+        curfile.delete();
+        // We can have empty data file if data loss in hdfs.
+        LOG.warn("Mapfile " + mapfile.toString() + " has empty data. " +
+          "Deleting.  Continuing...Probable DATA LOSS!!!  See HBASE-646.");
+        continue;
+      }
+
       // TODO: Confirm referent exists.
-      
+
       // Found map and sympathetic info file.  Add this hstorefile to result.
       results.add(curfile);
       if (LOG.isDebugEnabled()) {
@@ -1044,7 +1059,22 @@ public class HStore implements HConstants {
     }
     return results;
   }
-  
+
+  /* 
+   * @param mapfile
+   * @return True if the passed mapfile has a zero-length data component (its
+   * broken).
+   * @throws IOException
+   */
+  private boolean isEmptyDataFile(final Path mapfile)
+  throws IOException {
+    // Mapfiles are made of 'data' and 'index' files.  Confirm 'data' is
+    // non-null if it exists (may not have been written to yet).
+    Path dataFile = new Path(mapfile, "data");
+    return this.fs.exists(dataFile) &&
+      this.fs.getFileStatus(dataFile).getLen() == 0;
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // Bloom filters
   //////////////////////////////////////////////////////////////////////////////
