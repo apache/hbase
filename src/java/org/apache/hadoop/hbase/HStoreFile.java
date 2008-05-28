@@ -21,10 +21,10 @@ package org.apache.hadoop.hbase;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -538,8 +538,9 @@ public class HStoreFile implements HConstants {
    * Hbase customizations of MapFile.
    */
   static class HbaseMapFile extends MapFile {
-    static final Class KEY_CLASS = HStoreKey.class;
-    static final Class VALUE_CLASS = ImmutableBytesWritable.class;
+    static final Class<? extends Writable> KEY_CLASS = HStoreKey.class;
+    static final Class<? extends Writable> VALUE_CLASS =
+      ImmutableBytesWritable.class;
 
     static class HbaseReader extends MapFile.Reader {
       
@@ -569,8 +570,6 @@ public class HStoreFile implements HConstants {
        * @param conf
        * @param fs
        * @param dirName
-       * @param keyClass
-       * @param valClass
        * @param compression
        * @throws IOException
        */

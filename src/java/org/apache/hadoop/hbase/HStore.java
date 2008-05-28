@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HStoreFile.HbaseMapFile;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.TextSequence;
@@ -855,24 +856,8 @@ public class HStore implements HConstants {
     // Finally, start up all the map readers! (There could be more than one
     // since we haven't compacted yet.)
     for(Map.Entry<Long, HStoreFile> e: this.storefiles.entrySet()) {
-      MapFile.Reader r = null;
-      try {
-        r = e.getValue().getReader(this.fs, this.bloomFilter);
-      } catch (EOFException eofe) {
-        LOG.warn("Failed open of reader " + e.toString() + "; attempting fix",
-          eofe);
-        try {
-          // Try fixing this file.. if we can.  
-          MapFile.fix(this.fs, e.getValue().getMapFilePath(),
-            HStoreFile.HbaseMapFile.KEY_CLASS,
-            HStoreFile.HbaseMapFile.VALUE_CLASS, false, this.conf);
-        } catch (Exception fixe) {
-          LOG.warn("Failed fix of " + e.toString() +
-            "...continuing; Probable DATA LOSS!!!", fixe);
-          continue;
-        }
-      }
-      this.readers.put(e.getKey(), r);
+      this.readers.put(e.getKey(),
+        e.getValue().getReader(this.fs, this.bloomFilter));
     }
   }
   
@@ -978,7 +963,8 @@ public class HStore implements HConstants {
   /*
    * Creates a series of HStoreFiles loaded from the given directory.
    * There must be a matching 'mapdir' and 'loginfo' pair of files.
-   * If only one exists, we'll delete it.
+   * If only one exists, we'll delete it.  Does other consistency tests
+   * checking files are not zero, etc.
    *
    * @param infodir qualified path for info file directory
    * @param mapdir qualified path for map file directory
@@ -1034,6 +1020,23 @@ public class HStore implements HConstants {
           "Deleting.  Continuing...Probable DATA LOSS!!!  See HBASE-646.");
         continue;
       }
+      if (isEmptyIndexFile(mapfile)) {
+        try {
+          // Try fixing this file.. if we can.  Use the hbase version of fix.
+          // Need to remove the old index file first else fix won't go ahead.
+          this.fs.delete(new Path(mapfile, MapFile.INDEX_FILE_NAME));
+          long count = MapFile.fix(this.fs, mapfile, HbaseMapFile.KEY_CLASS,
+            HbaseMapFile.VALUE_CLASS, false, this.conf);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Fixed index on " + mapfile.toString() + "; had " +
+              count + " entries");
+          }
+        } catch (Exception e) {
+          LOG.warn("Failed fix of " + mapfile.toString() +
+            "...continuing; Probable DATA LOSS!!!", e);
+          continue;
+        }
+      }
 
       // TODO: Confirm referent exists.
 
@@ -1070,9 +1073,32 @@ public class HStore implements HConstants {
   throws IOException {
     // Mapfiles are made of 'data' and 'index' files.  Confirm 'data' is
     // non-null if it exists (may not have been written to yet).
-    Path dataFile = new Path(mapfile, "data");
-    return this.fs.exists(dataFile) &&
-      this.fs.getFileStatus(dataFile).getLen() == 0;
+    return isEmptyFile(new Path(mapfile, MapFile.DATA_FILE_NAME));
+  }
+
+  /* 
+   * @param mapfile
+   * @return True if the passed mapfile has a zero-length index component (its
+   * broken).
+   * @throws IOException
+   */
+  private boolean isEmptyIndexFile(final Path mapfile)
+  throws IOException {
+    // Mapfiles are made of 'data' and 'index' files.  Confirm 'data' is
+    // non-null if it exists (may not have been written to yet).
+    return isEmptyFile(new Path(mapfile, MapFile.INDEX_FILE_NAME));
+  }
+
+  /* 
+   * @param mapfile
+   * @return True if the passed mapfile has a zero-length index component (its
+   * broken).
+   * @throws IOException
+   */
+  private boolean isEmptyFile(final Path f)
+  throws IOException {
+    return this.fs.exists(f) &&
+      this.fs.getFileStatus(f).getLen() == 0;
   }
 
   //////////////////////////////////////////////////////////////////////////////

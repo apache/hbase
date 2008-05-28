@@ -7,6 +7,7 @@ HBase Change Log
    HBASE-642   Splitting log in a hostile environment -- bad hdfs -- we drop
                write-ahead-log edits
    HBASE-646   EOFException opening HStoreFile info file (spin on HBASE-645 and 550)
+   HBASE-648   If mapfile index is empty, run repair
 
 Release 0.1.2 - 05/13/2008
 
