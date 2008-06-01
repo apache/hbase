@@ -1005,7 +1005,7 @@ public class HStore implements HConstants {
         reference = readSplitInfo(p, fs);
       }
       curfile = new HStoreFile(conf, fs, basedir, info.getEncodedName(),
-          family.getFamilyName(), fid, reference);
+        family.getFamilyName(), fid, reference);
       Path mapfile = curfile.getMapFilePath();
       if (!fs.exists(mapfile)) {
         fs.delete(curfile.getInfoFilePath());
@@ -1284,7 +1284,7 @@ public class HStore implements HConstants {
     // TODO: We can fail in the below block before we complete adding this
     // flush to list of store files. Add cleanup of anything put on filesystem
     // if we fail.
-    synchronized(flushLock) {
+    synchronized (flushLock) {
       // A. Write the Maps out to the disk
       HStoreFile flushedFile = new HStoreFile(conf, fs, basedir,
           info.getEncodedName(), family.getFamilyName(), -1L, null);
@@ -2455,11 +2455,11 @@ public class HStore implements HConstants {
   implements ChangedReadersObserver {
     // Keys retrieved from the sources
     private HStoreKey keys[];
+    
     // Values that correspond to those keys
     private byte [][] vals;
 
-    @SuppressWarnings("hiding")
-    private MapFile.Reader[] readers;
+    private MapFile.Reader[] sfsReaders;
 
     // Used around replacement of Readers if they change while we're scanning.
     @SuppressWarnings("hiding")
@@ -2486,25 +2486,28 @@ public class HStore implements HConstants {
     * @throws IOException
     */
    private void openReaders(final Text firstRow) throws IOException {
-     if (this.readers != null) {
-       for (int i = 0; i < this.readers.length; i++) {
-         this.readers[i].close();
+     if (this.sfsReaders != null) {
+       for (int i = 0; i < this.sfsReaders.length; i++) {
+         // Close readers that are not exhausted, set to null
+         if (this.sfsReaders[i] != null) {
+           this.sfsReaders[i].close();
+         }
        }
      }
      // Open our own copies of the Readers here inside in the scanner.
-     this.readers = new MapFile.Reader[getStorefiles().size()];
+     this.sfsReaders = new MapFile.Reader[getStorefiles().size()];
      
      // Most recent map file should be first
-     int i = readers.length - 1;
+     int i = sfsReaders.length - 1;
      for(HStoreFile curHSF: getStorefiles().values()) {
-       readers[i--] = curHSF.getReader(fs, bloomFilter);
+       sfsReaders[i--] = curHSF.getReader(fs, bloomFilter);
      }
      
-     this.keys = new HStoreKey[readers.length];
-     this.vals = new byte[readers.length][];
+     this.keys = new HStoreKey[sfsReaders.length];
+     this.vals = new byte[sfsReaders.length][];
      
      // Advance the readers to the first pos.
-     for (i = 0; i < readers.length; i++) {
+     for (i = 0; i < sfsReaders.length; i++) {
        keys[i] = new HStoreKey();
        if (firstRow.getLength() != 0) {
          if (findFirstRow(i, firstRow)) {
@@ -2577,7 +2580,7 @@ public class HStore implements HConstants {
                }
              }
  
-             if(!getNext(i)) {
+             if (!getNext(i)) {
                closeSubScanner(i);
              }
            }
@@ -2658,18 +2661,18 @@ public class HStore implements HConstants {
      }
    }
 
-    /**
+    /*
      * The user didn't want to start scanning at the first row. This method
      * seeks to the requested row.
      *
-     * @param i         - which iterator to advance
-     * @param firstRow  - seek to this row
-     * @return          - true if this is the first row or if the row was not found
+     * @param i Which iterator to advance
+     * @param firstRow Seek to this row
+     * @return True if this is the first row or if the row was not found
      */
-    boolean findFirstRow(int i, Text firstRow) throws IOException {
+    private boolean findFirstRow(int i, Text firstRow) throws IOException {
       ImmutableBytesWritable ibw = new ImmutableBytesWritable();
       HStoreKey firstKey =
-        (HStoreKey)readers[i].getClosest(new HStoreKey(firstRow), ibw);
+        (HStoreKey)this.sfsReaders[i].getClosest(new HStoreKey(firstRow), ibw);
       if (firstKey == null) {
         // Didn't find it. Close the scanner and return TRUE
         closeSubScanner(i);
@@ -2682,17 +2685,19 @@ public class HStore implements HConstants {
       return columnMatch(i);
     }
     
-    /**
+    /*
      * Get the next value from the specified reader.
+     * 
+     * Caller must be holding a read lock.
      * 
      * @param i - which reader to fetch next value from
      * @return - true if there is more data available
      */
-    boolean getNext(int i) throws IOException {
+    private boolean getNext(int i) throws IOException {
       boolean result = false;
       ImmutableBytesWritable ibw = new ImmutableBytesWritable();
       while (true) {
-        if (!readers[i].next(keys[i], ibw)) {
+        if (!sfsReaders[i].next(keys[i], ibw)) {
           closeSubScanner(i);
           break;
         }
@@ -2705,42 +2710,44 @@ public class HStore implements HConstants {
       return result;
     }
     
-    /** Close down the indicated reader. */
-    void closeSubScanner(int i) {
+    /* Close down the indicated reader.
+     * @param i Index
+     */
+    private void closeSubScanner(int i) {
       try {
-        if(readers[i] != null) {
+        if(this.sfsReaders[i] != null) {
           try {
-            readers[i].close();
+            this.sfsReaders[i].close();
           } catch(IOException e) {
             LOG.error(storeName + " closing sub-scanner", e);
           }
         }
         
       } finally {
-        readers[i] = null;
-        keys[i] = null;
-        vals[i] = null;
+        this.sfsReaders[i] = null;
+        this.keys[i] = null;
+        this.vals[i] = null;
       }
     }
 
     /** Shut it down! */
     public void close() {
-      if(! scannerClosed) {
-        deleteChangedReaderObserver(this);
-        try {
-          for(int i = 0; i < readers.length; i++) {
-            if(readers[i] != null) {
-              try {
-                readers[i].close();
-              } catch(IOException e) {
-                LOG.error(storeName + " closing scanner", e);
-              }
+      if (this.scannerClosed) {
+        return;
+      }
+      deleteChangedReaderObserver(this);
+      try {
+        for (int i = 0; i < this.sfsReaders.length; i++) {
+          if (this.sfsReaders[i] != null) {
+            try {
+              this.sfsReaders[i].close();
+            } catch (IOException e) {
+              LOG.error(storeName + " closing scanner", e);
             }
           }
-          
-        } finally {
-          scannerClosed = true;
         }
+      } finally {
+        this.scannerClosed = true;
       }
     }
   }
