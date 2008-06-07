@@ -2958,7 +2958,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         final HRegionInfo info) throws IOException {
       
       if (isEnabled(info)) {
-        throw new TableNotDisabledException(tableName.toString());
+        throw new TableNotDisabledException("You must first disable table <" +
+          tableName.toString() + "> before you can drop it");
       }
     }
 
