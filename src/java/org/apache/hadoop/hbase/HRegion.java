@@ -958,7 +958,7 @@ public class HRegion implements HConstants {
       boolean status = true;
       doRegionCompactionPrep();
       for (HStore store : stores.values()) {
-        if(!store.compact(force)) {
+        if (!store.compact(force)) {
           status = false;
         }
       }
@@ -1105,8 +1105,10 @@ public class HRegion implements HConstants {
            if (LOG.isDebugEnabled()) {
              LOG.warn("Memcache size went negative " + size + "; resetting");
            }
-           this.memcacheSize.set(0);
         }
+        // Our count is unreliable; HBASE-674.  Just set memcache to zero
+        // rather than rely on our keeping a running accurate count.
+        this.memcacheSize.set(0);
       }
     } catch (Throwable t) {
       // An exception here means that the snapshot was not persisted.
@@ -1129,7 +1131,7 @@ public class HRegion implements HConstants {
     //     and that all updates to the log for this regionName that have lower 
     //     log-sequence-ids can be safely ignored.
     this.log.completeCacheFlush(this.regionInfo.getRegionName(),
-        regionInfo.getTableDesc().getName(), sequenceId);
+      regionInfo.getTableDesc().getName(), sequenceId);
 
     // D. Finally notify anyone waiting on memcache to clear:
     // e.g. checkResources().
@@ -1466,7 +1468,7 @@ public class HRegion implements HConstants {
     while (this.memcacheSize.get() >= this.blockingMemcacheSize) {
       if (!blocked) {
         LOG.info("Blocking updates for '" + Thread.currentThread().getName() +
-            "': Memcache size " +
+            "' on region " + getRegionName().toString() + ": Memcache size " +
             StringUtils.humanReadableInt(this.memcacheSize.get()) +
             " is >= than blocking " +
             StringUtils.humanReadableInt(this.blockingMemcacheSize) + " size");
@@ -1633,6 +1635,9 @@ public class HRegion implements HConstants {
       for (Map.Entry<HStoreKey, byte[]> e: updatesByColumn.entrySet()) {
         HStoreKey key = e.getKey();
         byte[] val = e.getValue();
+        // What if the update fails?  Memcache size will be off by this
+        // entry's size.  Have to discern if the delete is one where data
+        // failed to get added. St.Ack.
         size = this.memcacheSize.addAndGet(getEntrySize(key, val));
         stores.get(HStoreKey.extractFamily(key.getColumn())).add(key, val);
       }

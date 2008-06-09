@@ -471,8 +471,8 @@ public class HLog implements HConstants {
    * @throws IOException
    */
   void completeCacheFlush(final Text regionName, final Text tableName,
-      final long logSeqId) throws IOException {
-
+    final long logSeqId)
+  throws IOException {
     try {
       if (this.closed) {
         return;

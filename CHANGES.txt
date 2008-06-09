@@ -11,6 +11,7 @@ HBase Change Log
    HBASE-659   HLog#cacheFlushLock not cleared; hangs a region
    HBASE-663   Incorrect sequence number for cache flush
    HBASE-652   Dropping table fails silently if table isn't disabled 
+   HBASE-674   Memcache size unreliable
 
 Release 0.1.2 - 05/13/2008
 
