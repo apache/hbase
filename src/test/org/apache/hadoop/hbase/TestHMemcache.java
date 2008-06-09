@@ -61,8 +61,7 @@ public class TestHMemcache extends TestCase {
    * @param hmc Instance to add rows to.
    */
   private void addRows(final HStore.Memcache hmc)
-    throws UnsupportedEncodingException {
-    
+  throws UnsupportedEncodingException {
     for (int i = 0; i < ROW_COUNT; i++) {
       long timestamp = System.currentTimeMillis();
       for (int ii = 0; ii < COLUMNS_COUNT; ii++) {
@@ -100,8 +99,7 @@ public class TestHMemcache extends TestCase {
   }
   
   private void isExpectedRow(final int rowIndex, TreeMap<Text, byte []> row)
-    throws UnsupportedEncodingException {
-    
+  throws UnsupportedEncodingException {
     int i = 0;
     for (Text colname: row.keySet()) {
       String expectedColname = getColumnName(rowIndex, i++).toString();

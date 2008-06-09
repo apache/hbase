@@ -835,10 +835,8 @@ public class HTable implements HConstants {
       if (this.currentRegionLocation != null){
         LOG.debug("Advancing forward from region " 
           + this.currentRegionLocation.getRegionInfo());
-        
-        if (this.currentRegionLocation.getRegionInfo().getEndKey() == null
-          || this.currentRegionLocation.getRegionInfo().getEndKey().equals(EMPTY_TEXT)) {
-            LOG.debug("We're at the end of the region, returning.");
+        Text endKey =  this.currentRegionLocation.getRegionInfo().getEndKey();
+        if (endKey == null || endKey.equals(EMPTY_TEXT) || filterSaysStop(endKey)) {
             close();
             return false;
         }
@@ -897,6 +895,20 @@ public class HTable implements HConstants {
         throw e;
       }
       return true;
+    }
+
+    /**
+     * @param endKey
+     * @return Returns true if the passed region endkey is judged beyond
+     * filter.
+     */
+    private boolean filterSaysStop(final Text endKey) {
+      if (this.filter == null) {
+        return false;
+      }
+      // Let the filter see current row.
+      this.filter.filter(endKey);
+      return this.filter.filterAllRemaining();
     }
 
     /** {@inheritDoc} */
