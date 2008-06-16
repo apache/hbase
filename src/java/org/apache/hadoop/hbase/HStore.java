@@ -478,8 +478,11 @@ public class HStore implements HConstants {
           if (!HLogEdit.isDeleted(es.getValue())) { 
             result.add(tailMap.get(itKey));
           }
-        }
-        if (numVersions > 0 && result.size() >= numVersions) {
+          if (numVersions > 0 && result.size() >= numVersions) {
+            break;
+          }
+        } else {
+          // By L.N. HBASE-684, map is sorted, so we can't find match any more.
           break;
         }
       }
