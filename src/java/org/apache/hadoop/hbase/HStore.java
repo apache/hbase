@@ -533,7 +533,7 @@ public class HStore implements HConstants {
         HStoreKey key = es.getKey();
     
         // if there's no column name, then compare rows and timestamps
-        if (origin.getColumn().toString().equals("")) {
+        if (origin.getColumn() == null || origin.getColumn().getLength() == 0) {
           // if the current and origin row don't match, then we can jump
           // out of the loop entirely.
           if (!key.getRow().equals(origin.getRow())) {
