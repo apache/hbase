@@ -21,6 +21,8 @@ Release 0.1.3 - Unreleased
                (LN via Stack)
    HBASE-684   unnecessary iteration in HMemcache.internalGet? got much better
                reading performance after break it (LN via Stack)
+   HBASE-686   MemcacheScanner didn't return the first row(if it exists),
+               because HScannerInterface's output incorrect (LN via Jim Kellerman)
 
 
 Release 0.1.2 - 05/13/2008

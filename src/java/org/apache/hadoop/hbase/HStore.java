@@ -631,8 +631,7 @@ public class HStore implements HConstants {
        if (results.size() > 0) {
          results.clear();
        }
-       while (results.size() <= 0 &&
-           (this.currentRow = getNextRow(this.currentRow)) != null) {
+       while (results.size() <= 0 && this.currentRow != null) {
          if (deletes.size() > 0) {
            deletes.clear();
          }
@@ -661,6 +660,7 @@ public class HStore implements HConstants {
            }
            results.put(column, c);
          }
+         this.currentRow = getNextRow(this.currentRow);
        }
        return results.size() > 0;
      }

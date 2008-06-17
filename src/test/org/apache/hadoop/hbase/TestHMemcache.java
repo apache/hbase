@@ -196,7 +196,7 @@ public class TestHMemcache extends TestCase {
   }
   
   /** For HBASE-514 **/
-  public void testGetRowKeyAtOrBefore() throws IOException {
+  public void testGetRowKeyAtOrBefore() {
     // set up some test data
     Text t10 = new Text("010");
     Text t20 = new Text("020");
@@ -240,4 +240,40 @@ public class TestHMemcache extends TestCase {
   private HStoreKey getHSKForRow(Text row) {
     return new HStoreKey(row, new Text("test_col:"), HConstants.LATEST_TIMESTAMP);
   }
+
+  /**
+   * Test memcache scanner scanning cached rows, HBASE-686
+   * @throws IOException
+   */
+  public void testScanner_686() throws IOException {
+    addRows(this.hmemcache);
+    long timestamp = System.currentTimeMillis();
+    Text[] cols = new Text[COLUMNS_COUNT * ROW_COUNT];
+    for (int i = 0; i < ROW_COUNT; i++) {
+      for (int ii = 0; ii < COLUMNS_COUNT; ii++) {
+        cols[(ii + (i * COLUMNS_COUNT))] = getColumnName(i, ii);
+      }
+    }
+    //starting from each row, validate results should contain the starting row
+    for (int startRowId = 0; startRowId < ROW_COUNT; startRowId++) {
+      HInternalScannerInterface scanner = this.hmemcache.getScanner(timestamp,
+          cols, new Text(getRowName(startRowId)));
+      HStoreKey key = new HStoreKey();
+      TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+      for (int i = 0; scanner.next(key, results); i++) {
+        int rowId = startRowId + i;
+        assertTrue("Row name",
+            key.toString().startsWith(getRowName(rowId).toString()));
+        assertEquals("Count of columns", COLUMNS_COUNT, results.size());
+        TreeMap<Text, byte[]> row = new TreeMap<Text, byte[]>();
+        for (Map.Entry<Text, byte[]> e : results.entrySet()) {
+          row.put(e.getKey(), e.getValue());
+        }
+        isExpectedRow(rowId, row);
+        // Clear out set.  Otherwise row results accumulate.
+        results.clear();
+      }
+    }
+  }
+
 }
