@@ -271,36 +271,49 @@ public class HStore implements HConstants {
      * The returned object should map column names to byte arrays (byte[]).
      * @param key
      * @param results
+     * @return most recent timestamp found
      */
-    void getFull(HStoreKey key, Map<Text, Long> deletes, 
+    long getFull(HStoreKey key, Map<Text, Long> deletes, 
       SortedMap<Text, byte[]> results) {
+      long rowtime = -1L;
       
       this.mc_lock.readLock().lock();
       try {
         synchronized (mc) {
-          internalGetFull(mc, key, deletes, results);
+          long ts = internalGetFull(mc, key, deletes, results);
+          if (ts != HConstants.LATEST_TIMESTAMP && ts > rowtime) {
+            rowtime = ts;
+          }
         }
         synchronized (snapshot) {
-          internalGetFull(snapshot, key, deletes, results);
+          long ts = internalGetFull(snapshot, key, deletes, results);
+          if (ts != HConstants.LATEST_TIMESTAMP && ts > rowtime) {
+            rowtime = ts;
+          }
         }
-
+        return rowtime;
       } finally {
         this.mc_lock.readLock().unlock();
       }
     }
 
-    private void internalGetFull(SortedMap<HStoreKey, byte []> map, HStoreKey key, 
+    private long internalGetFull(SortedMap<HStoreKey, byte []> map, HStoreKey key, 
       Map<Text, Long> deletes, SortedMap<Text, byte []> results) {
 
       if (map.isEmpty() || key == null) {
-        return;
+        return -1L;
       }
 
+      long rowtime = -1L;
       SortedMap<HStoreKey, byte []> tailMap = map.tailMap(key);
       for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
         HStoreKey itKey = es.getKey();
         Text itCol = itKey.getColumn();
         if (results.get(itCol) == null && key.matchesWithoutColumn(itKey)) {
+          if (itKey.getTimestamp() != HConstants.LATEST_TIMESTAMP &&
+              itKey.getTimestamp() > rowtime) {
+            rowtime = itKey.getTimestamp();
+          }
           byte [] val = tailMap.get(itKey);
 
           if (HLogEdit.isDeleted(val)) {
@@ -316,6 +329,7 @@ public class HStore implements HConstants {
           break;
         }
       }
+      return rowtime;
     }
 
     /**
@@ -631,6 +645,7 @@ public class HStore implements HConstants {
        if (results.size() > 0) {
          results.clear();
        }
+       long ts = -1L;
        while (results.size() <= 0 && this.currentRow != null) {
          if (deletes.size() > 0) {
            deletes.clear();
@@ -640,7 +655,7 @@ public class HStore implements HConstants {
          }
          key.setRow(this.currentRow);
          key.setVersion(this.timestamp);
-         getFull(key, deletes, rowResults);
+         ts = getFull(key, deletes, rowResults);
          for (Text column: deletes.keySet()) {
            rowResults.put(column, HLogEdit.deleteBytes.get());
          }
@@ -661,6 +676,12 @@ public class HStore implements HConstants {
            results.put(column, c);
          }
          this.currentRow = getNextRow(this.currentRow);
+       }
+       // Set the timestamp to the largest one for the row if we would otherwise
+       // return HConstants.LATEST_TIMESTAMP
+       if (key.getTimestamp() == HConstants.LATEST_TIMESTAMP &&
+           ts != -1L) {
+         key.setVersion(ts);
        }
        return results.size() > 0;
      }
@@ -2512,7 +2533,7 @@ public class HStore implements HConstants {
      // Advance the readers to the first pos.
      for (i = 0; i < sfsReaders.length; i++) {
        keys[i] = new HStoreKey();
-       if (firstRow.getLength() != 0) {
+       if (firstRow != null && firstRow.getLength() != 0) {
          if (findFirstRow(i, firstRow)) {
            continue;
          }
@@ -2561,7 +2582,6 @@ public class HStore implements HConstants {
        if (viableRow.getRow() != null) {
          key.setRow(viableRow.getRow());
          key.setVersion(viableRow.getTimestamp());
-         key.setColumn(new Text(""));
          for (int i = 0; i < keys.length; i++) {
            // Fetch the data
            while ((keys[i] != null)
@@ -2612,9 +2632,21 @@ public class HStore implements HConstants {
      Text viableRow = null;
      long viableTimestamp = -1;
      for(int i = 0; i < keys.length; i++) {
+       // The first key that we find that matches may have a timestamp greater
+       // than the one we're looking for. We have to advance to see if there
+       // is an older version present, since timestamps are sorted descending
+       while (keys[i] != null &&
+           keys[i].getTimestamp() > this.timestamp &&
+           columnMatch(i) &&
+           getNext(i)) {
+         if (columnMatch(i)) {
+           break;
+         }
+       }
        if((keys[i] != null)
-           && (columnMatch(i))
-           && (keys[i].getTimestamp() <= this.timestamp)
+           // If we get here and keys[i] is not null, we already know that the
+           // column matches and the timestamp of the row is less than or equal
+           // to this.timestamp, so we do not need to test that here
            && ((viableRow == null)
                || (keys[i].getRow().compareTo(viableRow) < 0)
                || ((keys[i].getRow().compareTo(viableRow) == 0)
