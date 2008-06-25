@@ -848,7 +848,7 @@ public class HTable implements HConstants {
         startRow : oldLocation.getRegionInfo().getEndKey();
 
       // advance to the region that starts with the current region's end key
-      LOG.debug("Advancing internal scanner to startKey " + localStartKey);
+      LOG.debug("Advancing internal scanner to startKey '" + localStartKey + "'");
       this.currentRegionLocation = getRegionLocation(localStartKey);
       
       LOG.debug("New region: " + this.currentRegionLocation);
@@ -924,7 +924,7 @@ public class HTable implements HConstants {
       results.clear();
       do {
         values = server.next(scannerId);
-      } while (values != null && values.size() == 0 && nextScanner());
+      } while ((values == null || values.size() == 0) && nextScanner());
 
       if (values != null && values.size() != 0) {
         for (Map.Entry<Writable, Writable> e: values.entrySet()) {
@@ -1046,16 +1046,15 @@ public class HTable implements HConstants {
               " attempts.\n";
             int i = 1;
             for (IOException e2 : exceptions) {
-              message = message + "Exception " + i + ":\n" + e;
+              message = message + "Exception " + i + ":\n" + e2;
             }
             LOG.debug(message);
           }
           throw e;
-        } else {
-          if (LOG.isDebugEnabled()) {
-            exceptions.add(e);
-            LOG.debug("reloading table servers because: " + e.getMessage());
-          }
+        }
+        if (LOG.isDebugEnabled()) {
+          exceptions.add(e);
+          LOG.debug("reloading table servers because: " + e.getMessage());
         }
 
       } catch (Exception e) {

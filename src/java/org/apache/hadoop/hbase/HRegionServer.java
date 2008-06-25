@@ -1523,7 +1523,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         // No data for this row, go get another.
         results.clear();
       }
-      return values;
+      return values.size() == 0 ? null : values;
       
     } catch (IOException e) {
       checkFileSystem();
