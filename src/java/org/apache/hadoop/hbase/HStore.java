@@ -1466,7 +1466,7 @@ public class HStore implements HConstants {
    * @throws IOException
    * @param force True to force a compaction regardless of thresholds (Needed
    * by merge).
-   * @return true if compaction completed successfully
+   * @return Returns TRUE if a compaction.  FALSE, if no compaction.
    */
   boolean compact(final boolean force) throws IOException {
     synchronized (compactLock) {
@@ -1475,7 +1475,7 @@ public class HStore implements HConstants {
       List<HStoreFile> filesToCompact =
         new ArrayList<HStoreFile>(this.storefiles.values());
       if (filesToCompact.size() == 0) {
-        return true;
+        return false;
       }
       if (!force && !hasReferences(filesToCompact) &&
           filesToCompact.size() < compactionThreshold) {
@@ -1514,7 +1514,7 @@ public class HStore implements HConstants {
       return true;
     }
   }
-  
+
   /*
    * Compact passed <code>toCompactFiles</code> into <code>compactedOut</code>.
    * We create a new set of MapFile.Reader objects so we don't screw up the

@@ -898,19 +898,17 @@ public class HRegion implements HConstants {
   }
   /**
    * Compact all the stores.  This should be called periodically to make sure 
-   * the stores are kept manageable.  
+   * the stores are kept manageable.
    *
    * <p>This operation could block for a long time, so don't call it from a 
    * time-sensitive thread.
-   *
-   * @return Returns TRUE if the compaction has completed.  FALSE, if the
-   * compaction was not carried out, because the HRegion is busy doing
-   * something else storage-intensive (like flushing the cache). The caller
-   * should check back later.
    * 
+   * <p>
    * Note that no locking is necessary at this level because compaction only
    * conflicts with a region split, and that cannot happen because the region
    * server does them sequentially and not in parallel.
+   *
+   * @return Returns TRUE if a compaction.  FALSE, if no compaction.
    * @throws IOException
    */
   public boolean compactStores() throws IOException {
@@ -923,11 +921,6 @@ public class HRegion implements HConstants {
    *
    * <p>This operation could block for a long time, so don't call it from a 
    * time-sensitive thread.
-   *
-   * @return Returns TRUE if the compaction has completed.  FALSE, if the
-   * compaction was not carried out, because the HRegion is busy doing
-   * something else storage-intensive (like flushing the cache). The caller
-   * should check back later.
    * 
    * Note that no locking is necessary at this level because compaction only
    * conflicts with a region split, and that cannot happen because the region
@@ -935,6 +928,7 @@ public class HRegion implements HConstants {
    * 
    * @param force True to force a compaction regardless of thresholds (Needed
    * by merge).
+   * @return Returns TRUE if a compaction.  FALSE, if no compaction.
    * @throws IOException
    */
   private boolean compactStores(final boolean force) throws IOException {
@@ -955,19 +949,20 @@ public class HRegion implements HConstants {
       }
       long startTime = System.currentTimeMillis();
       LOG.info("checking compaction on region " + getRegionName());
-      boolean status = true;
+      boolean status = false;
       doRegionCompactionPrep();
       for (HStore store : stores.values()) {
-        if (!store.compact(force)) {
-          status = false;
+        if (store.compact(force)) {
+          // A compaction was run. Set status to true.
+          status = true;
         }
       }
       doRegionCompactionCleanup();
 
-      LOG.info("checking compaction completed on region " + getRegionName() + " in " +
+      LOG.info("checking compaction completed on region " + getRegionName() +
+        "; status: " + status + "; " +
         StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
       return status;
-      
     } finally {
       synchronized (writestate) {
         writestate.compacting = false;

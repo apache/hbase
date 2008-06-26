@@ -25,6 +25,7 @@ Release 0.1.3 - Unreleased
                because HScannerInterface's output incorrect (LN via Jim Kellerman)
    HBASE-613   Timestamp-anchored scanning fails to find all records
    HBASE-709   Deadlock while rolling WAL-log while finishing flush
+   HBASE-707   High-load import of data into single table/family never triggers split
 
 Release 0.1.2 - 05/13/2008
 
