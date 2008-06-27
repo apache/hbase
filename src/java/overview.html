@@ -172,13 +172,14 @@ the HBase version. It does not change your install unless you explicitly ask it 
 </p>
 
 <div style="background-color: #cccccc; padding: 2px">
-<code><pre>
-import org.apache.hadoop.hbase.HTable;
+<code><pre>import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.io.Text;
 import java.io.IOException;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 public class MyClient {
 
@@ -242,11 +243,10 @@ public class MyClient {
     while(scanner.next(row, columns)) {
       // print out the row we found and the columns we were looking for
       System.out.println("Found row: " + row.getRow() + " with value: " +
-       new String(columns.get("myColumnFamily:columnQualifier1")));
+              new String((byte[]) columns.get(columns.firstKey())));
     }
   }
-}
-</pre></code>
+}</pre></code>
 </div>
 
 <p>There are many other methods for putting data into and getting data out of 
