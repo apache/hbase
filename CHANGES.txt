@@ -1,5 +1,16 @@
 Hbase Change Log
 
+Unrelease Changes
+
+  INCOMPATIBLE CHANGES
+  BUG FIXES
+   HBASE-805   Remove unnecessary getRow overloads in HRS (Jonathan Gray via
+               Jim Kellerman)
+
+  IMPROVEMENTS
+  NEW FEATURES
+  OPTIMIZATIONS
+
 Release 0.2.0 - August 8, 2008.
 
   INCOMPATIBLE CHANGES
