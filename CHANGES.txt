@@ -1,6 +1,6 @@
 Hbase Change Log
 
-Unrelease Changes
+Release 0.3.0 - Unreleased
 
   INCOMPATIBLE CHANGES
   BUG FIXES
@@ -8,6 +8,9 @@ Unrelease Changes
                Jim Kellerman)
 
   IMPROVEMENTS
+   HBASE-801  When a table haven't disable, shell could response in a "user
+              friendly" way.
+
   NEW FEATURES
   OPTIMIZATIONS
 
