@@ -1,16 +1,19 @@
 Hbase Change Log
 
-Release 0.3.0 - Unreleased
+Release 0.2.1 - Unreleased
 
   INCOMPATIBLE CHANGES
   BUG FIXES
    HBASE-805   Remove unnecessary getRow overloads in HRS (Jonathan Gray via
                Jim Kellerman) (Fix whitespace changes in HRegionServer)
    HBASE-811   HTD is not fully copyable (Andrew Purtell via Jim Kellerman)
+   HBASE-729   Client region/metadata cache should have a public method for
+               invalidating entries (Andrew Purtell via Stack)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
               friendly" way.
+   HBASE-816  TableMap should survive USE (Andrew Purtell via Stack)
 
   NEW FEATURES
   OPTIMIZATIONS
