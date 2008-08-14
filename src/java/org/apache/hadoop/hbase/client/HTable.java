@@ -60,6 +60,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public HTable(final Text tableName)
   throws IOException {
     this(new HBaseConfiguration(), tableName.getBytes());
@@ -95,6 +96,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public HTable(HBaseConfiguration conf, final Text tableName)
   throws IOException {
     this(conf, tableName.getBytes());
@@ -133,6 +135,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public static boolean isTableEnabled(Text tableName) throws IOException {
     return isTableEnabled(tableName.getBytes());
   }
@@ -160,6 +163,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public static boolean isTableEnabled(HBaseConfiguration conf, Text tableName)
   throws IOException {
     return isTableEnabled(conf, tableName.getBytes());
@@ -194,6 +198,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public HRegionLocation getRegionLocation(final Text row)
   throws IOException {
     return connection.getRegionLocation(tableName, row.getBytes(), false);
@@ -326,6 +331,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public Cell get(final Text row, final Text column)
   throws IOException {
     return get(row.getBytes(), column.getBytes());
@@ -341,6 +347,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public Cell[] get(final Text row, final Text column, int numVersions)
   throws IOException {
     return get(row.getBytes(), column.getBytes(), numVersions);
@@ -426,6 +433,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public Cell[] get(final Text row, final Text column,
     final long timestamp, final int numVersions)
   throws IOException {
@@ -491,6 +499,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public RowResult getRow(final Text row) throws IOException {
     return getRow(row.getBytes());
   }
@@ -526,6 +535,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public RowResult getRow(final Text row, final long ts) 
   throws IOException {
     return getRow(row.getBytes(), ts);
@@ -566,6 +576,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public RowResult getRow(final Text row, final Text[] columns) 
   throws IOException {
     return getRow(row.getBytes(), Bytes.toByteArrays(columns));
@@ -607,6 +618,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public RowResult getRow(final Text row, final Text [] columns, 
     final long ts) 
   throws IOException {  
@@ -663,6 +675,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public Scanner getScanner(final Text [] columns)
   throws IOException {
     return getScanner(Bytes.toByteArrays(columns), HConstants.EMPTY_START_ROW);
@@ -699,6 +712,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public Scanner getScanner(final Text [] columns, final Text startRow)
   throws IOException {
     return getScanner(Bytes.toByteArrays(columns), startRow.getBytes());
@@ -841,6 +855,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public Scanner getScanner(final Text[] columns,
     final Text startRow, final Text stopRow, final long timestamp)
   throws IOException {
@@ -914,6 +929,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public Scanner getScanner(Text[] columns,
     Text startRow, long timestamp, RowFilterInterface filter)
   throws IOException {
@@ -981,6 +997,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public void deleteAll(final Text row) throws IOException {
     deleteAll(row, null);
   }
@@ -1039,6 +1056,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public void deleteAll(final Text row, final long ts)
   throws IOException {
     deleteAll(row, null, ts);
@@ -1051,6 +1069,7 @@ public class HTable {
    * @throws IOException 
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public void deleteAll(final Text row, final Text column) throws IOException {
     deleteAll(row, column, HConstants.LATEST_TIMESTAMP);
   }
@@ -1075,6 +1094,7 @@ public class HTable {
    * @throws IOException 
    * @deprecated Use String or byte [] overload instead
    */
+  @Deprecated
   public void deleteAll(final Text row, final Text column, final long ts)
   throws IOException {
     deleteAll(row.getBytes(), column.getBytes(), ts);
@@ -1129,6 +1149,7 @@ public class HTable {
    * @throws IOException
    * @deprecated Use String or byte [] overload instead
    */  
+  @Deprecated
   public void deleteFamily(final Text row, final Text family,
       final long timestamp)
   throws IOException{
@@ -1179,6 +1200,8 @@ public class HTable {
    */ 
   public synchronized void commit(final BatchUpdate batchUpdate) 
   throws IOException {
+    if (batchUpdate.getRow() == null)
+      throw new IllegalArgumentException("update has null row");
     connection.getRegionServerWithRetries(
       new ServerCallable<Boolean>(connection, tableName, batchUpdate.getRow()) {
         public Boolean call() throws IOException {

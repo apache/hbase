@@ -1128,6 +1128,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** {@inheritDoc} */
   public void batchUpdate(final byte [] regionName, BatchUpdate b)
   throws IOException {
+    if (b.getRow() == null)
+      throw new IllegalArgumentException("update has null row");
     checkOpen();
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
