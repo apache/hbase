@@ -33,6 +33,8 @@ Release 0.2.1 - Unreleased
    HBASE-810   Prevent temporary deadlocks when, during a scan with write
                operations, the region splits (Jean-Daniel Cryans via Jim
                Kellerman)
+   HBASE-843   Deleting and recreating a table in a single process does not work
+               (Jonathan Gray via Jim Kellerman)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
