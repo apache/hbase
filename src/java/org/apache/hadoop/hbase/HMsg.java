@@ -24,6 +24,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
@@ -97,7 +98,7 @@ public class HMsg implements Writable {
 
   private Type type = null;
   private HRegionInfo info = null;
-  private Text message = null;
+  private byte[] message = null;
 
   // Some useful statics.  Use these rather than create a new HMsg each time.
   public static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
@@ -121,7 +122,7 @@ public class HMsg implements Writable {
    * @param type Message type
    */
   public HMsg(final HMsg.Type type) {
-    this(type, new HRegionInfo(), null);
+    this(type, new HRegionInfo(), (byte[])null);
   }
   
   /**
@@ -130,9 +131,21 @@ public class HMsg implements Writable {
    * @param hri Region to which message <code>type</code> applies
    */
   public HMsg(final HMsg.Type type, final HRegionInfo hri) {
-    this(type, hri, null);
+    this(type, hri, (byte[])null);
   }
-  
+
+  /**
+   * 
+   * @param type Message type
+   * @param hri Region to which message <code>type</code> applies.  Cannot be
+   * null.  If no info associated, used other Constructor.
+   * @param msg Optional message (Stringified exception, etc.)
+   * @deprecated Use byte [] overload instead
+   */
+  public HMsg(final HMsg.Type type, final HRegionInfo hri, final Text msg) {
+    this(type, hri, (msg == null)? null : msg.getBytes());
+  }
+
   /**
    * Construct a message with the specified message and HRegionInfo
    * 
@@ -141,7 +154,7 @@ public class HMsg implements Writable {
    * null.  If no info associated, used other Constructor.
    * @param msg Optional message (Stringified exception, etc.)
    */
-  public HMsg(final HMsg.Type type, final HRegionInfo hri, final Text msg) {
+  public HMsg(final HMsg.Type type, final HRegionInfo hri, final byte[] msg) {
     if (type == null) {
       throw new NullPointerException("Message type cannot be null");
     }
@@ -172,7 +185,7 @@ public class HMsg implements Writable {
     return this.type.equals(other);
   }
   
-  public Text getMessage() {
+  public byte[] getMessage() {
     return this.message;
   }
 
@@ -188,7 +201,7 @@ public class HMsg implements Writable {
       sb.append(": ");
       sb.append(this.info.getRegionNameAsString());
     }
-    if (this.message != null && this.message.getLength() > 0) {
+    if (this.message != null && this.message.length > 0) {
       sb.append(": " + this.message);
     }
     return sb.toString();
@@ -221,11 +234,11 @@ public class HMsg implements Writable {
   public void write(DataOutput out) throws IOException {
      out.writeInt(this.type.ordinal());
      this.info.write(out);
-     if (this.message == null || this.message.getLength() == 0) {
+     if (this.message == null || this.message.length == 0) {
        out.writeBoolean(false);
      } else {
        out.writeBoolean(true);
-       this.message.write(out);
+       Bytes.writeByteArray(out, this.message);
      }
    }
 
@@ -238,10 +251,7 @@ public class HMsg implements Writable {
      this.info.readFields(in);
      boolean hasMessage = in.readBoolean();
      if (hasMessage) {
-       if (this.message == null) {
-         this.message = new Text();
-       }
-       this.message.readFields(in);
+       this.message = Bytes.readByteArray(in);
      }
    }
 }

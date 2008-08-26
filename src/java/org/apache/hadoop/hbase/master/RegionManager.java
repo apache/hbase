@@ -74,7 +74,7 @@ class RegionManager implements HConstants {
     Collections.synchronizedSortedMap(new TreeMap<byte [],
       MetaRegion>(Bytes.BYTES_COMPARATOR));
 
-  private static final Text OVERLOADED = new Text("Overloaded");
+  private static final byte[] OVERLOADED = Bytes.toBytes("Overloaded");
 
   /**
    * The 'unassignedRegions' table maps from a HRegionInfo to a timestamp that

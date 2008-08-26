@@ -60,6 +60,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    * now.
    * 
    * @param row
+   * @deprecated Use String or byte [] overload instead
    */
   public BatchUpdate(final Text row) {
     this(row, HConstants.LATEST_TIMESTAMP);
@@ -98,6 +99,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    * Initialize a BatchUpdate operation on a row with a specific timestamp.
    * 
    * @param row
+   * @deprecated Use String or byte [] overload instead
    */
   public BatchUpdate(final Text row, long timestamp){
     this(row.getBytes(), timestamp);
@@ -138,6 +140,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    *
    * @param column column whose value is being set
    * @param val new value for column.  Cannot be null (can be empty).
+   * @deprecated Use String or byte [] overload instead
    */
   public synchronized void put(final Text column, final byte val[]) {
     put(column.getBytes(), val);
@@ -172,6 +175,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    * Deletes the cell whose row/column/commit-timestamp match those of the
    * delete.
    * @param column name of column whose value is to be deleted
+   * @deprecated Use String or byte [] overload instead
    */
   public void delete(final Text column) {
     delete(column.getBytes());

@@ -85,6 +85,7 @@ public class HBaseAdmin {
    * @param tableName Table to check.
    * @return True if table exists already.
    * @throws MasterNotRunningException
+   * @deprecated Use String or byte [] overload instead
    */
   public boolean tableExists(final Text tableName)
   throws MasterNotRunningException {
@@ -200,6 +201,7 @@ public class HBaseAdmin {
    * 
    * @param tableName name of table to delete
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public void deleteTable(final Text tableName) throws IOException {
     deleteTable(tableName.getBytes());
@@ -297,6 +299,7 @@ public class HBaseAdmin {
    * 
    * @param tableName name of the table
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public void enableTable(final Text tableName) throws IOException {
     enableTable(tableName.getBytes());
@@ -359,6 +362,7 @@ public class HBaseAdmin {
    * 
    * @param tableName name of table
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public void disableTable(final Text tableName) throws IOException {
     disableTable(tableName.getBytes());
@@ -420,6 +424,7 @@ public class HBaseAdmin {
    * @param tableName name of table to check
    * @return true if table is on-line
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public boolean isTableEnabled(Text tableName) throws IOException {
     return isTableEnabled(tableName.getBytes());
@@ -447,6 +452,7 @@ public class HBaseAdmin {
    * @param tableName name of the table to add column to
    * @param column column descriptor of column to be added
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public void addColumn(final Text tableName, HColumnDescriptor column)
   throws IOException {
@@ -491,6 +497,7 @@ public class HBaseAdmin {
    * @param tableName name of table
    * @param columnName name of column to be deleted
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public void deleteColumn(final Text tableName, final Text columnName)
   throws IOException {
@@ -536,6 +543,7 @@ public class HBaseAdmin {
    * @param columnName name of column to be modified
    * @param descriptor new column descriptor to use
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public void modifyColumn(final Text tableName, final Text columnName, 
       HColumnDescriptor descriptor)

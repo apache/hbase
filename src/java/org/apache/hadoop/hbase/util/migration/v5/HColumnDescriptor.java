@@ -144,6 +144,7 @@ public class HColumnDescriptor implements WritableComparable {
    * The other attributes are defaulted.
    * 
    * @param columnName - column family name
+   * @deprecated Use String or byte [] overload instead
    */
   public HColumnDescriptor(final Text columnName) {
     this(columnName.getBytes());
@@ -341,9 +342,7 @@ public class HColumnDescriptor implements WritableComparable {
   public void readFields(DataInput in) throws IOException {
     int versionNumber = in.readByte();
     if (versionNumber <= 2) {
-      Text t = new Text();
-      t.readFields(in);
-      this.name = t.getBytes();
+      this.name = Bytes.readByteArray(in);
       if (HStoreKey.getFamilyDelimiterIndex(this.name) > 0) {
         this.name = stripColon(this.name);
       }

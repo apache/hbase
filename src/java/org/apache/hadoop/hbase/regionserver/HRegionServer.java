@@ -738,14 +738,19 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /* Add to the outbound message buffer */
   private void reportClose(HRegionInfo region) {
-    reportClose(region, null);
+    reportClose(region, (byte[])null);
   }
 
   /* Add to the outbound message buffer */
+  @Deprecated
   private void reportClose(final HRegionInfo region, final Text message) {
     outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_CLOSE, region, message));
   }
 
+  /* Add to the outbound message buffer */
+  private void reportClose(final HRegionInfo region, final byte[] message) {
+    outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_CLOSE, region, message));
+  }
   
   /**
    * Add to the outbound message buffer

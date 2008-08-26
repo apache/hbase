@@ -243,6 +243,7 @@ public class Bytes {
   /**
    * @param t
    * @return Array of byte arrays made from passed array of Text
+   * @deprecated Use String overload instead
    */
   public static byte [][] toByteArrays(final Text [] t) {
     byte [][] result = new byte[t.length][];
