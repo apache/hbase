@@ -47,6 +47,8 @@ Release 0.2.1 - Unreleased
    HBASE-752  HBase 0.2.1 should be based on Hadoop 0.17.2
    HBASE-799  Deprecate all remaining methods that take Text as a parameter
               (Jean-Daniel Cryans via Jim Kellerman)
+   HBASE-849  Speed improvement in JenkinsHash (Andrzej Bialecki via Jim
+              Kellerman)
 
   NEW FEATURES
   OPTIMIZATIONS
