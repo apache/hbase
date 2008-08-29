@@ -739,6 +739,7 @@ public class HStore implements HConstants {
         if (this.storefiles.size() <= 0) {
           return null;
         }
+        // filesToCompact are sorted oldest to newest.
         filesToCompact = new ArrayList<HStoreFile>(this.storefiles.values());
 
         // The max-sequenceID in any of the to-be-compacted TreeMaps is the 
@@ -805,12 +806,12 @@ public class HStore implements HConstants {
        * the caching associated with the currently-loaded ones. Our iteration-
        * based access pattern is practically designed to ruin the cache.
        */
-      List<MapFile.Reader> readers = new ArrayList<MapFile.Reader>();
+      List<MapFile.Reader> rdrs = new ArrayList<MapFile.Reader>();
       for (HStoreFile file: filesToCompact) {
         try {
           HStoreFile.BloomFilterMapFile.Reader reader =
             file.getReader(fs, false, false);
-          readers.add(reader);
+          rdrs.add(reader);
           
           // Compute the size of the new bloomfilter if needed
           if (this.family.isBloomfilter()) {
@@ -821,28 +822,24 @@ public class HStore implements HConstants {
           // exception message so output a message here where we know the
           // culprit.
           LOG.warn("Failed with " + e.toString() + ": " + file.toString());
-          closeCompactionReaders(readers);
+          closeCompactionReaders(rdrs);
           throw e;
         }
       }
-      
-      // Storefiles are keyed by sequence id. The oldest file comes first.
-      // We need to return out of here a List that has the newest file first.
-      Collections.reverse(readers);
 
       // Step through them, writing to the brand-new MapFile
       HStoreFile compactedOutputFile = new HStoreFile(conf, fs, 
           this.compactionDir, info.getEncodedName(), family.getName(),
           -1L, null);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("started compaction of " + readers.size() + " files into " +
+        LOG.debug("started compaction of " + rdrs.size() + " files into " +
           FSUtils.getPath(compactedOutputFile.getMapFilePath()));
       }
       MapFile.Writer writer = compactedOutputFile.getWriter(this.fs,
         this.compression, this.family.isBloomfilter(), nrows);
       writer.setIndexInterval(family.getMapFileIndexInterval());
       try {
-        compactHStoreFiles(writer, readers);
+        compact(writer, rdrs);
       } finally {
         writer.close();
       }
@@ -864,14 +861,19 @@ public class HStore implements HConstants {
    * Compact a list of MapFile.Readers into MapFile.Writer.
    * 
    * We work by iterating through the readers in parallel. We always increment
-   * the lowest-ranked one.
-   * Updates to a single row/column will appear ranked by timestamp. This allows
-   * us to throw out deleted values or obsolete versions.
+   * the lowest-ranked one. Updates to a single row/column will appear ranked
+   * by timestamp.
+   * @param compactedOut Where to write compaction.
+   * @param pReaders List of readers sorted oldest to newest.
+   * @throws IOException
    */
-  private void compactHStoreFiles(final MapFile.Writer compactedOut,
-      final List<MapFile.Reader> readers)
+  private void compact(final MapFile.Writer compactedOut,
+      final List<MapFile.Reader> pReaders)
   throws IOException {
-    MapFile.Reader[] rdrs = readers.toArray(new MapFile.Reader[readers.size()]);
+    // Reverse order so we newest is first.
+    List<MapFile.Reader> copy = new ArrayList<MapFile.Reader>(pReaders);
+    Collections.reverse(copy);
+    MapFile.Reader[] rdrs = pReaders.toArray(new MapFile.Reader[copy.size()]);
     try {
       HStoreKey[] keys = new HStoreKey[rdrs.length];
       ImmutableBytesWritable[] vals = new ImmutableBytesWritable[rdrs.length];
@@ -885,10 +887,10 @@ public class HStore implements HConstants {
       // Now, advance through the readers in order.  This will have the
       // effect of a run-time sort of the entire dataset.
       int numDone = 0;
-      for(int i = 0; i < rdrs.length; i++) {
+      for (int i = 0; i < rdrs.length; i++) {
         rdrs[i].reset();
-        done[i] = ! rdrs[i].next(keys[i], vals[i]);
-        if(done[i]) {
+        done[i] = !rdrs[i].next(keys[i], vals[i]);
+        if (done[i]) {
           numDone++;
         }
       }
@@ -897,7 +899,6 @@ public class HStore implements HConstants {
       int timesSeen = 0;
       byte [] lastRow = null;
       byte [] lastColumn = null;
-
       while (numDone < done.length) {
         // Find the reader with the smallest key.  If two files have same key
         // but different values -- i.e. one is delete and other is non-delete
@@ -906,19 +907,17 @@ public class HStore implements HConstants {
         // store file.
         int smallestKey = -1;
         for (int i = 0; i < rdrs.length; i++) {
-          if(done[i]) {
+          if (done[i]) {
             continue;
           }
-          if(smallestKey < 0) {
+          if (smallestKey < 0) {
             smallestKey = i;
           } else {
-            if(keys[i].compareTo(keys[smallestKey]) < 0) {
+            if (keys[i].compareTo(keys[smallestKey]) < 0) {
               smallestKey = i;
             }
           }
         }
-
-        // Reflect the current key/val in the output
         HStoreKey sk = keys[smallestKey];
         if (Bytes.equals(lastRow, sk.getRow())
             && Bytes.equals(lastColumn, sk.getColumn())) {
@@ -1287,7 +1286,6 @@ public class HStore implements HConstants {
         return true;
       }
     } else {
-      // Is this copy necessary?
       deletes.add(new HStoreKey(key));
     }
     return false;
@@ -1594,6 +1592,18 @@ public class HStore implements HConstants {
     // Arriving here just means that we consumed the whole rest of the map
     // without going "past" the key we're searching for. we can just fall
     // through here.
+  }
+  
+  /*
+   * @param key Key to copy and add to <code>deletes</code>
+   * @param deletes
+   * @return Instance of the copy added to <code>deletes</code>
+   */
+  private HStoreKey addCopyToDeletes(final HStoreKey key,
+      final Set<HStoreKey> deletes) {
+    HStoreKey copy = new HStoreKey(key);
+    deletes.add(copy);
+    return copy;
   }
   
   /*
