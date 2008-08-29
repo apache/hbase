@@ -1606,18 +1606,6 @@ public class HStore implements HConstants {
     return copy;
   }
   
-  /*
-   * @param key Key to copy and add to <code>deletes</code>
-   * @param deletes
-   * @return Instance of the copy added to <code>deletes</code>
-   */
-  private HStoreKey addCopyToDeletes(final HStoreKey key,
-      final Set<HStoreKey> deletes) {
-    HStoreKey copy = new HStoreKey(key);
-    deletes.add(copy);
-    return copy;
-  }
-  
   private void rowAtOrBeforeWithCandidates(final HStoreKey startKey,
     final MapFile.Reader map, final byte[] row,
     final SortedMap<HStoreKey, Long> candidateKeys,
