@@ -169,7 +169,7 @@ public class HStore implements HConstants {
     this.ttl = family.getTimeToLive();
     if (ttl != HConstants.FOREVER)
       this.ttl *= 1000;
-    this.memcache = new Memcache(this.ttl);
+    this.memcache = new Memcache(this.ttl, info);
     this.compactionDir = HRegion.getCompactionDir(basedir);
     this.storeName = Bytes.toBytes(this.info.getEncodedName() + "/" +
       Bytes.toString(this.family.getName()));
