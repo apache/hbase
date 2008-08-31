@@ -820,9 +820,9 @@ public class HStore implements HConstants {
         // The rule is: if the largest(oldest) one is more than twice the 
         // size of the second, skip the largest, and continue to next...,
         // until we meet the compactionThreshold limit.
-        for (point = 0; point < compactionThreshold - 1; point++) {
-          if (fileSizes[point] < fileSizes[point + 1] * 2 &&
-              maxFilesToCompact < (countOfFiles - point)) {
+        for (point = 0; point < countOfFiles - 1; point++) {
+          if ((fileSizes[point] < fileSizes[point + 1] * 2) && 
+               (countOfFiles - point) <= maxFilesToCompact) {
             break;
           }
           skipped += fileSizes[point];
