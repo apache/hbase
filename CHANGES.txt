@@ -47,6 +47,8 @@ Release 0.2.1 - Unreleased
                one time (Billy Pearson via Stack)
    HBASE-858   HBase-799 Created an error in util.migration.v5.HColumnDescriptor
                (Jean-Daniel Cryans via Stack)
+   HBASE-855   compaction can return less versions then we should in some cases
+               (Billy Pearson via Stack)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
