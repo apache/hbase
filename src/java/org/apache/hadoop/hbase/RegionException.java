@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2008 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,18 +17,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.RegionException;
-
+import java.io.IOException;
 /**
- * Thrown when no region server can be found for a region
+ * Thrown when something happens related to region handling.
+ * Subclasses have to be more specific.
  */
-public class NoServerForRegionException extends RegionException {
-  private static final long serialVersionUID = 1L << 11 - 1L;
+public class RegionException extends IOException {
+  private static final long serialVersionUID = 1473510258071111371L;
 
   /** default constructor */
-  public NoServerForRegionException() {
+  public RegionException() {
     super();
   }
 
@@ -36,7 +36,8 @@ public class NoServerForRegionException extends RegionException {
    * Constructor
    * @param s message
    */
-  public NoServerForRegionException(String s) {
+  public RegionException(String s) {
     super(s);
   }
+
 }
