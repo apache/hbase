@@ -56,6 +56,8 @@ Release 0.2.1 - Unreleased
    HBASE-864   Deadlock in regionserver
    HBASE-865   Fix javadoc warnings (Rong-En Fan via Jim Kellerman)
    HBASE-872   Getting exceptions in shell when creating/disabling tables
+   HBASE-868   Incrementing binary rows cause strange behavior once table
+               splits (Jonathan Gray via Stack)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
@@ -70,6 +72,8 @@ Release 0.2.1 - Unreleased
               (Jean-Daniel Cryans via Jim Kellerman)
    HBASE-849  Speed improvement in JenkinsHash (Andrzej Bialecki via Stack)
    HBASE-752  HBase 0.2.1 should be based on Hadoop 0.17.2.1
+   HBASE-871  Major compaction periodicity should be specifyable at the column
+              family level, not cluster wide (Jonathan Gray via Stack)
 
   NEW FEATURES
   OPTIMIZATIONS

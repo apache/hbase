@@ -1305,8 +1305,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     long timestamp) throws IOException{
     getRegion(regionName).deleteFamily(row, family, timestamp);
   }
-
-
+  
   /**
    * @return Info on this server.
    */
