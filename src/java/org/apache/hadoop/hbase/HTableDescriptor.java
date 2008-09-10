@@ -79,6 +79,8 @@ public class HTableDescriptor implements WritableComparable {
   public static final boolean DEFAULT_READONLY = false;
 
   public static final int DEFAULT_MEMCACHE_FLUSH_SIZE = 1024*1024*64;
+    
+  private transient Boolean meta = null;
   
   // Key is hash of the family name.
   private final Map<Integer, HColumnDescriptor> families =
@@ -198,10 +200,15 @@ public class HTableDescriptor implements WritableComparable {
 
   /** @return true if this is a meta region (part of the root or meta tables) */
   public boolean isMetaRegion() {
+    if (this.meta == null) {
+      this.meta = calculateIsMetaRegion();
+    }
+    return this.meta.booleanValue();
+  }
+
+  private synchronized Boolean calculateIsMetaRegion() {
     String value = getValue(IS_META);
-    if (value != null)
-      return Boolean.valueOf(value);
-    return false;
+    return (value != null)? new Boolean(value): Boolean.FALSE;
   }
 
   /**
