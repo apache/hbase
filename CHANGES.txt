@@ -1,5 +1,10 @@
 Hbase Change Log
 
+Release 0.2.2  -- Unreleased
+
+  BUG FIXES
+   HBASE-891   HRS.validateValuesLength throws IOE, gets caught in the retries
+
 Release 0.2.1  2008/09/13
 
   INCOMPATIBLE CHANGES
