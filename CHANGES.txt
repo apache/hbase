@@ -5,6 +5,7 @@ Release 0.18.1 - Unreleased
   BUG FIXES
    HBASE-891   HRS.validateValuesLength throws IOE, gets caught in the retries
    HBASE-906   [shell] Truncates output
+   HBASE-912   PE is broken when other tables exist
 
 Release 0.18.0 - September 21st, 2008
 
