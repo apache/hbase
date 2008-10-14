@@ -9,6 +9,8 @@ Release 0.18.1 - Unreleased
    HBASE-918   Region balancing during startup makes cluster unstable
    HBASE-921   region close and open processed out of order; makes for 
                disagreement between master and regionserver on region state
+   HBASE-925   HRS NPE on way out if no master to connect to
+   HBASE-928   NPE throwing RetriesExhaustedException
 
 Release 0.18.0 - September 21st, 2008
 
