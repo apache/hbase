@@ -12,6 +12,7 @@ Release 0.18.1 - Unreleased
    HBASE-925   HRS NPE on way out if no master to connect to
    HBASE-928   NPE throwing RetriesExhaustedException
    HBASE-576   Investigate IPC performance; partial.
+   HBASE-924   Update hadoop in lib on 0.18 hbase branch to 0.18.1
 
 Release 0.18.0 - September 21st, 2008
 
