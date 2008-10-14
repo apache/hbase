@@ -11,6 +11,7 @@ Release 0.18.1 - Unreleased
                disagreement between master and regionserver on region state
    HBASE-925   HRS NPE on way out if no master to connect to
    HBASE-928   NPE throwing RetriesExhaustedException
+   HBASE-576   Investigate IPC performance; partial.
 
 Release 0.18.0 - September 21st, 2008
 

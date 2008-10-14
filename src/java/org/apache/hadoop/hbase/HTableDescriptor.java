@@ -38,22 +38,6 @@ import org.apache.hadoop.io.WritableComparable;
  * column families.
  */
 public class HTableDescriptor implements WritableComparable {
-  /** Table descriptor for <core>-ROOT-</code> catalog table */
-  public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
-      HConstants.ROOT_TABLE_NAME,
-      new HColumnDescriptor[] { new HColumnDescriptor(HConstants.COLUMN_FAMILY,
-          1, HColumnDescriptor.CompressionType.NONE, false, false,
-          Integer.MAX_VALUE, HConstants.FOREVER, false) });
-  
-  /** Table descriptor for <code>.META.</code> catalog table */
-  public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
-      HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
-          new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
-              HColumnDescriptor.CompressionType.NONE, false, false,
-              Integer.MAX_VALUE, HConstants.FOREVER, false),
-          new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
-              HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
-              false, false, Integer.MAX_VALUE, HConstants.FOREVER, false) });
 
   // Changes prior to version 3 were not recorded here.
   // Version 3 adds metadata as a map where keys and values are byte[].
@@ -63,18 +47,35 @@ public class HTableDescriptor implements WritableComparable {
   private String nameAsString = "";
 
   // Table metadata
-  protected Map<ImmutableBytesWritable,ImmutableBytesWritable> values =
-    new HashMap<ImmutableBytesWritable,ImmutableBytesWritable>();
+  protected Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
+    new HashMap<ImmutableBytesWritable, ImmutableBytesWritable>();
 
-  //TODO: Why can't the following be private? They are only used within this class.
-  
   public static final String FAMILIES = "FAMILIES";
-
+  public static final ImmutableBytesWritable FAMILIES_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(FAMILIES));;
   public static final String MAX_FILESIZE = "MAX_FILESIZE";
+  public static final ImmutableBytesWritable MAX_FILESIZE_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(MAX_FILESIZE));
   public static final String READONLY = "READONLY";
+  public static final ImmutableBytesWritable READONLY_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(READONLY));
   public static final String MEMCACHE_FLUSHSIZE = "MEMCACHE_FLUSHSIZE";
+  public static final ImmutableBytesWritable MEMCACHE_FLUSHSIZE_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(MEMCACHE_FLUSHSIZE));
   public static final String IS_ROOT = "IS_ROOT";
+  public static final ImmutableBytesWritable IS_ROOT_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(IS_ROOT));
   public static final String IS_META = "IS_META";
+  public static final ImmutableBytesWritable IS_META_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(IS_META));
+
+  // The below are ugly but better than creating them each time till we
+  // replace booleans being saved as Strings with plain booleans.  Need a
+  // migration script to do this.  TODO.
+  private static final ImmutableBytesWritable FALSE =
+    new ImmutableBytesWritable(Bytes.toBytes(Boolean.FALSE.toString()));
+  private static final ImmutableBytesWritable TRUE =
+    new ImmutableBytesWritable(Bytes.toBytes(Boolean.TRUE.toString()));
 
   public static final boolean DEFAULT_IN_MEMORY = false;
 
@@ -83,9 +84,7 @@ public class HTableDescriptor implements WritableComparable {
   public static final int DEFAULT_MEMCACHE_FLUSH_SIZE = 1024*1024*64;
     
   private transient Boolean meta = null;
- 
-  // End TODO:
-  
+
   // Key is hash of the family name.
   private final Map<Integer, HColumnDescriptor> families =
     new HashMap<Integer, HColumnDescriptor>();
@@ -96,6 +95,7 @@ public class HTableDescriptor implements WritableComparable {
    */
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families) {
     this.name = name.clone();
+    this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(Bytes.mapKey(descriptor.getName()), descriptor);
@@ -109,6 +109,7 @@ public class HTableDescriptor implements WritableComparable {
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families,
        Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
     this.name = name.clone();
+    this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(Bytes.mapKey(descriptor.getName()), descriptor);
@@ -150,9 +151,9 @@ public class HTableDescriptor implements WritableComparable {
    */
   public HTableDescriptor(final byte [] name) {
     super();
+    setMetaFlags(this.name);
     this.name = this.isMetaRegion() ? name: isLegalTableName(name);
     this.nameAsString = Bytes.toString(this.name);
-    setMetaFlags(this.name);
   }
 
   /**
@@ -162,8 +163,7 @@ public class HTableDescriptor implements WritableComparable {
    * Can make a modifiable descriptor from an UnmodifyableHTableDescriptor.
    * @param desc The descriptor.
    */
-  public HTableDescriptor(final HTableDescriptor desc)
-  {
+  public HTableDescriptor(final HTableDescriptor desc) {
     super();
     this.name = desc.name.clone();
     this.nameAsString = Bytes.toString(this.name);
@@ -190,16 +190,13 @@ public class HTableDescriptor implements WritableComparable {
 
   /** @return true if this is the root region */
   public boolean isRootRegion() {
-    String value = getValue(IS_ROOT);
-    if (value != null)
-      return Boolean.valueOf(value);
-    return false;
+    return isSomething(IS_ROOT_KEY, false);
   }
 
   /** @param isRoot true if this is the root region */
   protected void setRootRegion(boolean isRoot) {
-    values.put(new ImmutableBytesWritable(Bytes.toBytes(IS_ROOT)),
-      new ImmutableBytesWritable(Bytes.toBytes(Boolean.toString(isRoot))));
+    // TODO: Make the value a boolean rather than String of boolean.
+    values.put(IS_ROOT_KEY, isRoot? TRUE: FALSE);
   }
 
   /** @return true if this is a meta region (part of the root or meta tables) */
@@ -211,16 +208,25 @@ public class HTableDescriptor implements WritableComparable {
   }
 
   private synchronized Boolean calculateIsMetaRegion() {
-    String value = getValue(IS_META);
-    return (value != null)? new Boolean(value): Boolean.FALSE;
+    byte [] value = getValue(IS_META_KEY);
+    return (value != null)? new Boolean(Bytes.toString(value)): Boolean.FALSE;
+  }
+  
+  private boolean isSomething(final ImmutableBytesWritable key,
+      final boolean valueIfNull) {
+    byte [] value = getValue(key);
+    if (value != null) {
+      // TODO: Make value be a boolean rather than String of boolean.
+      return Boolean.valueOf(Bytes.toString(value)).booleanValue();
+    }
+    return valueIfNull;
   }
 
   /**
    * @param isMeta true if this is a meta region (part of the root or meta
    * tables) */
   protected void setMetaRegion(boolean isMeta) {
-    values.put(new ImmutableBytesWritable(Bytes.toBytes(IS_META)),
-      new ImmutableBytesWritable(Bytes.toBytes(Boolean.toString(isMeta))));
+    values.put(IS_META_KEY, isMeta? TRUE: FALSE);
   }
 
   /** @return true if table is the meta table */
@@ -263,7 +269,11 @@ public class HTableDescriptor implements WritableComparable {
    * @return The value.
    */
   public byte[] getValue(byte[] key) {
-    ImmutableBytesWritable ibw = values.get(new ImmutableBytesWritable(key));
+    return getValue(new ImmutableBytesWritable(key));
+  }
+  
+  private byte[] getValue(final ImmutableBytesWritable key) {
+    ImmutableBytesWritable ibw = values.get(key);
     if (ibw == null)
       return null;
     return ibw.get();
@@ -292,8 +302,25 @@ public class HTableDescriptor implements WritableComparable {
    * @param value The value.
    */
   public void setValue(byte[] key, byte[] value) {
-    values.put(new ImmutableBytesWritable(key),
-      new ImmutableBytesWritable(value));
+    setValue(new ImmutableBytesWritable(key), value);
+  }
+  
+  /*
+   * @param key The key.
+   * @param value The value.
+   */
+  private void setValue(final ImmutableBytesWritable key,
+      final byte[] value) {
+    values.put(key, new ImmutableBytesWritable(value));
+  }
+
+  /*
+   * @param key The key.
+   * @param value The value.
+   */
+  private void setValue(final ImmutableBytesWritable key,
+      final ImmutableBytesWritable value) {
+    values.put(key, value);
   }
 
   /**
@@ -327,18 +354,15 @@ public class HTableDescriptor implements WritableComparable {
    * @return true if all columns in the table should be read only
    */
   public boolean isReadOnly() {
-    String value = getValue(READONLY);
-    if (value != null)
-      return Boolean.valueOf(value);
-    return DEFAULT_READONLY;
+    return isSomething(READONLY_KEY, DEFAULT_READONLY);
   }
 
   /**
    * @param readOnly True if all of the columns in the table should be read
    * only.
    */
-  public void setReadOnly(boolean readOnly) {
-    setValue(READONLY, Boolean.toString(readOnly));
+  public void setReadOnly(final boolean readOnly) {
+    setValue(READONLY_KEY, readOnly? TRUE: FALSE);
   }
 
   /** @return name of table */
@@ -353,9 +377,9 @@ public class HTableDescriptor implements WritableComparable {
 
   /** @return max hregion size for table */
   public long getMaxFileSize() {
-    String value = getValue(MAX_FILESIZE);
+    byte [] value = getValue(MAX_FILESIZE_KEY);
     if (value != null)
-      return Long.valueOf(value);
+      return Long.valueOf(Bytes.toString(value)).longValue();
     return HConstants.DEFAULT_MAX_FILE_SIZE;
   }
 
@@ -364,16 +388,16 @@ public class HTableDescriptor implements WritableComparable {
    * before a split is triggered.
    */
   public void setMaxFileSize(long maxFileSize) {
-    setValue(MAX_FILESIZE, Long.toString(maxFileSize));
+    setValue(MAX_FILESIZE_KEY, Bytes.toBytes(Long.toString(maxFileSize)));
   }
 
   /**
    * @return memory cache flush size for each hregion
    */
   public int getMemcacheFlushSize() {
-    String value = getValue(MEMCACHE_FLUSHSIZE);
+    byte [] value = getValue(MEMCACHE_FLUSHSIZE_KEY);
     if (value != null)
-      return Integer.valueOf(value);
+      return Integer.valueOf(Bytes.toString(value)).intValue();
     return DEFAULT_MEMCACHE_FLUSH_SIZE;
   }
 
@@ -381,7 +405,8 @@ public class HTableDescriptor implements WritableComparable {
    * @param memcacheFlushSize memory cache flush size for each hregion
    */
   public void setMemcacheFlushSize(int memcacheFlushSize) {
-    setValue(MEMCACHE_FLUSHSIZE, Integer.toString(memcacheFlushSize));
+    setValue(MEMCACHE_FLUSHSIZE_KEY,
+      Bytes.toBytes(Integer.toString(memcacheFlushSize)));
   }
 
   /**
@@ -576,4 +601,21 @@ public class HTableDescriptor implements WritableComparable {
   public static Path getTableDir(Path rootdir, final byte [] tableName) {
     return new Path(rootdir, Bytes.toString(tableName));
   }
+
+  /** Table descriptor for <core>-ROOT-</code> catalog table */
+  public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
+      HConstants.ROOT_TABLE_NAME,
+      new HColumnDescriptor[] { new HColumnDescriptor(HConstants.COLUMN_FAMILY,
+          1, HColumnDescriptor.CompressionType.NONE, false, false,
+          Integer.MAX_VALUE, HConstants.FOREVER, false) });
+  
+  /** Table descriptor for <code>.META.</code> catalog table */
+  public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
+      HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
+          new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
+              HColumnDescriptor.CompressionType.NONE, false, false,
+              Integer.MAX_VALUE, HConstants.FOREVER, false),
+          new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
+              HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
+              false, false, Integer.MAX_VALUE, HConstants.FOREVER, false) });
 }
