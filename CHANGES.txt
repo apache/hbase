@@ -7,6 +7,8 @@ Release 0.18.1 - Unreleased
    HBASE-906   [shell] Truncates output
    HBASE-912   PE is broken when other tables exist
    HBASE-918   Region balancing during startup makes cluster unstable
+   HBASE-921   region close and open processed out of order; makes for 
+               disagreement between master and regionserver on region state
 
 Release 0.18.0 - September 21st, 2008
 
