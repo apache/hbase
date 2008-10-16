@@ -15,6 +15,8 @@ Release 0.18.1 - Unreleased
    HBASE-924   Update hadoop in lib on 0.18 hbase branch to 0.18.1
    HBASE-930   RegionServer stuck: HLog: Could not append. Requesting close of
                log java.io.IOException: Could not get block locations. Aborting...
+   HBASE-933   missing hbase.regions.slop in hbase-default.xml for 0.18 branch
+               (Rong-en Fan via Stack)
 
   IMPROVEMENTS
    HBASE-920   Make region balancing sloppier

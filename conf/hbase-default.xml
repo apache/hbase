@@ -264,6 +264,13 @@
     </description>
   </property>
   <property>
+    <name>hbase.regions.slop</name>
+    <value>0.1</value>
+    <description>Rebalance if regionserver has average + (average * slop) regions.
+    Default is 10% slop.
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.nbreservationblocks</name>
     <value>4</value>
     <description>The number of reservation blocks which are used to prevent
