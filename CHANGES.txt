@@ -17,6 +17,8 @@ Release 0.18.1 - Unreleased
                log java.io.IOException: Could not get block locations. Aborting...
    HBASE-933   missing hbase.regions.slop in hbase-default.xml for 0.18 branch
                (Rong-en Fan via Stack)
+   HBASE-926   If no master, regionservers should hang out rather than fail on
+               connection and shut themselves down
 
   IMPROVEMENTS
    HBASE-920   Make region balancing sloppier

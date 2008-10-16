@@ -59,6 +59,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
    * @throws IOException
    */
   public void testHTable() throws IOException {
+    LOG.info("TEST: " + getName());
     byte[] value = "value".getBytes(UTF8_ENCODING);
     
     try {
@@ -179,6 +180,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     * For HADOOP-2579
     */
   public void testTableNotFoundExceptionWithoutAnyTables() {
+    LOG.info("TEST: " + getName());
     try {
       new HTable(conf, "notATable");
       fail("Should have thrown a TableNotFoundException");
@@ -195,6 +197,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     * For HADOOP-2579
     */
   public void testTableNotFoundExceptionWithATable() {
+    LOG.info("TEST: " + getName());
     try {
       HBaseAdmin admin = new HBaseAdmin(conf);
       HTableDescriptor testTableADesc =
@@ -216,6 +219,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
   }
   
   public void testGetRow() {
+    LOG.info("TEST: " + getName());
     HTable table = null;
     try {
       HColumnDescriptor column2 =
