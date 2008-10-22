@@ -19,6 +19,7 @@ Release 0.18.1 - Unreleased
                (Rong-en Fan via Stack)
    HBASE-926   If no master, regionservers should hang out rather than fail on
                connection and shut themselves down
+   HBASE-946   Row with 55k deletes timesout scanner lease
 
   IMPROVEMENTS
    HBASE-920   Make region balancing sloppier
