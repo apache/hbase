@@ -1,6 +1,11 @@
 HBase Change Log
 
-Release 0.18.1 - Unreleased
+Release 0.18.2 - Unreleased
+
+  BUG FIXES
+   HBASE-602   HBase Crash when network card has a IPv6 address
+
+Release 0.18.1 - Released October 27, 2008
 
   BUG FIXES
    HBASE-891   HRS.validateValuesLength throws IOE, gets caught in the retries

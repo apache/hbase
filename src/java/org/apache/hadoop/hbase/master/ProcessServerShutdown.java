@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;    //TODO: remove
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -72,13 +71,8 @@ class ProcessServerShutdown extends RegionServerOperation {
     this.deadServerName = this.deadServer.toString();
     this.logSplit = false;
     this.rootRescanned = false;
-    StringBuilder dirName = new StringBuilder("log_");
-    dirName.append(deadServer.getBindAddress());
-    dirName.append("_");
-    dirName.append(serverInfo.getStartCode());
-    dirName.append("_");
-    dirName.append(deadServer.getPort());
-    this.oldLogDir = new Path(master.rootdir, dirName.toString());
+    this.oldLogDir =
+      new Path(master.rootdir, HLog.getHLogDirectoryName(serverInfo));
   }
 
   @Override

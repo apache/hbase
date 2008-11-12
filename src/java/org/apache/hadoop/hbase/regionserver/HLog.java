@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -168,7 +169,7 @@ public class HLog implements HConstants {
   }
 
   /*
-   * Accessor for tests.
+   * Accessor for tests. Not part of public API. Hence no javadoc.
    * @return Current state of the monotonically increasing file id.
    */
   public long getFilenum() {
@@ -715,6 +716,22 @@ public class HLog implements HConstants {
       throw io;
     }
     LOG.info("log file splitting completed for " + srcDir.toString());
+  }
+  
+  /**
+   * Construct the HLog directory name
+   * 
+   * @param info HServerInfo for server
+   * @return the HLog directory name
+   */
+  public static String getHLogDirectoryName(HServerInfo info) {
+    StringBuilder dirName = new StringBuilder("log_");
+    dirName.append(info.getServerAddress().getBindAddress().replaceAll(":", "."));
+    dirName.append("_");
+    dirName.append(info.getStartCode());
+    dirName.append("_");
+    dirName.append(info.getServerAddress().getPort());
+    return dirName.toString();
   }
 
   private static void usage() {
