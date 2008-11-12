@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Map;
 import java.util.SortedMap;
@@ -726,7 +728,13 @@ public class HLog implements HConstants {
    */
   public static String getHLogDirectoryName(HServerInfo info) {
     StringBuilder dirName = new StringBuilder("log_");
-    dirName.append(info.getServerAddress().getBindAddress().replaceAll(":", "."));
+    try {
+      dirName.append(URLEncoder.encode(
+          info.getServerAddress().getBindAddress(), UTF8_ENCODING));
+    } catch (UnsupportedEncodingException e) {
+      LOG.error("Error encoding '" + info.getServerAddress().getBindAddress()
+          + "'", e);
+    }
     dirName.append("_");
     dirName.append(info.getStartCode());
     dirName.append("_");
