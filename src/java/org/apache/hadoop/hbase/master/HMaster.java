@@ -34,8 +34,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.dfs.DistributedFileSystem;
+import org.apache.hadoop.dfs.FSConstants.SafeModeAction;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -185,7 +185,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // Make sure dfs is not in safe mode
       String message = "Waiting for dfs to exit safe mode...";
       while (((DistributedFileSystem) fs).setSafeMode(
-          FSConstants.SafeModeAction.SAFEMODE_GET)) {
+          SafeModeAction.SAFEMODE_GET)) {
         LOG.info(message);
         try {
           Thread.sleep(this.threadWakeFrequency);

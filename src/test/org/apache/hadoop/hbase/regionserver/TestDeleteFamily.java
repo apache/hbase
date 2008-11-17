@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.dfs.MiniDFSCluster;
 
 /**
  * Test the functionality of deleteFamily.
