@@ -297,6 +297,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // Now ask master what it wants us to do and tell it what we have done
       for (int tries = 0; !stopRequested.get() && isHealthy();) {
         // Try to get the root region location from the master.
+        if (!haveRootRegion.get()) {
           HServerAddress rootServer = hbaseMaster.getRootRegionLocation();
           if (rootServer != null) {
             // By setting the root region location, we bypass the wait imposed on
@@ -305,6 +306,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer));
             haveRootRegion.set(true);
           }
+        }
           long now = System.currentTimeMillis();
         if (lastMsg != 0 && (now - lastMsg) >= serverLeaseTimeout) {
           // It has been way too long since we last reported to the master.
@@ -650,21 +652,33 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     // Is this too expensive every three seconds getting a lock on onlineRegions
     // and then per store carried?  Can I make metrics be sloppier and avoid
     // the synchronizations?
+    int stores = 0;
     int storefiles = 0;
     long memcacheSize = 0;
+    long storefileIndexSize = 0;
     synchronized (this.onlineRegions) {
       for (Map.Entry<Integer, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
         memcacheSize += r.memcacheSize.get();
         synchronized(r.stores) {
+          stores += r.stores.size();
           for(Map.Entry<Integer, HStore> ee: r.stores.entrySet()) {
-            storefiles += ee.getValue().getStorefilesCount();
+            HStore store = ee.getValue(); 
+            storefiles += store.getStorefilesCount();
+            try {
+              storefileIndexSize += store.getStorefilesIndexSize();
+            } catch (IOException ex) {
+              LOG.warn("error getting store file index size for " + store +
+                ": " + StringUtils.stringifyException(ex));  
+            }
           }
         }
       }
     }
+    this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);
     this.metrics.memcacheSizeMB.set((int)(memcacheSize/(1024*1024)));
+    this.metrics.storefileIndexSizeMB.set((int)(storefileIndexSize/(1024*1024)));
   }
 
   /**
