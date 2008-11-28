@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -194,7 +196,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
-    
+
   /**
    * Starts a HRegionServer at the default location
    * @param conf
@@ -322,9 +324,29 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           }
           try {
             doMetrics();
-            this.serverInfo.setLoad(new HServerLoad(requestCount.get(),
-                onlineRegions.size(), this.metrics.storefiles.get(),
-                this.metrics.memcacheSizeMB.get()));
+            MemoryUsage memory =
+                ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+            HServerLoad hsl = new HServerLoad(requestCount.get(), 
+              (int)(memory.getUsed()/1024/1024),
+              (int)(memory.getMax()/1024/1024));
+            for (HRegion r: onlineRegions.values()) {
+              byte[] name = r.getRegionName();
+              int stores = 0;
+              int storefiles = 0;
+              int memcacheSizeMB = (int)(r.memcacheSize.get()/1024/1024);
+              int storefileIndexSizeMB = 0;
+              synchronized (r.stores) {
+                stores += r.stores.size();
+                for (HStore store: r.stores.values()) {
+                  storefiles += store.getStorefilesCount();
+                  storefileIndexSizeMB += 
+                    (int)(store.getStorefilesIndexSize()/1024/1024);
+                }
+              }
+              hsl.addRegionInfo(name, stores, storefiles, memcacheSizeMB,
+                storefileIndexSizeMB);
+            }
+            this.serverInfo.setLoad(hsl);
             this.requestCount.set(0);
             HMsg msgs[] = hbaseMaster.regionServerReport(
               serverInfo, outboundArray, getMostLoadedRegions());
@@ -434,10 +456,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         housekeeping();
         sleeper.sleep(lastMsg);
       } // for
-    } catch (OutOfMemoryError error) {
-      abort();
-      LOG.fatal("Ran out of memory", error);
     } catch (Throwable t) {
+      checkOOME(t);
       LOG.fatal("Unhandled exception. Aborting...", t);
       abort();
     }
@@ -550,6 +570,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       isOnline = true;
     } catch (IOException e) {
       this.stopRequested.set(true);
+      checkOOME(e);
       isOnline = false;
       e = RemoteExceptionHandler.checkIOException(e); 
       LOG.fatal("Failed init", e);
@@ -557,6 +578,22 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       ex.initCause(e);
       throw ex;
     }
+  }
+  
+  /*
+   * Check if an OOME and if so, call abort.
+   * @param e
+   * @return True if we OOME'd and are aborting.
+   */
+  private boolean checkOOME(final Throwable e) {
+    boolean aborting = false;
+    if (e instanceof OutOfMemoryError ||
+        (e.getCause()!= null && e.getCause() instanceof OutOfMemoryError)) {
+      LOG.fatal("OOME, aborting.", e);
+      abort();
+      aborting = true;
+    }
+    return aborting;
   }
 
   /*
@@ -591,7 +628,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   private static class MajorCompactionChecker extends Chore {
     private final HRegionServer instance;
-    
+
     MajorCompactionChecker(final HRegionServer h,
         final int sleepTime, final AtomicBoolean stopper) {
       super(sleepTime, stopper);
@@ -800,8 +837,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * from under hbase or we OOME.
    */
   public void abort() {
-    reservedSpace.clear();
     this.abortRequested = true;
+    this.reservedSpace.clear();
+    LOG.info("Dump of metrics: " + this.metrics.toString());
     stop();
   }
 
@@ -846,7 +884,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     while(!stopRequested.get()) {
       try {
         this.requestCount.set(0);
-        this.serverInfo.setLoad(new HServerLoad(0, onlineRegions.size(), 0, 0));
+        MemoryUsage memory =
+          ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+        HServerLoad hsl = new HServerLoad(0, (int)memory.getUsed()/1024/1024,
+          (int)memory.getMax()/1024/1024);
+        this.serverInfo.setLoad(hsl);
+        if (LOG.isDebugEnabled())
+          LOG.debug("sending initial server load: " + hsl);
         lastMsg = System.currentTimeMillis();
         result = this.hbaseMaster.regionServerStartup(serverInfo);
         break;
@@ -892,7 +936,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   void reportSplit(HRegionInfo oldRegion, HRegionInfo newRegionA,
       HRegionInfo newRegionB) {
-
     outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_SPLIT, oldRegion,
       (oldRegion.getRegionNameAsString() + " split; daughters: " +
         newRegionA.getRegionNameAsString() + ", " +
@@ -975,7 +1018,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             case MSG_REGION_SPLIT: {
               // Force split a region
               HRegion region = getRegion(info.getRegionName());
+              // flush the memcache for the region
+              region.flushcache();
+              // flag that the region should be split
               region.regionInfo.shouldSplit(true);
+              // force a compaction
               compactSplitThread.compactionRequested(region,
                 "MSG_REGION_SPLIT");
             } break;
@@ -983,6 +1030,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             case MSG_REGION_COMPACT: {
               // Compact a region
               HRegion region = getRegion(info.getRegionName());
+              // flush the memcache for the region
+              region.flushcache();
+              // force a compaction
               compactSplitThread.compactionRequested(region,
                 "MSG_REGION_COMPACT");
             } break;
@@ -1017,6 +1067,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           }
         }
       } catch(Throwable t) {
+        checkOOME(t);
         LOG.fatal("Unhandled exception", t);
       } finally {
         LOG.info("worker thread exiting");
@@ -1039,8 +1090,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         this.compactSplitThread.
           compactionRequested(region, "Region open check");
       } catch (IOException e) {
-        LOG.error("error opening region " + regionInfo.getRegionNameAsString(), e);
-
+        checkOOME(e);
+        LOG.error("error opening region " + regionInfo.getRegionNameAsString(),
+          e);
         // TODO: add an extra field in HRegionInfo to indicate that there is
         // an error. We can't do that now because that would be an incompatible
         // change that would require a migration
@@ -1113,6 +1165,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         LOG.error("error closing region " +
             Bytes.toString(region.getRegionName()),
           RemoteExceptionHandler.checkIOException(e));
+        checkOOME(e);
       }
     }
     return regionsToClose;
@@ -1228,11 +1281,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       HRegion region = getRegion(regionName);
       Map<byte [], Cell> map = region.getFull(row, columnSet, ts,
           getLockFromId(lockId));
+      if (map == null || map.isEmpty())
+        return null;
       HbaseMapWritable<byte [], Cell> result =
         new HbaseMapWritable<byte [], Cell>();
       result.putAll(map);
       return new RowResult(row, result);
     } catch (IOException e) {
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1250,6 +1306,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       RowResult rr = region.getClosestRowBefore(row, columnFamily);
       return rr;
     } catch (IOException e) {
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1286,6 +1343,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       return resultSets.toArray(new RowResult[resultSets.size()]);
     } catch (IOException e) {
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1304,10 +1362,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     try {
       cacheFlusher.reclaimMemcacheMemory();
       region.batchUpdate(b, getLockFromId(b.getRowLock()));
-    } catch (OutOfMemoryError error) {
-      abort();
-      LOG.fatal("Ran out of memory", error);
     } catch (IOException e) {
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1327,14 +1383,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         locks[i] = getLockFromId(b[i].getRowLock());
         region.batchUpdate(b[i], locks[i]);
       }
-    } catch (OutOfMemoryError error) {
-      abort();
-      LOG.fatal("Ran out of memory", error);
     } catch(WrongRegionException ex) {
       return i;
     } catch (NotServingRegionException ex) {
       return i;
     } catch (IOException e) {
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1397,7 +1451,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       return scannerId;
     } catch (IOException e) {
       LOG.error("Error opening scanner (fsOk: " + this.fsOk + ")",
-          RemoteExceptionHandler.checkIOException(e));
+        RemoteExceptionHandler.checkIOException(e));
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1430,6 +1485,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       s.close();
       this.leases.cancelLease(scannerName);
     } catch (IOException e) {
+      // TODO: Should we even be returning an exception out of a close?
+      // What can the client do with an exception in close?
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1527,7 +1585,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       return lockId;
     } catch (IOException e) {
       LOG.error("Error obtaining row lock (fsOk: " + this.fsOk + ")",
-          RemoteExceptionHandler.checkIOException(e));
+        RemoteExceptionHandler.checkIOException(e));
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1842,7 +1901,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   public long getProtocolVersion(final String protocol, 
-      @SuppressWarnings("unused") final long clientVersion)
+      final long clientVersion)
   throws IOException {  
     if (protocol.equals(HRegionInterface.class.getName())) {
       return HBaseRPCProtocolVersion.versionID;
