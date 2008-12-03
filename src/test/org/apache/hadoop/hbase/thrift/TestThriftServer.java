@@ -166,7 +166,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
       failed2 = true;
     }
     assertTrue(failed2);
-    assertEquals(handler.getRow(tableAname, rowBname).columns.size(), 0);
+    assertNull(handler.getRow(tableAname, rowBname));
 
     // Teardown
     handler.disableTable(tableAname);
@@ -188,6 +188,10 @@ public class TestThriftServer extends HBaseClusterTestCase {
     // Apply timestamped Mutations to rowA
     long time1 = System.currentTimeMillis();
     handler.mutateRowTs(tableAname, rowAname, getMutations(), time1);
+
+    // Sleep to assure that 'time1' and 'time2' will be different even with a
+    // coarse grained system timer.
+    Thread.sleep(1000);
 
     // Apply timestamped BatchMutations for rowA and rowB
     long time2 = System.currentTimeMillis();
@@ -231,7 +235,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
     }
     assertTrue(failed);
     assertTrue(Bytes.equals(handler.get(tableAname, rowAname, columnBname).value, valueCname));
-    assertEquals(handler.getRow(tableAname, rowBname).columns.size(), 0);
+    assertNull(handler.getRow(tableAname, rowBname));
 
     // Teardown
     handler.disableTable(tableAname);
@@ -252,6 +256,10 @@ public class TestThriftServer extends HBaseClusterTestCase {
     // Apply timestamped Mutations to rowA
     long time1 = System.currentTimeMillis();
     handler.mutateRowTs(tableAname, rowAname, getMutations(), time1);
+
+    // Sleep to assure that 'time1' and 'time2' will be different even with a
+    // coarse grained system timer.
+    Thread.sleep(1000);
 
     // Apply timestamped BatchMutations for rowA and rowB
     long time2 = System.currentTimeMillis();

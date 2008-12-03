@@ -85,6 +85,11 @@ Release 0.19.0 - Unreleased
    HBASE-1016  Fix example in javadoc overvie
    HBASE-1021  hbase metrics FileContext not working
    HBASE-1023  Check global flusher
+   HBASE-1036  HBASE-1028 broke Thrift
+   HBASE-1037  Some test cases failing on Windows/Cygwin but not UNIX/Linux
+   HBASE-1041  Migration throwing NPE
+   HBASE-1042  OOME but we don't abort
+   HBASE-927   We don't recover if HRS hosting -ROOT-/.META. goes down
       
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side
@@ -145,6 +150,9 @@ Release 0.19.0 - Unreleased
    HBASE-1020  Regionserver OOME handler should dump vital stats
    HBASE-1018  Regionservers should report detailed health to master
    HBASE-1034  Remove useless TestToString unit test
+   HBASE-1030  Bit of polish on HBASE-1018
+   HBASE-847   new API: HTable.getRow with numVersion specified
+               (Doğacan Güney via Stack)
 
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
