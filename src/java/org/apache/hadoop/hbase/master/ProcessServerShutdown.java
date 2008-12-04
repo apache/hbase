@@ -45,6 +45,8 @@ import org.apache.hadoop.hbase.io.RowResult;
 class ProcessServerShutdown extends RegionServerOperation {
   private HServerAddress deadServer;
   private String deadServerName;
+  private final boolean rootRegionServer;
+  private boolean rootRegionReassigned = false;
   private Path oldLogDir;
   private boolean logSplit;
   private boolean rootRescanned;
@@ -64,11 +66,14 @@ class ProcessServerShutdown extends RegionServerOperation {
   /**
    * @param master
    * @param serverInfo
+   * @param rootRegionServer
    */
-  public ProcessServerShutdown(HMaster master, HServerInfo serverInfo) {
+  public ProcessServerShutdown(HMaster master, HServerInfo serverInfo,
+    boolean rootRegionServer) {
     super(master);
     this.deadServer = serverInfo.getServerAddress();
     this.deadServerName = this.deadServer.toString();
+    this.rootRegionServer = rootRegionServer;
     this.logSplit = false;
     this.rootRescanned = false;
     this.oldLogDir =
@@ -242,6 +247,17 @@ class ProcessServerShutdown extends RegionServerOperation {
         }
       }
       logSplit = true;
+    }
+
+    if (this.rootRegionServer && !this.rootRegionReassigned) {
+      // The server that died was serving the root region. Now that the log
+      // has been split, get it reassigned.
+      master.regionManager.reassignRootRegion();
+      // avoid multiple root region reassignment 
+      this.rootRegionReassigned = true;
+      // When we call rootAvailable below, it will put us on the delayed
+      // to do queue to allow some time to pass during which the root 
+      // region will hopefully get reassigned.
     }
 
     if (!rootAvailable()) {

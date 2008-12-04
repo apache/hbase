@@ -62,7 +62,7 @@ class MetaScanner extends BaseScanner {
     boolean scanSuccessful = false;
     while (!master.closed.get() && !regionManager.isInitialRootScanComplete() &&
       regionManager.getRootRegionLocation() == null) {
-      master.sleeper.sleep();
+      sleep();
     }
     if (master.closed.get()) {
       return scanSuccessful;

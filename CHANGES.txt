@@ -4,6 +4,9 @@ Release 0.18.2 - Unreleased
 
   BUG FIXES
    HBASE-602   HBase Crash when network card has a IPv6 address
+   HBASE-927   We don't recover if HRS hosting -ROOT-/.META. goes down -
+               (back port from trunk)
+
 
 Release 0.18.1 - Released October 27, 2008
 

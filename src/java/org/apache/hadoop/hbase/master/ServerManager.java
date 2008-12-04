@@ -124,10 +124,17 @@ class ServerManager implements HConstants {
       // The startup message was from a known server with the same name.
       // Timeout the old one right away.
       HServerAddress root = master.getRootRegionLocation();
+      boolean rootServer = false;
       if (root != null && root.equals(storedInfo.getServerAddress())) {
-        master.regionManager.unassignRootRegion();
+        master.regionManager.unsetRootRegion();
+        rootServer = true;
       }
-      master.delayedToDoQueue.put(new ProcessServerShutdown(master, storedInfo));
+      try {
+        master.toDoQueue.put(
+            new ProcessServerShutdown(master, storedInfo, rootServer));
+      } catch (InterruptedException e) {
+        LOG.error("Insertion into toDoQueue was interrupted", e);
+      }
     }
 
     // record new server
@@ -285,16 +292,18 @@ class ServerManager implements HConstants {
     serversToServerInfo.put(serverName, serverInfo);
 
     HServerLoad load = serversToLoad.get(serverName);
-    if (load != null && !load.equals(serverInfo.getLoad())) {
-      // We have previous information about the load on this server
-      // and the load on this server has changed
-      synchronized (loadToServers) {
-        Set<String> servers = loadToServers.get(load);
+    if (load != null) {
+      if (!load.equals(serverInfo.getLoad())) {
+        // We have previous information about the load on this server
+        // and the load on this server has changed
+        synchronized (loadToServers) {
+          Set<String> servers = loadToServers.get(load);
 
-        // Note that servers should never be null because loadToServers
-        // and serversToLoad are manipulated in pairs
-        servers.remove(serverName);
-        loadToServers.put(load, servers);
+          // Note that servers should never be null because loadToServers
+          // and serversToLoad are manipulated in pairs
+          servers.remove(serverName);
+          loadToServers.put(load, servers);
+        }
       }
     }
 
@@ -668,10 +677,12 @@ class ServerManager implements HConstants {
       LOG.info(server + " lease expired");
       // Remove the server from the known servers list and update load info
       HServerInfo info = serversToServerInfo.remove(server);
+      boolean rootServer = false;
       if (info != null) {
         HServerAddress root = master.getRootRegionLocation();
         if (root != null && root.equals(info.getServerAddress())) {
-          master.regionManager.unassignRootRegion();
+          master.regionManager.unsetRootRegion();
+          rootServer = true;
         }
         String serverName = info.getServerAddress().toString();
         HServerLoad load = serversToLoad.remove(serverName);
@@ -685,16 +696,15 @@ class ServerManager implements HConstants {
           }
         }
         deadServers.add(server);
+        try {
+          master.toDoQueue.put(
+              new ProcessServerShutdown(master, info, rootServer));
+        } catch (InterruptedException e) {
+          LOG.error("insert into toDoQueue was interrupted", e);
+        }
       }
       synchronized (serversToServerInfo) {
         serversToServerInfo.notifyAll();
-      }
-
-      // NOTE: If the server was serving the root region, we cannot reassign it
-      // here because the new server will start serving the root region before
-      // the ProcessServerShutdown operation has a chance to split the log file.
-      if (info != null) {
-        master.delayedToDoQueue.put(new ProcessServerShutdown(master, info));
       }
     }
   }

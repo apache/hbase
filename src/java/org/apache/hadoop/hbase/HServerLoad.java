@@ -28,6 +28,7 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * This class encapsulates metrics for determining the load on a HRegionServer
  */
+@SuppressWarnings("unchecked")
 public class HServerLoad implements WritableComparable {
   private int numberOfRequests;         // number of requests since last report
   private int numberOfRegions;          // number of regions being served

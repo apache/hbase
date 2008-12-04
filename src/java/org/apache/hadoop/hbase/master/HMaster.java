@@ -121,7 +121,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   final int metaRescanInterval;
   
   // A Sleeper that sleeps for threadWakeFrequency
-  protected final Sleeper sleeper;
+  private final Sleeper sleeper;
   
   // Default access so accesible from unit tests. MASTER is name of the webapp
   // and the attribute name used stuffing this instance into web context.
@@ -587,10 +587,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     for (int tries = 0; tries < numRetries; tries++) {
       try {
-        // We can not access meta regions if they have not already been
-        // assigned and scanned.  If we timeout waiting, just shutdown.
-        if (regionManager.waitForMetaRegionsOrClose()) {
-          break;
+        // We can not create a table unless meta regions have already been
+        // assigned and scanned.
+        if (!regionManager.areAllMetaRegionsOnline()) {
+          throw new NotAllMetaRegionsOnlineException();
         }
         createTable(newRegion);
         LOG.info("created table " + desc.getNameAsString());

@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.util.Writables;
 class RegionManager implements HConstants {
   protected static final Log LOG = LogFactory.getLog(RegionManager.class);
   
-  private volatile AtomicReference<HServerAddress> rootRegionLocation =
+  private AtomicReference<HServerAddress> rootRegionLocation =
     new AtomicReference<HServerAddress>(null);
   
   final Lock splitLogLock = new ReentrantLock();
@@ -155,6 +155,17 @@ class RegionManager implements HConstants {
    */
   void unassignRootRegion() {
     rootRegionLocation.set(null);
+    if (!master.shutdownRequested) {
+      unassignedRegions.put(HRegionInfo.ROOT_REGIONINFO, ZERO_L);
+    }
+  }
+  
+  void unsetRootRegion() {
+    rootRegionLocation.set(null);
+  }
+  
+  void reassignRootRegion() {
+    unsetRootRegion();
     if (!master.shutdownRequested) {
       unassignedRegions.put(HRegionInfo.ROOT_REGIONINFO, ZERO_L);
     }
@@ -493,9 +504,15 @@ class RegionManager implements HConstants {
    * Block until meta regions are online or we're shutting down.
    * @return true if we found meta regions, false if we're closing.
    */
-  public boolean waitForMetaRegionsOrClose() {
-    return metaScannerThread.waitForMetaRegionsOrClose();
+  public boolean areAllMetaRegionsOnline() {
+    boolean result = false;
+    if (rootRegionLocation.get() != null &&
+        numberOfMetaRegions.get() == onlineMetaRegions.size()) {
+      result = true;
+    }
+    return result;
   }
+  
   
   /**
    * Search our map of online meta regions to find the first meta region that 
@@ -523,16 +540,25 @@ class RegionManager implements HConstants {
    * Get a set of all the meta regions that contain info about a given table.
    * @param tableName Table you need to know all the meta regions for
    * @return set of MetaRegion objects that contain the table
+   * @throws NotAllMetaRegionsOnlineException
    */
-  public Set<MetaRegion> getMetaRegionsForTable(byte [] tableName) {
+  public Set<MetaRegion> getMetaRegionsForTable(byte [] tableName)
+  throws NotAllMetaRegionsOnlineException {
     byte [] firstMetaRegion = null;
     Set<MetaRegion> metaRegions = new HashSet<MetaRegion>();
     
     if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
+      if (rootRegionLocation.get() == null) {
+        throw new NotAllMetaRegionsOnlineException(
+            Bytes.toString(HConstants.ROOT_TABLE_NAME));
+      }
       metaRegions.add(new MetaRegion(rootRegionLocation.get(),
           HRegionInfo.ROOT_REGIONINFO.getRegionName()));
       
     } else {
+      if (!areAllMetaRegionsOnline()) {
+        throw new NotAllMetaRegionsOnlineException();
+      }
       synchronized (onlineMetaRegions) {
         if (onlineMetaRegions.size() == 1) {
           firstMetaRegion = onlineMetaRegions.firstKey();
@@ -592,9 +618,9 @@ class RegionManager implements HConstants {
    * @return list of MetaRegion objects
    */
   public List<MetaRegion> getListOfOnlineMetaRegions() {
-    List<MetaRegion> regions = new ArrayList<MetaRegion>();
+    List<MetaRegion> regions = null;
     synchronized(onlineMetaRegions) {
-      regions.addAll(onlineMetaRegions.values());
+      regions = new ArrayList<MetaRegion>(onlineMetaRegions.values());
     }
     return regions;
   }
@@ -805,9 +831,8 @@ class RegionManager implements HConstants {
   /**
    * Add a meta region to the scan queue
    * @param m MetaRegion that needs to get scanned
-   * @throws InterruptedException
    */
-  public void addMetaRegionToScan(MetaRegion m) throws InterruptedException {
+  public void addMetaRegionToScan(MetaRegion m) {
     metaScannerThread.addMetaRegionToScan(m);
   }
   
