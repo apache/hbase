@@ -808,7 +808,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             if(e == null || stopRequested.get()) {
               continue;
             }
-            LOG.info(e.msg);
+            LOG.info("Worker: " + e.msg);
             switch(e.msg.getType()) {
 
             case MSG_REGIONSERVER_QUIESCE:
@@ -1048,7 +1048,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   public RowResult getClosestRowBefore(final byte [] regionName, 
-    final byte [] row)
+    final byte [] row, final byte [] columnFamily)
   throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
@@ -1056,7 +1056,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // locate the region we're operating on
       HRegion region = getRegion(regionName);
       // ask the region for all the data 
-      RowResult rr = region.getClosestRowBefore(row);
+      RowResult rr = region.getClosestRowBefore(row, columnFamily);
       return rr;
     } catch (IOException e) {
       checkFileSystem();

@@ -7,6 +7,9 @@ Release 0.18.2 - Unreleased
    HBASE-927   We don't recover if HRS hosting -ROOT-/.META. goes down -
                (back port from trunk)
 
+  IMPROVEMENTS
+   HBASE-1046  Narrow getClosestRowBefore by passing column family (backport)
+
 
 Release 0.18.1 - Released October 27, 2008
 

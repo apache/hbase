@@ -37,8 +37,9 @@ public interface HRegionInterface extends VersionedProtocol {
   /**
    * Protocol version.
    * Upped to 4 when we removed overloaded methods from the protocol.
+   * Upped to 5 when we changed getClosestRowBefore signature.
    */
-  public static final long versionID = 4L;
+  public static final long versionID = 5L;
 
   /** 
    * Get metainfo about an HRegion
@@ -72,11 +73,12 @@ public interface HRegionInterface extends VersionedProtocol {
    * 
    * @param regionName region name
    * @param row row key
+   * @param columnFamily Column family to look for row in.
    * @return map of values
    * @throws IOException
    */
   public RowResult getClosestRowBefore(final byte [] regionName,
-    final byte [] row)
+    final byte [] row, final byte [] columnFamily)
   throws IOException;
 
   /**
