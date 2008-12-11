@@ -6,6 +6,8 @@ Release 0.18.2 - Unreleased
    HBASE-602   HBase Crash when network card has a IPv6 address
    HBASE-927   We don't recover if HRS hosting -ROOT-/.META. goes down -
                (back port from trunk)
+   HBASE-1052  Stopping a HRegionServer with unflushed cache causes data loss
+               from org.apache.hadoop.hbase.DroppedSnapshotException
 
   IMPROVEMENTS
    HBASE-1046  Narrow getClosestRowBefore by passing column family (backport)
