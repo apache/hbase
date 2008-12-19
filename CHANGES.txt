@@ -11,6 +11,7 @@ Release 0.18.2 - Unreleased
 
   IMPROVEMENTS
    HBASE-1046  Narrow getClosestRowBefore by passing column family (backport)
+   HBASE-1069  Show whether HRegion major compacts or not in INFO level
 
 
 Release 0.18.1 - Released October 27, 2008
