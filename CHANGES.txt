@@ -8,6 +8,8 @@ Release 0.18.2 - Unreleased
                (back port from trunk)
    HBASE-1052  Stopping a HRegionServer with unflushed cache causes data loss
                from org.apache.hadoop.hbase.DroppedSnapshotException
+   HBASE-981   hbase.io.index.interval doesn't seem to have an effect;
+               interval is 128 rather than the configured 32
 
   IMPROVEMENTS
    HBASE-1046  Narrow getClosestRowBefore by passing column family (backport)
