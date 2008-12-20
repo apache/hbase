@@ -10,6 +10,7 @@ Release 0.18.2 - Unreleased
                from org.apache.hadoop.hbase.DroppedSnapshotException
    HBASE-981   hbase.io.index.interval doesn't seem to have an effect;
                interval is 128 rather than the configured 32
+   HBASE-1070  Up default index interval in TRUNK and branch
 
   IMPROVEMENTS
    HBASE-1046  Narrow getClosestRowBefore by passing column family (backport)
