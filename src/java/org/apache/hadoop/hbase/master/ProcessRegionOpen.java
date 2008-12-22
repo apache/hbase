@@ -112,7 +112,7 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
             }
           }
           // If updated successfully, remove from pending list.
-          master.regionManager.noLongerPending(regionInfo.getRegionName());
+          master.regionManager.removeRegion(regionInfo);
           return true;
         }
     }.doWithRetries();

@@ -23,14 +23,12 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
 /** Instantiated to enable or disable a table */
@@ -98,13 +96,14 @@ class ChangeTableState extends TableOperation {
 
       if (online) {
         // Bring offline regions on-line
-        master.regionManager.noLongerClosing(i.getRegionName());
-        if (!master.regionManager.isUnassigned(i)) {
-          master.regionManager.setUnassigned(i);
+        if (!master.regionManager.isUnassigned(i) &&
+            !master.regionManager.isAssigned(i.getRegionName()) &&
+            !master.regionManager.isPending(i.getRegionName())) {
+          master.regionManager.setUnassigned(i, false);
         }
       } else {
         // Prevent region from getting assigned.
-        master.regionManager.noLongerUnassigned(i);
+        master.regionManager.removeRegion(i);
       }
     }
 
@@ -122,28 +121,12 @@ class ChangeTableState extends TableOperation {
 
       // Cause regions being served to be taken off-line and disabled
 
-      Map<byte [], HRegionInfo> localKillList =
-        new TreeMap<byte [], HRegionInfo>(Bytes.BYTES_COMPARATOR);
       for (HRegionInfo i: e.getValue()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("adding region " + i.getRegionNameAsString() + " to kill list");
         }
         // this marks the regions to be closed
-        localKillList.put(i.getRegionName(), i);
-        // this marks the regions to be offlined once they are closed
-        master.regionManager.markRegionForOffline(i.getRegionName());
-      }
-      Map<byte [], HRegionInfo> killedRegions = 
-        master.regionManager.removeMarkedToClose(serverName);
-      if (killedRegions != null) {
-        localKillList.putAll(killedRegions);
-      }
-      if (localKillList.size() > 0) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("inserted local kill list into kill list for server " +
-              serverName);
-        }
-        master.regionManager.markToCloseBulk(serverName, localKillList);
+        master.regionManager.setClosing(serverName, i, true);
       }
     }
     servedRegions.clear();

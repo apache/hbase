@@ -265,9 +265,10 @@ class ServerManager implements HConstants {
               } else if (info.isMetaTable()) {
                 master.regionManager.offlineMetaRegion(info.getStartKey());
               }
-              if (!master.regionManager.isMarkedToClose(
-                  serverName, info.getRegionName())) {
-                master.regionManager.setUnassigned(info);
+              if (!master.regionManager.isOfflined(info.getRegionName())) {
+                master.regionManager.setUnassigned(info, true);
+              } else {
+                master.regionManager.removeRegion(info);
               }
             }
           }
@@ -334,8 +335,6 @@ class ServerManager implements HConstants {
     HRegionInfo[] mostLoadedRegions, HMsg incomingMsgs[])
   throws IOException { 
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
-    Map<byte [], HRegionInfo> regionsToKill = 
-      master.regionManager.removeMarkedToClose(serverName);
     if (serverInfo.getServerAddress() == null) {
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");
@@ -346,7 +345,6 @@ class ServerManager implements HConstants {
       LOG.info("Received " + incomingMsgs[i] + " from " + serverName);
       switch (incomingMsgs[i].getType()) {
         case MSG_REPORT_PROCESS_OPEN:
-          master.regionManager.updateAssignmentDeadline(region);
           break;
         
         case MSG_REPORT_OPEN:
@@ -354,7 +352,7 @@ class ServerManager implements HConstants {
           break;
 
         case MSG_REPORT_CLOSE:
-          processRegionClose(serverInfo, region);
+          processRegionClose(region);
           break;
 
         case MSG_REPORT_SPLIT:
@@ -370,12 +368,10 @@ class ServerManager implements HConstants {
     }
 
     // Tell the region server to close regions that we have marked for closing.
-    if (regionsToKill != null) {
-      for (HRegionInfo i: regionsToKill.values()) {
-        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i));
-        // Transition the region from toClose to closing state
-        master.regionManager.setClosing(i.getRegionName());
-      }
+    for (HRegionInfo i: master.regionManager.getMarkedToClose(serverName)) {
+      returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i));
+      // Transition the region from toClose to closing state
+      master.regionManager.setClosed(i.getRegionName());
     }
 
     // Figure out what the RegionServer ought to do, and write back.
@@ -407,10 +403,10 @@ class ServerManager implements HConstants {
     master.regionManager.endActions(region.getRegionName());
 
     HRegionInfo newRegionA = splitA.getRegionInfo();
-    master.regionManager.setUnassigned(newRegionA);
+    master.regionManager.setUnassigned(newRegionA, false);
 
     HRegionInfo newRegionB = splitB.getRegionInfo();
-    master.regionManager.setUnassigned(newRegionB);
+    master.regionManager.setUnassigned(newRegionB, false);
 
     if (region.isMetaTable()) {
       // A meta region has split.
@@ -424,7 +420,8 @@ class ServerManager implements HConstants {
     HRegionInfo region, ArrayList<HMsg> returnMsgs) 
   throws IOException {
     boolean duplicateAssignment = false;
-    if (!master.regionManager.isUnassigned(region)) {
+    if (!master.regionManager.isUnassigned(region) &&
+        !master.regionManager.isAssigned(region.getRegionName())) {
       if (region.isRootRegion()) {
         // Root region
         HServerAddress rootServer = master.getRootRegionLocation();
@@ -462,10 +459,11 @@ class ServerManager implements HConstants {
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE_WITHOUT_REPORT,
         region, "Duplicate assignment".getBytes()));
     } else {
-      // it was assigned, and it's not a duplicate assignment, so take it out 
-      // of the unassigned list.
-      master.regionManager.noLongerUnassigned(region);
       if (region.isRootRegion()) {
+        // it was assigned, and it's not a duplicate assignment, so take it out 
+        // of the unassigned list.
+        master.regionManager.removeRegion(region);
+        
         // Store the Root Region location (in memory)
         HServerAddress rootServer = serverInfo.getServerAddress();
         master.connection.setRootRegionLocation(
@@ -487,57 +485,37 @@ class ServerManager implements HConstants {
     }
   }
   
-  private void processRegionClose(
-      @SuppressWarnings("unused") HServerInfo serverInfo, HRegionInfo region) {
+  private void processRegionClose(HRegionInfo region) {
     if (region.isRootRegion()) {
       // Root region
+      master.connection.setRootRegionLocation(null);
+      master.regionManager.unsetRootRegion();
       if (region.isOffline()) {
         // Can't proceed without root region. Shutdown.
         LOG.fatal("root region is marked offline");
         master.shutdown();
+        return;
       }
-      master.connection.setRootRegionLocation(null);
-      master.regionManager.reassignRootRegion();
+ 
+    } else if (region.isMetaTable()) {
+      // Region is part of the meta table. Remove it from onlineMetaRegions
+      master.regionManager.offlineMetaRegion(region.getStartKey());
+    }
 
-    } else {
-      boolean reassignRegion = !region.isOffline();
-      boolean offlineRegion = false;
+    boolean offlineRegion =
+      master.regionManager.isOfflined(region.getRegionName());
+    boolean reassignRegion = !region.isOffline() && !offlineRegion;
 
-      // either this region is being closed because it was marked to close, or
-      // the region server is going down peacefully. in either case, we should
-      // at least try to remove it from the closing list. 
-      master.regionManager.noLongerClosing(region.getRegionName());
-
-      // if the region is marked to be offlined, we don't want to reassign it.
-      if (master.regionManager.isMarkedForOffline(region.getRegionName())) {
-        reassignRegion = false;
-        offlineRegion = true;
-      }
-
-      if (region.isMetaTable()) {
-        // Region is part of the meta table. Remove it from onlineMetaRegions
-        master.regionManager.offlineMetaRegion(region.getStartKey());
-      }
-
-      // if the region is already on the unassigned list, let's remove it. this
-      // is safe because if it's going to be reassigned, it'll get added again
-      // shortly. if it's not going to get reassigned, then we need to make 
-      // sure it's not on the unassigned list, because that would contend with
-      // the ProcessRegionClose going on asynchronously.
-      master.regionManager.noLongerUnassigned(region);
-
-      // NOTE: we cannot put the region into unassignedRegions as that
-      //       changes the ordering of the messages we've received. In
-      //       this case, a close could be processed before an open
-      //       resulting in the master not agreeing on the region's
-      //       state.
-      try {
-        master.toDoQueue.put(new ProcessRegionClose(master, region, 
-            offlineRegion, reassignRegion));
-      } catch (InterruptedException e) {
-        throw new RuntimeException(
-            "Putting into toDoQueue was interrupted.", e);
-      }
+    // NOTE: If the region was just being closed and not offlined, we cannot
+    //       mark the region unassignedRegions as that changes the ordering of
+    //       the messages we've received. In this case, a close could be
+    //       processed before an open resulting in the master not agreeing on
+    //       the region's state.
+    try {
+      master.toDoQueue.put(new ProcessRegionClose(master, region, offlineRegion,
+          reassignRegion));
+    } catch (InterruptedException e) {
+      throw new RuntimeException("Putting into toDoQueue was interrupted.", e);
     }
   }
   
@@ -545,9 +523,9 @@ class ServerManager implements HConstants {
   private boolean cancelLease(final String serverName) {
     boolean leaseCancelled = false;
     HServerInfo info = serversToServerInfo.remove(serverName);
+    // Only cancel lease and update load information once.
+    // This method can be called a couple of times during shutdown.
     if (info != null) {
-      // Only cancel lease and update load information once.
-      // This method can be called a couple of times during shutdown.
       if (master.getRootRegionLocation() != null &&
         info.getServerAddress().equals(master.getRootRegionLocation())) {
         master.regionManager.reassignRootRegion();

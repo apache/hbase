@@ -120,6 +120,14 @@ class MemcacheFlusher extends Thread implements FlushRequester {
   
   @Override
   public void run() {
+    while (!this.server.isStopRequested() && this.server.isInSafeMode()) {
+      try {
+        LOG.debug("in safe mode, deferring memcache flushes");
+        Thread.sleep(threadWakeFrequency);
+      } catch (InterruptedException ex) {
+        continue;
+      }
+    }
     while (!server.isStopRequested()) {
       HRegion r = null;
       try {

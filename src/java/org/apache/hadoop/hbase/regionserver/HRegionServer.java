@@ -117,7 +117,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   protected final AtomicBoolean stopRequested = new AtomicBoolean(false);
   
   protected final AtomicBoolean quiesced = new AtomicBoolean(false);
-  
+
+  protected final AtomicBoolean safeMode = new AtomicBoolean(true);
+
   // Go down hard.  Used if file system becomes unavailable and also in
   // debugging and unit tests.
   protected volatile boolean abortRequested;
@@ -521,15 +523,32 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     join();
 
-    LOG.info("Running hdfs shutdown thread");
-    hdfsShutdownThread.start();
-    try {
-      hdfsShutdownThread.join();
-      LOG.info("Hdfs shutdown thread completed.");
-    } catch (InterruptedException e) {
-      LOG.warn("hdfsShutdownThread.join() was interrupted", e);
-    }
+    runThread(this.hdfsShutdownThread);
     LOG.info(Thread.currentThread().getName() + " exiting");
+  }
+
+  /**
+   * Run and wait on passed thread in HRS context.
+   * @param t
+   */
+  public void runThread(final Thread t) {
+    if (t ==  null) {
+      return;
+    }
+    t.start();
+    Threads.shutdown(t);
+  }
+
+  /**
+   * Set the hdfs shutdown thread to run on exit.  Pass null to disable
+   * running of the shutdown test.  Needed by tests.
+   * @param t Thread to run.  Pass null to disable tests.
+   * @return Previous occupant of the shutdown thread position.
+   */
+  public Thread setHDFSShutdownThreadOnExit(final Thread t) {
+    Thread old = this.hdfsShutdownThread;
+    this.hdfsShutdownThread = t;
+    return old;
   }
 
   /*
@@ -571,6 +590,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.logFlusher.setHLog(log);
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
+      // start thread for turning off safemode
+      if (conf.getInt("hbase.regionserver.safemode.period", 0) < 1) {
+        safeMode.set(false);
+        compactSplitThread.setLimit(-1);
+        LOG.debug("skipping safe mode");
+      } else {
+        new SafemodeThread().start();
+      }
       startServiceThreads();
       isOnline = true;
     } catch (Throwable e) {
@@ -698,6 +725,58 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
     return this.fsOk;
+  }
+
+  /**
+   * Thread for toggling safemode after some configurable interval.
+   */
+  private class SafemodeThread extends Thread {
+
+    public void start() {
+      // make this thread a daemon so it will not delay any shutdown
+      this.setDaemon(true);
+      super.start();
+    }
+
+    public void run() {
+      // first, wait the required interval before turning off safemode
+      int safemodeInterval =
+        conf.getInt("hbase.regionserver.safemode.period", 120 * 1000);
+      try {
+        Thread.sleep(safemodeInterval);
+      } catch (InterruptedException ex) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(this.getName() + " exiting on interrupt");
+        }
+        return;
+      }
+      LOG.info("leaving safe mode");
+      safeMode.set(false);
+
+      // now that safemode is off, slowly increase the per-cycle compaction
+      // limit, finally setting it to unlimited (-1)
+      int compactionCheckInterval = 
+        conf.getInt("hbase.regionserver.thread.splitcompactcheckfrequency",
+            20 * 1000);
+      final int limitSteps[] = { 1, 1, 1, 1, 2, 2, 2, 3, 3, -1 };
+      for (int i = 0; i < limitSteps.length; i++) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("setting compaction limit to " + limitSteps[i]);
+        }
+        compactSplitThread.setLimit(limitSteps[i]);
+        try {
+          Thread.sleep(compactionCheckInterval);
+        } catch (InterruptedException ex) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(this.getName() + " exiting on interrupt");
+          }
+          // unlimit compactions before exiting
+          compactSplitThread.setLimit(-1);
+          return;
+        }
+      }
+      LOG.info("compactions no longer limited");
+    }
   }
 
   /*
@@ -1824,7 +1903,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   public boolean isStopRequested() {
     return stopRequested.get();
   }
-  
+
+  /**
+   * @return true if the region server is in safe mode
+   */
+  public boolean isInSafeMode() {
+    return safeMode.get();
+  }
+
   /**
    * 
    * @return the configuration
