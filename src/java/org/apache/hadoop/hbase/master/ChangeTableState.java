@@ -66,7 +66,6 @@ class ChangeTableState extends TableOperation {
   protected void postProcessMeta(MetaRegion m, HRegionInterface server)
   throws IOException {
     // Process regions not being served
-    
     if (LOG.isDebugEnabled()) {
       LOG.debug("processing unserved regions");
     }
@@ -78,55 +77,53 @@ class ChangeTableState extends TableOperation {
         }
         continue;
       }
-      
-      // Update meta table
-      
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("updating columns in row: " + i.getRegionNameAsString());
-      }
 
+      // Update meta table
       BatchUpdate b = new BatchUpdate(i.getRegionName());
       updateRegionInfo(b, i);
       b.delete(COL_SERVER);
       b.delete(COL_STARTCODE);
       server.batchUpdate(m.getRegionName(), b, -1L);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("updated columns in row: " + i.getRegionNameAsString());
+        LOG.debug("Updated columns in row: " + i.getRegionNameAsString());
       }
 
-      if (online) {
-        // Bring offline regions on-line
-        if (!master.regionManager.isUnassigned(i) &&
-            !master.regionManager.isAssigned(i.getRegionName()) &&
-            !master.regionManager.isPending(i.getRegionName())) {
-          master.regionManager.setUnassigned(i, false);
+      synchronized (master.regionManager) {
+        if (online) {
+          // Bring offline regions on-line
+          if (!master.regionManager.isUnassigned(i) &&
+              !master.regionManager.isAssigned(i.getRegionName()) &&
+              !master.regionManager.isPending(i.getRegionName())) {
+            master.regionManager.setUnassigned(i, false);
+          }
+        } else {
+          // Prevent region from getting assigned.
+          master.regionManager.removeRegion(i);
         }
-      } else {
-        // Prevent region from getting assigned.
-        master.regionManager.removeRegion(i);
       }
     }
 
     // Process regions currently being served
-
     if (LOG.isDebugEnabled()) {
       LOG.debug("processing regions currently being served");
     }
-    for (Map.Entry<String, HashSet<HRegionInfo>> e: servedRegions.entrySet()) {
-      String serverName = e.getKey();
-      if (online) {
-        LOG.debug("Already online");
-        continue;                             // Already being served
-      }
-
-      // Cause regions being served to be taken off-line and disabled
-
-      for (HRegionInfo i: e.getValue()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("adding region " + i.getRegionNameAsString() + " to kill list");
+    synchronized (master.regionManager) {
+      for (Map.Entry<String, HashSet<HRegionInfo>> e: servedRegions.entrySet()) {
+        String serverName = e.getKey();
+        if (online) {
+          LOG.debug("Already online");
+          continue;                             // Already being served
         }
-        // this marks the regions to be closed
-        master.regionManager.setClosing(serverName, i, true);
+
+        // Cause regions being served to be taken off-line and disabled
+
+        for (HRegionInfo i: e.getValue()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("adding region " + i.getRegionNameAsString() + " to kill list");
+          }
+          // this marks the regions to be closed
+          master.regionManager.setClosing(serverName, i, true);
+        }
       }
     }
     servedRegions.clear();

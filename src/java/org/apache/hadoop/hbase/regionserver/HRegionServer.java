@@ -435,8 +435,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               checkFileSystem();
             }
             if (this.stopRequested.get()) {
-            	LOG.info("Stop was requested, clearing the toDo " +
-            			"despite of the exception");
+                LOG.info("Stop was requested, clearing the toDo " +
+                        "despite of the exception");
                 toDo.clear();
                 continue;
             }
@@ -758,7 +758,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       int compactionCheckInterval = 
         conf.getInt("hbase.regionserver.thread.splitcompactcheckfrequency",
             20 * 1000);
-      final int limitSteps[] = { 1, 1, 1, 1, 2, 2, 2, 3, 3, -1 };
+      final int limitSteps[] = {
+        1, 1, 1, 1,
+        2, 2, 2, 2, 2, 2,
+        3, 3, 3, 3, 3, 3, 3, 3, 
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        -1 };
       for (int i = 0; i < limitSteps.length; i++) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("setting compaction limit to " + limitSteps[i]);
@@ -1365,7 +1370,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
   throws IOException {
-	HRegion region = this.removeFromOnlineRegions(hri);
+    HRegion region = this.removeFromOnlineRegions(hri);
     if (region != null) {
       region.close();
       if(reportWhenCompleted) {

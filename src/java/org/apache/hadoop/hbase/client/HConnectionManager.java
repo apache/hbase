@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.ipc.RemoteException;
@@ -176,7 +177,15 @@ public class HConnectionManager implements HConstants {
       return this.pause * HConstants.RETRY_BACKOFF[ntries];
     }
 
+    public void unsetRootRegionLocation() {
+      this.rootRegionLocation = null;
+    }
+    
     public void setRootRegionLocation(HRegionLocation rootRegion) {
+      if (rootRegion == null) {
+        throw new IllegalArgumentException(
+            "Cannot set root region location to null.");
+      }
       this.rootRegionLocation = rootRegion;
     }
     
@@ -270,8 +279,7 @@ public class HConnectionManager implements HConstants {
      * of a catalog table.
      */
     private static boolean isMetaTableName(final byte [] n) {
-      return Bytes.equals(n, ROOT_TABLE_NAME) ||
-        Bytes.equals(n, META_TABLE_NAME);
+      return MetaUtils.isMetaTableName(n);
     }
 
     public HRegionLocation getRegionLocation(final byte [] name,
@@ -880,9 +888,6 @@ public class HConnectionManager implements HConstants {
         if (t instanceof DoNotRetryIOException) {
           throw (DoNotRetryIOException) t;
         }
-        if (t instanceof IOException) {
-          throw (IOException) t;
-        }
       }
       return null;    
     }
@@ -893,6 +898,7 @@ public class HConnectionManager implements HConstants {
       if (list.isEmpty()) {
         return;
       }
+      boolean retryOnlyOne = false;
       Collections.sort(list);
       List<BatchUpdate> tempUpdates = new ArrayList<BatchUpdate>();
       byte[] currentRegion = getRegionLocation(tableName, list.get(0).getRow(),
@@ -908,7 +914,7 @@ public class HConnectionManager implements HConstants {
           region = getRegionLocation(tableName, list.get(i + 1).getRow(), false)
               .getRegionInfo().getRegionName();
         }
-        if (!Bytes.equals(currentRegion, region) || isLastRow) {
+        if (!Bytes.equals(currentRegion, region) || isLastRow || retryOnlyOne) {
           final BatchUpdate[] updates = tempUpdates.toArray(new BatchUpdate[0]);
           int index = getRegionServerForWithoutRetries(new ServerCallable<Integer>(
               this, tableName, batchUpdate.getRow()) {
@@ -926,13 +932,10 @@ public class HConnectionManager implements HConstants {
             }
             long sleepTime = getPauseTime(tries);
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Eeloading table servers because region " +
+              LOG.debug("Reloading table servers because region " +
                 "server didn't accept updates; tries=" + tries +
                 " of max=" + this.numRetries + ", waiting=" + sleepTime + "ms");
             }
-            // Basic waiting time. If many updates are flushed, tests have shown
-            // that this is barely needed but when commiting 1 update this may
-            // get retried hundreds of times.
             try {
               Thread.sleep(sleepTime);
               tries++;
@@ -940,9 +943,13 @@ public class HConnectionManager implements HConstants {
               // continue
             }
             i = i - updates.length + index;
+            retryOnlyOne = true;
             region = getRegionLocation(tableName, list.get(i + 1).getRow(),
                 true).getRegionInfo().getRegionName();
-
+            
+          }
+          else {
+            retryOnlyOne = false;
           }
           currentRegion = region;
           tempUpdates.clear();

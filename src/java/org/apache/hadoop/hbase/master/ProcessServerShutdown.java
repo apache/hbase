@@ -130,29 +130,31 @@ class ProcessServerShutdown extends RegionServerOperation {
           continue;
         }
 
-        if (info.isMetaTable()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("removing meta region " +
-              Bytes.toString(info.getRegionName()) +
+        synchronized (master.regionManager) {
+          if (info.isMetaTable()) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("removing meta region " +
+                  Bytes.toString(info.getRegionName()) +
               " from online meta regions");
+            }
+            master.regionManager.offlineMetaRegion(info.getStartKey());
           }
-          master.regionManager.offlineMetaRegion(info.getStartKey());
-        }
 
-        ToDoEntry todo = new ToDoEntry(row, info);
-        toDoList.add(todo);
+          ToDoEntry todo = new ToDoEntry(row, info);
+          toDoList.add(todo);
 
-        if (master.regionManager.isOfflined(info.getRegionName()) ||
-            info.isOffline()) {
-          master.regionManager.removeRegion(info);
-          // Mark region offline
-          if (!info.isOffline()) {
-            todo.regionOffline = true;
-          }
-        } else {
-          if (!info.isOffline() && !info.isSplit()) {
-            // Get region reassigned
-            regions.add(info);
+          if (master.regionManager.isOfflined(info.getRegionName()) ||
+              info.isOffline()) {
+            master.regionManager.removeRegion(info);
+            // Mark region offline
+            if (!info.isOffline()) {
+              todo.regionOffline = true;
+            }
+          } else {
+            if (!info.isOffline() && !info.isSplit()) {
+              // Get region reassigned
+              regions.add(info);
+            }
           }
         }
       }

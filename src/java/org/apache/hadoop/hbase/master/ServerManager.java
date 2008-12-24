@@ -260,15 +260,17 @@ class ServerManager implements HConstants {
             for (int i = 1; i < msgs.length; i++) {
               LOG.info("Processing " + msgs[i] + " from " + serverName);
               HRegionInfo info = msgs[i].getRegionInfo();
-              if (info.isRootRegion()) {
-                master.regionManager.reassignRootRegion();
-              } else if (info.isMetaTable()) {
-                master.regionManager.offlineMetaRegion(info.getStartKey());
-              }
-              if (!master.regionManager.isOfflined(info.getRegionName())) {
-                master.regionManager.setUnassigned(info, true);
-              } else {
-                master.regionManager.removeRegion(info);
+              synchronized (master.regionManager) {
+                if (info.isRootRegion()) {
+                  master.regionManager.reassignRootRegion();
+                } else if (info.isMetaTable()) {
+                  master.regionManager.offlineMetaRegion(info.getStartKey());
+                }
+                if (!master.regionManager.isOfflined(info.getRegionName())) {
+                  master.regionManager.setUnassigned(info, true);
+                } else {
+                  master.regionManager.removeRegion(info);
+                }
               }
             }
           }
@@ -367,20 +369,21 @@ class ServerManager implements HConstants {
       }
     }
 
-    // Tell the region server to close regions that we have marked for closing.
-    for (HRegionInfo i: master.regionManager.getMarkedToClose(serverName)) {
-      returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i));
-      // Transition the region from toClose to closing state
-      master.regionManager.setClosed(i.getRegionName());
+    synchronized (master.regionManager) {
+      // Tell the region server to close regions that we have marked for closing.
+      for (HRegionInfo i: master.regionManager.getMarkedToClose(serverName)) {
+        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i));
+        // Transition the region from toClose to closing state
+        master.regionManager.setClosed(i.getRegionName());
+      }
+
+      // Figure out what the RegionServer ought to do, and write back.
+      master.regionManager.assignRegions(serverInfo, serverName, 
+          mostLoadedRegions, returnMsgs);
+
+      // Send any pending table actions.
+      master.regionManager.applyActions(serverInfo, returnMsgs);
     }
-
-    // Figure out what the RegionServer ought to do, and write back.
-    master.regionManager.assignRegions(serverInfo, serverName, 
-      mostLoadedRegions, returnMsgs);
-
-    // Send any pending table actions.
-    master.regionManager.applyActions(serverInfo, returnMsgs);
-
     return returnMsgs.toArray(new HMsg[returnMsgs.size()]);
   }
   
@@ -397,21 +400,23 @@ class ServerManager implements HConstants {
   private void processSplitRegion(String serverName, HServerInfo serverInfo, 
     HRegionInfo region, HMsg splitA, HMsg splitB, ArrayList<HMsg> returnMsgs) {
 
-    // Cancel any actions pending for the affected region.
-    // This prevents the master from sending a SPLIT message if the table
-    // has already split by the region server. 
-    master.regionManager.endActions(region.getRegionName());
+    synchronized (master.regionManager) {
+      // Cancel any actions pending for the affected region.
+      // This prevents the master from sending a SPLIT message if the table
+      // has already split by the region server. 
+      master.regionManager.endActions(region.getRegionName());
 
-    HRegionInfo newRegionA = splitA.getRegionInfo();
-    master.regionManager.setUnassigned(newRegionA, false);
+      HRegionInfo newRegionA = splitA.getRegionInfo();
+      master.regionManager.setUnassigned(newRegionA, false);
 
-    HRegionInfo newRegionB = splitB.getRegionInfo();
-    master.regionManager.setUnassigned(newRegionB, false);
+      HRegionInfo newRegionB = splitB.getRegionInfo();
+      master.regionManager.setUnassigned(newRegionB, false);
 
-    if (region.isMetaTable()) {
-      // A meta region has split.
-      master.regionManager.offlineMetaRegion(region.getStartKey());
-      master.regionManager.incrementNumMetaRegions();
+      if (region.isMetaTable()) {
+        // A meta region has split.
+        master.regionManager.offlineMetaRegion(region.getStartKey());
+        master.regionManager.incrementNumMetaRegions();
+      }
     }
   }
 
@@ -420,102 +425,106 @@ class ServerManager implements HConstants {
     HRegionInfo region, ArrayList<HMsg> returnMsgs) 
   throws IOException {
     boolean duplicateAssignment = false;
-    if (!master.regionManager.isUnassigned(region) &&
-        !master.regionManager.isAssigned(region.getRegionName())) {
-      if (region.isRootRegion()) {
-        // Root region
-        HServerAddress rootServer = master.getRootRegionLocation();
-        if (rootServer != null) {
-          if (rootServer.toString().compareTo(serverName) == 0) {
-            // A duplicate open report from the correct server
+    synchronized (master.regionManager) {
+      if (!master.regionManager.isUnassigned(region) &&
+          !master.regionManager.isAssigned(region.getRegionName())) {
+        if (region.isRootRegion()) {
+          // Root region
+          HServerAddress rootServer = master.getRootRegionLocation();
+          if (rootServer != null) {
+            if (rootServer.toString().compareTo(serverName) == 0) {
+              // A duplicate open report from the correct server
+              return;
+            }
+            // We received an open report on the root region, but it is
+            // assigned to a different server
+            duplicateAssignment = true;
+          }
+        } else {
+          // Not root region. If it is not a pending region, then we are
+          // going to treat it as a duplicate assignment, although we can't 
+          // tell for certain that's the case.
+          if (master.regionManager.isPending(region.getRegionName())) {
+            // A duplicate report from the correct server
             return;
           }
-          // We received an open report on the root region, but it is
-          // assigned to a different server
           duplicateAssignment = true;
         }
-      } else {
-        // Not root region. If it is not a pending region, then we are
-        // going to treat it as a duplicate assignment, although we can't 
-        // tell for certain that's the case.
-        if (master.regionManager.isPending(region.getRegionName())) {
-          // A duplicate report from the correct server
-          return;
-        }
-        duplicateAssignment = true;
       }
-    }
     
-    if (duplicateAssignment) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("region server " + serverInfo.getServerAddress().toString()
-          + " should not have opened region " + region.getRegionName());
-      }
-
-      // This Region should not have been opened.
-      // Ask the server to shut it down, but don't report it as closed.  
-      // Otherwise the HMaster will think the Region was closed on purpose, 
-      // and then try to reopen it elsewhere; that's not what we want.
-      returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE_WITHOUT_REPORT,
-        region, "Duplicate assignment".getBytes()));
-    } else {
-      if (region.isRootRegion()) {
-        // it was assigned, and it's not a duplicate assignment, so take it out 
-        // of the unassigned list.
-        master.regionManager.removeRegion(region);
-        
-        // Store the Root Region location (in memory)
-        HServerAddress rootServer = serverInfo.getServerAddress();
-        master.connection.setRootRegionLocation(
-            new HRegionLocation(region, rootServer));
-        master.regionManager.setRootRegionLocation(rootServer);
-      } else {
-        // Note that the table has been assigned and is waiting for the
-        // meta table to be updated.
-        master.regionManager.setPending(region.getRegionName());
-        // Queue up an update to note the region location.
-        try {
-          master.toDoQueue.put(
-            new ProcessRegionOpen(master, serverInfo, region));
-        } catch (InterruptedException e) {
-          throw new RuntimeException(
-            "Putting into toDoQueue was interrupted.", e);
+      if (duplicateAssignment) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("region server " + serverInfo.getServerAddress().toString()
+              + " should not have opened region " + region.getRegionName());
         }
-      } 
+
+        // This Region should not have been opened.
+        // Ask the server to shut it down, but don't report it as closed.  
+        // Otherwise the HMaster will think the Region was closed on purpose, 
+        // and then try to reopen it elsewhere; that's not what we want.
+        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE_WITHOUT_REPORT,
+            region, "Duplicate assignment".getBytes()));
+      } else {
+        if (region.isRootRegion()) {
+          // it was assigned, and it's not a duplicate assignment, so take it out 
+          // of the unassigned list.
+          master.regionManager.removeRegion(region);
+
+          // Store the Root Region location (in memory)
+          HServerAddress rootServer = serverInfo.getServerAddress();
+          master.connection.setRootRegionLocation(
+              new HRegionLocation(region, rootServer));
+          master.regionManager.setRootRegionLocation(rootServer);
+        } else {
+          // Note that the table has been assigned and is waiting for the
+          // meta table to be updated.
+          master.regionManager.setPending(region.getRegionName());
+          // Queue up an update to note the region location.
+          try {
+            master.toDoQueue.put(
+                new ProcessRegionOpen(master, serverInfo, region));
+          } catch (InterruptedException e) {
+            throw new RuntimeException(
+                "Putting into toDoQueue was interrupted.", e);
+          }
+        } 
+      }
     }
   }
   
   private void processRegionClose(HRegionInfo region) {
-    if (region.isRootRegion()) {
-      // Root region
-      master.connection.setRootRegionLocation(null);
-      master.regionManager.unsetRootRegion();
-      if (region.isOffline()) {
-        // Can't proceed without root region. Shutdown.
-        LOG.fatal("root region is marked offline");
-        master.shutdown();
-        return;
+    synchronized (master.regionManager) {
+      if (region.isRootRegion()) {
+        // Root region
+        master.connection.unsetRootRegionLocation();
+        master.regionManager.unsetRootRegion();
+        if (region.isOffline()) {
+          // Can't proceed without root region. Shutdown.
+          LOG.fatal("root region is marked offline");
+          master.shutdown();
+          return;
+        }
+
+      } else if (region.isMetaTable()) {
+        // Region is part of the meta table. Remove it from onlineMetaRegions
+        master.regionManager.offlineMetaRegion(region.getStartKey());
       }
- 
-    } else if (region.isMetaTable()) {
-      // Region is part of the meta table. Remove it from onlineMetaRegions
-      master.regionManager.offlineMetaRegion(region.getStartKey());
-    }
 
-    boolean offlineRegion =
-      master.regionManager.isOfflined(region.getRegionName());
-    boolean reassignRegion = !region.isOffline() && !offlineRegion;
+      boolean offlineRegion =
+        master.regionManager.isOfflined(region.getRegionName());
+      boolean reassignRegion = !region.isOffline() && !offlineRegion;
 
-    // NOTE: If the region was just being closed and not offlined, we cannot
-    //       mark the region unassignedRegions as that changes the ordering of
-    //       the messages we've received. In this case, a close could be
-    //       processed before an open resulting in the master not agreeing on
-    //       the region's state.
-    try {
-      master.toDoQueue.put(new ProcessRegionClose(master, region, offlineRegion,
-          reassignRegion));
-    } catch (InterruptedException e) {
-      throw new RuntimeException("Putting into toDoQueue was interrupted.", e);
+      // NOTE: If the region was just being closed and not offlined, we cannot
+      //       mark the region unassignedRegions as that changes the ordering of
+      //       the messages we've received. In this case, a close could be
+      //       processed before an open resulting in the master not agreeing on
+      //       the region's state.
+      try {
+        master.toDoQueue.put(new ProcessRegionClose(master, region, offlineRegion,
+            reassignRegion));
+      } catch (InterruptedException e) {
+        throw new RuntimeException("Putting into toDoQueue was interrupted.", e);
+      }
     }
   }
   
