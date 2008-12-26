@@ -61,7 +61,7 @@ class CompactSplitThread extends Thread implements HConstants {
   
   private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
 
-  private int limit = 1;
+  private volatile int limit = 1;
 
   /** @param server */
   public CompactSplitThread(HRegionServer server) {
@@ -77,7 +77,6 @@ class CompactSplitThread extends Thread implements HConstants {
   public void run() {
     while (!this.server.isStopRequested() && this.server.isInSafeMode()) {
       try {
-        LOG.debug("in safe mode, deferring compactions");
         Thread.sleep(this.frequency);
       } catch (InterruptedException ex) {
         continue;

@@ -199,6 +199,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   final LogRoller logRoller;
   final LogFlusher logFlusher;
   
+  // safemode processing
+  SafeModeThread safeModeThread;
+
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
 
@@ -523,7 +526,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     join();
 
-    runThread(this.hdfsShutdownThread);
+    runThread(this.hdfsShutdownThread,
+      this.conf.getLong("hbase.dfs.shutdown.wait", 30000));
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
 
@@ -531,12 +535,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Run and wait on passed thread in HRS context.
    * @param t
    */
-  public void runThread(final Thread t) {
+  public void runThread(final Thread t, final long dfsShutdownWait) {
     if (t ==  null) {
       return;
     }
     t.start();
-    Threads.shutdown(t);
+    Threads.shutdown(t, dfsShutdownWait);
   }
 
   /**
@@ -590,14 +594,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.logFlusher.setHLog(log);
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
-      // start thread for turning off safemode
-      if (conf.getInt("hbase.regionserver.safemode.period", 0) < 1) {
-        safeMode.set(false);
-        compactSplitThread.setLimit(-1);
-        LOG.debug("skipping safe mode");
-      } else {
-        new SafemodeThread().start();
-      }
       startServiceThreads();
       isOnline = true;
     } catch (Throwable e) {
@@ -730,13 +726,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /**
    * Thread for toggling safemode after some configurable interval.
    */
-  private class SafemodeThread extends Thread {
-
-    public void start() {
-      // make this thread a daemon so it will not delay any shutdown
-      this.setDaemon(true);
-      super.start();
-    }
+  private class SafeModeThread extends Thread {
 
     public void run() {
       // first, wait the required interval before turning off safemode
@@ -745,6 +735,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       try {
         Thread.sleep(safemodeInterval);
       } catch (InterruptedException ex) {
+        // turn off safemode and limits on the way out due to some kind of
+        // abnormal condition so we do not prevent such things as memcache
+        // flushes and worsen the situation
+        safeMode.set(false);
+        compactSplitThread.setLimit(-1);
         if (LOG.isDebugEnabled()) {
           LOG.debug(this.getName() + " exiting on interrupt");
         }
@@ -763,7 +758,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         2, 2, 2, 2, 2, 2,
         3, 3, 3, 3, 3, 3, 3, 3, 
         4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-        -1 };
+        -1
+      };
       for (int i = 0; i < limitSteps.length; i++) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("setting compaction limit to " + limitSteps[i]);
@@ -772,11 +768,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         try {
           Thread.sleep(compactionCheckInterval);
         } catch (InterruptedException ex) {
+          // unlimit compactions before exiting
+          compactSplitThread.setLimit(-1);
           if (LOG.isDebugEnabled()) {
             LOG.debug(this.getName() + " exiting on interrupt");
           }
-          // unlimit compactions before exiting
-          compactSplitThread.setLimit(-1);
           return;
         }
       }
@@ -1003,6 +999,18 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.infoServer.setAttribute("regionserver", this);
       this.infoServer.start();
     }
+
+    // Set up the safe mode handler if safe mode has been configured.
+    if (conf.getInt("hbase.regionserver.safemode.period", 0) < 1) {
+      safeMode.set(false);
+      compactSplitThread.setLimit(-1);
+      LOG.debug("skipping safe mode");
+    } else {
+      this.safeModeThread = new SafeModeThread();
+      Threads.setDaemonThreadRunning(this.safeModeThread, n + ".safeMode",
+        handler);
+    }
+
     // Start Server.  This service is like leases in that it internally runs
     // a thread.
     this.server.start();
