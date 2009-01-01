@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -56,8 +57,8 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.io.MapFile;
-import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.hbase.io.MapFile;
+import org.apache.hadoop.hbase.io.SequenceFile;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -124,8 +125,8 @@ public class HStore implements HConstants {
   private final int compactionThreshold;
   
   // All access must be synchronized.
-  private final Set<ChangedReadersObserver> changedReaderObservers =
-    new HashSet<ChangedReadersObserver>();
+  private final CopyOnWriteArraySet<ChangedReadersObserver> changedReaderObservers =
+    new CopyOnWriteArraySet<ChangedReadersObserver>();
 
   /**
    * An HStore is a set of zero or more MapFiles, which stretch backwards over 
@@ -456,14 +457,15 @@ public class HStore implements HConstants {
           "Cleaned up info file.  Continuing...Probable DATA LOSS!!!");
         continue;
       }
-      if (isEmptyDataFile(mapfile)) {
+      // References don't have data or index components under mapfile.
+      if (!isReference && isEmptyDataFile(mapfile)) {
         curfile.delete();
         // We can have empty data file if data loss in hdfs.
         LOG.warn("Mapfile " + mapfile.toString() + " has empty data. " +
           "Deleting.  Continuing...Probable DATA LOSS!!!  See HBASE-646.");
         continue;
       }
-      if (isEmptyIndexFile(mapfile)) {
+      if (!isReference && isEmptyIndexFile(mapfile)) {
         try {
           // Try fixing this file.. if we can.  Use the hbase version of fix.
           // Need to remove the old index file first else fix won't go ahead.
@@ -551,15 +553,14 @@ public class HStore implements HConstants {
   }
 
   /* 
-   * @param mapfile
-   * @return True if the passed mapfile has a zero-length index component (its
+   * @param f
+   * @return True if the passed file does not exist or is zero-length (its
    * broken).
    * @throws IOException
    */
   private boolean isEmptyFile(final Path f)
   throws IOException {
-    return this.fs.exists(f) &&
-      this.fs.getFileStatus(f).getLen() == 0;
+    return !this.fs.exists(f) || this.fs.getFileStatus(f).getLen() == 0;
   }
 
   /**
@@ -726,36 +727,30 @@ public class HStore implements HConstants {
       this.lock.writeLock().unlock();
     }
   }
-  
+
   /*
    * Notify all observers that set of Readers has changed.
    * @throws IOException
    */
   private void notifyChangedReadersObservers() throws IOException {
-    synchronized (this.changedReaderObservers) {
-      for (ChangedReadersObserver o: this.changedReaderObservers) {
-        o.updateReaders();
-      }
+    for (ChangedReadersObserver o: this.changedReaderObservers) {
+      o.updateReaders();
     }
   }
-  
+
   /*
    * @param o Observer who wants to know about changes in set of Readers
    */
   void addChangedReaderObserver(ChangedReadersObserver o) {
-    synchronized(this.changedReaderObservers) {
-      this.changedReaderObservers.add(o);
-    }
+    this.changedReaderObservers.add(o);
   }
   
   /*
    * @param o Observer no longer interested in changes in set of Readers.
    */
   void deleteChangedReaderObserver(ChangedReadersObserver o) {
-    synchronized (this.changedReaderObservers) {
-      if (!this.changedReaderObservers.remove(o)) {
-        LOG.warn("Not in set" + o);
-      }
+    if (!this.changedReaderObservers.remove(o)) {
+      LOG.warn("Not in set" + o);
     }
   }
 
@@ -866,6 +861,10 @@ public class HStore implements HConstants {
       for (int i = 0; i < countOfFiles; i++) {
         HStoreFile file = filesToCompact.get(i);
         Path path = file.getMapFilePath();
+        if (path == null) {
+          LOG.warn("Path is null for " + file);
+          return null;
+        }
         int len = 0;
         for (FileStatus fstatus:fs.listStatus(path)) {
           len += fstatus.getLen();
