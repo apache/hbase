@@ -127,6 +127,16 @@ Release 0.19.0 - Unreleased
    HBASE-1093  NPE in HStore#compact
    HBASE-1097  SequenceFile.Reader keeps around buffer whose size is that of
                largest item read -> results in lots of dead heap
+   HBASE-1107  NPE in HStoreScanner.updateReaders
+   HBASE-1083  Will keep scheduling major compactions if last time one ran, we
+               didn't.
+   HBASE-1101  NPE in HConnectionManager$TableServers.processBatchOfRows
+   HBASE-1099  Regions assigned while master is splitting logs of recently
+               crashed server; regionserver tries to execute incomplete log
+   HBASE-1104, HBASE-1098, HBASE-1096: Doubly-assigned regions redux,
+               IllegalStateException: Cannot set a region to be closed it it was
+               not already marked as closing, Does not recover if HRS carrying 
+               -ROOT- goes down
 
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side
@@ -202,6 +212,10 @@ Release 0.19.0 - Unreleased
    HBASE-1062  Compactions at (re)start on a large table can overwhelm DFS
    HBASE-1102  boolean HTable.exists()
    HBASE-1105  Remove duplicated code in HCM, add javadoc to RegionState, etc.
+   HBASE-1106  Expose getClosestRowBefore in HTable
+               (Michael Gottesman via Stack)
+   HBASE-1082  Administrative functions for table/region maintenance
+   HBASE-1090  Atomic Check And Save in HTable (Michael Gottesman via Stack)
 
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]

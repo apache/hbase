@@ -532,15 +532,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /*
    * HMasterRegionInterface
    */
-  public MapWritable regionServerStartup(HServerInfo serverInfo) {
-    // Set the address for now even tho it will not be persisted on
-    // the HRS side.
+  public MapWritable regionServerStartup(final HServerInfo serverInfo) {
+    // Set the address for now even tho it will not be persisted on HRS side.
     String rsAddress = HBaseServer.getRemoteAddress();
-    serverInfo.setServerAddress(new HServerAddress
-        (rsAddress, serverInfo.getServerAddress().getPort()));
-    // register with server manager
-    serverManager.regionServerStartup(serverInfo);
-    // send back some config info
+    serverInfo.setServerAddress(new HServerAddress(rsAddress,
+      serverInfo.getServerAddress().getPort()));
+    // Register with server manager
+    this.serverManager.regionServerStartup(serverInfo);
+    // Send back some config info
     return createConfigurationSubset();
   }
   
@@ -795,20 +794,22 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     case MODIFY_TABLE_SPLIT:
     case MODIFY_TABLE_COMPACT:
+    case MODIFY_TABLE_MAJOR_COMPACT:
+    case MODIFY_TABLE_FLUSH:
       if (args != null && args.length > 0) {
         if (!(args[0] instanceof ImmutableBytesWritable))
           throw new IOException(
             "request argument must be ImmutableBytesWritable");
-        byte[] rowKey = ((ImmutableBytesWritable)args[0]).get();
+        byte [] rowKey = ((ImmutableBytesWritable)args[0]).get();
         Pair<HRegionInfo,HServerAddress> pair =
           getTableRegionClosest(tableName, rowKey);
         if (pair != null) {
-          regionManager.startAction(pair.getFirst().getRegionName(),
+          this.regionManager.startAction(pair.getFirst().getRegionName(),
             pair.getFirst(), pair.getSecond(), op);
         }
       } else {
         for (Pair<HRegionInfo,HServerAddress> pair: getTableRegions(tableName))
-          regionManager.startAction(pair.getFirst().getRegionName(),
+          this.regionManager.startAction(pair.getFirst().getRegionName(),
             pair.getFirst(), pair.getSecond(), op);
       }
       break;
@@ -834,7 +835,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       LOG.info("Marking " + hri.getRegionNameAsString() +
         " as closed on " + servername + "; cleaning SERVER + STARTCODE; " +
           "master will tell regionserver to close region on next heartbeat");
-      this.regionManager.setClosing(servername, hri, hri.isOffline(), false);
+      this.regionManager.setClosing(servername, hri, hri.isOffline());
       MetaRegion meta = this.regionManager.getMetaRegionForRow(regionname);
       HRegionInterface srvr = getMETAServer(meta);
       HRegion.cleanRegionInMETA(srvr, meta.getRegionName(), hri);

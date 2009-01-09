@@ -137,6 +137,12 @@ public class HRegion implements HConstants {
   final HRegionInfo regionInfo;
   final Path regiondir;
   private final Path regionCompactionDir;
+  
+  /*
+   * Set this when scheduling compaction if want the next compaction to be a
+   * major compaction.  Cleared each time through compaction code.
+   */
+  private volatile boolean forceMajorCompaction = false;
 
   /*
    * Data structure of write state flags used coordinating flushes,
@@ -648,6 +654,14 @@ public class HRegion implements HConstants {
     }
   }
 
+  void setForceMajorCompaction(final boolean b) {
+    this.forceMajorCompaction = b;
+  }
+  
+  boolean getForceMajorCompaction() {
+    return this.forceMajorCompaction;
+  }
+
   /**
    * Called by compaction thread and after region is opened to compact the
    * HStores if necessary.
@@ -663,7 +677,9 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public byte [] compactStores() throws IOException {
-    return compactStores(false);
+    boolean majorCompaction = this.forceMajorCompaction;
+    this.forceMajorCompaction = false;
+    return compactStores(majorCompaction);
   }
 
   /*
@@ -1059,7 +1075,7 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public RowResult getClosestRowBefore(final byte [] row,
-    final byte [] columnFamily)
+      final byte [] columnFamily)
   throws IOException{
     // look across all the HStores for this region and determine what the
     // closest key is across all column families, since the data may be sparse
@@ -1068,20 +1084,22 @@ public class HRegion implements HConstants {
     splitsAndClosesLock.readLock().lock();
     try {
       HStore store = getStore(columnFamily);
-      // get the closest key
+      // get the closest key. (HStore.getRowKeyAtOrBefore can return null)
       byte [] closestKey = store.getRowKeyAtOrBefore(row);
-      // If it happens to be an exact match, we can stop looping.
+      // If it happens to be an exact match, we can stop.
       // Otherwise, we need to check if it's the max and move to the next
-      if (HStoreKey.equalsTwoRowKeys(regionInfo, row, closestKey)) {
-        key = new HStoreKey(closestKey, this.regionInfo);
-      } else if (closestKey != null &&
-          (key == null || HStoreKey.compareTwoRowKeys(
-              regionInfo,closestKey, key.getRow()) > 0) ) {
-        key = new HStoreKey(closestKey, this.regionInfo);
-      } else {
+      if (closestKey != null) {
+        if (HStoreKey.equalsTwoRowKeys(regionInfo, row, closestKey)) {
+          key = new HStoreKey(closestKey, this.regionInfo);
+        }
+        if (key == null) {
+          key = new HStoreKey(closestKey, this.regionInfo);
+        }
+      }
+      if (key == null) {
         return null;
       }
-      
+
       // Now that we've found our key, get the values
       HbaseMapWritable<byte [], Cell> cells =
         new HbaseMapWritable<byte [], Cell>();
@@ -1273,6 +1291,99 @@ public class HRegion implements HConstants {
     } finally {
       splitsAndClosesLock.readLock().unlock();
     }
+  }
+
+
+  /**
+   * Performs an atomic check and save operation. Checks if
+   * the specified expected values have changed, and if not
+   * applies the update.
+   * 
+   * @param b the update to apply
+   * @param expectedValues the expected values to check
+   * @param lockid
+   * @param writeToWAL whether or not to write to the write ahead log
+   * @return true if update was applied
+   * @throws IOException
+   */
+  public boolean checkAndSave(BatchUpdate b,
+    HbaseMapWritable<byte[], byte[]> expectedValues, Integer lockid,
+    boolean writeToWAL)
+  throws IOException {
+    // This is basically a copy of batchUpdate with the atomic check and save
+    // added in. So you should read this method with batchUpdate. I will
+    // comment the areas that I have changed where I have not changed, you
+    // should read the comments from the batchUpdate method
+    boolean success = true;
+    checkReadOnly();
+    checkResources();
+    splitsAndClosesLock.readLock().lock();
+    try {
+      byte[] row = b.getRow();
+      Integer lid = getLock(lockid,row);
+      try {
+        Set<byte[]> keySet = expectedValues.keySet();
+        Map<byte[],Cell> actualValues = this.getFull(row,keySet,
+        HConstants.LATEST_TIMESTAMP, 1,lid);
+        for (byte[] key : keySet) {
+          // If test fails exit
+          if(!Bytes.equals(actualValues.get(key).getValue(),
+            expectedValues.get(key))) {
+            success = false;
+            break;
+          }
+        }
+        
+        if (success) {
+          long commitTime = (b.getTimestamp() == LATEST_TIMESTAMP)?
+            System.currentTimeMillis(): b.getTimestamp();
+          List<byte []> deletes = null;
+          for (BatchOperation op: b) {
+            HStoreKey key = new HStoreKey(row, op.getColumn(), commitTime,
+                this.regionInfo);
+            byte[] val = null;
+            if (op.isPut()) {
+              val = op.getValue();
+              if (HLogEdit.isDeleted(val)) {
+                throw new IOException("Cannot insert value: " + val);
+              }
+            } else {
+              if (b.getTimestamp() == LATEST_TIMESTAMP) {
+                // Save off these deletes
+                if (deletes == null) {
+                  deletes = new ArrayList<byte []>();
+                }
+                deletes.add(op.getColumn());
+              } else {
+                val = HLogEdit.deleteBytes.get();
+              }
+            }
+            if (val != null) {
+              localput(lid, key, val);
+            }
+          }
+          TreeMap<HStoreKey, byte[]> edits =
+            this.targetColumns.remove(lid);
+          if (edits != null && edits.size() > 0) {
+            update(edits, writeToWAL);
+          }
+          if (deletes != null && deletes.size() > 0) {
+            // We have some LATEST_TIMESTAMP deletes to run.
+            for (byte [] column: deletes) {
+              deleteMultiple(row, column, LATEST_TIMESTAMP, 1);
+            }
+          }
+        }
+      } catch (IOException e) {
+        this.targetColumns.remove(Long.valueOf(lid));
+        throw e;
+      } finally {
+        if(lockid == null) releaseRowLock(lid);
+      }
+    } finally {
+      splitsAndClosesLock.readLock().unlock();
+    }
+    return success;
   }
 
   /*

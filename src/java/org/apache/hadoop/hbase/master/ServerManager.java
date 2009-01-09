@@ -59,9 +59,13 @@ class ServerManager implements HConstants {
   final Map<String, HServerInfo> serversToServerInfo =
     new ConcurrentHashMap<String, HServerInfo>();
   
-  /** Set of known dead servers */
-  final Set<String> deadServers =
-    Collections.synchronizedSet(new HashSet<String>());
+  /**
+   * Set of known dead servers.  On lease expiration, servers are added here.
+   * Boolean holds whether its logs have been split or not.  Initially set to
+   * false.
+   */
+  private final Map<String, Boolean> deadServers =
+    new ConcurrentHashMap<String, Boolean>();
 
   /** SortedMap server load -> Set of server names */
   final SortedMap<HServerLoad, Set<String>> loadToServers =
@@ -89,24 +93,67 @@ class ServerManager implements HConstants {
     this.loggingPeriodForAverageLoad = master.getConfiguration().
       getLong("hbase.master.avgload.logging.period", 60000);
   }
-  
+ 
+  /*
+   * Look to see if we have ghost references to this regionserver such as
+   * still-existing leases or if regionserver is on the dead servers list
+   * getting its logs processed.
+   * @param serverInfo
+   * @return True if still ghost references and we have not been able to clear
+   * them or the server is shutting down.
+   */
+  private boolean checkForGhostReferences(final HServerInfo serverInfo) {
+    String s = serverInfo.getServerAddress().toString().trim();
+    boolean result = false;
+    boolean lease = false;
+    for (long sleepTime = -1; !master.closed.get() && !result;) {
+      if (sleepTime != -1) {
+        try {
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException e) {
+          // Continue
+        }
+      }
+      if (!lease) {
+        try {
+          this.serverLeases.createLease(s, new ServerExpirer(s));
+        } catch (Leases.LeaseStillHeldException e) {
+          LOG.debug("Waiting on current lease to expire for " + e.getName());
+          sleepTime = this.master.leaseTimeout / 4;
+          continue;
+        }
+        lease = true;
+      }
+      // May be on list of dead servers.  If so, wait till we've cleared it.
+      String addr = serverInfo.getServerAddress().toString();
+      if (isDead(addr)) {
+        LOG.debug("Waiting on " + addr + " removal from dead list before " +
+          "processing report-for-duty request");
+        sleepTime = this.master.threadWakeFrequency;
+        try {
+          // Keep up lease.  May be here > lease expiration.
+          this.serverLeases.renewLease(s);
+        } catch (LeaseException e) {
+          LOG.warn("Failed renewal. Retrying.", e);
+        }
+        continue;
+      }
+      result = true;
+    }
+    return result;
+  }
+
   /**
    * Let the server manager know a new regionserver has come online
    * @param serverInfo
    */
-  public void regionServerStartup(HServerInfo serverInfo) {
+  public void regionServerStartup(final HServerInfo serverInfo) {
     String s = serverInfo.getServerAddress().toString().trim();
     LOG.info("Received start message from: " + s);
-    // Do the lease check up here. There might already be one out on this
-    // server expecially if it just shutdown and came back up near-immediately.
-    if (!master.closed.get()) {
-      try {
-        serverLeases.createLease(s, new ServerExpirer(s));
-      } catch (Leases.LeaseStillHeldException e) {
-        LOG.debug("Lease still held on " + e.getName());
-        return;
-      }
+    if (!checkForGhostReferences(serverInfo)) {
+      return;
     }
+    // Go on to process the regionserver registration.
     HServerLoad load = serversToLoad.remove(s);
     if (load != null) {
       // The startup message was from a known server.
@@ -119,7 +166,6 @@ class ServerManager implements HConstants {
         }
       }
     }
-
     HServerInfo storedInfo = serversToServerInfo.remove(s);
     if (storedInfo != null && !master.closed.get()) {
       // The startup message was from a known server with the same name.
@@ -137,7 +183,6 @@ class ServerManager implements HConstants {
         LOG.error("Insertion into toDoQueue was interrupted", e);
       }
     }
-
     // record new server
     load = new HServerLoad();
     serverInfo.setLoad(load);
@@ -263,13 +308,15 @@ class ServerManager implements HConstants {
               synchronized (master.regionManager) {
                 if (info.isRootRegion()) {
                   master.regionManager.reassignRootRegion();
-                } else if (info.isMetaTable()) {
-                  master.regionManager.offlineMetaRegion(info.getStartKey());
-                }
-                if (!master.regionManager.isOfflined(info.getRegionName())) {
-                  master.regionManager.setUnassigned(info, true);
                 } else {
-                  master.regionManager.removeRegion(info);
+                  if (info.isMetaTable()) {
+                    master.regionManager.offlineMetaRegion(info.getStartKey());
+                  }
+                  if (!master.regionManager.isOfflined(info.getRegionName())) {
+                    master.regionManager.setUnassigned(info, true);
+                  } else {
+                    master.regionManager.removeRegion(info);
+                  }
                 }
               }
             }
@@ -374,7 +421,7 @@ class ServerManager implements HConstants {
       for (HRegionInfo i: master.regionManager.getMarkedToClose(serverName)) {
         returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i));
         // Transition the region from toClose to closing state
-        master.regionManager.setClosed(i.getRegionName());
+        master.regionManager.setPendingClose(i.getRegionName());
       }
 
       // Figure out what the RegionServer ought to do, and write back.
@@ -427,7 +474,7 @@ class ServerManager implements HConstants {
     boolean duplicateAssignment = false;
     synchronized (master.regionManager) {
       if (!master.regionManager.isUnassigned(region) &&
-          !master.regionManager.isAssigned(region.getRegionName())) {
+          !master.regionManager.isPendingOpen(region.getRegionName())) {
         if (region.isRootRegion()) {
           // Root region
           HServerAddress rootServer = master.getRootRegionLocation();
@@ -444,7 +491,7 @@ class ServerManager implements HConstants {
           // Not root region. If it is not a pending region, then we are
           // going to treat it as a duplicate assignment, although we can't 
           // tell for certain that's the case.
-          if (master.regionManager.isPending(region.getRegionName())) {
+          if (master.regionManager.isPendingOpen(region.getRegionName())) {
             // A duplicate report from the correct server
             return;
           }
@@ -478,7 +525,7 @@ class ServerManager implements HConstants {
         } else {
           // Note that the table has been assigned and is waiting for the
           // meta table to be updated.
-          master.regionManager.setPending(region.getRegionName());
+          master.regionManager.setOpen(region.getRegionName());
           // Queue up an update to note the region location.
           try {
             master.toDoQueue.put(
@@ -519,9 +566,10 @@ class ServerManager implements HConstants {
       //       the messages we've received. In this case, a close could be
       //       processed before an open resulting in the master not agreeing on
       //       the region's state.
+      master.regionManager.setClosed(region.getRegionName());
       try {
-        master.toDoQueue.put(new ProcessRegionClose(master, region, offlineRegion,
-            reassignRegion));
+        master.toDoQueue.put(new ProcessRegionClose(master, region,
+            offlineRegion, reassignRegion));
       } catch (InterruptedException e) {
         throw new RuntimeException("Putting into toDoQueue was interrupted.", e);
       }
@@ -535,11 +583,11 @@ class ServerManager implements HConstants {
     // Only cancel lease and update load information once.
     // This method can be called a couple of times during shutdown.
     if (info != null) {
+      LOG.info("Cancelling lease for " + serverName);
       if (master.getRootRegionLocation() != null &&
         info.getServerAddress().equals(master.getRootRegionLocation())) {
-        master.regionManager.reassignRootRegion();
+        master.regionManager.unsetRootRegion();
       }
-      LOG.info("Cancelling lease for " + serverName);
       try {
         serverLeases.cancelLease(serverName);
       } catch (LeaseException e) {
@@ -703,7 +751,7 @@ class ServerManager implements HConstants {
             }
           }
         }
-        deadServers.add(server);
+        deadServers.put(server, Boolean.FALSE);
         try {
           master.toDoQueue.put(
               new ProcessServerShutdown(master, info, rootServer));
@@ -742,6 +790,6 @@ class ServerManager implements HConstants {
    * @return true if server is dead
    */
   public boolean isDead(String serverName) {
-    return deadServers.contains(serverName);
+    return deadServers.containsKey(serverName);
   }
 }

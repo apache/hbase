@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -47,6 +48,67 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
  
   private static final byte [] attrName = Bytes.toBytes("TESTATTR");
   private static final byte [] attrValue = Bytes.toBytes("somevalue");
+
+  public void testCheckAndSave() throws IOException {
+    HTable table = null;
+    HColumnDescriptor column2 =
+      new HColumnDescriptor(Bytes.toBytes("info2:"));
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    HTableDescriptor testTableADesc =
+      new HTableDescriptor(tableAname);
+    testTableADesc.addFamily(column);
+    testTableADesc.addFamily(column2);
+    admin.createTable(testTableADesc);
+    
+    table = new HTable(conf, tableAname);
+    BatchUpdate batchUpdate = new BatchUpdate(row);
+    BatchUpdate batchUpdate2 = new BatchUpdate(row);
+    BatchUpdate batchUpdate3 = new BatchUpdate(row);
+    
+    HbaseMapWritable<byte[],byte[]> expectedValues =
+      new HbaseMapWritable<byte[],byte[]>();
+    HbaseMapWritable<byte[],byte[]> badExpectedValues =
+      new HbaseMapWritable<byte[],byte[]>();
+    
+    for(int i = 0; i < 5; i++) {
+      // This batchupdate is our initial batch update,
+      // As such we also set our expected values to the same values
+      // since we will be comparing the two
+      batchUpdate.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i));
+      expectedValues.put(Bytes.toBytes(COLUMN_FAMILY_STR+i), Bytes.toBytes(i));
+      
+      badExpectedValues.put(Bytes.toBytes(COLUMN_FAMILY_STR+i),
+        Bytes.toBytes(500));
+      
+      // This is our second batchupdate that we will use to update the initial
+      // batchupdate
+      batchUpdate2.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i+1));
+      
+      // This final batch update is to check that our expected values (which
+      // are now wrong)
+      batchUpdate3.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i+2));
+    }
+    
+    // Initialize rows
+    table.commit(batchUpdate);
+    
+    // check if incorrect values are returned false
+    assertFalse(table.checkAndSave(batchUpdate2,badExpectedValues,null));
+    
+    // make sure first expected values are correct
+    assertTrue(table.checkAndSave(batchUpdate2, expectedValues,null));
+        
+    // make sure check and save truly saves the data after checking the expected
+    // values
+    RowResult r = table.getRow(row);
+    byte[][] columns = batchUpdate2.getColumns();
+    for(int i = 0;i < columns.length;i++) {
+      assertTrue(Bytes.equals(r.get(columns[i]).getValue(),batchUpdate2.get(columns[i])));
+    }
+    
+    // make sure that the old expected values fail
+    assertFalse(table.checkAndSave(batchUpdate3, expectedValues,null));
+  }
 
   /**
    * the test
@@ -259,4 +321,57 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     }
   }
   
+  public void testGetClosestRowBefore() throws IOException {
+    HColumnDescriptor column2 =
+      new HColumnDescriptor(Bytes.toBytes("info2:"));
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    HTableDescriptor testTableADesc =
+      new HTableDescriptor(tableAname);
+    testTableADesc.addFamily(column);
+    testTableADesc.addFamily(column2);
+    admin.createTable(testTableADesc);
+    
+    byte[] firstRow = Bytes.toBytes("ro");
+    byte[] beforeFirstRow = Bytes.toBytes("rn");
+    byte[] beforeSecondRow = Bytes.toBytes("rov");
+    
+    HTable table = new HTable(conf, tableAname);
+    BatchUpdate batchUpdate = new BatchUpdate(firstRow);
+    BatchUpdate batchUpdate2 = new BatchUpdate(row);
+    byte[] zero = new byte[]{0};
+    byte[] one = new byte[]{1};
+    byte[] columnFamilyBytes = Bytes.toBytes(COLUMN_FAMILY_STR);
+    
+    batchUpdate.put(COLUMN_FAMILY_STR,zero);
+    batchUpdate2.put(COLUMN_FAMILY_STR,one);
+    
+    table.commit(batchUpdate);
+    table.commit(batchUpdate2);
+    
+    RowResult result = null;
+    
+    // Test before first that null is returned
+    result = table.getClosestRowBefore(beforeFirstRow, columnFamilyBytes);
+    assertTrue(result == null);
+    
+    // Test at first that first is returned
+    result = table.getClosestRowBefore(firstRow, columnFamilyBytes);
+    assertTrue(result.containsKey(COLUMN_FAMILY_STR));
+    assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), zero));
+    
+    // Test inbetween first and second that first is returned
+    result = table.getClosestRowBefore(beforeSecondRow, columnFamilyBytes);
+    assertTrue(result.containsKey(COLUMN_FAMILY_STR));
+    assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), zero));
+    
+    // Test at second make sure second is returned
+    result = table.getClosestRowBefore(row, columnFamilyBytes);
+    assertTrue(result.containsKey(COLUMN_FAMILY_STR));
+    assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), one));
+    
+    // Test after second, make sure second is returned
+    result = table.getClosestRowBefore(Bytes.add(row,one), columnFamilyBytes);
+    assertTrue(result.containsKey(COLUMN_FAMILY_STR));
+    assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), one));
+  }
 }
