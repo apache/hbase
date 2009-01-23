@@ -456,13 +456,12 @@ public class HLog implements HConstants, Syncable {
    *
    * @param regionName
    * @param tableName
-   * @param row
-   * @param columns
-   * @param timestamp
+   * @param edits
+   * @param sync
    * @throws IOException
    */
   void append(byte [] regionName, byte [] tableName,
-      TreeMap<HStoreKey, byte[]> edits)
+      TreeMap<HStoreKey, byte[]> edits, boolean sync)
   throws IOException {
     if (closed) {
       throw new IOException("Cannot append; log is closed");
@@ -483,7 +482,7 @@ public class HLog implements HConstants, Syncable {
           new HLogKey(regionName, tableName, key.getRow(), seqNum[counter++]);
         HLogEdit logEdit =
           new HLogEdit(key.getColumn(), es.getValue(), key.getTimestamp());
-       doWrite(logKey, logEdit);
+       doWrite(logKey, logEdit, sync);
 
         this.numEntries++;
       }
@@ -521,10 +520,11 @@ public class HLog implements HConstants, Syncable {
     }
   }
   
-  private void doWrite(HLogKey logKey, HLogEdit logEdit) throws IOException {
+  private void doWrite(HLogKey logKey, HLogEdit logEdit, boolean sync)
+  throws IOException {
     try {
       this.writer.append(logKey, logEdit);
-      if (++unflushedEntries >= flushlogentries) {
+      if (sync || ++unflushedEntries >= flushlogentries) {
         sync();
       }
     } catch (IOException e) {
@@ -570,7 +570,8 @@ public class HLog implements HConstants, Syncable {
       }
 
       HLogKey logKey = new HLogKey(regionName, tableName, row, seqNum);
-      doWrite(logKey, logEdit);
+      boolean sync = regionInfo.isMetaRegion() || regionInfo.isRootRegion();
+      doWrite(logKey, logEdit, sync);
       this.numEntries++;
       updateLock.notifyAll();
     }
