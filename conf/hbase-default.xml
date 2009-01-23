@@ -182,10 +182,10 @@
   </property>
   <property>
     <name>hbase.regionserver.hlog.blocksize</name>
-    <value>67108864</value>
+    <value>1048576</value>
     <description>Block size for HLog files. To minimize potential data loss,
     the size should be (avg key length) * (avg value length) * flushlogentries.
-    Default 64MB.
+    Default 1MB.
     </description>
   </property>
   <property>

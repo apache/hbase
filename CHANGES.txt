@@ -1,28 +1,9 @@
 HBase Change Log
-Release 0.20.0 - Unreleased
-  INCOMPATIBLE CHANGES
-
+Release 0.19.1 - Unreleased
   BUG FIXES
-   HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)
-   HBASE-1129  Master won't go down; stuck joined on rootScanner
-   HBASE-1136  HashFunction inadvertently destroys some randomness
-               (Jonathan Ellis via Stack)
-   HBASE-1138  Test that readers opened after a sync can see all data up to the
-               sync (temporary until HADOOP-4379 is resolved)
    HBASE-1121  Cluster confused about where -ROOT- is
 
-  IMPROVEMENTS
-   HBASE-1089  Add count of regions on filesystem to master UI; add percentage
-               online as difference between whats open and whats on filesystem
-               (Samuel Guo via Stack)
-   HBASE-1130  PrefixRowFilter (Michael Gottesman via Stack)
-   HBASE-1139  Update Clover in build.xml
-   HBASE-876   There are a large number of Java warnings in HBase; part 1,
-               part 2, and part 3 (Evgeny Ryabitskiy via Stack)
-   HBASE-896   Update jruby from 1.1.2 to 1.1.6
-   HBASE-1031  Add the Zookeeper jar
-
-Release 0.19.0 - Unreleased
+Release 0.19.0
   INCOMPATIBLE CHANGES
    HBASE-885   TableMap and TableReduce should be interfaces
                (Doğacan Güney via Stack)
@@ -1176,7 +1157,7 @@ Branch 0.15
     HADOOP-1800 output should default utf8 encoding
     HADOOP-1801 When hdfs is yanked out from under hbase, hbase should go down gracefully
     HADOOP-1813 OOME makes zombie of region server
-    HADOOP-1814	TestCleanRegionServerExit fails too often on Hudson
+    HADOOP-1814 TestCleanRegionServerExit fails too often on Hudson
     HADOOP-1820 Regionserver creates hlogs without bound
                 (reverted 2007/09/25) (Fixed 2007/09/30)
     HADOOP-1821 Replace all String.getBytes() with String.getBytes("UTF-8")
