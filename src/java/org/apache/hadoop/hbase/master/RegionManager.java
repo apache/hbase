@@ -167,9 +167,7 @@ class RegionManager implements HConstants {
   
   /*
    * Assigns regions to region servers attempting to balance the load across
-   * all region servers
-   *
-   * Note that no synchronization is necessary as the caller 
+   * all region servers. Note that no synchronization is necessary as the caller 
    * (ServerManager.processMsgs) already owns the monitor for the RegionManager.
    * 
    * @param info
@@ -1174,10 +1172,10 @@ class RegionManager implements HConstants {
     }
     
     synchronized void setClosed() {
-      if (!pendingClose) {
+      if (!pendingClose && !pendingOpen) {
         throw new IllegalStateException(
             "Cannot set a region to be closed if it was not already marked as" +
-            " pending close. State: " + toString());
+            " pending close or pending open. State: " + toString());
       }
       this.unassigned = false;
       this.pendingOpen = false;
