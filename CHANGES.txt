@@ -5,6 +5,8 @@ Release 0.19.1 - Unreleased
    HBASE-1148  Always flush HLog on root or meta region updates
    HBASE-1129  Master won't go down; stuck joined on rootScanner 
    HBASE-1138  Make HLog block size configurable
+   HBASE-1175  HBA administrative tools do not work when specifying region
+               names (Jonathan Gray via Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-845   HCM.isTableEnabled doesn't really tell if it is, or not
