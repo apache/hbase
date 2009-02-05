@@ -12,6 +12,8 @@ Release 0.19.1 - Unreleased
    HBASE-845   HCM.isTableEnabled doesn't really tell if it is, or not
    HBASE-903   [shell] Can't set table descriptor attributes when I alter a table
    HBASE-1178  Add shutdown command to shell
+   HBASE-1184  HColumnDescriptor is too restrictive with family names
+               (Toby White via Andrew Purtell)
 
 Release 0.19.0
   INCOMPATIBLE CHANGES
