@@ -770,11 +770,13 @@ public class SequenceFile {
       return true;
     }
 
+    @Override
     public int hashCode() {
       assert false : "hashCode not designed";
       return 42; // any arbitrary constant will do 
     }
     
+    @Override
     public String toString() {
       StringBuffer sb = new StringBuffer();
       sb.append("size: ").append(this.theMetadata.size()).append("\n");
@@ -952,6 +954,13 @@ public class SequenceFile {
       }
     }
 
+    /** flush all currently written data to the file system */
+    public void syncFs() throws IOException {
+      if (out != null) {
+        out.sync();                               // flush contents to file system
+      }
+    }
+
     /** Returns the configuration of this file. */
     Configuration getConf() { return conf; }
     
@@ -1115,10 +1124,13 @@ public class SequenceFile {
       
     }
     
+    @Override
     boolean isCompressed() { return true; }
+    @Override
     boolean isBlockCompressed() { return false; }
 
     /** Append a key/value pair. */
+    @Override
     @SuppressWarnings("unchecked")
     public synchronized void append(Object key, Object val)
       throws IOException {
@@ -1151,6 +1163,7 @@ public class SequenceFile {
     }
 
     /** Append a key/value pair. */
+    @Override
     public synchronized void appendRaw(byte[] keyData, int keyOffset,
         int keyLength, ValueBytes val) throws IOException {
 
@@ -1240,7 +1253,9 @@ public class SequenceFile {
       finalizeFileHeader();
     }
     
+    @Override
     boolean isCompressed() { return true; }
+    @Override
     boolean isBlockCompressed() { return true; }
 
     /** Initialize */
@@ -1268,6 +1283,7 @@ public class SequenceFile {
     }
     
     /** Compress and flush contents to dfs */
+    @Override
     public synchronized void sync() throws IOException {
       if (noBufferedRecords > 0) {
         super.sync();
@@ -1297,6 +1313,7 @@ public class SequenceFile {
     }
     
     /** Close the file. */
+    @Override
     public synchronized void close() throws IOException {
       if (out != null) {
         sync();
@@ -1305,6 +1322,7 @@ public class SequenceFile {
     }
 
     /** Append a key/value pair. */
+    @Override
     @SuppressWarnings("unchecked")
     public synchronized void append(Object key, Object val)
       throws IOException {
@@ -1337,6 +1355,7 @@ public class SequenceFile {
     }
     
     /** Append a key/value pair. */
+    @Override
     public synchronized void appendRaw(byte[] keyData, int keyOffset,
         int keyLength, ValueBytes val) throws IOException {
       
@@ -1929,6 +1948,7 @@ public class SequenceFile {
      * of the value may be computed by calling buffer.getLength() before and
      * after calls to this method. */
     /** @deprecated Call {@link #nextRaw(DataOutputBuffer,SequenceFile.ValueBytes)}. */
+    @Deprecated
     public synchronized int next(DataOutputBuffer buffer) throws IOException {
       // Unsupported for block-compressed sequence files
       if (blockCompressed) {
@@ -2210,6 +2230,7 @@ public class SequenceFile {
     }
 
     /** Returns the name of the file. */
+    @Override
     public String toString() {
       return file.toString();
     }
@@ -2798,6 +2819,7 @@ public class SequenceFile {
         this.tmpDir = tmpDir;
         this.progress = progress;
       }
+      @Override
       protected boolean lessThan(Object a, Object b) {
         // indicate we're making progress
         if (progress != null) {
@@ -2933,7 +2955,7 @@ public class SequenceFile {
               totalBytes += segmentsToMerge.get(i).segmentLength;
             }
             if (totalBytes != 0) //being paranoid
-              progPerByte = 1.0f / (float)totalBytes;
+              progPerByte = 1.0f / totalBytes;
             //reset factor to what it originally was
             factor = origFactor;
             return this;
@@ -3055,6 +3077,7 @@ public class SequenceFile {
           compareTo(that.segmentPathName.toString());
       }
 
+      @Override
       public boolean equals(Object o) {
         if (!(o instanceof SegmentDescriptor)) {
           return false;
@@ -3069,6 +3092,7 @@ public class SequenceFile {
         return false;
       }
 
+      @Override
       public int hashCode() {
         return 37 * 17 + (int) (segmentOffset^(segmentOffset>>>32));
       }
@@ -3159,6 +3183,7 @@ public class SequenceFile {
       /** The default cleanup. Subclasses can override this with a custom 
        * cleanup 
        */
+      @Override
       public void cleanup() throws IOException {
         super.close();
         if (super.shouldPreserveInput()) return;
