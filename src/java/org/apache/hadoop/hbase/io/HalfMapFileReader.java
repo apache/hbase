@@ -21,6 +21,9 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -45,6 +48,8 @@ import org.apache.hadoop.io.WritableComparable;
  */
 //TODO should be fixed generic warnings from MapFile methods
 public class HalfMapFileReader extends BloomFilterMapFile.Reader {
+  private static final Log LOG = LogFactory.getLog(HalfMapFileReader.class);
+
   private final boolean top;
   private final HStoreKey midkey;
   private boolean firstNextCall = true;
@@ -146,6 +151,8 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
       // greater.
       closest = (key.compareTo(this.midkey) < 0)?
         this.midkey: super.getClosest(key, val);
+      // we know that we just went past the midkey
+      firstNextCall = false;
     } else {
       // We're serving bottom of the file.
       if (key.compareTo(this.midkey) < 0) {
@@ -190,7 +197,12 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
       }
     }
     boolean result = super.next(key, val);
-    if (!top && key.compareTo(midkey) >= 0) {
+    int cmpresult = key.compareTo(midkey);
+
+    if (top && cmpresult < 0) {
+      LOG.error("BUG BUG BUG. HalfMapFileReader wanted to return key out of range. DANGER");
+      throw new IOException("BUG BUG BUG. HalfMapFileReader wanted to return key out of range. DANGER");
+    } else if (!top && cmpresult >= 0) {
       result = false;
     }
     return result;

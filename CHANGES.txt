@@ -10,6 +10,8 @@ Release 0.19.1 - Unreleased
    HBASE-1190  TableInputFormatBase with row filters scan too far (Dave
                Latham via Andrew Purtell)
    HBASE-1198  OOME in IPC server does not trigger abort behavior
+   HBASE-1224  Scanner returns values from before startrow
+               (Ben Maurer via Stack)
 
   IMPROVEMENTS
    HBASE-845   HCM.isTableEnabled doesn't really tell if it is, or not

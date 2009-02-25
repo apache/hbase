@@ -66,7 +66,34 @@ public class TestHStoreFile extends HBaseTestCase {
     // ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
     //  "Temporary end-of-test thread dump debugging HADOOP-2040: " + getName());
   }
-  
+
+  /**
+   * Assert we can go to an offset in top file and then start nexting from there.
+   * See hbase-1224.
+   * @throws Exception
+   */
+  @SuppressWarnings("unchecked")
+  public void testNextingAtOffsetinHalfMapFile() throws Exception {
+    Path p = writeMapFile(getName());
+    WritableComparable midkey = getMidkey(p);
+    // Now test reading from the top.
+    HalfMapFileReader top = new HalfMapFileReader(this.fs, p.toString(),
+      this.conf, Reference.Range.top, midkey, null);
+    ImmutableBytesWritable val = new ImmutableBytesWritable();
+    final String startRowPrefix = "zy";
+    HStoreKey key = new HStoreKey(startRowPrefix);
+    WritableComparable closest = top.getClosest(key, val);
+    assertTrue(closest.toString().startsWith(startRowPrefix));
+    int count = 0;
+    for (boolean first = true; top.next(key, val); count++) {
+      if (first) {
+        assertTrue(key.toString().compareTo(startRowPrefix) > 0);
+      }
+      LOG.info(key.toString());
+    }
+    assertTrue(count > 0);
+  }
+
   private Path writeMapFile(final String name)
   throws IOException {
     Path path = new Path(DIR, name);
