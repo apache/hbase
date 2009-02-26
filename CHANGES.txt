@@ -12,6 +12,8 @@ Release 0.19.1 - Unreleased
    HBASE-1198  OOME in IPC server does not trigger abort behavior
    HBASE-1224  Scanner returns values from before startrow
                (Ben Maurer via Stack)
+   HBASE-1142  Cleanup thrift server; remove Text and profuse DEBUG messaging
+               (Tim Sell via Stack)
 
   IMPROVEMENTS
    HBASE-845   HCM.isTableEnabled doesn't really tell if it is, or not
