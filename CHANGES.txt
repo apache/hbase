@@ -14,6 +14,7 @@ Release 0.19.1 - Unreleased
                (Ben Maurer via Stack)
    HBASE-1142  Cleanup thrift server; remove Text and profuse DEBUG messaging
                (Tim Sell via Stack)
+   HBASE-1211  NPE in retries exhausted exception
 
   IMPROVEMENTS
    HBASE-845   HCM.isTableEnabled doesn't really tell if it is, or not
