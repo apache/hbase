@@ -18,6 +18,8 @@ Release 0.19.1 - Unreleased
    HBASE-1233  Transactional fixes: Overly conservative scan read-set,
                potential CME (Clint Morgan via Stack)
    HBASE-1185  wrong request/sec in the gui reporting wrong
+   HBASE-1238  Under upload, region servers are unable 
+               to compact when loaded with hundreds of regions
 
   IMPROVEMENTS
    HBASE-845   HCM.isTableEnabled doesn't really tell if it is, or not
