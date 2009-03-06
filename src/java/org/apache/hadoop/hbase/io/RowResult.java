@@ -248,4 +248,17 @@ public class RowResult implements Writable, SortedMap<byte [], Cell> {
     Bytes.writeByteArray(out, this.row);
     this.cells.write(out);
   }
+  
+  //
+  // Comparable
+  //
+  /**
+   *  Comparing this RowResult with another one by
+   *  comparing the row in it.
+   *  @param o the RowResult Object to compare to
+   *  @return the compare number
+   */
+  public int compareTo(Object o){
+    return Bytes.compareTo(this.row, ((RowResult)o).getRow());
+  }
 }
