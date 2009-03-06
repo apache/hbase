@@ -51,10 +51,10 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.io.SequenceFile.Metadata;
-import org.apache.hadoop.io.SequenceFile.Reader;
+import org.apache.hadoop.hbase.io.SequenceFile;
+import org.apache.hadoop.hbase.io.SequenceFile.CompressionType;
+import org.apache.hadoop.hbase.io.SequenceFile.Metadata;
+import org.apache.hadoop.hbase.io.SequenceFile.Reader;
 import org.apache.hadoop.io.compress.DefaultCodec;
 
 /**
@@ -757,30 +757,34 @@ public class HLog implements HConstants, Syncable {
           LOG.debug("Splitting " + (i + 1) + " of " + logfiles.length + ": " +
             logfiles[i].getPath());
         }
-        // Recover the files lease if necessary
-        boolean recovered = false;
-        while (!recovered) {
-          try {
-            FSDataOutputStream out = fs.append(logfiles[i].getPath());
-            out.close();
-            recovered = true;
-          } catch (IOException e) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Triggering lease recovery.");
+        // Recover the file's lease if necessary
+        try {
+          while (true) {
+            try {
+              FSDataOutputStream out = fs.append(logfiles[i].getPath());
+              out.close();
+              break;
+            } catch (IOException e) {
+              e = RemoteExceptionHandler.checkIOException(e);
+              if (e instanceof EOFException) {
+                throw e;
+              }
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Triggering lease recovery.");
+              }
             }
             try {
               Thread.sleep(leaseRecoveryPeriod);
             } catch (InterruptedException ex) {
               // ignore it and try again
             }
-            if (logfiles[i].getLen() <= 0) {
-              // If the file could be empty, skip it.
-              break;
-            }
-            continue;
           }
+        } catch (EOFException e) {
+          // file is empty, skip it
+          continue;
         }
-        if (!recovered) {
+        if (logfiles[i].getLen() <= 0) {
+          // File is empty, skip it.
           continue;
         }
         HLogKey key = new HLogKey();
