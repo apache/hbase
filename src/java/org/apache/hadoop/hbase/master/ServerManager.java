@@ -240,7 +240,7 @@ class ServerManager implements HConstants {
       }
     }
 
-    if (master.shutdownRequested) {
+    if (master.shutdownRequested.get()) {
       if(quiescedServers.get() >= serversToServerInfo.size()) {
         // If the only servers we know about are meta servers, then we can
         // proceed with shutdown

@@ -159,7 +159,7 @@ class RegionManager implements HConstants {
   
   void reassignRootRegion() {
     unsetRootRegion();
-    if (!master.shutdownRequested) {
+    if (!master.shutdownRequested.get()) {
       synchronized (regionsInTransition) {
         RegionState s = new RegionState(HRegionInfo.ROOT_REGIONINFO);
         s.setUnassigned();
