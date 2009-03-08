@@ -388,19 +388,17 @@ public class MapFile {
       data.seek(firstPosition);
     }
 
-    /** Get the key at approximately the middle of the file.
-     * 
-     * @throws IOException
+    /** Get the key at approximately the middle of the file. Or null if the
+     *  file is empty. 
      */
     public synchronized WritableComparable midKey() throws IOException {
 
       readIndex();
-      int pos = ((count - 1) / 2);              // middle of the index
-      if (pos < 0) {
-        throw new IOException("MapFile empty");
+      if (count == 0) {
+        return null;
       }
-      
-      return keys[pos];
+    
+      return keys[(count - 1) / 2];
     }
     
     /** Reads the final key from the file.
