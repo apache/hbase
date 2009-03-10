@@ -35,8 +35,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.io.MapFile;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Scanner scans both the memcache and the HStore
@@ -53,6 +54,7 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
   private HStore store;
   private final long timestamp;
   private final byte [][] targetCols;
+  private final HStoreKey previousNext;
   
   // Indices for memcache scanner and hstorefile scanner.
   private static final int MEMS_INDEX = 0;
@@ -70,6 +72,8 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
     long timestamp, RowFilterInterface filter) 
   throws IOException {
     this.store = store;
+    this.previousNext =
+      new HStoreKey(HConstants.EMPTY_BYTE_ARRAY, this.store.getHRegionInfo());
     this.dataFilter = filter;
     if (null != dataFilter) {
       dataFilter.reset();
@@ -275,7 +279,9 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
         }
       }
     }
-    
+    // Save a copy of the key we give out so we can use it if we have to
+    // update readers.
+    Writables.copyWritable(key, this.previousNext);
     return moreToFollow;
     } finally {
       this.lock.readLock().unlock();
@@ -313,7 +319,7 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
   
   // Implementation of ChangedReadersObserver
   
-  public void updateReaders() throws IOException {
+  public void updateReaders(final long sequenceid) throws IOException {
     if (this.closing.get()) {
       return;
     }
@@ -325,10 +331,8 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
         // Presume that we went from no readers to at least one -- need to put
         // a HStoreScanner in place.
         try {
-          // I think its safe getting key from mem at this stage -- it shouldn't have
-          // been flushed yet
           this.scanners[HSFS_INDEX] = new StoreFileScanner(this.store,
-              this.timestamp, this. targetCols, this.keys[MEMS_INDEX].getRow());
+            this.timestamp, this. targetCols, this.previousNext.getRow());
           checkScannerFlags(HSFS_INDEX);
           setupScanner(HSFS_INDEX);
           LOG.debug("Added a StoreFileScanner to outstanding HStoreScanner");
@@ -336,6 +340,11 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
           doClose();
           throw e;
         }
+      } else if (this.scanners[HSFS_INDEX] != null) {
+        // There are outstanding store files.  Add in the just flushed file
+        // to the mix.
+        ((StoreFileScanner)this.scanners[HSFS_INDEX]).
+          updateReaders(sequenceid, this.previousNext.getRow());
       }
     } finally {
       this.lock.writeLock().unlock();

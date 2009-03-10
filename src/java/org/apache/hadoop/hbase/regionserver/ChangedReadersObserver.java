@@ -29,7 +29,9 @@ import java.io.IOException;
 public interface ChangedReadersObserver {
   /**
    * Notify observers.
+   * @param flushid Flush sequence id for new file.  Acts as identifier for new
+   * file.
    * @throws IOException
    */
-  void updateReaders() throws IOException;
+  void updateReaders(final long flushid) throws IOException;
 }

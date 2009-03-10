@@ -728,7 +728,7 @@ public class HStore implements HConstants {
         this.family.isBlockCacheEnabled()));
       this.storefiles.put(flushid, flushedFile);
       // Tell listeners of the change in readers.
-      notifyChangedReadersObservers();
+      notifyChangedReadersObservers(flushid);
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -736,11 +736,14 @@ public class HStore implements HConstants {
 
   /*
    * Notify all observers that set of Readers has changed.
+   * @param flushid The flush id for the file just added.  Acts as new-file
+   * identifier.
    * @throws IOException
    */
-  private void notifyChangedReadersObservers() throws IOException {
+  private void notifyChangedReadersObservers(final long flushid)
+  throws IOException {
     for (ChangedReadersObserver o: this.changedReaderObservers) {
-      o.updateReaders();
+      o.updateReaders(flushid);
     }
   }
 
@@ -1290,7 +1293,7 @@ public class HStore implements HConstants {
                   this.family.isBlockCacheEnabled()));
           this.storefiles.put(orderVal, finalCompactedFile);
           // Tell observers that list of Readers has changed.
-          notifyChangedReadersObservers();
+          notifyChangedReadersObservers(orderVal);
           // Finally, delete old store files.
           for (HStoreFile hsf : toDelete.values()) {
             hsf.delete();

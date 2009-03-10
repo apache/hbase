@@ -185,6 +185,12 @@ public class TestScanner extends HBaseTestCase {
       count++;
       if (flushIndex == count) {
         LOG.info("Starting flush at flush index " + flushIndex);
+        // Add something to flush.
+        addContent(hri, Bytes.toString(HConstants.COL_REGIONINFO),
+          new byte [] {'a', 'b', 'c'}, new byte [] {'d', 'e', 'f'});
+        hri.flushcache();
+        addContent(hri, Bytes.toString(HConstants.COL_REGIONINFO),
+          new byte [] {'a', 'b', 'c'}, new byte [] {'d', 'e', 'f'});
         hri.flushcache();
         LOG.info("Finishing flush");
       }

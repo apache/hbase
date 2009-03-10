@@ -34,8 +34,7 @@ import org.apache.hadoop.hbase.io.MapFile;
 /**
  * A scanner that iterates through HStore files
  */
-class StoreFileScanner extends HAbstractScanner
-implements ChangedReadersObserver {
+class StoreFileScanner extends HAbstractScanner {
     // Keys retrieved from the sources
   private volatile HStoreKey keys[];
   // Values that correspond to those keys
@@ -62,9 +61,8 @@ implements ChangedReadersObserver {
   throws IOException {
     super(timestamp, targetCols);
     this.store = store;
-    this.store.addChangedReaderObserver(this);
     try {
-      openReaders(firstRow);
+      openReaders(firstRow, -1);
     } catch (Exception ex) {
       close();
       IOException e = new IOException("HStoreScanner failed construction");
@@ -79,7 +77,40 @@ implements ChangedReadersObserver {
    * @param firstRow
    * @throws IOException
    */
-  private void openReaders(final byte [] firstRow) throws IOException {
+  private void openReaders(final byte [] firstRow, final long sequenceid)
+  throws IOException {
+    SortedMap<Long, HStoreFile> storefiles = this.store.getStorefiles();
+    // If just one file was added by a flush, just open the new file.
+    if (this.readers != null &&
+        this.readers.length + 1 == storefiles.size() &&
+        storefiles.lastKey().longValue() == sequenceid) {
+      // Presume that just one file was added.  Slot it in front of all the
+      // others.
+      HStoreFile hsf = storefiles.get(Long.valueOf(sequenceid));
+      if (hsf == null) {
+        LOG.warn("Failed getting file for " + sequenceid +
+          "; falling back on close and reopen of all Readers");
+      } else {
+        // Only add in non-null Readers
+        int nonulls = 0;
+        for (int i = 1; i < this.readers.length; i++) {
+          if (this.readers[i] != null) nonulls++;
+        }
+        MapFile.Reader [] newReaders = new MapFile.Reader[nonulls + 1];
+        newReaders[0] = hsf.getReader(store.fs, false, false);
+        int j = 0;
+        for (int i = 1; i < this.readers.length + 1; i++) {
+          MapFile.Reader r = this.readers[i - 1];
+          if (r != null) {
+            newReaders[j++] = r;
+          }
+        }
+        this.readers = newReaders;
+        advance(firstRow);
+        return;
+      }
+    }
+    // If here, then we are opening all files anew.
     if (this.readers != null) {
       for (int i = 0; i < this.readers.length; i++) {
         if (this.readers[i] != null) {
@@ -88,20 +119,24 @@ implements ChangedReadersObserver {
       }
     }
     // Open our own copies of the Readers here inside in the scanner.
-    this.readers = new MapFile.Reader[this.store.getStorefiles().size()];
-    
+    this.readers = new MapFile.Reader[storefiles.size()];
+
     // Most recent map file should be first
     int i = readers.length - 1;
-    for(HStoreFile curHSF: store.getStorefiles().values()) {
+    for (HStoreFile curHSF : storefiles.values()) {
       readers[i--] = curHSF.getReader(store.fs, false, false);
     }
-    
+    advance(firstRow);
+  }
+
+  private void advance(final byte [] firstRow) throws IOException {
     this.keys = new HStoreKey[readers.length];
     this.vals = new byte[readers.length][];
-    
+
     // Advance the readers to the first pos.
-    for (i = 0; i < readers.length; i++) {
-      keys[i] = new HStoreKey(HConstants.EMPTY_BYTE_ARRAY, this.store.getHRegionInfo());
+    for (int i = 0; i < readers.length; i++) {
+      keys[i] = new HStoreKey(HConstants.EMPTY_BYTE_ARRAY, this.store
+          .getHRegionInfo());
       if (firstRow != null && firstRow.length != 0) {
         if (findFirstRow(i, firstRow)) {
           continue;
@@ -348,7 +383,6 @@ implements ChangedReadersObserver {
   /** Shut it down! */
   public void close() {
     if (!this.scannerClosed) {
-      this.store.deleteChangedReaderObserver(this);
       try {
         for(int i = 0; i < readers.length; i++) {
           if(readers[i] != null) {
@@ -366,19 +400,19 @@ implements ChangedReadersObserver {
     }
   }
 
-  // Implementation of ChangedReadersObserver
-  
-  public void updateReaders() throws IOException {
+  /**
+   * Called by hosting {@link HStoreScanner}.
+   * @param sequenceid
+   * @param previousNextRow
+   * @throws IOException
+   */
+  void updateReaders(final long sequenceid, final byte [] previousNextRow)
+  throws IOException {
     this.lock.writeLock().lock();
     try {
-      // The keys are currently lined up at the next row to fetch.  Pass in
-      // the current row as 'first' row and readers will be opened and cue'd
-      // up so future call to next will start here.
-      ViableRow viableRow = getNextViableRow();
-      openReaders(viableRow.getRow());
+      openReaders(previousNextRow, sequenceid);
       LOG.debug("Replaced Scanner Readers at row " +
-        (viableRow == null || viableRow.getRow() == null? "null":
-          Bytes.toString(viableRow.getRow())));
+        (previousNextRow == null? "null": Bytes.toString(previousNextRow)));
     } finally {
       this.lock.writeLock().unlock();
     }
