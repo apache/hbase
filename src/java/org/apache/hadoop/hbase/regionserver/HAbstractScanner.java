@@ -20,8 +20,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.SortedMap;
 import java.util.Vector;
 import java.util.regex.Pattern;
@@ -112,8 +110,7 @@ public abstract class HAbstractScanner implements InternalScanner {
 
   // Holds matchers for each column family.  Its keyed by the byte [] hashcode
   // which you can get by calling Bytes.mapKey.
-  private Map<Integer, Vector<ColumnMatcher>> okCols =
-    new HashMap<Integer, Vector<ColumnMatcher>>();
+  private Vector<ColumnMatcher> matchers = new Vector<ColumnMatcher>();
   
   // True when scanning is done
   protected volatile boolean scannerClosed = false;
@@ -130,11 +127,6 @@ public abstract class HAbstractScanner implements InternalScanner {
     this.wildcardMatch = false;
     this.multipleMatchers = false;
     for(int i = 0; i < targetCols.length; i++) {
-      Integer key = HStoreKey.getFamilyMapKey(targetCols[i]);
-      Vector<ColumnMatcher> matchers = okCols.get(key);
-      if (matchers == null) {
-        matchers = new Vector<ColumnMatcher>();
-      }
       ColumnMatcher matcher = new ColumnMatcher(targetCols[i]);
       if (matcher.isWildCardMatch()) {
         this.wildcardMatch = true;
@@ -143,7 +135,6 @@ public abstract class HAbstractScanner implements InternalScanner {
       if (matchers.size() > 1) {
         this.multipleMatchers = true;
       }
-      okCols.put(key, matchers);
     }
   }
 
@@ -159,8 +150,6 @@ public abstract class HAbstractScanner implements InternalScanner {
    * @throws IOException
    */
   protected boolean columnMatch(final byte [] column) throws IOException {
-    Vector<ColumnMatcher> matchers =
-      this.okCols.get(HStoreKey.getFamilyMapKey(column));
     if (matchers == null) {
       return false;
     }
