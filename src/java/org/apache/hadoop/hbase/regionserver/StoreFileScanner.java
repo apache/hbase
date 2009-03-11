@@ -98,9 +98,9 @@ class StoreFileScanner extends HAbstractScanner {
         }
         MapFile.Reader [] newReaders = new MapFile.Reader[nonulls + 1];
         newReaders[0] = hsf.getReader(store.fs, false, false);
-        int j = 0;
-        for (int i = 1; i < this.readers.length + 1; i++) {
-          MapFile.Reader r = this.readers[i - 1];
+        int j = 1;
+        for (int i = 0; i < this.readers.length; i++) {
+          MapFile.Reader r = this.readers[i];
           if (r != null) {
             newReaders[j++] = r;
           }

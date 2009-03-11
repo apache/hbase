@@ -159,6 +159,9 @@ public class TestScanner extends HBaseTestCase {
       assertEquals(count, count(hri, 100));
       assertEquals(count, count(hri, 0));
       assertEquals(count, count(hri, count - 1));
+    } catch (Exception e) {
+      LOG.error("Failed with this exception", e);
+      throw e;
     } finally {
       this.r.close();
       this.r.getLog().closeAndDelete();
@@ -180,6 +183,9 @@ public class TestScanner extends HBaseTestCase {
     HStoreKey key = new HStoreKey();
     SortedMap<byte [], Cell> values =
       new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+    if (flushIndex == -1) {
+      hri.flushcache();
+    }
     int count = 0;
     while (s.next(key, values)) {
       count++;
