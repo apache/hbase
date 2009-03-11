@@ -93,7 +93,7 @@ class StoreFileScanner extends HAbstractScanner {
       } else {
         // Only add in non-null Readers
         int nonulls = 0;
-        for (int i = 1; i < this.readers.length; i++) {
+        for (int i = 0; i < this.readers.length; i++) {
           if (this.readers[i] != null) nonulls++;
         }
         MapFile.Reader [] newReaders = new MapFile.Reader[nonulls + 1];
