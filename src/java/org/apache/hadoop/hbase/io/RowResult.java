@@ -39,7 +39,8 @@ import org.apache.hadoop.io.Writable;
 /**
  * Holds row name and then a map of columns to cells.
  */
-public class RowResult implements Writable, SortedMap<byte [], Cell> {
+public class RowResult
+implements Writable, SortedMap<byte [], Cell>, Comparable, ISerializable {
   private byte [] row = null;
   private final HbaseMapWritable<byte [], Cell> cells;
 
