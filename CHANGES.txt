@@ -1,5 +1,5 @@
 HBase Change Log
-Release 0.19.1 - Unreleased
+Release 0.19.1 - 03/19/2009
   BUG FIXES
    HBASE-1121  Cluster confused about where -ROOT- is
    HBASE-1148  Always flush HLog on root or meta region updates
