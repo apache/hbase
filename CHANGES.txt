@@ -28,6 +28,8 @@ Release 0.19.1 - 03/19/2009
    HBASE-1220  Don't reopen file if already open when updating readers
                underneath scanners
    HBASE-1256  NPE in StoreFileScanner durring cache flush
+   HBASE-1303  Secondary index configuration prevents HBase from starting
+               (Ken Weiner via Stack)
 
 
   IMPROVEMENTS
