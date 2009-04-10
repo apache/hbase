@@ -1,4 +1,11 @@
 HBase Change Log
+
+Unreleased changes
+  BUG FIXES
+   HBASE-1303  Secondary index configuration prevents HBase from starting
+               (Ken Weiner via Stack)
+   HBASE-1202  getRow does not always work when specifying number of versions
+
 Release 0.19.1 - 03/19/2009
   BUG FIXES
    HBASE-1121  Cluster confused about where -ROOT- is
@@ -28,8 +35,6 @@ Release 0.19.1 - 03/19/2009
    HBASE-1220  Don't reopen file if already open when updating readers
                underneath scanners
    HBASE-1256  NPE in StoreFileScanner durring cache flush
-   HBASE-1303  Secondary index configuration prevents HBase from starting
-               (Ken Weiner via Stack)
 
 
   IMPROVEMENTS
