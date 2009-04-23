@@ -8,6 +8,8 @@ Release 0.19.2 - Unreleased
    HBASE-1319  Bug in atomicIncrement 0.19.1 only (Ryan Rawson via Stack)
    HBASE-1301  HTable.getRow() returns null if the row does no exist
                (Rong-en Fan via Stack)
+   HBASE-1292  php thrift's getRow() would throw an exception if the row does
+               not exist (Rong-en Fan via Stack)
 
 Release 0.19.1 - 03/19/2009
   BUG FIXES
