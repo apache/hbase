@@ -10,6 +10,8 @@ Release 0.19.2 - Unreleased
                (Rong-en Fan via Stack)
    HBASE-1292  php thrift's getRow() would throw an exception if the row does
                not exist (Rong-en Fan via Stack)
+   HBASE-1287  Partitioner class not used in TableMapReduceUtil.initTableReduceJob()
+               (Lars George and Billy Pearson via Stack)
 
 Release 0.19.1 - 03/19/2009
   BUG FIXES
