@@ -17,6 +17,7 @@ Release 0.19.2 - Unreleased
    HBASE-1058  Prevent runaway compactions
    HBASE-1347  HTable.incrementColumnValue does not take negative 'amount'
                (Evgeny Ryabitskiy via Stack)
+   HBASE-1365  Typo in TableInputFormatBase.setInputColums (Jon Gray via Stack)
 
 Release 0.19.1 - 03/19/2009
   BUG FIXES
