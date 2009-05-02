@@ -15,6 +15,8 @@ Release 0.19.2 - Unreleased
    HBASE-1350  New method in HTable.java to return start and end keys for
                regions in a table (Vimal Mathew via Stack)
    HBASE-1058  Prevent runaway compactions
+   HBASE-1347  HTable.incrementColumnValue does not take negative 'amount'
+               (Evgeny Ryabitskiy via Stack)
 
 Release 0.19.1 - 03/19/2009
   BUG FIXES
