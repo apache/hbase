@@ -20,6 +20,7 @@ Release 0.19.2 - Unreleased
    HBASE-1365  Typo in TableInputFormatBase.setInputColums (Jon Gray via Stack)
    HBASE-1318  Thrift server doesnt know about atomicIncrement
                (Ryan Rawson via Stack)
+   HBASE-1352  incrementColumnValue/Memcache bug
 
 
 Release 0.19.1 - 03/19/2009
