@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -276,9 +277,13 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
     // Address is givin a default IP for the moment. Will be changed after
     // calling the master.
     this.serverInfo = new HServerInfo(new HServerAddress(
-      new InetSocketAddress(DEFAULT_HOST,
+      new InetSocketAddress(address.getBindAddress(),
       this.server.getListenerAddress().getPort())), System.currentTimeMillis(),
       this.conf.getInt("hbase.regionserver.info.port", 60030));
+    String machineName = DNS.getDefaultHost(
+      conf.get("hbase.regionserver.dns.interface","default"),
+      conf.get("hbase.regionserver.dns.nameserver","default"));
+    this.serverInfo.setName(machineName);
     if (this.serverInfo.getServerAddress() == null) {
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");
