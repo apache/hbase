@@ -22,6 +22,7 @@ Release 0.19.2 - Unreleased
                (Ryan Rawson via Stack)
    HBASE-1352  incrementColumnValue/Memcache bug
    HBASE-1279  Fix the way hostnames and IPs are handled
+   HBASE-1368  HBASE-1279 broke the build
 
 
 Release 0.19.1 - 03/19/2009
