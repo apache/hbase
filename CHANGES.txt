@@ -25,6 +25,7 @@ Release 0.19.2 - Unreleased
    HBASE-1368  HBASE-1279 broke the build
    HBASE-1264  Wrong return values of comparators for ColumnValueFilter
                (Thomas Schneider via Andrew Purtell)
+   HBASE-1371  Generating the javadoc gives warnings in branch 0.19
 
 Release 0.19.1 - 03/19/2009
   BUG FIXES
