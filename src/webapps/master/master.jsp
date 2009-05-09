@@ -88,9 +88,9 @@
      for (String serverName: serverNames) {
        HServerInfo hsi = serverToServerInfos.get(serverName);
        String url = "http://" +
-         hsi.getServerAddress().getHostname().toString() + ":" +
+         hsi.getName() + ":" +
          hsi.getInfoPort() + "/";
-       String hostname = hsi.getServerAddress().getHostname() + ":" + hsi.getServerAddress().getPort();
+       String hostname = hsi.getName() + ":" + hsi.getServerAddress().getPort();
        totalRegions += hsi.getLoad().getNumberOfRegions();
        totalRequests += hsi.getLoad().getNumberOfRequests() / interval;
        long startCode = hsi.getStartCode();

@@ -38,10 +38,12 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   private long startCode;
   private HServerLoad load;
   private int infoPort;
+  private String name;
 
   /** default constructor - used by Writable */
   public HServerInfo() {
-    this(new HServerAddress(), 0, HConstants.DEFAULT_REGIONSERVER_INFOPORT);
+    this(new HServerAddress(), 0, 
+        HConstants.DEFAULT_REGIONSERVER_INFOPORT, "default name");
   }
   
   /**
@@ -51,11 +53,12 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
    * @param infoPort Port the info server is listening on.
    */
   public HServerInfo(HServerAddress serverAddress, long startCode,
-      final int infoPort) {
+      final int infoPort, String name) {
     this.serverAddress = serverAddress;
     this.startCode = startCode;
     this.load = new HServerLoad();
     this.infoPort = infoPort;
+    this.name = name;
   }
   
   /**
@@ -114,6 +117,14 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   public void setStartCode(long startCode) {
     this.startCode = startCode;
   }
+  
+  public String getName() {
+    return name;
+  }
+  
+  public void setName(String name) {
+    this.name = name;
+  }
 
   @Override
   public String toString() {
@@ -131,6 +142,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     int result = this.serverAddress.hashCode();
     result ^= this.infoPort;
     result ^= this.startCode;
+    result ^= this.name.hashCode();
     return result;
   }
 
@@ -142,6 +154,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.startCode = in.readLong();
     this.load.readFields(in);
     this.infoPort = in.readInt();
+    this.name = in.readUTF();
   }
 
   public void write(DataOutput out) throws IOException {
@@ -149,6 +162,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     out.writeLong(this.startCode);
     this.load.write(out);
     out.writeInt(this.infoPort);
+    out.writeUTF(name);
   }
 
   public int compareTo(HServerInfo o) {

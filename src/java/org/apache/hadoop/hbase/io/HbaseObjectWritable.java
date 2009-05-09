@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /** 
  * This is a customized version of the polymorphic hadoop
- * {@link ObjectWritable}.  It removes UTF8 (HADOOP-414).
+ * {@link org.apache.hadoop.io.ObjectWritable}.  It removes UTF8 (HADOOP-414).
  * Using {@link Text} intead of UTF-8 saves ~2% CPU between reading and writing
  * objects running a short sequentialWrite Performance Evaluation test just in
  * ObjectWritable alone; more when we're doing randomRead-ing.  Other

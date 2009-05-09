@@ -62,7 +62,7 @@ import org.apache.hadoop.util.StringUtils;
  *       Text[] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
  *         Bytes.toBytes("columnB") };
  *       // mandatory
- *       setInputColums(inputColumns);
+ *       setInputColumns(inputColumns);
  *       RowFilterInterface exampleFilter = new RegExpRowFilter("keyPrefix.*");
  *       // optional
  *       setRowFilter(exampleFilter);
@@ -303,7 +303,7 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
   /**
    * @param inputColumns to be passed in {@link RowResult} to the map task.
    */
-  protected void setInputColums(byte [][] inputColumns) {
+  protected void setInputColumns(byte [][] inputColumns) {
     this.inputColumns = inputColumns;
   }
 

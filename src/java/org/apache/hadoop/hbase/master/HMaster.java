@@ -547,10 +547,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * HMasterRegionInterface
    */
   public MapWritable regionServerStartup(final HServerInfo serverInfo) {
-    // Set the address for now even tho it will not be persisted on HRS side.
-    String rsAddress = HBaseServer.getRemoteAddress();
-    serverInfo.setServerAddress(new HServerAddress(rsAddress,
-      serverInfo.getServerAddress().getPort()));
+    // Set the address for now even tho it will not be persisted on HRS side
+    // If the address given is not the default one,
+    // use the IP given by the user.
+    if (serverInfo.getServerAddress().getBindAddress().equals(
+        DEFAULT_HOST)) {
+      String rsAddress = HBaseServer.getRemoteAddress();
+      serverInfo.setServerAddress(new HServerAddress(rsAddress,
+        serverInfo.getServerAddress().getPort()));
+    }
     // Register with server manager
     this.serverManager.regionServerStartup(serverInfo);
     // Send back some config info

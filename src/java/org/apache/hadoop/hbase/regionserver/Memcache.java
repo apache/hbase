@@ -606,7 +606,7 @@ class Memcache {
           }
         } else {
           // Cell holds a delete value.
-          deletes.add(itKey);
+          if (deletes != null) deletes.add(itKey);
         }
       } else {
         // By L.N. HBASE-684, map is sorted, so we can't find match any more.

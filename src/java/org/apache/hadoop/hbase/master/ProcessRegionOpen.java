@@ -94,6 +94,7 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
             this.historian.online(this.master.getConfiguration());
           }
           this.historian.addRegionOpen(regionInfo, serverAddress);
+          this.historian.getRegionHistory("dummy");
           synchronized (master.regionManager) {
             if (isMetaTable) {
               // It's a meta region.
