@@ -222,31 +222,26 @@ class MemcacheFlusher extends Thread implements FlushRequester {
    */
   private boolean flushRegion(HRegion region, boolean removeFromQueue) {
     // Wait until it is safe to flush
-    int count = 0;
-    boolean triggered = false;
-    while (count++ < (blockingWaitTime / 500)) {
+    boolean toomany;
+    do {
+      toomany = false;
       for (HStore hstore: region.stores.values()) {
-        if (hstore.getStorefilesCount() > this.blockingStoreFilesNumber) {
-          if (!triggered) {
-            server.compactSplitThread.compactionRequested(region, getName());
-            LOG.info("Too many store files for region " + region + ": " +
-              hstore.getStorefilesCount() + ", waiting");
-            triggered = true;
+        int files = hstore.getStorefilesCount();
+        if (files > this.blockingStoreFilesNumber) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Too many store files in store " + hstore + ": " +
+              files + ", waiting");
           }
+          toomany = true;
+          server.compactSplitThread.compactionRequested(region, getName());
           try {
-            Thread.sleep(500);
+            Thread.sleep(blockingWaitTime);
           } catch (InterruptedException e) {
             // ignore
           }
-          continue;
         }
       }
-      if (triggered) {
-        LOG.info("Compaction completed on region " + region +
-          ", proceeding");
-      }
-      break;
-    }
+    } while (toomany);
     synchronized (regionsInQueue) {
       // See comment above for removeFromQueue on why we do not
       // take the region out of the set. If removeFromQueue is true, remove it
