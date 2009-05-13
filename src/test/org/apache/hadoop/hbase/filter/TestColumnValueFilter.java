@@ -73,16 +73,16 @@ public class TestColumnValueFilter extends TestCase {
 
   private void substrFilterTests(RowFilterInterface filter) 
       throws Exception {
-    assertTrue("substrTrue", filter.filterColumn(ROW, COLUMN, FULLSTRING_1));
-    assertFalse("substrFalse", filter.filterColumn(ROW, COLUMN, FULLSTRING_2));
+    assertFalse("substrTrue", filter.filterColumn(ROW, COLUMN, FULLSTRING_1));
+    assertTrue("substrFalse", filter.filterColumn(ROW, COLUMN, FULLSTRING_2));
     assertFalse("substrFilterAllRemaining", filter.filterAllRemaining());
     assertFalse("substrFilterNotNull", filter.filterRow(null));
   }
 
   private void regexFilterTests(RowFilterInterface filter) 
       throws Exception {
-    assertTrue("regexTrue", filter.filterColumn(ROW, COLUMN, FULLSTRING_1));
-    assertFalse("regexFalse", filter.filterColumn(ROW, COLUMN, FULLSTRING_2));
+    assertFalse("regexTrue", filter.filterColumn(ROW, COLUMN, FULLSTRING_1));
+    assertTrue("regexFalse", filter.filterColumn(ROW, COLUMN, FULLSTRING_2));
     assertFalse("regexFilterAllRemaining", filter.filterAllRemaining());
     assertFalse("regexFilterNotNull", filter.filterRow(null));
   }
