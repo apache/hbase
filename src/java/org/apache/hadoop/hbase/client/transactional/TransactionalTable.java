@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Table with transactional support.
@@ -47,7 +48,7 @@ public class TransactionalTable extends HTable {
    */
   public TransactionalTable(final HBaseConfiguration conf,
       final String tableName) throws IOException {
-    super(conf, tableName);
+    this(conf, Bytes.toBytes(tableName));
   }
 
   /**
@@ -386,7 +387,7 @@ public class TransactionalTable extends HTable {
    * @param batchUpdate
    * @throws IOException
    */
-  public synchronized void commit(final TransactionState transactionState,
+  public void commit(final TransactionState transactionState,
       final BatchUpdate batchUpdate) throws IOException {
     super.getConnection().getRegionServerWithRetries(
         new TransactionalServerCallable<Boolean>(super.getConnection(), super

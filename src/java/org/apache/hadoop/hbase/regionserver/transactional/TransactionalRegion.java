@@ -48,10 +48,13 @@ import org.apache.hadoop.hbase.client.transactional.UnknownTransactionException;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
+import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.transactional.TransactionState.Status;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -75,13 +78,11 @@ import org.apache.hadoop.util.Progressable;
  */
 public class TransactionalRegion extends HRegion {
 
-  private static final String LEASE_TIME = "hbase.transaction.leaseTime";
-  private static final int DEFAULT_LEASE_TIME = 60 * 1000;
-  private static final int LEASE_CHECK_FREQUENCY = 1000;
-  
   private static final String OLD_TRANSACTION_FLUSH = "hbase.transaction.flush";
-  private static final int DEFAULT_OLD_TRANSACTION_FLUSH = 100; // Do a flush if we have this many old transactions..
-  
+  private static final int DEFAULT_OLD_TRANSACTION_FLUSH = 100; // Do a flush if
+  // we have this
+  // many old
+  // transactions..
 
   private static final Log LOG = LogFactory.getLog(TransactionalRegion.class);
 
@@ -97,11 +98,11 @@ public class TransactionalRegion extends HRegion {
   private Set<TransactionState> commitPendingTransactions = Collections
       .synchronizedSet(new HashSet<TransactionState>());
 
-  private final Leases transactionLeases;
   private AtomicInteger nextSequenceId = new AtomicInteger(0);
   private Object commitCheckLock = new Object();
   private TransactionalHLogManager logManager;
   private final int oldTransactionFlushTrigger;
+  private final Leases transactionLeases;
 
   /**
    * @param basedir
@@ -113,12 +114,13 @@ public class TransactionalRegion extends HRegion {
    */
   public TransactionalRegion(final Path basedir, final HLog log,
       final FileSystem fs, final HBaseConfiguration conf,
-      final HRegionInfo regionInfo, final FlushRequester flushListener) {
+      final HRegionInfo regionInfo, final FlushRequester flushListener,
+      final Leases transactionalLeases) {
     super(basedir, log, fs, conf, regionInfo, flushListener);
-    transactionLeases = new Leases(conf.getInt(LEASE_TIME, DEFAULT_LEASE_TIME),
-        LEASE_CHECK_FREQUENCY);
     logManager = new TransactionalHLogManager(this);
-    oldTransactionFlushTrigger = conf.getInt(OLD_TRANSACTION_FLUSH, DEFAULT_OLD_TRANSACTION_FLUSH);
+    oldTransactionFlushTrigger = conf.getInt(OLD_TRANSACTION_FLUSH,
+        DEFAULT_OLD_TRANSACTION_FLUSH);
+    this.transactionLeases = transactionalLeases;
   }
 
   @Override
@@ -160,8 +162,14 @@ public class TransactionalRegion extends HRegion {
    */
   @Override
   protected long getCompleteCacheFlushSequenceId(final long currentSequenceId) {
+    LinkedList<TransactionState> transactionStates;
+    synchronized (transactionsById) {
+      transactionStates = new LinkedList<TransactionState>(transactionsById
+          .values());
+    }
+
     long minPendingStartSequenceId = currentSequenceId;
-    for (TransactionState transactionState : transactionsById.values()) {
+    for (TransactionState transactionState : transactionStates) {
       minPendingStartSequenceId = Math.min(minPendingStartSequenceId,
           transactionState.getHLogStartSequenceId());
     }
@@ -173,6 +181,7 @@ public class TransactionalRegion extends HRegion {
    * @throws IOException
    */
   public void beginTransaction(final long transactionId) throws IOException {
+    checkClosing();
     String key = String.valueOf(transactionId);
     if (transactionsById.get(key) != null) {
       TransactionState alias = getTransactionState(transactionId);
@@ -180,7 +189,8 @@ public class TransactionalRegion extends HRegion {
         alias.setStatus(Status.ABORTED);
         retireTransaction(alias);
       }
-      LOG.error("Existing trasaction with id ["+key+"] in region ["+super.getRegionInfo().getRegionNameAsString()+"]");
+      LOG.error("Existing trasaction with id [" + key + "] in region ["
+          + super.getRegionInfo().getRegionNameAsString() + "]");
       throw new IOException("Already exiting transaction id: " + key);
     }
 
@@ -188,24 +198,33 @@ public class TransactionalRegion extends HRegion {
         .getSequenceNumber(), super.getRegionInfo());
 
     // Order is important here ...
-    List<TransactionState> commitPendingCopy = new LinkedList<TransactionState>(commitPendingTransactions);
+    List<TransactionState> commitPendingCopy = new LinkedList<TransactionState>(
+        commitPendingTransactions);
     for (TransactionState commitPending : commitPendingCopy) {
       state.addTransactionToCheck(commitPending);
     }
     state.setStartSequenceNumber(nextSequenceId.get());
 
-    transactionsById.put(String.valueOf(key), state);
+    synchronized (transactionsById) {
+      transactionsById.put(key, state);
+    }
     try {
-      transactionLeases.createLease(key, new TransactionLeaseListener(key));
+      transactionLeases.createLease(getLeaseId(transactionId),
+          new TransactionLeaseListener(key));
     } catch (LeaseStillHeldException e) {
-      LOG.error("Lease still held for ["+key+"] in region ["+super.getRegionInfo().getRegionNameAsString()+"]");      
+      LOG.error("Lease still held for [" + key + "] in region ["
+          + super.getRegionInfo().getRegionNameAsString() + "]");
       throw new RuntimeException(e);
     }
     LOG.debug("Begining transaction " + key + " in region "
         + super.getRegionInfo().getRegionNameAsString());
     logManager.writeStartToLog(transactionId);
-    
+
     maybeTriggerOldTransactionFlush();
+  }
+
+  private String getLeaseId(long transactionId) {
+    return super.getRegionInfo().getRegionNameAsString() + transactionId;
   }
 
   /**
@@ -219,6 +238,7 @@ public class TransactionalRegion extends HRegion {
    */
   public Cell get(final long transactionId, final byte[] row,
       final byte[] column) throws IOException {
+    checkClosing();
     Cell[] results = get(transactionId, row, column, 1);
     return (results == null || results.length == 0) ? null : results[0];
   }
@@ -235,6 +255,7 @@ public class TransactionalRegion extends HRegion {
    */
   public Cell[] get(final long transactionId, final byte[] row,
       final byte[] column, final int numVersions) throws IOException {
+    checkClosing();
     return get(transactionId, row, column, Long.MAX_VALUE, numVersions);
   }
 
@@ -252,6 +273,8 @@ public class TransactionalRegion extends HRegion {
   public Cell[] get(final long transactionId, final byte[] row,
       final byte[] column, final long timestamp, final int numVersions)
       throws IOException {
+    checkClosing();
+
     TransactionState state = getTransactionState(transactionId);
 
     state.addRead(row);
@@ -294,6 +317,7 @@ public class TransactionalRegion extends HRegion {
    * @return Map<columnName, Cell> values
    * @throws IOException
    */
+
   public Map<byte[], Cell> getFull(final long transactionId, final byte[] row,
       final Set<byte[]> columns, final long ts) throws IOException {
     TransactionState state = getTransactionState(transactionId);
@@ -312,7 +336,8 @@ public class TransactionalRegion extends HRegion {
         LOG.trace("cell: " + Bytes.toString(entry.getValue().getValue()));
       }
 
-      Map<byte[], Cell> internalResults = getFull(row, columns, ts, 1, null);
+      HbaseMapWritable<byte[], Cell> internalResults = getFull(row, columns,
+          ts, 1, null);
       internalResults.putAll(localCells);
       return internalResults;
     }
@@ -340,6 +365,8 @@ public class TransactionalRegion extends HRegion {
   public InternalScanner getScanner(final long transactionId,
       final byte[][] cols, final byte[] firstRow, final long timestamp,
       final RowFilterInterface filter) throws IOException {
+    checkClosing();
+
     TransactionState state = getTransactionState(transactionId);
     state.addScan(firstRow, filter);
     return new ScannerWrapper(transactionId, super.getScanner(cols, firstRow,
@@ -355,6 +382,8 @@ public class TransactionalRegion extends HRegion {
    */
   public void batchUpdate(final long transactionId, final BatchUpdate b)
       throws IOException {
+    checkClosing();
+
     TransactionState state = getTransactionState(transactionId);
     state.addWrite(b);
     logManager.writeUpdateToLog(transactionId, b);
@@ -371,18 +400,22 @@ public class TransactionalRegion extends HRegion {
    */
   public void deleteAll(final long transactionId, final byte[] row,
       final long timestamp) throws IOException {
+    checkClosing();
+
     TransactionState state = getTransactionState(transactionId);
     long now = System.currentTimeMillis();
+
 
     for (HStore store : super.stores.values()) {
       List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp),
           ALL_VERSIONS, now, null);
+
       BatchUpdate deleteUpdate = new BatchUpdate(row, timestamp);
 
       for (HStoreKey key : keys) {
         deleteUpdate.delete(key.getColumn());
       }
-      
+
       state.addWrite(deleteUpdate);
       logManager.writeUpdateToLog(transactionId, deleteUpdate);
 
@@ -392,39 +425,61 @@ public class TransactionalRegion extends HRegion {
 
   /**
    * @param transactionId
-   * @return true if commit is successful
+   * @return TransactionRegionInterface commit code
    * @throws IOException
    */
-  public boolean commitRequest(final long transactionId) throws IOException {
+  public int commitRequest(final long transactionId) throws IOException {
+    checkClosing();
+
     synchronized (commitCheckLock) {
       TransactionState state = getTransactionState(transactionId);
       if (state == null) {
-        return false;
+        return TransactionalRegionInterface.COMMIT_UNSUCESSFUL;
       }
 
       if (hasConflict(state)) {
         state.setStatus(Status.ABORTED);
         retireTransaction(state);
-        return false;
+        return TransactionalRegionInterface.COMMIT_UNSUCESSFUL;
       }
 
       // No conflicts, we can commit.
       LOG.trace("No conflicts for transaction " + transactionId
           + " found in region " + super.getRegionInfo().getRegionNameAsString()
           + ". Voting for commit");
-      state.setStatus(Status.COMMIT_PENDING);
 
       // If there are writes we must keep record off the transaction
       if (state.getWriteSet().size() > 0) {
         // Order is important
+        state.setStatus(Status.COMMIT_PENDING);
         commitPendingTransactions.add(state);
         state.setSequenceNumber(nextSequenceId.getAndIncrement());
         commitedTransactionsBySequenceNumber.put(state.getSequenceNumber(),
             state);
+        return TransactionalRegionInterface.COMMIT_OK;
       }
+      // Otherwise we were read-only and commitable, so we can forget it.
+      state.setStatus(Status.COMMITED);
+      retireTransaction(state);
+      return TransactionalRegionInterface.COMMIT_OK_READ_ONLY;
+    }
+  }
 
+  /**
+   * @param transactionId
+   * @return true if commit is successful
+   * @throws IOException
+   */
+  public boolean commitIfPossible(final long transactionId) throws IOException {
+    int status = commitRequest(transactionId);
+
+    if (status == TransactionalRegionInterface.COMMIT_OK) {
+      commit(transactionId);
+      return true;
+    } else if (status == TransactionalRegionInterface.COMMIT_OK_READ_ONLY) {
       return true;
     }
+    return false;
   }
 
   private boolean hasConflict(final TransactionState state) {
@@ -447,6 +502,7 @@ public class TransactionalRegion extends HRegion {
    * @throws IOException
    */
   public void commit(final long transactionId) throws IOException {
+    // Not checking closing...
     TransactionState state;
     try {
       state = getTransactionState(transactionId);
@@ -473,11 +529,14 @@ public class TransactionalRegion extends HRegion {
    * @throws IOException
    */
   public void abort(final long transactionId) throws IOException {
+    // Not checking closing...
     TransactionState state;
     try {
       state = getTransactionState(transactionId);
     } catch (UnknownTransactionException e) {
-      LOG.error("Asked to abort unknown transaction: " + transactionId);
+      LOG.info("Asked to abort unknown transaction [" + transactionId
+          + "] in region [" + getRegionInfo().getRegionNameAsString()
+          + "], ignoring");
       return;
     }
 
@@ -520,12 +579,64 @@ public class TransactionalRegion extends HRegion {
     retireTransaction(state);
   }
 
+  @Override
+  public List<HStoreFile> close(boolean abort) throws IOException {
+    prepareToClose();
+    if (!commitPendingTransactions.isEmpty()) {
+      // FIXME, better way to handle?
+      LOG.warn("Closing transactional region ["
+          + getRegionInfo().getRegionNameAsString() + "], but still have ["
+          + commitPendingTransactions.size()
+          + "] transactions  that are pending commit");
+    }
+    return super.close(abort);
+  }
+
+  @Override
+  protected void prepareToSplit() {
+    prepareToClose();
+  }
+
+  boolean closing = false;
+
+  /**
+   * Get ready to close.
+   * 
+   */
+  void prepareToClose() {
+    LOG.info("Preparing to close region "
+        + getRegionInfo().getRegionNameAsString());
+    closing = true;
+
+    while (!commitPendingTransactions.isEmpty()) {
+      LOG.info("Preparing to closing transactional region ["
+          + getRegionInfo().getRegionNameAsString() + "], but still have ["
+          + commitPendingTransactions.size()
+          + "] transactions that are pending commit. Sleeping");
+      for (TransactionState s : commitPendingTransactions) {
+        LOG.info(s.toString());
+      }
+      try {
+        Thread.sleep(200);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+
+    }
+  }
+
+  private void checkClosing() throws IOException {
+    if (closing) {
+      throw new IOException("closing region, no more transaction allowed");
+    }
+  }
+
   // Cancel leases, and removed from lease lookup. This transaction may still
   // live in commitedTransactionsBySequenceNumber and commitPendingTransactions
   private void retireTransaction(final TransactionState state) {
     String key = String.valueOf(state.getTransactionId());
     try {
-      transactionLeases.cancelLease(key);
+      transactionLeases.cancelLease(getLeaseId(state.getTransactionId()));
     } catch (LeaseException e) {
       // Ignore
     }
@@ -541,12 +652,14 @@ public class TransactionalRegion extends HRegion {
     state = transactionsById.get(key);
 
     if (state == null) {
-      LOG.trace("Unknown transaction: " + key);
-      throw new UnknownTransactionException(key);
+      LOG.debug("Unknown transaction: [" + key + "], region: ["
+          + getRegionInfo().getRegionNameAsString() + "]");
+      throw new UnknownTransactionException("transaction: [" + key
+          + "], region: [" + getRegionInfo().getRegionNameAsString() + "]");
     }
 
     try {
-      transactionLeases.renewLease(key);
+      transactionLeases.renewLease(getLeaseId(transactionId));
     } catch (LeaseException e) {
       throw new RuntimeException(e);
     }
@@ -555,11 +668,11 @@ public class TransactionalRegion extends HRegion {
   }
 
   private void maybeTriggerOldTransactionFlush() {
-      if (commitedTransactionsBySequenceNumber.size() > oldTransactionFlushTrigger) {
-        removeUnNeededCommitedTransactions();
-      }
+    if (commitedTransactionsBySequenceNumber.size() > oldTransactionFlushTrigger) {
+      removeUnNeededCommitedTransactions();
+    }
   }
-  
+
   /**
    * Cleanup references to committed transactions that are no longer needed.
    * 
@@ -586,20 +699,20 @@ public class TransactionalRegion extends HRegion {
     if (LOG.isDebugEnabled()) {
       StringBuilder debugMessage = new StringBuilder();
       if (numRemoved > 0) {
-        debugMessage.append("Removed ").append(numRemoved).append(
-            " commited transactions");
+        debugMessage.append("Removed [").append(numRemoved).append(
+            "] commited transactions");
 
         if (minStartSeqNumber == Integer.MAX_VALUE) {
           debugMessage.append("with any sequence number");
         } else {
-          debugMessage.append("with sequence lower than ").append(
-              minStartSeqNumber).append(".");
+          debugMessage.append("with sequence lower than [").append(
+              minStartSeqNumber).append("].");
         }
         if (!commitedTransactionsBySequenceNumber.isEmpty()) {
-          debugMessage.append(" Still have ").append(
-              commitedTransactionsBySequenceNumber.size()).append(" left.");
+          debugMessage.append(" Still have [").append(
+              commitedTransactionsBySequenceNumber.size()).append("] left.");
         } else {
-          debugMessage.append("None left.");
+          debugMessage.append(" None left.");
         }
         LOG.debug(debugMessage.toString());
       } else if (commitedTransactionsBySequenceNumber.size() > 0) {
@@ -612,8 +725,13 @@ public class TransactionalRegion extends HRegion {
   }
 
   private Integer getMinStartSequenceNumber() {
+    LinkedList<TransactionState> transactionStates;
+    synchronized (transactionsById) {
+      transactionStates = new LinkedList<TransactionState>(transactionsById
+          .values());
+    }
     Integer min = null;
-    for (TransactionState transactionState : transactionsById.values()) {
+    for (TransactionState transactionState : transactionStates) {
       if (min == null || transactionState.getStartSequenceNumber() < min) {
         min = transactionState.getStartSequenceNumber();
       }
@@ -623,9 +741,15 @@ public class TransactionalRegion extends HRegion {
 
   // TODO, resolve from the global transaction log
   @SuppressWarnings("unused")
-  private void resolveTransactionFromLog(final long transactionId) {
-    throw new RuntimeException("Globaql transaction log is not Implemented");
+  private void resolveTransactionFromLog(final TransactionState transactionState)
+      throws IOException {
+    LOG
+        .error("Global transaction log is not Implemented. (Optimisticly) assuming transaction commit!");
+    commit(transactionState);
+    // throw new RuntimeException("Global transaction log is not Implemented");
   }
+
+  private static final int MAX_COMMIT_PENDING_WAITS = 10;
 
   private class TransactionLeaseListener implements LeaseListener {
     private final String transactionName;
@@ -635,7 +759,8 @@ public class TransactionalRegion extends HRegion {
     }
 
     public void leaseExpired() {
-      LOG.info("Transaction " + this.transactionName + " lease expired");
+      LOG.info("Transaction [" + this.transactionName + "] expired in region ["
+          + getRegionInfo().getRegionNameAsString() + "]");
       TransactionState s = null;
       synchronized (transactionsById) {
         s = transactionsById.remove(transactionName);
@@ -652,8 +777,27 @@ public class TransactionalRegion extends HRegion {
       case COMMIT_PENDING:
         LOG.info("Transaction " + s.getTransactionId()
             + " expired in COMMIT_PENDING state");
-        LOG.info("Checking transaction status in transaction log");
-        resolveTransactionFromLog(s.getTransactionId());
+
+        try {
+          if (s.getCommitPendingWaits() > MAX_COMMIT_PENDING_WAITS) {
+            LOG.info("Checking transaction status in transaction log");
+            resolveTransactionFromLog(s);
+            break;
+          }
+          LOG.info("renewing lease and hoping for commit");
+          s.incrementCommitPendingWaits();
+          String key = Long.toString(s.getTransactionId());
+          transactionsById.put(key, s);
+          try {
+            transactionLeases.createLease(getLeaseId(s.getTransactionId()),
+                this);
+          } catch (LeaseStillHeldException e) {
+            transactionLeases.renewLease(getLeaseId(s.getTransactionId()));
+          }
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+
         break;
       default:
         LOG.warn("Unexpected status on expired lease");
@@ -696,7 +840,10 @@ public class TransactionalRegion extends HRegion {
       TransactionState state = getTransactionState(transactionId);
 
       if (result) {
+        // TODO: Is this right???? St.Ack
+
         Map<byte[], Cell> localWrites = state.localGetFull(key.getRow(), null,
+
             Integer.MAX_VALUE);
         if (localWrites != null) {
           LOG

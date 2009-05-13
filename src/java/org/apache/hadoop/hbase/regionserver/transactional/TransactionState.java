@@ -31,7 +31,9 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.ColumnNameParseException;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
@@ -91,6 +93,13 @@ class TransactionState {
       }
       return true;
     }
+    
+    @Override
+    public String toString() {
+      return "startRow: "
+          + (startRow == null ? "null" : Bytes.toString(startRow))
+          + ", endRow: " + (endRow == null ? "null" : Bytes.toString(endRow));
+    }
   }
 
   private final HRegionInfo regionInfo;
@@ -104,6 +113,7 @@ class TransactionState {
   private Set<TransactionState> transactionsToCheck = new HashSet<TransactionState>();
   private int startSequenceNumber;
   private Integer sequenceNumber;
+  private int commitPendingWaits = 0;
 
   TransactionState(final long transactionId, final long rLogStartSequenceId,
       HRegionInfo regionInfo) {
@@ -140,7 +150,7 @@ class TransactionState {
   Map<byte[], Cell> localGetFull(final byte[] row, final Set<byte[]> columns,
       final long timestamp) {
     Map<byte[], Cell> results = new TreeMap<byte[], Cell>(
-        Bytes.BYTES_COMPARATOR); // Must use the Bytes Conparator because
+        Bytes.BYTES_COMPARATOR); 
     for (BatchUpdate b : writeSet) {
       if (!Bytes.equals(row, b.getRow())) {
         continue;
@@ -150,7 +160,7 @@ class TransactionState {
       }
       for (BatchOperation op : b) {
         if (!op.isPut()
-            || (columns != null && !columns.contains(op.getColumn()))) {
+            || (columns != null && !columnInColumns(op.getColumn(), columns))) {
           continue;
         }
         results.put(op.getColumn(), new Cell(op.getValue(), b.getTimestamp()));
@@ -159,6 +169,14 @@ class TransactionState {
     return results.size() == 0 ? null : results;
   }
 
+  private boolean columnInColumns(byte [] column, Set<byte []> columns) {
+    try {
+      return columns.contains(column) || columns.contains(Bytes.add(HStoreKey.getFamily(column), Bytes.toBytes(":")));
+    } catch (ColumnNameParseException e) {
+      throw new RuntimeException(e);
+    }
+  }
+  
   /**
    * Get from the writeSet.
    * 
@@ -221,7 +239,8 @@ class TransactionState {
         if (scanRange.contains(otherUpdate.getRow())) {
           LOG.debug("Transaction [" + this.toString()
               + "] has scan which conflicts with [" + checkAgainst.toString()
-              + "]: region [" + regionInfo.getRegionNameAsString() + "], row["
+              + "]: region [" + regionInfo.getRegionNameAsString() + "], scanRange[" +
+              scanRange.toString()+"] ,row["
               + Bytes.toString(otherUpdate.getRow()) + "]");
           return true;
         }
@@ -357,6 +376,14 @@ class TransactionState {
       }
     }
     return null;
+  }
+  
+  int getCommitPendingWaits() {
+    return commitPendingWaits;
+  }
+  
+  void incrementCommitPendingWaits() {
+    this.commitPendingWaits++;
   }
 
 }

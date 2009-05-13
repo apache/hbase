@@ -62,7 +62,7 @@ public class IndexedRegionServer extends TransactionalRegionServer implements
       throws IOException {
     HRegion r = new IndexedRegion(HTableDescriptor.getTableDir(super
         .getRootDir(), regionInfo.getTableDesc().getName()), super.log, super
-        .getFileSystem(), super.conf, regionInfo, super.getFlushRequester());
+        .getFileSystem(), super.conf, regionInfo, super.getFlushRequester(), super.getLeases());
     r.initialize(null, new Progressable() {
       public void progress() {
         addProcessingMessage(regionInfo);

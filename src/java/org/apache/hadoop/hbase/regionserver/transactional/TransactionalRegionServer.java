@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
@@ -57,8 +58,12 @@ import org.apache.hadoop.util.Progressable;
  */
 public class TransactionalRegionServer extends HRegionServer implements
     TransactionalRegionInterface {
+  private static final String LEASE_TIME = "hbase.transaction.leasetime";
+  private static final int DEFAULT_LEASE_TIME = 60 * 1000;
+  private static final int LEASE_CHECK_FREQUENCY = 1000;
+  
   static final Log LOG = LogFactory.getLog(TransactionalRegionServer.class);
-
+  private final Leases transactionLeases;
   private final CleanOldTransactionsChore cleanOldTransactionsThread;
 
   /**
@@ -81,6 +86,9 @@ public class TransactionalRegionServer extends HRegionServer implements
     super(address, conf);
     cleanOldTransactionsThread = new CleanOldTransactionsChore(this,
         super.stopRequested);
+    transactionLeases = new Leases(conf.getInt(LEASE_TIME, DEFAULT_LEASE_TIME),
+        LEASE_CHECK_FREQUENCY);
+    LOG.error("leases time:"+conf.getInt(LEASE_TIME, DEFAULT_LEASE_TIME));
   }
 
   @Override
@@ -104,6 +112,7 @@ public class TransactionalRegionServer extends HRegionServer implements
     };
     Threads.setDaemonThreadRunning(this.cleanOldTransactionsThread, n
         + ".oldTransactionCleaner", handler);
+    Threads.setDaemonThreadRunning(this.transactionLeases, "Transactional leases");
 
   }
 
@@ -112,7 +121,7 @@ public class TransactionalRegionServer extends HRegionServer implements
       throws IOException {
     HRegion r = new TransactionalRegion(HTableDescriptor.getTableDir(super
         .getRootDir(), regionInfo.getTableDesc().getName()), super.log, super
-        .getFileSystem(), super.conf, regionInfo, super.getFlushRequester());
+        .getFileSystem(), super.conf, regionInfo, super.getFlushRequester(), this.transactionLeases);
     r.initialize(null, new Progressable() {
       public void progress() {
         addProcessingMessage(regionInfo);
@@ -125,13 +134,29 @@ public class TransactionalRegionServer extends HRegionServer implements
       throws NotServingRegionException {
     return (TransactionalRegion) super.getRegion(regionName);
   }
+  
+  protected Leases getTransactionalLeases() {
+    return this.transactionLeases;
+  }
 
+  /** We want to delay the close region for a bit if we have commit pending transactions.
+   * 
+   */
+  @Override
+  protected void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
+  throws IOException {
+    getTransactionalRegion(hri.getRegionName()).prepareToClose();
+    super.closeRegion(hri, reportWhenCompleted);
+  }
+  
   public void abort(final byte[] regionName, final long transactionId)
       throws IOException {
     checkOpen();
     super.getRequestCount().incrementAndGet();
     try {
       getTransactionalRegion(regionName).abort(transactionId);
+    } catch(NotServingRegionException e) {
+      LOG.info("Got not serving region durring abort. Ignoring.");
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -162,12 +187,24 @@ public class TransactionalRegionServer extends HRegionServer implements
     }
   }
 
-  public boolean commitRequest(final byte[] regionName, final long transactionId)
+  public int commitRequest(final byte[] regionName, final long transactionId)
       throws IOException {
     checkOpen();
     super.getRequestCount().incrementAndGet();
     try {
       return getTransactionalRegion(regionName).commitRequest(transactionId);
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
+  }
+  
+  public boolean commitIfPossible(byte[] regionName, long transactionId)
+  throws IOException {
+    checkOpen();
+    super.getRequestCount().incrementAndGet();
+    try {
+      return getTransactionalRegion(regionName).commitIfPossible(transactionId);
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -228,6 +265,8 @@ public class TransactionalRegionServer extends HRegionServer implements
   public RowResult getRow(final long transactionId, final byte[] regionName,
       final byte[] row, final byte[][] columns, final long ts)
       throws IOException {
+    long startTime = System.nanoTime();
+
     checkOpen();
     super.getRequestCount().incrementAndGet();
     try {
@@ -239,9 +278,9 @@ public class TransactionalRegionServer extends HRegionServer implements
       }
 
       TransactionalRegion region = getTransactionalRegion(regionName);
-      Map<byte[], Cell> map = region.getFull(transactionId, row, columnSet, ts);
       HbaseMapWritable<byte[], Cell> result = new HbaseMapWritable<byte[], Cell>();
-      result.putAll(map);
+      result.putAll(region.getFull(transactionId, row, columnSet, ts));
+      LOG.debug("Got row ["+Bytes.toString(row)+"] in ["+((System.nanoTime()-startTime) / 1000)+"]micro seconds");
       return new RowResult(row, result);
     } catch (IOException e) {
       checkFileSystem();

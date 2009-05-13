@@ -1395,7 +1395,7 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
     getOutboundMsgs().add(new HMsg(HMsg.Type.MSG_REPORT_PROCESS_OPEN, hri));
   }
 
-  void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
+  protected void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
   throws IOException {
     HRegion region = this.removeFromOnlineRegions(hri);
     if (region != null) {

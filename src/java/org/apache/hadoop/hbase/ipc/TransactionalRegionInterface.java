@@ -27,12 +27,20 @@ import org.apache.hadoop.hbase.io.RowResult;
 /**
  * Interface for transactional region servers.
  * 
- * <p>NOTE: if you change the interface, you must change the RPC version
- * number in HBaseRPCProtocolVersion
+ * <p>
+ * NOTE: if you change the interface, you must change the RPC version number in
+ * HBaseRPCProtocolVersion
  * 
  */
 public interface TransactionalRegionInterface extends HRegionInterface {
 
+  /** Status code representing a transaction that can be committed. */
+  int COMMIT_OK = 1;
+  /** Status code representing a read-only transaction that can be committed. */
+  int COMMIT_OK_READ_ONLY = 2;
+  /** Status code representing a transaction that cannot be committed. */
+  int COMMIT_UNSUCESSFUL = 3;
+  
   /**
    * Sent to initiate a transaction.
    * 
@@ -40,13 +48,13 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * @param regionName name of region
    * @throws IOException
    */
-  public void beginTransaction(long transactionId, final byte[] regionName)
+  void beginTransaction(long transactionId, final byte[] regionName)
       throws IOException;
 
   /**
    * Retrieve a single value from the specified region for the specified row and
    * column keys
-   *
+   * 
    * @param transactionId
    * @param regionName name of region
    * @param row row key
@@ -54,8 +62,8 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * @return alue for that region/row/column
    * @throws IOException
    */
-  public Cell get(long transactionId, final byte[] regionName,
-      final byte[] row, final byte[] column) throws IOException;
+  Cell get(long transactionId, final byte[] regionName, final byte[] row,
+      final byte[] column) throws IOException;
 
   /**
    * Get the specified number of versions of the specified row and column
@@ -68,9 +76,8 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * @return array of values
    * @throws IOException
    */
-  public Cell[] get(long transactionId, final byte[] regionName,
-      final byte[] row, final byte[] column, final int numVersions)
-      throws IOException;
+  Cell[] get(long transactionId, final byte[] regionName, final byte[] row,
+      final byte[] column, final int numVersions) throws IOException;
 
   /**
    * Get the specified number of versions of the specified row and column with
@@ -85,9 +92,9 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * @return array of values
    * @throws IOException
    */
-  public Cell[] get(long transactionId, final byte[] regionName,
-      final byte[] row, final byte[] column, final long timestamp,
-      final int numVersions) throws IOException;
+  Cell[] get(long transactionId, final byte[] regionName, final byte[] row,
+      final byte[] column, final long timestamp, final int numVersions)
+      throws IOException;
 
   /**
    * Get all the data for the specified row at a given timestamp
@@ -99,7 +106,7 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * @return map of values
    * @throws IOException
    */
-  public RowResult getRow(long transactionId, final byte[] regionName,
+  RowResult getRow(long transactionId, final byte[] regionName,
       final byte[] row, final long ts) throws IOException;
 
   /**
@@ -113,7 +120,7 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * @return map of values
    * @throws IOException
    */
-  public RowResult getRow(long transactionId, final byte[] regionName,
+  RowResult getRow(long transactionId, final byte[] regionName,
       final byte[] row, final byte[][] columns, final long ts)
       throws IOException;
 
@@ -127,7 +134,7 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * @return map of values
    * @throws IOException
    */
-  public RowResult getRow(long transactionId, final byte[] regionName,
+  RowResult getRow(long transactionId, final byte[] regionName,
       final byte[] row, final byte[][] columns) throws IOException;
 
   /**
@@ -140,7 +147,7 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * @param timestamp Delete all entries that have this timestamp or older
    * @throws IOException
    */
-  public void deleteAll(long transactionId, byte[] regionName, byte[] row,
+  void deleteAll(long transactionId, byte[] regionName, byte[] row,
       long timestamp) throws IOException;
 
   /**
@@ -160,7 +167,7 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * @return scannerId scanner identifier used in other calls
    * @throws IOException
    */
-  public long openScanner(final long transactionId, final byte[] regionName,
+  long openScanner(final long transactionId, final byte[] regionName,
       final byte[][] columns, final byte[] startRow, long timestamp,
       RowFilterInterface filter) throws IOException;
 
@@ -172,37 +179,47 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * @param b BatchUpdate
    * @throws IOException
    */
-  public void batchUpdate(long transactionId, final byte[] regionName,
+  void batchUpdate(long transactionId, final byte[] regionName,
       final BatchUpdate b) throws IOException;
 
   /**
    * Ask if we can commit the given transaction.
-   *
+   * 
    * @param regionName
    * @param transactionId
-   * @return true if we can commit
+   * @return status of COMMIT_OK, COMMIT_READ_ONLY, or COMMIT_UNSUSESSFULL
    * @throws IOException
    */
-  public boolean commitRequest(final byte[] regionName, long transactionId)
+  int commitRequest(final byte[] regionName, long transactionId)
+      throws IOException;
+
+  /**
+   * Try to commit the given transaction. This is used when there is only one
+   * participating region.
+   * 
+   * @param regionName
+   * @param transactionId
+   * @return true if committed
+   * @throws IOException
+   */
+  boolean commitIfPossible(final byte[] regionName, long transactionId)
       throws IOException;
 
   /**
    * Commit the transaction.
-   *
+   * 
    * @param regionName
    * @param transactionId
    * @throws IOException
    */
-  public void commit(final byte[] regionName, long transactionId)
-      throws IOException;
+  void commit(final byte[] regionName, long transactionId) throws IOException;
 
   /**
    * Abort the transaction.
-   *
+   * 
    * @param regionName
    * @param transactionId
    * @throws IOException
    */
-  public void abort(final byte[] regionName, long transactionId)
-      throws IOException;
+  void abort(final byte[] regionName, long transactionId) throws IOException;
 }

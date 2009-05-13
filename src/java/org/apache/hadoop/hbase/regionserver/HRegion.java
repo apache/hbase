@@ -379,7 +379,8 @@ public class HRegion implements HConstants {
    * 
    * @throws IOException
    */
-  List<HStoreFile> close(boolean abort) throws IOException {
+  public List<HStoreFile> close(final boolean abort) throws IOException {
+
     if (isClosed()) {
       LOG.warn("region " + this + " already closed");
       return null;
@@ -533,6 +534,7 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   HRegion[] splitRegion(final byte [] midKey) throws IOException {
+    prepareToSplit();
     synchronized (splitLock) {
       if (closed.get()) {
         return null;
@@ -626,6 +628,10 @@ public class HRegion implements HConstants {
       
       return regions;
     }
+  }
+  
+  protected void prepareToSplit() {
+    // nothing
   }
   
   /*

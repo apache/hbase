@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 import org.apache.hadoop.hbase.client.tableindexed.IndexedTable;
@@ -59,8 +60,8 @@ class IndexedRegion extends TransactionalRegion {
 
   public IndexedRegion(final Path basedir, final HLog log, final FileSystem fs,
       final HBaseConfiguration conf, final HRegionInfo regionInfo,
-      final FlushRequester flushListener) {
-    super(basedir, log, fs, conf, regionInfo, flushListener);
+      final FlushRequester flushListener, Leases transactionLeases) {
+    super(basedir, log, fs, conf, regionInfo, flushListener, transactionLeases);
     this.conf = conf;
   }
 
