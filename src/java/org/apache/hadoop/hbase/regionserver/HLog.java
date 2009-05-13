@@ -172,8 +172,8 @@ public class HLog implements HConstants, Syncable {
       conf.getInt("hbase.regionserver.maxlogentries", 100000);
     this.flushlogentries =
       conf.getInt("hbase.regionserver.flushlogentries", 100);
-    this.blocksize =
-      conf.getLong("hbase.regionserver.hlog.blocksize", 1024L * 1024L);
+    this.blocksize = conf.getLong("hbase.regionserver.hlog.blocksize",
+      this.fs.getDefaultBlockSize());
     this.optionalFlushInterval =
       conf.getLong("hbase.regionserver.optionallogflushinterval", 10 * 1000);
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
@@ -183,6 +183,10 @@ public class HLog implements HConstants, Syncable {
     }
     fs.mkdirs(dir);
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 64);
+    LOG.info("HLog configuration: blocksize=" + this.blocksize +
+      ", maxlogentries=" + this.maxlogentries + ", flushlogentries=" +
+      this.flushlogentries + ", optionallogflushinternal=" +
+      this.optionalFlushInterval + "ms");
     rollWriter();
   }
 
@@ -273,7 +277,7 @@ public class HLog implements HConstants, Syncable {
           new Metadata());
 
         LOG.info((oldFile != null?
-          "Closed " + oldFile + ", entries=" + this.numEntries + ". ": "") +
+          "Closed " + oldFile + ", entries=" + this.numEntries.get() + ". ": "") +
           "New log writer: " + FSUtils.getPath(newPath));
 
         // Can we delete any of the old log files?
@@ -500,6 +504,7 @@ public class HLog implements HConstants, Syncable {
 
   void optionalSync() {
     if (!this.closed) {
+      long now = System.currentTimeMillis();
       synchronized (updateLock) {
         if (((System.currentTimeMillis() - this.optionalFlushInterval) >
         this.lastLogFlushTime) && this.unflushedEntries > 0) {
@@ -509,6 +514,11 @@ public class HLog implements HConstants, Syncable {
             LOG.error("Error flushing HLog", e);
           }
         }
+      }
+      long took = System.currentTimeMillis() - now;
+      if (took > 1000) {
+        LOG.warn(Thread.currentThread().getName() + " took " + took +
+          "ms optional sync to HLog; editcount=" + this.numEntries.get());
       }
     }
   }
@@ -522,9 +532,15 @@ public class HLog implements HConstants, Syncable {
   private void doWrite(HLogKey logKey, HLogEdit logEdit, boolean sync)
   throws IOException {
     try {
+      long now = System.currentTimeMillis();
       this.writer.append(logKey, logEdit);
       if (sync || ++unflushedEntries >= flushlogentries) {
         sync();
+      }
+      long took = System.currentTimeMillis() - now;
+      if (took > 1000) {
+        LOG.warn(Thread.currentThread().getName() + " took " + took +
+          "ms appending an edit to HLog; editcount=" + this.numEntries.get());
       }
     } catch (IOException e) {
       LOG.fatal("Could not append. Requesting close of log", e);
@@ -741,7 +757,7 @@ public class HLog implements HConstants, Syncable {
       for (int i = 0; i < logfiles.length; i++) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Splitting " + (i + 1) + " of " + logfiles.length + ": " +
-            logfiles[i].getPath());
+            logfiles[i].getPath() + ", length=" + logfiles[i].getLen());
         }
         // Check for possibly empty file. With appends, currently Hadoop reports
         // a zero length even if the file has been sync'd. Revisit if 
