@@ -5,6 +5,11 @@ Release 0.19.2 - Unreleased
                hbase.regionserver.hlog.blocksize is not specified
    HBASE-1344  WARN IllegalStateException: Cannot set a region as open if
                it has not been pending
+   HBASE-1362  .META. may not come back if regionserver crashes
+               (Nitay Joffe via Stack)
+
+  IMPROVEMENTS
+   HBASE-1418  Transacitonal improvments and fixes (Clint Morgan via Stack)
 
 Release 0.19.2 - May 9th, 2009 
   BUG FIXES
