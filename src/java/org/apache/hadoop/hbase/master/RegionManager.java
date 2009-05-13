@@ -270,12 +270,7 @@ class RegionManager implements HConstants {
       }
       
       for (RegionState s: regionsToAssign) {
-        LOG.info("assigning region " + Bytes.toString(s.getRegionName())+
-          " to server " + serverName);
-        s.setPendingOpen(serverName);
-        this.historian.addRegionAssignment(s.getRegionInfo(), serverName);
-        returnMsgs.add(
-            new HMsg(HMsg.Type.MSG_REGION_OPEN, s.getRegionInfo(), inSafeMode()));
+        doRegionAssignment(s, serverName, returnMsgs);
         if (--nregions <= 0) {
           break;
         }
@@ -283,6 +278,41 @@ class RegionManager implements HConstants {
     }
   }
   
+  /*
+   * Assign all to the only server. An unlikely case but still possible.
+   * 
+   * Note that no synchronization is needed on regionsInTransition while
+   * iterating on it because the only caller is assignRegions whose caller owns 
+   * the monitor for RegionManager
+   * 
+   * @param regionsToAssign
+   * @param serverName
+   * @param returnMsgs
+   */
+  private void assignRegionsToOneServer(final Set<RegionState> regionsToAssign,
+      final String serverName, final ArrayList<HMsg> returnMsgs) {
+    for (RegionState s: regionsToAssign) {
+      doRegionAssignment(s, serverName, returnMsgs);
+    }
+  }
+
+  /*
+   * Do single region assignment.
+   * @param rs
+   * @param sinfo
+   * @param returnMsgs
+   */
+  private void doRegionAssignment(final RegionState rs,
+      final String serverName, final ArrayList<HMsg> returnMsgs) {
+    byte [] regionName = rs.getRegionInfo().getRegionName();
+    LOG.info("Assigning region " + Bytes.toString(regionName) + " to " + serverName);
+    rs.setPendingOpen(serverName);
+    this.regionsInTransition.put(regionName, rs);
+    this.historian.addRegionAssignment(rs.getRegionInfo(),
+        serverName);
+    returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo()));
+  }
+
   /*
    * @param nRegionsToAssign
    * @param thisServersLoad
@@ -381,30 +411,6 @@ class RegionManager implements HConstants {
       break;
     }
     return nservers;
-  }
-  
-  
-  /*
-   * Assign all to the only server. An unlikely case but still possible.
-   * 
-   * Note that no synchronization is needed on regionsInTransition while
-   * iterating on it because the only caller is assignRegions whose caller owns 
-   * the monitor for RegionManager
-   * 
-   * @param regionsToAssign
-   * @param serverName
-   * @param returnMsgs
-   */
-  private void assignRegionsToOneServer(final Set<RegionState> regionsToAssign,
-      final String serverName, final ArrayList<HMsg> returnMsgs) {
-    for (RegionState s: regionsToAssign) {
-      LOG.info("assigning region " + Bytes.toString(s.getRegionName()) +
-          " to the only server " + serverName);
-      s.setPendingOpen(serverName);
-      this.historian.addRegionAssignment(s.getRegionInfo(), serverName);
-      returnMsgs.add(new HMsg(
-          HMsg.Type.MSG_REGION_OPEN, s.getRegionInfo(), inSafeMode()));
-    }
   }
   
   /*

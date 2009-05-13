@@ -277,7 +277,7 @@ public class HLog implements HConstants, Syncable {
           new Metadata());
 
         LOG.info((oldFile != null?
-          "Closed " + oldFile + ", entries=" + this.numEntries.get() + ". ": "") +
+          "Closed " + oldFile + ", entries=" + this.numEntries + ". ": "") +
           "New log writer: " + FSUtils.getPath(newPath));
 
         // Can we delete any of the old log files?
@@ -518,7 +518,7 @@ public class HLog implements HConstants, Syncable {
       long took = System.currentTimeMillis() - now;
       if (took > 1000) {
         LOG.warn(Thread.currentThread().getName() + " took " + took +
-          "ms optional sync to HLog; editcount=" + this.numEntries.get());
+          "ms optional sync to HLog; editcount=" + this.numEntries);
       }
     }
   }
@@ -540,7 +540,7 @@ public class HLog implements HConstants, Syncable {
       long took = System.currentTimeMillis() - now;
       if (took > 1000) {
         LOG.warn(Thread.currentThread().getName() + " took " + took +
-          "ms appending an edit to HLog; editcount=" + this.numEntries.get());
+          "ms appending an edit to HLog; editcount=" + this.numEntries);
       }
     } catch (IOException e) {
       LOG.fatal("Could not append. Requesting close of log", e);

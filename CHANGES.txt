@@ -3,6 +3,8 @@ Release 0.19.2 - Unreleased
   BUG FIXES
    HBASE-1413  fall back to filesystem block size default if
                hbase.regionserver.hlog.blocksize is not specified
+   HBASE-1344  WARN IllegalStateException: Cannot set a region as open if
+               it has not been pending
 
 Release 0.19.2 - May 9th, 2009 
   BUG FIXES
