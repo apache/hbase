@@ -1,5 +1,5 @@
 HBase Change Log
-Release 0.19.2 - Unreleased
+Release 0.19.3 - Unreleased
   BUG FIXES
    HBASE-1413  fall back to filesystem block size default if
                hbase.regionserver.hlog.blocksize is not specified
@@ -12,6 +12,7 @@ Release 0.19.2 - Unreleased
    HBASE-1418  Transacitonal improvments and fixes (Clint Morgan via Stack)
    HBASE-1424  have shell print regioninfo and location on first load if
                DEBUG enabled
+   HBASE-1008  [performance] The replay of logs on server crash takes way too long
 
 Release 0.19.2 - May 9th, 2009 
   BUG FIXES
