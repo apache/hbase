@@ -89,9 +89,9 @@ import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
-import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.HBaseRPC.Server;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -168,7 +168,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   // Server to handle client requests.  Default access so can be accessed by
   // unit tests.
-  HBaseServer server;
+  Server server;
   
   // Leases
   private Leases leases;
@@ -1296,8 +1296,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         // should retry indefinitely.
         master = (HMasterRegionInterface)HBaseRPC.waitForProxy(
             HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
-            masterAddress.getInetSocketAddress(),
-            this.conf, -1, this.rpcTimeout);
+            masterAddress.getInetSocketAddress(), this.conf, -1);
       } catch (IOException e) {
         LOG.warn("Unable to connect to master. Retrying. Error was:", e);
         sleeper.sleep();

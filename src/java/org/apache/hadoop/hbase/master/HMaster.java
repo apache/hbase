@@ -64,10 +64,10 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
-import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.HBaseRPC.Server;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -123,7 +123,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   volatile BlockingQueue<RegionServerOperation> toDoQueue =
     new LinkedBlockingQueue<RegionServerOperation>();
 
-  private final HBaseServer server;
+  private final Server server;
   private final HServerAddress address;
 
   final ServerConnection connection;
@@ -568,7 +568,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     // use the IP given by the user.
     if (serverInfo.getServerAddress().getBindAddress().equals(
         DEFAULT_HOST)) {
-      String rsAddress = HBaseServer.getRemoteAddress();
+      String rsAddress = Server.getRemoteAddress();
       serverInfo.setServerAddress(new HServerAddress(rsAddress,
       serverInfo.getServerAddress().getPort()));
     }
@@ -585,7 +585,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   protected MapWritable createConfigurationSubset() {
     MapWritable mw = addConfig(new MapWritable(), HConstants.HBASE_DIR);
     // Get the real address of the HRS.
-    String rsAddress = HBaseServer.getRemoteAddress();
+    String rsAddress = Server.getRemoteAddress();
     if (rsAddress != null) {
       mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));
     }

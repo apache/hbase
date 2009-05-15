@@ -777,7 +777,7 @@ public class HConnectionManager implements HConstants {
             server = (HRegionInterface)HBaseRPC.waitForProxy(
                 serverInterfaceClass, HBaseRPCProtocolVersion.versionID,
                 regionServer.getInetSocketAddress(), this.conf, 
-                this.maxRPCAttempts, this.rpcTimeout);
+                this.maxRPCAttempts);
           } catch (RemoteException e) {
             throw RemoteExceptionHandler.decodeRemoteException(e);
           }
