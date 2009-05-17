@@ -259,6 +259,10 @@ public class HLog implements HConstants, Syncable {
    * @throws IOException
    */
   public byte [] rollWriter() throws FailedLogCloseException, IOException {
+    // Return if nothing to flush.
+    if (this.writer != null && this.numEntries <= 0) {
+      return null;
+    }
     byte [] regionToFlush = null;
     this.cacheFlushLock.lock();
     try {
@@ -526,7 +530,7 @@ public class HLog implements HConstants, Syncable {
       }
     }
   }
-  
+
   private void requestLogRoll() {
     if (this.listener != null) {
       this.listener.logRollRequested();

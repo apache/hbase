@@ -13,6 +13,8 @@ Release 0.19.3 - Unreleased
    HBASE-1424  have shell print regioninfo and location on first load if
                DEBUG enabled
    HBASE-1008  [performance] The replay of logs on server crash takes way too long
+   HBASE-1401  close HLog (and open new one) if there hasnt been edits in
+               N minutes/hours
 
 Release 0.19.2 - May 9th, 2009 
   BUG FIXES
