@@ -998,6 +998,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     System.exit(0);
   }
 
+  @SuppressWarnings("null")
   protected static void doMain(String [] args,
       Class<? extends HMaster> masterClass) {
 
