@@ -58,22 +58,21 @@ class LogRoller extends Thread implements LogRollListener {
       long now = System.currentTimeMillis();
       boolean periodic = false;
       if (!rollLog.get()) {
-        periodic = (now - this.lastrolltime) < this.rollperiod;
-        if (periodic) {
-          // Time for periodic roll
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Hlog roll period " + this.rollperiod + "ms elapsed");
+        periodic = (now - this.lastrolltime) > this.rollperiod;
+        if (!periodic) {
+          synchronized (rollLog) {
+            try {
+              rollLog.wait(server.threadWakeFrequency);
+            } catch (InterruptedException e) {
+              // Fall through
+            }
           }
-          break;
+          continue;
         }
-        synchronized (rollLog) {
-          try {
-            rollLog.wait(server.threadWakeFrequency);
-          } catch (InterruptedException e) {
-            continue;
-          }
+        // Time for periodic roll
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Hlog roll period " + this.rollperiod + "ms elapsed");
         }
-        continue;
       }
       rollLock.lock();          // Don't interrupt us. We're working
       try {
