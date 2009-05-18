@@ -133,6 +133,9 @@ Release 0.20.0 - Unreleased
                (Clint Morgan via Stack)
    HBASE-1431  NPE in HTable.checkAndSave when row doesn't exist (Guilherme
                Mauro Germoglio Barbosa via Andrew Purtell)
+   HBASE-1421  Processing a regionserver message -- OPEN, CLOSE, SPLIT, etc. --
+               and if we're carrying more than one message in payload, if
+               exception, all messages that follow are dropped on floor
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
@@ -256,6 +259,8 @@ Release 0.20.0 - Unreleased
                HLog#append?)
    HBASE-1429  Allow passing of a configuration object to HTablePool
    HBASE-1432  LuceneDocumentWrapper is not public
+   HBASE-1401  close HLog (and open new one) if there hasnt been edits in N
+               minutes/hours
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
