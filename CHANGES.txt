@@ -7,12 +7,15 @@ Release 0.19.3 - Unreleased
                it has not been pending
    HBASE-1362  .META. may not come back if regionserver crashes
                (Nitay Joffe via Stack)
+   HBASE-1431  NPE in HTable.checkAndSave when row doesn't exist (Guilherme
+               Mauro Germoglio Barbosa via Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-1418  Transacitonal improvments and fixes (Clint Morgan via Stack)
    HBASE-1424  have shell print regioninfo and location on first load if
                DEBUG enabled
-   HBASE-1008  [performance] The replay of logs on server crash takes way too long
+   HBASE-1008  [performance] The replay of logs on server crash takes way too
+               long
    HBASE-1401  close HLog (and open new one) if there hasnt been edits in
                N minutes/hours
 
