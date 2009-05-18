@@ -12,6 +12,7 @@ Release 0.19.3 - Unreleased
    HBASE-1421  Processing a regionserver message -- OPEN, CLOSE, SPLIT, etc.
                -- and if we're carrying more than one message in payload,
                if exception, all messages that follow are dropped on floor
+   HBASE-1386  NPE in housekeeping
 
   IMPROVEMENTS
    HBASE-1418  Transacitonal improvments and fixes (Clint Morgan via Stack)

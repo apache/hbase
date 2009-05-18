@@ -1061,12 +1061,16 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
     // If the todo list has > 0 messages, iterate looking for open region
     // messages. Send the master a message that we're working on its
     // processing so it doesn't assign the region elsewhere.
-    if (this.toDo.size() <= 0) {
+    if (this.toDo.isEmpty()) {
       return;
     }
     // This iterator is 'safe'.  We are guaranteed a view on state of the
     // queue at time iterator was taken out.  Apparently goes from oldest.
     for (ToDoEntry e: this.toDo) {
+      HMsg msg = e.msg;
+      if (msg == null) {
+        LOG.warn("Message is empty -- hbase-1386: " + e);
+      }
       if (e.msg.isType(HMsg.Type.MSG_REGION_OPEN)) {
         addProcessingMessage(e.msg.getRegionInfo());
       }
@@ -1211,10 +1215,9 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
    * Data structure to hold a HMsg and retries count.
    */
   private static class ToDoEntry {
-    private int tries;
+    protected final AtomicInteger tries = new AtomicInteger(0);
     private final HMsg msg;
     ToDoEntry(HMsg msg) {
-      this.tries = 0;
       this.msg = msg;
     }
   }
@@ -1309,9 +1312,9 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
             if (ex instanceof IOException) {
               ex = RemoteExceptionHandler.checkIOException((IOException) ex);
             }
-            if(e != null && e.tries < numRetries) {
+            if(e != null && e.tries.get() < numRetries) {
               LOG.warn(ex);
-              e.tries++;
+              e.tries.incrementAndGet();
               try {
                 toDo.put(e);
               } catch (InterruptedException ie) {
