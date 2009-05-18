@@ -1168,9 +1168,8 @@ class RegionManager implements HConstants {
      */
     synchronized void setPendingOpen(final String serverName) {
       if (!this.unassigned) {
-        throw new IllegalStateException(
-            "Cannot assign a region that is not currently unassigned. State: " +
-            toString());
+        LOG.warn("Cannot assign a region that is not currently unassigned. " +
+          "FIX!! State: " + toString());
       }
       this.unassigned = false;
       this.pendingOpen = true;
@@ -1188,9 +1187,8 @@ class RegionManager implements HConstants {
 
     synchronized void setOpen() {
       if (!pendingOpen) {
-        throw new IllegalStateException(
-            "Cannot set a region as open if it has not been pending. State: " +
-            toString());
+        LOG.warn("Cannot set a region as open if it has not been pending. " +
+          "FIX!! State: " + toString());
       }
       this.unassigned = false;
       this.pendingOpen = false;
@@ -1222,9 +1220,8 @@ class RegionManager implements HConstants {
 
     synchronized void setPendingClose() {
       if (!closing) {
-        throw new IllegalStateException(
-            "Cannot set a region as pending close if it has not been closing. " +
-            "State: " + toString());
+        LOG.warn("Cannot set a region as pending close if it has not been " +
+          "closing.  FIX!! State: " + toString());
       }
       this.unassigned = false;
       this.pendingOpen = false;

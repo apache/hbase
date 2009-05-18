@@ -396,11 +396,15 @@ class ServerManager implements HConstants {
     return processMsgs(serverName, serverInfo, mostLoadedRegions, msgs);
   }
 
-  /** 
+  /* 
    * Process all the incoming messages from a server that's contacted us.
    * 
    * Note that we never need to update the server's load information because
    * that has already been done in regionServerReport.
+   * @param serverInfo
+   * @param mostLoadedRegions
+   * @param incomingMsgs
+   * @return
    */
   private HMsg[] processMsgs(String serverName, HServerInfo serverInfo, 
     HRegionInfo[] mostLoadedRegions, HMsg incomingMsgs[])
@@ -411,6 +415,8 @@ class ServerManager implements HConstants {
         "hbase-958 debugging");
     }
     // Get reports on what the RegionServer did.
+    // Be careful that in message processors we don't throw exceptions that
+    // break the switch below because then we might drop messages on the floor.
     int openingCount = 0;
     for (int i = 0; i < incomingMsgs.length; i++) {
       HRegionInfo region = incomingMsgs[i].getRegionInfo();
@@ -434,8 +440,7 @@ class ServerManager implements HConstants {
           break;
 
         default:
-          throw new IOException(
-            "Impossible state during message processing. Instruction: " +
+          LOG.warn("Impossible state during message processing. Instruction: " +
             incomingMsgs[i].getType());
       }
     }
@@ -463,7 +468,7 @@ class ServerManager implements HConstants {
     return returnMsgs.toArray(new HMsg[returnMsgs.size()]);
   }
   
-  /**
+  /*
    * A region has split.
    *
    * @param serverName
@@ -558,15 +563,22 @@ class ServerManager implements HConstants {
           // Note that the table has been assigned and is waiting for the
           // meta table to be updated.
           master.regionManager.setOpen(region.getRegionName());
-          // Queue up an update to note the region location.
-          try {
-            master.toDoQueue.put(
-                new ProcessRegionOpen(master, serverInfo, region));
-          } catch (InterruptedException e) {
-            throw new RuntimeException(
-                "Putting into toDoQueue was interrupted.", e);
+          // Queue up an update to note the region location.  Do inside
+          // a retry loop in case interrupted.
+          boolean succeeded = false;
+          for (int i = 0; i < 10; i++) {
+            try {
+              master.toDoQueue.
+                put(new ProcessRegionOpen(master, serverInfo, region));
+              succeeded = true;
+            } catch (InterruptedException e) {
+              LOG.warn("Putting into toDoQueue was interrupted.", e);
+            }
           }
-        } 
+          if (!succeeded) {
+            LOG.warn("FAILED ADDING OPEN TO TODO QUEUE: " + serverInfo);
+          }
+        }
       }
     }
   }

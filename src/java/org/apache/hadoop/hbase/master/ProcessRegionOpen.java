@@ -41,12 +41,10 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
    * @param master
    * @param info
    * @param regionInfo
-   * @throws IOException
    */
   @SuppressWarnings("unused")
   public ProcessRegionOpen(HMaster master, HServerInfo info, 
-    HRegionInfo regionInfo)
-  throws IOException {
+      HRegionInfo regionInfo) {
     super(master, regionInfo);
     this.serverAddress = info.getServerAddress();
     if (this.serverAddress == null) {
