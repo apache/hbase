@@ -439,6 +439,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public void addIndex(IndexSpecification index) {
     indexes.put(index.getIndexId(), index);
   }
+  
+  public void removeIndex(String indexId) {
+    indexes.remove(indexId);
+  }
 
   /**
    * Adds a column family.
