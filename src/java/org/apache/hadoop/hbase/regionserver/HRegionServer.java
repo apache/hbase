@@ -1011,7 +1011,7 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
     // Put up info server.
     int port = this.conf.getInt("hbase.regionserver.info.port", 60030);
     if (port >= 0) {
-      String a = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+      String a = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
       this.infoServer = new InfoServer("regionserver", a, port, false);
       this.infoServer.setAttribute("regionserver", this);
       this.infoServer.start();

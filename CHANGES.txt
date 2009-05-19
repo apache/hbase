@@ -13,6 +13,8 @@ Release 0.19.3 - Unreleased
                -- and if we're carrying more than one message in payload,
                if exception, all messages that follow are dropped on floor
    HBASE-1386  NPE in housekeeping
+   HBASE-1435  HRegionServer is using wrong info bind address from
+               hbase-site.xml (Lars George via Stack)
 
   IMPROVEMENTS
    HBASE-1418  Transacitonal improvments and fixes (Clint Morgan via Stack)
