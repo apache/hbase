@@ -15,6 +15,7 @@ Release 0.19.3 - Unreleased
    HBASE-1386  NPE in housekeeping
    HBASE-1435  HRegionServer is using wrong info bind address from
                hbase-site.xml (Lars George via Stack)
+   HBASE-1441  NPE in ProcessRegionStatusChange#getMetaRegion
 
   IMPROVEMENTS
    HBASE-1418  Transacitonal improvments and fixes (Clint Morgan via Stack)
@@ -24,7 +25,7 @@ Release 0.19.3 - Unreleased
                long
    HBASE-1401  close HLog (and open new one) if there hasnt been edits in
                N minutes/hours
-   HBASE-1420  add abliity to add and remove (table) indexes on existing
+   HBASE-1420  add abliity to add and remove table) indexes on existing
                tables (Clint Morgan via Stack)
 
 Release 0.19.2 - May 9th, 2009 
