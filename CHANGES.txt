@@ -27,6 +27,7 @@ Release 0.19.3 - Unreleased
                N minutes/hours
    HBASE-1420  add abliity to add and remove table) indexes on existing
                tables (Clint Morgan via Stack)
+   HBASE-1430  Read the logs in batches during log splitting to avoid OOME
 
 Release 0.19.2 - May 9th, 2009 
   BUG FIXES
