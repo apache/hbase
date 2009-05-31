@@ -127,9 +127,7 @@ public class JtaXAResource implements XAResource {
   }
 
   /**
-   * Get the threadLocalTransaction state.
-   * 
-   * @return
+   * @return the threadLocalTransaction state.
    */
   public TransactionState getThreadLocalTransactionState() {
     return threadLocalTransactionState.get();
