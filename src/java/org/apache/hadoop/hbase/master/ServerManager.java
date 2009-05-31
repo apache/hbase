@@ -186,14 +186,9 @@ class ServerManager implements HConstants {
       // The startup message was from a known server with the same name.
       // Timeout the old one right away.
       HServerAddress root = master.getRootRegionLocation();
-      boolean rootServer = false;
-      if (root != null && root.equals(storedInfo.getServerAddress())) {
-        master.regionManager.unsetRootRegion();
-        rootServer = true;
-      }
       try {
         master.toDoQueue.put(
-            new ProcessServerShutdown(master, storedInfo, rootServer));
+            new ProcessServerShutdown(master, storedInfo));
       } catch (InterruptedException e) {
         LOG.error("Insertion into toDoQueue was interrupted", e);
       }
@@ -320,13 +315,9 @@ class ServerManager implements HConstants {
             for (int i = 1; i < msgs.length; i++) {
               LOG.info("Processing " + msgs[i] + " from " + serverName);
               HRegionInfo info = msgs[i].getRegionInfo();
-              synchronized (master.regionManager) {
-                if (info.isRootRegion()) {
-                  master.regionManager.reassignRootRegion();
-                } else {
-                  if (info.isMetaTable()) {
-                    master.regionManager.offlineMetaRegion(info.getStartKey());
-                  }
+              // Meta/root region offlining is handed in removeServerInfo above.
+              if (!info.isMetaRegion()) {
+                synchronized (master.regionManager) {
                   if (!master.regionManager.isOfflined(info.getRegionName())) {
                     master.regionManager.setUnassigned(info, true);
                   } else {
@@ -628,10 +619,7 @@ class ServerManager implements HConstants {
     // This method can be called a couple of times during shutdown.
     if (info != null) {
       LOG.info("Cancelling lease for " + serverName);
-      if (master.getRootRegionLocation() != null &&
-        info.getServerAddress().equals(master.getRootRegionLocation())) {
-        master.regionManager.unsetRootRegion();
-      }
+      master.regionManager.offlineMetaServer(info.getServerAddress());
       try {
         serverLeases.cancelLease(serverName);
       } catch (LeaseException e) {
@@ -774,16 +762,7 @@ class ServerManager implements HConstants {
       LOG.info(server + " lease expired");
       // Remove the server from the known servers list and update load info
       HServerInfo info = serversToServerInfo.remove(server);
-      boolean rootServer = false;
       if (info != null) {
-        HServerAddress root = master.getRootRegionLocation();
-        if (root != null && root.equals(info.getServerAddress())) {
-          // NOTE: If the server was serving the root region, we cannot reassign
-          // it here because the new server will start serving the root region
-          // before ProcessServerShutdown has a chance to split the log file.
-          master.regionManager.unsetRootRegion();
-          rootServer = true;
-        }
         String serverName = info.getServerAddress().toString();
         HServerLoad load = serversToLoad.remove(serverName);
         if (load != null) {
@@ -797,8 +776,7 @@ class ServerManager implements HConstants {
         }
         deadServers.put(server, Boolean.FALSE);
         try {
-          master.toDoQueue.put(
-              new ProcessServerShutdown(master, info, rootServer));
+          master.toDoQueue.put(new ProcessServerShutdown(master, info));
         } catch (InterruptedException e) {
           LOG.error("insert into toDoQueue was interrupted", e);
         }

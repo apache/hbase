@@ -90,6 +90,7 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
           exceptions.add(e);
         }
       } catch (Exception e) {
+        LOG.debug("Exception in RetryableMetaOperation: ", e);
         throw new RuntimeException(e);
       }
       sleeper.sleep();
