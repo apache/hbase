@@ -30,6 +30,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
+import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 /** 
@@ -46,17 +47,38 @@ public class RegionServerMetrics implements Updater {
   private static final int MB = 1024*1024;
     
   public final MetricsTimeVaryingRate atomicIncrementTime =
-    new MetricsTimeVaryingRate("atomicIncrementTime");
+      new MetricsTimeVaryingRate("atomicIncrementTime");
   
   /**
    * Count of regions carried by this regionserver
    */
-  public final MetricsIntValue regions = new MetricsIntValue("regions");
+  public final MetricsIntValue regions =
+    new MetricsIntValue("regions");
+
+  /**
+   * Block cache size.
+   */
+  public final MetricsLongValue blockCacheSize = new MetricsLongValue("blockCacheSize");
+
+  /**
+   * Block cache free size.
+   */
+  public final MetricsLongValue blockCacheFree = new MetricsLongValue("blockCacheFree");
+
+  /**
+   * Block cache item count.
+   */
+  public final MetricsLongValue blockCacheCount = new MetricsLongValue("blockCacheCount");
+
+  /**
+   * Block hit ratio.
+   */
+  public final MetricsIntValue blockCacheHitRatio = new MetricsIntValue("blockCacheHitRatio");
 
   /*
    * Count of requests to the regionservers since last call to metrics update
    */
-  private final MetricsRate requests = new MetricsRate("requests");
+    private final MetricsRate requests = new MetricsRate("requests");
 
   /**
    * Count of stores open on the regionserver.
@@ -108,6 +130,11 @@ public class RegionServerMetrics implements Updater {
       this.memcacheSizeMB.pushMetric(this.metricsRecord);
       this.regions.pushMetric(this.metricsRecord);
       this.requests.pushMetric(this.metricsRecord);
+
+      this.blockCacheSize.pushMetric(this.metricsRecord);
+      this.blockCacheFree.pushMetric(this.metricsRecord);
+      this.blockCacheCount.pushMetric(this.metricsRecord);
+      this.blockCacheHitRatio.pushMetric(this.metricsRecord);
     }
     this.metricsRecord.update();
     this.lastUpdate = System.currentTimeMillis();
@@ -158,6 +185,14 @@ public class RegionServerMetrics implements Updater {
       Long.valueOf(memory.getUsed()/MB));
     sb = Strings.appendKeyValue(sb, "maxHeap",
       Long.valueOf(memory.getMax()/MB));
+    sb = Strings.appendKeyValue(sb, "blockCacheSize",
+        Long.valueOf(this.blockCacheSize.get()));
+    sb = Strings.appendKeyValue(sb, "blockCacheFree",
+        Long.valueOf(this.blockCacheFree.get()));
+    sb = Strings.appendKeyValue(sb, "blockCacheCount",
+        Long.valueOf(this.blockCacheCount.get()));
+    sb = Strings.appendKeyValue(sb, "blockCacheHitRatio",
+        Long.valueOf(this.blockCacheHitRatio.get()));
     return sb.toString();
   }
 }

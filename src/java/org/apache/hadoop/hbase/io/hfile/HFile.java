@@ -519,11 +519,15 @@ public class HFile {
     }
 
     private void checkValue(final byte [] value,
-        final int offset,
+        @SuppressWarnings("unused") final int offset,
         final int length) throws IOException {
       if (value == null) {
         throw new IOException("Value cannot be null");
       }
+    }
+
+    public long getTotalBytes() {
+      return this.totalBytes;
     }
 
     public void close() throws IOException {
