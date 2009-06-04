@@ -85,6 +85,7 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -161,17 +162,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @throws IOException
    */
   public HMaster(HBaseConfiguration conf) throws IOException {
-    // find out our address. If it's set in config, use that, otherwise look it
-    // up in DNS.
-    String addressStr = conf.get(MASTER_ADDRESS);
-    if (addressStr == null) {
-      addressStr = conf.get(MASTER_HOST_NAME);
-      if (addressStr == null) {
-        addressStr = InetAddress.getLocalHost().getCanonicalHostName();
-      }
-      addressStr += ":";
-      addressStr += conf.get("hbase.master.port", Integer.toString(DEFAULT_MASTER_PORT));
-    }
+    // find out our address up in DNS.
+    String addressStr = DNS.getDefaultHost(
+        conf.get("hbase.master.dns.interface","default"),
+        conf.get("hbase.master.dns.nameserver","default"));
+    addressStr += ":" + 
+      conf.get("hbase.master.port", Integer.toString(DEFAULT_MASTER_PORT));
     HServerAddress address = new HServerAddress(addressStr);
     LOG.info("My address is " + address);
 
@@ -247,7 +243,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
     
     zooKeeperWrapper = new ZooKeeperWrapper(conf);
-    zkMasterAddressWatcher = new ZKMasterAddressWatcher(zooKeeperWrapper);
+    zkMasterAddressWatcher = new ZKMasterAddressWatcher(this);
     serverManager = new ServerManager(this);
     regionManager = new RegionManager(this);
 
@@ -261,7 +257,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   private void writeAddressToZooKeeper() {
     while (true) {
       zkMasterAddressWatcher.waitForMasterAddressAvailability();
-      if (zooKeeperWrapper.writeMasterAddress(address)) {
+      // Check if we need to shutdown instead of taking control
+      if(this.shutdownRequested.get())
+      {
+        return;
+      } else if(zooKeeperWrapper.writeMasterAddress(address)) {
+        zooKeeperWrapper.setClusterState(true);
         return;
       }
     }
@@ -531,7 +532,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           this.connection.getHRegionConnection(address, false);
         HServerInfo info = hri.getHServerInfo();
         LOG.debug("Inspection found server " + info.getName());
-        serverManager.recordNewServer(info);
+        serverManager.recordNewServer(info, true);
         HRegionInfo[] regions = hri.getRegionsAssignment();
         for (HRegionInfo region : regions) {
           if(region.isRootRegion()) {
@@ -670,6 +671,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public void shutdown() {
     LOG.info("Cluster shutdown requested. Starting to quiesce servers");
     this.shutdownRequested.set(true);
+    this.zooKeeperWrapper.setClusterState(false);
   }
 
   public void createTable(HTableDescriptor desc)
@@ -1075,13 +1077,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     // Process command-line args. TODO: Better cmd-line processing
     // (but hopefully something not as painful as cli options).
-
-    final String addressArgKey = "--bind=";
     for (String cmd: args) {
-      if (cmd.startsWith(addressArgKey)) {
-        conf.set(MASTER_ADDRESS, cmd.substring(addressArgKey.length()));
-        continue;
-      }
 
       if (cmd.equals("start")) {
         try {
@@ -1098,6 +1094,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             Constructor<? extends HMaster> c =
               masterClass.getConstructor(HBaseConfiguration.class);
             HMaster master = c.newInstance(conf);
+            if(master.shutdownRequested.get()) {
+              LOG.info("Won't bring the Master up as a shutdown is requested");
+              return;
+            }
             master.start();
           }
         } catch (Throwable t) {

@@ -64,10 +64,11 @@ public class ZooKeeperWrapper implements HConstants {
   private final ZooKeeper zooKeeper;
   private final WatcherWrapper watcher;
 
-  private final String rootRegionZNode;
-  private final String outOfSafeModeZNode;
-  private final String rsZNode;
-  private final String masterElectionZNode;
+  public final String rootRegionZNode;
+  public final String outOfSafeModeZNode;
+  public final String rsZNode;
+  public final String masterElectionZNode;
+  public final String clusterStateZNode;
 
   /**
    * Create a ZooKeeperWrapper.
@@ -109,11 +110,14 @@ public class ZooKeeperWrapper implements HConstants {
     String rsZNodeName = conf.get("zookeeper.znode.rs", "rs");
     String masterAddressZNodeName = conf.get("zookeeper.znode.master",
       "master");
+    String stateZNodeName = conf.get("zookeeper.znode.state",
+    "shutdown");
     
     rootRegionZNode = getZNode(parentZNode, rootServerZNodeName);
     outOfSafeModeZNode = getZNode(parentZNode, outOfSafeModeZNodeName);
     rsZNode = getZNode(parentZNode, rsZNodeName);
     masterElectionZNode = getZNode(parentZNode, masterAddressZNodeName);
+    clusterStateZNode = getZNode(parentZNode, stateZNodeName);
   }
 
   /**
@@ -152,8 +156,8 @@ public class ZooKeeperWrapper implements HConstants {
     try {
       properties = HQuorumPeer.parseZooKeeperConfig();
     } catch (IOException e) {
-      LOG.error("fail to read properties from " + ZOOKEEPER_CONFIG_NAME);
-      return;
+      LOG.fatal("Fail to read properties from " + ZOOKEEPER_CONFIG_NAME, e);
+      System.exit(-1);
     }
 
     String clientPort = null;
@@ -242,6 +246,49 @@ public class ZooKeeperWrapper implements HConstants {
    */
   public HServerAddress readMasterAddress(Watcher watcher) {
     return readAddress(masterElectionZNode, watcher);
+  }
+  
+  /**
+   * Watch the state of the cluster, up or down
+   * @param watcher Watcher to set on cluster state node
+   */
+  public void setClusterStateWatch(Watcher watcher) {
+    try {
+      zooKeeper.exists(clusterStateZNode, watcher);
+    } catch (InterruptedException e) {
+      LOG.warn("Failed to check on ZNode " + clusterStateZNode, e);
+    } catch (KeeperException e) {
+      LOG.warn("Failed to check on ZNode " + clusterStateZNode, e);
+    }
+  }
+  
+  /**
+   * Set the cluster state, up or down
+   * @param up True to write the node, false to delete it
+   * @return true if it worked, else it's false
+   */
+  public boolean setClusterState(boolean up) {
+    if (!ensureParentExists(clusterStateZNode)) {
+      return false;
+    }
+    try {
+      if(up) {
+        byte[] data = Bytes.toBytes("up");
+        zooKeeper.create(clusterStateZNode, data, 
+            Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        LOG.debug("State node wrote in ZooKeeper");
+      } else {
+        zooKeeper.delete(clusterStateZNode, -1);
+        LOG.debug("State node deleted in ZooKeeper");
+      }
+      return true;
+    } catch (InterruptedException e) {
+      LOG.warn("Failed to set state node in ZooKeeper", e);
+    } catch (KeeperException e) {
+      LOG.warn("Failed to set state node in ZooKeeper", e);
+    }
+
+    return false;
   }
 
   /**
@@ -529,12 +576,12 @@ public class ZooKeeperWrapper implements HConstants {
       List<String> nodes = zooKeeper.getChildren(rsZNode, false);
       for (String node : nodes) {
         LOG.debug("Deleting node: " + node);
-        zooKeeper.delete(node, -1);
+        zooKeeper.delete(joinPath(this.rsZNode, node), -1);
       }
     } catch (KeeperException e) {
-      LOG.warn("Failed to delete " + rsZNode + " znode in ZooKeeper: " + e);
+      LOG.warn("Failed to delete " + rsZNode + " znodes in ZooKeeper: " + e);
     } catch (InterruptedException e) {
-      LOG.warn("Failed to delete " + rsZNode + " znode in ZooKeeper: " + e);
+      LOG.warn("Failed to delete " + rsZNode + " znodes in ZooKeeper: " + e);
     }
   }
   
