@@ -795,13 +795,13 @@ public class HLog implements HConstants, Syncable {
           // reports a zero length even if the file has been sync'd. Revisit if
           // HADOOP-4751 is committed.
           long length = logfiles[i].getLen();
-          HLogKey key = new HLogKey();
-          KeyValue val = new KeyValue();
           SequenceFile.Reader in = null;
               int count = 0;
           try {
             in = new SequenceFile.Reader(fs, logfiles[i].getPath(), conf);
             try {
+              HLogKey key = new HLogKey();
+              KeyValue val = new KeyValue();
               while (in.next(key, val)) {
                 byte [] regionName = key.getRegionName();
                 LinkedList<HLogEntry> queue = logEntries.get(regionName);
@@ -812,6 +812,10 @@ public class HLog implements HConstants, Syncable {
                 }
                 queue.push(new HLogEntry(val, key));
                 count++;
+                // Make the key and value new each time; otherwise same instance
+                // is used over and over.
+                key = new HLogKey();
+                val = new KeyValue();
               }
               LOG.debug("Pushed " + count + " entries from " +
                 logfiles[i].getPath());
