@@ -888,7 +888,8 @@ public class HLog implements HConstants, Syncable {
                       SequenceFile.Writer w =
                         SequenceFile.createWriter(fs, conf, logfile,
                           HLogKey.class, HLogEdit.class, getCompressionType(conf));
-                      logWriters.put(key, new WriterAndPath(logfile, w));
+                      wap = new WriterAndPath(logfile, w);
+                      logWriters.put(key, wap);
                       if (LOG.isDebugEnabled()) {
                         LOG.debug("Creating new hlog file writer for path "
                             + logfile + " and region " + Bytes.toString(key));
