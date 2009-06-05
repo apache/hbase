@@ -7,6 +7,9 @@ Release 0.19.4 - Unreleased
    HBASE-1483  HLog split loses track of edits
    HBASE-1484  commit log split writes files with newest edits first
                (since hbase-1430); should be other way round
+   HBASE-1143  region count erratic in master UI (kill server hosting root
+               or meta and see how count goes awry).... make sure you have
+               a bunch of reions in there
 
 Release 0.19.3 - May 27th, 2009
   BUG FIXES

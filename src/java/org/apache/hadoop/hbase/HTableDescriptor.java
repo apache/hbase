@@ -111,6 +111,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     for(HColumnDescriptor descriptor : families) {
       this.families.put(Bytes.mapKey(descriptor.getName()), descriptor);
     }
+    // TODO: Fix this hard-coding.
+    setMemcacheFlushSize(16 * 1024);
   }
 
   /**
