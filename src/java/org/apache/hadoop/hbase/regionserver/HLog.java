@@ -24,6 +24,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.ListIterator;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Map;
@@ -93,7 +96,7 @@ import org.apache.hadoop.io.compress.DefaultCodec;
  *
  */
 public class HLog implements HConstants, Syncable {
-  private static final Log LOG = LogFactory.getLog(HLog.class);
+  static final Log LOG = LogFactory.getLog(HLog.class);
   private static final String HLOG_DATFILE = "hlog.dat.";
   static final byte [] METACOLUMN = Bytes.toBytes("METACOLUMN:");
   static final byte [] METAROW = Bytes.toBytes("METAROW");
@@ -207,7 +210,7 @@ public class HLog implements HConstants, Syncable {
    * @param c Configuration to use.
    * @return the kind of compression to use
    */
-  private static CompressionType getCompressionType(final Configuration c) {
+  static CompressionType getCompressionType(final Configuration c) {
     String name = c.get("hbase.io.seqfile.compression.type");
     return name == null? CompressionType.NONE: CompressionType.valueOf(name);
   }
@@ -723,22 +726,23 @@ public class HLog implements HConstants, Syncable {
    * @param conf HBaseConfiguration
    * @throws IOException
    */
-  public static void splitLog(final Path rootDir, final Path srcDir,
+  public static List<Path> splitLog(final Path rootDir, final Path srcDir,
       final FileSystem fs, final Configuration conf)
   throws IOException {
     long millis = System.currentTimeMillis();
+    List<Path> splits = null;
     if (!fs.exists(srcDir)) {
       // Nothing to do
-      return;
+      return splits;
     }
     FileStatus [] logfiles = fs.listStatus(srcDir);
     if (logfiles == null || logfiles.length == 0) {
       // Nothing to do
-      return;
+      return splits;
     }
     LOG.info("Splitting " + logfiles.length + " log(s) in " +
       srcDir.toString());
-    splitLog(rootDir, logfiles, fs, conf);
+    splits = splitLog(rootDir, logfiles, fs, conf);
     try {
       fs.delete(srcDir, true);
     } catch (IOException e) {
@@ -750,6 +754,17 @@ public class HLog implements HConstants, Syncable {
     long endMillis = System.currentTimeMillis();
     LOG.info("log file splitting completed in " + (endMillis - millis) +
         " millis for " + srcDir.toString());
+    return splits;
+  }
+
+  // Private immutable datastructure to hold Writer and its Path.
+  private final static class WriterAndPath {
+    final Path p;
+    final SequenceFile.Writer w;
+    WriterAndPath(final Path p, final SequenceFile.Writer w) {
+      this.p = p;
+      this.w = w;
+    }
   }
   
   /*
@@ -759,12 +774,12 @@ public class HLog implements HConstants, Syncable {
    * @param conf
    * @throws IOException
    */
-  private static void splitLog(final Path rootDir, final FileStatus [] logfiles,
-      final FileSystem fs, final Configuration conf)
+  private static List<Path> splitLog(final Path rootDir,
+      final FileStatus [] logfiles, final FileSystem fs, final Configuration conf)
     throws IOException {
-      final Map<byte [], SequenceFile.Writer> logWriters =
-        new TreeMap<byte [], SequenceFile.Writer>(Bytes.BYTES_COMPARATOR);
-      
+      final Map<byte [], WriterAndPath> logWriters =
+        new TreeMap<byte [], WriterAndPath>(Bytes.BYTES_COMPARATOR);
+      List<Path> splits = null;
       try {
         int maxSteps = Double.valueOf(Math.ceil((logfiles.length * 1.0) / 
             DEFAULT_NUMBER_CONCURRENT_LOG_READS)).intValue();
@@ -849,9 +864,14 @@ public class HLog implements HConstants, Syncable {
                 long threadTime = System.currentTimeMillis();
                 try {
                   int count = 0;
-                  for (HLogEntry logEntry : entries) {
-                    SequenceFile.Writer w = logWriters.get(key);
-                    if (w == null) {
+                  // Items were added to the linkedlist oldest first. Pull them
+                  // out in that order.
+                  for (ListIterator<HLogEntry> i =
+                    entries.listIterator(entries.size());
+                      i.hasPrevious();) {
+                    HLogEntry logEntry = i.previous();
+                    WriterAndPath wap = logWriters.get(key);
+                    if (wap == null) {
                       Path logfile = new Path(HRegion.getRegionDir(HTableDescriptor
                           .getTableDir(rootDir, logEntry.getKey().getTablename()),
                           HRegionInfo.encodeRegionName(key)),
@@ -865,9 +885,10 @@ public class HLog implements HConstants, Syncable {
                         fs.rename(logfile, oldlogfile);
                         old = new SequenceFile.Reader(fs, oldlogfile, conf);
                       }
-                      w = SequenceFile.createWriter(fs, conf, logfile,
+                      SequenceFile.Writer w =
+                        SequenceFile.createWriter(fs, conf, logfile,
                           HLogKey.class, HLogEdit.class, getCompressionType(conf));
-                      logWriters.put(key, w);
+                      logWriters.put(key, new WriterAndPath(logfile, w));
                       if (LOG.isDebugEnabled()) {
                         LOG.debug("Creating new hlog file writer for path "
                             + logfile + " and region " + Bytes.toString(key));
@@ -888,7 +909,7 @@ public class HLog implements HConstants, Syncable {
                         fs.delete(oldlogfile, true);
                       }
                     }
-                    w.append(logEntry.getKey(), logEntry.getEdit());
+                    wap.w.append(logEntry.getKey(), logEntry.getEdit());
                     count++;
                   }
                   if (LOG.isDebugEnabled()) {
@@ -912,15 +933,18 @@ public class HLog implements HConstants, Syncable {
             for(int i = 0; !threadPool.awaitTermination(5, TimeUnit.SECONDS); i++) {
               LOG.debug("Waiting for hlog writers to terminate, iteration #" + i);
             }
-          }catch(InterruptedException ex) {
+          } catch(InterruptedException ex) {
             LOG.warn("Hlog writers were interrupted, possible data loss!");
           }
         }
       } finally {
-        for (SequenceFile.Writer w : logWriters.values()) {
-          w.close();
+        splits = new ArrayList<Path>(logWriters.size());
+        for (WriterAndPath wap: logWriters.values()) {
+          wap.w.close();
+          splits.add(wap.p);
         }
       }
+      return splits;
     }
   
   /**
@@ -955,6 +979,9 @@ public class HLog implements HConstants, Syncable {
       return key;
     }
 
+    public String toString() {
+      return this.key + "=" + this.edit;
+    }
   }
 
   /**
