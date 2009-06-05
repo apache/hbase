@@ -4,6 +4,9 @@ Release 0.19.4 - Unreleased
    HBASE-1446  2 javdoc build warning
    HBASE-1457  Taking down ROOT/META regionserver can result in cluster
                becoming in-operational (Ryan Rawson via Stack)
+   HBASE-1483  HLog split loses track of edits
+   HBASE-1484  commit log split writes files with newest edits first
+               (since hbase-1430); should be other way round
 
 Release 0.19.3 - May 27th, 2009
   BUG FIXES
