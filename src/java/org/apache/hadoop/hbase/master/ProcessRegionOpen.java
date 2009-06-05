@@ -29,12 +29,16 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /** 
  * ProcessRegionOpen is instantiated when a region server reports that it is
  * serving a region. This applies to all meta and user regions except the 
  * root region which is handled specially.
  */
 class ProcessRegionOpen extends ProcessRegionStatusChange {
+  static final Log LOG = LogFactory.getLog(ProcessRegionOpen.class);
   protected final HServerAddress serverAddress;
   protected final byte [] startCode;
 
@@ -79,7 +83,7 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
     // Register the newly-available Region's location.
     LOG.info("updating row " + regionInfo.getRegionNameAsString() +
         " in region " + Bytes.toString(metaRegionName) + " with " +
-        " with startcode " + Bytes.toString(this.startCode) + " and server " +
+        " with startcode " + Bytes.toLong(this.startCode) + " and server " +
         this.serverAddress);
     BatchUpdate b = new BatchUpdate(regionInfo.getRegionName());
     b.put(COL_SERVER,
