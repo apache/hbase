@@ -30,6 +30,8 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,7 +43,6 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.HBaseClient;
@@ -85,8 +86,25 @@ public class HBaseRPC {
   private HBaseRPC() {}                                  // no public ctor
 
 
-  /** A method invocation, including the method name and its parameters.*/
-  private static class Invocation implements Writable, Configurable {
+ /** A method invocation, including the method name and its parameters.*/
+ private static class Invocation implements Writable, Configurable {
+   // Here, for hbase, we maintain two static maps of method names to code and
+   // vice versa.
+   private static final Map<Byte, String> CODE_TO_METHODNAME =
+     new HashMap<Byte, String>();
+   private static final Map<String, Byte> METHODNAME_TO_CODE =
+     new HashMap<String, Byte>();
+   // Special code that means 'not-encoded'.
+   private static final byte NOT_ENCODED = 0;
+   static {
+     byte code = NOT_ENCODED + 1;
+     code = addToMap(VersionedProtocol.class, code);
+     code = addToMap(HMasterInterface.class, code);
+     code = addToMap(HMasterRegionInterface.class, code);
+     code = addToMap(TransactionalRegionInterface.class, code);
+   }
+   // End of hbase modifications.
+
     private String methodName;
     @SuppressWarnings("unchecked")
     private Class[] parameterClasses;
@@ -117,18 +135,20 @@ public class HBaseRPC {
     public Object[] getParameters() { return parameters; }
 
     public void readFields(DataInput in) throws IOException {
-      methodName = Text.readString(in);
+      byte code = in.readByte();
+      methodName = CODE_TO_METHODNAME.get(Byte.valueOf(code));
       parameters = new Object[in.readInt()];
       parameterClasses = new Class[parameters.length];
       HbaseObjectWritable objectWritable = new HbaseObjectWritable();
       for (int i = 0; i < parameters.length; i++) {
-        parameters[i] = HbaseObjectWritable.readObject(in, objectWritable, this.conf);
+        parameters[i] = HbaseObjectWritable.readObject(in, objectWritable,
+          this.conf);
         parameterClasses[i] = objectWritable.getDeclaredClass();
       }
     }
 
     public void write(DataOutput out) throws IOException {
-      Text.writeString(out, methodName);
+      writeMethodNameCode(out, this.methodName);
       out.writeInt(parameterClasses.length);
       for (int i = 0; i < parameterClasses.length; i++) {
         HbaseObjectWritable.writeObject(out, parameters[i], parameterClasses[i],
@@ -158,6 +178,55 @@ public class HBaseRPC {
       return this.conf;
     }
 
+    // Hbase additions.
+    private static void addToMap(final String name, final byte code) {
+      if (METHODNAME_TO_CODE.containsKey(name)) {
+        return;
+      }
+      METHODNAME_TO_CODE.put(name, Byte.valueOf(code));
+      CODE_TO_METHODNAME.put(Byte.valueOf(code), name);
+    }
+    
+    /*
+     * @param c Class whose methods we'll add to the map of methods to codes
+     * (and vice versa).
+     * @param code Current state of the byte code.
+     * @return State of <code>code</code> when this method is done.
+     */
+    private static byte addToMap(final Class<?> c, final byte code) {
+      byte localCode = code;
+      Method [] methods = c.getMethods();
+      // There are no guarantees about the order in which items are returned in
+      // so do a sort (Was seeing that sort was one way on one server and then
+      // another on different server).
+      Arrays.sort(methods, new Comparator<Method>() {
+        public int compare(Method left, Method right) {
+          return left.getName().compareTo(right.getName());
+        }
+      });
+      for (int i = 0; i < methods.length; i++) {
+        addToMap(methods[i].getName(), localCode++);
+      }
+      return localCode;
+    }
+
+    /*
+     * Write out the code byte for passed Class.
+     * @param out
+     * @param c
+     * @throws IOException
+     */
+    static void writeMethodNameCode(final DataOutput out, final String methodname)
+    throws IOException {
+      Byte code = METHODNAME_TO_CODE.get(methodname);
+      if (code == null) {
+        LOG.error("Unsupported type " + methodname);
+        throw new UnsupportedOperationException("No code for unexpected " +
+          methodname);
+      }
+      out.writeByte(code.byteValue());
+    }
+    // End of hbase additions.
   }
 
   /* Cache a client using its socket factory as the hash key */
