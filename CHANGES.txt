@@ -165,6 +165,10 @@ Release 0.20.0 - Unreleased
                (since hbase-1430); should be other way round
    HBASE-1493  New TableMapReduceUtil methods should be static (Billy Pearson
                via Andrew Purtell)
+   HBASE-1486  BLOCKCACHE always on even when disabled (Lars George via Stack)
+   HBASE-1491  ZooKeeper errors: "Client has seen zxid 0xe our last zxid is 0xd"
+   HBASE-1499  Fix javadoc warnings after HBASE-1304 commit (Lars George via Stack)
+   HBASE-1504  Remove left-over debug from 1304 commit
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
@@ -311,6 +315,13 @@ Release 0.20.0 - Unreleased
    HBASE-1478  Remove hbase master options from shell (Nitay Joffe via Stack)
    HBASE-1462  hclient still seems to depend on master
    HBASE-1143  region count erratic in master UI
+   HBASE-1490  Update ZooKeeper library
+   HBASE-1489  Basic git ignores for people who use git and eclipse
+   HBASE-1453  Add HADOOP-4681 to our bundled hadoop, add to 'gettting started'
+               recommendation that hbase users backport 
+   HBASE-1507  iCMS as default JVM
+   HBASE-1509  Add explanation to shell "help" command on how to use binarykeys
+               (Lars George via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

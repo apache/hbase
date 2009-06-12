@@ -130,6 +130,7 @@ public class Store implements HConstants {
   private final Object compactLock = new Object();
   private final int compactionThreshold;
   private final int blocksize;
+  private final boolean blockcache;
   private final boolean bloomfilter;
   private final Compression.Algorithm compression;
   
@@ -162,6 +163,7 @@ public class Store implements HConstants {
     this.fs = fs;
     this.conf = conf;
     this.bloomfilter = family.isBloomfilter();
+    this.blockcache = family.isBlockCacheEnabled();
     this.blocksize = family.getBlocksize();
     this.compression = family.getCompression();
     this.comparator = info.getComparator();
@@ -360,7 +362,7 @@ public class Store implements HConstants {
       }
       StoreFile curfile = null;
       try {
-        curfile = new StoreFile(fs, p, this.conf);
+        curfile = new StoreFile(fs, p, blockcache, this.conf);
       } catch (IOException ioe) {
         LOG.warn("Failed open of " + p + "; presumption is that file was " +
           "corrupted at flush and lost edits picked up by commit log replay. " +
@@ -516,7 +518,8 @@ public class Store implements HConstants {
         writer.close();
       }
     }
-    StoreFile sf = new StoreFile(this.fs, writer.getPath(), this.conf);
+    StoreFile sf = new StoreFile(this.fs, writer.getPath(), blockcache, 
+      this.conf);
     this.storeSize += sf.getReader().length();
     if(LOG.isDebugEnabled()) {
       LOG.debug("Added " + sf + ", entries=" + sf.getReader().getEntries() +
@@ -890,7 +893,8 @@ public class Store implements HConstants {
       LOG.error("Failed move of compacted file " + compactedFile.getPath(), e);
       return;
     }
-    StoreFile finalCompactedFile = new StoreFile(this.fs, p, this.conf);
+    StoreFile finalCompactedFile = new StoreFile(this.fs, p, blockcache, 
+      this.conf);
     this.lock.writeLock().lock();
     try {
       try {
@@ -1349,8 +1353,6 @@ public class Store implements HConstants {
 
   /**
    * @return The size of the store file indexes, in bytes.
-   * @throws IOException if there was a problem getting file sizes from the
-   * filesystem
    */
   long getStorefilesIndexSize() {
     long size = 0;
@@ -1486,7 +1488,7 @@ public class Store implements HConstants {
    * @param family
    * @param qualifier
    * @param amount
-   * @return
+   * @return The new value.
    * @throws IOException
    */
   public long incrementColumnValue(byte [] row, byte [] family,

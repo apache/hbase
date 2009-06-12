@@ -172,6 +172,7 @@ public class MiniHBaseCluster implements HConstants {
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
     }
+    HConnectionManager.deleteAllConnections(false);
   }
 
   /**

@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -61,7 +60,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * The type of compression.
    * @see org.apache.hadoop.io.SequenceFile.Writer
    * @deprecated Compression now means which compression library
-   * rather than 'what' to cmopress.  See {@link Compression.Algorithm}
+   * rather than 'what' to compress.
    */
   @Deprecated
   public static enum CompressionType {
@@ -108,7 +107,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /**
    * Default setting for whether to use a block cache or not.
    */
-  public static final boolean DEFAULT_BLOCKCACHE = false;
+  public static final boolean DEFAULT_BLOCKCACHE = true;
 
   /**
    * Default size of blocks in files store to the filesytem.  Use smaller for
@@ -194,7 +193,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * @param inMemory If true, column data should be kept in an HRegionServer's
    * cache
    * @param blockCacheEnabled If true, MapFile blocks should be cached
-   * @param maxValueLength Restrict values to &lt;= this value
    * @param timeToLive Time-to-live of cell contents, in seconds
    * (use HConstants.FOREVER for unlimited TTL)
    * @param bloomFilter Enable the specified bloom filter for this column

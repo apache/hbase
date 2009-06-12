@@ -665,6 +665,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
     join();
 
+    zooKeeperWrapper.close();
+
     if (shutdownHDFS.get()) {
       runThread(this.hdfsShutdownThread,
           this.conf.getLong("hbase.dfs.shutdown.wait", 30000));
@@ -1870,7 +1872,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
           break;
         }
       }
-      LOG.debug("Result[]next time: " + (System.currentTimeMillis()-start) + " (ms)");
       return results.toArray(new Result[0]);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
