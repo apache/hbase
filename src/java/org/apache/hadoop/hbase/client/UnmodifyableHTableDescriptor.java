@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 
 /**
  * Read-only table descriptor.
@@ -38,7 +37,7 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
    * @param desc
    */
   UnmodifyableHTableDescriptor(final HTableDescriptor desc) {
-    super(desc.getName(), getUnmodifyableFamilies(desc), desc.getIndexes(), desc.getValues());
+    super(desc.getName(), getUnmodifyableFamilies(desc), desc.getValues());
   }
   
   /*
@@ -120,13 +119,5 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   @Override
   public void setMemcacheFlushSize(int memcacheFlushSize) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
-  }
-
-  /**
-   * @see org.apache.hadoop.hbase.HTableDescriptor#addIndex(org.apache.hadoop.hbase.client.tableindexed.IndexSpecification)
-   */
-  @Override
-  public void addIndex(IndexSpecification index) {
-    throw new UnsupportedOperationException("HTableDescriptor is read-only"); 
   }
 }

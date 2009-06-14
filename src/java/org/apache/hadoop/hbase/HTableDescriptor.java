@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
@@ -103,10 +102,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
   private final Map<byte [], HColumnDescriptor> families =
     new TreeMap<byte [], HColumnDescriptor>(KeyValue.FAMILY_COMPARATOR);
 
-  // Key is indexId
-  private final Map<String, IndexSpecification> indexes =
-    new HashMap<String, IndexSpecification>();
-  
   /**
    * Private constructor used internally creating table descriptors for 
    * catalog tables: e.g. .META. and -ROOT-.
@@ -126,16 +121,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
    * catalog tables: e.g. .META. and -ROOT-.
    */
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families,
-      Collection<IndexSpecification> indexes,
-       Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
+      Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
     this.name = name.clone();
     this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(descriptor.getName(), descriptor);
-    }
-    for(IndexSpecification index : indexes) {
-      this.indexes.put(index.getIndexId(), index);
     }
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry:
         values.entrySet()) {
@@ -198,7 +189,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
         desc.values.entrySet()) {
       this.values.put(e.getKey(), e.getValue());
     }
-    this.indexes.putAll(desc.indexes);
   }
 
   /*
@@ -436,22 +426,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
     setValue(MEMCACHE_FLUSHSIZE_KEY,
       Bytes.toBytes(Integer.toString(memcacheFlushSize)));
   }
-    
-  public Collection<IndexSpecification> getIndexes() {
-    return indexes.values();
-  }
-  
-  public IndexSpecification getIndex(String indexId) {
-    return indexes.get(indexId);
-  }
-  
-  public void addIndex(IndexSpecification index) {
-    indexes.put(index.getIndexId(), index);
-  }
-  
-  public void removeIndex(String indexId) {
-    indexes.remove(indexId);
-  }
 
   /**
    * Adds a column family.
@@ -510,13 +484,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
     s.append(FAMILIES);
     s.append(" => ");
     s.append(families.values());
-    if (!indexes.isEmpty()) {
-      // Don't emit if empty.  Has to do w/ transactional hbase.
-      s.append(", ");
-      s.append("INDEXES");
-      s.append(" => ");
-      s.append(indexes.values());
-    }
     s.append('}');
     return s.toString();
   }
@@ -581,16 +548,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
       c.readFields(in);
       families.put(c.getName(), c);
     }
-    indexes.clear();
-    if (version < 4) {
-      return;
-    }
-    int numIndexes = in.readInt();
-    for (int i = 0; i < numIndexes; i++) {
-      IndexSpecification index = new IndexSpecification();
-      index.readFields(in);
-      addIndex(index);
-    }
   }
 
   public void write(DataOutput out) throws IOException {
@@ -609,10 +566,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
         it.hasNext(); ) {
       HColumnDescriptor family = it.next();
       family.write(out);
-    }
-    out.writeInt(indexes.size());
-    for(IndexSpecification index : indexes.values()) {
-      index.write(out);
     }
   }
 
