@@ -42,7 +42,7 @@ public class ZKMasterAddressWatcher implements Watcher {
 
   /**
    * Create a watcher with a ZooKeeperWrapper instance.
-   * @param master The master.
+   * @param zooKeeper ZooKeeperWrapper to use to talk to ZooKeeper.
    */
   public ZKMasterAddressWatcher(HMaster master) {
     this.master = master;

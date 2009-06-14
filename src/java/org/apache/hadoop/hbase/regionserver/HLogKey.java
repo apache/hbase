@@ -87,9 +87,6 @@ public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
     return logSeqNum;
   }
 
-  /**
-   * @return the write time
-   */
   public long getWriteTime() {
     return this.writeTime;
   }

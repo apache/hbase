@@ -33,8 +33,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -71,7 +69,7 @@ public class Merge extends Configured implements Tool {
     this.conf = conf;
     this.mergeInfo = null;
   }
-  
+
   public int run(String[] args) throws Exception {
     if (parseArgs(args) != 0) {
       return -1;
@@ -142,14 +140,11 @@ public class Merge extends Configured implements Tool {
    */
   private void mergeTwoMetaRegions() throws IOException {
     HRegion rootRegion = utils.getRootRegion();
-    Get get = new Get(region1);
-    get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    List<KeyValue> cells1 =  rootRegion.get(get, null).list();
+    List<KeyValue> cells1 =
+      rootRegion.get(region1, HConstants.COL_REGIONINFO, -1, -1);
     HRegionInfo info1 = Writables.getHRegionInfo((cells1 == null)? null: cells1.get(0).getValue());
-
-    get = new Get(region2);
-    get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    List<KeyValue> cells2 =  rootRegion.get(get, null).list();
+    List<KeyValue> cells2 =
+      rootRegion.get(region2, HConstants.COL_REGIONINFO, -1, -1);
     HRegionInfo info2 = Writables.getHRegionInfo((cells2 == null)? null: cells2.get(0).getValue());
     HRegion merged = merge(info1, rootRegion, info2, rootRegion); 
     LOG.info("Adding " + merged.getRegionInfo() + " to " +
@@ -211,9 +206,7 @@ public class Merge extends Configured implements Tool {
     LOG.info("Found meta for region1 " + Bytes.toString(meta1.getRegionName()) +
       ", meta for region2 " + Bytes.toString(meta2.getRegionName()));
     HRegion metaRegion1 = this.utils.getMetaRegion(meta1);
-    Get get = new Get(region1);
-    get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    List<KeyValue> cells1 =  metaRegion1.get(get, null).list();
+    List<KeyValue> cells1 = metaRegion1.get(region1, HConstants.COL_REGIONINFO, -1, -1);
     HRegionInfo info1 = Writables.getHRegionInfo((cells1 == null)? null: cells1.get(0).getValue());
     if (info1== null) {
       throw new NullPointerException("info1 is null using key " +
@@ -226,9 +219,7 @@ public class Merge extends Configured implements Tool {
     } else {
       metaRegion2 = utils.getMetaRegion(meta2);
     }
-    get = new Get(region2);
-    get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    List<KeyValue> cells2 =  metaRegion2.get(get, null).list();
+    List<KeyValue> cells2 = metaRegion2.get(region2, HConstants.COL_REGIONINFO, -1, -1);
     HRegionInfo info2 = Writables.getHRegionInfo((cells2 == null)? null: cells2.get(0).getValue());
     if (info2 == null) {
       throw new NullPointerException("info2 is null using key " + meta2);
@@ -318,10 +309,7 @@ public class Merge extends Configured implements Tool {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing region: " + regioninfo + " from " + meta);
     }
-    
-    Delete delete  = new Delete(regioninfo.getRegionName(), 
-        System.currentTimeMillis(), null);
-    meta.delete(delete, null, true);
+    meta.deleteAll(regioninfo.getRegionName(), System.currentTimeMillis(), null);
   }
 
   /*

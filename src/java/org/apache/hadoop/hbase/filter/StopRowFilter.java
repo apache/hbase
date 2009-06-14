@@ -32,8 +32,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Implementation of RowFilterInterface that filters out rows greater than or 
  * equal to a specified rowKey.
- *
- * @deprecated Use filters that are rooted on @{link Filter} instead
  */
 public class StopRowFilter implements RowFilterInterface {
   private byte [] stopRowKey;

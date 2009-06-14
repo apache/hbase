@@ -38,15 +38,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.filter.PageFilter;
-import org.apache.hadoop.hbase.filter.RowWhileMatchFilter;
+import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.filter.PageRowFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Hash;
@@ -88,13 +86,12 @@ public class PerformanceEvaluation implements HConstants {
   private static final int ONE_GB = 1024 * 1024 * 1000;
   private static final int ROWS_PER_GB = ONE_GB / ROW_LENGTH;
   
-  static final byte [] FAMILY_NAME = Bytes.toBytes("info");
-  static final byte [] QUALIFIER_NAME = Bytes.toBytes("data");
+  static final byte [] COLUMN_NAME = Bytes.toBytes(COLUMN_FAMILY_STR + "data");
   
   protected static final HTableDescriptor TABLE_DESCRIPTOR;
   static {
     TABLE_DESCRIPTOR = new HTableDescriptor("TestTable");
-    TABLE_DESCRIPTOR.addFamily(new HColumnDescriptor(CATALOG_FAMILY));
+    TABLE_DESCRIPTOR.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
   }
   
   private static final String RANDOM_READ = "randomRead";
@@ -434,12 +431,11 @@ public class PerformanceEvaluation implements HConstants {
     
     @Override
     void testRow(final int i) throws IOException {
-      Scan scan = new Scan(getRandomRow(this.rand, this.totalRows));
-      scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-      scan.setFilter(new RowWhileMatchFilter(new PageFilter(120)));
-      ResultScanner s = this.table.getScanner(scan);
+      Scanner s = this.table.getScanner(new byte [][] {COLUMN_NAME},
+        getRandomRow(this.rand, this.totalRows),
+        new WhileMatchRowFilter(new PageRowFilter(120)));
       //int count = 0;
-      for (Result rr = null; (rr = s.next()) != null;) {
+      for (RowResult rr = null; (rr = s.next()) != null;) {
         // LOG.info("" + count++ + " " + rr.toString());
       }
       s.close();
@@ -465,9 +461,7 @@ public class PerformanceEvaluation implements HConstants {
     
     @Override
     void testRow(final int i) throws IOException {
-      Get get = new Get(getRandomRow(this.rand, this.totalRows));
-      get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-      this.table.get(get);
+      this.table.get(getRandomRow(this.rand, this.totalRows), COLUMN_NAME);
     }
 
     @Override
@@ -491,9 +485,9 @@ public class PerformanceEvaluation implements HConstants {
     @Override
     void testRow(final int i) throws IOException {
       byte [] row = getRandomRow(this.rand, this.totalRows);
-      Put put = new Put(row);
-      put.add(FAMILY_NAME, QUALIFIER_NAME, generateValue(this.rand));
-      table.put(put);
+      BatchUpdate b = new BatchUpdate(row);
+      b.put(COLUMN_NAME, generateValue(this.rand));
+      table.commit(b);
     }
 
     @Override
@@ -503,7 +497,7 @@ public class PerformanceEvaluation implements HConstants {
   }
   
   class ScanTest extends Test {
-    private ResultScanner testScanner;
+    private Scanner testScanner;
     
     ScanTest(final HBaseConfiguration conf, final int startRow,
         final int perClientRunRows, final int totalRows, final Status status) {
@@ -513,9 +507,8 @@ public class PerformanceEvaluation implements HConstants {
     @Override
     void testSetup() throws IOException {
       super.testSetup();
-      Scan scan = new Scan(format(this.startRow));
-      scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-      this.testScanner = table.getScanner(scan);
+      this.testScanner = table.getScanner(new byte [][] {COLUMN_NAME},
+        format(this.startRow));
     }
     
     @Override
@@ -546,9 +539,7 @@ public class PerformanceEvaluation implements HConstants {
     
     @Override
     void testRow(final int i) throws IOException {
-      Get get = new Get(format(i));
-      get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-      table.get(get);
+      table.get(format(i), COLUMN_NAME);
     }
 
     @Override
@@ -565,9 +556,9 @@ public class PerformanceEvaluation implements HConstants {
     
     @Override
     void testRow(final int i) throws IOException {
-      Put put = new Put(format(i));
-      put.add(FAMILY_NAME, QUALIFIER_NAME, generateValue(this.rand));
-      table.put(put);
+      BatchUpdate b = new BatchUpdate(format(i));
+      b.put(COLUMN_NAME, generateValue(this.rand));
+      table.commit(b);
     }
 
     @Override

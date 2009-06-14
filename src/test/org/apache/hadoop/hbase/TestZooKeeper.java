@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -142,9 +141,9 @@ public class TestZooKeeper extends HBaseClusterTestCase {
       admin.createTable(desc);
   
       HTable table = new HTable("test");
-      Put put = new Put(Bytes.toBytes("testrow"));
-      put.add(Bytes.toBytes("fam"), Bytes.toBytes("col"), Bytes.toBytes("testdata"));
-      table.put(put);
+      BatchUpdate batchUpdate = new BatchUpdate("testrow");
+      batchUpdate.put("fam:col", Bytes.toBytes("testdata"));
+      table.commit(batchUpdate);
     } catch (Exception e) {
       e.printStackTrace();
       fail();

@@ -25,7 +25,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.SortedMap;
 
 import junit.framework.TestCase;
@@ -35,13 +34,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
@@ -58,11 +52,11 @@ public abstract class HBaseTestCase extends TestCase {
   /** configuration parameter name for test directory */
   public static final String TEST_DIRECTORY_KEY = "test.build.data";
 
-  protected final static byte [] fam1 = Bytes.toBytes("colfamily1");
-  protected final static byte [] fam2 = Bytes.toBytes("colfamily2");
-  protected final static byte [] fam3 = Bytes.toBytes("colfamily3");
-  protected static final byte [][] COLUMNS = {fam1,
-    fam2, fam3};
+  protected final static byte [] COLFAMILY_NAME1 = Bytes.toBytes("colfamily1:");
+  protected final static byte [] COLFAMILY_NAME2 = Bytes.toBytes("colfamily2:");
+  protected final static byte [] COLFAMILY_NAME3 = Bytes.toBytes("colfamily3:");
+  protected static final byte [][] COLUMNS = {COLFAMILY_NAME1,
+    COLFAMILY_NAME2, COLFAMILY_NAME3};
 
   private boolean localfs = false;
   protected Path testDir = null;
@@ -195,13 +189,13 @@ public abstract class HBaseTestCase extends TestCase {
   protected HTableDescriptor createTableDescriptor(final String name,
       final int versions) {
     HTableDescriptor htd = new HTableDescriptor(name);
-    htd.addFamily(new HColumnDescriptor(fam1, versions,
+    htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME1, versions,
       HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
       Integer.MAX_VALUE, HConstants.FOREVER, false));
-    htd.addFamily(new HColumnDescriptor(fam2, versions,
+    htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME2, versions,
         HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
         Integer.MAX_VALUE, HConstants.FOREVER, false));
-    htd.addFamily(new HColumnDescriptor(fam3, versions,
+    htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME3, versions,
         HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
         Integer.MAX_VALUE,  HConstants.FOREVER, false));
     return htd;
@@ -290,13 +284,11 @@ public abstract class HBaseTestCase extends TestCase {
             break EXIT;
           }
           try {
-            Put put = new Put(t);
-            if(ts != -1) {
-              put.setTimeStamp(ts);
-            }
+            BatchUpdate batchUpdate = ts == -1 ? 
+              new BatchUpdate(t) : new BatchUpdate(t, ts);
             try {
-              put.add(Bytes.toBytes(column), null, t);
-              updater.put(put);
+              batchUpdate.put(column, t);
+              updater.commit(batchUpdate);
               count++;
             } catch (RuntimeException ex) {
               ex.printStackTrace();
@@ -339,23 +331,44 @@ public abstract class HBaseTestCase extends TestCase {
    */
   public static interface Incommon {
     /**
-     * 
-     * @param delete
-     * @param lockid
-     * @param writeToWAL
+     * @param row
+     * @param column
+     * @return value for row/column pair
      * @throws IOException
      */
-    public void delete(Delete delete,  Integer lockid, boolean writeToWAL)
+    public Cell get(byte [] row, byte [] column) throws IOException;
+    /**
+     * @param row
+     * @param column
+     * @param versions
+     * @return value for row/column pair for number of versions requested
+     * @throws IOException
+     */
+    public Cell[] get(byte [] row, byte [] column, int versions) throws IOException;
+    /**
+     * @param row
+     * @param column
+     * @param ts
+     * @param versions
+     * @return value for row/column/timestamp tuple for number of versions
+     * @throws IOException
+     */
+    public Cell[] get(byte [] row, byte [] column, long ts, int versions)
     throws IOException;
+    /**
+     * @param row
+     * @param column
+     * @param ts
+     * @throws IOException
+     */
+    public void deleteAll(byte [] row, byte [] column, long ts) throws IOException;
 
     /**
-     * @param put
+     * @param batchUpdate
      * @throws IOException
      */
-    public void put(Put put) throws IOException;
+    public void commit(BatchUpdate batchUpdate) throws IOException;
 
-    public Result get(Get get) throws IOException;
-    
     /**
      * @param columns
      * @param firstRow
@@ -380,46 +393,48 @@ public abstract class HBaseTestCase extends TestCase {
       this.region = HRegion;
     }
     
-    public void put(Put put) throws IOException {
-      region.put(put);
+    public void commit(BatchUpdate batchUpdate) throws IOException {
+      region.batchUpdate(batchUpdate, null);
     }
     
-    public void delete(Delete delete,  Integer lockid, boolean writeToWAL)
+    public void deleteAll(byte [] row, byte [] column, long ts)
     throws IOException {
-      this.region.delete(delete, lockid, writeToWAL);
+      this.region.deleteAll(row, column, ts, null);
     }
-    
-    public Result get(Get get) throws IOException {
-      return region.get(get, null);
-    }
-    
+
     public ScannerIncommon getScanner(byte [][] columns, byte [] firstRow,
       long ts) 
     throws IOException {
-      Scan scan = new Scan(firstRow);
-      scan.addColumns(columns);
-      scan.setTimeRange(0, ts);
       return new 
-        InternalScannerIncommon(region.getScanner(scan));
+        InternalScannerIncommon(region.getScanner(columns, firstRow, ts, null));
     }
-    
-    //New
-    public ScannerIncommon getScanner(byte [] family, byte [][] qualifiers,
-        byte [] firstRow, long ts) 
-      throws IOException {
-        Scan scan = new Scan(firstRow);
-        for(int i=0; i<qualifiers.length; i++){
-          scan.addColumn(HConstants.CATALOG_FAMILY, qualifiers[i]);
-        }
-        scan.setTimeRange(0, ts);
-        return new 
-          InternalScannerIncommon(region.getScanner(scan));
-      }
-    
-    public Result get(Get get, Integer lockid) throws IOException{
-      return this.region.get(get, lockid);
+
+    public Cell get(byte [] row, byte [] column) throws IOException {
+      // TODO: Fix profligacy converting from List to Cell [].
+      Cell[] result = Cell.createSingleCellArray(this.region.get(row, column, -1, -1));
+      return (result == null)? null : result[0];
     }
-    
+
+    public Cell[] get(byte [] row, byte [] column, int versions)
+    throws IOException {
+      // TODO: Fix profligacy converting from List to Cell [].
+      return Cell.createSingleCellArray(this.region.get(row, column, -1, versions));
+    }
+
+    public Cell[] get(byte [] row, byte [] column, long ts, int versions)
+    throws IOException {
+      // TODO: Fix profligacy converting from List to Cell [].
+      return Cell.createSingleCellArray(this.region.get(row, column, ts, versions));
+    }
+
+    /**
+     * @param row
+     * @return values for each column in the specified row
+     * @throws IOException
+     */
+    public Map<byte [], Cell> getFull(byte [] row) throws IOException {
+      return region.getFull(row, null, HConstants.LATEST_TIMESTAMP, 1, null);
+    }
 
     public void flushcache() throws IOException {
       this.region.flushcache();
@@ -440,27 +455,33 @@ public abstract class HBaseTestCase extends TestCase {
       this.table = table;
     }
     
-    public void put(Put put) throws IOException {
-      table.put(put);
+    public void commit(BatchUpdate batchUpdate) throws IOException {
+      table.commit(batchUpdate);
     }
     
-    
-    public void delete(Delete delete,  Integer lockid, boolean writeToWAL)
+    public void deleteAll(byte [] row, byte [] column, long ts)
     throws IOException {
-      this.table.delete(delete);
-    }
-    
-    public Result get(Get get) throws IOException {
-      return table.get(get);
+      this.table.deleteAll(row, column, ts);
     }
     
     public ScannerIncommon getScanner(byte [][] columns, byte [] firstRow, long ts) 
     throws IOException {
-      Scan scan = new Scan(firstRow);
-      scan.addColumns(columns);
-      scan.setTimeStamp(ts);
       return new 
-        ClientScannerIncommon(table.getScanner(scan));
+        ClientScannerIncommon(table.getScanner(columns, firstRow, ts, null));
+    }
+    
+    public Cell get(byte [] row, byte [] column) throws IOException {
+      return this.table.get(row, column);
+    }
+    
+    public Cell[] get(byte [] row, byte [] column, int versions)
+    throws IOException {
+      return this.table.get(row, column, versions);
+    }
+    
+    public Cell[] get(byte [] row, byte [] column, long ts, int versions)
+    throws IOException {
+      return this.table.get(row, column, ts, versions);
     }
   }
   
@@ -473,19 +494,22 @@ public abstract class HBaseTestCase extends TestCase {
   }
   
   public static class ClientScannerIncommon implements ScannerIncommon {
-    ResultScanner scanner;
-    public ClientScannerIncommon(ResultScanner scanner) {
+    Scanner scanner;
+    public ClientScannerIncommon(Scanner scanner) {
       this.scanner = scanner;
     }
     
     public boolean next(List<KeyValue> values)
     throws IOException {
-      Result results = scanner.next();
+      RowResult results = scanner.next();
       if (results == null) {
         return false;
       }
       values.clear();
-      values.addAll(results.list());
+      for (Map.Entry<byte [], Cell> entry : results.entrySet()) {
+        values.add(new KeyValue(results.getRow(), entry.getKey(),
+          entry.getValue().getTimestamp(), entry.getValue().getValue()));
+      }
       return true;
     }
     
@@ -520,53 +544,25 @@ public abstract class HBaseTestCase extends TestCase {
     }
   }
   
-//  protected void assertCellEquals(final HRegion region, final byte [] row,
-//    final byte [] column, final long timestamp, final String value)
-//  throws IOException {
-//    Map<byte [], Cell> result = region.getFull(row, null, timestamp, 1, null);
-//    Cell cell_value = result.get(column);
-//    if (value == null) {
-//      assertEquals(Bytes.toString(column) + " at timestamp " + timestamp, null,
-//        cell_value);
-//    } else {
-//      if (cell_value == null) {
-//        fail(Bytes.toString(column) + " at timestamp " + timestamp + 
-//          "\" was expected to be \"" + value + " but was null");
-//      }
-//      if (cell_value != null) {
-//        assertEquals(Bytes.toString(column) + " at timestamp " 
-//            + timestamp, value, new String(cell_value.getValue()));
-//      }
-//    }
-//  }
-
-  protected void assertResultEquals(final HRegion region, final byte [] row,
-      final byte [] family, final byte [] qualifier, final long timestamp,
-      final byte [] value)
-    throws IOException {
-      Get get = new Get(row);
-      get.setTimeStamp(timestamp);
-      Result res = region.get(get, null);
-      NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map = 
-        res.getMap();
-      byte [] res_value = map.get(family).get(qualifier).get(timestamp);
-    
-      if (value == null) {
-        assertEquals(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
-            " at timestamp " + timestamp, null, res_value);
-      } else {
-        if (res_value == null) {
-          fail(Bytes.toString(family) + " " + Bytes.toString(qualifier) + 
-              " at timestamp " + timestamp + "\" was expected to be \"" + 
-              value + " but was null");
-        }
-        if (res_value != null) {
-          assertEquals(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
-              " at timestamp " + 
-              timestamp, value, new String(res_value));
-        }
+  protected void assertCellEquals(final HRegion region, final byte [] row,
+    final byte [] column, final long timestamp, final String value)
+  throws IOException {
+    Map<byte [], Cell> result = region.getFull(row, null, timestamp, 1, null);
+    Cell cell_value = result.get(column);
+    if (value == null) {
+      assertEquals(Bytes.toString(column) + " at timestamp " + timestamp, null,
+        cell_value);
+    } else {
+      if (cell_value == null) {
+        fail(Bytes.toString(column) + " at timestamp " + timestamp + 
+          "\" was expected to be \"" + value + " but was null");
+      }
+      if (cell_value != null) {
+        assertEquals(Bytes.toString(column) + " at timestamp " 
+            + timestamp, value, new String(cell_value.getValue()));
       }
     }
+  }
   
   /**
    * Initializes parameters used in the test environment:

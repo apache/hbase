@@ -12,6 +12,7 @@
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.HColumnDescriptor" 
+  import="org.apache.hadoop.hbase.client.tableindexed.IndexSpecification"
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   HBaseConfiguration conf = master.getConfiguration();
@@ -123,6 +124,19 @@ $(document).ready(function(){
 </ul>
 </li>  
 
+<li><span>&nbsp;Indexes</span>
+<ul>
+<%     Collection<IndexSpecification> idx = htDesc.getIndexes();
+       if (idx.size() > 0) 
+         for (IndexSpecification is: idx) { %>
+<li>&nbsp;ID: <%= is.getIndexId() %> </li>
+<%       } 
+       else { %>
+<li>&nbsp;none</li>
+<%     } %>
+</ul>
+</li>
+
 </ul>
 </li>
 
@@ -147,7 +161,7 @@ $(document).ready(function(){
      Arrays.sort(serverNames);
      for (String serverName: serverNames) {
        HServerInfo hsi = serverToServerInfos.get(serverName);
-       String hostname = hsi.getServerAddress().getInetSocketAddress().getAddress().getHostAddress() + ":" + hsi.getInfoPort();
+       String hostname = hsi.getName() + ":" + hsi.getInfoPort();
        String url = "http://" + hostname + "/";
        totalRegions += hsi.getLoad().getNumberOfRegions();
        totalRequests += hsi.getLoad().getNumberOfRequests() / interval;

@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
@@ -31,9 +34,6 @@ import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * Test HStoreFile
@@ -72,11 +72,11 @@ public class TestStoreFile extends HBaseTestCase {
     // Make up a directory hierarchy that has a regiondir and familyname.
     HFile.Writer writer = StoreFile.getWriter(this.fs,
       new Path(new Path(this.testDir, "regionname"), "familyname"),
-      2 * 1024, null, null);
+      2 * 1024, null, null, false);
     writeStoreFile(writer);
-    checkHalfHFile(new StoreFile(this.fs, writer.getPath(), true, conf));
+    checkHalfHFile(new StoreFile(this.fs, writer.getPath(), conf));
   }
-  
+
   /*
    * Writes HStoreKey and ImmutableBytes data to passed writer and
    * then closes it.
@@ -111,9 +111,9 @@ public class TestStoreFile extends HBaseTestCase {
     Path dir = new Path(storedir, "1234567890");
     // Make a store file and write data to it.
     HFile.Writer writer = StoreFile.getWriter(this.fs, dir, 8 * 1024, null,
-      null);
+      null, false);
     writeStoreFile(writer);
-    StoreFile hsf = new StoreFile(this.fs, writer.getPath(), true, conf);
+    StoreFile hsf = new StoreFile(this.fs, writer.getPath(), conf);
     HFile.Reader reader = hsf.getReader();
     // Split on a row, not in middle of row.  Midkey returned by reader
     // may be in middle of row.  Create new one with empty column and
@@ -124,7 +124,7 @@ public class TestStoreFile extends HBaseTestCase {
     byte [] finalKey = hsk.getRow();
     // Make a reference
     Path refPath = StoreFile.split(fs, dir, hsf, reader.midkey(), Range.top);
-    StoreFile refHsf = new StoreFile(this.fs, refPath, true, conf);
+    StoreFile refHsf = new StoreFile(this.fs, refPath, conf);
     // Now confirm that I can read from the reference and that it only gets
     // keys from top half of the file.
     HFileScanner s = refHsf.getReader().getScanner();
@@ -158,8 +158,8 @@ public class TestStoreFile extends HBaseTestCase {
     Path bottomPath = StoreFile.split(this.fs, bottomDir,
       f, midkey, Range.bottom);
     // Make readers on top and bottom.
-    HFile.Reader top = new StoreFile(this.fs, topPath, true, conf).getReader();
-    HFile.Reader bottom = new StoreFile(this.fs, bottomPath, true, conf).getReader();
+    HFile.Reader top = new StoreFile(this.fs, topPath, conf).getReader();
+    HFile.Reader bottom = new StoreFile(this.fs, bottomPath, conf).getReader();
     ByteBuffer previous = null;
     LOG.info("Midkey: " + Bytes.toString(midkey));
     byte [] midkeyBytes = new HStoreKey(midkey).getBytes();
@@ -212,8 +212,8 @@ public class TestStoreFile extends HBaseTestCase {
       topPath = StoreFile.split(this.fs, topDir, f, badmidkey, Range.top);
       bottomPath = StoreFile.split(this.fs, bottomDir, f, badmidkey,
         Range.bottom);
-      top = new StoreFile(this.fs, topPath, true, conf).getReader();
-      bottom = new StoreFile(this.fs, bottomPath, true, conf).getReader();
+      top = new StoreFile(this.fs, topPath, conf).getReader();
+      bottom = new StoreFile(this.fs, bottomPath, conf).getReader();
       bottomScanner = bottom.getScanner();
       int count = 0;
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
@@ -256,8 +256,8 @@ public class TestStoreFile extends HBaseTestCase {
       topPath = StoreFile.split(this.fs, topDir, f, badmidkey, Range.top);
       bottomPath = StoreFile.split(this.fs, bottomDir, f, badmidkey,
         Range.bottom);
-      top = new StoreFile(this.fs, topPath, true, conf).getReader();
-      bottom = new StoreFile(this.fs, bottomPath, true, conf).getReader();
+      top = new StoreFile(this.fs, topPath, conf).getReader();
+      bottom = new StoreFile(this.fs, bottomPath, conf).getReader();
       first = true;
       bottomScanner = bottom.getScanner();
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||

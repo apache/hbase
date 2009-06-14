@@ -20,13 +20,18 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.util.NavigableMap;
+import java.util.Iterator;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -34,14 +39,13 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class TestGetRowVersions extends HBaseClusterTestCase {
   private static final Log LOG = LogFactory.getLog(TestGetRowVersions.class);
-  
   private static final String TABLE_NAME = "test";
-  private static final byte [] CONTENTS = Bytes.toBytes("contents");
-  private static final byte [] ROW = Bytes.toBytes("row");
-  private static final byte [] VALUE1 = Bytes.toBytes("value1");
-  private static final byte [] VALUE2 = Bytes.toBytes("value2");
-  private static final long TIMESTAMP1 = 100L;
-  private static final long TIMESTAMP2 = 200L;
+  private static final String CONTENTS_STR = "contents:";
+  private static final String ROW = "row";
+  private static final String COLUMN = "contents:contents";
+  private static final long TIMESTAMP = System.currentTimeMillis();
+  private static final String VALUE1 = "value1";
+  private static final String VALUE2 = "value2";
   private HBaseAdmin admin = null;
   private HTable table = null;
 
@@ -49,7 +53,7 @@ public class TestGetRowVersions extends HBaseClusterTestCase {
   public void setUp() throws Exception {
     super.setUp();
     HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
-    desc.addFamily(new HColumnDescriptor(CONTENTS));
+    desc.addFamily(new HColumnDescriptor(CONTENTS_STR));
     this.admin = new HBaseAdmin(conf);
     this.admin.createTable(desc);
     this.table = new HTable(conf, TABLE_NAME);
@@ -57,10 +61,9 @@ public class TestGetRowVersions extends HBaseClusterTestCase {
 
   /** @throws Exception */
   public void testGetRowMultipleVersions() throws Exception {
-    Put put = new Put(ROW);
-    put.setTimeStamp(TIMESTAMP1);
-    put.add(CONTENTS, CONTENTS, VALUE1);
-    this.table.put(put);
+    BatchUpdate b = new BatchUpdate(ROW, TIMESTAMP);
+    b.put(COLUMN, Bytes.toBytes(VALUE1));
+    this.table.commit(b);
     // Shut down and restart the HBase cluster
     this.cluster.shutdown();
     this.zooKeeperCluster.shutdown();
@@ -69,35 +72,33 @@ public class TestGetRowVersions extends HBaseClusterTestCase {
     // Make a new connection
     this.table = new HTable(conf, TABLE_NAME);
     // Overwrite previous value
-    put = new Put(ROW);
-    put.setTimeStamp(TIMESTAMP2);
-    put.add(CONTENTS, CONTENTS, VALUE2);
-    this.table.put(put);
+    b = new BatchUpdate(ROW, TIMESTAMP);
+    b.put(COLUMN, Bytes.toBytes(VALUE2));
+    this.table.commit(b);
     // Now verify that getRow(row, column, latest) works
-    Get get = new Get(ROW);
-    // Should get one version by default
-    Result r = table.get(get);
+    RowResult r = table.getRow(ROW);
     assertNotNull(r);
-    assertFalse(r.isEmpty());
-    assertTrue(r.size() == 1);
-    byte [] value = r.getValue(CONTENTS, CONTENTS);
-    assertTrue(value.length != 0);
-    assertTrue(Bytes.equals(value, VALUE2));
+    assertTrue(r.size() != 0);
+    Cell c = r.get(COLUMN);
+    assertNotNull(c);
+    assertTrue(c.getValue().length != 0);
+    String value = Bytes.toString(c.getValue());
+    assertTrue(value.compareTo(VALUE2) == 0);
     // Now check getRow with multiple versions
-    get = new Get(ROW);
-    get.setMaxVersions();
-    r = table.get(get);
-    assertTrue(r.size() == 2);
-    value = r.getValue(CONTENTS, CONTENTS);
-    assertTrue(value.length != 0);
-    assertTrue(Bytes.equals(value, VALUE2));
-    NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map =
-      r.getMap();
-    NavigableMap<byte[], NavigableMap<Long, byte[]>> familyMap = 
-      map.get(CONTENTS);
-    NavigableMap<Long, byte[]> versionMap = familyMap.get(CONTENTS);
-    assertTrue(versionMap.size() == 2);
-    assertTrue(Bytes.equals(VALUE1, versionMap.get(TIMESTAMP1)));
-    assertTrue(Bytes.equals(VALUE2, versionMap.get(TIMESTAMP2)));
+    r = table.getRow(ROW, HConstants.ALL_VERSIONS);
+    for (Map.Entry<byte[], Cell> e: r.entrySet()) {
+      // Column name
+//      System.err.print("  " + Bytes.toString(e.getKey()));
+      c = e.getValue();
+      
+      // Need to iterate since there may be multiple versions
+      for (Iterator<Map.Entry<Long, byte[]>> it = c.iterator();
+            it.hasNext(); ) {
+        Map.Entry<Long, byte[]> v = it.next();
+        value = Bytes.toString(v.getValue());
+//        System.err.println(" = " + value);
+        assertTrue(VALUE2.compareTo(Bytes.toString(v.getValue())) == 0);
+      }
+    }
   }
 }

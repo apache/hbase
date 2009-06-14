@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2007 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -29,14 +29,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -194,7 +193,7 @@ class HMerge implements HConstants {
   private static class OnlineMerger extends Merger {
     private final byte [] tableName;
     private final HTable table;
-    private final ResultScanner metaScanner;
+    private final Scanner metaScanner;
     private HRegionInfo latestRegion;
     
     OnlineMerger(HBaseConfiguration conf, FileSystem fs,
@@ -203,23 +202,22 @@ class HMerge implements HConstants {
       super(conf, fs, tableName);
       this.tableName = tableName;
       this.table = new HTable(conf, META_TABLE_NAME);
-      this.metaScanner = table.getScanner(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+      this.metaScanner = table.getScanner(COL_REGIONINFO_ARRAY, tableName);
       this.latestRegion = null;
     }
     
     private HRegionInfo nextRegion() throws IOException {
       try {
-        Result results = getMetaRow();
+        RowResult results = getMetaRow();
         if (results == null) {
           return null;
         }
-        byte [] regionInfoValue = results.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
-        if (regionInfoValue == null || regionInfoValue.length == 0) {
+        Cell regionInfo = results.get(COL_REGIONINFO);
+        if (regionInfo == null || regionInfo.getValue().length == 0) {
           throw new NoSuchElementException("meta region entry missing " +
-              Bytes.toString(CATALOG_FAMILY) + ":" +
-              Bytes.toString(REGIONINFO_QUALIFIER));
+              Bytes.toString(COL_REGIONINFO));
         }
-        HRegionInfo region = Writables.getHRegionInfo(regionInfoValue);
+        HRegionInfo region = Writables.getHRegionInfo(regionInfo.getValue());
         if (!Bytes.equals(region.getTableDesc().getName(), this.tableName)) {
           return null;
         }
@@ -246,13 +244,13 @@ class HMerge implements HConstants {
      * @return A Map of the row content else null if we are off the end.
      * @throws IOException
      */
-    private Result getMetaRow() throws IOException {
-      Result currentRow = metaScanner.next();
+    private RowResult getMetaRow() throws IOException {
+      RowResult currentRow = metaScanner.next();
       boolean foundResult = false;
       while (currentRow != null) {
         LOG.info("Row: <" + Bytes.toString(currentRow.getRow()) + ">");
-        byte [] regionInfoValue = currentRow.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
-        if (regionInfoValue == null || regionInfoValue.length == 0) {
+        Cell regionInfo = currentRow.get(COL_REGIONINFO);
+        if (regionInfo == null || regionInfo.getValue().length == 0) {
           currentRow = metaScanner.next();
           continue;
         }
@@ -288,18 +286,17 @@ class HMerge implements HConstants {
         if(Bytes.equals(regionsToDelete[r], latestRegion.getRegionName())) {
           latestRegion = null;
         }
-        Delete delete = new Delete(regionsToDelete[r]);
-        table.delete(delete);
+        table.deleteAll(regionsToDelete[r]);
         if(LOG.isDebugEnabled()) {
           LOG.debug("updated columns in row: " + Bytes.toString(regionsToDelete[r]));
         }
       }
       newRegion.getRegionInfo().setOffline(true);
 
-      Put put = new Put(newRegion.getRegionName());
-      put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER,
+      BatchUpdate update = new BatchUpdate(newRegion.getRegionName());
+      update.put(COL_REGIONINFO,
         Writables.getBytes(newRegion.getRegionInfo()));
-      table.put(put);
+      table.commit(update);
 
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: "
@@ -328,10 +325,9 @@ class HMerge implements HConstants {
           HRegionInfo.ROOT_REGIONINFO, null);
       root.initialize(null, null);
 
-      Scan scan = new Scan();
-      scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
       InternalScanner rootScanner = 
-        root.getScanner(scan);
+        root.getScanner(COL_REGIONINFO_ARRAY, HConstants.EMPTY_START_ROW, 
+        HConstants.LATEST_TIMESTAMP, null);
       
       try {
         List<KeyValue> results = new ArrayList<KeyValue>();
@@ -370,29 +366,23 @@ class HMerge implements HConstants {
     throws IOException {
       byte[][] regionsToDelete = {oldRegion1, oldRegion2};
       for(int r = 0; r < regionsToDelete.length; r++) {
-        Delete delete = new Delete(regionsToDelete[r]);
-        delete.deleteColumns(HConstants.CATALOG_FAMILY,
-            HConstants.REGIONINFO_QUALIFIER);
-        delete.deleteColumns(HConstants.CATALOG_FAMILY,
-            HConstants.SERVER_QUALIFIER);
-        delete.deleteColumns(HConstants.CATALOG_FAMILY,
-            HConstants.STARTCODE_QUALIFIER);
-        delete.deleteColumns(HConstants.CATALOG_FAMILY,
-            HConstants.SPLITA_QUALIFIER);
-        delete.deleteColumns(HConstants.CATALOG_FAMILY,
-            HConstants.SPLITB_QUALIFIER);
-        root.delete(delete, null, true);
-        
+        BatchUpdate b = new BatchUpdate(regionsToDelete[r]);
+        b.delete(COL_REGIONINFO);
+        b.delete(COL_SERVER);
+        b.delete(COL_STARTCODE);
+        b.delete(COL_SPLITA);
+        b.delete(COL_SPLITB);
+        root.batchUpdate(b,null);
+
         if(LOG.isDebugEnabled()) {
           LOG.debug("updated columns in row: " + Bytes.toString(regionsToDelete[r]));
         }
       }
       HRegionInfo newInfo = newRegion.getRegionInfo();
       newInfo.setOffline(true);
-      Put put = new Put(newRegion.getRegionName());
-      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-          Writables.getBytes(newInfo));
-      root.put(put);
+      BatchUpdate b = new BatchUpdate(newRegion.getRegionName());
+      b.put(COL_REGIONINFO, Writables.getBytes(newInfo));
+      root.batchUpdate(b,null);
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: " + Bytes.toString(newRegion.getRegionName()));
       }

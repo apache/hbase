@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HServerAddress;
 
@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.HServerAddress;
  * <code>${HBASE_HOME}/bin/hbase ./bin/hbase org.apache.hadoop.hbase.OOMERegionServer start</code>.
  */
 public class OOMERegionServer extends HRegionServer {
-  private List<Put> retainer = new ArrayList<Put>();
+  private List<BatchUpdate> retainer = new ArrayList<BatchUpdate>();
 
   public OOMERegionServer(HBaseConfiguration conf) throws IOException {
     super(conf);
@@ -46,12 +46,12 @@ public class OOMERegionServer extends HRegionServer {
     super(address, conf);
   }
   
-  public void put(byte [] regionName, Put put)
+  public void batchUpdate(byte [] regionName, BatchUpdate b)
   throws IOException {
-    super.put(regionName, put);
+    super.batchUpdate(regionName, b, -1L);
     for (int i = 0; i < 30; i++) {
       // Add the batch update 30 times to bring on the OOME faster.
-      this.retainer.add(put);
+      this.retainer.add(b);
     }
   }
   

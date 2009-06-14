@@ -32,10 +32,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -105,15 +102,15 @@ public class DisabledTestRegionServerExit extends HBaseClusterTestCase {
   private byte [] createTableAndAddRow(final String tableName)
   throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY));
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(desc);
     // put some values in the table
     this.table = new HTable(conf, tableName);
     byte [] row = Bytes.toBytes("row1");
-    Put put = new Put(row);
-    put.add(HConstants.CATALOG_FAMILY, null, Bytes.toBytes(tableName));
-    table.put(put);
+    BatchUpdate b = new BatchUpdate(row);
+    b.put(HConstants.COLUMN_FAMILY, Bytes.toBytes(tableName));
+    table.commit(b);
     return row;
   }
 
@@ -169,29 +166,27 @@ public class DisabledTestRegionServerExit extends HBaseClusterTestCase {
           // Now try to open a scanner on the meta table. Should stall until
           // meta server comes back up.
           HTable t = new HTable(conf, HConstants.META_TABLE_NAME);
-          Scan scan = new Scan();
-          scan.addFamily(HConstants.CATALOG_FAMILY);
-
-          ResultScanner s = t.getScanner(scan);
+          Scanner s =
+            t.getScanner(HConstants.COLUMN_FAMILY_ARRAY,
+              HConstants.EMPTY_START_ROW);
           s.close();
           
         } catch (IOException e) {
           LOG.fatal("could not re-open meta table because", e);
           fail();
         }
-        ResultScanner scanner = null;
+        Scanner scanner = null;
         try {
           // Verify that the client can find the data after the region has moved
           // to a different server
-          Scan scan = new Scan();
-          scan.addFamily(HConstants.CATALOG_FAMILY);
-
-          scanner = table.getScanner(scan);
+          scanner =
+            table.getScanner(HConstants.COLUMN_FAMILY_ARRAY,
+               HConstants.EMPTY_START_ROW);
           LOG.info("Obtained scanner " + scanner);
-          for (Result r : scanner) {
+          for (RowResult r : scanner) {
             assertTrue(Bytes.equals(r.getRow(), row));
             assertEquals(1, r.size());
-            byte[] bytes = r.getRowResult().get(HConstants.CATALOG_FAMILY).getValue();
+            byte[] bytes = r.get(HConstants.COLUMN_FAMILY).getValue();
             assertNotNull(bytes);
             assertTrue(tableName.equals(Bytes.toString(bytes)));
           }

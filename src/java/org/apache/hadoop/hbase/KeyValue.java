@@ -25,11 +25,11 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.RawComparator;
 
 /**
  * An HBase Key/Value.  Instances of this class are immutable.  They are not
@@ -59,8 +59,6 @@ public class KeyValue implements Writable, HeapSize {
    * Colon character in UTF-8
    */
   public static final char COLUMN_FAMILY_DELIMITER = ':';
-
-  public static final byte[] COLUMN_FAMILY_DELIM_ARRAY = new byte[]{COLUMN_FAMILY_DELIMITER};
   
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values.
@@ -120,45 +118,26 @@ public class KeyValue implements Writable, HeapSize {
         return compare(a, 0, a.length, b, 0, b.length);
       }
     };
-  
-  /**
-   * Get the appropriate row comparator for the specified table.
-   * 
-   * Hopefully we can get rid of this, I added this here because it's replacing
-   * something in HSK.  We should move completely off of that.
-   * 
-   * @param tableName  The table name.
-   * @return The comparator.
-   */
-  public static RawComparator<byte []> getRowComparator(byte [] tableName) {
-    if(Bytes.equals(HTableDescriptor.ROOT_TABLEDESC.getName(),tableName)) {
-      return ROOT_COMPARATOR.getRawComparator();
-    }
-    if(Bytes.equals(HTableDescriptor.META_TABLEDESC.getName(), tableName)) {
-      return META_COMPARATOR.getRawComparator();
-    }
-    return COMPARATOR.getRawComparator();
-  }
 
   // Size of the timestamp and type byte on end of a key -- a long + a byte.
-  public static final int TIMESTAMP_TYPE_SIZE =
+  private static final int TIMESTAMP_TYPE_SIZE =
     Bytes.SIZEOF_LONG /* timestamp */ +
     Bytes.SIZEOF_BYTE /*keytype*/;
 
   // Size of the length shorts and bytes in key.
-  public static final int KEY_INFRASTRUCTURE_SIZE =
+  private static final int KEY_INFRASTRUCTURE_SIZE =
     Bytes.SIZEOF_SHORT /*rowlength*/ +
     Bytes.SIZEOF_BYTE /*columnfamilylength*/ +
     TIMESTAMP_TYPE_SIZE;
 
   // How far into the key the row starts at. First thing to read is the short
   // that says how long the row is.
-  public static final int ROW_OFFSET =
+  private static final int ROW_OFFSET =
     Bytes.SIZEOF_INT /*keylength*/ +
     Bytes.SIZEOF_INT /*valuelength*/;
 
   // Size of the length ints in a KeyValue datastructure.
-  public static final int KEYVALUE_INFRASTRUCTURE_SIZE = ROW_OFFSET;
+  private static final int KEYVALUE_INFRASTRUCTURE_SIZE = ROW_OFFSET;
 
   /**
    * Key type.
@@ -166,13 +145,10 @@ public class KeyValue implements Writable, HeapSize {
    * enum ordinals . They change if item is removed or moved.  Do our own codes.
    */
   public static enum Type {
-    Minimum((byte)0),
     Put((byte)4),
-
     Delete((byte)8),
     DeleteColumn((byte)12),
     DeleteFamily((byte)14),
-
     // Maximum is used when searching; you look from maximum on down.
     Maximum((byte)255);
     
@@ -257,259 +233,178 @@ public class KeyValue implements Writable, HeapSize {
     this.offset = offset;
     this.length = length;
   }
-
-  /** Temporary constructors until 880/1249 is committed to remove deps */
   
   /**
-   * Temporary.
+   * Constructs KeyValue structure filled with null value.
+   * @param row - row key (arbitrary byte array)
+   * @param timestamp
+   */
+  public KeyValue(final String row, final long timestamp) {
+    this(Bytes.toBytes(row), timestamp);
+  }
+
+  /**
+   * Constructs KeyValue structure filled with null value.
+   * @param row - row key (arbitrary byte array)
+   * @param timestamp
+   */
+  public KeyValue(final byte [] row, final long timestamp) {
+    this(row, null, timestamp, Type.Put, null);
+  }
+
+  /**
+   * Constructs KeyValue structure filled with null value.
+   * @param row - row key (arbitrary byte array)
+   * @param column Column with delimiter between family and qualifier
+   */
+  public KeyValue(final String row, final String column) {
+    this(row, column, null);
+  }
+
+  /**
+   * Constructs KeyValue structure filled with null value.
+   * @param row - row key (arbitrary byte array)
+   * @param column Column with delimiter between family and qualifier
    */
   public KeyValue(final byte [] row, final byte [] column) {
-    this(row, column, HConstants.LATEST_TIMESTAMP, null);
+    this(row, column, null);
   }
-  
-  public KeyValue(final byte [] row, final byte [] column, long ts) {
+
+  /**
+   * Constructs KeyValue structure filled with specified value.
+   * @param row - row key (arbitrary byte array)
+   * @param column Column with delimiter between family and qualifier
+   * @param value
+   */
+  public KeyValue(final String row, final String column, final byte [] value) {
+    this(Bytes.toBytes(row), Bytes.toBytes(column), value);
+  }
+
+  /**
+   * Constructs KeyValue structure filled with specified value.
+   * @param row - row key (arbitrary byte array)
+   * @param column Column with delimiter between family and qualifier
+   * @param value
+   */
+  public KeyValue(final byte [] row, final byte [] column, final byte [] value) {
+    this(row, column, HConstants.LATEST_TIMESTAMP, value);
+  }
+
+
+  /**
+   * Constructs KeyValue structure filled with null value.
+   * @param row - row key (arbitrary byte array)
+   * @param column Column with delimiter between family and qualifier
+   * @param ts
+   */
+  public KeyValue(final String row, final String column, final long ts) {
     this(row, column, ts, null);
   }
-  
-  public KeyValue(final byte [] row, final byte [] column, long ts,
-      byte [] value) {
-    this(row, column, ts, Type.Put, value);
-  }
-  
-  public KeyValue(final byte [] row, final byte [] column, long ts, Type type,
-      byte [] value) {
-    int rlength = row == null ? 0 : row.length;
-    int vlength = value == null ? 0 : value.length;
-    int clength = column == null ? 0 : column.length;
-    this.bytes = createByteArray(row, 0, rlength, column, 0, clength,
-        ts, type, value, 0, vlength);
-    this.length = this.bytes.length;
-    this.offset = 0;
-  }
-  
-  /** Constructors that build a new backing byte array from fields */
-  
+
   /**
    * Constructs KeyValue structure filled with null value.
    * @param row - row key (arbitrary byte array)
+   * @param column Column with delimiter between family and qualifier
+   * @param ts
+   */
+  public KeyValue(final byte [] row, final byte [] column, final long ts) {
+    this(row, column, ts, Type.Put);
+  }
+
+  /**
+   * Constructs KeyValue structure filled with specified value.
+   * @param row - row key (arbitrary byte array)
+   * @param column Column with delimiter between family and qualifier
    * @param timestamp
+   * @param value
    */
-  public KeyValue(final byte [] row, final long timestamp) {
-    this(row, timestamp, Type.Put);
+  public KeyValue(final String row, final String column,
+    final long timestamp, final byte [] value) {
+    this(Bytes.toBytes(row),
+      column == null? HConstants.EMPTY_BYTE_ARRAY: Bytes.toBytes(column),
+      timestamp, value);
   }
 
   /**
-   * Constructs KeyValue structure filled with null value.
+   * Constructs KeyValue structure filled with specified value.
    * @param row - row key (arbitrary byte array)
+   * @param column Column with delimiter between family and qualifier
    * @param timestamp
+   * @param value
    */
-  public KeyValue(final byte [] row, final long timestamp, Type type) {
-    this(row, null, null, timestamp, type, null);
+  public KeyValue(final byte [] row, final byte [] column,
+     final long timestamp, final byte [] value) {
+    this(row, column, timestamp, Type.Put, value);
+  }
+
+  /**
+   * Constructs KeyValue structure filled with specified value.
+   * @param row - row key (arbitrary byte array)
+   * @param column Column with delimiter between family and qualifier
+   * @param timestamp
+   * @param type
+   * @param value
+   */
+  public KeyValue(final String row, final String column,
+     final long timestamp, final Type type, final byte [] value) {
+    this(Bytes.toBytes(row), Bytes.toBytes(column), timestamp, type,
+      value);
   }
 
   /**
    * Constructs KeyValue structure filled with null value.
    * @param row - row key (arbitrary byte array)
-   * @param family family name
-   * @param qualifier column qualifier
+   * @param column Column with delimiter between family and qualifier
+   * @param timestamp
+   * @param type
    */
-  public KeyValue(final byte [] row, final byte [] family, 
-      final byte [] qualifier) {
-    this(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Put);
+  public KeyValue(final byte [] row, final byte [] column,
+      final long timestamp, final Type type) {
+    this(row, 0, row.length, column, 0, column == null? 0: column.length,
+      timestamp, type, null, 0, -1);
   }
 
   /**
-   * Constructs KeyValue structure filled with null value.
+   * Constructs KeyValue structure filled with specified value.
    * @param row - row key (arbitrary byte array)
-   * @param family family name
-   * @param qualifier column qualifier
+   * @param column Column with delimiter between family and qualifier
+   * @param timestamp
+   * @param type
+   * @param value
    */
-  public KeyValue(final byte [] row, final byte [] family, 
-      final byte [] qualifier, final byte [] value) {
-    this(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Put, value);
+  public KeyValue(final byte [] row, final byte [] column,
+      final long timestamp, final Type type, final byte [] value) {
+    this(row, 0, row.length, column, 0, column == null? 0: column.length,
+      timestamp, type, value, 0, value == null? 0: value.length);
   }
 
   /**
-   * Constructs KeyValue structure filled with specified values.
-   * @param row row key
-   * @param family family name
-   * @param qualifier column qualifier
-   * @param timestamp version timestamp
-   * @param type key type
-   * @throws IllegalArgumentException
-   */
-  public KeyValue(final byte[] row, final byte[] family,
-      final byte[] qualifier, final long timestamp, Type type) {
-    this(row, family, qualifier, timestamp, type, null);
-  }
-  
-  /**
-   * Constructs KeyValue structure filled with specified values.
-   * @param row row key
-   * @param family family name
-   * @param qualifier column qualifier
-   * @param timestamp version timestamp
-   * @param value column value
-   * @throws IllegalArgumentException
-   */
-  public KeyValue(final byte[] row, final byte[] family,
-      final byte[] qualifier, final long timestamp, final byte[] value) {
-    this(row, family, qualifier, timestamp, Type.Put, value);
-  }
-  
-  /**
-   * Constructs KeyValue structure filled with specified values.
-   * @param row row key
-   * @param family family name
-   * @param qualifier column qualifier
-   * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
-   * @throws IllegalArgumentException
-   */
-  public KeyValue(final byte[] row, final byte[] family,
-      final byte[] qualifier, final long timestamp, Type type,
-      final byte[] value) {
-    this(row, family, qualifier, 0, qualifier==null ? 0 : qualifier.length, 
-        timestamp, type, value, 0, value==null ? 0 : value.length);
-  } 
-
-  /**
-   * Constructs KeyValue structure filled with specified values.
-   * @param row row key
-   * @param family family name
-   * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
-   * @throws IllegalArgumentException
-   */
-  public KeyValue(byte [] row, byte [] family, 
-      byte [] qualifier, int qoffset, int qlength, long timestamp, Type type, 
-      byte [] value, int voffset, int vlength) {
-    this(row, 0, row==null ? 0 : row.length, 
-        family, 0, family==null ? 0 : family.length,
-        qualifier, qoffset, qlength, timestamp, type, 
-        value, voffset, vlength);
-  }
-
-  /**
-   * Constructs KeyValue structure filled with specified values.
-   * <p>
-   * Column is split into two fields, family and qualifier.
-   * @param row row key
-   * @param roffset row offset
-   * @param rlength row length
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
-   * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
+   * Constructs KeyValue structure filled with specified value.
+   * @param row - row key (arbitrary byte array)
+   * @param roffset
+   * @param rlength
+   * @param column Column with delimiter between family and qualifier
+   * @param coffset Where to start reading the column.
+   * @param clength How long column is (including the family/qualifier delimiter.
+   * @param timestamp
+   * @param type
+   * @param value
+   * @param voffset
+   * @param vlength
    * @throws IllegalArgumentException
    */
   public KeyValue(final byte [] row, final int roffset, final int rlength,
-      final byte [] family, final int foffset, final int flength,
-      final byte [] qualifier, final int qoffset, final int qlength,
+      final byte [] column, final int coffset, int clength,
       final long timestamp, final Type type,
-      final byte [] value, final int voffset, final int vlength) {
-    this.bytes = createByteArray(row, roffset, rlength, 
-        family, foffset, flength, qualifier, qoffset, qlength,
-        timestamp, type, value, voffset, vlength);
+      final byte [] value, final int voffset, int vlength) {
+    this.bytes = createByteArray(row, roffset, rlength, column, coffset,
+      clength, timestamp, type, value, voffset, vlength);
     this.length = bytes.length;
     this.offset = 0;
   }
 
   /**
    * Write KeyValue format into a byte array.
-   * 
-   * @param row row key
-   * @param roffset row offset
-   * @param rlength row length
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
-   * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
-   * @return The newly created byte array. 
-   */
-  static byte [] createByteArray(final byte [] row, final int roffset,
-      final int rlength, final byte [] family, final int foffset, int flength,
-      final byte [] qualifier, final int qoffset, int qlength,
-      final long timestamp, final Type type,
-      final byte [] value, final int voffset, int vlength) {
-    if (rlength > Short.MAX_VALUE) {
-      throw new IllegalArgumentException("Row > " + Short.MAX_VALUE);
-    }
-    if (row == null) {
-      throw new IllegalArgumentException("Row is null");
-    }
-    // Family length
-    flength = family == null ? 0 : flength;
-    if (flength > Byte.MAX_VALUE) {
-      throw new IllegalArgumentException("Family > " + Byte.MAX_VALUE);
-    }
-    // Qualifier length
-    qlength = qualifier == null ? 0 : qlength;
-    if (qlength > Integer.MAX_VALUE - rlength - flength) {
-      throw new IllegalArgumentException("Qualifier > " + Integer.MAX_VALUE);
-    }
-    // Key length
-    long longkeylength = KEY_INFRASTRUCTURE_SIZE + rlength + flength + qlength;
-    if (longkeylength > Integer.MAX_VALUE) {
-      throw new IllegalArgumentException("keylength " + longkeylength + " > " +
-        Integer.MAX_VALUE);
-    }
-    int keylength = (int)longkeylength;
-    // Value length
-    vlength = value == null? 0 : vlength;
-    if (vlength > HConstants.MAXIMUM_VALUE_LENGTH) {
-      throw new IllegalArgumentException("Valuer > " + 
-          HConstants.MAXIMUM_VALUE_LENGTH);
-    }
-    
-    // Allocate right-sized byte array.
-    byte [] bytes = new byte[KEYVALUE_INFRASTRUCTURE_SIZE + keylength + vlength];
-    // Write key, value and key row length.
-    int pos = 0;
-    pos = Bytes.putInt(bytes, pos, keylength);
-    pos = Bytes.putInt(bytes, pos, vlength);
-    pos = Bytes.putShort(bytes, pos, (short)(rlength & 0x0000ffff));
-    pos = Bytes.putBytes(bytes, pos, row, roffset, rlength);
-    pos = Bytes.putByte(bytes, pos, (byte)(flength & 0x0000ff));
-    if(flength != 0) {
-      pos = Bytes.putBytes(bytes, pos, family, foffset, flength);
-    }
-    if(qlength != 0) {
-      pos = Bytes.putBytes(bytes, pos, qualifier, qoffset, qlength);
-    }
-    pos = Bytes.putLong(bytes, pos, timestamp);
-    pos = Bytes.putByte(bytes, pos, type.getCode());
-    if (value != null && value.length > 0) {
-      pos = Bytes.putBytes(bytes, pos, value, voffset, vlength);
-    }
-    return bytes;
-  }
-  
-  /**
-   * Write KeyValue format into a byte array.
-   * <p>
-   * Takes column in the form <code>family:qualifier</code>
    * @param row - row key (arbitrary byte array)
    * @param roffset
    * @param rlength
@@ -521,13 +416,19 @@ public class KeyValue implements Writable, HeapSize {
    * @param value
    * @param voffset
    * @param vlength
-   * @return The newly created byte array. 
+   * @return
    */
   static byte [] createByteArray(final byte [] row, final int roffset,
         final int rlength,
       final byte [] column, final int coffset, int clength,
       final long timestamp, final Type type,
       final byte [] value, final int voffset, int vlength) {
+    if (rlength > Short.MAX_VALUE) {
+      throw new IllegalArgumentException("Row > " + Short.MAX_VALUE);
+    }
+    if (row == null) {
+      throw new IllegalArgumentException("Row is null");
+    }
     // If column is non-null, figure where the delimiter is at.
     int delimiteroffset = 0;
     if (column != null && column.length > 0) {
@@ -535,15 +436,41 @@ public class KeyValue implements Writable, HeapSize {
       if (delimiteroffset > Byte.MAX_VALUE) {
         throw new IllegalArgumentException("Family > " + Byte.MAX_VALUE);
       }
-    } else {
-      return createByteArray(row,roffset,rlength,null,0,0,null,0,0,timestamp,
-          type,value,voffset,vlength);
     }
-    int flength = delimiteroffset-coffset;
-    int qlength = clength - flength - 1;
-    return createByteArray(row, roffset, rlength, column, coffset,
-        flength, column, delimiteroffset+1, qlength, timestamp, type,
-        value, voffset, vlength);
+    // Value length
+    vlength = value == null? 0: vlength;
+    // Column length - minus delimiter
+    clength = column == null || column.length == 0? 0: clength - 1;
+    long longkeylength = KEY_INFRASTRUCTURE_SIZE + rlength + clength;
+    if (longkeylength > Integer.MAX_VALUE) {
+      throw new IllegalArgumentException("keylength " + longkeylength + " > " +
+        Integer.MAX_VALUE);
+    }
+    int keylength = (int)longkeylength;
+    // Allocate right-sized byte array.
+    byte [] bytes = new byte[KEYVALUE_INFRASTRUCTURE_SIZE + keylength + vlength];
+    // Write key, value and key row length.
+    int pos = 0;
+    pos = Bytes.putInt(bytes, pos, keylength);
+    pos = Bytes.putInt(bytes, pos, vlength);
+    pos = Bytes.putShort(bytes, pos, (short)(rlength & 0x0000ffff));
+    pos = Bytes.putBytes(bytes, pos, row, roffset, rlength);
+    // Write out column family length.
+    pos = Bytes.putByte(bytes, pos, (byte)(delimiteroffset & 0x0000ff));
+    if (column != null && column.length != 0) {
+      // Write family.
+      pos = Bytes.putBytes(bytes, pos, column, coffset, delimiteroffset);
+      // Write qualifier.
+      delimiteroffset++;
+      pos = Bytes.putBytes(bytes, pos, column, coffset + delimiteroffset,
+        column.length - delimiteroffset);
+    }
+    pos = Bytes.putLong(bytes, pos, timestamp);
+    pos = Bytes.putByte(bytes, pos, type.getCode());
+    if (value != null && value.length > 0) {
+      pos = Bytes.putBytes(bytes, pos, value, voffset, vlength);
+    }
+    return bytes;
   }
 
   // Needed doing 'contains' on List.  Only compares the key portion, not the
@@ -558,36 +485,37 @@ public class KeyValue implements Writable, HeapSize {
     return result;
   }
 
-  //---------------------------------------------------------------------------
-  //
-  //  KeyValue cloning
-  //
-  //---------------------------------------------------------------------------
-  
   /**
-   * Clones a row.
-   * 
-   * @param timestamp  The new time stamp for the row.
+   * @param timestamp
    * @return Clone of bb's key portion with only the row and timestamp filled in.
+   * @throws IOException
    */
   public KeyValue cloneRow(final long timestamp) {
     return new KeyValue(getBuffer(), getRowOffset(), getRowLength(),
-        null, 0, 0, null, 0, 0, 
-        timestamp, Type.codeToType(getType()), null, 0, 0);
+      null, 0, 0, timestamp, Type.codeToType(getType()), null, 0, 0);
+  }
+
+  /**
+   * @return Clone of bb's key portion with type set to Type.Delete.
+   * @throws IOException
+   */
+  public KeyValue cloneDelete() {
+    return createKey(Type.Delete);
   }
 
   /**
    * @return Clone of bb's key portion with type set to Type.Maximum. Use this
    * doing lookups where you are doing getClosest.  Using Maximum, you'll be
    * sure to trip over all of the other key types since Maximum sorts first.
+   * @throws IOException
    */
   public KeyValue cloneMaximum() {
      return createKey(Type.Maximum);
   }
 
-  /**
-   * Make a clone with the new type. Does not copy value.
-   * 
+  /*
+   * Make a clone with the new type.
+   * Does not copy value.
    * @param newtype New type to set on clone of this key.
    * @return Clone of this key with type set to <code>newtype</code>
    */
@@ -603,12 +531,6 @@ public class KeyValue implements Writable, HeapSize {
     return new KeyValue(other, 0, other.length);
   }
 
-  //---------------------------------------------------------------------------
-  //
-  //  String representation
-  //
-  //---------------------------------------------------------------------------
-  
   public String toString() {
     return keyToString(this.bytes, this.offset + ROW_OFFSET, getKeyLength()) +
       "/vlen=" + getValueLength();
@@ -623,7 +545,6 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * Use for logging.
    * @param b Key portion of a KeyValue.
    * @param o Offset to start of key
    * @param l Length of key.
@@ -631,7 +552,7 @@ public class KeyValue implements Writable, HeapSize {
    */
   public static String keyToString(final byte [] b, final int o, final int l) {
     int rowlength = Bytes.toShort(b, o);
-    String row = Bytes.toStringBinary(b, o + Bytes.SIZEOF_SHORT, rowlength);
+    String row = Bytes.toString(b, o + Bytes.SIZEOF_SHORT, rowlength);
     int columnoffset = o + Bytes.SIZEOF_SHORT + 1 + rowlength;
     int familylength = b[columnoffset - 1];
     int columnlength = l - ((columnoffset - o) + TIMESTAMP_TYPE_SIZE);
@@ -642,20 +563,11 @@ public class KeyValue implements Writable, HeapSize {
       columnlength - familylength);
     long timestamp = Bytes.toLong(b, o + (l - TIMESTAMP_TYPE_SIZE));
     byte type = b[o + l - 1];
-//    return row + "/" + family +
-//      (family != null && family.length() > 0? COLUMN_FAMILY_DELIMITER: "") +
-//      qualifier + "/" + timestamp + "/" + Type.codeToType(type);
     return row + "/" + family +
-      (family != null && family.length() > 0? ":" :"") +
+      (family != null && family.length() > 0? COLUMN_FAMILY_DELIMITER: "") +
       qualifier + "/" + timestamp + "/" + Type.codeToType(type);
   }
 
-  //---------------------------------------------------------------------------
-  //
-  //  Public Member Accessors
-  //
-  //---------------------------------------------------------------------------
-  
   /**
    * @return The byte array backing this KeyValue.
    */
@@ -677,13 +589,7 @@ public class KeyValue implements Writable, HeapSize {
     return length;
   }
 
-  //---------------------------------------------------------------------------
-  //
-  //  Length and Offset Calculators
-  //
-  //---------------------------------------------------------------------------
-  
-  /**
+  /*
    * Determines the total length of the KeyValue stored in the specified
    * byte array and offset.  Includes all headers.
    * @param bytes byte array
@@ -697,166 +603,6 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * @return Key offset in backing buffer..
-   */
-  public int getKeyOffset() {
-    return this.offset + ROW_OFFSET;
-  }
-
-  public String getKeyString() {
-    return Bytes.toStringBinary(getBuffer(), getKeyOffset(), getKeyLength());
-  }
-
-  /**
-   * @return Length of key portion.
-   */
-  public int getKeyLength() {
-    return Bytes.toInt(this.bytes, this.offset);
-  }
-
-  /**
-   * @return Value offset
-   */
-  public int getValueOffset() {
-    return getKeyOffset() + getKeyLength();
-  }
-  
-  /**
-   * @return Value length
-   */
-  public int getValueLength() {
-    return Bytes.toInt(this.bytes, this.offset + Bytes.SIZEOF_INT);
-  }
-
-  /**
-   * @return Row offset
-   */
-  public int getRowOffset() {
-    return getKeyOffset() + Bytes.SIZEOF_SHORT;
-  }
-  
-  /**
-   * @return Row length
-   */
-  public short getRowLength() {
-    return Bytes.toShort(this.bytes, getKeyOffset());
-  }
-
-  /**
-   * @return Family offset
-   */
-  public int getFamilyOffset() {
-    return getFamilyOffset(getRowLength());
-  }
-  
-  /**
-   * @return Family offset
-   */
-  public int getFamilyOffset(int rlength) {
-    return this.offset + ROW_OFFSET + Bytes.SIZEOF_SHORT + rlength + Bytes.SIZEOF_BYTE;
-  }
-  
-  /**
-   * @return Family length
-   */
-  public byte getFamilyLength() {
-    return getFamilyLength(getFamilyOffset());
-  }
-  
-  /**
-   * @return Family length
-   */
-  public byte getFamilyLength(int foffset) {
-    return this.bytes[foffset-1];
-  }
-
-  /**
-   * @return Qualifier offset
-   */
-  public int getQualifierOffset() {
-    return getQualifierOffset(getFamilyOffset());
-  }
-  
-  /**
-   * @return Qualifier offset
-   */
-  public int getQualifierOffset(int foffset) {
-    return foffset + getFamilyLength(foffset);
-  }
-  
-  /**
-   * @return Qualifier length
-   */
-  public int getQualifierLength() {
-    return getQualifierLength(getRowLength(),getFamilyLength());
-  }
-  
-  /**
-   * @return Qualifier length
-   */
-  public int getQualifierLength(int rlength, int flength) {
-    return getKeyLength() - 
-      (KEY_INFRASTRUCTURE_SIZE + rlength + flength);
-  }
-  
-  /**
-   * @return Column (family + qualifier) length
-   */
-  public int getTotalColumnLength() {
-    int rlength = getRowLength();
-    int foffset = getFamilyOffset(rlength);
-    return getTotalColumnLength(rlength,foffset);
-  }
-  
-  /**
-   * @return Column (family + qualifier) length
-   */
-  public int getTotalColumnLength(int rlength, int foffset) {
-    int flength = getFamilyLength(foffset);
-    int qlength = getQualifierLength(rlength,flength);
-    return flength + qlength;
-  }
-  
-  /**
-   * @return Timestamp offset
-   */
-  public int getTimestampOffset() {
-    return getTimestampOffset(getKeyLength());
-  }
-  
-  /**
-   * @param keylength Pass if you have it to save on a int creation.
-   * @return Timestamp offset
-   */
-  public int getTimestampOffset(final int keylength) {
-    return getKeyOffset() + keylength - TIMESTAMP_TYPE_SIZE;
-  }
-
-  /**
-   * @return True if this KeyValue has a LATEST_TIMESTAMP timestamp.
-   */
-  public boolean isLatestTimestamp() {
-    return  Bytes.compareTo(getBuffer(), getTimestampOffset(), Bytes.SIZEOF_LONG, 
-      HConstants.LATEST_TIMESTAMP_BYTES, 0, Bytes.SIZEOF_LONG) == 0;
-  }
-
-  public boolean updateLatestStamp(final byte [] now) {
-    int tsOffset = getTimestampOffset();
-    if(Bytes.compareTo(now, 0, Bytes.SIZEOF_LONG, 
-        this.bytes, tsOffset, Bytes.SIZEOF_LONG) < 0) {
-      System.arraycopy(now, 0, this.bytes, tsOffset, Bytes.SIZEOF_LONG);
-      return true;
-    }
-    return false;
-  }
-  
-  //---------------------------------------------------------------------------
-  //
-  //  Methods that return copies of fields
-  //
-  //---------------------------------------------------------------------------
-  
-  /**
    * @return Copy of the key portion only.  Used compacting and testing.
    */
   public byte [] getKey() {
@@ -865,20 +611,32 @@ public class KeyValue implements Writable, HeapSize {
     System.arraycopy(getBuffer(), getKeyOffset(), key, 0, keylength);
     return key;
   }
-  
-  /**
-   * Do not use unless you have to.  Use {@link #getBuffer()} with appropriate
-   * offset and lengths instead.
-   * @return Value in a new byte array.
-   */
-  public byte [] getValue() {
-    int o = getValueOffset();
-    int l = getValueLength();
-    byte [] result = new byte[l];
-    System.arraycopy(getBuffer(), o, result, 0, l);
-    return result;
+
+  public String getKeyString() {
+    return Bytes.toString(getBuffer(), getKeyOffset(), getKeyLength());
   }
-  
+
+  /**
+   * @return Key offset in backing buffer..
+   */
+  public int getKeyOffset() {
+    return this.offset + ROW_OFFSET;
+  }
+
+  /**
+   * @return Row length.
+   */
+  public short getRowLength() {
+    return Bytes.toShort(this.bytes, getKeyOffset());
+  }
+
+  /**
+   * @return Offset into backing buffer at which row starts.
+   */
+  public int getRowOffset() {
+    return getKeyOffset() + Bytes.SIZEOF_SHORT;
+  }
+
   /**
    * Do not use this unless you have to.
    * Use {@link #getBuffer()} with appropriate offsets and lengths instead.
@@ -909,9 +667,24 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * @param keylength Pass if you have it to save on a int creation.
+   * @return Offset into backing buffer at which timestamp starts.
+   */
+  int getTimestampOffset(final int keylength) {
+    return getKeyOffset() + keylength - TIMESTAMP_TYPE_SIZE;
+  }
+
+  /**
+   * @return True if a {@link Type#Delete}.
+   */
+  public boolean isDeleteType() {
+    return getType() == Type.Delete.getCode();
+  }
+
+  /**
    * @return Type of this KeyValue.
    */
-  public byte getType() {
+  byte getType() {
     return getType(getKeyLength());
   }
 
@@ -924,170 +697,99 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * @return True if Delete KeyValue type.
+   * @return Length of key portion.
    */
-  public boolean isDeleteType() {
-    return getType() == Type.Delete.code;
+  public int getKeyLength() {
+    return Bytes.toInt(this.bytes, this.offset);
   }
 
   /**
-   * @return True if DeleteColumn KeyValue type.
+   * @return Value length
    */
-  public boolean isDeleteColumnType() {
-    return getType() == Type.DeleteColumn.code;
+  public int getValueLength() {
+    return Bytes.toInt(this.bytes, this.offset + Bytes.SIZEOF_INT);
   }
 
   /**
-   * Do not use this unless you have to.
-   * Use {@link #getBuffer()} with appropriate offsets and lengths instead.
-   * @return Returns column. Makes a copy.  Inserts delimiter.
+   * @return Offset into backing buffer at which value starts.
    */
-  public byte [] getColumn() {
-    int fo = getFamilyOffset();
-    int fl = getFamilyLength(fo);
-    int ql = getQualifierLength();
-    byte [] result = new byte[fl + 1 + ql];
-    System.arraycopy(this.bytes, fo, result, 0, fl);
-    result[fl] = COLUMN_FAMILY_DELIMITER;
-    System.arraycopy(this.bytes, fo + fl, result,
-      fl + 1, ql);
-    return result;
+  public int getValueOffset() {
+    return getKeyOffset() + getKeyLength();
   }
 
   /**
-   * Do not use this unless you have to.
-   * Use {@link #getBuffer()} with appropriate offsets and lengths instead.
-   * @return Returns family. Makes a copy.
+   * Do not use unless you have to.  Use {@link #getBuffer()} with appropriate
+   * offset and lengths instead.
+   * @return Value in a new byte array.
    */
-  public byte [] getFamily() {
-    int o = getFamilyOffset();
-    int l = getFamilyLength(o);
+  public byte [] getValue() {
+    int o = getValueOffset();
+    int l = getValueLength();
     byte [] result = new byte[l];
-    System.arraycopy(this.bytes, o, result, 0, l);
+    System.arraycopy(getBuffer(), o, result, 0, l);
     return result;
   }
 
   /**
-   * Do not use this unless you have to.
-   * Use {@link #getBuffer()} with appropriate offsets and lengths instead.
-   * @return Returns qualifier. Makes a copy.
+   * @return Offset into backing buffer at which the column begins
    */
-  public byte [] getQualifier() {
-    int o = getQualifierOffset();
-    int l = getQualifierLength();
-    byte [] result = new byte[l];
-    System.arraycopy(this.bytes, o, result, 0, l);
-    return result;
+  public int getColumnOffset() {
+    return getColumnOffset(getRowLength());
   }
 
-  //---------------------------------------------------------------------------
-  //
-  //  KeyValue splitter
-  //
-  //---------------------------------------------------------------------------
-  
   /**
-   * Utility class that splits a KeyValue buffer into separate byte arrays.
-   * <p>
-   * Should get rid of this if we can, but is very useful for debugging.
+   * @param rowlength - length of row.
+   * @return Offset into backing buffer at which the column begins
    */
-  public static class SplitKeyValue {
-    private byte [][] split;
-    SplitKeyValue() {
-      this.split = new byte[6][];
-    }
-    public void setRow(byte [] value) { this.split[0] = value; }
-    public void setFamily(byte [] value) { this.split[1] = value; }
-    public void setQualifier(byte [] value) { this.split[2] = value; }
-    public void setTimestamp(byte [] value) { this.split[3] = value; }
-    public void setType(byte [] value) { this.split[4] = value; }
-    public void setValue(byte [] value) { this.split[5] = value; }
-    public byte [] getRow() { return this.split[0]; }
-    public byte [] getFamily() { return this.split[1]; }
-    public byte [] getQualifier() { return this.split[2]; }
-    public byte [] getTimestamp() { return this.split[3]; }
-    public byte [] getType() { return this.split[4]; }
-    public byte [] getValue() { return this.split[5]; }
+  public int getColumnOffset(final int rowlength) {
+    return getRowOffset() + rowlength + 1;
   }
-  
-  public SplitKeyValue split() {
-    SplitKeyValue split = new SplitKeyValue();
-    int splitOffset = this.offset;
-    int keyLen = Bytes.toInt(bytes, splitOffset);
-    splitOffset += Bytes.SIZEOF_INT;
-    int valLen = Bytes.toInt(bytes, splitOffset);
-    splitOffset += Bytes.SIZEOF_INT;
-    short rowLen = Bytes.toShort(bytes, splitOffset);
-    splitOffset += Bytes.SIZEOF_SHORT;
-    byte [] row = new byte[rowLen];
-    System.arraycopy(bytes, splitOffset, row, 0, rowLen);
-    splitOffset += rowLen;
-    split.setRow(row);
-    byte famLen = bytes[splitOffset];
-    splitOffset += Bytes.SIZEOF_BYTE;
-    byte [] family = new byte[famLen];
-    System.arraycopy(bytes, splitOffset, family, 0, famLen);
-    splitOffset += famLen;
-    split.setFamily(family);
-    int colLen = keyLen -
-      (rowLen + famLen + Bytes.SIZEOF_SHORT + Bytes.SIZEOF_BYTE +
-      Bytes.SIZEOF_LONG + Bytes.SIZEOF_BYTE);
-    byte [] qualifier = new byte[colLen];
-    System.arraycopy(bytes, splitOffset, qualifier, 0, colLen);
-    splitOffset += colLen;
-    split.setQualifier(qualifier);
-    byte [] timestamp = new byte[Bytes.SIZEOF_LONG];
-    System.arraycopy(bytes, splitOffset, timestamp, 0, Bytes.SIZEOF_LONG);
-    splitOffset += Bytes.SIZEOF_LONG;
-    split.setTimestamp(timestamp);
-    byte [] type = new byte[1];
-    type[0] = bytes[splitOffset];
-    splitOffset += Bytes.SIZEOF_BYTE;
-    split.setType(type);
-    byte [] value = new byte[valLen];
-    System.arraycopy(bytes, splitOffset, value, 0, valLen);
-    split.setValue(value);
-    return split;
+
+  /**
+   * @param columnoffset Pass if you have it to save on an int creation.
+   * @return Length of family portion of column.
+   */
+  int getFamilyLength(final int columnoffset) {
+    return this.bytes[columnoffset - 1];
   }
-  
-  //---------------------------------------------------------------------------
-  //
-  //  Compare specified fields against those contained in this KeyValue 
-  //
-  //---------------------------------------------------------------------------
-  
+
+  /**
+   * @param columnoffset Pass if you have it to save on an int creation.
+   * @return Length of column.
+   */
+  public int getColumnLength(final int columnoffset) {
+    return getColumnLength(columnoffset, getKeyLength());
+  }
+
+  int getColumnLength(final int columnoffset, final int keylength) {
+    return (keylength + ROW_OFFSET) - (columnoffset - this.offset) -
+      TIMESTAMP_TYPE_SIZE;
+  }
+
   /**
    * @param family
    * @return True if matching families.
    */
   public boolean matchingFamily(final byte [] family) {
-    int o = getFamilyOffset();
-    int l = getFamilyLength(o);
+    int o = getColumnOffset();
+    // Family length byte is just before the column starts.
+    int l = this.bytes[o - 1];
     return Bytes.compareTo(family, 0, family.length, this.bytes, o, l) == 0;
   }
 
   /**
-   * @param qualifier
-   * @return True if matching qualifiers.
-   */
-  public boolean matchingQualifier(final byte [] qualifier) {
-    int o = getQualifierOffset();
-    int l = getQualifierLength();
-    return Bytes.compareTo(qualifier, 0, qualifier.length, 
-        this.bytes, o, l) == 0;
-  }
-
-  /**
    * @param column Column minus its delimiter
+   * @param familylength Length of family in passed <code>column</code>
    * @return True if column matches.
    * @see #matchingColumn(byte[])
    */
-  public boolean matchingColumnNoDelimiter(final byte [] column) {
-    int rl = getRowLength();
-    int o = getFamilyOffset(rl);
-    int fl = getFamilyLength(o);
-    int l = fl + getQualifierLength(rl,fl);
-    return Bytes.compareTo(column, 0, column.length, this.bytes, o, l) == 0;
+  public boolean matchingColumnNoDelimiter(final byte [] column,
+      final int familylength) {
+    int o = getColumnOffset();
+    int l = getColumnLength(o);
+    int f = getFamilyLength(o);
+    return compareColumns(getBuffer(), o, l, f,
+      column, 0, column.length, familylength) == 0;
   }
 
   /**
@@ -1096,40 +798,14 @@ public class KeyValue implements Writable, HeapSize {
    */
   public boolean matchingColumn(final byte [] column) {
     int index = getFamilyDelimiterIndex(column, 0, column.length);
-    int rl = getRowLength();
-    int o = getFamilyOffset(rl);
-    int fl = getFamilyLength(o);
-    int ql = getQualifierLength(rl,fl);
-    if(Bytes.compareTo(column, 0, index, this.bytes, o, fl) != 0) {
+    int o = getColumnOffset();
+    int l = getColumnLength(o);
+    int result = Bytes.compareTo(getBuffer(), o, index, column, 0, index);
+    if (result != 0) {
       return false;
     }
-    return Bytes.compareTo(column, index + 1, column.length - (index + 1),
-        this.bytes, o + fl, ql) == 0;
-  }
-
-  /**
-   *
-   * @param family column family
-   * @param qualifier column qualifier
-   * @return True if column matches
-   */
-  public boolean matchingColumn(final byte[] family, final byte[] qualifier) {
-    int rl = getRowLength();
-    int o = getFamilyOffset(rl);
-    int fl = getFamilyLength(o);
-    int ql = getQualifierLength(rl,fl);
-    if(Bytes.compareTo(family, 0, family.length, this.bytes, o, family.length)
-        != 0) {
-      return false;
-    }
-    if(qualifier == null || qualifier.length == 0) {
-      if(ql == 0) {
-        return true;
-      }
-      return false;
-    }
-    return Bytes.compareTo(qualifier, 0, qualifier.length,
-        this.bytes, o + fl, ql) == 0;
+    return Bytes.compareTo(getBuffer(), o + index, l - index,
+      column, index + 1, column.length - (index + 1)) == 0;
   }
 
   /**
@@ -1141,7 +817,7 @@ public class KeyValue implements Writable, HeapSize {
    * @param roffset
    * @param rlength
    * @param rfamilylength Offset of family delimiter in right column.
-   * @return The result of the comparison.
+   * @return
    */
   static int compareColumns(final byte [] left, final int loffset,
       final int llength, final int lfamilylength,
@@ -1167,33 +843,41 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * @return True if column is empty.
+   * @return Returns column String with delimiter added back. Expensive!
    */
-  public boolean isEmptyColumn() {
-    return getQualifierLength() == 0;
+  public String getColumnString() {
+    int o = getColumnOffset();
+    int l = getColumnLength(o);
+    int familylength = getFamilyLength(o);
+    return Bytes.toString(this.bytes, o, familylength) +
+      COLUMN_FAMILY_DELIMITER + Bytes.toString(this.bytes,
+       o + familylength, l - familylength);
   }
 
   /**
-   * Splits a column in family:qualifier form into separate byte arrays.
-   * 
-   * @param c  The column.
-   * @return The parsed column.
+   * Do not use this unless you have to.
+   * Use {@link #getBuffer()} with appropriate offsets and lengths instead.
+   * @return Returns column. Makes a copy.  Inserts delimiter.
    */
-  public static byte [][] parseColumn(byte [] c) {
-    final byte [][] result = new byte [2][];
-    final int index = getFamilyDelimiterIndex(c, 0, c.length);
-    if (index == -1) {
-      throw new IllegalArgumentException("Impossible column name: " + c);
-    }
-    result[0] = new byte [index];
-    System.arraycopy(c, 0, result[0], 0, index);
-    final int len = c.length - (index + 1);
-    result[1] = new byte[len];
-    System.arraycopy(c, index + 1 /*Skip delimiter*/, result[1], 0,
-      len);
+  public byte [] getColumn() {
+    int o = getColumnOffset();
+    int l = getColumnLength(o);
+    int familylength = getFamilyLength(o);
+    byte [] result = new byte[l + 1];
+    System.arraycopy(getBuffer(), o, result, 0, familylength);
+    result[familylength] = COLUMN_FAMILY_DELIMITER;
+    System.arraycopy(getBuffer(), o + familylength, result,
+      familylength + 1, l - familylength);
     return result;
   }
-  
+
+  /**
+   * @return True if column is empty.
+   */
+  public boolean isEmptyColumn() {
+    return getColumnLength(getColumnOffset()) == 0;
+  }
+
   /**
    * @param b
    * @return Index of the family-qualifier colon delimiter character in passed
@@ -1342,8 +1026,7 @@ public class KeyValue implements Writable, HeapSize {
      * @return Result comparing rows.
      */
     public int compareRows(final KeyValue left, final KeyValue right) {
-      return compareRows(left, left.getRowLength(), right, 
-          right.getRowLength());
+      return compareRows(left, left.getRowLength(), right, right.getRowLength());
     }
 
     /**
@@ -1375,27 +1058,28 @@ public class KeyValue implements Writable, HeapSize {
       return getRawComparator().compareRows(left, loffset, llength,
         right, roffset, rlength);
     }
-    
+
     public int compareColumns(final KeyValue left, final byte [] right,
         final int roffset, final int rlength, final int rfamilyoffset) {
-      int offset = left.getFamilyOffset();
-      int length = left.getFamilyLength() + left.getQualifierLength();
+      int offset = left.getColumnOffset();
+      int length = left.getColumnLength(offset);
       return getRawComparator().compareColumns(left.getBuffer(), offset, length,
         left.getFamilyLength(offset),
         right, roffset, rlength, rfamilyoffset);
     }
 
     int compareColumns(final KeyValue left, final short lrowlength,
-        final KeyValue right, final short rrowlength) {
-      int lfoffset = left.getFamilyOffset(lrowlength);
-      int rfoffset = right.getFamilyOffset(rrowlength);
-      int lclength = left.getTotalColumnLength(lrowlength,lfoffset);
-      int rclength = right.getTotalColumnLength(rrowlength, rfoffset);
-      int lfamilylength = left.getFamilyLength(lfoffset);
-      int rfamilylength = right.getFamilyLength(rfoffset);
-      return getRawComparator().compareColumns(left.getBuffer(), lfoffset,
-          lclength, lfamilylength,
-        right.getBuffer(), rfoffset, rclength, rfamilylength);
+        final int lkeylength, final KeyValue right, final short rrowlength,
+        final int rkeylength) {
+      int loffset = left.getColumnOffset(lrowlength);
+      int roffset = right.getColumnOffset(rrowlength);
+      int llength = left.getColumnLength(loffset, lkeylength);
+      int rlength = right.getColumnLength(roffset, rkeylength);
+      int lfamilylength = left.getFamilyLength(loffset);
+      int rfamilylength = right.getFamilyLength(roffset);
+      return getRawComparator().compareColumns(left.getBuffer(), loffset,
+          llength, lfamilylength,
+        right.getBuffer(), roffset, rlength, rfamilylength);
     }
 
     /**
@@ -1411,7 +1095,10 @@ public class KeyValue implements Writable, HeapSize {
       if (!matchingRows(left, lrowlength, right, rrowlength)) {
         return false;
       }
-      return compareColumns(left, lrowlength, right, rrowlength) == 0;
+      int lkeylength = left.getKeyLength();
+      int rkeylength = right.getKeyLength();
+      return compareColumns(left, lrowlength, lkeylength,
+        right, rrowlength, rkeylength) == 0;
     }
 
     /**
@@ -1453,8 +1140,7 @@ public class KeyValue implements Writable, HeapSize {
     public boolean matchingRows(final byte [] left, final int loffset,
         final int llength,
         final byte [] right, final int roffset, final int rlength) {
-      int compare = compareRows(left, loffset, llength, 
-          right, roffset, rlength);
+      int compare = compareRows(left, loffset, llength, right, roffset, rlength);
       if (compare != 0) {
         return false;
       }
@@ -1485,6 +1171,7 @@ public class KeyValue implements Writable, HeapSize {
  
     /**
      * @return Comparator that ignores timestamps; useful counting versions.
+     * @throws IOException
      */
     public KVComparator getComparatorIgnoringTimestamps() {
       KVComparator c = null;
@@ -1527,43 +1214,19 @@ public class KeyValue implements Writable, HeapSize {
    */
   public static KeyValue createFirstOnRow(final byte [] row,
       final long ts) {
-    return new KeyValue(row, null, null, ts, Type.Maximum);
+    return createFirstOnRow(row, null, ts);
   }
 
   /**
    * @param row - row key (arbitrary byte array)
    * @param ts - timestamp
-   * @return First possible key on passed <code>row</code>, column and timestamp
+   * @return First possible key on passed <code>row</code>, column and timestamp.
    */
   public static KeyValue createFirstOnRow(final byte [] row, final byte [] c,
       final long ts) {
-    byte [][] split = parseColumn(c);
-    return new KeyValue(row, split[0], split[1], ts, Type.Maximum);
+    return new KeyValue(row, c, ts, Type.Maximum);
   }
 
-  /**
-   * @param row - row key (arbitrary byte array)
-   * @param f - family name
-   * @param q - column qualifier
-   * @return First possible key on passed <code>row</code>, and column.
-   */
-  public static KeyValue createFirstOnRow(final byte [] row, final byte [] f,
-      final byte [] q) {
-    return new KeyValue(row, f, q, HConstants.LATEST_TIMESTAMP, Type.Maximum);
-  }
-
-  /**
-   * @param row - row key (arbitrary byte array)
-   * @param f - family name
-   * @param q - column qualifier
-   * @param ts - timestamp
-   * @return First possible key on passed <code>row</code>, column and timestamp
-   */
-  public static KeyValue createFirstOnRow(final byte [] row, final byte [] f,
-      final byte [] q, final long ts) {
-    return new KeyValue(row, f, q, ts, Type.Maximum);
-  }
-  
   /**
    * @param b
    * @param o
@@ -1592,8 +1255,7 @@ public class KeyValue implements Writable, HeapSize {
       //          "---" + Bytes.toString(right, roffset, rlength));
       final int metalength = 7; // '.META.' length
       int lmetaOffsetPlusDelimiter = loffset + metalength;
-      int leftFarDelimiter = getDelimiterInReverse(left, 
-          lmetaOffsetPlusDelimiter,
+      int leftFarDelimiter = getDelimiterInReverse(left, lmetaOffsetPlusDelimiter,
           llength - metalength, HRegionInfo.DELIMITER);
       int rmetaOffsetPlusDelimiter = roffset + metalength;
       int rightFarDelimiter = getDelimiterInReverse(right,
@@ -1701,9 +1363,6 @@ public class KeyValue implements Writable, HeapSize {
         return compare;
       }
 
-      // if row matches, and no column in the 'left' AND put type is 'minimum',
-      // then return that left is larger than right.
-
       // Compare column family.  Start compare past row and family length.
       int lcolumnoffset = Bytes.SIZEOF_SHORT + lrowlength + 1 + loffset;
       int rcolumnoffset = Bytes.SIZEOF_SHORT + rrowlength + 1 + roffset;
@@ -1711,24 +1370,12 @@ public class KeyValue implements Writable, HeapSize {
         (lcolumnoffset - loffset);
       int rcolumnlength = rlength - TIMESTAMP_TYPE_SIZE -
         (rcolumnoffset - roffset);
-
-      // This supports 'last key on a row' - the magic is if there is no column in the
-      // left operand, and the left operand has a type of '0' - magical value,
-      // then we say the left is bigger.  This will let us seek to the last key in
-      // a row.
-
-      byte ltype = left[loffset + (llength - 1)];
-
-      if (lcolumnlength == 0 && ltype == Type.Minimum.getCode()) {
-        return 1; // left is bigger.
-      }
-
       compare = Bytes.compareTo(left, lcolumnoffset, lcolumnlength, right,
           rcolumnoffset, rcolumnlength);
       if (compare != 0) {
         return compare;
       }
-      
+
       if (!this.ignoreTimestamp) {
         // Get timestamps.
         long ltimestamp = Bytes.toLong(left,
@@ -1744,8 +1391,7 @@ public class KeyValue implements Writable, HeapSize {
       if (!this.ignoreType) {
         // Compare types. Let the delete types sort ahead of puts; i.e. types
         // of higher numbers sort before those of lesser numbers
-
-        // ltype is defined above
+        byte ltype = left[loffset + (llength - 1)];
         byte rtype = right[roffset + (rlength - 1)];
         return (0xff & rtype) - (0xff & ltype);
       }
@@ -1756,7 +1402,7 @@ public class KeyValue implements Writable, HeapSize {
       return compare(left, 0, left.length, right, 0, right.length);
     }
 
-    public int compareRows(byte [] left, int loffset, int llength,
+    protected int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
     }
@@ -1784,9 +1430,7 @@ public class KeyValue implements Writable, HeapSize {
   
   // HeapSize
   public long heapSize() {
-    int dataLen = bytes.length + (bytes.length % 8);
-    return HeapSize.OBJECT + HeapSize.BYTE_ARRAY + dataLen +
-      (2 * HeapSize.INT);
+    return this.length;
   }
   
   // Writable

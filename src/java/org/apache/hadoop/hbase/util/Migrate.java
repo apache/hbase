@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -250,10 +249,9 @@ public class Migrate extends Configured implements Tool {
     if (!enableBlockCache(oldHri)) {
       return;
     }
-    Put put = new Put(oldHri.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, 
-        Writables.getBytes(oldHri));
-    mr.put(put);
+    BatchUpdate b = new BatchUpdate(oldHri.getRegionName());
+    b.put(HConstants.COL_REGIONINFO, Writables.getBytes(oldHri));
+    mr.batchUpdate(b);
     LOG.info("Enabled blockcache on " + oldHri.getRegionNameAsString());
   }
 
@@ -264,7 +262,7 @@ public class Migrate extends Configured implements Tool {
   private boolean enableBlockCache(final HRegionInfo hri) {
     boolean result = false;
     HColumnDescriptor hcd =
-      hri.getTableDesc().getFamily(HConstants.CATALOG_FAMILY);
+      hri.getTableDesc().getFamily(HConstants.COLUMN_FAMILY);
     if (hcd == null) {
       LOG.info("No info family in: " + hri.getRegionNameAsString());
       return result;
@@ -285,10 +283,9 @@ public class Migrate extends Configured implements Tool {
     if (!updateVersions(oldHri)) {
       return;
     }
-    Put put = new Put(oldHri.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, 
-        Writables.getBytes(oldHri));
-    mr.put(put);
+    BatchUpdate b = new BatchUpdate(oldHri.getRegionName());
+    b.put(HConstants.COL_REGIONINFO, Writables.getBytes(oldHri));
+    mr.batchUpdate(b);
     LOG.info("Upped versions on " + oldHri.getRegionNameAsString());
   }
 
@@ -299,7 +296,7 @@ public class Migrate extends Configured implements Tool {
   private boolean updateVersions(final HRegionInfo hri) {
     boolean result = false;
     HColumnDescriptor hcd =
-      hri.getTableDesc().getFamily(HConstants.CATALOG_HISTORIAN_FAMILY);
+      hri.getTableDesc().getFamily(HConstants.COLUMN_FAMILY_HISTORIAN);
     if (hcd == null) {
       LOG.info("No region historian family in: " + hri.getRegionNameAsString());
       return result;
@@ -310,7 +307,7 @@ public class Migrate extends Configured implements Tool {
       result = true;
     }
     // Set the versions up to 10 from old default of 1.
-    hcd = hri.getTableDesc().getFamily(HConstants.CATALOG_FAMILY);
+    hcd = hri.getTableDesc().getFamily(HConstants.COLUMN_FAMILY);
     if (hcd.getMaxVersions() == 1) {
       // Set it to 10, an arbitrary high number
       hcd.setMaxVersions(10);

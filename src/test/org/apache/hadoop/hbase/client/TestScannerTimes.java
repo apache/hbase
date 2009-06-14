@@ -26,11 +26,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Test that verifies that scanners return a different timestamp for values that
@@ -38,9 +36,9 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class TestScannerTimes extends HBaseClusterTestCase {
   private static final String TABLE_NAME = "hbase737";
-  private static final byte [] FAM1 = Bytes.toBytes("fam1");
-  private static final byte [] FAM2 = Bytes.toBytes("fam2");
-  private static final byte [] ROW = Bytes.toBytes("row");
+  private static final String FAM1 = "fam1:";
+  private static final String FAM2 = "fam2:";
+  private static final String ROW = "row";
   
   /**
    * test for HBASE-737
@@ -59,9 +57,9 @@ public class TestScannerTimes extends HBaseClusterTestCase {
     HTable table = new HTable(conf, TABLE_NAME);
     
     // Insert some values
-    Put put = new Put(ROW);
-    put.add(FAM1, Bytes.toBytes("letters"), Bytes.toBytes("abcdefg"));
-    table.put(put);
+    BatchUpdate b = new BatchUpdate(ROW);
+    b.put(FAM1 + "letters", "abcdefg".getBytes(HConstants.UTF8_ENCODING));
+    table.commit(b);
     
     try {
       Thread.sleep(1000);
@@ -69,34 +67,35 @@ public class TestScannerTimes extends HBaseClusterTestCase {
       //ignore
     }
     
-    put = new Put(ROW);
-    put.add(FAM1, Bytes.toBytes("numbers"), Bytes.toBytes("123456"));
-    table.put(put);
+    b = new BatchUpdate(ROW);
+    b.put(FAM1 + "numbers", "123456".getBytes(HConstants.UTF8_ENCODING));
+    table.commit(b);
     
     try {
       Thread.sleep(1000);
     } catch (InterruptedException i) {
       //ignore
     }
-
-    put = new Put(ROW);
-    put.add(FAM2, Bytes.toBytes("letters"), Bytes.toBytes("hijklmnop"));
-    table.put(put);
+    
+    b = new BatchUpdate(ROW);
+    b.put(FAM2 + "letters", "hijklmnop".getBytes(HConstants.UTF8_ENCODING));
+    table.commit(b);
     
     long times[] = new long[3];
+    byte[][] columns = new byte[][] {
+        FAM1.getBytes(HConstants.UTF8_ENCODING),
+        FAM2.getBytes(HConstants.UTF8_ENCODING)
+    };
     
     // First scan the memcache
     
-    Scan scan = new Scan();
-    scan.addFamily(FAM1);
-    scan.addFamily(FAM2);
-    ResultScanner s = table.getScanner(scan);
+    Scanner s = table.getScanner(columns);
     try {
       int index = 0;
-      Result r = null;
+      RowResult r = null;
       while ((r = s.next()) != null) {
-        for(KeyValue key : r.sorted()) {
-          times[index++] = key.getTimestamp();
+        for (Cell c: r.values()) {
+          times[index++] = c.getTimestamp();
         }
       }
     } finally {
@@ -108,30 +107,23 @@ public class TestScannerTimes extends HBaseClusterTestCase {
       }
     }
     
-    // Flush data to disk and try again
+    // Fush data to disk and try again
     
     cluster.flushcache();
-    
-    // Reset times
-    for(int i=0;i<times.length;i++) {
-      times[i] = 0;
-    }
     
     try {
       Thread.sleep(1000);
     } catch (InterruptedException i) {
       //ignore
     }
-    scan = new Scan();
-    scan.addFamily(FAM1);
-    scan.addFamily(FAM2);
-    s = table.getScanner(scan);
+    
+    s = table.getScanner(columns);
     try {
       int index = 0;
-      Result r = null;
+      RowResult r = null;
       while ((r = s.next()) != null) {
-        for(KeyValue key : r.sorted()) {
-          times[index++] = key.getTimestamp();
+        for (Cell c: r.values()) {
+          times[index++] = c.getTimestamp();
         }
       }
     } finally {
@@ -142,5 +134,6 @@ public class TestScannerTimes extends HBaseClusterTestCase {
         assertTrue(times[j] > times[i]);
       }
     }
+    
   }
 }

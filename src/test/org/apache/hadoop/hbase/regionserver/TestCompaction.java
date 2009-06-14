@@ -23,14 +23,11 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -41,7 +38,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestCompaction extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
   private HRegion r = null;
-  private static final byte [] COLUMN_FAMILY = fam1;
+  private static final byte [] COLUMN_FAMILY = COLFAMILY_NAME1;
   private final byte [] STARTROW = Bytes.toBytes(START_KEY);
   private static final byte [] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
   private static final int COMPACTION_THRESHOLD = MAXVERSIONS;
@@ -94,16 +91,11 @@ public class TestCompaction extends HBaseTestCase {
     // Default is that there only 3 (MAXVERSIONS) versions allowed per column.
     // Assert == 3 when we ask for versions.
     addContent(new HRegionIncommon(r), Bytes.toString(COLUMN_FAMILY));
-
-    
     // FIX!!
-//    Cell[] cellValues =
-//      Cell.createSingleCellArray(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
-    Result result = r.get(new Get(STARTROW).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null);
-
+    Cell[] cellValues = 
+      Cell.createSingleCellArray(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     // Assert that I can get 3 versions since it is the max I should get
-    assertEquals(3, result.size());
-//    assertEquals(cellValues.length, 3);
+    assertEquals(cellValues.length, 3);
     r.flushcache();
     r.compactStores();
     // Always 3 versions if that is what max versions is.
@@ -111,49 +103,32 @@ public class TestCompaction extends HBaseTestCase {
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     // FIX
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null);
-
-    // Assert that I can get 3 versions since it is the max I should get
-    assertEquals(3, result.size());
-//
-//    cellValues = Cell.createSingleCellArray(r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100/*Too many*/));
-//    LOG.info("Count of " + Bytes.toString(secondRowBytes) + ": " +
-//      cellValues.length);
-//    assertTrue(cellValues.length == 3);
+    cellValues = Cell.createSingleCellArray(r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100/*Too many*/));
+    LOG.info("Count of " + Bytes.toString(secondRowBytes) + ": " +
+      cellValues.length);
+    assertTrue(cellValues.length == 3);
 
     // Now add deletes to memcache and then flush it.  That will put us over
     // the compaction threshold of 3 store files.  Compacting these store files
     // should result in a compacted store file that has no references to the
     // deleted row.
-    Delete delete = new Delete(secondRowBytes, System.currentTimeMillis(), null);
-    byte [][] famAndQf = {COLUMN_FAMILY, null};
-    delete.deleteFamily(famAndQf[0]);
-    r.delete(delete, null, true);
-    
+    r.deleteAll(secondRowBytes, COLUMN_FAMILY_TEXT, System.currentTimeMillis(),
+      null);
     // Assert deleted.
-
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null );
-    assertTrue(result.isEmpty());
-
-
+    assertNull(r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     r.flushcache();
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null );
-    assertTrue(result.isEmpty());
-
+    assertNull(r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     // Add a bit of data and flush.  Start adding at 'bbb'.
     createSmallerStoreFile(this.r);
     r.flushcache();
     // Assert that the second row is still deleted.
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null );
-    assertTrue(result.isEmpty());
-
+    cellValues = Cell.createSingleCellArray(r.get(secondRowBytes,
+      COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
+    assertNull(r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     // Force major compaction.
     r.compactStores(true);
     assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 1);
-
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null );
-    assertTrue(result.isEmpty());
-
+    assertNull(r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     // Make sure the store files do have some 'aaa' keys in them -- exactly 3.
     // Also, that compacted store files do not have any secondRowBytes because
     // they were deleted.

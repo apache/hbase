@@ -49,12 +49,12 @@ import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
@@ -499,7 +499,7 @@ class RegionManager implements HConstants {
       if (currentRegion.isRootRegion() || currentRegion.isMetaTable()) {
         continue;
       }
-      final String regionName = currentRegion.getRegionNameAsString();
+      String regionName = currentRegion.getRegionNameAsString();
       if (regionIsInTransition(regionName)) {
         skipped++;
         continue;
@@ -723,12 +723,9 @@ class RegionManager implements HConstants {
     // 3. Insert into meta
     HRegionInfo info = region.getRegionInfo();
     byte [] regionName = region.getRegionName();
-    
-    Put put = new Put(regionName);
-    byte [] infoBytes = Writables.getBytes(info);
-    String infoString = new String(infoBytes);
-    put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(info));
-    server.put(metaRegionName, put);
+    BatchUpdate b = new BatchUpdate(regionName);
+    b.put(COL_REGIONINFO, Writables.getBytes(info));
+    server.batchUpdate(metaRegionName, b, -1L);
     
     // 4. Close the new region to flush it to disk.  Close its log file too.
     region.close();
@@ -1207,21 +1204,18 @@ class RegionManager implements HConstants {
    * @param op
    */
   public void startAction(byte[] regionName, HRegionInfo info,
-      HServerAddress server, HConstants.Modify op) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Adding operation " + op + " from tasklist");
-    }
+      HServerAddress server, int op) {
     switch (op) {
-      case TABLE_SPLIT:
+      case HConstants.MODIFY_TABLE_SPLIT:
         startAction(regionName, info, server, this.regionsToSplit);
         break;
-      case TABLE_COMPACT:
+      case HConstants.MODIFY_TABLE_COMPACT:
         startAction(regionName, info, server, this.regionsToCompact);
         break;
-      case TABLE_MAJOR_COMPACT:
+      case HConstants.MODIFY_TABLE_MAJOR_COMPACT:
         startAction(regionName, info, server, this.regionsToMajorCompact);
         break;
-      case TABLE_FLUSH:
+      case HConstants.MODIFY_TABLE_FLUSH:
         startAction(regionName, info, server, this.regionsToFlush);
         break;
       default:
@@ -1239,21 +1233,18 @@ class RegionManager implements HConstants {
    * @param regionName
    * @param op
    */
-  public void endAction(byte[] regionName, HConstants.Modify op) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing operation " + op + " from tasklist");
-    }
+  public void endAction(byte[] regionName, int op) {
     switch (op) {
-    case TABLE_SPLIT:
+    case HConstants.MODIFY_TABLE_SPLIT:
       this.regionsToSplit.remove(regionName);
       break;
-    case TABLE_COMPACT:
+    case HConstants.MODIFY_TABLE_COMPACT:
       this.regionsToCompact.remove(regionName);
       break;
-    case TABLE_MAJOR_COMPACT:
+    case HConstants.MODIFY_TABLE_MAJOR_COMPACT:
       this.regionsToMajorCompact.remove(regionName);
       break;
-    case TABLE_FLUSH:
+    case HConstants.MODIFY_TABLE_FLUSH:
       this.regionsToFlush.remove(regionName);
       break;
     default:

@@ -29,9 +29,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
 import org.apache.hadoop.hbase.rest.serializer.ISerializable;
@@ -49,7 +48,7 @@ public class TableModel extends AbstractModel {
   }
 
   // Get Methods
-  public Result[] get(byte [] tableName) throws HBaseRestException {
+  public RowResult[] get(byte[] tableName) throws HBaseRestException {
     return get(tableName, getColumns(tableName));
   }
 
@@ -64,28 +63,26 @@ public class TableModel extends AbstractModel {
    * @return resultant rows
    * @throws org.apache.hadoop.hbase.rest.exception.HBaseRestException
    */
-  public Result[] get(byte [] tableName, byte[][] columnNames)
+  public RowResult[] get(byte[] tableName, byte[][] columnNames)
       throws HBaseRestException {
     try {
-      ArrayList<Result> a = new ArrayList<Result>();
+      ArrayList<RowResult> a = new ArrayList<RowResult>();
       HTable table = new HTable(tableName);
 
-      Scan scan = new Scan();
-      scan.addColumns(columnNames);
-      ResultScanner s = table.getScanner(scan);
-      Result r;
+      Scanner s = table.getScanner(columnNames);
+      RowResult r;
 
       while ((r = s.next()) != null) {
         a.add(r);
       }
 
-      return a.toArray(new Result[0]);
+      return a.toArray(new RowResult[0]);
     } catch (Exception e) {
       throw new HBaseRestException(e);
     }
   }
 
-  protected boolean doesTableExist(byte [] tableName) throws HBaseRestException {
+  protected boolean doesTableExist(byte[] tableName) throws HBaseRestException {
     try {
       return this.admin.tableExists(tableName);
     } catch (IOException e) {
@@ -93,7 +90,7 @@ public class TableModel extends AbstractModel {
     }
   }
   
-  protected void disableTable(byte [] tableName) throws HBaseRestException {
+  protected void disableTable(byte[] tableName) throws HBaseRestException {
     try {
       this.admin.disableTable(tableName);
     } catch (IOException e) {
@@ -101,7 +98,7 @@ public class TableModel extends AbstractModel {
     }
   }
   
-  protected void enableTable(byte [] tableName) throws HBaseRestException {
+  protected void enableTable(byte[] tableName) throws HBaseRestException {
     try {
       this.admin.enableTable(tableName);
     } catch (IOException e) {
@@ -113,7 +110,7 @@ public class TableModel extends AbstractModel {
       ArrayList<HColumnDescriptor> columns) throws HBaseRestException {
     HTableDescriptor htc = null;
     try {
-      htc = this.admin.getTableDescriptor(Bytes.toBytes(tableName));
+      htc = this.admin.getTableDescriptor(tableName);
     } catch (IOException e) {
       throw new HBaseRestException("Table does not exist");
     }
@@ -207,7 +204,7 @@ public class TableModel extends AbstractModel {
    *         tableName not existing.
    * @throws org.apache.hadoop.hbase.rest.exception.HBaseRestException
    */
-  public boolean post(byte [] tableName, HTableDescriptor htd)
+  public boolean post(byte[] tableName, HTableDescriptor htd)
       throws HBaseRestException {
     try {
       if (!this.admin.tableExists(tableName)) {
@@ -228,7 +225,7 @@ public class TableModel extends AbstractModel {
    * @return true if table exists and deleted, false if table does not exist.
    * @throws org.apache.hadoop.hbase.rest.exception.HBaseRestException
    */
-  public boolean delete(byte [] tableName) throws HBaseRestException {
+  public boolean delete(byte[] tableName) throws HBaseRestException {
     try {
       if (this.admin.tableExists(tableName)) {
         this.admin.disableTable(tableName);
@@ -244,7 +241,7 @@ public class TableModel extends AbstractModel {
   public static class Regions implements ISerializable {
     byte[][] regionKey;
 
-    public Regions(byte [][] bs) {
+    public Regions(byte[][] bs) {
       super();
       this.regionKey = bs;
     }

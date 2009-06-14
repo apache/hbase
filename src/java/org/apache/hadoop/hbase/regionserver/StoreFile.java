@@ -19,21 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.HalfHFileReader;
-import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Map;
@@ -41,6 +26,24 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.io.HalfHFileReader;
+import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Hash;
+import org.apache.hadoop.io.RawComparator;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
@@ -55,7 +58,7 @@ import java.util.regex.Pattern;
 public class StoreFile implements HConstants {
   static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
 
-  private static final String HFILE_CACHE_SIZE_KEY = "hfile.block.cache.size";
+  public static final String HFILE_CACHE_SIZE_KEY = "hfile.block.cache.size";
 
   private static BlockCache hfileBlockCache = null;
   
@@ -70,9 +73,7 @@ public class StoreFile implements HConstants {
   private Reference reference;
   // If this StoreFile references another, this is the other files path.
   private Path referencePath;
-  // Should the block cache be used or not.
-  private boolean blockcache;
-  
+
   // Keys for metadata stored in backing HFile.
   private static final byte [] MAX_SEQ_ID_KEY = Bytes.toBytes("MAX_SEQ_ID_KEY");
   // Set when we obtain a Reader.
@@ -83,7 +84,7 @@ public class StoreFile implements HConstants {
   // If true, this file was product of a major compaction.  Its then set
   // whenever you get a Reader.
   private AtomicBoolean majorCompaction = null;
-  
+
   /*
    * Regex that will work for straight filenames and for reference names.
    * If reference, then the regex has more than just one group.  Group 1 is
@@ -99,27 +100,23 @@ public class StoreFile implements HConstants {
   private final HBaseConfiguration conf;
 
   /**
-   * Constructor, loads a reader and it's indices, etc. May allocate a 
-   * substantial amount of ram depending on the underlying files (10-20MB?).
-   * 
-   * @param fs  The current file system to use.
-   * @param p  The path of the file.
-   * @param blockcache  <code>true</code> if the block cache is enabled.
-   * @param conf  The current configuration.
-   * @throws IOException When opening the reader fails.
+   * Constructor, loads a reader and it's indices, etc. May allocate a substantial
+   * amount of ram depending on the underlying files (10-20MB?).
+   * @param fs
+   * @param p
+   * @param conf
+   * @throws IOException
    */
-  StoreFile(final FileSystem fs, final Path p, final boolean blockcache, 
-      final HBaseConfiguration conf) 
-  throws IOException {
+  StoreFile(final FileSystem fs, final Path p, final HBaseConfiguration conf) throws IOException {
     this.conf = conf;
     this.fs = fs;
     this.path = p;
-    this.blockcache = blockcache;
     if (isReference(p)) {
       this.reference = Reference.read(fs, p);
       this.referencePath = getReferredToFile(this.path);
     }
     this.reader = open();
+
   }
 
   /**
@@ -211,12 +208,6 @@ public class StoreFile implements HConstants {
     return this.sequenceid;
   }
 
-  /**
-   * Returns the block cache or <code>null</code> in case none should be used.
-   * 
-   * @param conf  The current configuration.
-   * @return The block cache or <code>null</code>.
-   */
   public static synchronized BlockCache getBlockCache(HBaseConfiguration conf) {
     if (hfileBlockCache != null)
       return hfileBlockCache;
@@ -230,11 +221,8 @@ public class StoreFile implements HConstants {
     return hfileBlockCache;
   }
 
-  /**
-   * @return the blockcache
-   */
   public BlockCache getBlockCache() {
-    return blockcache ? getBlockCache(conf) : null;
+    return getBlockCache(conf);
   }
 
   /**
@@ -249,8 +237,8 @@ public class StoreFile implements HConstants {
       throw new IllegalAccessError("Already open");
     }
     if (isReference()) {
-      this.reader = new HalfHFileReader(this.fs, this.referencePath, 
-          getBlockCache(), this.reference);
+      this.reader = new HalfHFileReader(this.fs, this.referencePath, getBlockCache(),
+        this.reference);
     } else {
       this.reader = new StoreFileReader(this.fs, this.path, getBlockCache());
     }
@@ -281,23 +269,13 @@ public class StoreFile implements HConstants {
         this.majorCompaction.set(mc);
       }
     }
-
-    // TODO read in bloom filter here, ignore if the column family config says
-    // "no bloom filter" even if there is one in the hfile.
     return this.reader;
   }
-
+  
   /**
    * Override to add some customization on HFile.Reader
    */
   static class StoreFileReader extends HFile.Reader {
-    /**
-     * 
-     * @param fs
-     * @param path
-     * @param cache
-     * @throws IOException
-     */
     public StoreFileReader(FileSystem fs, Path path, BlockCache cache)
         throws IOException {
       super(fs, path, cache);
@@ -318,14 +296,6 @@ public class StoreFile implements HConstants {
    * Override to add some customization on HalfHFileReader.
    */
   static class HalfStoreFileReader extends HalfHFileReader {
-    /**
-     * 
-     * @param fs
-     * @param p
-     * @param c
-     * @param r
-     * @throws IOException
-     */
     public HalfStoreFileReader(FileSystem fs, Path p, BlockCache c, Reference r)
         throws IOException {
       super(fs, p, c, r);
@@ -414,7 +384,7 @@ public class StoreFile implements HConstants {
    */
   public static HFile.Writer getWriter(final FileSystem fs, final Path dir)
   throws IOException {
-    return getWriter(fs, dir, DEFAULT_BLOCKSIZE_SMALL, null, null);
+    return getWriter(fs, dir, DEFAULT_BLOCKSIZE_SMALL, null, null, false);
   }
 
   /**
@@ -427,12 +397,13 @@ public class StoreFile implements HConstants {
    * @param blocksize
    * @param algorithm Pass null to get default.
    * @param c Pass null to get default.
+   * @param filter BloomFilter
    * @return HFile.Writer
    * @throws IOException
    */
   public static HFile.Writer getWriter(final FileSystem fs, final Path dir,
-                                       final int blocksize, final Compression.Algorithm algorithm,
-                                       final KeyValue.KeyComparator c)
+    final int blocksize, final Compression.Algorithm algorithm,
+    final KeyValue.KeyComparator c, final boolean filter)
   throws IOException {
     if (!fs.exists(dir)) {
       fs.mkdirs(dir);
@@ -440,7 +411,7 @@ public class StoreFile implements HConstants {
     Path path = getUniqueFile(fs, dir);
     return new HFile.Writer(fs, path, blocksize,
       algorithm == null? HFile.DEFAULT_COMPRESSION_ALGORITHM: algorithm,
-      c == null? KeyValue.KEY_COMPARATOR: c);
+      c == null? KeyValue.KEY_COMPARATOR: c, filter);
   }
 
   /**
@@ -474,6 +445,7 @@ public class StoreFile implements HConstants {
    * @param dir
    * @param suffix
    * @return Path to a file that doesn't exist at time of this invocation.
+   * @return
    * @throws IOException
    */
   static Path getRandomFilename(final FileSystem fs, final Path dir,
@@ -493,8 +465,8 @@ public class StoreFile implements HConstants {
    * Write file metadata.
    * Call before you call close on the passed <code>w</code> since its written
    * as metadata to that file.
-   * 
-   * @param w hfile writer
+   *
+   * @param w
    * @param maxSequenceId Maximum sequence id.
    * @throws IOException
    */

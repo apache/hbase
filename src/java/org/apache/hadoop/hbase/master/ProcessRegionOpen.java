@@ -25,9 +25,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RegionHistorian;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -81,12 +78,11 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
         " in region " + Bytes.toString(metaRegionName) +
         " with startcode " + serverInfo.getStartCode() + " and server " +
         serverInfo.getServerAddress());
-    Put p = new Put(regionInfo.getRegionName());
-    p.add(CATALOG_FAMILY, SERVER_QUALIFIER,
+    BatchUpdate b = new BatchUpdate(regionInfo.getRegionName());
+    b.put(COL_SERVER,
         Bytes.toBytes(serverInfo.getServerAddress().toString()));
-    p.add(CATALOG_FAMILY, STARTCODE_QUALIFIER,
-        Bytes.toBytes(serverInfo.getStartCode()));
-    server.put(metaRegionName, p);
+    b.put(COL_STARTCODE, Bytes.toBytes(serverInfo.getStartCode()));
+    server.batchUpdate(metaRegionName, b, -1L);
     if (!historian.isOnline()) {
       // This is safest place to do the onlining of the historian in
       // the master.  When we get to here, we know there is a .META.

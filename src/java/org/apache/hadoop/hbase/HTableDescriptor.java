@@ -27,11 +27,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.fs.Path;
-//import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
+import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
@@ -46,8 +45,7 @@ import agilejson.TOJSON;
  * HTableDescriptor contains the name of an HTable, and its
  * column families.
  */
-public class HTableDescriptor implements WritableComparable<HTableDescriptor>,
-ISerializable {
+public class HTableDescriptor implements WritableComparable<HTableDescriptor>, ISerializable {
 
   // Changes prior to version 3 were not recorded here.
   // Version 3 adds metadata as a map where keys and values are byte[].
@@ -102,14 +100,12 @@ ISerializable {
   private volatile Boolean root = null;
 
   // Key is hash of the family name.
-  public final Map<byte [], HColumnDescriptor> families =
+  private final Map<byte [], HColumnDescriptor> families =
     new TreeMap<byte [], HColumnDescriptor>(KeyValue.FAMILY_COMPARATOR);
-//  private final Map<byte [], HColumnDescriptor> families =
-//    new TreeMap<byte [], HColumnDescriptor>(KeyValue.FAMILY_COMPARATOR);
-  
+
   // Key is indexId
-//  private final Map<String, IndexSpecification> indexes =
-//    new HashMap<String, IndexSpecification>();
+  private final Map<String, IndexSpecification> indexes =
+    new HashMap<String, IndexSpecification>();
   
   /**
    * Private constructor used internally creating table descriptors for 
@@ -129,38 +125,24 @@ ISerializable {
    * Private constructor used internally creating table descriptors for 
    * catalog tables: e.g. .META. and -ROOT-.
    */
-//  protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families,
-//      Collection<IndexSpecification> indexes,
-//       Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
-//    this.name = name.clone();
-//    this.nameAsString = Bytes.toString(this.name);
-//    setMetaFlags(name);
-//    for(HColumnDescriptor descriptor : families) {
-//      this.families.put(descriptor.getName(), descriptor);
-//    }
-//    for(IndexSpecification index : indexes) {
-//      this.indexes.put(index.getIndexId(), index);
-//    }
-//    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry:
-//        values.entrySet()) {
-//      this.values.put(entry.getKey(), entry.getValue());
-//    }
-//  }
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families,
-      Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
+      Collection<IndexSpecification> indexes,
+       Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
     this.name = name.clone();
     this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(descriptor.getName(), descriptor);
     }
+    for(IndexSpecification index : indexes) {
+      this.indexes.put(index.getIndexId(), index);
+    }
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry:
         values.entrySet()) {
       this.values.put(entry.getKey(), entry.getValue());
     }
   }
-  
-  
+
   /**
    * Constructs an empty object.
    * For deserializing an HTableDescriptor instance only.
@@ -216,7 +198,7 @@ ISerializable {
         desc.values.entrySet()) {
       this.values.put(e.getKey(), e.getValue());
     }
-//    this.indexes.putAll(desc.indexes);
+    this.indexes.putAll(desc.indexes);
   }
 
   /*
@@ -455,17 +437,21 @@ ISerializable {
       Bytes.toBytes(Integer.toString(memcacheFlushSize)));
   }
     
-//  public Collection<IndexSpecification> getIndexes() {
-//    return indexes.values();
-//  }
-//  
-//  public IndexSpecification getIndex(String indexId) {
-//    return indexes.get(indexId);
-//  }
-//  
-//  public void addIndex(IndexSpecification index) {
-//    indexes.put(index.getIndexId(), index);
-//  }
+  public Collection<IndexSpecification> getIndexes() {
+    return indexes.values();
+  }
+  
+  public IndexSpecification getIndex(String indexId) {
+    return indexes.get(indexId);
+  }
+  
+  public void addIndex(IndexSpecification index) {
+    indexes.put(index.getIndexId(), index);
+  }
+  
+  public void removeIndex(String indexId) {
+    indexes.remove(indexId);
+  }
 
   /**
    * Adds a column family.
@@ -524,13 +510,13 @@ ISerializable {
     s.append(FAMILIES);
     s.append(" => ");
     s.append(families.values());
-//    if (!indexes.isEmpty()) {
-//      // Don't emit if empty.  Has to do w/ transactional hbase.
-//      s.append(", ");
-//      s.append("INDEXES");
-//      s.append(" => ");
-//      s.append(indexes.values());
-//    }
+    if (!indexes.isEmpty()) {
+      // Don't emit if empty.  Has to do w/ transactional hbase.
+      s.append(", ");
+      s.append("INDEXES");
+      s.append(" => ");
+      s.append(indexes.values());
+    }
     s.append('}');
     return s.toString();
   }
@@ -595,16 +581,16 @@ ISerializable {
       c.readFields(in);
       families.put(c.getName(), c);
     }
-//    indexes.clear();
+    indexes.clear();
     if (version < 4) {
       return;
     }
-//    int numIndexes = in.readInt();
-//    for (int i = 0; i < numIndexes; i++) {
-//      IndexSpecification index = new IndexSpecification();
-//      index.readFields(in);
-//      addIndex(index);
-//    }
+    int numIndexes = in.readInt();
+    for (int i = 0; i < numIndexes; i++) {
+      IndexSpecification index = new IndexSpecification();
+      index.readFields(in);
+      addIndex(index);
+    }
   }
 
   public void write(DataOutput out) throws IOException {
@@ -624,10 +610,10 @@ ISerializable {
       HColumnDescriptor family = it.next();
       family.write(out);
     }
-//    out.writeInt(indexes.size());
-//    for(IndexSpecification index : indexes.values()) {
-//      index.write(out);
-//    }
+    out.writeInt(indexes.size());
+    for(IndexSpecification index : indexes.values()) {
+      index.write(out);
+    }
   }
 
   // Comparable
@@ -668,13 +654,6 @@ ISerializable {
     return Collections.unmodifiableCollection(this.families.values());
   }
   
-  /**
-   * @return Immutable sorted set of the keys of the families.
-   */
-  public Set<byte[]> getFamiliesKeys() {
-    return Collections.unmodifiableSet(this.families.keySet());
-  }
-  
   @TOJSON(fieldName = "columns")
   public HColumnDescriptor[] getColumnFamilies() {
     return getFamilies().toArray(new HColumnDescriptor[0]);
@@ -710,22 +689,22 @@ ISerializable {
   /** Table descriptor for <core>-ROOT-</code> catalog table */
   public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
       HConstants.ROOT_TABLE_NAME,
-      new HColumnDescriptor[] { new HColumnDescriptor(HConstants.CATALOG_FAMILY,
+      new HColumnDescriptor[] { new HColumnDescriptor(HConstants.COLUMN_FAMILY,
           10,  // Ten is arbitrary number.  Keep versions to help debuggging.
           Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
-          HConstants.FOREVER, false) });
+          Integer.MAX_VALUE, HConstants.FOREVER, false) });
   
   /** Table descriptor for <code>.META.</code> catalog table */
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
-          new HColumnDescriptor(HConstants.CATALOG_FAMILY,
+          new HColumnDescriptor(HConstants.COLUMN_FAMILY,
             10, // Ten is arbitrary number.  Keep versions to help debuggging.
             Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
-            HConstants.FOREVER, false),
-          new HColumnDescriptor(HConstants.CATALOG_HISTORIAN_FAMILY,
+            Integer.MAX_VALUE, HConstants.FOREVER, false),
+          new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
             HConstants.ALL_VERSIONS, Compression.Algorithm.NONE.getName(),
             false, false,  8 * 1024,
-            HConstants.WEEK_IN_SECONDS, false)});
+            Integer.MAX_VALUE, HConstants.WEEK_IN_SECONDS, false)});
 
   /* (non-Javadoc)
    * @see org.apache.hadoop.hbase.rest.xml.IOutputXML#toXML()

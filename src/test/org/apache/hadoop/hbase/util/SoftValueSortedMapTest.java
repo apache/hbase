@@ -17,6 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.util;
 
 import java.util.SortedMap;
@@ -29,7 +30,6 @@ public class SoftValueSortedMapTest {
       map.put(new Integer(i), new Integer(i));
     }
     System.out.println(map.size());
-    @SuppressWarnings("unused")
     byte[] block = new byte[849*1024*1024]; // 10 MB
     System.out.println(map.size());
   }

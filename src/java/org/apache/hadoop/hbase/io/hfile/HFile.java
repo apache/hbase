@@ -104,6 +104,11 @@ import org.apache.hadoop.io.compress.Decompressor;
  * <pre>&lt;fileinfo>&lt;trailer></pre>.  That is, there are not data nor meta
  * blocks present.
  * <p>
+ * TODO: Bloomfilters.  Need to add hadoop 0.20. first since it has bug fixes
+ * on the hadoop bf package.
+ *  * TODO: USE memcmp by default?  Write the keys out in an order that allows
+ * my using this -- reverse the timestamp.
+ * TODO: Add support for fast-gzip and for lzo.
  * TODO: Do scanners need to be able to take a start and end row?
  * TODO: Should BlockIndex know the name of its file?  Should it have a Path
  * that points at its file say for the case where an index lives apart from
@@ -154,7 +159,7 @@ public class HFile {
 
     // Name for this object used when logging or in toString.  Is either
     // the result of a toString on stream or else toString of passed file Path.
-    protected String name;
+    private String name;
 
     // Total uncompressed bytes, maybe calculate a compression ratio later.
     private int totalBytes = 0;
@@ -217,7 +222,7 @@ public class HFile {
      */
     public Writer(FileSystem fs, Path path)
     throws IOException {
-      this(fs, path, DEFAULT_BLOCKSIZE, (Compression.Algorithm) null, null);
+      this(fs, path, DEFAULT_BLOCKSIZE, null, null, false);
     }
 
     /**
@@ -236,7 +241,7 @@ public class HFile {
       this(fs, path, blocksize,
         compress == null? DEFAULT_COMPRESSION_ALGORITHM:
           Compression.getCompressionAlgorithmByName(compress),
-        comparator);
+        comparator, false);
     }
 
     /**
@@ -246,13 +251,15 @@ public class HFile {
      * @param blocksize
      * @param compress
      * @param comparator
+     * @param bloomfilter
      * @throws IOException
      */
     public Writer(FileSystem fs, Path path, int blocksize,
       Compression.Algorithm compress,
-      final RawComparator<byte []> comparator)
+      final RawComparator<byte []> comparator,
+      final boolean bloomfilter)
     throws IOException {
-      this(fs.create(path), blocksize, compress, comparator);
+      this(fs.create(path), blocksize, compress, comparator, bloomfilter);
       this.closeOutputStream = true;
       this.name = path.toString();
       this.path = path;
@@ -267,22 +274,26 @@ public class HFile {
      * @throws IOException
      */
     public Writer(final FSDataOutputStream ostream, final int blocksize,
-      final String  compress, final RawComparator<byte []> c)
+        final String  compress, final RawComparator<byte []> c)
     throws IOException {
       this(ostream, blocksize,
-        Compression.getCompressionAlgorithmByName(compress), c);
+        compress == null? DEFAULT_COMPRESSION_ALGORITHM:
+          Compression.getCompressionAlgorithmByName(compress), c, false);
     }
-  
+
     /**
      * Constructor that takes a stream.
      * @param ostream Stream to use.
      * @param blocksize
      * @param compress
      * @param c
+     * @param bloomfilter
      * @throws IOException
      */
     public Writer(final FSDataOutputStream ostream, final int blocksize,
-      final Compression.Algorithm  compress, final RawComparator<byte []> c)
+        final Compression.Algorithm  compress,
+        final RawComparator<byte []> c,
+        final boolean bloomfilter)
     throws IOException {
       this.outputStream = ostream;
       this.closeOutputStream = false;
@@ -454,12 +465,8 @@ public class HFile {
      * Add key/value to file.
      * Keys must be added in an order that agrees with the Comparator passed
      * on construction.
-     * @param key
-     * @param koffset
-     * @param klength
-     * @param value
-     * @param voffset
-     * @param vlength
+     * @param key Key to add.  Cannot be empty nor null.
+     * @param value Value to add.  Cannot be empty nor null.
      * @throws IOException
      */
     public void append(final byte [] key, final int koffset, final int klength,
@@ -720,11 +727,11 @@ public class HFile {
     }
 
     protected String toStringFirstKey() {
-      return Bytes.toStringBinary(getFirstKey());
+      return Bytes.toString(getFirstKey());
     }
 
     protected String toStringLastKey() {
-      return Bytes.toStringBinary(getFirstKey());
+      return Bytes.toString(getFirstKey());
     }
 
     public long length() {
@@ -1032,9 +1039,6 @@ public class HFile {
       }
       
       public KeyValue getKeyValue() {
-        if(this.block == null) {
-          return null;
-        }
         return new KeyValue(this.block.array(),
             this.block.arrayOffset() + this.block.position() - 8);
       }
@@ -1183,7 +1187,7 @@ public class HFile {
       }
 
       public String getKeyString() {
-        return Bytes.toStringBinary(block.array(), block.arrayOffset() +
+        return Bytes.toString(block.array(), block.arrayOffset() +
           block.position(), currKeyLen);
       }
 
@@ -1234,10 +1238,6 @@ public class HFile {
         }
       }
     }
-
-    public String getTrailerInfo() {
-      return trailer.toString();
-    }
   }
   /*
    * The RFile has a fixed trailer which contains offsets to other variable
@@ -1265,9 +1265,11 @@ public class HFile {
 
     static int trailerSize() {
       // Keep this up to date...
+      final int intSize = 4;
+      final int longSize = 8;
       return 
-      ( Bytes.SIZEOF_INT * 5 ) +
-      ( Bytes.SIZEOF_LONG * 4 ) +
+      ( intSize * 5 ) +
+      ( longSize * 4 ) +
       TRAILERBLOCKMAGIC.length;
     }
 

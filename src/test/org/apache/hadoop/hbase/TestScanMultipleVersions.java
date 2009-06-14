@@ -21,12 +21,11 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -54,7 +53,7 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
     // Create table description
     
     this.desc = new HTableDescriptor(TABLE_NAME);
-    this.desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    this.desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY));
 
     // Region 0 will contain the key range [,row_0500)
     INFOS[0] = new HRegionInfo(this.desc, HConstants.EMPTY_START_ROW,
@@ -71,11 +70,9 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
         HRegion.createHRegion(this.INFOS[i], this.testDir, this.conf);
       // Insert data
       for (int j = 0; j < TIMESTAMPS.length; j++) {
-        Put put = new Put(ROWS[i]);
-        put.setTimeStamp(TIMESTAMPS[j]);
-        put.add(HConstants.CATALOG_FAMILY, null, TIMESTAMPS[j], 
-            Bytes.toBytes(TIMESTAMPS[j]));
-        REGIONS[i].put(put);
+        BatchUpdate b = new BatchUpdate(ROWS[i], TIMESTAMPS[j]);
+        b.put(HConstants.COLUMN_FAMILY, Bytes.toBytes(TIMESTAMPS[j]));
+        REGIONS[i].batchUpdate(b, null);
       }
       // Insert the region we created into the meta
       HRegion.addRegionToMETA(meta, REGIONS[i]);
@@ -96,25 +93,19 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
     HTable t = new HTable(conf, TABLE_NAME);
     for (int i = 0; i < ROWS.length; i++) {
       for (int j = 0; j < TIMESTAMPS.length; j++) {
-        Get get = new Get(ROWS[i]);
-        get.addFamily(HConstants.CATALOG_FAMILY);
-        get.setTimeStamp(TIMESTAMPS[j]);
-        Result result = t.get(get);
-        int cellCount = 0;
-        for(@SuppressWarnings("unused")KeyValue kv : result.sorted()) {
-          cellCount++;
-        }
-        assertTrue(cellCount == 1);
+        Cell [] cells =
+          t.get(ROWS[i], HConstants.COLUMN_FAMILY, TIMESTAMPS[j], 1);
+        assertTrue(cells != null && cells.length == 1);
+        System.out.println("Row=" + Bytes.toString(ROWS[i]) + ", cell=" +
+          cells[0]);
       }
     }
     
     // Case 1: scan with LATEST_TIMESTAMP. Should get two rows
     int count = 0;
-    Scan scan = new Scan();
-    scan.addFamily(HConstants.CATALOG_FAMILY);
-    ResultScanner s = t.getScanner(scan);
+    Scanner s = t.getScanner(HConstants.COLUMN_FAMILY_ARRAY);
     try {
-      for (Result rr = null; (rr = s.next()) != null;) {
+      for (RowResult rr = null; (rr = s.next()) != null;) {
         System.out.println(rr.toString());
         count += 1;
       }
@@ -127,11 +118,8 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
     // (in this case > 1000 and < LATEST_TIMESTAMP. Should get 2 rows.
     
     count = 0;
-    scan = new Scan();
-    scan.setTimeRange(1000L, Long.MAX_VALUE);
-    scan.addFamily(HConstants.CATALOG_FAMILY);
-
-    s = t.getScanner(scan);
+    s = t.getScanner(HConstants.COLUMN_FAMILY_ARRAY, HConstants.EMPTY_START_ROW,
+        10000L);
     try {
       while (s.next() != null) {
         count += 1;
@@ -145,11 +133,8 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
     // (in this case == 1000. Should get 2 rows.
     
     count = 0;
-    scan = new Scan();
-    scan.setTimeStamp(1000L);
-    scan.addFamily(HConstants.CATALOG_FAMILY);
-
-    s = t.getScanner(scan);
+    s = t.getScanner(HConstants.COLUMN_FAMILY_ARRAY, HConstants.EMPTY_START_ROW,
+        1000L);
     try {
       while (s.next() != null) {
         count += 1;
@@ -163,11 +148,8 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
     // second timestamp (100 < timestamp < 1000). Should get 2 rows.
     
     count = 0;
-    scan = new Scan();
-    scan.setTimeRange(100L, 1000L);
-    scan.addFamily(HConstants.CATALOG_FAMILY);
-
-    s = t.getScanner(scan);
+    s = t.getScanner(HConstants.COLUMN_FAMILY_ARRAY, HConstants.EMPTY_START_ROW,
+        500L);
     try {
       while (s.next() != null) {
         count += 1;
@@ -181,11 +163,8 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
     // Should get 2 rows.
     
     count = 0;
-    scan = new Scan();
-    scan.setTimeStamp(100L);
-    scan.addFamily(HConstants.CATALOG_FAMILY);
-
-    s = t.getScanner(scan);
+    s = t.getScanner(HConstants.COLUMN_FAMILY_ARRAY, HConstants.EMPTY_START_ROW,
+        100L);
     try {
       while (s.next() != null) {
         count += 1;

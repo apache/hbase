@@ -19,8 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
@@ -137,23 +136,33 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * 
    * @param transactionId
    * @param regionName region name
-   * @param delete
+   * @param row row key
+   * @param timestamp Delete all entries that have this timestamp or older
    * @throws IOException
    */
-  public void delete(long transactionId, byte [] regionName, Delete delete)
-  throws IOException;
-  
+  public void deleteAll(long transactionId, byte[] regionName, byte[] row,
+      long timestamp) throws IOException;
+
   /**
    * Opens a remote scanner with a RowFilter.
    * 
    * @param transactionId
    * @param regionName name of region to scan
-   * @param scan
+   * @param columns columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned. Its also possible to
+   * pass a regex for column family name. A column name is judged to be regex if
+   * it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
+   * @param startRow starting row to scan
+   * @param timestamp only return values whose timestamp is <= this value
+   * @param filter RowFilter for filtering results at the row-level.
+   * 
    * @return scannerId scanner identifier used in other calls
    * @throws IOException
    */
   public long openScanner(final long transactionId, final byte[] regionName,
-      Scan scan) throws IOException;
+      final byte[][] columns, final byte[] startRow, long timestamp,
+      RowFilterInterface filter) throws IOException;
 
   /**
    * Applies a batch of updates via one RPC

@@ -23,31 +23,37 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.io.RowResult;
 
 
 /**
  * Retries scanner operations such as create, next, etc.
- * Used by {@link ResultScanner}s made by {@link HTable}.
+ * Used by {@link Scanner}s made by {@link HTable}.
  */
-public class ScannerCallable extends ServerCallable<Result[]> {
+public class ScannerCallable extends ServerCallable<RowResult[]> {
   private long scannerId = -1L;
   private boolean instantiated = false;
   private boolean closed = false;
-  private Scan scan;
-  private byte [] startRow;
+  private final byte [][] columns;
+  private final long timestamp;
+  private final RowFilterInterface filter;
   private int caching = 1;
 
   /**
    * @param connection
    * @param tableName
+   * @param columns
    * @param startRow
-   * @param scan
+   * @param timestamp
+   * @param filter
    */
-  public ScannerCallable (HConnection connection, byte [] tableName,
-      byte [] startRow, Scan scan) {
+  public ScannerCallable (HConnection connection, byte [] tableName, byte [][] columns,
+      byte [] startRow, long timestamp, RowFilterInterface filter) {
     super(connection, tableName, startRow);
-    this.scan = scan;
-    this.startRow = startRow;
+    this.columns = columns;
+    this.timestamp = timestamp;
+    this.filter = filter;
   }
   
   /**
@@ -65,7 +71,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
   /**
    * @see java.util.concurrent.Callable#call()
    */
-  public Result [] call() throws IOException {
+  public RowResult[] call() throws IOException {
     if (scannerId != -1L && closed) {
       server.close(scannerId);
       scannerId = -1L;
@@ -73,19 +79,28 @@ public class ScannerCallable extends ServerCallable<Result[]> {
       // open the scanner
       scannerId = openScanner();
     } else {
-      Result [] rrs = server.next(scannerId, caching);
-      return rrs == null || rrs.length == 0? null: rrs;
+      RowResult [] rrs = server.next(scannerId, caching);
+      return rrs.length == 0 ? null : rrs;
     }
     return null;
   }
   
   protected long openScanner() throws IOException {
     return server.openScanner(
-        this.location.getRegionInfo().getRegionName(), scan);
+        this.location.getRegionInfo().getRegionName(), columns, row,
+        timestamp, filter);
   }
   
-  protected Scan getScan() {
-    return scan;
+  protected byte [][] getColumns() {
+    return columns;
+  }
+  
+  protected long getTimestamp() {
+    return timestamp;
+  }
+  
+  protected RowFilterInterface getFilter() {
+    return filter;
   }
   
   /**

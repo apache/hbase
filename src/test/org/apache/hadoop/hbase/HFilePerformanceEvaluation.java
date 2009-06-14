@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -188,7 +187,7 @@ public class HFilePerformanceEvaluation {
     
     @Override
     void setUp() throws Exception {
-      writer = new HFile.Writer(this.fs, this.mf, RFILE_BLOCKSIZE, (Compression.Algorithm) null, null);
+      writer = new HFile.Writer(this.fs, this.mf, RFILE_BLOCKSIZE, null, null);
     }
     
     @Override

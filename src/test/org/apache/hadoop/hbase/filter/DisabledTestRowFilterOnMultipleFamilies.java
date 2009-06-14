@@ -32,13 +32,9 @@ import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
@@ -75,14 +71,10 @@ public class DisabledTestRowFilterOnMultipleFamilies extends HBaseClusterTestCas
     HTable table = new HTable(conf, TABLE_NAME);
 
     for (int i = 0; i < NUM_ROWS; i++) {
-      Put put = new Put(Bytes.toBytes("row_" + String.format("%1$05d", i)));
-      byte [][] famAndQf = KeyValue.parseColumn(TEXT_COLUMN1);
-      put.add(famAndQf[0], famAndQf[1], VALUE);
-      
-      famAndQf = KeyValue.parseColumn(TEXT_COLUMN2);
-      put.add(famAndQf[0], famAndQf[1], Bytes.toBytes(String.format("%1$05d", i)));
-      
-      table.put(put);
+      BatchUpdate b = new BatchUpdate("row_" + String.format("%1$05d", i));
+      b.put(TEXT_COLUMN1, VALUE);
+      b.put(TEXT_COLUMN2, String.format("%1$05d", i).getBytes());
+      table.commit(b);
     }
 
     LOG.info("Print table contents using scanner before map/reduce for " + TABLE_NAME);
@@ -93,9 +85,7 @@ public class DisabledTestRowFilterOnMultipleFamilies extends HBaseClusterTestCas
 
   private void scanTable(final String tableName, final boolean printValues) throws IOException {
     HTable table = new HTable(conf, tableName);
-    Scan scan = new Scan();
-    scan.addColumns(columns);
-    ResultScanner scanner = table.getScanner(scan);
+    Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
     int numFound = doScan(scanner, printValues);
     Assert.assertEquals(NUM_ROWS, numFound);
   }
@@ -106,24 +96,21 @@ public class DisabledTestRowFilterOnMultipleFamilies extends HBaseClusterTestCas
     columnMap.put(TEXT_COLUMN1,
         new Cell(VALUE, HConstants.LATEST_TIMESTAMP));
     RegExpRowFilter filter = new RegExpRowFilter(null, columnMap);
-    Scan scan = new Scan();
-    scan.addColumns(columns);
-//    scan.setFilter(filter);
-    ResultScanner scanner = table.getScanner(scan);
+    Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW, filter);
     int numFound = doScan(scanner, printValues);
     Assert.assertEquals(NUM_ROWS, numFound);
   }
 
-  private int doScan(final ResultScanner scanner, final boolean printValues) throws IOException {
+  private int doScan(final Scanner scanner, final boolean printValues) throws IOException {
     {
       int count = 0;
 
       try {
-        for (Result result : scanner) {
+        for (RowResult result : scanner) {
           if (printValues) {
             LOG.info("row: " + Bytes.toString(result.getRow()));
 
-            for (Map.Entry<byte [], Cell> e : result.getRowResult().entrySet()) {
+            for (Map.Entry<byte [], Cell> e : result.entrySet()) {
               LOG.info(" column: " + e.getKey() + " value: "
                   + new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));
             }

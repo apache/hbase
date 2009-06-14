@@ -1651,7 +1651,7 @@ public class SequenceFile {
           try {
             Class<? extends CompressionCodec> codecClass
               = conf.getClassByName(codecClassname).asSubclass(CompressionCodec.class);
-            this.codec = (CompressionCodec)ReflectionUtils.newInstance(codecClass, conf);
+            this.codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass, conf);
           } catch (ClassNotFoundException cnfe) {
             throw new IllegalArgumentException("Unknown codec: " + 
                                                codecClassname, cnfe);

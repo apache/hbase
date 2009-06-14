@@ -724,8 +724,8 @@ public class MapFile {
                           ", got " + dataReader.getValueClass().getName());
     }
     long cnt = 0L;
-    Writable key = (Writable)ReflectionUtils.newInstance(keyClass, conf);
-    Writable value = (Writable)ReflectionUtils.newInstance(valueClass, conf);
+    Writable key = (Writable) ReflectionUtils.newInstance(keyClass, conf);
+    Writable value = (Writable) ReflectionUtils.newInstance(valueClass, conf);
     SequenceFile.Writer indexWriter = null;
     if (!dryrun) indexWriter = SequenceFile.createWriter(fs, conf, index, keyClass, LongWritable.class);
     try {

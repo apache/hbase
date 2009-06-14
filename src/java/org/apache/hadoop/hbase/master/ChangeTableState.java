@@ -27,8 +27,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Writables;
@@ -80,13 +78,11 @@ class ChangeTableState extends TableOperation {
       }
 
       // Update meta table
-      Put put = updateRegionInfo(i);
-      server.put(m.getRegionName(), put);
-      
-      Delete delete = new Delete(i.getRegionName());
-      delete.deleteColumns(CATALOG_FAMILY, SERVER_QUALIFIER);
-      delete.deleteColumns(CATALOG_FAMILY, STARTCODE_QUALIFIER);
-      server.delete(m.getRegionName(), delete);
+      BatchUpdate b = new BatchUpdate(i.getRegionName());
+      updateRegionInfo(b, i);
+      b.delete(COL_SERVER);
+      b.delete(COL_STARTCODE);
+      server.batchUpdate(m.getRegionName(), b, -1L);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Updated columns in row: " + i.getRegionNameAsString());
       }
@@ -129,11 +125,9 @@ class ChangeTableState extends TableOperation {
     servedRegions.clear();
   }
 
-  protected Put updateRegionInfo(final HRegionInfo i)
+  protected void updateRegionInfo(final BatchUpdate b, final HRegionInfo i)
   throws IOException {
     i.setOffline(!online);
-    Put put = new Put(i.getRegionName());
-    put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(i));
-    return put;
+    b.put(COL_REGIONINFO, Writables.getBytes(i));
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2008 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -28,9 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
@@ -75,7 +73,7 @@ import org.apache.hadoop.util.StringUtils;
  * </pre>
  */
 public abstract class TableInputFormatBase
-implements InputFormat<ImmutableBytesWritable, Result> {
+implements InputFormat<ImmutableBytesWritable, RowResult> {
   final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
   private byte [][] inputColumns;
   private HTable table;
@@ -86,12 +84,12 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    * Iterate over an HBase table data, return (Text, RowResult) pairs
    */
   protected class TableRecordReader
-  implements RecordReader<ImmutableBytesWritable, Result> {
+  implements RecordReader<ImmutableBytesWritable, RowResult> {
     private byte [] startRow;
     private byte [] endRow;
     private byte [] lastRow;
     private RowFilterInterface trrRowFilter;
-    private ResultScanner scanner;
+    private Scanner scanner;
     private HTable htable;
     private byte [][] trrInputColumns;
 
@@ -108,21 +106,16 @@ implements InputFormat<ImmutableBytesWritable, Result> {
             new HashSet<RowFilterInterface>();
           rowFiltersSet.add(new WhileMatchRowFilter(new StopRowFilter(endRow)));
           rowFiltersSet.add(trrRowFilter);
-          Scan scan = new Scan(startRow);
-          scan.addColumns(trrInputColumns);
-//          scan.setFilter(new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL,
-//              rowFiltersSet));
-          this.scanner = this.htable.getScanner(scan);
+          this.scanner = this.htable.getScanner(trrInputColumns, startRow,
+            new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL,
+              rowFiltersSet));
         } else {
-          Scan scan = new Scan(firstRow, endRow);
-          scan.addColumns(trrInputColumns);
-          this.scanner = this.htable.getScanner(scan);
+          this.scanner =
+            this.htable.getScanner(trrInputColumns, firstRow, endRow);
         }
       } else {
-        Scan scan = new Scan(firstRow);
-        scan.addColumns(trrInputColumns);
-//        scan.setFilter(trrRowFilter);
-        this.scanner = this.htable.getScanner(scan);
+        this.scanner =
+          this.htable.getScanner(trrInputColumns, firstRow, trrRowFilter);
       }
     }
 
@@ -189,8 +182,8 @@ implements InputFormat<ImmutableBytesWritable, Result> {
      *
      * @see org.apache.hadoop.mapred.RecordReader#createValue()
      */
-    public Result createValue() {
-      return new Result();
+    public RowResult createValue() {
+      return new RowResult();
     }
 
     public long getPos() {
@@ -210,9 +203,9 @@ implements InputFormat<ImmutableBytesWritable, Result> {
      * @return true if there was more data
      * @throws IOException
      */
-    public boolean next(ImmutableBytesWritable key, Result value)
+    public boolean next(ImmutableBytesWritable key, RowResult value)
     throws IOException {
-      Result result;
+      RowResult result;
       try {
         result = this.scanner.next();
       } catch (UnknownScannerException e) {
@@ -239,7 +232,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    * @see org.apache.hadoop.mapred.InputFormat#getRecordReader(InputSplit,
    *      JobConf, Reporter)
    */
-  public RecordReader<ImmutableBytesWritable, Result> getRecordReader(
+  public RecordReader<ImmutableBytesWritable, RowResult> getRecordReader(
       InputSplit split, JobConf job, Reporter reporter)
   throws IOException {
     TableSplit tSplit = (TableSplit) split;

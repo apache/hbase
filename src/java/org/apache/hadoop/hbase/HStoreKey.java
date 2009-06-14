@@ -456,7 +456,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     return getDelimiter(b, 0, b.length, COLUMN_FAMILY_DELIMITER);
   }
 
-  static int getRequiredDelimiterInReverse(final byte [] b,
+  private static int getRequiredDelimiterInReverse(final byte [] b,
       final int offset, final int length, final int delimiter) {
     int index = getDelimiterInReverse(b, offset, length, delimiter);
     if (index < 0) {
@@ -471,7 +471,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * @return Index of delimiter having started from end of <code>b</code> moving
    * leftward.
    */
-  static int getDelimiter(final byte [] b, int offset, final int length,
+  private static int getDelimiter(final byte [] b, int offset, final int length,
       final int delimiter) {
     if (b == null) {
       throw new NullPointerException();

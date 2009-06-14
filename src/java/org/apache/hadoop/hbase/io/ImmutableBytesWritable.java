@@ -122,22 +122,10 @@ implements WritableComparable<ImmutableBytesWritable> {
     return this.length;
   }
  
-  /**
-   * @return the current length of the buffer. same as getSize()
-   */
-  //Should probably deprecate getSize() so that we keep the same calls for all
-  //byte []
   public int getLength() {
-    if (this.bytes == null) {
-      throw new IllegalStateException("Uninitialiized. Null constructor " +
-        "called w/o accompaying readFields invocation");
-    }
-    return this.length;
+    return getSize();
   }
-  
-  /**
-   * @return offset
-   */
+
   public int getOffset(){
     return this.offset;
   }

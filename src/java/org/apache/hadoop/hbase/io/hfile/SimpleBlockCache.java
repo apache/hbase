@@ -24,9 +24,6 @@ public class SimpleBlockCache implements BlockCache {
   private ReferenceQueue q = new ReferenceQueue();
   public int dumps = 0;
   
-  /**
-   * Constructor
-   */
   public SimpleBlockCache() {
     super();
   }
@@ -39,9 +36,6 @@ public class SimpleBlockCache implements BlockCache {
     }
   }
 
-  /**
-   * @return the size
-   */
   public synchronized int size() {
     processQueue();
     return cache.size();
