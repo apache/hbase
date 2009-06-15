@@ -12,6 +12,9 @@ Release 0.19.4 - Unreleased
                a bunch of reions in there
    HBASE-1487  ProcessRegionOpen in line 82, LOG.info() outputs
                "Bytes.toString(this.startCode)", which gives those non-printables
+   HBASE-1524  TableInputFormatBase.TableRecordReader.restart() @line 110.
+               "startRow" should be changed to "firstRow"
+               (Qiaoilang Xiang via Stack)
 
 Release 0.19.3 - May 27th, 2009
   BUG FIXES

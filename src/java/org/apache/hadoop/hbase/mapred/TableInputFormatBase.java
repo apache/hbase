@@ -107,7 +107,7 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
             new HashSet<RowFilterInterface>();
           rowFiltersSet.add(new WhileMatchRowFilter(new StopRowFilter(endRow)));
           rowFiltersSet.add(trrRowFilter);
-          this.scanner = this.htable.getScanner(trrInputColumns, startRow,
+          this.scanner = this.htable.getScanner(trrInputColumns, firstRow,
             new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL,
               rowFiltersSet));
         } else {
