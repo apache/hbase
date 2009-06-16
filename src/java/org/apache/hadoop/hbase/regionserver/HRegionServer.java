@@ -88,9 +88,9 @@ import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
-import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.HBaseRPC.Server;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -167,7 +167,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   // Server to handle client requests.  Default access so can be accessed by
   // unit tests.
-  HBaseServer server;
+  Server server;
   
   // Leases
   private Leases leases;
@@ -222,8 +222,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
 
-  private final long rpcTimeout;
-
   // Address passed in to constructor.
   private final HServerAddress address;
 
@@ -274,8 +272,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
     this.numRegionsToReport =                                        
       conf.getInt("hbase.regionserver.numregionstoreport", 10);      
-
-    this.rpcTimeout = conf.getLong("hbase.regionserver.lease.period", 60000);
 
     reinitialize();
   }
@@ -1296,7 +1292,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         master = (HMasterRegionInterface)HBaseRPC.waitForProxy(
             HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
             masterAddress.getInetSocketAddress(),
-            this.conf, -1, this.rpcTimeout);
+            this.conf, -1);
       } catch (IOException e) {
         LOG.warn("Unable to connect to master. Retrying. Error was:", e);
         sleeper.sleep();
