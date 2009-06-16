@@ -88,9 +88,9 @@ import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
+import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.ipc.HBaseRPC.Server;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -167,7 +167,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   // Server to handle client requests.  Default access so can be accessed by
   // unit tests.
-  Server server;
+  HBaseServer server;
   
   // Leases
   private Leases leases;
@@ -1296,7 +1296,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         master = (HMasterRegionInterface)HBaseRPC.waitForProxy(
             HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
             masterAddress.getInetSocketAddress(),
-            this.conf, -1);
+            this.conf, -1, this.rpcTimeout);
       } catch (IOException e) {
         LOG.warn("Unable to connect to master. Retrying. Error was:", e);
         sleeper.sleep();
@@ -1857,7 +1857,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     checkOpen();
     List<Result> results = new ArrayList<Result>();
     try {
-	long start = System.currentTimeMillis();
       String scannerName = String.valueOf(scannerId);
       InternalScanner s = scanners.get(scannerName);
       if (s == null) {
@@ -1881,10 +1880,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       throw convertThrowableToIOE(cleanup(t));
     }
   } 
-  
-  
-  
-  
+
   public void close(final long scannerId) throws IOException {
     try {
       checkOpen();

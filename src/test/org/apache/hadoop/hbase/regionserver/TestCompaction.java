@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestCompaction extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
   private HRegion r = null;
+  private Path compactionDir = null;
+  private Path regionCompactionDir = null;
   private static final byte [] COLUMN_FAMILY = fam1;
   private final byte [] STARTROW = Bytes.toBytes(START_KEY);
   private static final byte [] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
@@ -67,6 +69,9 @@ public class TestCompaction extends HBaseTestCase {
     super.setUp();
     HTableDescriptor htd = createTableDescriptor(getName());
     this.r = createNewHRegion(htd, null, null);
+    this.compactionDir = HRegion.getCompactionDir(this.r.getBaseDir());
+    this.regionCompactionDir = new Path(this.compactionDir, 
+        Integer.toString(this.r.getRegionInfo().getEncodedName()));
   }
   
   @Override
@@ -102,10 +107,14 @@ public class TestCompaction extends HBaseTestCase {
     Result result = r.get(new Get(STARTROW).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null);
 
     // Assert that I can get 3 versions since it is the max I should get
-    assertEquals(3, result.size());
+    assertEquals(COMPACTION_THRESHOLD, result.size());
 //    assertEquals(cellValues.length, 3);
     r.flushcache();
     r.compactStores();
+    // check compaction dir is exists
+    assertTrue(this.cluster.getFileSystem().exists(this.compactionDir));
+    // check Compaction Dir for this Regions is cleaned up
+    assertTrue(!this.cluster.getFileSystem().exists(this.regionCompactionDir));
     // Always 3 versions if that is what max versions is.
     byte [] secondRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
     // Increment the least significant character so we get to next row.
