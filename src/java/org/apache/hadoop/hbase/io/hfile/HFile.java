@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
@@ -104,11 +105,6 @@ import org.apache.hadoop.io.compress.Decompressor;
  * <pre>&lt;fileinfo>&lt;trailer></pre>.  That is, there are not data nor meta
  * blocks present.
  * <p>
- * TODO: Bloomfilters.  Need to add hadoop 0.20. first since it has bug fixes
- * on the hadoop bf package.
- *  * TODO: USE memcmp by default?  Write the keys out in an order that allows
- * my using this -- reverse the timestamp.
- * TODO: Add support for fast-gzip and for lzo.
  * TODO: Do scanners need to be able to take a start and end row?
  * TODO: Should BlockIndex know the name of its file?  Should it have a Path
  * that points at its file say for the case where an index lives apart from
@@ -159,7 +155,7 @@ public class HFile {
 
     // Name for this object used when logging or in toString.  Is either
     // the result of a toString on stream or else toString of passed file Path.
-    private String name;
+    protected String name;
 
     // Total uncompressed bytes, maybe calculate a compression ratio later.
     private int totalBytes = 0;
@@ -222,7 +218,7 @@ public class HFile {
      */
     public Writer(FileSystem fs, Path path)
     throws IOException {
-      this(fs, path, DEFAULT_BLOCKSIZE, null, null, false);
+      this(fs, path, DEFAULT_BLOCKSIZE, (Compression.Algorithm) null, null);
     }
 
     /**
@@ -241,7 +237,7 @@ public class HFile {
       this(fs, path, blocksize,
         compress == null? DEFAULT_COMPRESSION_ALGORITHM:
           Compression.getCompressionAlgorithmByName(compress),
-        comparator, false);
+        comparator);
     }
 
     /**
@@ -251,15 +247,13 @@ public class HFile {
      * @param blocksize
      * @param compress
      * @param comparator
-     * @param bloomfilter
      * @throws IOException
      */
     public Writer(FileSystem fs, Path path, int blocksize,
       Compression.Algorithm compress,
-      final RawComparator<byte []> comparator,
-      final boolean bloomfilter)
+      final RawComparator<byte []> comparator)
     throws IOException {
-      this(fs.create(path), blocksize, compress, comparator, bloomfilter);
+      this(fs.create(path), blocksize, compress, comparator);
       this.closeOutputStream = true;
       this.name = path.toString();
       this.path = path;
@@ -274,26 +268,22 @@ public class HFile {
      * @throws IOException
      */
     public Writer(final FSDataOutputStream ostream, final int blocksize,
-        final String  compress, final RawComparator<byte []> c)
+      final String  compress, final RawComparator<byte []> c)
     throws IOException {
       this(ostream, blocksize,
-        compress == null? DEFAULT_COMPRESSION_ALGORITHM:
-          Compression.getCompressionAlgorithmByName(compress), c, false);
+        Compression.getCompressionAlgorithmByName(compress), c);
     }
-
+  
     /**
      * Constructor that takes a stream.
      * @param ostream Stream to use.
      * @param blocksize
      * @param compress
      * @param c
-     * @param bloomfilter
      * @throws IOException
      */
     public Writer(final FSDataOutputStream ostream, final int blocksize,
-        final Compression.Algorithm  compress,
-        final RawComparator<byte []> c,
-        final boolean bloomfilter)
+      final Compression.Algorithm  compress, final RawComparator<byte []> c)
     throws IOException {
       this.outputStream = ostream;
       this.closeOutputStream = false;
@@ -465,8 +455,12 @@ public class HFile {
      * Add key/value to file.
      * Keys must be added in an order that agrees with the Comparator passed
      * on construction.
-     * @param key Key to add.  Cannot be empty nor null.
-     * @param value Value to add.  Cannot be empty nor null.
+     * @param key
+     * @param koffset
+     * @param klength
+     * @param value
+     * @param voffset
+     * @param vlength
      * @throws IOException
      */
     public void append(final byte [] key, final int koffset, final int klength,
@@ -727,11 +721,11 @@ public class HFile {
     }
 
     protected String toStringFirstKey() {
-      return Bytes.toString(getFirstKey());
+      return Bytes.toStringBinary(getFirstKey());
     }
 
     protected String toStringLastKey() {
-      return Bytes.toString(getFirstKey());
+      return Bytes.toStringBinary(getFirstKey());
     }
 
     public long length() {
@@ -1039,6 +1033,9 @@ public class HFile {
       }
       
       public KeyValue getKeyValue() {
+        if(this.block == null) {
+          return null;
+        }
         return new KeyValue(this.block.array(),
             this.block.arrayOffset() + this.block.position() - 8);
       }
@@ -1187,7 +1184,7 @@ public class HFile {
       }
 
       public String getKeyString() {
-        return Bytes.toString(block.array(), block.arrayOffset() +
+        return Bytes.toStringBinary(block.array(), block.arrayOffset() +
           block.position(), currKeyLen);
       }
 
@@ -1238,6 +1235,10 @@ public class HFile {
         }
       }
     }
+
+    public String getTrailerInfo() {
+      return trailer.toString();
+    }
   }
   /*
    * The RFile has a fixed trailer which contains offsets to other variable
@@ -1265,11 +1266,9 @@ public class HFile {
 
     static int trailerSize() {
       // Keep this up to date...
-      final int intSize = 4;
-      final int longSize = 8;
       return 
-      ( intSize * 5 ) +
-      ( longSize * 4 ) +
+      ( Bytes.SIZEOF_INT * 5 ) +
+      ( Bytes.SIZEOF_LONG * 4 ) +
       TRAILERBLOCKMAGIC.length;
     }
 
@@ -1544,5 +1543,67 @@ public class HFile {
     // Expecting the size() of a block not exceeding 4GB. Assuming the
     // size() will wrap to negative integer if it exceeds 2GB (From tfile).
     return (int)(l & 0x00000000ffffffffL);
+  }
+
+
+  public static void main(String []args) throws IOException {
+    if (args.length < 1) {
+      System.out.println("usage: <filename> -- dumps hfile stats");
+      return;
+    }
+
+    HBaseConfiguration conf = new HBaseConfiguration();
+
+    FileSystem fs = FileSystem.get(conf);
+
+    Path path = new Path(args[0]);
+
+    if (!fs.exists(path)) {
+      System.out.println("File doesnt exist: " + path);
+      return;
+    }
+
+    HFile.Reader reader = new HFile.Reader(fs, path, null);
+    Map<byte[],byte[]> fileInfo = reader.loadFileInfo();
+
+    // scan thru and count the # of unique rows.
+//    HashSet<Integer> rows = new HashSet<Integer>(reader.getEntries()/4);
+//    long start = System.currentTimeMillis();
+//    HFileScanner scanner = reader.getScanner();
+//    HStoreKey hsk;
+//    scanner.seekTo();
+//    do {
+//      hsk = new HStoreKey(scanner.getKey());
+//      rows.add(Bytes.hashCode(hsk.getRow()));
+//    } while (scanner.next());
+//    long end = System.currentTimeMillis();
+
+
+    HFileScanner scanner = reader.getScanner();
+    scanner.seekTo();
+    KeyValue kv;
+    do {
+      kv = scanner.getKeyValue();
+        System.out.println("K: " + Bytes.toStringBinary(kv.getKey()) +
+            " V: " + Bytes.toStringBinary(kv.getValue()));
+    } while (scanner.next());
+
+    System.out.println("Block index size as per heapsize: " + reader.indexSize());
+    System.out.println(reader.toString());
+    System.out.println(reader.getTrailerInfo());
+    System.out.println("Fileinfo:");
+    for ( Map.Entry<byte[], byte[]> e : fileInfo.entrySet()) {
+      System.out.print(Bytes.toString(e.getKey()) + " = " );
+
+      if (Bytes.compareTo(e.getKey(), Bytes.toBytes("MAX_SEQ_ID_KEY"))==0) {
+        long seqid = Bytes.toLong(e.getValue());
+        System.out.println(seqid);
+      } else {
+        System.out.println(Bytes.toStringBinary(e.getValue()));
+      }
+
+    }
+
+    reader.close();
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -28,7 +28,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
@@ -72,6 +74,8 @@ import org.apache.hadoop.util.StringUtils;
  *  }
  * </pre>
  */
+
+@Deprecated
 public abstract class TableInputFormatBase
 implements InputFormat<ImmutableBytesWritable, RowResult> {
   final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
@@ -89,7 +93,7 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
     private byte [] endRow;
     private byte [] lastRow;
     private RowFilterInterface trrRowFilter;
-    private Scanner scanner;
+    private ResultScanner scanner;
     private HTable htable;
     private byte [][] trrInputColumns;
 
@@ -106,16 +110,21 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
             new HashSet<RowFilterInterface>();
           rowFiltersSet.add(new WhileMatchRowFilter(new StopRowFilter(endRow)));
           rowFiltersSet.add(trrRowFilter);
-          this.scanner = this.htable.getScanner(trrInputColumns, startRow,
-            new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL,
-              rowFiltersSet));
+          Scan scan = new Scan(startRow);
+          scan.addColumns(trrInputColumns);
+//          scan.setFilter(new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL,
+//              rowFiltersSet));
+          this.scanner = this.htable.getScanner(scan);
         } else {
-          this.scanner =
-            this.htable.getScanner(trrInputColumns, firstRow, endRow);
+          Scan scan = new Scan(firstRow, endRow);
+          scan.addColumns(trrInputColumns);
+          this.scanner = this.htable.getScanner(scan);
         }
       } else {
-        this.scanner =
-          this.htable.getScanner(trrInputColumns, firstRow, trrRowFilter);
+        Scan scan = new Scan(firstRow);
+        scan.addColumns(trrInputColumns);
+//        scan.setFilter(trrRowFilter);
+        this.scanner = this.htable.getScanner(scan);
       }
     }
 
@@ -205,7 +214,7 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
      */
     public boolean next(ImmutableBytesWritable key, RowResult value)
     throws IOException {
-      RowResult result;
+      Result result;
       try {
         result = this.scanner.next();
       } catch (UnknownScannerException e) {
@@ -218,7 +227,7 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
       if (result != null && result.size() > 0) {
         key.set(result.getRow());
         lastRow = key.get();
-        Writables.copyWritable(result, value);
+        Writables.copyWritable(result.getRowResult(), value);
         return true;
       }
       return false;

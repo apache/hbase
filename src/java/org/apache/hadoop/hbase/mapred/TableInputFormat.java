@@ -35,15 +35,13 @@ import org.apache.hadoop.util.StringUtils;
 /**
  * Convert HBase tabular data into a format that is consumable by Map/Reduce.
  */
+@Deprecated
 public class TableInputFormat extends TableInputFormatBase implements
     JobConfigurable {
   private final Log LOG = LogFactory.getLog(TableInputFormat.class);
 
   /**
    * space delimited list of columns
-   *
-   * @see org.apache.hadoop.hbase.regionserver.HAbstractScanner for column name
-   *      wildcards
    */
   public static final String COLUMN_LIST = "hbase.mapred.tablecolumns";
 

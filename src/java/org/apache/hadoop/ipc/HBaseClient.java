@@ -31,7 +31,7 @@ public class HBaseClient extends Client {
    * @param conf
    * @param factory
    */
-  public HBaseClient(Class valueClass, Configuration conf, SocketFactory factory) {
+  public HBaseClient(Class<?> valueClass, Configuration conf, SocketFactory factory) {
     super(valueClass, conf, factory);
   }
 

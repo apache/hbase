@@ -23,14 +23,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.Reader;
+
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
@@ -169,7 +170,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
         assertTrue(Bytes.equals(HLog.METAROW, val.getRow()));
-        assertTrue(Bytes.equals(HLog.METACOLUMN, val.getColumn()));
+        assertTrue(Bytes.equals(HLog.METAFAMILY, val.getFamily()));
         assertEquals(0, Bytes.compareTo(HLog.COMPLETE_CACHE_FLUSH,
           val.getValue()));
         System.out.println(key + " " + val);

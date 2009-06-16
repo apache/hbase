@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -39,6 +39,7 @@ import org.apache.hadoop.util.Progressable;
 /**
  * Convert Map/Reduce output and write it to an HBase table
  */
+@Deprecated
 public class TableOutputFormat extends
 FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
 
