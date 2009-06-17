@@ -196,6 +196,8 @@ Release 0.20.0 - Unreleased
    HBASE-1447  Take last version of the hbase-1249 design doc. and make
                documentation out of it
    HBASE-1206  Scanner spins when there are concurrent inserts to column family
+   HBASE-1536  Controlled crash of regionserver not hosting meta/root leaves master 
+               in spinning state, regions not reassigned
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
@@ -350,6 +352,9 @@ Release 0.20.0 - Unreleased
    HBASE-1509  Add explanation to shell "help" command on how to use binarykeys
                (Lars George via Stack)
    HBASE-1514  hfile inspection tool
+   HBASE-1329  Visibility into ZooKeeper
+   HBASE-867   If millions of columns in a column family, hbase scanner won't
+               come up (Jonathan Gray via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
