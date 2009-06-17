@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.TimestampTestBase;
  * run against an HRegion and against an HTable: i.e. both local and remote.
  */
 public class TestTimestamp extends HBaseClusterTestCase {
-  private static final String COLUMN_NAME = "contents:";
+  public static String COLUMN_NAME = "contents";
   
   /** constructor */
   public TestTimestamp() {
