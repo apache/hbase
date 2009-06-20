@@ -196,8 +196,21 @@ Release 0.20.0 - Unreleased
    HBASE-1447  Take last version of the hbase-1249 design doc. and make
                documentation out of it
    HBASE-1206  Scanner spins when there are concurrent inserts to column family
-   HBASE-1536  Controlled crash of regionserver not hosting meta/root leaves master 
-               in spinning state, regions not reassigned
+   HBASE-1536  Controlled crash of regionserver not hosting meta/root leaves
+               master in spinning state, regions not reassigned
+   HBASE-1543  Unnecessary toString during scanning costs us some CPU
+   HBASE-1544  Cleanup HTable (Jonathan Gray via Stack)
+   HBASE-1488  After 1304 goes in, fix and reenable test of thrift, mr indexer,
+               and merge tool
+   HBASE-1531  Change new Get to use new filter API
+   HBASE-1549  in zookeeper.sh, use localhost instead of 127.0.0.1
+   HBASE-1534  Got ZooKeeper event, state: Disconnected on HRS and then NPE on
+               reinit
+   HBASE-1387  Before release verify all object sizes using Ryans' instrumented
+               JVM trick (Erik Holstad via Stack)
+   HBASE-1545  atomicIncrements creating new values with Long.MAX_VALUE
+   HBASE-1547  atomicIncrement doesnt increase hregion.memcacheSize
+   HBASE-1553  ClassSize missing in trunk
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
@@ -358,9 +371,20 @@ Release 0.20.0 - Unreleased
    HBASE-1538  Up zookeeper timeout from 10 seconds to 30 seconds to cut down
                on hbase-user traffic
    HBASE-1539  prevent aborts due to missing zoo.cfg
+   HBASE-1488  Fix TestThriftServer and re-enable it
+   HBASE-1541  Scanning multiple column families in the presence of deleted 
+               families results in bad scans
+   HBASE-1540  Client delete unit test, define behavior
+               (Jonathan Gray via Stack)
+   HBASE-1552  provide version running on cluster via getClusterStatus
+   HBASE-1550  hbase-daemon.sh stop should provide more information when stop
+               command fails
+   HBASE-1515  Address part of config option hbase.regionserver unnecessary
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
+   HBASE-1535  Add client ability to perform mutations without the WAL
+               (Jon Gray via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

@@ -296,7 +296,7 @@ public class TestMemcache extends TestCase {
     long ttl = Long.MAX_VALUE;
 
     QueryMatcher matcher =
-      new QueryMatcher(get, row, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
+      new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
     
     List<KeyValue> result = new ArrayList<KeyValue>();
     boolean res = memcache.get(matcher, result);
@@ -324,7 +324,7 @@ public class TestMemcache extends TestCase {
     long ttl = Long.MAX_VALUE;
 
     QueryMatcher matcher =
-      new QueryMatcher(get, row, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
+      new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
     
     List<KeyValue> result = new ArrayList<KeyValue>();
     boolean res = memcache.get(matcher, result);
@@ -349,7 +349,7 @@ public class TestMemcache extends TestCase {
     long ttl = Long.MAX_VALUE;
 
     QueryMatcher matcher =
-      new QueryMatcher(get, row, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
+      new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
     
     //Setting up memcache
     memcache.add(new KeyValue(row, fam ,qf1, val));
@@ -390,8 +390,8 @@ public class TestMemcache extends TestCase {
     columns.add(qf3);
     long ttl = Long.MAX_VALUE;
 
-    QueryMatcher matcher =
-      new QueryMatcher(get, row, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
+    QueryMatcher matcher = new QueryMatcher(get, fam, columns, ttl,
+      KeyValue.KEY_COMPARATOR, 1);
     
     //Setting up expected
     List<KeyValue> expected = new ArrayList<KeyValue>();
@@ -506,9 +506,12 @@ public class TestMemcache extends TestCase {
     KeyValue put1 = new KeyValue(row, fam, qf1, ts, val);
     KeyValue put2 = new KeyValue(row, fam, qf2, ts, val);
     KeyValue put3 = new KeyValue(row, fam, qf3, ts, val);
+    KeyValue put4 = new KeyValue(row, fam, qf3, ts+1, val);
+
     memcache.add(put1);
     memcache.add(put2);
     memcache.add(put3);
+    memcache.add(put4);
     
     KeyValue del = 
       new KeyValue(row, fam, null, ts, KeyValue.Type.DeleteFamily, val);
@@ -516,8 +519,9 @@ public class TestMemcache extends TestCase {
 
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(del);
+    expected.add(put4);
     
-    assertEquals(1, memcache.memcache.size());
+    assertEquals(2, memcache.memcache.size());
     int i=0;
     for(KeyValue actual : memcache.memcache) {
       assertEquals(expected.get(i++), actual);

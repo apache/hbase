@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -71,8 +72,7 @@ public class TestHRegion extends HBaseTestCase {
   // individual code pieces in the HRegion. Putting files locally in
   // /tmp/testtable
   //////////////////////////////////////////////////////////////////////////////
-  
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // checkAndPut tests
   //////////////////////////////////////////////////////////////////////////////
@@ -285,10 +285,45 @@ public class TestHRegion extends HBaseTestCase {
     get = new Get(row).addColumn(fam, splitB);
     result = region.get(get, null);
     assertEquals(1, result.size());
+  }
 
-    
+  public void testScanner_DeleteOneFamilyNotAnother() throws IOException {
+    byte [] tableName = Bytes.toBytes("test_table");
+    byte [] fam1 = Bytes.toBytes("columnA");
+    byte [] fam2 = Bytes.toBytes("columnB");
+    initHRegion(tableName, getName(), fam1, fam2);
 
-    
+    byte [] rowA = Bytes.toBytes("rowA");
+    byte [] rowB = Bytes.toBytes("rowB");
+
+    byte [] value = Bytes.toBytes("value");
+
+    Delete delete = new Delete(rowA);
+    delete.deleteFamily(fam1);
+
+    region.delete(delete, null, true);
+
+    // now create data.
+    Put put = new Put(rowA);
+    put.add(fam2, null, value);
+    region.put(put);
+
+    put = new Put(rowB);
+    put.add(fam1, null, value);
+    put.add(fam2, null, value);
+    region.put(put);
+
+    Scan scan = new Scan();
+    scan.addFamily(fam1).addFamily(fam2);
+    InternalScanner s = region.getScanner(scan);
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    s.next(results);
+    assertTrue(Bytes.equals(rowA, results.get(0).getRow()));
+
+    results.clear();
+    s.next(results);
+    assertTrue(Bytes.equals(rowB, results.get(0).getRow()));
+
   }
   
   //Visual test, since the method doesn't return anything
@@ -340,7 +375,7 @@ public class TestHRegion extends HBaseTestCase {
     }
     assertFalse(true);
   }
-  
+
   public void testGet_Basic() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -363,7 +398,7 @@ public class TestHRegion extends HBaseTestCase {
     put.add(fam1, col4, null);
     put.add(fam1, col5, null);
     region.put(put);
-    
+
     Get get = new Get(row1);
     get.addColumn(fam1, col2);
     get.addColumn(fam1, col4);
@@ -371,10 +406,9 @@ public class TestHRegion extends HBaseTestCase {
     KeyValue kv1 = new KeyValue(row1, fam1, col2);
     KeyValue kv2 = new KeyValue(row1, fam1, col4);
     KeyValue [] expected = {kv1, kv2};
-    
+
     //Test
     Result res = region.get(get, null);
-    
     assertEquals(expected.length, res.size());
     for(int i=0; i<res.size(); i++){
       assertEquals(0,
@@ -385,8 +419,15 @@ public class TestHRegion extends HBaseTestCase {
           Bytes.compareTo(
               expected[i].getQualifier(), res.raw()[i].getQualifier()));
     }
+
+    // Test using a filter on a Get
+    Get g = new Get(row1);
+    final int count = 2;
+    g.setFilter(new ColumnCountGetFilter(count));
+    res = region.get(g, null);
+    assertEquals(count, res.size());
   }
-  
+
   public void testGet_Empty() throws IOException {
     byte [] tableName = Bytes.toBytes("emptytable");
     byte [] row = Bytes.toBytes("row");

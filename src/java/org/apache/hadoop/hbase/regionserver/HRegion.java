@@ -1176,7 +1176,7 @@ public class HRegion implements HConstants { // , Writable{
    * @throws IOException
    */
   public void put(Put put) throws IOException {
-    this.put(put, null, true);
+    this.put(put, null, put.writeToWAL());
   }
   
   /**
@@ -1194,7 +1194,7 @@ public class HRegion implements HConstants { // , Writable{
    * @throws IOException
    */
   public void put(Put put, Integer lockid) throws IOException {
-    this.put(put, lockid, true);
+    this.put(put, lockid, put.writeToWAL());
   }
 
   /**
@@ -1710,7 +1710,7 @@ public class HRegion implements HConstants { // , Writable{
       if(stopRow != null &&
           comparator.compareRows(stopRow, 0, stopRow.length, 
               currentRow, 0, currentRow.length)
-          <= 0){
+          <= 0) {
         return false;
       }
       this.storeHeap.next(results);
@@ -1721,6 +1721,21 @@ public class HRegion implements HConstants { // , Writable{
         }
         byte [] row = kv.getRow();
         if(!Bytes.equals(currentRow, row)) {
+          // Next row:
+
+          // what happens if there are _no_ results:
+          if (results.isEmpty()) {
+            // Continue on the next row:
+            currentRow = row;
+
+            // But did we pass the stop row?
+            if (stopRow != null &&
+                comparator.compareRows(stopRow, 0, stopRow.length,
+                    currentRow, 0, currentRow.length) <= 0) {
+              return false;
+            }
+            continue;
+          }
           return true;
         }
         this.storeHeap.next(results);
@@ -2218,12 +2233,12 @@ public class HRegion implements HConstants { // , Writable{
    */
   public Result get(final Get get, final Integer lockid) throws IOException {
     // Verify families are all valid
-    if(get.hasFamilies()) {
-      for(byte [] family : get.familySet()) {
+    if (get.hasFamilies()) {
+      for (byte [] family: get.familySet()) {
         checkFamily(family);
       }
     } else { // Adding all families to scanner
-      for(byte[] family: regionInfo.getTableDesc().getFamiliesKeys()){
+      for (byte[] family: regionInfo.getTableDesc().getFamiliesKeys()) {
         get.addFamily(family);
       }
     }
@@ -2231,7 +2246,7 @@ public class HRegion implements HConstants { // , Writable{
     Integer lid = getLock(lockid, get.getRow()); 
     List<KeyValue> result = new ArrayList<KeyValue>();
     try {
-      for(Map.Entry<byte[],NavigableSet<byte[]>> entry:
+      for (Map.Entry<byte[],NavigableSet<byte[]>> entry:
           get.getFamilyMap().entrySet()) {
         get(this.stores.get(entry.getKey()), get, entry.getValue(), result);
       }
@@ -2260,16 +2275,29 @@ public class HRegion implements HConstants { // , Writable{
       byte [] qualifier, long amount)
   throws IOException {
     checkRow(row);
-    
+
+    boolean flush = false;
     // Lock row
     Integer lid = obtainRowLock(row);
     long result = 0L;
     try {
       Store store = stores.get(family);
-      result = store.incrementColumnValue(row, family, qualifier, amount);
+
+      Store.ValueAndSize vas =
+          store.incrementColumnValue(row, family, qualifier, amount);
+
+      result = vas.value;
+      long size = this.memcacheSize.addAndGet(vas.sizeAdded);
+      flush = isFlushSize(size);
     } finally {
       releaseRowLock(lid);
     }
+
+    if (flush) {
+      // Request a cache flush.  Do it outside update lock.
+      requestFlush();
+    }
+
     return result;
   }
     

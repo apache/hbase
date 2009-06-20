@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 
 
 /** 
@@ -46,10 +47,16 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   private byte [] row = null;
   private long timestamp = HConstants.LATEST_TIMESTAMP;
   private long lockId = -1L;
+  private boolean writeToWAL = true;
+  
   private Map<byte [], List<KeyValue>> familyMap =
     new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
   
-  /** Constructor for Writable.  DO NOT USE */
+  private static final long OVERHEAD = ClassSize.alignSize(HeapSize.OBJECT + 
+      1 * HeapSize.REFERENCE + 1 * HeapSize.ARRAY + 2 * Bytes.SIZEOF_LONG + 
+      1 * Bytes.SIZEOF_BOOLEAN + 1 * HeapSize.REFERENCE + HeapSize.TREEMAP_SIZE);
+  
+  /** Constructor for Writable. DO NOT USE */
   public Put() {}
   
   /**
@@ -104,12 +111,12 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
    * its version to this Put operation.
    * @param column Old style column name with family and qualifier put together
    * with a colon.
-   * @param timestamp version timestamp
+   * @param ts version timestamp
    * @param value column value
    */
-  public void add(byte [] column, long timestamp, byte [] value) {
+  public void add(byte [] column, long ts, byte [] value) {
     byte [][] parts = KeyValue.parseColumn(column);
-    add(parts[0], parts[1], timestamp, value);
+    add(parts[0], parts[1], ts, value);
   }
 
   /**
@@ -117,15 +124,15 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
    * its version to this Put operation.
    * @param family family name
    * @param qualifier column qualifier
-   * @param timestamp version timestamp
+   * @param ts version timestamp
    * @param value column value
    */
-  public void add(byte [] family, byte [] qualifier, long timestamp, byte [] value) {
+  public void add(byte [] family, byte [] qualifier, long ts, byte [] value) {
     List<KeyValue> list = familyMap.get(family);
     if(list == null) {
-      list = new ArrayList<KeyValue>();
+      list = new ArrayList<KeyValue>(0);
     }
-    KeyValue kv = new KeyValue(this.row, family, qualifier, timestamp, 
+    KeyValue kv = new KeyValue(this.row, family, qualifier, ts, 
       KeyValue.Type.Put, value); 
     list.add(kv);
     familyMap.put(family, list);
@@ -207,6 +214,22 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   }
   
   /**
+   * @return true if edits should be applied to WAL, false if not
+   */
+  public boolean writeToWAL() {
+    return this.writeToWAL;
+  }
+  
+  /**
+   * Set whether this Put should be written to the WAL or not.
+   * Not writing the WAL means you may lose edits on server crash.
+   * @param write true if edits should be written to WAL, false if not
+   */
+  public void writeToWAL(boolean write) {
+    this.writeToWAL = write;
+  }
+  
+  /**
    * @return String 
    */
   @Override
@@ -246,13 +269,29 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   
   //HeapSize
   public long heapSize() {
-  	long totalSize = 0;
-  	for(Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-  	  for(KeyValue kv : entry.getValue()) {
-  		totalSize += kv.heapSize();
-  	  }
-  	}
-    return totalSize;
+    long heapsize = OVERHEAD;
+    heapsize += ClassSize.alignSize(this.row.length);
+
+    
+    for(Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
+      //Adding entry overhead
+      heapsize += HeapSize.MAP_ENTRY_SIZE;
+      
+      //Adding key overhead
+      heapsize += HeapSize.REFERENCE + HeapSize.ARRAY + 
+        ClassSize.alignSize(entry.getKey().length);
+      
+      //This part is kinds tricky since the JVM can reuse references if you
+      //store the same value, but have a good match with SizeOf at the moment
+      //Adding value overhead
+      heapsize += HeapSize.REFERENCE + HeapSize.ARRAYLIST_SIZE;
+      int size = entry.getValue().size();
+      heapsize += size * HeapSize.REFERENCE;
+      for(KeyValue kv : entry.getValue()) {
+        heapsize += kv.heapSize();
+      }
+    }
+    return heapsize;
   }
   
   //Writable
@@ -261,6 +300,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
     this.row = Bytes.readByteArray(in);
     this.timestamp = in.readLong();
     this.lockId = in.readLong();
+    this.writeToWAL = in.readBoolean();
     int numFamilies = in.readInt();
     this.familyMap = 
       new TreeMap<byte [],List<KeyValue>>(Bytes.BYTES_COMPARATOR);
@@ -286,6 +326,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.timestamp);
     out.writeLong(this.lockId);
+    out.writeBoolean(this.writeToWAL);
     out.writeInt(familyMap.size());
     for(Map.Entry<byte [], List<KeyValue>> entry : familyMap.entrySet()) {
       Bytes.writeByteArray(out, entry.getKey());

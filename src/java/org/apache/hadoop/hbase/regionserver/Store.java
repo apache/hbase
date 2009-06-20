@@ -1468,9 +1468,8 @@ public class Store implements HConstants {
     KeyComparator keyComparator = this.comparator.getRawComparator();
 
     // Column matching and version enforcement
-    QueryMatcher matcher = new QueryMatcher(get, get.getRow(), 
-        this.family.getName(), columns, this.ttl, keyComparator,
-        versionsToReturn(get.getMaxVersions()));
+    QueryMatcher matcher = new QueryMatcher(get, this.family.getName(), columns,
+      this.ttl, keyComparator, versionsToReturn(get.getMaxVersions()));
     
     // Read from Memcache
     if(this.memcache.get(matcher, result)) {
@@ -1495,6 +1494,15 @@ public class Store implements HConstants {
     // Run a GET scan and put results into the specified list 
     scanner.get(result);
   }
+
+  public static class ValueAndSize {
+    public long value;
+    public long sizeAdded;
+    public ValueAndSize(long value, long sizeAdded) {
+      this.value = value;
+      this.sizeAdded = sizeAdded;
+    }
+  }
   
   /**
    * Increments the value for the given row/family/qualifier
@@ -1505,8 +1513,8 @@ public class Store implements HConstants {
    * @return The new value.
    * @throws IOException
    */
-  public long incrementColumnValue(byte [] row, byte [] family,
-      byte [] qualifier, long amount) throws IOException{
+  public ValueAndSize incrementColumnValue(byte [] row, byte [] family,
+      byte [] qualifier, long amount) throws IOException {
     long value = 0;
     List<KeyValue> result = new ArrayList<KeyValue>();
     KeyComparator keyComparator = this.comparator.getRawComparator();
@@ -1516,8 +1524,8 @@ public class Store implements HConstants {
     NavigableSet<byte[]> qualifiers = 
       new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     qualifiers.add(qualifier);
-    QueryMatcher matcher = new QueryMatcher(get, row, family, qualifiers,
-        this.ttl, keyComparator, 1);
+    QueryMatcher matcher = new QueryMatcher(get, family, qualifiers, this.ttl,
+      keyComparator, 1);
     
     // Read from Memcache
     if(this.memcache.get(matcher, result)) {
@@ -1528,9 +1536,8 @@ public class Store implements HConstants {
       value = Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG) + amount;
       Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(value), 0, 
           Bytes.SIZEOF_LONG);
-      return value;
+      return new ValueAndSize(value, 0);
     }
-    
     // Check if we even have storefiles
     if(this.storefiles.isEmpty()) {
       return addNewKeyValue(row, family, qualifier, value, amount);
@@ -1553,12 +1560,13 @@ public class Store implements HConstants {
     return addNewKeyValue(row, family, qualifier, value, amount);
   }
   
-  private long addNewKeyValue(byte [] row, byte [] family, byte [] qualifier, 
+  private ValueAndSize addNewKeyValue(byte [] row, byte [] family, byte [] qualifier,
       long value, long amount) {
     long newValue = value + amount;
-    KeyValue newKv = new KeyValue(row, family, qualifier, Bytes.toBytes(newValue));
+    KeyValue newKv = new KeyValue(row, family, qualifier,
+        System.currentTimeMillis(),
+        Bytes.toBytes(newValue));
     add(newKv);
-    return newValue;
+    return new ValueAndSize(newValue, newKv.heapSize());
   }
-  
 }
