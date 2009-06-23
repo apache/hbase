@@ -1411,7 +1411,9 @@ public class HTable {
       final RowLock rl)
   throws IOException {
     Delete d = new Delete(row, ts, rl);
-    d.deleteColumn(column);
+    if(column != null) {
+      d.deleteColumns(column, ts);
+    }
     delete(d);
   }
   
@@ -1544,9 +1546,8 @@ public class HTable {
   public void deleteFamily(final byte [] row, final byte [] family, 
     final long timestamp, final RowLock rl)
   throws IOException {
-    // Is this right?  LATEST_TS? St.Ack
     Delete d = new Delete(row, HConstants.LATEST_TIMESTAMP, rl);
-    d.deleteFamily(family);
+    d.deleteFamily(stripColon(family), timestamp);
     delete(d);
   }
   
@@ -1865,9 +1866,16 @@ public class HTable {
       if(!scan.hasFilter()) {
         return false;
       }
-      // Let the filter see current row.
-      scan.getFilter().filterRowKey(endKey, 0, endKey.length);
-      return scan.getFilter().filterAllRemaining();
+      if (scan.getFilter() != null) {
+        // Let the filter see current row.
+        scan.getFilter().filterRowKey(endKey, 0, endKey.length);
+        return scan.getFilter().filterAllRemaining();
+      }
+      if (scan.getOldFilter() != null) {
+        scan.getOldFilter().filterRowKey(endKey, 0, endKey.length);
+        return scan.getOldFilter().filterAllRemaining();
+      }
+      return false; //unlikely.
     }
 
     public Result next() throws IOException {
@@ -2070,5 +2078,15 @@ public class HTable {
         }
       };
     }
+  }
+  
+  private static byte [] stripColon(final byte [] n) {
+    byte col = n[n.length-1];
+    if (col == ':') {
+      byte [] res = new byte[n.length-1];
+      System.arraycopy(n, 0, res, 0, n.length-1);
+      return res;
+    }
+    return n;
   }
 }

@@ -168,7 +168,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         conf.get("hbase.master.dns.interface","default"),
         conf.get("hbase.master.dns.nameserver","default"));
     addressStr += ":" + 
-      conf.get("hbase.master.port", Integer.toString(DEFAULT_MASTER_PORT));
+      conf.get(MASTER_PORT, Integer.toString(DEFAULT_MASTER_PORT));
     HServerAddress address = new HServerAddress(addressStr);
     LOG.info("My address is " + address);
 
