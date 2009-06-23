@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -171,7 +172,7 @@ abstract class BaseScanner extends Chore implements HConstants {
         long startCode = Writables.cellToLong(values.get(COL_STARTCODE));
 
         // Note Region has been assigned.
-        checkAssigned(info, serverName, startCode);
+        checkAssigned(info, serverName, startCode, region, values.getRow());
         if (isSplitParent(info)) {
           splitParents.put(info, values);
         }
@@ -332,7 +333,8 @@ abstract class BaseScanner extends Chore implements HConstants {
   }
 
   protected void checkAssigned(final HRegionInfo info,
-    final String serverName, final long startCode) 
+    final String serverName, final long startCode, final MetaRegion metaregion,
+    final byte [] row) 
   throws IOException {
      HServerInfo storedInfo = null;
     synchronized (this.master.regionManager) {
@@ -342,22 +344,34 @@ abstract class BaseScanner extends Chore implements HConstants {
        * by ProcessServerShutdown
        */
       if (info.isOffline() ||
-          this.master.regionManager.
-            regionIsInTransition(info.getRegionName()) ||
+          this.master.regionManager.regionIsInTransition(info.getRegionName()) ||
           (serverName != null && this.master.serverManager.isDead(serverName))) {
 
         return;
       }
       if (serverName != null && serverName.length() != 0) {
         storedInfo = this.master.serverManager.getServerInfo(serverName);
+        if (storedInfo == null) {
+          // Maybe its been updated since we do next on scan?  Check.
+          // We're doing this because race conditions in master -- could have
+          // had my serverinfo state updated and .META. updated but the current
+          // next may not see it.  Need to do this to avoid double assignment.
+          String newServerName = regetServerName(metaregion, row);
+          if (newServerName != null && !newServerName.equals(serverName)) {
+            // Got a different name.  Retry get of serverinfo.
+            LOG.debug("Got new server name on retry: " + newServerName + ", " +
+              serverName);
+            storedInfo = this.master.serverManager.getServerInfo(serverName);
+          }
+        }
       }
 
       /*
        * If the startcode is off -- either null or doesn't match the start code
        * for the address -- then add it to the list of unassigned regions.
        */ 
-      if (storedInfo == null || storedInfo.getStartCode() != startCode) {
-
+      if (storedInfo == null || (storedInfo.getStartCode() != startCode &&
+          regetStartCode(storedInfo.getStartCode(), metaregion, row))) {
         // The current assignment is invalid
         if (LOG.isDebugEnabled()) {
           LOG.debug("Current assignment of " + info.getRegionNameAsString() +
@@ -373,7 +387,7 @@ abstract class BaseScanner extends Chore implements HConstants {
         // data in the meta region. Once we are on-line, dead server log
         // recovery is handled by lease expiration and ProcessServerShutdown
         if (!this.master.regionManager.isInitialMetaScanComplete() &&
-            serverName.length() != 0) {
+            (serverName != null && serverName.length() != 0)) {
           StringBuilder dirName = new StringBuilder("log_");
           dirName.append(serverName.replace(":", "_"));
           Path logDir = new Path(this.master.rootdir, dirName.toString());
@@ -399,6 +413,49 @@ abstract class BaseScanner extends Chore implements HConstants {
         this.master.regionManager.setUnassigned(info, true);
       }
     }
+  }
+
+  /*
+   * @param metaregion
+   * @param row
+   * @return Server name or null if none found.
+   * @throws IOException
+   */
+  private String regetServerName(final MetaRegion metaregion, final byte [] row)
+  throws IOException {
+    HRegionInterface server = this.master.connection.
+    getHRegionConnection(metaregion.getServer());
+    Cell [] cells = server.get(metaregion.getRegionName(), row,
+        HConstants.COL_SERVER, HConstants.LATEST_TIMESTAMP, 1);
+    return cells.length > 0? Bytes.toString(cells[0].getValue()): "";
+  }
+
+  /*
+   * Go get the startcode from .META. again.  It may have changed since we
+   * started up the scan, especially if scan was big.
+   * @param currentStartCode What we have as current start code.
+   * @param metaregion Region to reget from.
+   * @param row Row in metaregion to get startcode from.
+   * @return True if regotten startcode does not match what we have for
+   * server info or if we fail to get a startcode.
+   * @throws IOException 
+   */
+  private boolean regetStartCode(final long currentStartCode,
+      final MetaRegion metaregion, final byte [] row)
+  throws IOException {
+    HRegionInterface server = this.master.connection.
+      getHRegionConnection(metaregion.getServer());
+    Cell [] cells = server.get(metaregion.getRegionName(), row,
+      HConstants.COL_STARTCODE, HConstants.LATEST_TIMESTAMP, 1);
+    if (cells.length > 0) {
+      long newStartCode = Bytes.toLong(cells[0].getValue());
+      boolean b = newStartCode != currentStartCode;
+      if (!b) {
+        LOG.debug("Reget found a different start code: " +
+          currentStartCode + ", " + newStartCode);
+      }
+    }
+    return true;
   }
 
   /**

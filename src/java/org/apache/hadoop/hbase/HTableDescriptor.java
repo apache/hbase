@@ -112,7 +112,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       this.families.put(Bytes.mapKey(descriptor.getName()), descriptor);
     }
     // TODO: Fix this hard-coding.
-    setMemcacheFlushSize(16 * 1024);
+    setMemcacheFlushSize(32 * 1024);
   }
 
   /**
@@ -675,7 +675,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
       HConstants.ROOT_TABLE_NAME,
       new HColumnDescriptor[] { new HColumnDescriptor(HConstants.COLUMN_FAMILY,
-          10,  // Ten is arbitrary number.  Keep versions to help debuggging.
+          10,  // Ten is arbitrary number.  Keep versions to help debugging.
           HColumnDescriptor.CompressionType.NONE, false, true,
           Integer.MAX_VALUE, HConstants.FOREVER, false) });
   
@@ -683,7 +683,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
           new HColumnDescriptor(HConstants.COLUMN_FAMILY,
-            10, // Ten is arbitrary number.  Keep versions to help debuggging.
+            10, // Ten is arbitrary number.  Keep versions to help debugging.
             HColumnDescriptor.CompressionType.NONE, false, true,
             Integer.MAX_VALUE, HConstants.FOREVER, false),
           new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,

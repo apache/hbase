@@ -77,6 +77,7 @@ public class TestHbaseObjectWritable extends TestCase {
     obj = doType(conf, new StopRowFilter(HConstants.EMPTY_BYTE_ARRAY),
         RowFilterInterface.class);
     assertTrue(obj instanceof StopRowFilter);
+    // Try new Filter type.
   }
   
   private Object doType(final HBaseConfiguration conf, final Object value,

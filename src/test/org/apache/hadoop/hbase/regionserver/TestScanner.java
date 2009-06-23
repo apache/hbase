@@ -72,6 +72,11 @@ public class TestScanner extends HBaseTestCase {
     // Set the hbase.rootdir to be the home directory in mini dfs.
     this.conf.set(HConstants.HBASE_DIR,
       this.cluster.getFileSystem().getHomeDirectory().toString());
+    // There is no flusher thread running to notice when the 'blocker' comes
+    // down when we are over memcache size limits. Therefore stop 'blocker'
+    // from working in this test.  Otherwise was seeing these:
+    // 2009-06-23 15:07:13,876 INFO  [main] regionserver.HRegion(1412): Blocking updates for 'main' on region -ROOT-,,1245794831727: Memcache size 3.1m is >= than blocking 3.1m size
+    this.conf.setInt("hbase.hregion.memcache.block.multiplier", 1000);
     super.setUp();
     
   }

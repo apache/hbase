@@ -15,6 +15,8 @@ Release 0.19.4 - Unreleased
    HBASE-1524  TableInputFormatBase.TableRecordReader.restart() @line 110.
                "startRow" should be changed to "firstRow"
                (Qiaoilang Xiang via Stack)
+   HBASE-1573  Holes in master state change; updated startcode and server go
+               into .META. but catalog scanner just got old values
 
 Release 0.19.3 - May 27th, 2009
   BUG FIXES
