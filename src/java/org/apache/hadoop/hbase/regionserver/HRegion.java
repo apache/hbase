@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -126,7 +125,7 @@ public class HRegion implements HConstants { // , Writable{
   // private int [] storeSize = null;
   // private byte [] name = null;
   
-  final AtomicLong memcacheSize = new AtomicLong(0);
+  final AtomicLong memstoreSize = new AtomicLong(0);
 
   // This is the table subdirectory.
   final Path basedir;
@@ -149,7 +148,7 @@ public class HRegion implements HConstants { // , Writable{
    * compactions and closes.
    */
   static class WriteState {
-    // Set while a memcache flush is happening.
+    // Set while a memstore flush is happening.
     volatile boolean flushing = false;
     // Set when a flush has been requested.
     volatile boolean flushRequested = false;
@@ -179,10 +178,10 @@ public class HRegion implements HConstants { // , Writable{
 
   private volatile WriteState writestate = new WriteState();
 
-  final int memcacheFlushSize;
+  final int memstoreFlushSize;
   private volatile long lastFlushTime;
   final FlushRequester flushListener;
-  private final int blockingMemcacheSize;
+  private final int blockingMemStoreSize;
   final long threadWakeFrequency;
   // Used to guard splits and closes
   private final ReentrantReadWriteLock splitsAndClosesLock =
@@ -213,12 +212,12 @@ public class HRegion implements HConstants { // , Writable{
    */
   public HRegion(){
     this.basedir = null;
-    this.blockingMemcacheSize = 0;
+    this.blockingMemStoreSize = 0;
     this.conf = null;
     this.flushListener = null;
     this.fs = null;
     this.historian = null;
-    this.memcacheFlushSize = 0;
+    this.memstoreFlushSize = 0;
     this.log = null;
     this.regionCompactionDir = null;
     this.regiondir = null;
@@ -266,14 +265,14 @@ public class HRegion implements HConstants { // , Writable{
     }
     this.regionCompactionDir =
       new Path(getCompactionDir(basedir), encodedNameStr);
-    int flushSize = regionInfo.getTableDesc().getMemcacheFlushSize();
-    if (flushSize == HTableDescriptor.DEFAULT_MEMCACHE_FLUSH_SIZE) {
-      flushSize = conf.getInt("hbase.hregion.memcache.flush.size",
-                      HTableDescriptor.DEFAULT_MEMCACHE_FLUSH_SIZE);
+    int flushSize = regionInfo.getTableDesc().getMemStoreFlushSize();
+    if (flushSize == HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE) {
+      flushSize = conf.getInt("hbase.hregion.memstore.flush.size",
+                      HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
     }
-    this.memcacheFlushSize = flushSize;
-    this.blockingMemcacheSize = this.memcacheFlushSize *
-      conf.getInt("hbase.hregion.memcache.block.multiplier", 1);
+    this.memstoreFlushSize = flushSize;
+    this.blockingMemStoreSize = this.memstoreFlushSize *
+      conf.getInt("hbase.hregion.memstore.block.multiplier", 1);
   }
 
   /**
@@ -312,8 +311,6 @@ public class HRegion implements HConstants { // , Writable{
       }
     }
 
-    // Play log if one.  Delete when done.
-    doReconstructionLog(oldLogFile, minSeqId, maxSeqId, reporter);
     if (fs.exists(oldLogFile)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Deleting old log file: " + oldLogFile);
@@ -814,7 +811,7 @@ public class HRegion implements HConstants { // , Writable{
         this.writestate.flushing = true;
       } else {
         if(LOG.isDebugEnabled()) {
-          LOG.debug("NOT flushing memcache for region " + this +
+          LOG.debug("NOT flushing memstore for region " + this +
             ", flushing=" +
               writestate.flushing + ", writesEnabled=" +
               writestate.writesEnabled);
@@ -841,23 +838,23 @@ public class HRegion implements HConstants { // , Writable{
 
   /**
    * Flushing the cache is a little tricky. We have a lot of updates in the
-   * HMemcache, all of which have also been written to the log. We need to
-   * write those updates in the HMemcache out to disk, while being able to
+   * memstore, all of which have also been written to the log. We need to
+   * write those updates in the memstore out to disk, while being able to
    * process reads/writes as much as possible during the flush operation. Also,
-   * the log has to state clearly the point in time at which the HMemcache was
+   * the log has to state clearly the point in time at which the memstore was
    * flushed. (That way, during recovery, we know when we can rely on the
-   * on-disk flushed structures and when we have to recover the HMemcache from
+   * on-disk flushed structures and when we have to recover the memstore from
    * the log.)
    * 
    * <p>So, we have a three-step process:
    * 
-   * <ul><li>A. Flush the memcache to the on-disk stores, noting the current
+   * <ul><li>A. Flush the memstore to the on-disk stores, noting the current
    * sequence ID for the log.<li>
    * 
    * <li>B. Write a FLUSHCACHE-COMPLETE message to the log, using the sequence
-   * ID that was current at the time of memcache-flush.</li>
+   * ID that was current at the time of memstore-flush.</li>
    * 
-   * <li>C. Get rid of the memcache structures that are now redundant, as
+   * <li>C. Get rid of the memstore structures that are now redundant, as
    * they've been flushed to the on-disk HStores.</li>
    * </ul>
    * <p>This method is protected, but can be accessed via several public
@@ -877,27 +874,27 @@ public class HRegion implements HConstants { // , Writable{
     // Record latest flush time
     this.lastFlushTime = startTime;
     // If nothing to flush, return and avoid logging start/stop flush.
-    if (this.memcacheSize.get() <= 0) {
+    if (this.memstoreSize.get() <= 0) {
       return false;
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Started memcache flush for region " + this +
-        ". Current region memcache size " +
-          StringUtils.humanReadableInt(this.memcacheSize.get()));
+      LOG.debug("Started memstore flush for region " + this +
+        ". Current region memstore size " +
+          StringUtils.humanReadableInt(this.memstoreSize.get()));
     }
 
-    // Stop updates while we snapshot the memcache of all stores. We only have
+    // Stop updates while we snapshot the memstore of all stores. We only have
     // to do this for a moment.  Its quick.  The subsequent sequence id that
     // goes into the HLog after we've flushed all these snapshots also goes
     // into the info file that sits beside the flushed files.
-    // We also set the memcache size to zero here before we allow updates
+    // We also set the memstore size to zero here before we allow updates
     // again so its value will represent the size of the updates received
     // during the flush
     long sequenceId = -1L;
     long completeSequenceId = -1L;
     this.updatesLock.writeLock().lock();
-    // Get current size of memcaches.
-    final long currentMemcacheSize = this.memcacheSize.get();
+    // Get current size of memstores.
+    final long currentMemStoreSize = this.memstoreSize.get();
     try {
       for (Store s: stores.values()) {
         s.snapshot();
@@ -909,12 +906,12 @@ public class HRegion implements HConstants { // , Writable{
     }
 
     // Any failure from here on out will be catastrophic requiring server
-    // restart so hlog content can be replayed and put back into the memcache.
+    // restart so hlog content can be replayed and put back into the memstore.
     // Otherwise, the snapshot content while backed up in the hlog, it will not
     // be part of the current running servers state.
     boolean compactionRequested = false;
     try {
-      // A.  Flush memcache to all the HStores.
+      // A.  Flush memstore to all the HStores.
       // Keep running vector of all store files that includes both old and the
       // just-made new flush store file.
       for (Store hstore: stores.values()) {
@@ -923,11 +920,11 @@ public class HRegion implements HConstants { // , Writable{
           compactionRequested = true;
         }
       }
-      // Set down the memcache size by amount of flush.
-      this.memcacheSize.addAndGet(-currentMemcacheSize);
+      // Set down the memstore size by amount of flush.
+      this.memstoreSize.addAndGet(-currentMemStoreSize);
     } catch (Throwable t) {
       // An exception here means that the snapshot was not persisted.
-      // The hlog needs to be replayed so its content is restored to memcache.
+      // The hlog needs to be replayed so its content is restored to memstore.
       // Currently, only a server restart will do this.
       // We used to only catch IOEs but its possible that we'd get other
       // exceptions -- e.g. HBASE-659 was about an NPE -- so now we catch
@@ -949,7 +946,7 @@ public class HRegion implements HConstants { // , Writable{
     this.log.completeCacheFlush(getRegionName(),
         regionInfo.getTableDesc().getName(), completeSequenceId);
 
-    // C. Finally notify anyone waiting on memcache to clear:
+    // C. Finally notify anyone waiting on memstore to clear:
     // e.g. checkResources().
     synchronized (this) {
       notifyAll();
@@ -958,8 +955,8 @@ public class HRegion implements HConstants { // , Writable{
     if (LOG.isDebugEnabled()) {
       long now = System.currentTimeMillis();
       String timeTaken = StringUtils.formatTimeDiff(now, startTime);
-      LOG.debug("Finished memcache flush of ~" +
-        StringUtils.humanReadableInt(currentMemcacheSize) + " for region " +
+      LOG.debug("Finished memstore flush of ~" +
+        StringUtils.humanReadableInt(currentMemStoreSize) + " for region " +
         this + " in " + (now - startTime) + "ms, sequence id=" + sequenceId +
         ", compaction requested=" + compactionRequested);
       if (!regionInfo.isMetaRegion()) {
@@ -1164,7 +1161,7 @@ public class HRegion implements HConstants { // , Writable{
           kv.updateLatestStamp(byteNow);
         }
 
-        size = this.memcacheSize.addAndGet(store.delete(kv));
+        size = this.memstoreSize.addAndGet(store.delete(kv));
       }
       flush = isFlushSize(size);
     } finally {
@@ -1372,15 +1369,15 @@ public class HRegion implements HConstants { // , Writable{
    */
   private void checkResources() {
     boolean blocked = false;
-    while (this.memcacheSize.get() > this.blockingMemcacheSize) {
+    while (this.memstoreSize.get() > this.blockingMemStoreSize) {
       requestFlush();
       if (!blocked) {
         LOG.info("Blocking updates for '" + Thread.currentThread().getName() +
           "' on region " + Bytes.toString(getRegionName()) +
-          ": Memcache size " +
-          StringUtils.humanReadableInt(this.memcacheSize.get()) +
+          ": memstore size " +
+          StringUtils.humanReadableInt(this.memstoreSize.get()) +
           " is >= than blocking " +
-          StringUtils.humanReadableInt(this.blockingMemcacheSize) + " size");
+          StringUtils.humanReadableInt(this.blockingMemStoreSize) + " size");
       }
       blocked = true;
       synchronized(this) {
@@ -1407,7 +1404,7 @@ public class HRegion implements HConstants { // , Writable{
   }
 
   /** 
-   * Add updates first to the hlog and then add values to memcache.
+   * Add updates first to the hlog and then add values to memstore.
    * Warning: Assumption is caller has lock on passed in row.
    * @param edits Cell updates by column
    * @praram now
@@ -1419,7 +1416,7 @@ public class HRegion implements HConstants { // , Writable{
   }
 
   /** 
-   * Add updates first to the hlog (if writeToWal) and then add values to memcache.
+   * Add updates first to the hlog (if writeToWal) and then add values to memstore.
    * Warning: Assumption is caller has lock on passed in row.
    * @param family
    * @param edits
@@ -1443,7 +1440,7 @@ public class HRegion implements HConstants { // , Writable{
       long size = 0;
       Store store = getStore(family);
       for (KeyValue kv: edits) {
-        size = this.memcacheSize.addAndGet(store.add(kv));
+        size = this.memstoreSize.addAndGet(store.add(kv));
       }
       flush = isFlushSize(size);
     } finally {
@@ -1477,14 +1474,7 @@ public class HRegion implements HConstants { // , Writable{
    * @return True if size is over the flush threshold
    */
   private boolean isFlushSize(final long size) {
-    return size > this.memcacheFlushSize;
-  }
-  
-  // Do any reconstruction needed from the log
-  protected void doReconstructionLog(Path oldLogFile, long minSeqId, long maxSeqId,
-    Progressable reporter)
-  throws UnsupportedEncodingException, IOException {
-    // Nothing to do (Replaying is done in HStores)
+    return size > this.memstoreFlushSize;
   }
 
   protected Store instantiateHStore(Path baseDir, 
@@ -1663,11 +1653,10 @@ public class HRegion implements HConstants { // , Writable{
    * It is used to combine scanners from multiple Stores (aka column families).
    */
   class RegionScanner implements InternalScanner {
-    
     private KeyValueHeap storeHeap;
     private byte [] stopRow;
     
-    RegionScanner(Scan scan) throws IOException {
+    RegionScanner(Scan scan) {
       if(Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
         this.stopRow = null;
       } else {
@@ -1675,21 +1664,11 @@ public class HRegion implements HConstants { // , Writable{
       }
       
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
-      try {
-        for(Map.Entry<byte[], NavigableSet<byte[]>> entry : 
+      for(Map.Entry<byte[], NavigableSet<byte[]>> entry : 
           scan.getFamilyMap().entrySet()) {
-          Store store = stores.get(entry.getKey());
-          scanners.add(store.getScanner(scan, entry.getValue()));
-        }
-      } catch (IOException e) {
-        for(KeyValueScanner scanner : scanners) {
-          if(scanner != null) {
-            close(scanner);
-          }
-        }
-        throw e;
+        Store store = stores.get(entry.getKey());
+        scanners.add(store.getScanner(scan, entry.getValue()));
       }
-      
       this.storeHeap = 
         new KeyValueHeap(scanners.toArray(new KeyValueScanner[0]), comparator);
       
@@ -2292,7 +2271,7 @@ public class HRegion implements HConstants { // , Writable{
           store.incrementColumnValue(row, family, qualifier, amount);
 
       result = vas.value;
-      long size = this.memcacheSize.addAndGet(vas.sizeAdded);
+      long size = this.memstoreSize.addAndGet(vas.sizeAdded);
       flush = isFlushSize(size);
     } finally {
       releaseRowLock(lid);

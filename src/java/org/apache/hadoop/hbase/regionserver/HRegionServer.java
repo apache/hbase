@@ -196,7 +196,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   CompactSplitThread compactSplitThread;
 
   // Cache flushing  
-  MemcacheFlusher cacheFlusher;
+  MemStoreFlusher cacheFlusher;
   
   /* Check for major compactions.
    */
@@ -318,7 +318,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.workerThread = new Thread(worker);
 
     // Cache flushing thread.
-    this.cacheFlusher = new MemcacheFlusher(conf, this);
+    this.cacheFlusher = new MemStoreFlusher(conf, this);
     
     // Compaction thread
     this.compactSplitThread = new CompactSplitThread(this);
@@ -752,7 +752,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     byte[] name = r.getRegionName();
     int stores = 0;
     int storefiles = 0;
-    int memcacheSizeMB = (int)(r.memcacheSize.get()/1024/1024);
+    int memstoreSizeMB = (int)(r.memstoreSize.get()/1024/1024);
     int storefileIndexSizeMB = 0;
     synchronized (r.stores) {
       stores += r.stores.size();
@@ -762,7 +762,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
           (int)(store.getStorefilesIndexSize()/1024/1024);
       }
     }
-    return new HServerLoad.RegionLoad(name, stores, storefiles, memcacheSizeMB,
+    return new HServerLoad.RegionLoad(name, stores, storefiles, memstoreSizeMB,
       storefileIndexSizeMB);
   }
  
@@ -1057,12 +1057,12 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // the synchronizations?
     int stores = 0;
     int storefiles = 0;
-    long memcacheSize = 0;
+    long memstoreSize = 0;
     long storefileIndexSize = 0;
     synchronized (this.onlineRegions) {
       for (Map.Entry<Integer, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
-        memcacheSize += r.memcacheSize.get();
+        memstoreSize += r.memstoreSize.get();
         synchronized (r.stores) {
           stores += r.stores.size();
           for(Map.Entry<byte [], Store> ee: r.stores.entrySet()) {
@@ -1075,7 +1075,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
     this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);
-    this.metrics.memcacheSizeMB.set((int)(memcacheSize/(1024*1024)));
+    this.metrics.memstoreSizeMB.set((int)(memstoreSize/(1024*1024)));
     this.metrics.storefileIndexSizeMB.set((int)(storefileIndexSize/(1024*1024)));
 
     LruBlockCache lruBlockCache = (LruBlockCache)StoreFile.getBlockCache(conf);
@@ -1737,7 +1737,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
     try {
-      cacheFlusher.reclaimMemcacheMemory();
+      cacheFlusher.reclaimMemStoreMemory();
       region.put(put, getLockFromId(put.getLockId()));
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
@@ -1750,7 +1750,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     checkOpen();
     try {
       HRegion region = getRegion(regionName);
-      this.cacheFlusher.reclaimMemcacheMemory();
+      this.cacheFlusher.reclaimMemStoreMemory();
       Integer[] locks = new Integer[puts.length];
       for (i = 0; i < puts.length; i++) {
         this.requestCount.incrementAndGet();
@@ -1790,7 +1790,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
     try {
-      cacheFlusher.reclaimMemcacheMemory();
+      cacheFlusher.reclaimMemStoreMemory();
       return region.checkAndPut(row, family, qualifier, value, put,
           getLockFromId(put.getLockId()), true);
     } catch (Throwable t) {
@@ -1928,7 +1928,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     checkOpen();
     try {
       boolean writeToWAL = true;
-      this.cacheFlusher.reclaimMemcacheMemory();
+      this.cacheFlusher.reclaimMemStoreMemory();
       this.requestCount.incrementAndGet();
       Integer lock = getLockFromId(delete.getLockId());
       HRegion region = getRegion(regionName);
@@ -2160,7 +2160,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // Copy over all regions. Regions are sorted by size with biggest first.
     synchronized (this.onlineRegions) {
       for (HRegion region : this.onlineRegions.values()) {
-        sortedRegions.put(Long.valueOf(region.memcacheSize.get()), region);
+        sortedRegions.put(Long.valueOf(region.memstoreSize.get()), region);
       }
     }
     return sortedRegions;
@@ -2284,14 +2284,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
   }
 
   /**
-   * Return the total size of all memcaches in every region.
-   * @return memcache size in bytes
+   * Return the total size of all memstores in every region.
+   * @return memstore size in bytes
    */
-  public long getGlobalMemcacheSize() {
+  public long getGlobalMemStoreSize() {
     long total = 0;
     synchronized (onlineRegions) {
       for (HRegion region : onlineRegions.values()) {
-        total += region.memcacheSize.get();
+        total += region.memstoreSize.get();
       }
     }
     return total;

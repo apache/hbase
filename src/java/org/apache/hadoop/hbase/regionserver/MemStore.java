@@ -27,12 +27,12 @@ import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -43,29 +43,28 @@ import org.apache.hadoop.hbase.regionserver.DeleteCompare.DeleteCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * The Memcache holds in-memory modifications to the HRegion.  Modifications
- * are {@link KeyValue}s.  When asked to flush, current memcache is moved
- * to snapshot and is cleared.  We continue to serve edits out of new memcache
+ * The MemStore holds in-memory modifications to the Store.  Modifications
+ * are {@link KeyValue}s.  When asked to flush, current memstore is moved
+ * to snapshot and is cleared.  We continue to serve edits out of new memstore
  * and backing snapshot until flusher reports in that the flush succeeded. At
  * this point we let the snapshot go.
- * TODO: Adjust size of the memcache when we remove items because they have
+ * TODO: Adjust size of the memstore when we remove items because they have
  * been deleted.
  */
-class Memcache {
-  private static final Log LOG = LogFactory.getLog(Memcache.class);
+class MemStore {
+  private static final Log LOG = LogFactory.getLog(MemStore.class);
 
   private final long ttl;
 
-  // Note that since these structures are always accessed with a lock held,
-  // no additional synchronization is required.
-  
-  // The currently active sorted set of edits.  Using explicit type because
-  // if I use NavigableSet, I lose some facility -- I can't get a NavigableSet
-  // when I do tailSet or headSet.
-  volatile ConcurrentSkipListSet<KeyValue> memcache;
+  // MemStore.  Use a SkipListMap rather than SkipListSet because of the
+  // better semantics.  The Map will overwrite if passed a key it already had
+  // whereas the Set will not add new KV if key is same though value might be
+  // different.  Value is not important -- just make sure always same
+  // reference passed.
+  volatile ConcurrentSkipListMap<KeyValue, Object> memstore;
 
-  // Snapshot of memcache.  Made for flusher.
-  volatile ConcurrentSkipListSet<KeyValue> snapshot;
+  // Snapshot of memstore.  Made for flusher.
+  volatile ConcurrentSkipListMap<KeyValue, Object> snapshot;
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -79,11 +78,16 @@ class Memcache {
 
   // TODO: Fix this guess by studying jprofiler
   private final static int ESTIMATED_KV_HEAP_TAX = 60;
-  
+
+  /* Value we add memstore 'value'.  Memstore backing is a Map
+   * but we are only interested in its keys.
+   */
+  private static final Object NULL = new Object();
+
   /**
    * Default constructor. Used for tests.
    */
-  public Memcache() {
+  public MemStore() {
     this(HConstants.FOREVER, KeyValue.COMPARATOR);
   }
 
@@ -92,33 +96,33 @@ class Memcache {
    * @param ttl The TTL for cache entries, in milliseconds.
    * @param c
    */
-  public Memcache(final long ttl, final KeyValue.KVComparator c) {
+  public MemStore(final long ttl, final KeyValue.KVComparator c) {
     this.ttl = ttl;
     this.comparator = c;
     this.comparatorIgnoreTimestamp =
       this.comparator.getComparatorIgnoringTimestamps();
     this.comparatorIgnoreType = this.comparator.getComparatorIgnoringType();
-    this.memcache = createSet(c);
-    this.snapshot = createSet(c);
+    this.memstore = createMap(c);
+    this.snapshot = createMap(c);
   }
 
-  static ConcurrentSkipListSet<KeyValue> createSet(final KeyValue.KVComparator c) {
-    return new ConcurrentSkipListSet<KeyValue>(c);
+  static ConcurrentSkipListMap<KeyValue, Object> createMap(final KeyValue.KVComparator c) {
+    return new ConcurrentSkipListMap<KeyValue, Object>(c);
   }
 
   void dump() {
-    for (KeyValue kv: this.memcache) {
-      LOG.info(kv);
+    for (Map.Entry<KeyValue, ?> entry: this.memstore.entrySet()) {
+      LOG.info(entry.getKey());
     }
-    for (KeyValue kv: this.snapshot) {
-      LOG.info(kv);
+    for (Map.Entry<KeyValue, ?> entry: this.snapshot.entrySet()) {
+      LOG.info(entry.getKey());
     }
   }
 
   /**
-   * Creates a snapshot of the current Memcache.
-   * Snapshot must be cleared by call to {@link #clearSnapshot(SortedMap)}
-   * To get the snapshot made by this method, use {@link #getSnapshot}.
+   * Creates a snapshot of the current memstore.
+   * Snapshot must be cleared by call to {@link #clearSnapshot(java.util.Map)}
+   * To get the snapshot made by this method, use {@link #getSnapshot()}
    */
   void snapshot() {
     this.lock.writeLock().lock();
@@ -129,12 +133,12 @@ class Memcache {
         LOG.warn("Snapshot called again without clearing previous. " +
           "Doing nothing. Another ongoing flush or did we fail last attempt?");
       } else {
-        // We used to synchronize on the memcache here but we're inside a
+        // We used to synchronize on the memstore here but we're inside a
         // write lock so removed it. Comment is left in case removal was a
         // mistake. St.Ack
-        if (!this.memcache.isEmpty()) {
-          this.snapshot = this.memcache;
-          this.memcache = createSet(this.comparator);
+        if (!this.memstore.isEmpty()) {
+          this.snapshot = this.memstore;
+          this.memstore = createMap(this.comparator);
         }
       }
     } finally {
@@ -145,12 +149,12 @@ class Memcache {
   /**
    * Return the current snapshot.
    * Called by flusher to get current snapshot made by a previous
-   * call to {@link snapshot}.
+   * call to {@link #snapshot()}
    * @return Return snapshot.
    * @see {@link #snapshot()}
-   * @see {@link #clearSnapshot(NavigableSet)}
+   * @see {@link #clearSnapshot(java.util.Map)}
    */
-  ConcurrentSkipListSet<KeyValue> getSnapshot() {
+  ConcurrentSkipListMap<KeyValue, ?> getSnapshot() {
     return this.snapshot;
   }
 
@@ -160,7 +164,7 @@ class Memcache {
    * @throws UnexpectedException
    * @see {@link #snapshot()}
    */
-  void clearSnapshot(final Set<KeyValue> ss)
+  void clearSnapshot(final Map<KeyValue, ?> ss)
   throws UnexpectedException {
     this.lock.writeLock().lock();
     try {
@@ -171,7 +175,7 @@ class Memcache {
       // OK. Passed in snapshot is same as current snapshot.  If not-empty,
       // create a new snapshot and let the old one go.
       if (!ss.isEmpty()) {
-        this.snapshot = createSet(this.comparator);
+        this.snapshot = createMap(this.comparator);
       }
     } finally {
       this.lock.writeLock().unlock();
@@ -187,13 +191,9 @@ class Memcache {
     long size = -1;
     this.lock.readLock().lock();
     try {
-      boolean notpresent = this.memcache.add(kv);
-      // if false then memcache is not changed (look memcache.add(kv) docs)
-      // need to remove kv and add again to replace it
-      if (!notpresent && this.memcache.remove(kv)) {
-        this.memcache.add(kv);
-      }
-      size = heapSize(kv, notpresent);
+      // Add anything as value as long as same instance each time.
+      size = heapSize(kv,
+        this.memstore.put(kv, NULL) == null);
     } finally {
       this.lock.readLock().unlock();
     }
@@ -211,7 +211,7 @@ class Memcache {
     //Have to find out what we want to do here, to find the fastest way of
     //removing things that are under a delete.
     //Actions that will take place here are:
-    //1. Insert a delete and remove all the affected entries already in memcache
+    //1. Insert a delete and remove all the affected entries already in memstore
     //2. In the case of a Delete and the matching put is found then don't insert
     //   the delete
     //TODO Would be nice with if we had an iterator for this, so we could remove
@@ -221,7 +221,7 @@ class Memcache {
     try {
       boolean notpresent = false;
       List<KeyValue> deletes = new ArrayList<KeyValue>();
-      SortedSet<KeyValue> tailSet = this.memcache.tailSet(delete);
+      SortedMap<KeyValue, Object> tail = this.memstore.tailMap(delete);
 
       //Parse the delete, so that it is only done once
       byte [] deleteBuffer = delete.getBuffer();
@@ -250,29 +250,29 @@ class Memcache {
       deleteOffset += Bytes.SIZEOF_LONG;
       byte deleteType = deleteBuffer[deleteOffset];
       
-      //Comparing with tail from memcache
-      for (KeyValue mem : tailSet) {
-        
-        DeleteCode res = DeleteCompare.deleteCompare(mem, deleteBuffer, 
+      //Comparing with tail from memstore
+      for (Map.Entry<KeyValue, ?> entry : tail.entrySet()) {
+        DeleteCode res = DeleteCompare.deleteCompare(entry.getKey(),
+            deleteBuffer, 
             deleteRowOffset, deleteRowLen, deleteQualifierOffset, 
             deleteQualifierLen, deleteTimestampOffset, deleteType,
             comparator.getRawComparator());
         if (res == DeleteCode.DONE) {
           break;
         } else if (res == DeleteCode.DELETE) {
-          deletes.add(mem);
+          deletes.add(entry.getKey());
         } // SKIP
       }
 
       //Delete all the entries effected by the last added delete
       for(KeyValue del : deletes) {
-        notpresent = this.memcache.remove(del);
+        notpresent = this.memstore.remove(del) == null;
         size -= heapSize(del, notpresent);
       }
       
-      //Adding the delete to memcache
-      notpresent = this.memcache.add(delete);
-      size += heapSize(delete, notpresent);
+      // Adding the delete to memstore. Add any value, as long as
+      // same instance each time.
+      size += heapSize(delete, this.memstore.put(delete, NULL) == null);
     } finally {
       this.lock.readLock().unlock();
     }
@@ -280,7 +280,7 @@ class Memcache {
   }
   
   /*
-   * Calculate how the memcache size has changed, approximately.  Be careful.
+   * Calculate how the memstore size has changed, approximately.  Be careful.
    * If class changes, be sure to change the size calculation.
    * Add in tax of Map.Entry.
    * @param kv
@@ -302,7 +302,7 @@ class Memcache {
   KeyValue getNextRow(final KeyValue kv) {
     this.lock.readLock().lock();
     try {
-      return getLowest(getNextRow(kv, this.memcache),
+      return getLowest(getNextRow(kv, this.memstore),
         getNextRow(kv, this.snapshot));
     } finally {
       this.lock.readLock().unlock();
@@ -326,21 +326,21 @@ class Memcache {
 
   /*
    * @param kv Find row that follows this one.  If null, return first.
-   * @param set Set to look in for a row beyond <code>row</code>.
+   * @param map Set to look in for a row beyond <code>row</code>.
    * @return Next row or null if none found.  If one found, will be a new
    * KeyValue -- can be destroyed by subsequent calls to this method.
    */
   private KeyValue getNextRow(final KeyValue kv,
-      final NavigableSet<KeyValue> set) {
+      final NavigableMap<KeyValue, ?> map) {
     KeyValue result = null;
-    SortedSet<KeyValue> tailset = kv == null? set: set.tailSet(kv);
+    SortedMap<KeyValue, ?> tail = kv == null? map: map.tailMap(kv);
     // Iterate until we fall into the next row; i.e. move off current row
-    for (KeyValue i : tailset) {
-      if (comparator.compareRows(i, kv) <= 0)
+    for (Map.Entry<KeyValue, ?> i : tail.entrySet()) {
+      if (comparator.compareRows(i.getKey(), kv) <= 0)
         continue;
       // Note: Not suppressing deletes or expired cells.  Needs to be handled
       // by higher up functions.
-      result = i;
+      result = i.getKey();
       break;
     }
     return result;
@@ -350,7 +350,7 @@ class Memcache {
   /**
    * @param row Row to look for.
    * @param candidateKeys Map of candidate keys (Accumulation over lots of
-   * lookup over stores and memcaches)
+   * lookup over stores and memstores)
    */
   void getRowKeyAtOrBefore(final KeyValue row,
       final NavigableSet<KeyValue> candidateKeys) {
@@ -361,27 +361,28 @@ class Memcache {
   /**
    * @param kv Row to look for.
    * @param candidates Map of candidate keys (Accumulation over lots of
-   * lookup over stores and memcaches).  Pass a Set with a Comparator that
+   * lookup over stores and memstores).  Pass a Set with a Comparator that
    * ignores key Type so we can do Set.remove using a delete, i.e. a KeyValue
    * with a different Type to the candidate key.
    * @param deletes Pass a Set that has a Comparator that ignores key type.
+   * @param now
    */
   void getRowKeyAtOrBefore(final KeyValue kv,
       final NavigableSet<KeyValue> candidates, 
       final NavigableSet<KeyValue> deletes, final long now) {
     this.lock.readLock().lock();
     try {
-      getRowKeyAtOrBefore(memcache, kv, candidates, deletes, now);
+      getRowKeyAtOrBefore(memstore, kv, candidates, deletes, now);
       getRowKeyAtOrBefore(snapshot, kv, candidates, deletes, now);
     } finally {
       this.lock.readLock().unlock();
     }
   }
 
-  private void getRowKeyAtOrBefore(final ConcurrentSkipListSet<KeyValue> set,
+  private void getRowKeyAtOrBefore(final ConcurrentSkipListMap<KeyValue, Object> map,
       final KeyValue kv, final NavigableSet<KeyValue> candidates,
       final NavigableSet<KeyValue> deletes, final long now) {
-    if (set.isEmpty()) {
+    if (map.isEmpty()) {
       return;
     }
     // We want the earliest possible to start searching from.  Start before
@@ -389,21 +390,22 @@ class Memcache {
     KeyValue search = candidates.isEmpty()? kv: candidates.first();
 
     // Get all the entries that come equal or after our search key
-    SortedSet<KeyValue> tailset = set.tailSet(search);
+    SortedMap<KeyValue, Object> tail = map.tailMap(search);
 
     // if there are items in the tail map, there's either a direct match to
     // the search key, or a range of values between the first candidate key
     // and the ultimate search key (or the end of the cache)
-    if (!tailset.isEmpty() &&
-        this.comparator.compareRows(tailset.first(), search) <= 0) {
+    if (!tail.isEmpty() &&
+        this.comparator.compareRows(tail.firstKey(), search) <= 0) {
       // Keep looking at cells as long as they are no greater than the 
       // ultimate search key and there's still records left in the map.
       KeyValue deleted = null;
       KeyValue found = null;
-      for (Iterator<KeyValue> iterator = tailset.iterator();
+      for (Iterator<Map.Entry<KeyValue, Object>> iterator =
+          tail.entrySet().iterator();
         iterator.hasNext() && (found == null ||
           this.comparator.compareRows(found, kv) <= 0);) {
-        found = iterator.next();
+        found = iterator.next().getKey();
         if (this.comparator.compareRows(found, kv) <= 0) {
           if (found.isDeleteType()) {
             Store.handleDeletes(found, candidates, deletes);
@@ -425,12 +427,12 @@ class Memcache {
         }
       }
       if (candidates.isEmpty() && deleted != null) {
-        getRowKeyBefore(set, deleted, candidates, deletes, now);
+        getRowKeyBefore(map, deleted, candidates, deletes, now);
       }
     } else {
       // The tail didn't contain any keys that matched our criteria, or was 
       // empty. Examine all the keys that proceed our splitting point.
-      getRowKeyBefore(set, search, candidates, deletes, now);
+      getRowKeyBefore(map, search, candidates, deletes, now);
     }
   }
 
@@ -438,19 +440,19 @@ class Memcache {
    * Get row key that comes before passed <code>search_key</code>
    * Use when we know search_key is not in the map and we need to search
    * earlier in the cache.
-   * @param set
+   * @param map
    * @param search
    * @param candidates
    * @param deletes Pass a Set that has a Comparator that ignores key type.
    * @param now
    */
-  private void getRowKeyBefore(ConcurrentSkipListSet<KeyValue> set,
+  private void getRowKeyBefore(ConcurrentSkipListMap<KeyValue, Object> map,
       KeyValue search, NavigableSet<KeyValue> candidates,
       final NavigableSet<KeyValue> deletes, final long now) {
-    NavigableSet<KeyValue> headSet = set.headSet(search);
+    NavigableMap<KeyValue, Object> headMap = map.headMap(search);
     // If we tried to create a headMap and got an empty map, then there are
     // no keys at or before the search key, so we're done.
-    if (headSet.isEmpty()) {
+    if (headMap.isEmpty()) {
       return;
     }
 
@@ -458,7 +460,9 @@ class Memcache {
     // backwards until we find at least one candidate or run out of headMap.
     if (candidates.isEmpty()) {
       KeyValue lastFound = null;
-      for (Iterator<KeyValue> i = headSet.descendingIterator(); i.hasNext();) {
+      // TODO: Confirm we're iterating in the right order
+      for (Iterator<KeyValue> i = headMap.descendingKeySet().iterator();
+          i.hasNext();) {
         KeyValue found = i.next();
         // if the last row we found a candidate key for is different than
         // the row of the current candidate, we can stop looking -- if its
@@ -477,14 +481,14 @@ class Memcache {
             candidates.add(found);
           } else {
             // Its expired.
-            Store.expiredOrDeleted(set, found);
+            Store.expiredOrDeleted(map, found);
           }
         } else {
           // We are encountering items in reverse.  We may have just added
           // an item to candidates that this later item deletes.  Check.  If we
           // found something in candidates, remove it from the set.
           if (Store.handleDeletes(found, candidates, deletes)) {
-            remove(set, found);
+            remove(map, found);
           }
         }
       }
@@ -493,11 +497,11 @@ class Memcache {
       // the very last row's worth of keys in the headMap, because any 
       // smaller acceptable candidate keys would have caused us to start
       // our search earlier in the list, and we wouldn't be searching here.
-      SortedSet<KeyValue> rowTailMap = 
-        headSet.tailSet(headSet.last().cloneRow(HConstants.LATEST_TIMESTAMP));
-      Iterator<KeyValue> i = rowTailMap.iterator();
+      SortedMap<KeyValue, Object> rowTailMap = 
+        headMap.tailMap(headMap.lastKey().cloneRow(HConstants.LATEST_TIMESTAMP));
+      Iterator<Map.Entry<KeyValue, Object>> i = rowTailMap.entrySet().iterator();
       do {
-        KeyValue found = i.next();
+        KeyValue found = i.next().getKey();
         if (found.isDeleteType()) {
           Store.handleDeletes(found, candidates, deletes);
         } else {
@@ -506,7 +510,7 @@ class Memcache {
               !deletes.contains(found)) {
             candidates.add(found);
           } else {
-            Store.expiredOrDeleted(set, found);
+            Store.expiredOrDeleted(map, found);
           }
         }
       } while (i.hasNext());
@@ -515,21 +519,22 @@ class Memcache {
 
 
   /*
-   * @param set
+   * @param map
    * @param kv This is a delete record.  Remove anything behind this of same
    * r/c/ts.
    * @return True if we removed anything.
    */
-  private boolean remove(final NavigableSet<KeyValue> set, final KeyValue kv) {
-    SortedSet<KeyValue> s = set.tailSet(kv);
-    if (s.isEmpty()) {
+  private boolean remove(final NavigableMap<KeyValue, Object> map,
+      final KeyValue kv) {
+    SortedMap<KeyValue, Object> m = map.tailMap(kv);
+    if (m.isEmpty()) {
       return false;
     }
     boolean removed = false;
-    for (KeyValue k: s) {
-      if (this.comparatorIgnoreType.compare(k, kv) == 0) {
+    for (Map.Entry<KeyValue, Object> entry: m.entrySet()) {
+      if (this.comparatorIgnoreType.compare(entry.getKey(), kv) == 0) {
         // Same r/c/ts.  Remove it.
-        s.remove(k);
+        m.remove(entry.getKey());
         removed = true;
         continue;
       }
@@ -539,14 +544,14 @@ class Memcache {
   }
 
   /**
-   * @return scanner on memcache and snapshot in this order.
+   * @return scanner on memstore and snapshot in this order.
    */
   KeyValueScanner [] getScanners() {
     this.lock.readLock().lock();
     try {
       KeyValueScanner [] scanners = new KeyValueScanner[2];
-      scanners[0] = new MemcacheScanner(this.memcache);
-      scanners[1] = new MemcacheScanner(this.snapshot);
+      scanners[0] = new MemStoreScanner(this.memstore);
+      scanners[1] = new MemStoreScanner(this.snapshot);
       return scanners;
     } finally {
       this.lock.readLock().unlock();
@@ -558,14 +563,13 @@ class Memcache {
   //
 
   /**
-   * Perform a single-row Get on the memcache and snapshot, placing results
+   * Perform a single-row Get on the  and snapshot, placing results
    * into the specified KV list.
    * <p>
    * This will return true if it is determined that the query is complete
    * and it is not necessary to check any storefiles after this.
    * <p>
    * Otherwise, it will return false and you should continue on.
-   * @param startKey Starting KeyValue
    * @param matcher Column matcher
    * @param result List to add results to
    * @return true if done with store (early-out), false if not
@@ -575,14 +579,11 @@ class Memcache {
   throws IOException {
     this.lock.readLock().lock();
     try {
-      if(internalGet(this.memcache, matcher, result) || matcher.isDone()) {
+      if(internalGet(this.memstore, matcher, result) || matcher.isDone()) {
         return true;
       }
       matcher.update();
-      if(internalGet(this.snapshot, matcher, result) || matcher.isDone()) {
-        return true;
-      }
-      return false;
+      return internalGet(this.snapshot, matcher, result) || matcher.isDone();
     } finally {
       this.lock.readLock().unlock();
     }
@@ -590,23 +591,23 @@ class Memcache {
   
   /**
    *
-   * @param set memcache or snapshot
+   * @param map memstore or snapshot
    * @param matcher query matcher
    * @param result list to add results to
    * @return true if done with store (early-out), false if not
    * @throws IOException
    */
-  private boolean internalGet(SortedSet<KeyValue> set, QueryMatcher matcher,
-      List<KeyValue> result) throws IOException {
-    if(set.isEmpty()) return false;
+  private boolean internalGet(SortedMap<KeyValue, Object> map, QueryMatcher matcher,
+      List<KeyValue> result)
+  throws IOException {
+    if(map.isEmpty()) return false;
     // Seek to startKey
-    SortedSet<KeyValue> tailSet = set.tailSet(matcher.getStartKey());
-    
-    for (KeyValue kv : tailSet) {
-      QueryMatcher.MatchCode res = matcher.match(kv);
+    SortedMap<KeyValue, Object> tail = map.tailMap(matcher.getStartKey());
+    for (Map.Entry<KeyValue, Object> entry : tail.entrySet()) {
+      QueryMatcher.MatchCode res = matcher.match(entry.getKey());
       switch(res) {
         case INCLUDE:
-          result.add(kv);
+          result.add(entry.getKey());
           break;
         case SKIP:
           break;
@@ -623,18 +624,18 @@ class Memcache {
   
 
   /*
-   * MemcacheScanner implements the KeyValueScanner.
-   * It lets the caller scan the contents of a memcache.
+   * MemStoreScanner implements the KeyValueScanner.
+   * It lets the caller scan the contents of a memstore.
    * This behaves as if it were a real scanner but does not maintain position
-   * in the passed memcache tree.
+   * in the passed memstore tree.
    */
-  protected class MemcacheScanner implements KeyValueScanner {
-    private final NavigableSet<KeyValue> mc;
+  protected class MemStoreScanner implements KeyValueScanner {
+    private final NavigableMap<KeyValue, Object> mc;
     private KeyValue current = null;
     private List<KeyValue> result = new ArrayList<KeyValue>();
     private int idx = 0;
 
-    MemcacheScanner(final NavigableSet<KeyValue> mc) {
+    MemStoreScanner(final NavigableMap<KeyValue, Object> mc) {
       this.mc = mc;
     }
 
@@ -677,9 +678,9 @@ class Memcache {
      * next row.
      */
     boolean cacheNextRow() {
-      SortedSet<KeyValue> keys;
+      SortedMap<KeyValue, Object> keys;
       try {
-        keys = this.mc.tailSet(this.current);
+        keys = this.mc.tailMap(this.current);
       } catch (Exception e) {
         close();
         return false;
@@ -689,13 +690,14 @@ class Memcache {
         return false;
       }
       this.current = null;
-      byte [] row = keys.first().getRow();
-      for (KeyValue key: keys) {
-        if (comparator.compareRows(key, row) != 0) {
-          this.current = key;
+      byte [] row = keys.firstKey().getRow();
+      for (Map.Entry<KeyValue, Object> key: keys.entrySet()) {
+        KeyValue kv = key.getKey();
+        if (comparator.compareRows(kv, row) != 0) {
+          this.current = kv;
           break;
         }
-        result.add(key);
+        result.add(kv);
       }
       return true;
     }
@@ -711,39 +713,37 @@ class Memcache {
 
   /**
    * Code to help figure if our approximation of object heap sizes is close
-   * enough.  See hbase-900.  Fills memcaches then waits so user can heap
+   * enough.  See hbase-900.  Fills memstores then waits so user can heap
    * dump and bring up resultant hprof in something like jprofiler which
    * allows you get 'deep size' on objects.
    * @param args
-   * @throws InterruptedException
-   * @throws IOException 
    */
   public static void main(String [] args) {
     RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
     LOG.info("vmName=" + runtime.getVmName() + ", vmVendor=" +
       runtime.getVmVendor() + ", vmVersion=" + runtime.getVmVersion());
     LOG.info("vmInputArguments=" + runtime.getInputArguments());
-    Memcache memcache1 = new Memcache();
+    MemStore memstore1 = new MemStore();
     // TODO: x32 vs x64
     long size = 0;
     final int count = 10000;
     byte [] column = Bytes.toBytes("col:umn");
     for (int i = 0; i < count; i++) {
       // Give each its own ts
-      size += memcache1.add(new KeyValue(Bytes.toBytes(i), column, i));
+      size += memstore1.add(new KeyValue(Bytes.toBytes(i), column, i));
     }
-    LOG.info("memcache1 estimated size=" + size);
+    LOG.info("memstore1 estimated size=" + size);
     for (int i = 0; i < count; i++) {
-      size += memcache1.add(new KeyValue(Bytes.toBytes(i), column, i));
+      size += memstore1.add(new KeyValue(Bytes.toBytes(i), column, i));
     }
-    LOG.info("memcache1 estimated size (2nd loading of same data)=" + size);
-    // Make a variably sized memcache.
-    Memcache memcache2 = new Memcache();
+    LOG.info("memstore1 estimated size (2nd loading of same data)=" + size);
+    // Make a variably sized memstore.
+    MemStore memstore2 = new MemStore();
     for (int i = 0; i < count; i++) {
-      size += memcache2.add(new KeyValue(Bytes.toBytes(i), column, i,
+      size += memstore2.add(new KeyValue(Bytes.toBytes(i), column, i,
         new byte[i]));
     }
-    LOG.info("memcache2 estimated size=" + size);
+    LOG.info("memstore2 estimated size=" + size);
     final int seconds = 30;
     LOG.info("Waiting " + seconds + " seconds while heap dump is taken");
     for (int i = 0; i < seconds; i++) {
