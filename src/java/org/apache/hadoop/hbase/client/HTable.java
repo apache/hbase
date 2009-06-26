@@ -472,8 +472,8 @@ public class HTable {
   }
   
   /**
-   * Atomically increments a column value. If the column value isn't long-like,
-   * this could throw an exception.
+   * Atomically increments a column value. If the column value already exists
+   * and is not a big-endian long, this could throw an exception.<p>
    * 
    * @param row
    * @param family
@@ -484,6 +484,26 @@ public class HTable {
    */
   public long incrementColumnValue(final byte [] row, final byte [] family, 
       final byte [] qualifier, final long amount)
+  throws IOException {
+    return incrementColumnValue(row, family, qualifier, amount, true);
+  }
+
+  /**
+   * Atomically increments a column value. If the column value already exists
+   * and is not a big-endian long, this could throw an exception.<p>
+   * 
+   * Setting writeToWAL to false means that in a fail scenario, you will lose 
+   * any increments that have not been flushed.
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param amount
+   * @param writeToWAL true if increment should be applied to WAL, false if not
+   * @return The new value.
+   * @throws IOException
+   */
+  public long incrementColumnValue(final byte [] row, final byte [] family, 
+      final byte [] qualifier, final long amount, final boolean writeToWAL)
   throws IOException {
     NullPointerException npe = null;
     if (row == null) {
@@ -499,11 +519,9 @@ public class HTable {
     return connection.getRegionServerWithRetries(
         new ServerCallable<Long>(connection, tableName, row) {
           public Long call() throws IOException {
-            Get get = new Get(row);
-            get.addColumn(family, qualifier);
             return server.incrementColumnValue(
                 location.getRegionInfo().getRegionName(), row, family, 
-                qualifier, amount);
+                qualifier, amount, writeToWAL);
           }
         }
     );
@@ -1717,7 +1735,7 @@ public class HTable {
     for (BatchOperation bo: batchUpdate) {
       if (!bo.isPut()) throw new IOException("Only Puts in BU as of 0.20.0");
       Put p = new Put(batchUpdate.getRow(), rl);
-      p.add(bo.getColumn(),batchUpdate.getTimestamp(), bo.getValue());
+      p.add(bo.getColumn(), batchUpdate.getTimestamp(), bo.getValue());
       put(p);
     }
   }
@@ -1774,7 +1792,7 @@ public class HTable {
       if (CLIENT_LOG.isDebugEnabled()) {
         CLIENT_LOG.debug("Creating scanner over " 
             + Bytes.toString(getTableName()) 
-            + " starting at key '" + Bytes.toString(scan.getStartRow()) + "'");
+            + " starting at key '" + Bytes.toStringBinary(scan.getStartRow()) + "'");
       }
       this.scan = scan;
       this.lastNext = System.currentTimeMillis();
@@ -1833,7 +1851,7 @@ public class HTable {
 
       if (CLIENT_LOG.isDebugEnabled()) {
         CLIENT_LOG.debug("Advancing internal scanner to startKey at '" +
-          Bytes.toString(localStartKey) + "'");
+          Bytes.toStringBinary(localStartKey) + "'");
       }
             
       try {
@@ -1863,9 +1881,22 @@ public class HTable {
      * filter.
      */
     private boolean filterSaysStop(final byte [] endKey) {
+      if (scan.getStopRow().length > 0) {
+        // there is a stop row, check to see if we are past it.
+        byte [] stopRow = scan.getStopRow();
+        int cmp = Bytes.compareTo(stopRow, 0, stopRow.length,
+            endKey, 0, endKey.length);
+        if (cmp <= 0) {
+          // stopRow <= endKey (endKey is equals to or larger than stopRow)
+          // This is a stop.
+          return true;
+        }
+      }
+
       if(!scan.hasFilter()) {
         return false;
       }
+
       if (scan.getFilter() != null) {
         // Let the filter see current row.
         scan.getFilter().filterRowKey(endKey, 0, endKey.length);

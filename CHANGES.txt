@@ -221,6 +221,15 @@ Release 0.20.0 - Unreleased
    HBASE-1564  in UI make host addresses all look the same -- not IP sometimes
                and host at others
    HBASE-1567  cant serialize new filters
+   HBASE-1585  More binary key/value log output cleanup
+               (Lars George via Stack)
+   HBASE-1563  incrementColumnValue does not write to WAL (Jon Gray via Stack)
+   HBASE-1569  rare race condition can take down a regionserver
+   HBASE-1450  Scripts passed to hbase shell do not have shell context set up
+               for them
+   HBASE-1566  using Scan(startRow,stopRow) will cause you to iterate the
+               entire table
+   HBASE-1560  TIF can't seem to find one region
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
@@ -401,6 +410,9 @@ Release 0.20.0 - Unreleased
                'memtable' or....
    HBASE-1562  How to handle the setting of 32 bit versus 64 bit machines
                (Erik Holstad via Stack)
+   HBASE-1584  Put add methods should return this for ease of use (Be
+               consistant with Get) (Clint Morgan via Stack)
+   HBASE-1581  Run major compaction on .META. when table is dropped or truncated
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

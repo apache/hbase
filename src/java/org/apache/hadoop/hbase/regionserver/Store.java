@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.io.SequenceFile;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Progressable;
@@ -288,8 +289,8 @@ public class Store implements HConstants {
     // general memory usage accounting.
     long maxSeqIdInLog = -1;
     // TODO: Move this memstoring over into MemStore.
-    ConcurrentSkipListMap<KeyValue, Object> reconstructedCache =
-      MemStore.createMap(this.comparator);
+    KeyValueSkipListSet reconstructedCache =
+      new KeyValueSkipListSet(this.comparator);
     SequenceFile.Reader logReader = new SequenceFile.Reader(this.fs,
       reconstructionLog, this.conf);
     try {
@@ -315,7 +316,7 @@ public class Store implements HConstants {
           continue;
         }
         // Add anything as value as long as we use same instance each time.
-        reconstructedCache.put(val, Boolean.TRUE);
+        reconstructedCache.add(val);
         editsCount++;
         // Every 2k edits, tell the reporter we're making progress.
         // Have seen 60k edits taking 3minutes to complete.
@@ -466,17 +467,17 @@ public class Store implements HConstants {
   boolean flushCache(final long logCacheFlushId) throws IOException {
     // Get the snapshot to flush.  Presumes that a call to
     // this.memstore.snapshot() has happened earlier up in the chain.
-    ConcurrentSkipListMap<KeyValue, ?> cache = this.memstore.getSnapshot();
+    KeyValueSkipListSet snapshot = this.memstore.getSnapshot();
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
-    StoreFile sf = internalFlushCache(cache, logCacheFlushId);
+    StoreFile sf = internalFlushCache(snapshot, logCacheFlushId);
     if (sf == null) {
       return false;
     }
     // Add new file to store files.  Clear snapshot too while we have the
     // Store write lock.
-    int size = updateStorefiles(logCacheFlushId, sf, cache);
+    int size = updateStorefiles(logCacheFlushId, sf, snapshot);
     return size >= this.compactionThreshold;
   }
 
@@ -486,13 +487,13 @@ public class Store implements HConstants {
    * @return StoreFile created.
    * @throws IOException
    */
-  private StoreFile internalFlushCache(final ConcurrentSkipListMap<KeyValue, ?> cache,
+  private StoreFile internalFlushCache(final KeyValueSkipListSet set,
     final long logCacheFlushId)
   throws IOException {
     HFile.Writer writer = null;
     long flushed = 0;
     // Don't flush if there are no entries.
-    if (cache.size() == 0) {
+    if (set.size() == 0) {
       return null;
     }
     long oldestTimestamp = System.currentTimeMillis() - ttl;
@@ -504,8 +505,7 @@ public class Store implements HConstants {
       writer = getWriter();
       int entries = 0;
       try {
-        for (Map.Entry<KeyValue, ?> entry: cache.entrySet()) {
-          KeyValue kv = entry.getKey();
+        for (KeyValue kv: set) {
           if (!isExpired(kv, oldestTimestamp)) {
             writer.append(kv);
             entries++;
@@ -521,12 +521,13 @@ public class Store implements HConstants {
     }
     StoreFile sf = new StoreFile(this.fs, writer.getPath(), blockcache, 
       this.conf);
-    this.storeSize += sf.getReader().length();
+    Reader r = sf.getReader();
+    this.storeSize += r.length();
     if(LOG.isDebugEnabled()) {
-      LOG.debug("Added " + sf + ", entries=" + sf.getReader().getEntries() +
+      LOG.debug("Added " + sf + ", entries=" + r.getEntries() +
         ", sequenceid=" + logCacheFlushId +
         ", memsize=" + StringUtils.humanReadableInt(flushed) +
-        ", filesize=" + StringUtils.humanReadableInt(sf.getReader().length()) +
+        ", filesize=" + StringUtils.humanReadableInt(r.length()) +
         " to " + this.regioninfo.getRegionNameAsString());
     }
     return sf;
@@ -554,12 +555,12 @@ public class Store implements HConstants {
    * Change storefiles adding into place the Reader produced by this new flush.
    * @param logCacheFlushId
    * @param sf
-   * @param cache That was used to make the passed file <code>p</code>.
+   * @param set That was used to make the passed file <code>p</code>.
    * @throws IOException
    * @return Count of store files.
    */
   private int updateStorefiles(final long logCacheFlushId,
-    final StoreFile sf, final NavigableMap<KeyValue, ?> cache)
+    final StoreFile sf, final KeyValueSkipListSet set)
   throws IOException {
     int count = 0;
     this.lock.writeLock().lock();
@@ -568,7 +569,7 @@ public class Store implements HConstants {
       count = this.storefiles.size();
       // Tell listeners of the change in readers.
       notifyChangedReadersObservers();
-      this.memstore.clearSnapshot(cache);
+      this.memstore.clearSnapshot(set);
       return count;
     } finally {
       this.lock.writeLock().unlock();
@@ -672,6 +673,11 @@ public class Store implements HConstants {
         if (path == null) {
           LOG.warn("Path is null for " + file);
           return null;
+        }
+        Reader r = file.getReader();
+        if (r == null) {
+          LOG.warn("StoreFile " + file + " has a null Reader");
+          continue;
         }
         long len = file.getReader().length();
         fileSizes[i] = len;
@@ -788,7 +794,7 @@ public class Store implements HConstants {
   private boolean isMajorCompaction(final List<StoreFile> filesToCompact)
   throws IOException {
     boolean result = false;
-    if (filesToCompact == null || filesToCompact.size() <= 0) {
+    if (filesToCompact == null || filesToCompact.isEmpty()) {
       return result;
     }
     long lowTimestamp = getLowestTimestamp(fs,
@@ -830,9 +836,14 @@ public class Store implements HConstants {
     // for each file, obtain a scanner:
     KeyValueScanner [] scanners = new KeyValueScanner[filesToCompact.size()];
     // init:
-    for(int i = 0; i < filesToCompact.size(); ++i) {
+    for (int i = 0; i < filesToCompact.size(); ++i) {
       // TODO open a new HFile.Reader w/o block cache.
-      scanners[i] = new StoreFileScanner(filesToCompact.get(i).getReader().getScanner());
+      Reader r = filesToCompact.get(i).getReader();
+      if (r == null) {
+        LOG.warn("StoreFile " + filesToCompact.get(i) + " has a null Reader");
+        continue;
+      }
+      scanners[i] = new StoreFileScanner(r.getScanner());
     }
 
     if (majorCompaction) {
@@ -942,7 +953,12 @@ public class Store implements HConstants {
       // 4. Compute new store size
       this.storeSize = 0L;
       for (StoreFile hsf : this.storefiles.values()) {
-        this.storeSize += hsf.getReader().length();
+        Reader r = hsf.getReader();
+        if (r == null) {
+          LOG.warn("StoreFile " + hsf + " has a null Reader");
+          continue;
+        }
+        this.storeSize += r.length();
       }
     } finally {
       this.lock.writeLock().unlock();
@@ -974,8 +990,8 @@ public class Store implements HConstants {
     return wantedVersions > maxVersions ? maxVersions: wantedVersions;
   }
 
-  static void expiredOrDeleted(final Map<KeyValue, Object> set, final KeyValue kv) {
-    boolean b = set.remove(kv) != null;
+  static void expiredOrDeleted(final Set<KeyValue> set, final KeyValue kv) {
+    boolean b = set.remove(kv);
     if (LOG.isDebugEnabled()) {
       LOG.debug(kv.toString() + " expired: " + b);
     }
@@ -1086,14 +1102,19 @@ public class Store implements HConstants {
     // search key to be the last key.  If its a deleted key, then we'll back
     // up to the row before and return that.
     // TODO: Cache last key as KV over in the file.
-    byte [] lastkey = f.getReader().getLastKey();
+    Reader r = f.getReader();
+    if (r == null) {
+      LOG.warn("StoreFile " + f + " has a null Reader");
+      return;
+    }
+    byte [] lastkey = r.getLastKey();
     KeyValue lastKeyValue =
       KeyValue.createKeyValueFromKey(lastkey, 0, lastkey.length);
     if (this.comparator.compareRows(lastKeyValue, targetkey) < 0) {
       search = lastKeyValue;
     }
     KeyValue knownNoGoodKey = null;
-    HFileScanner scanner = f.getReader().getScanner();
+    HFileScanner scanner = r.getScanner();
     for (boolean foundCandidate = false; !foundCandidate;) {
       // Seek to the exact row, or the one that would be immediately before it
       int result = scanner.seekTo(search.getBuffer(), search.getKeyOffset(),
@@ -1182,7 +1203,12 @@ public class Store implements HConstants {
     }
 
     // Seek to the exact row, or the one that would be immediately before it
-    HFileScanner scanner = f.getReader().getScanner();
+    Reader r = f.getReader();
+    if (r == null) {
+      LOG.warn("StoreFile " + f + " has a null Reader");
+      return;
+    }
+    HFileScanner scanner = r.getScanner();
     int result = scanner.seekTo(search.getBuffer(), search.getKeyOffset(),
       search.getKeyLength());
     if (result < 0) {
@@ -1269,7 +1295,7 @@ public class Store implements HConstants {
     this.lock.readLock().lock();
     try {
       // Iterate through all store files
-      if (this.storefiles.size() <= 0) {
+      if (this.storefiles.isEmpty()) {
         return null;
       }
       if (!force && (storeSize < this.desiredMaxFileSize)) {
@@ -1291,15 +1317,24 @@ public class Store implements HConstants {
             return null;
           }
         }
-        long size = sf.getReader().length();
+        Reader r = sf.getReader();
+        if (r == null) {
+          LOG.warn("Storefile " + sf + " Reader is null");
+          continue;
+        }
+        long size = r.length();
         if (size > maxSize) {
           // This is the largest one so far
           maxSize = size;
           mapIndex = e.getKey();
         }
       }
-
-      HFile.Reader r = this.storefiles.get(mapIndex).getReader();
+      StoreFile sf = this.storefiles.get(mapIndex);
+      HFile.Reader r = sf.getReader();
+      if (r == null) {
+        LOG.warn("Storefile " + sf + " Reader is null");
+        return null;
+      }
       // Get first, last, and mid keys.  Midkey is the key that starts block
       // in middle of hfile.  Has column and timestamp.  Need to return just
       // the row we want to split on as midkey.
@@ -1369,8 +1404,14 @@ public class Store implements HConstants {
    */
   long getStorefilesIndexSize() {
     long size = 0;
-    for (StoreFile s: storefiles.values())
-      size += s.getReader().indexSize();
+    for (StoreFile s: storefiles.values()) {
+      Reader r = s.getReader();
+      if (r == null) {
+        LOG.warn("StoreFile " + s + " has a null Reader");
+        continue;
+      }
+      size += r.indexSize();
+    }
     return size;
   }
 
@@ -1477,14 +1518,19 @@ public class Store implements HConstants {
     }
     
     // Check if we even have storefiles
-    if(this.storefiles.isEmpty()) {
+    if (this.storefiles.isEmpty()) {
       return;
     }
     
     // Get storefiles for this store
     List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
-    for(StoreFile sf : this.storefiles.descendingMap().values()) {
-      storefileScanners.add(sf.getReader().getScanner());
+    for (StoreFile sf : this.storefiles.descendingMap().values()) {
+      HFile.Reader r = sf.getReader();
+      if (r == null) {
+        LOG.warn("StoreFile " + sf + " has a null Reader");
+        continue;
+      }
+      storefileScanners.add(r.getScanner());
     }
     
     // StoreFileGetScan will handle reading this store's storefiles
@@ -1494,15 +1540,21 @@ public class Store implements HConstants {
     scanner.get(result);
   }
 
-  public static class ValueAndSize {
-    public long value;
-    public long sizeAdded;
-    public ValueAndSize(long value, long sizeAdded) {
+  /*
+   * Data structure to hold incrementColumnValue result.
+   */
+  static class ICVResult {
+    final long value;
+    final long sizeAdded;
+    final KeyValue kv;
+
+    ICVResult(long value, long sizeAdded, KeyValue kv) {
       this.value = value;
       this.sizeAdded = sizeAdded;
+      this.kv = kv;
     }
   }
-  
+
   /**
    * Increments the value for the given row/family/qualifier
    * @param row
@@ -1512,8 +1564,9 @@ public class Store implements HConstants {
    * @return The new value.
    * @throws IOException
    */
-  public ValueAndSize incrementColumnValue(byte [] row, byte [] f,
-      byte [] qualifier, long amount) throws IOException {
+  public ICVResult incrementColumnValue(byte [] row, byte [] f,
+      byte [] qualifier, long amount)
+  throws IOException {
     long value = 0;
     List<KeyValue> result = new ArrayList<KeyValue>();
     KeyComparator keyComparator = this.comparator.getRawComparator();
@@ -1527,25 +1580,31 @@ public class Store implements HConstants {
       keyComparator, 1);
     
     // Read from memstore
-    if(this.memstore.get(matcher, result)) {
+    if (this.memstore.get(matcher, result)) {
       // Received early-out from memstore
-      KeyValue kv = result.get(0);
+      // Make a copy of the KV and increment it
+      KeyValue kv = result.get(0).clone();
       byte [] buffer = kv.getBuffer();
       int valueOffset = kv.getValueOffset();
       value = Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG) + amount;
-      Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(value), 0, 
-          Bytes.SIZEOF_LONG);
-      return new ValueAndSize(value, 0);
+      Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(value), 0,
+        Bytes.SIZEOF_LONG);
+      return new ICVResult(value, 0, kv);
     }
     // Check if we even have storefiles
     if(this.storefiles.isEmpty()) {
-      return addNewKeyValue(row, f, qualifier, value, amount);
+      return createNewKeyValue(row, f, qualifier, value, amount);
     }
     
     // Get storefiles for this store
     List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
-    for(StoreFile sf : this.storefiles.descendingMap().values()) {
-      storefileScanners.add(sf.getReader().getScanner());
+    for (StoreFile sf : this.storefiles.descendingMap().values()) {
+      Reader r = sf.getReader();
+      if (r == null) {
+        LOG.warn("StoreFile " + sf + " has a null Reader");
+        continue;
+      }
+      storefileScanners.add(r.getScanner());
     }
     
     // StoreFileGetScan will handle reading this store's storefiles
@@ -1556,16 +1615,15 @@ public class Store implements HConstants {
     if(result.size() > 0) {
       value = Bytes.toLong(result.get(0).getValue());
     }
-    return addNewKeyValue(row, f, qualifier, value, amount);
+    return createNewKeyValue(row, f, qualifier, value, amount);
   }
   
-  private ValueAndSize addNewKeyValue(byte [] row, byte [] f, byte [] qualifier,
-      long value, long amount) {
+  private ICVResult createNewKeyValue(byte [] row, byte [] f, 
+      byte [] qualifier, long value, long amount) {
     long newValue = value + amount;
     KeyValue newKv = new KeyValue(row, f, qualifier,
         System.currentTimeMillis(),
         Bytes.toBytes(newValue));
-    add(newKv);
-    return new ValueAndSize(newValue, newKv.heapSize());
+    return new ICVResult(newValue, newKv.heapSize(), newKv);
   }
 }

@@ -1045,11 +1045,16 @@ public class HRegionServer implements HConstants, HRegionInterface,
     HLog newlog = new HLog(fs, logdir, conf, hlogRoller);
     return newlog;
   }
-  
-  /*
-   * @param interval Interval since last time metrics were called.
-   */
+
   protected void doMetrics() {
+    try {
+      metrics();
+    } catch (Throwable e) {
+      LOG.warn("Failed metrics", e);
+    }
+  }
+
+  protected void metrics() {
     this.metrics.regions.set(this.onlineRegions.size());
     this.metrics.incrementRequests(this.requestCount.get());
     // Is this too expensive every three seconds getting a lock on onlineRegions
@@ -1989,7 +1994,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
    */
   Integer getLockFromId(long lockId)
   throws IOException {
-    if(lockId == -1L) {
+    if (lockId == -1L) {
       return null;
     }
     String lockName = String.valueOf(lockId);
@@ -2388,7 +2393,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   
   /** {@inheritDoc} */
   public long incrementColumnValue(byte [] regionName, byte [] row, 
-      byte [] family, byte [] qualifier, long amount)
+      byte [] family, byte [] qualifier, long amount, boolean writeToWAL)
   throws IOException {
     checkOpen();
 
@@ -2399,7 +2404,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
-      return region.incrementColumnValue(row, family, qualifier, amount);
+      return region.incrementColumnValue(row, family, qualifier, amount, 
+          writeToWAL);
     } catch (IOException e) {
       checkFileSystem();
       throw e;
