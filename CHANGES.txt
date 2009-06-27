@@ -232,6 +232,7 @@ Release 0.20.0 - Unreleased
    HBASE-1560  TIF can't seem to find one region
    HBASE-1580  Store scanner does not consult filter.filterRow at end of scan
                (Clint Morgan via Stack)
+   HBASE-1437  broken links in hbase.org
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
@@ -415,11 +416,14 @@ Release 0.20.0 - Unreleased
    HBASE-1584  Put add methods should return this for ease of use (Be
                consistant with Get) (Clint Morgan via Stack)
    HBASE-1581  Run major compaction on .META. when table is dropped or truncated
+   HBASE-1587  Update ganglia config and doc to account for ganglia 3.1 and
+               hadoop-4675
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
    HBASE-1535  Add client ability to perform mutations without the WAL
                (Jon Gray via Stack)
+   HBASE-1460  Concurrent LRU Block Cache (Jon Gray via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
