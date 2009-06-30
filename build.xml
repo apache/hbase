@@ -98,7 +98,7 @@
   <fileset id="lib.jars" dir="${basedir}" includes="lib/*.jar"/>
   <path id="classpath">
     <fileset refid="lib.jars"/>
-    <fileset dir="${lib.dir}/jsp-2.1/">
+    <fileset dir="${lib.dir}/jetty-ext/">
       <include name="*jar" />
     </fileset>
     <pathelement location="${build.classes}"/>
@@ -195,7 +195,7 @@
      -->
   <target name="jspc" depends="init" unless="jspc.not.required">
     <path id="jspc.classpath">
-      <fileset dir="${basedir}/lib/jsp-2.1/">
+      <fileset dir="${basedir}/lib/jetty-ext/">
         <include name="*jar" />
       </fileset>
       <fileset dir="${basedir}/lib/">
@@ -423,8 +423,13 @@
         <link href="${javadoc.link.java}"/>
         <classpath >
           <path refid="classpath" />
+          <fileset dir="src/contrib/">
+            <include name="*/lib/*.jar" />
+          </fileset>
           <pathelement path="${java.class.path}"/>
         </classpath>
+    	<packageset dir="src/contrib/transactional/src/java"/>
+    	<packageset dir="src/contrib/stargate/src/java"/>
     </javadoc>
   </target>	
 

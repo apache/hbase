@@ -134,6 +134,7 @@ public class HConnectionManager implements HConstants {
     private final long pause;
     private final int numRetries;
     private final int maxRPCAttempts;
+    private final long rpcTimeout;
 
     private final Object masterLock = new Object();
     private volatile boolean closed;
@@ -184,6 +185,7 @@ public class HConnectionManager implements HConstants {
       this.pause = conf.getLong("hbase.client.pause", 2 * 1000);
       this.numRetries = conf.getInt("hbase.client.retries.number", 10);
       this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
+      this.rpcTimeout = conf.getLong("hbase.regionserver.lease.period", 60000);
       
       this.master = null;
       this.masterChecked = false;

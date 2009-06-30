@@ -436,7 +436,7 @@ public class PerformanceEvaluation implements HConstants {
     void testRow(final int i) throws IOException {
       Scan scan = new Scan(getRandomRow(this.rand, this.totalRows));
       scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-      scan.setFilter(new RowWhileMatchFilter(new PageFilter(120)));
+      scan.setFilter(new WhileMatchFilter(new PageFilter(120)));
       ResultScanner s = this.table.getScanner(scan);
       //int count = 0;
       for (Result rr = null; (rr = s.next()) != null;) {
