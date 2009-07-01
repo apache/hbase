@@ -21,7 +21,7 @@
   <property name="version" value="0.20.0-dev-0.18.3"/>
   <property name="Name" value="HBase"/>
   <property name="final.name" value="hbase-${version}"/>
-  <property name="year" value="2008"/>
+  <property name="year" value="2009"/>
  
   <!-- Load all the default properties, and any the user wants    -->
   <!-- to contribute (without having to type -D or edit this file -->
@@ -182,10 +182,13 @@
       </fileset>
     </copy>
     <jar jarfile="${jarfile}" basedir="${build.classes}" >
+      <fileset dir="${conf.dir}" >
+        <include name="hbase-default.xml" />
+      </fileset>
       <zipfileset dir="conf" prefix="conf" includes="zoo.cfg,hbase-default.xml" />
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
    		<manifest>
-            <attribute name="Main-Class" value="org/apache/hadoop/hbase/mapred/Driver" />
+            <attribute name="Main-Class" value="org/apache/hadoop/hbase/mapreduce/Driver" />
     	</manifest>
     </jar>
   </target>
@@ -514,7 +517,9 @@
     </subant> 
   </target>
 
-  <target name="test" depends="test-core, test-contrib"
+  <!-- REENABLE!!! <target name="test" depends="test-core, test-contrib"
+  -->
+  <target name="test" depends="test-core"
     description="Run core, contrib unit tests">
   </target>
 
