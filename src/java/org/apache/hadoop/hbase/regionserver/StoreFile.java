@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
@@ -75,6 +76,8 @@ public class StoreFile implements HConstants {
   private Path referencePath;
   // Should the block cache be used or not.
   private boolean blockcache;
+  // Is this from an in-memory store
+  private boolean inMemory;
   
   // Keys for metadata stored in backing HFile.
   private static final byte [] MAX_SEQ_ID_KEY = Bytes.toBytes("MAX_SEQ_ID_KEY");
@@ -112,12 +115,13 @@ public class StoreFile implements HConstants {
    * @throws IOException When opening the reader fails.
    */
   StoreFile(final FileSystem fs, final Path p, final boolean blockcache, 
-      final HBaseConfiguration conf) 
+      final HBaseConfiguration conf, final boolean inMemory) 
   throws IOException {
     this.conf = conf;
     this.fs = fs;
     this.path = p;
     this.blockcache = blockcache;
+    this.inMemory = inMemory;
     if (isReference(p)) {
       this.reference = Reference.read(fs, p);
       this.referencePath = getReferredToFile(this.path);
@@ -262,7 +266,8 @@ public class StoreFile implements HConstants {
       this.reader = new HalfHFileReader(this.fs, this.referencePath, 
           getBlockCache(), this.reference);
     } else {
-      this.reader = new StoreFileReader(this.fs, this.path, getBlockCache());
+      this.reader = new Reader(this.fs, this.path, getBlockCache(),
+          this.inMemory);
     }
     // Load up indices and fileinfo.
     Map<byte [], byte []> map = this.reader.loadFileInfo();
@@ -298,71 +303,18 @@ public class StoreFile implements HConstants {
   }
 
   /**
-   * Override to add some customization on HFile.Reader
-   */
-  static class StoreFileReader extends HFile.Reader {
-    /**
-     * 
-     * @param fs
-     * @param path
-     * @param cache
-     * @throws IOException
-     */
-    public StoreFileReader(FileSystem fs, Path path, BlockCache cache)
-        throws IOException {
-      super(fs, path, cache);
-    }
-
-    @Override
-    protected String toStringFirstKey() {
-      return KeyValue.keyToString(getFirstKey());
-    }
-
-    @Override
-    protected String toStringLastKey() {
-      return KeyValue.keyToString(getLastKey());
-    }
-  }
-
-  /**
-   * Override to add some customization on HalfHFileReader.
-   */
-  static class HalfStoreFileReader extends HalfHFileReader {
-    /**
-     * 
-     * @param fs
-     * @param p
-     * @param c
-     * @param r
-     * @throws IOException
-     */
-    public HalfStoreFileReader(FileSystem fs, Path p, BlockCache c, Reference r)
-        throws IOException {
-      super(fs, p, c, r);
-    }
-
-    @Override
-    public String toString() {
-      return super.toString() + (isTop()? ", half=top": ", half=bottom") +
-          " splitKey: " + KeyValue.keyToString(splitkey);
-    }
-
-    @Override
-    protected String toStringFirstKey() {
-      return KeyValue.keyToString(getFirstKey());
-    }
-
-    @Override
-    protected String toStringLastKey() {
-      return KeyValue.keyToString(getLastKey());
-    }
-  }
-
-  /**
    * @return Current reader.  Must call open first else returns null.
    */
   public HFile.Reader getReader() {
     return this.reader;
+  }
+
+  /**
+   * Gets a special Reader for use during compactions.  Will not cache blocks.
+   * @return Current reader.  Must call open first else returns null.
+   */
+  public HFile.CompactionReader getCompactionReader() {
+    return new HFile.CompactionReader(this.reader);
   }
 
   /**

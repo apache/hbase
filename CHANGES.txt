@@ -433,6 +433,12 @@ Release 0.20.0 - Unreleased
                (Lars George via Stack)
    HBASE-1596  Remove WatcherWrapper and have all users of Zookeeper provide a
                Watcher
+   HBASE-1597  Prevent unnecessary caching of blocks during compactions
+               (Jon Gray via Stack)
+   HBASE-1607  Redo MemStore heap sizing to be accurate, testable, and more
+               like new LruBlockCache (Jon Gray via Stack)
+   HBASE-1218  Implement in-memory column (Jon Gray via Stack)
+   HBASE-1606  Remove zoo.cfg, put config options into hbase-site.xml
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

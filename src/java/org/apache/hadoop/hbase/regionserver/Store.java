@@ -49,12 +49,15 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.SequenceFile;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.HFile.CompactionReader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
@@ -82,7 +85,7 @@ import org.apache.hadoop.util.StringUtils;
  * <p>Locking and transactions are handled at a higher level.  This API should
  * not be called directly but by an HRegion manager.
  */
-public class Store implements HConstants {
+public class Store implements HConstants, HeapSize {
   static final Log LOG = LogFactory.getLog(Store.class);
   /**
    * Comparator that looks at columns and compares their family portions.
@@ -107,6 +110,7 @@ public class Store implements HConstants {
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   final byte [] storeName;
   private final String storeNameStr;
+  private final boolean inMemory;
 
   /*
    * Sorted Map of readers keyed by maximum edit sequence id (Most recent should
@@ -187,7 +191,10 @@ public class Store implements HConstants {
     // MIN_COMMITS_FOR_COMPACTION map files
     this.compactionThreshold =
       conf.getInt("hbase.hstore.compactionThreshold", 3);
-
+    
+    // Check if this is in-memory store
+    this.inMemory = family.isInMemory();
+    
     // By default we split region if a file > DEFAULT_MAX_FILE_SIZE.
     long maxFileSize = info.getTableDesc().getMaxFileSize();
     if (maxFileSize == HConstants.DEFAULT_MAX_FILE_SIZE) {
@@ -363,7 +370,7 @@ public class Store implements HConstants {
       }
       StoreFile curfile = null;
       try {
-        curfile = new StoreFile(fs, p, blockcache, this.conf);
+        curfile = new StoreFile(fs, p, blockcache, this.conf, this.inMemory);
       } catch (IOException ioe) {
         LOG.warn("Failed open of " + p + "; presumption is that file was " +
           "corrupted at flush and lost edits picked up by commit log replay. " +
@@ -509,7 +516,7 @@ public class Store implements HConstants {
           if (!isExpired(kv, oldestTimestamp)) {
             writer.append(kv);
             entries++;
-            flushed += this.memstore.heapSize(kv, true);
+            flushed += this.memstore.heapSizeChange(kv, true);
           }
         }
         // B. Write out the log sequence number that corresponds to this output
@@ -520,7 +527,7 @@ public class Store implements HConstants {
       }
     }
     StoreFile sf = new StoreFile(this.fs, writer.getPath(), blockcache, 
-      this.conf);
+      this.conf, this.inMemory);
     Reader r = sf.getReader();
     this.storeSize += r.length();
     if(LOG.isDebugEnabled()) {
@@ -674,12 +681,12 @@ public class Store implements HConstants {
           LOG.warn("Path is null for " + file);
           return null;
         }
-        Reader r = file.getReader();
+        CompactionReader r = file.getCompactionReader();
         if (r == null) {
           LOG.warn("StoreFile " + file + " has a null Reader");
           continue;
         }
-        long len = file.getReader().length();
+        long len = file.getCompactionReader().length();
         fileSizes[i] = len;
         totalSize += len;
       }
@@ -838,7 +845,7 @@ public class Store implements HConstants {
     // init:
     for (int i = 0; i < filesToCompact.size(); ++i) {
       // TODO open a new HFile.Reader w/o block cache.
-      Reader r = filesToCompact.get(i).getReader();
+      CompactionReader r = filesToCompact.get(i).getCompactionReader();
       if (r == null) {
         LOG.warn("StoreFile " + filesToCompact.get(i) + " has a null Reader");
         continue;
@@ -919,7 +926,7 @@ public class Store implements HConstants {
       return;
     }
     StoreFile finalCompactedFile = new StoreFile(this.fs, p, blockcache, 
-      this.conf);
+      this.conf, this.inMemory);
     this.lock.writeLock().lock();
     try {
       try {
@@ -953,7 +960,7 @@ public class Store implements HConstants {
       // 4. Compute new store size
       this.storeSize = 0L;
       for (StoreFile hsf : this.storefiles.values()) {
-        Reader r = hsf.getReader();
+        Reader r = hsf.getCompactionReader();
         if (r == null) {
           LOG.warn("StoreFile " + hsf + " has a null Reader");
           continue;
@@ -1625,5 +1632,20 @@ public class Store implements HConstants {
         System.currentTimeMillis(),
         Bytes.toBytes(newValue));
     return new ICVResult(newValue, newKv.heapSize(), newKv);
+  }
+
+  public static final long FIXED_OVERHEAD = ClassSize.align(
+      ClassSize.OBJECT + (17 * ClassSize.REFERENCE) +
+      (5 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
+      ClassSize.align(ClassSize.ARRAY));
+  
+  public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
+      ClassSize.OBJECT + ClassSize.REENTRANT_LOCK + 
+      ClassSize.CONCURRENT_SKIPLISTMAP + 
+      ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + ClassSize.OBJECT);
+      
+  @Override
+  public long heapSize() {
+    return DEEP_OVERHEAD + this.memstore.heapSize();
   }
 }

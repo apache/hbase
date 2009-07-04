@@ -13,7 +13,13 @@
   
   <property name="javac.debug" value="on"/>
   <property name="javac.source" value="1.6"/>
-  
+
+  <!-- the unit test classpath -->
+  <path id="test.classpath.stargate">
+    <pathelement location="${lib.dir}" />
+    <path refid="test.classpath"/>
+  </path>
+
   <target name="init-contrib">
     <tstamp/>
     <mkdir dir="${build.war.classes}"/>
@@ -44,7 +50,7 @@
   
   <target name="compile-test" depends="compile-jar,compile-war">
     <javac srcdir="${src.test}" includes="**/*.java" destdir="${build.test}" debug="${javac.debug}" source="1.6">
-      <classpath refid="test.classpath"/>
+      <classpath refid="test.classpath.stargate"/>
     </javac>
   </target>
   
@@ -54,7 +60,7 @@
       <sysproperty key="build.test" value="${build.test}"/>
       <sysproperty key="user.dir" value="${build.test}/data"/>
       <sysproperty key="test.log.dir" value="${hadoop.log.dir}"/>
-      <classpath refid="test.classpath"/>
+      <classpath refid="test.classpath.stargate"/>
       <formatter type="${test.junit.output.format}"/>
       <batchtest todir="${build.test}" unless="testcase">
         <fileset dir="${src.test}" includes="**/Test*.java"/>
@@ -72,11 +78,6 @@
     <copy todir="${build.dir}/lib" overwrite="true">
       <fileset dir="${lib.dir}"/>
       <mapper type="flatten"/>
-    </copy>
-    <copy todir="${build.war.classes}" overwrite="true">
-      <fileset dir="${conf.dir}">
-        <include name="zoo.cfg"/>
-      </fileset>
     </copy>
     
     <war destfile="${build.dir}/${war.file}" webxml="${web.xml.file}">

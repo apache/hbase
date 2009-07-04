@@ -372,8 +372,16 @@ public class LruBlockCache implements BlockCache, HeapSize {
         remainingBuckets--;
       }
       
+      float singleMB = ((float)bucketSingle.totalSize())/((float)(1024*1024));
+      float multiMB = ((float)bucketMulti.totalSize())/((float)(1024*1024));
+      float memoryMB = ((float)bucketMemory.totalSize())/((float)(1024*1024));
+      
       LOG.debug("Block cache LRU eviction completed. " + 
-          "Freed " + bytesFreed + " bytes");
+          "Freed " + bytesFreed + " bytes.  " +
+          "Priority Sizes: " +
+          "Single=" + singleMB + "MB (" + bucketSingle.totalSize() + "), " +
+          "Multi=" + multiMB + "MB (" + bucketMulti.totalSize() + ")," +
+          "Memory=" + memoryMB + "MB (" + bucketMemory.totalSize() + ")");
       
     } finally {
       stats.evict();
@@ -422,6 +430,10 @@ public class LruBlockCache implements BlockCache, HeapSize {
     
     public long overflow() {
       return totalSize - bucketSize;
+    }
+    
+    public long totalSize() {
+      return totalSize;
     }
     
     public int compareTo(BlockBucket that) {
@@ -539,19 +551,15 @@ public class LruBlockCache implements BlockCache, HeapSize {
     LruBlockCache.LOG.debug("Cache Stats: Sizes: " + 
         "Total=" + sizeMB + "MB (" + totalSize + "), " +
         "Free=" + freeMB + "MB (" + freeSize + "), " +
-        "Max=" + maxMB + "MB (" + maxSize +")");
-    
-    // Log hit/miss and eviction counts
-    LruBlockCache.LOG.debug("Cache Stats: Counts: " +
+        "Max=" + maxMB + "MB (" + maxSize +")" +
+      ", Counts: " +
         "Blocks=" + size() +", " +
         "Access=" + stats.getRequestCount() + ", " +
         "Hit=" + stats.getHitCount() + ", " +
         "Miss=" + stats.getMissCount() + ", " +
         "Evictions=" + stats.getEvictionCount() + ", " +
-        "Evicted=" + stats.getEvictedCount());
-    
-    // Log hit/miss and eviction ratios
-    LruBlockCache.LOG.debug("Cache Stats: Ratios: " +
+        "Evicted=" + stats.getEvictedCount() +
+      ", Ratios: " +
         "Hit Ratio=" + stats.getHitRatio()*100 + "%, " +
         "Miss Ratio=" + stats.getMissRatio()*100 + "%, " +
         "Evicted/Run=" + stats.evictedPerEviction());

@@ -38,17 +38,28 @@ import javax.xml.namespace.QName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.TableSchemaMessage.TableSchema;
 
 /**
  * A representation of HBase table descriptors.
+ * 
+ * <pre>
+ * &lt;complexType name="TableSchema"&gt;
+ *   &lt;sequence&gt;
+ *     &lt;element name="column" type="tns:ColumnSchema" 
+ *       maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
+ *   &lt;/sequence&gt;
+ *   &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
+ *   &lt;anyAttribute&gt;&lt;/anyAttribute&gt;
+ * &lt;/complexType&gt;
+ * </pre>
  */
 @XmlRootElement(name="TableSchema")
 @XmlType(propOrder = {"name","columns"})
-public class TableSchemaModel implements Serializable, IProtobufWrapper {
+public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
-  private static final QName IN_MEMORY = new QName(HConstants.IN_MEMORY);
   private static final QName IS_META = new QName(HTableDescriptor.IS_META);
   private static final QName IS_ROOT = new QName(HTableDescriptor.IS_ROOT);
   private static final QName READONLY = new QName(HTableDescriptor.READONLY);
@@ -177,15 +188,6 @@ public class TableSchemaModel implements Serializable, IProtobufWrapper {
   // confuse JAXB
 
   /**
-   * @return true if IN_MEMORY attribute exists and is true
-   */
-  public boolean __getInMemory() {
-    Object o = attrs.get(IN_MEMORY);
-    return o != null ? 
-      Boolean.valueOf(o.toString()) : HTableDescriptor.DEFAULT_IN_MEMORY;
-  }
-
-  /**
    * @return true if IS_META attribute exists and is truel
    */
   public boolean __getIsMeta() {
@@ -208,13 +210,6 @@ public class TableSchemaModel implements Serializable, IProtobufWrapper {
     Object o = attrs.get(READONLY);
     return o != null ? 
       Boolean.valueOf(o.toString()) : HTableDescriptor.DEFAULT_READONLY;
-  }
-
-  /**
-   * @param value desired value of IN_MEMORY attribute
-   */
-  public void __setInMemory(boolean value) {
-    attrs.put(IN_MEMORY, Boolean.toString(value));
   }
 
   /**
@@ -273,10 +268,6 @@ public class TableSchemaModel implements Serializable, IProtobufWrapper {
       }
       builder.addColumns(familyBuilder);
     }
-    if (attrs.containsKey(IN_MEMORY)) {
-      builder.setInMemory(
-        Boolean.valueOf(attrs.get(IN_MEMORY).toString()));
-    }
     if (attrs.containsKey(READONLY)) {
       builder.setReadOnly(
         Boolean.valueOf(attrs.get(READONLY).toString()));
@@ -285,16 +276,13 @@ public class TableSchemaModel implements Serializable, IProtobufWrapper {
   }
 
   @Override
-  public IProtobufWrapper getObjectFromMessage(byte[] message) 
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message) 
       throws IOException {
     TableSchema.Builder builder = TableSchema.newBuilder();
     builder.mergeFrom(message);
     this.setName(builder.getName());
     for (TableSchema.Attribute attr: builder.getAttrsList()) {
       this.addAttribute(attr.getName(), attr.getValue());
-    }
-    if (builder.hasInMemory()) {
-      this.addAttribute(HConstants.IN_MEMORY, builder.getInMemory());
     }
     if (builder.hasReadOnly()) {
       this.addAttribute(HTableDescriptor.READONLY, builder.getReadOnly());
