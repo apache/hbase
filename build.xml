@@ -432,7 +432,6 @@
           <pathelement path="${java.class.path}"/>
         </classpath>
     	<packageset dir="src/contrib/transactional/src/java"/>
-    	<packageset dir="src/contrib/stargate/src/java"/>
     </javadoc>
   </target>	
 
