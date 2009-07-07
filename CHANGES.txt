@@ -17,6 +17,8 @@ Release 0.19.4 - Unreleased
                (Qiaoilang Xiang via Stack)
    HBASE-1573  Holes in master state change; updated startcode and server go
                into .META. but catalog scanner just got old values
+   HBASE-1618  Investigate further into the MemStoreFlusher StoreFile limit
+               (Jon Gray via Stack)
 
 Release 0.19.3 - May 27th, 2009
   BUG FIXES
