@@ -797,7 +797,7 @@ public class HConnectionManager implements HConstants {
             server = (HRegionInterface)HBaseRPC.waitForProxy(
                 serverInterfaceClass, HBaseRPCProtocolVersion.versionID,
                 regionServer.getInetSocketAddress(), this.conf, 
-                this.maxRPCAttempts);
+                this.maxRPCAttempts, this.rpcTimeout);
           } catch (RemoteException e) {
             throw RemoteExceptionHandler.decodeRemoteException(e);
           }
@@ -1003,7 +1003,9 @@ public class HConnectionManager implements HConstants {
       }
       boolean retryOnlyOne = false;
       int tries = 0;
-      Collections.sort(list); 
+      if (list.size() > 1) {
+        Collections.sort(list);
+      }
       List<Put> currentPuts = new ArrayList<Put>();
       HRegionLocation location =
         getRegionLocationForRowWithRetries(tableName, list.get(0).getRow(),
