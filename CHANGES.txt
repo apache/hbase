@@ -249,6 +249,8 @@ Release 0.20.0 - Unreleased
                (Jon Gray via Stack)
    HBASE-1625  Adding check to Put.add(KeyValue kv), to see that it has the same
                row as when instantiated (Erik Holstad via Stack)
+   HBASE-1629  HRS unable to contact master
+   HBASE-1633  Can't delete in TRUNK shell; makes it hard doing admin repairs
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
@@ -453,6 +455,9 @@ Release 0.20.0 - Unreleased
    HBASE-1626  Allow emitting Deletes out of new TableReducer
                (Lars George via Stack)
    HBASE-1551  HBase should manage multiple node ZooKeeper quorum
+   HBASE-1637  Delete client class methods should return itself like Put, Get,
+               Scan (Jon Gray via Nitay)
+   HBASE-1640  Allow passing arguments to jruby script run when run by bin/hbase shell
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
