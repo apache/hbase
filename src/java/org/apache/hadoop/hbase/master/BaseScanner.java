@@ -381,34 +381,6 @@ abstract class BaseScanner extends Chore implements HConstants {
                 startCode + ", storedInfo.startCode: " +
                 storedInfo.getStartCode()));
         }
-
-        // Recover the region server's log if there is one.
-        // This is only done from here if we are restarting and there is stale
-        // data in the meta region. Once we are on-line, dead server log
-        // recovery is handled by lease expiration and ProcessServerShutdown
-        if (!this.master.regionManager.isInitialMetaScanComplete() &&
-            (serverName != null && serverName.length() != 0)) {
-          StringBuilder dirName = new StringBuilder("log_");
-          dirName.append(serverName.replace(":", "_"));
-          Path logDir = new Path(this.master.rootdir, dirName.toString());
-          try {
-            if (master.fs.exists(logDir)) {
-              this.master.regionManager.splitLogLock.lock();
-              try {
-                HLog.splitLog(master.rootdir, logDir, master.fs,
-                    master.getConfiguration());
-              } finally {
-                this.master.regionManager.splitLogLock.unlock();
-              }
-            }
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Split " + logDir.toString());
-            }
-          } catch (IOException e) {
-            LOG.warn("unable to split region server log because: ", e);
-            throw e;
-          }
-        }
         // Now get the region assigned
         this.master.regionManager.setUnassigned(info, true);
       }

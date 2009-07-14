@@ -19,6 +19,7 @@ Release 0.19.4 - Unreleased
                into .META. but catalog scanner just got old values
    HBASE-1618  Investigate further into the MemStoreFlusher StoreFile limit
                (Jon Gray via Stack)
+   HBASE-698   HLog recovery is not performed after master failure
 
 Release 0.19.3 - May 27th, 2009
   BUG FIXES

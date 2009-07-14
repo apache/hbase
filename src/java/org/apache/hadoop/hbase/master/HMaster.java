@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -66,6 +67,7 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
+import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -361,9 +363,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public void run() {
     final String threadName = "HMaster";
     Thread.currentThread().setName(threadName);
-    startServiceThreads();
-    /* Main processing loop */
     try {
+      splitLogAfterStartup();
+      startServiceThreads();
+      /* Main processing loop */
       while (!closed.get()) {
         // check if we should be shutting down
         if (shutdownRequested.get()) {
@@ -521,6 +524,29 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Started service threads");
+    }
+  }
+  
+  /**
+   * Inspect the log directories to recover any log file.
+   * @throws IOException
+   */
+  private void splitLogAfterStartup() throws IOException{
+    FileStatus [] logFolders = this.fs.listStatus(this.rootdir);
+    for (FileStatus status : logFolders) {
+      String folder = status.getPath().getName();
+      if(folder.startsWith(HConstants.HREGION_LOGDIR_NAME)) {
+        LOG.info("Found log folder : " + folder + " to split");
+        this.regionManager.splitLogLock.lock();
+        Path logDir =
+          new Path(this.rootdir, folder);
+        try {
+          HLog.splitLog(this.rootdir, logDir, this.fs,
+              getConfiguration());
+        } finally {
+          this.regionManager.splitLogLock.unlock();
+        }
+      }
     }
   }
 
