@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -210,5 +211,26 @@ public class FSUtils {
       throw new FileNotFoundException(message);
     }
     return rootdir;
+  }
+
+  /**
+   * A {@link PathFilter} that returns directories.
+   */
+  public static class DirFilter implements PathFilter {
+    private final FileSystem fs;
+
+    public DirFilter(final FileSystem fs) {
+      this.fs = fs;
+    }
+
+    public boolean accept(Path p) {
+      boolean isdir = false;
+      try {
+        isdir = this.fs.getFileStatus(p).isDir();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      return isdir;
+    }
   }
 }

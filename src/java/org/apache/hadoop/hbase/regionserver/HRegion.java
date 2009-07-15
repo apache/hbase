@@ -2680,4 +2680,107 @@ public class HRegion implements HConstants {
       releaseRowLock(lid);
     }
   }
+
+  /*
+   * This method calls System.exit.
+   * @param message Message to print out.  May be null.
+   */
+  private static void printUsageAndExit(final String message) {
+    if (message != null && message.length() > 0) System.out.println(message);
+    System.out.println("Usage: HRegion CATLALOG_TABLE_DIR [major_compact]");
+    System.out.println("Options:");
+    System.out.println(" major_compact  Pass this option to major compact " +
+      "passed region.");
+    System.out.println("Default outputs scan of passed region.");
+    System.exit(1);
+  }
+
+  /*
+   * Process table.
+   * Do major compaction or list content.
+   * @param fs
+   * @param p
+   * @param log
+   * @param c
+   * @param majorCompact
+   * @throws IOException
+   */
+  private static void processTable(final FileSystem fs, final Path p,
+      final HLog log, final HBaseConfiguration c,
+      final boolean majorCompact)
+  throws IOException {
+    HRegion region = null;
+    String rootStr = Bytes.toString(HConstants.ROOT_TABLE_NAME);
+    String metaStr = Bytes.toString(HConstants.META_TABLE_NAME);
+    // Currently expects tables have one region only.
+    if (p.getName().startsWith(rootStr)) {
+      region = new HRegion(p, log, fs, c, HRegionInfo.ROOT_REGIONINFO, null);
+    } else if (p.getName().startsWith(metaStr)) {
+      region = new HRegion(p, log, fs, c, HRegionInfo.FIRST_META_REGIONINFO,
+          null);
+    } else {
+      throw new IOException("Not a known catalog table: " + p.toString());
+    }
+    try {
+      region.initialize(null, null);
+      if (majorCompact) {
+        region.compactStores(true);
+      } else {
+        // Default behavior
+        InternalScanner scanner = region.getScanner(
+          new byte [][] {HConstants.COLUMN_FAMILY, HConstants.COLUMN_FAMILY_HISTORIAN},
+          HConstants.EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
+        try {
+          boolean done = false;
+          do {
+            HStoreKey key = new HStoreKey();
+            SortedMap<byte [], Cell> values =
+              new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+            done = scanner.next(key, values);
+            if (values.size() > 0) LOG.info(key + " " + values);
+          } while (done);
+        } finally {
+          scanner.close();
+        }
+      }
+    } finally {
+      region.close();
+    }
+  }
+
+  /**
+   * Facility for dumping and compacting catalog tables.
+   * Only does catalog tables since these are only tables we for sure know
+   * schema on.  For usage run:
+   * <pre>
+   *   ./bin/hbase org.apache.hadoop.hbase.regionserver.HRegion
+   * </pre>
+   * @param args
+   * @throws IOException 
+   */
+  public static void main(String[] args) throws IOException {
+    if (args.length < 1) {
+      printUsageAndExit(null);
+    }
+    boolean majorCompact = false;
+    if (args.length > 1) {
+      if (!args[1].toLowerCase().startsWith("major")) {
+        printUsageAndExit("ERROR: Unrecognized option <" + args[1] + ">");
+      }
+      majorCompact = true;
+    
+    }
+    Path tableDir  = new Path(args[0]);
+    HBaseConfiguration c = new HBaseConfiguration();
+    FileSystem fs = FileSystem.get(c);
+    String tmp = c.get("hbase.tmp.dir", "/tmp");
+    Path logdir = new Path(new Path(tmp),
+      "hlog" + tableDir.getName() + System.currentTimeMillis());
+    HLog log = new HLog(fs, logdir, c, null);
+    try {
+      processTable(fs, tableDir, log, c, majorCompact);
+     } finally {
+       log.close();
+     }
+  }
 }
