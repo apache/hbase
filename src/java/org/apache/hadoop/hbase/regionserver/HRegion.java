@@ -144,6 +144,20 @@ public class HRegion implements HConstants {
    */
   private volatile boolean forceMajorCompaction = false;
 
+  /**
+   * @return True if this region has references.
+   */
+  boolean hasReferences() {
+    for (Map.Entry<Integer, HStore> e: this.stores.entrySet()) {
+      for (Map.Entry<Long, HStoreFile> ee:
+          e.getValue().getStorefiles().entrySet()) {
+        // Found a reference, return.
+        if (ee.getValue().isReference()) return true;
+      }
+    }
+    return false;
+  }
+
   /*
    * Data structure of write state flags used coordinating flushes,
    * compactions and closes.
@@ -705,6 +719,10 @@ public class HRegion implements HConstants {
    */
   byte [] compactStores(final boolean majorCompaction)
   throws IOException {
+    if (this.closing.get() || this.closed.get()) {
+      LOG.debug("Skipping compaction because closing/closed");
+      return null;
+    }
     splitsAndClosesLock.readLock().lock();
     try {
       byte [] midKey = null;
