@@ -26,6 +26,8 @@ Release 0.19.4 - Unreleased
    HBASE-1583  Start/Stop of large cluster untenable
    HBASE-1609  We wait on leases to expire before regionserver goes down.
                Rather, just let client fail
+   HBASE-1651  client is broken, it requests ROOT region location from ZK
+               too much
 
 Release 0.19.3 - May 27th, 2009
   BUG FIXES
