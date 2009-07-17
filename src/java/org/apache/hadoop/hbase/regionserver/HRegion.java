@@ -33,7 +33,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
@@ -209,7 +208,6 @@ public class HRegion implements HConstants {
     new ReentrantReadWriteLock();
   private final Integer splitLock = new Integer(0);
   private long minSequenceId;
-  final AtomicInteger activeScannerCount = new AtomicInteger(0);
 
   //////////////////////////////////////////////////////////////////////////////
   // Constructor
@@ -420,19 +418,6 @@ public class HRegion implements HConstants {
       }
       newScannerLock.writeLock().lock();
       try {
-        // Wait for active scanners to finish. The write lock we hold will
-        // prevent new scanners from being created.
-        synchronized (activeScannerCount) {
-          while (activeScannerCount.get() != 0) {
-            LOG.debug("waiting for " + activeScannerCount.get() +
-                " scanners to finish");
-            try {
-              activeScannerCount.wait();
-            } catch (InterruptedException e) {
-              // continue
-            }
-          }
-        }
         splitsAndClosesLock.writeLock().lock();
         LOG.debug("Updates disabled for region, no outstanding scanners on " +
           this);
@@ -2037,10 +2022,6 @@ public class HRegion implements HConstants {
           closeScanner(i);
         }
       }
-
-      // As we have now successfully completed initialization, increment the
-      // activeScanner count.
-      activeScannerCount.incrementAndGet();
     }
 
     @SuppressWarnings("null")
@@ -2161,24 +2142,9 @@ public class HRegion implements HConstants {
     }
 
     public void close() {
-      try {
-        for(int i = 0; i < scanners.length; i++) {
-          if(scanners[i] != null) {
-            closeScanner(i);
-          }
-        }
-      } finally {
-        synchronized (activeScannerCount) {
-          int count = activeScannerCount.decrementAndGet();
-          if (count < 0) {
-            LOG.error("active scanner count less than zero: " + count +
-                " resetting to zero");
-            activeScannerCount.set(0);
-            count = 0;
-          }
-          if (count == 0) {
-            activeScannerCount.notifyAll();
-          }
+      for(int i = 0; i < scanners.length; i++) {
+        if(scanners[i] != null) {
+          closeScanner(i);
         }
       }
     }

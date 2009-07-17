@@ -1420,7 +1420,16 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
     } finally {
       this.lock.writeLock().unlock();
     }
-    for(HRegion region: regionsToClose) {
+    // Close any outstanding scanners.  Means they'll get an UnknownScanner
+    // exception next time they come in.
+    for (Map.Entry<String, InternalScanner> e: this.scanners.entrySet()) {
+      try {
+        e.getValue().close();
+      } catch (IOException ioe) {
+        LOG.warn("Closing scanner " + e.getKey(), ioe);
+      }
+    }
+    for (HRegion region: regionsToClose) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("closing region " + Bytes.toString(region.getRegionName()));
       }
@@ -1574,15 +1583,22 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
   }
 
   public RowResult[] next(final long scannerId, int nbRows) throws IOException {
-    checkOpen();
-    ArrayList<RowResult> resultSets = new ArrayList<RowResult>();
     try {
       String scannerName = String.valueOf(scannerId);
       InternalScanner s = scanners.get(scannerName);
       if (s == null) {
         throw new UnknownScannerException("Name: " + scannerName);
       }
+      try {
+        checkOpen();
+      } catch (IOException e) {
+        // If checkOpen failed, cancel this lease; filesystem is gone or we're
+        // closing or something.
+        this.leases.cancelLease(scannerName);
+        throw e;
+      }
       this.leases.renewLease(scannerName);
+      List<RowResult> resultSets = new ArrayList<RowResult>();
       for(int i = 0; i < nbRows; i++) {
         requestCount.incrementAndGet();
         // Collect values to be returned here
