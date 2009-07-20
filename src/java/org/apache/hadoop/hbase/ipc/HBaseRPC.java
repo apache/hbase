@@ -80,29 +80,60 @@ public class HBaseRPC {
   // Leave this out in the hadoop ipc package but keep class name.  Do this
   // so that we dont' get the logging of this class's invocations by doing our
   // blanket enabling DEBUG on the o.a.h.h. package.
-  private static final Log LOG =
+  protected static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HbaseRPC");
 
-  private HBaseRPC() {}                                  // no public ctor
+  private HBaseRPC() {
+    super();
+  }                                  // no public ctor
 
+  // Special code that means 'not-encoded'.
+  private static final byte NOT_ENCODED = 0;
+  private static byte code = NOT_ENCODED + 1;
+  
+  /** Add a new interface to the ipc map.
+   * @param c Class whose methods we'll add to the map of methods to codes
+   * (and vice versa).
+   * @param startCode Current state of the byte code.
+   * @return State of <code>code</code> when this method is done.
+   */
+  public static byte addToMap(final Class<?> c, final byte startCode) {
+    if (Invocation.CODE_TO_METHODNAME.get(startCode) != null) {
+      throw new IllegalArgumentException("Code " + startCode +
+        "already had entry");
+    }
+    byte localCode = startCode;
+    Method [] methods = c.getMethods();
+    // There are no guarantees about the order in which items are returned in
+    // so do a sort (Was seeing that sort was one way on one server and then
+    // another on different server).
+    Arrays.sort(methods, new Comparator<Method>() {
+      public int compare(Method left, Method right) {
+        return left.getName().compareTo(right.getName());
+      }
+    });
+    for (int i = 0; i < methods.length; i++) {
+      Invocation.addToMap(methods[i].getName(), localCode++);
+    }
+    return localCode;
+  }
+  
+  static {
+    code = HBaseRPC.addToMap(VersionedProtocol.class, code);
+    code = HBaseRPC.addToMap(HMasterInterface.class, code);
+    code = HBaseRPC.addToMap(HMasterRegionInterface.class, code);
+    code = HBaseRPC.addToMap(HRegionInterface.class, code);
+  }
 
   /** A method invocation, including the method name and its parameters.*/
   private static class Invocation implements Writable, Configurable {
     // Here, for hbase, we maintain two static maps of method names to code and
     // vice versa.
-    private static final Map<Byte, String> CODE_TO_METHODNAME =
+    static final Map<Byte, String> CODE_TO_METHODNAME =
       new HashMap<Byte, String>();
     private static final Map<String, Byte> METHODNAME_TO_CODE =
       new HashMap<String, Byte>();
-    // Special code that means 'not-encoded'.
-    private static final byte NOT_ENCODED = 0;
-    static {
-      byte code = NOT_ENCODED + 1;
-      code = addToMap(VersionedProtocol.class, code);
-      code = addToMap(HMasterInterface.class, code);
-      code = addToMap(HMasterRegionInterface.class, code);
-      code = addToMap(HRegionInterface.class, code);
-    }
+    
     // End of hbase modifications.
 
     private String methodName;
@@ -112,7 +143,9 @@ public class HBaseRPC {
     private Configuration conf;
 
     /** default constructor */
-    public Invocation() {}
+    public Invocation() {
+      super();
+    }
 
     /**
      * @param method
@@ -141,7 +174,8 @@ public class HBaseRPC {
       parameterClasses = new Class[parameters.length];
       HbaseObjectWritable objectWritable = new HbaseObjectWritable();
       for (int i = 0; i < parameters.length; i++) {
-        parameters[i] = HbaseObjectWritable.readObject(in, objectWritable, this.conf);
+        parameters[i] = HbaseObjectWritable.readObject(in, objectWritable,
+          this.conf);
         parameterClasses[i] = objectWritable.getDeclaredClass();
       }
     }
@@ -157,7 +191,7 @@ public class HBaseRPC {
 
     @Override
     public String toString() {
-      StringBuffer buffer = new StringBuffer();
+      StringBuilder buffer = new StringBuilder(256);
       buffer.append(methodName);
       buffer.append("(");
       for (int i = 0; i < parameters.length; i++) {
@@ -169,8 +203,16 @@ public class HBaseRPC {
       return buffer.toString();
     }
 
+    public void setConf(Configuration conf) {
+      this.conf = conf;
+    }
+
+    public Configuration getConf() {
+      return this.conf;
+    }
+    
     // Hbase additions.
-    private static void addToMap(final String name, final byte code) {
+    static void addToMap(final String name, final byte code) {
       if (METHODNAME_TO_CODE.containsKey(name)) {
         return;
       }
@@ -178,28 +220,6 @@ public class HBaseRPC {
       CODE_TO_METHODNAME.put(Byte.valueOf(code), name);
     }
     
-    /*
-     * @param c Class whose methods we'll add to the map of methods to codes
-     * (and vice versa).
-     * @param code Current state of the byte code.
-     * @return State of <code>code</code> when this method is done.
-     */
-    private static byte addToMap(final Class<?> c, final byte code) {
-      byte localCode = code;
-      Method [] methods = c.getMethods();
-      // There are no guarantees about the order in which items are returned in
-      // so do a sort (Was seeing that sort was one way on one server and then
-      // another on different server).
-      Arrays.sort(methods, new Comparator<Method>() {
-        public int compare(Method left, Method right) {
-          return left.getName().compareTo(right.getName());
-        }
-      });
-      for (int i = 0; i < methods.length; i++) {
-        addToMap(methods[i].getName(), localCode++);
-      }
-      return localCode;
-    }
 
     /*
      * Write out the code byte for passed Class.
@@ -218,15 +238,6 @@ public class HBaseRPC {
       out.writeByte(code.byteValue());
     }
     // End of hbase additions.
-
-    public void setConf(Configuration conf) {
-      this.conf = conf;
-    }
-
-    public Configuration getConf() {
-      return this.conf;
-    }
-
   }
 
   /* Cache a client using its socket factory as the hash key */

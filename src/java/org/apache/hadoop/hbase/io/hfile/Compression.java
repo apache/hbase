@@ -84,7 +84,7 @@ public final class Compression {
           Configuration conf = new Configuration();
           conf.setBoolean("hadoop.native.lib", true);
           try {
-            Class<?> externalCodec =
+            Class externalCodec =
                 ClassLoader.getSystemClassLoader().loadClass("com.hadoop.compression.lzo.LzoCodec");
             lzoCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
           } catch (ClassNotFoundException e) {

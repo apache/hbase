@@ -273,6 +273,9 @@ Release 0.20.0 - Unreleased
                this.blockingStoreFilesNumber loop
    HBASE-1058  Disable 1058 on catalog tables
    HBASE-1583  Start/Stop of large cluster untenable
+   HBASE-1668  hbase-1609 broke TestHRegion.testScanSplitOnRegion unit test
+   HBASE-1669  need dynamic extensibility of HBaseRPC code maps and interface
+               lists (Clint Morgan via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
@@ -491,6 +494,9 @@ Release 0.20.0 - Unreleased
    HBASE-1662  Tool to run major compaction on catalog regions when hbase is
                shutdown
    HBASE-1665  expose more load information to the client side
+   HBASE-1609  We wait on leases to expire before regionserver goes down.
+               Rather, just let client fail
+   HBASE-1655  Usability improvements to HTablePool (Ken Weiner via jgray)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
