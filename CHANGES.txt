@@ -28,6 +28,7 @@ Release 0.19.4 - Unreleased
                Rather, just let client fail
    HBASE-1651  client is broken, it requests ROOT region location from ZK
                too much
+   HBASE-1683  OOME on master splitting logs; stuck, won't go down
 
 Release 0.19.3 - May 27th, 2009
   BUG FIXES
