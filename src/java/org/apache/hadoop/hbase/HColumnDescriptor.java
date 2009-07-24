@@ -381,6 +381,13 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   }
 
   /**
+   * @param key Key whose key and value we're to remove from HCD parameters.
+   */
+  public void remove(final byte [] key) {
+    values.remove(new ImmutableBytesWritable(key));
+  }
+
+  /**
    * @param key The key.
    * @param value The value.
    */
@@ -391,7 +398,8 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /** @return compression type being used for the column family */
   @TOJSON
   public Compression.Algorithm getCompression() {
-    return Compression.Algorithm.valueOf(getValue(COMPRESSION));
+    String n = getValue(COMPRESSION);
+    return Compression.Algorithm.valueOf(n.toUpperCase());
   }
   
   /** @return maximum number of versions */

@@ -20,8 +20,9 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
@@ -30,14 +31,24 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.migration.nineteen.io.BloomFilterMapFile;
+import org.apache.hadoop.hbase.migration.nineteen.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.FSUtils.DirFilter;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -76,13 +87,9 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class Migrate extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(Migrate.class);
-  private final HBaseConfiguration conf;
   private FileSystem fs;
-  
-  // Gets set by migration methods if we are in readOnly mode.
   boolean migrationNeeded = false;
-
-  boolean readOnly = false;
+  boolean check = false;
 
   // Filesystem version of hbase 0.1.x.
   private static final float HBASE_0_1_VERSION = 0.1f;
@@ -93,26 +100,27 @@ public class Migrate extends Configured implements Tool {
   private static final String MIGRATION_LINK = 
     " See http://wiki.apache.org/hadoop/Hbase/HowToMigrate for more information.";
 
-  /** default constructor */
-  public Migrate() {
-    this(new HBaseConfiguration());
-  }
-  
   /**
-   * @param conf
+   * Default constructor.
    */
-  public Migrate(HBaseConfiguration conf) {
-    super(conf);
-    this.conf = conf;
+  public Migrate() {
+    super();
   }
-  
+
+  /**
+   * @param c
+   */
+  public Migrate(final HBaseConfiguration c) {
+    super(c);
+  }
+
   /*
    * Sets the hbase rootdir as fs.default.name.
    * @return True if succeeded.
    */
   private boolean setFsDefaultName() {
     // Validate root directory path
-    Path rd = new Path(conf.get(HConstants.HBASE_DIR));
+    Path rd = new Path(getConf().get(HConstants.HBASE_DIR));
     try {
       // Validate root directory path
       FSUtils.validateRootPath(rd);
@@ -122,7 +130,7 @@ public class Migrate extends Configured implements Tool {
           " configuration parameter '" + HConstants.HBASE_DIR + "'", e);
       return false;
     }
-    this.conf.set("fs.default.name", rd.toString());
+    getConf().set("fs.default.name", rd.toString());
     return true;
   }
 
@@ -132,7 +140,7 @@ public class Migrate extends Configured implements Tool {
   private boolean verifyFilesystem() {
     try {
       // Verify file system is up.
-      fs = FileSystem.get(conf);                        // get DFS handle
+      fs = FileSystem.get(getConf());                        // get DFS handle
       LOG.info("Verifying that file system is available..");
       FSUtils.checkFileSystemAvailable(fs);
       return true;
@@ -147,7 +155,7 @@ public class Migrate extends Configured implements Tool {
     LOG.info("Verifying that HBase is not running...." +
           "Trys ten times  to connect to running master");
     try {
-      HBaseAdmin.checkHBaseAvailable(conf);
+      HBaseAdmin.checkHBaseAvailable((HBaseConfiguration)getConf());
       LOG.fatal("HBase cluster must be off-line.");
       return false;
     } catch (MasterNotRunningException e) {
@@ -165,15 +173,13 @@ public class Migrate extends Configured implements Tool {
     if (!verifyFilesystem()) {
       return -3;
     }
-    if (!notRunning()) {
-      return -4;
-    }
 
     try {
-      LOG.info("Starting upgrade" + (readOnly ? " check" : ""));
+      LOG.info("Starting upgrade" + (check ? " check" : ""));
 
       // See if there is a file system version file
-      String versionStr = FSUtils.getVersion(fs, FSUtils.getRootDir(this.conf));
+      String versionStr = FSUtils.getVersion(fs,
+        FSUtils.getRootDir((HBaseConfiguration)getConf()));
       if (versionStr == null) {
         throw new IOException("File system version file " +
             HConstants.VERSION_FILE_NAME +
@@ -193,31 +199,30 @@ public class Migrate extends Configured implements Tool {
         System.out.println(msg);
         throw new IOException(msg);
       }
-
+      this.migrationNeeded = true;
       migrate6to7();
-
-      if (!readOnly) {
+      if (!check) {
         // Set file system version
         LOG.info("Setting file system version.");
-        FSUtils.setVersion(fs, FSUtils.getRootDir(this.conf));
+        FSUtils.setVersion(fs, FSUtils.getRootDir((HBaseConfiguration)getConf()));
         LOG.info("Upgrade successful.");
       } else if (this.migrationNeeded) {
         LOG.info("Upgrade needed.");
       }
       return 0;
     } catch (Exception e) {
-      LOG.fatal("Upgrade" +  (readOnly ? " check" : "") + " failed", e);
+      LOG.fatal("Upgrade" +  (check ? " check" : "") + " failed", e);
       return -1;
     }
   }
   
   // Move the fileystem version from 6 to 7.
   private void migrate6to7() throws IOException {
-    if (this.readOnly && this.migrationNeeded) {
+    if (this.check && this.migrationNeeded) {
       return;
     }
     // Before we start, make sure all is major compacted.
-    Path hbaseRootDir = new Path(conf.get(HConstants.HBASE_DIR));
+    Path hbaseRootDir = new Path(getConf().get(HConstants.HBASE_DIR));
     boolean pre020 = FSUtils.isPre020FileLayout(fs, hbaseRootDir);
     if (pre020) {
       LOG.info("Checking pre020 filesystem is major compacted");
@@ -241,51 +246,66 @@ public class Migrate extends Configured implements Tool {
         throw new IOException(msg);
       }
     }
-    // TOOD: Verify all has been brought over from old to new layout.
-    final MetaUtils utils = new MetaUtils(this.conf);
+    final MetaUtils utils = new MetaUtils((HBaseConfiguration)getConf());
+    final List<HRegionInfo> metas = new ArrayList<HRegionInfo>();
     try {
-      // TODO: Set the .META. and -ROOT- to flush at 16k?  32k?
-      // TODO: Enable block cache on all tables
-      // TODO: Rewrite MEMCACHE_FLUSHSIZE as MEMSTORE_FLUSHSIZE – name has changed. 
-      // TODO: Remove tableindexer 'index' attribute index from TableDescriptor (See HBASE-1586) 
-      // TODO: TODO: Move of in-memory parameter from table to column family (from HTD to HCD). 
-      // TODO: Purge isInMemory, etc., methods from HTD as part of migration. 
-      // TODO: Clean up old region log files (HBASE-698) 
-      
-      updateVersions(utils.getRootRegion().getRegionInfo());
-      enableBlockCache(utils.getRootRegion().getRegionInfo());
-      // Scan the root region
+      // Rewrite root.
+      rewriteHRegionInfo(utils.getRootRegion().getRegionInfo());
+      // Scan the root region to rewrite metas.
       utils.scanRootRegion(new MetaUtils.ScannerListener() {
         public boolean processRow(HRegionInfo info)
         throws IOException {
-          if (readOnly && !migrationNeeded) {
+          if (check && !migrationNeeded) {
             migrationNeeded = true;
             return false;
           }
-          updateVersions(utils.getRootRegion(), info);
-          enableBlockCache(utils.getRootRegion(), info);
+          metas.add(info);
+          rewriteHRegionInfo(utils.getRootRegion(), info);
           return true;
         }
       });
-      LOG.info("TODO: Note on make sure not using old hbase-default.xml");
-      /*
-       * hbase.master / hbase.master.hostname are obsolete, that's replaced by
-hbase.cluster.distributed. This config must be set to "true" to have a
-fully-distributed cluster and the server lines in zoo.cfg must not
-point to "localhost".
-
-The clients must have a valid zoo.cfg in their classpath since we
-don't provide the master address.
-
-hbase.master.dns.interface and hbase.master.dns.nameserver should be
-set to control the master's address (not mandatory).
-       */
-      LOG.info("TODO: Note on zookeeper config. before starting:");
+      // Scan meta to rewrite table stuff.
+      for (HRegionInfo hri: metas) {
+        final HRegion h = utils.getMetaRegion(hri);
+        utils.scanMetaRegion(h, new MetaUtils.ScannerListener() {
+          public boolean processRow(HRegionInfo info) throws IOException {
+            if (check && !migrationNeeded) {
+              migrationNeeded = true;
+              return false;
+            }
+            rewriteHRegionInfo(h, info);
+            return true;
+          }
+        });
+      }
+      cleanOldLogFiles(hbaseRootDir);
     } finally {
       utils.shutdown();
     }
   }
-  
+
+  /*
+   * Remove old log files.
+   * @param fs
+   * @param hbaseRootDir
+   * @throws IOException
+   */
+  private void cleanOldLogFiles(final Path hbaseRootDir)
+  throws IOException {
+    FileStatus [] oldlogfiles = fs.listStatus(hbaseRootDir, new PathFilter () {
+      public boolean accept(Path p) {
+        return p.getName().startsWith("log_");
+      }
+    });
+    // Return if nothing to do.
+    if (oldlogfiles.length <= 0) return;
+    LOG.info("Removing " + oldlogfiles.length + " old logs file clutter");
+    for (int i = 0; i < oldlogfiles.length; i++) {
+      fs.delete(oldlogfiles[i].getPath(), true);
+      LOG.info("Deleted: " + oldlogfiles[i].getPath());
+    }
+  }
+
   /*
    * Rewrite all under hbase root dir.
    * Presumes that {@link FSUtils#isMajorCompactedPre020(FileSystem, Path)}
@@ -316,30 +336,84 @@ set to control the master's address (not mandatory).
           if (mfs.length > 1) {
             throw new IOException("Should only be one directory in: " + mfdir);
           }
-          Path mf = mfs[0].getPath();
-          Path infofile = new Path(new Path(family, "info"), mf.getName());
-          rewrite(this.fs, mf, infofile);
+          if (mfs.length == 0) {
+            // Special case.  Empty region.  Remove the mapfiles and info dirs.
+            Path infodir = new Path(family, "info");
+            LOG.info("Removing " + mfdir + " and " + infodir + " because empty");
+            fs.delete(mfdir, true);
+            fs.delete(infodir, true);
+          } else {
+            rewrite((HBaseConfiguration)getConf(), this.fs, mfs[0].getPath());
+          }
         }
       }
     }
   }
-  
+
   /**
-   * Rewrite the passed mapfile
-   * @param mapfiledir
-   * @param infofile
+   * Rewrite the passed 0.19 mapfile as a 0.20 file.
+   * @param fs
+   * @param mf
    * @throws IOExcepion
    */
-  public static void rewrite (final FileSystem fs, final Path mapfiledir,
-      final Path infofile)
+  public static void rewrite (final HBaseConfiguration conf, final FileSystem fs,
+    final Path mf)
   throws IOException {
-    if (!fs.exists(mapfiledir)) {
-      throw new FileNotFoundException(mapfiledir.toString());
+    Path familydir = mf.getParent().getParent();
+    Path regiondir = familydir.getParent();
+    Path basedir = regiondir.getParent();
+    if (HStoreFile.isReference(mf)) {
+      throw new IOException(mf.toString() + " is Reference");
     }
-    if (!fs.exists(infofile)) {
-      throw new FileNotFoundException(infofile.toString());
+    HStoreFile hsf = new HStoreFile(conf, fs, basedir,
+      Integer.parseInt(regiondir.getName()),
+      Bytes.toBytes(familydir.getName()), Long.parseLong(mf.getName()), null);
+    BloomFilterMapFile.Reader src = hsf.getReader(fs, false, false);
+    HFile.Writer tgt = StoreFile.getWriter(fs, familydir,
+      conf.getInt("hfile.min.blocksize.size", 64*1024),
+      Compression.Algorithm.NONE, getComparator(basedir));
+    // From old 0.19 HLogEdit.
+    ImmutableBytesWritable deleteBytes =
+      new ImmutableBytesWritable("HBASE::DELETEVAL".getBytes("UTF-8"));
+    try {
+      while (true) {
+        HStoreKey key = new HStoreKey();
+        ImmutableBytesWritable value = new ImmutableBytesWritable();
+        if (!src.next(key, value)) {
+          break;
+        }
+        byte [][] parts = KeyValue.parseColumn(key.getColumn());
+        KeyValue kv = deleteBytes.equals(value)?
+            new KeyValue(key.getRow(), parts[0], parts[1], 
+                key.getTimestamp(), KeyValue.Type.Delete):
+              new KeyValue(key.getRow(), parts[0], parts[1], 
+                key.getTimestamp(), value.get());
+         tgt.append(kv);
+      }
+      long seqid = hsf.loadInfo(fs);
+      StoreFile.appendMetadata(tgt, seqid, 
+          hsf.isMajorCompaction());
+      // Success, delete src.
+      src.close();
+      tgt.close();
+      hsf.delete();
+      // If we rewrote src, delete mapfiles and info dir.
+      fs.delete(mf.getParent(), true);
+      fs.delete(new Path(familydir, "info"), true);
+      LOG.info("Rewrote " + mf.toString() + " as " + tgt.toString());
+    } catch (IOException e) {
+      // If error, delete tgt.
+      src.close();
+      tgt.close();
+      fs.delete(tgt.getPath(), true);
     }
-    
+  }
+
+  private static KeyValue.KeyComparator getComparator(final Path tabledir) {
+    String tablename = tabledir.getName();
+    return tablename.equals("-ROOT-")? KeyValue.META_KEY_COMPARATOR:
+      tablename.equals(".META.")? KeyValue.META_KEY_COMPARATOR:
+        KeyValue.KEY_COMPARATOR;
   }
 
   /*
@@ -347,33 +421,41 @@ set to control the master's address (not mandatory).
    * @param mr
    * @param oldHri
    */
-  void enableBlockCache(HRegion mr, HRegionInfo oldHri)
+  void rewriteHRegionInfo(HRegion mr, HRegionInfo oldHri)
   throws IOException {
-    if (!enableBlockCache(oldHri)) {
+    if (!rewriteHRegionInfo(oldHri)) {
       return;
     }
     Put put = new Put(oldHri.getRegionName());
     put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, 
         Writables.getBytes(oldHri));
     mr.put(put);
-    LOG.info("Enabled blockcache on " + oldHri.getRegionNameAsString());
   }
 
   /*
    * @param hri Update versions.
    * @param true if we changed value
    */
-  private boolean enableBlockCache(final HRegionInfo hri) {
+  private boolean rewriteHRegionInfo(final HRegionInfo hri) {
     boolean result = false;
-    HColumnDescriptor hcd =
-      hri.getTableDesc().getFamily(HConstants.CATALOG_FAMILY);
-    if (hcd == null) {
-      LOG.info("No info family in: " + hri.getRegionNameAsString());
-      return result;
+    // Set flush size at 32k if a catalog table.
+    int catalogMemStoreFlushSize = 32 * 1024;
+    if (hri.isMetaRegion() &&
+        hri.getTableDesc().getMemStoreFlushSize() != catalogMemStoreFlushSize) {
+      hri.getTableDesc().setMemStoreFlushSize(catalogMemStoreFlushSize);
+      result = true;
     }
-    // Set blockcache enabled.
-    hcd.setBlockCacheEnabled(true);
-    return true;
+    // Remove the old MEMCACHE_FLUSHSIZE if present
+    hri.getTableDesc().remove(Bytes.toBytes("MEMCACHE_FLUSHSIZE"));
+    for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
+      // Set block cache on all tables.
+      hcd.setBlockCacheEnabled(true);
+      // Set compression to none.  Previous was 'none'.  Needs to be upper-case.
+      // Any other compression we are turning off.  Have user enable it.
+      hcd.setCompressionType(Algorithm.NONE);
+      result = true;
+    }
+    return result;
   }
 
 
@@ -431,7 +513,7 @@ set to control the master's address (not mandatory).
       return -1;
     }
     if (remainingArgs[0].compareTo("check") == 0) {
-      this.readOnly = true;
+      this.check = true;
     } else if (remainingArgs[0].compareTo("upgrade") != 0) {
       usage();
       return -1;
@@ -459,7 +541,7 @@ set to control the master's address (not mandatory).
   public static void main(String[] args) {
     int status = 0;
     try {
-      status = ToolRunner.run(new Migrate(), args);
+      status = ToolRunner.run(new HBaseConfiguration(), new Migrate(), args);
     } catch (Exception e) {
       LOG.error(e);
       status = -1;
