@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -232,5 +233,72 @@ public class FSUtils {
       }
       return isdir;
     }
+  }
+
+  /**
+   * Runs through the hbase rootdir and checks all stores have only
+   * one file in them -- that is, they've been major compacted.  Looks
+   * at root and meta tables too.
+   * @param fs
+   * @param hbaseRootDir
+   * @return True if this hbase install is major compacted.
+   * @throws IOException
+   */
+  public static boolean isMajorCompacted(final FileSystem fs,
+      final Path hbaseRootDir)
+  throws IOException {
+    // Presumes any directory under hbase.rootdir is a table.
+    FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, new DirFilter(fs));
+    for (int i = 0; i < tableDirs.length; i++) {
+      // Inside a table, there are compaction.dir directories to skip.
+      // Otherwise, all else should be regions.  Then in each region, should
+      // only be family directories.  Under each of these, should be a mapfile
+      // and info directory and in these only one file.
+      Path d = tableDirs[i].getPath();
+      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) continue;
+      FileStatus [] regionDirs = fs.listStatus(d, new DirFilter(fs));
+      for (int j = 0; j < regionDirs.length; j++) {
+        Path dd = regionDirs[j].getPath();
+        if (dd.equals(HConstants.HREGION_COMPACTIONDIR_NAME)) continue;
+        // Else its a region name.  Now look in region for families.
+        FileStatus [] familyDirs = fs.listStatus(dd, new DirFilter(fs));
+        for (int k = 0; k < familyDirs.length; k++) {
+          Path family = familyDirs[k].getPath();
+          FileStatus [] infoAndMapfile = fs.listStatus(family);
+          // Assert that only info and mapfile in family dir.
+          if (infoAndMapfile.length != 0 && infoAndMapfile.length != 2) {
+            LOG.debug(family.toString() +
+              " has more than just info and mapfile: " + infoAndMapfile.length);
+            return false;
+          }
+          // Make sure directory named info or mapfile.
+          for (int ll = 0; ll < 2; ll++) {
+            if (infoAndMapfile[ll].getPath().getName().equals("info") ||
+                infoAndMapfile[ll].getPath().getName().equals("mapfiles"))
+              continue;
+            LOG.debug("Unexpected directory name: " +
+              infoAndMapfile[ll].getPath());
+            return false;
+          }
+          // Now in family, there are 'mapfile' and 'info' subdirs.  Just
+          // look in the 'mapfile' subdir.
+          FileStatus [] familyStatus =
+            fs.listStatus(new Path(family, "mapfiles"));
+          if (familyStatus.length > 1) {
+            LOG.debug(family.toString() + " has " + familyStatus.length +
+              " files.");
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  public static void main(final String [] args)
+  throws IOException {
+    HBaseConfiguration c = new HBaseConfiguration();
+    FileSystem fs = FileSystem.get(c);
+    System.out.println("majorCompacted=" + isMajorCompacted(fs, getRootDir(c)));
   }
 }
