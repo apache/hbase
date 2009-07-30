@@ -1,13 +1,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NavigableSet;
-import java.util.concurrent.ConcurrentSkipListSet;
-
+import junit.framework.TestCase;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -16,10 +9,18 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Progressable;
 
-import junit.framework.TestCase;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NavigableSet;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * Test class fosr the Store 
@@ -69,17 +70,22 @@ public class TestStore extends TestCase {
   private void init(String methodName) throws IOException {
     //Setting up a Store
     Path basedir = new Path(DIR+methodName);
+    Path logdir = new Path(DIR+methodName+"/logs");
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     HBaseConfiguration conf = new HBaseConfiguration();
     FileSystem fs = FileSystem.get(conf);
     Path reconstructionLog = null; 
     Progressable reporter = null;
 
+    fs.delete(logdir, true);
+
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
-
-    store = new Store(basedir, info, hcd, fs, reconstructionLog, conf,
+    HLog hlog = new HLog(fs, logdir, conf, null);
+    HRegion region = new HRegion(basedir, hlog, fs, conf, info, null);
+    
+    store = new Store(basedir, region, hcd, fs, reconstructionLog, conf,
         reporter);
   }
 
@@ -87,6 +93,38 @@ public class TestStore extends TestCase {
   //////////////////////////////////////////////////////////////////////////////
   // Get tests
   //////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Test for hbase-1686.
+   * @throws IOException
+   */
+  public void testEmptyStoreFile() throws IOException {
+    init(this.getName());
+    // Write a store file.
+    this.store.add(new KeyValue(row, family, qf1, null));
+    this.store.add(new KeyValue(row, family, qf2, null));
+    flush(1);
+    // Now put in place an empty store file.  Its a little tricky.  Have to
+    // do manually with hacked in sequence id.
+    StoreFile f = this.store.getStorefiles().firstEntry().getValue();
+    Path storedir = f.getPath().getParent();
+    long seqid = f.getMaxSequenceId();
+    HBaseConfiguration c = new HBaseConfiguration();
+    FileSystem fs = FileSystem.get(c);
+    Writer w = StoreFile.getWriter(fs, storedir);
+    StoreFile.appendMetadata(w, seqid + 1);
+    w.close();
+    this.store.close();
+    // Reopen it... should pick up two files
+    this.store = new Store(storedir.getParent().getParent(),
+      this.store.getHRegion(),
+      this.store.getFamily(), fs, null, c, null);
+    System.out.println(this.store.getHRegionInfo().getEncodedName());
+    assertEquals(2, this.store.getStorefilesCount());
+    this.store.get(get, qualifiers, result);
+    assertEquals(1, result.size());
+  }
+
   /**
    * Getting data from memstore only
    * @throws IOException
@@ -209,7 +247,7 @@ public class TestStore extends TestCase {
     this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
     
     Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf1, amount);
-    assertEquals(vas.value, value+amount);
+    assertEquals(value+amount, vas.value);
     store.add(vas.kv);
     Get get = new Get(row);
     get.addColumn(family, qf1);
@@ -327,6 +365,46 @@ public class TestStore extends TestCase {
     List<KeyValue> result = new ArrayList<KeyValue>();
     this.store.get(get, qualifiers, result);
     assertEquals(amount, Bytes.toLong(result.get(0).getValue()));
+  }
+
+  public void testIncrementColumnValue_ICVDuringFlush()
+    throws IOException {
+    init(this.getName());
+
+    long value = 1L;
+    long amount = 3L;
+    this.store.add(new KeyValue(row, family, qf1,
+        System.currentTimeMillis(),
+        Bytes.toBytes(value)));
+
+    // snapshot the store.
+    this.store.snapshot();
+
+    // incrment during the snapshot...
+
+    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf1, amount);
+
+    // then flush.
+    this.store.flushCache(id++);
+    assertEquals(1, this.store.getStorefiles().size());
+    assertEquals(0, this.store.memstore.kvset.size());
+
+    Get get = new Get(row);
+    get.addColumn(family, qf1);
+    get.setMaxVersions(); // all versions.
+    List<KeyValue> results = new ArrayList<KeyValue>();
+
+    NavigableSet<byte[]> cols = new TreeSet<byte[]>();
+    cols.add(qf1);
+
+    this.store.get(get, cols, results);
+    // only one, because Store.ICV doesnt add to memcache.
+    assertEquals(1, results.size());
+
+    // but the timestamps should be different...
+    long icvTs = vas.kv.getTimestamp();
+    long storeTs = results.get(0).getTimestamp();
+    assertTrue(icvTs != storeTs);
   }
   
 }

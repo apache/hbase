@@ -413,7 +413,17 @@ public class HRegionServer implements HConstants, HRegionInterface,
     regionServerThread = Thread.currentThread();
     boolean quiesceRequested = false;
     try {
-      init(reportForDuty());
+      MapWritable w = null;
+      while (!stopRequested.get()) {
+        w = reportForDuty();
+        if (w != null) {
+          init(w);
+          break;
+        }
+        sleeper.sleep();
+        LOG.warn("No response from master on reportForDuty. Sleeping and " +
+          "then trying again.");
+      }
       long lastMsg = 0;
       // Now ask master what it wants us to do and tell it what we have done
       for (int tries = 0; !stopRequested.get() && isHealthy();) {
@@ -799,7 +809,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
    */
   private Throwable cleanup(final Throwable t, final String msg) {
     if (msg == null) {
-      LOG.error(RemoteExceptionHandler.checkThrowable(t));
+      LOG.error("", RemoteExceptionHandler.checkThrowable(t));
     } else {
       LOG.error(msg, RemoteExceptionHandler.checkThrowable(t));
     }
@@ -1478,7 +1488,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
             case MSG_REGION_SPLIT:
               region = getRegion(info.getRegionName());
               region.flushcache();
-              region.regionInfo.shouldSplit(true);
+              region.shouldSplit(true);
               // force a compaction; split will be side-effect.
               compactSplitThread.compactionRequested(region,
                 e.msg.getType().name());
@@ -1886,7 +1896,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   public Result [] next(final long scannerId, int nbRows) throws IOException {
     try {
       String scannerName = String.valueOf(scannerId);
-      InternalScanner s = scanners.get(scannerName);
+      InternalScanner s = this.scanners.get(scannerName);
       if (s == null) {
         throw new UnknownScannerException("Name: " + scannerName);
       }
@@ -1914,6 +1924,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
       return results.toArray(new Result[0]);
     } catch (Throwable t) {
+      if (t instanceof NotServingRegionException) {
+        this.scanners.remove(scannerId);
+      }
       throw convertThrowableToIOE(cleanup(t));
     }
   } 
@@ -1974,9 +1987,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
       boolean writeToWAL = true;
       this.cacheFlusher.reclaimMemStoreMemory();
       this.requestCount.incrementAndGet();
-      Integer lock = getLockFromId(delete.getLockId());
+      Integer lid = getLockFromId(delete.getLockId());
       HRegion region = getRegion(regionName);
-      region.delete(delete, lock, writeToWAL);
+      region.delete(delete, lid, writeToWAL);
     } catch(WrongRegionException ex) {
     } catch (NotServingRegionException ex) {
     } catch (Throwable t) {

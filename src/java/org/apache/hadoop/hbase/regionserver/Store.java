@@ -95,7 +95,7 @@ public class Store implements HConstants, HeapSize {
   protected final MemStore memstore;
   // This stores directory in the filesystem.
   private final Path homedir;
-  private final HRegionInfo regioninfo;
+  private final HRegion region;
   private final HColumnDescriptor family;
   final FileSystem fs;
   private final HBaseConfiguration conf;
@@ -144,7 +144,7 @@ public class Store implements HConstants, HeapSize {
    * Constructor
    * @param basedir qualified path under which the region directory lives;
    * generally the table subdirectory
-   * @param info HRegionInfo for this region
+   * @param region
    * @param family HColumnDescriptor for this column
    * @param fs file system object
    * @param reconstructionLog existing log file to apply if any
@@ -154,13 +154,14 @@ public class Store implements HConstants, HeapSize {
    * failed.  Can be null.
    * @throws IOException
    */
-  protected Store(Path basedir, HRegionInfo info, HColumnDescriptor family,
+  protected Store(Path basedir, HRegion region, HColumnDescriptor family,
     FileSystem fs, Path reconstructionLog, HBaseConfiguration conf,
     final Progressable reporter)
-  throws IOException {  
+  throws IOException {
+    HRegionInfo info = region.regionInfo;
     this.homedir = getStoreHomedir(basedir, info.getEncodedName(),
       family.getName());
-    this.regioninfo = info;
+    this.region = region;
     this.family = family;
     this.fs = fs;
     this.conf = conf;
@@ -294,6 +295,7 @@ public class Store implements HConstants, HeapSize {
     // TODO: This could grow large and blow heap out.  Need to get it into
     // general memory usage accounting.
     long maxSeqIdInLog = -1;
+    long firstSeqIdInLog = -1;
     // TODO: Move this memstoring over into MemStore.
     KeyValueSkipListSet reconstructedCache =
       new KeyValueSkipListSet(this.comparator);
@@ -308,6 +310,9 @@ public class Store implements HConstants, HeapSize {
       int reportInterval =
         this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
       while (logReader.next(key, val)) {
+        if (firstSeqIdInLog == -1) {
+          firstSeqIdInLog = key.getLogSeqNum();
+        }
         maxSeqIdInLog = Math.max(maxSeqIdInLog, key.getLogSeqNum());
         if (key.getLogSeqNum() <= maxSeqID) {
           skippedEdits++;
@@ -317,7 +322,7 @@ public class Store implements HConstants, HeapSize {
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
         if (/* commented out for now - stack via jgray key.isTransactionEntry() || */
             val.matchingFamily(HLog.METAFAMILY) ||
-          !Bytes.equals(key.getRegionName(), regioninfo.getRegionName()) ||
+          !Bytes.equals(key.getRegionName(), region.regionInfo.getRegionName()) ||
           !val.matchingFamily(family.getName())) {
           continue;
         }
@@ -329,10 +334,14 @@ public class Store implements HConstants, HeapSize {
         if (reporter != null && (editsCount % reportInterval) == 0) {
           reporter.progress();
         }
+        // Instantiate a new KeyValue to perform Writable on
+        val = new KeyValue();
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Applied " + editsCount + ", skipped " + skippedEdits +
-          " because sequence id <= " + maxSeqID);
+          "; store maxSeqID=" + maxSeqID +
+          ", firstSeqIdInLog=" + firstSeqIdInLog +
+          ", maxSeqIdInLog=" + maxSeqIdInLog);
       }
     } finally {
       logReader.close();
@@ -534,7 +543,7 @@ public class Store implements HConstants, HeapSize {
         ", sequenceid=" + logCacheFlushId +
         ", memsize=" + StringUtils.humanReadableInt(flushed) +
         ", filesize=" + StringUtils.humanReadableInt(r.length()) +
-        " to " + this.regioninfo.getRegionNameAsString());
+        " to " + this.region.regionInfo.getRegionNameAsString());
     }
     return sf;
   }
@@ -619,49 +628,51 @@ public class Store implements HConstants, HeapSize {
    * thread must be able to block for long periods.
    * 
    * <p>During this time, the Store can work as usual, getting values from
-   * MapFiles and writing new MapFiles from the memstore.
+   * StoreFiles and writing new StoreFiles from the memstore.
    * 
-   * Existing MapFiles are not destroyed until the new compacted TreeMap is 
+   * Existing StoreFiles are not destroyed until the new compacted StoreFile is 
    * completely written-out to disk.
    *
-   * The compactLock prevents multiple simultaneous compactions.
+   * <p>The compactLock prevents multiple simultaneous compactions.
    * The structureLock prevents us from interfering with other write operations.
    * 
-   * We don't want to hold the structureLock for the whole time, as a compact() 
+   * <p>We don't want to hold the structureLock for the whole time, as a compact() 
    * can be lengthy and we want to allow cache-flushes during this period.
    * 
-   * @param mc True to force a major compaction regardless of
-   * thresholds
+   * @param mc True to force a major compaction regardless of thresholds
    * @return row to split around if a split is needed, null otherwise
    * @throws IOException
    */
   StoreSize compact(final boolean mc) throws IOException {
-    boolean forceSplit = this.regioninfo.shouldSplit(false);
+    boolean forceSplit = this.region.shouldSplit(false);
     boolean majorcompaction = mc;
     synchronized (compactLock) {
-      long maxId = -1;
       // filesToCompact are sorted oldest to newest.
-      List<StoreFile> filesToCompact = null;
-      filesToCompact = new ArrayList<StoreFile>(this.storefiles.values());
-      if (filesToCompact.size() <= 0) {
+      List<StoreFile> filesToCompact =
+        new ArrayList<StoreFile>(this.storefiles.values());
+      if (filesToCompact.isEmpty()) {
         LOG.debug(this.storeNameStr + ": no store files to compact");
         return null;
       }
-      // The max-sequenceID in any of the to-be-compacted TreeMaps is the 
-      // last key of storefiles.
-      maxId = this.storefiles.lastKey().longValue();
+
+      // Max-sequenceID is the last key of the storefiles TreeMap
+      long maxId = this.storefiles.lastKey().longValue();
+
       // Check to see if we need to do a major compaction on this region.
       // If so, change doMajorCompaction to true to skip the incremental
       // compacting below. Only check if doMajorCompaction is not true.
       if (!majorcompaction) {
         majorcompaction = isMajorCompaction(filesToCompact);
       }
+
       boolean references = hasReferences(filesToCompact);
       if (!majorcompaction && !references && 
           (forceSplit || (filesToCompact.size() < compactionThreshold))) {
         return checkSplit(forceSplit);
       }
-      if (!fs.exists(this.regionCompactionDir) && !fs.mkdirs(this.regionCompactionDir)) {
+
+      if (!fs.exists(this.regionCompactionDir) &&
+          !fs.mkdirs(this.regionCompactionDir)) {
         LOG.warn("Mkdir on " + this.regionCompactionDir.toString() + " failed");
         return checkSplit(forceSplit);
       }
@@ -670,7 +681,7 @@ public class Store implements HConstants, HeapSize {
       // selection.
       int countOfFiles = filesToCompact.size();
       long totalSize = 0;
-      long[] fileSizes = new long[countOfFiles];
+      long [] fileSizes = new long[countOfFiles];
       long skipped = 0;
       int point = 0;
       for (int i = 0; i < countOfFiles; i++) {
@@ -689,6 +700,7 @@ public class Store implements HConstants, HeapSize {
         fileSizes[i] = len;
         totalSize += len;
       }
+ 
       if (!majorcompaction && !references) {
         // Here we select files for incremental compaction.  
         // The rule is: if the largest(oldest) one is more than twice the 
@@ -719,26 +731,17 @@ public class Store implements HConstants, HeapSize {
         }
       }
  
-      // Step through them, writing to the brand-new file
-      HFile.Writer writer = getWriter(this.regionCompactionDir);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Started compaction of " + filesToCompact.size() + " file(s)" +
-          (references? ", hasReferences=true,": " ") + " into " +
-          FSUtils.getPath(writer.getPath()));
-      }
-      try {
-        compact(writer, filesToCompact, majorcompaction);
-      } finally {
-        // Now, write out an HSTORE_LOGINFOFILE for the brand-new TreeMap.
-        StoreFile.appendMetadata(writer, maxId, majorcompaction);
-        writer.close();
-      }
-
+      // Ready to go.  Have list of files to compact.
+      LOG.debug("Started compaction of " + filesToCompact.size() + " file(s)" +
+        (references? ", hasReferences=true,": " ") + " into " +
+          FSUtils.getPath(this.regionCompactionDir) + ", seqid=" + maxId);
+      HFile.Writer writer = compact(filesToCompact, majorcompaction, maxId);
       // Move the compaction into place.
-      completeCompaction(filesToCompact, writer);
+      StoreFile sf = completeCompaction(filesToCompact, writer);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Completed" + (majorcompaction? " major ": " ") +
           "compaction of " + this.storeNameStr +
+          "; new storefile is " + (sf == null? "none": sf.toString()) +
           "; store size is " + StringUtils.humanReadableInt(storeSize));
       }
     }
@@ -834,16 +837,17 @@ public class Store implements HConstants, HeapSize {
    * @param writer output writer
    * @param filesToCompact which files to compact
    * @param majorCompaction true to major compact (prune all deletes, max versions, etc)
+   * @param maxId Readers maximum sequence id.
+   * @return Product of compaction or null if all cells expired or deleted and
+   * nothing made it through the compaction.
    * @throws IOException
    */
-  private void compact(HFile.Writer writer,
-                       List<StoreFile> filesToCompact,
-                       boolean majorCompaction) throws IOException {
-    // for each file, obtain a scanner:
+  private HFile.Writer compact(final List<StoreFile> filesToCompact,
+      final boolean majorCompaction, final long maxId)
+  throws IOException {
+    // For each file, obtain a scanner:
     KeyValueScanner [] scanners = new KeyValueScanner[filesToCompact.size()];
-    // init:
     for (int i = 0; i < filesToCompact.size(); ++i) {
-      // TODO open a new HFile.Reader w/o block cache.
       Reader r = filesToCompact.get(i).getReader();
       if (r == null) {
         LOG.warn("StoreFile " + filesToCompact.get(i) + " has a null Reader");
@@ -853,82 +857,101 @@ public class Store implements HConstants, HeapSize {
       scanners[i] = new StoreFileScanner(r.getScanner(false));
     }
 
+    // Make the instantiation lazy in case compaction produces no product; i.e.
+    // where all source cells are expired or deleted.
+    HFile.Writer writer = null;
+    try {
     if (majorCompaction) {
       InternalScanner scanner = null;
-
       try {
         Scan scan = new Scan();
         scan.setMaxVersions(family.getMaxVersions());
         scanner = new StoreScanner(this, scan, scanners);
-
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.
-        ArrayList<KeyValue> row = new ArrayList<KeyValue>();
+        ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
         boolean more = true;
-        while ( more ) {
-          more = scanner.next(row);
+        while (more) {
+          more = scanner.next(kvs);
           // output to writer:
-          for (KeyValue kv : row) {
+          for (KeyValue kv : kvs) {
+            if (writer == null) {
+              writer = getWriter(this.regionCompactionDir);
+            }
             writer.append(kv);
           }
-          row.clear();
+          kvs.clear();
         }
       } finally {
-        if (scanner != null)
+        if (scanner != null) {
           scanner.close();
+        }
       }
     } else {
       MinorCompactingStoreScanner scanner = null;
       try {
         scanner = new MinorCompactingStoreScanner(this, scanners);
-
-        while ( scanner.next(writer) ) { }
+        writer = getWriter(this.regionCompactionDir);
+        while (scanner.next(writer)) {
+          // Nothing to do
+        }
       } finally {
         if (scanner != null)
           scanner.close();
       }
     }
-
+    } finally {
+      if (writer != null) {
+        StoreFile.appendMetadata(writer, maxId, majorCompaction);
+        writer.close();
+      }
+    }
+    return writer;
   }
 
   /*
    * It's assumed that the compactLock  will be acquired prior to calling this 
    * method!  Otherwise, it is not thread-safe!
    *
-   * It works by processing a compaction that's been written to disk.
+   * <p>It works by processing a compaction that's been written to disk.
    * 
    * <p>It is usually invoked at the end of a compaction, but might also be
    * invoked at HStore startup, if the prior execution died midway through.
    * 
    * <p>Moving the compacted TreeMap into place means:
    * <pre>
-   * 1) Moving the new compacted MapFile into place
-   * 2) Unload all replaced MapFiles, close and collect list to delete.
+   * 1) Moving the new compacted StoreFile into place
+   * 2) Unload all replaced StoreFile, close and collect list to delete.
    * 3) Loading the new TreeMap.
    * 4) Compute new store size
    * </pre>
    * 
    * @param compactedFiles list of files that were compacted
-   * @param compactedFile HStoreFile that is the result of the compaction
+   * @param compactedFile StoreFile that is the result of the compaction
+   * @return StoreFile created. May be null.
    * @throws IOException
    */
-  private void completeCompaction(final List<StoreFile> compactedFiles,
+  private StoreFile completeCompaction(final List<StoreFile> compactedFiles,
     final HFile.Writer compactedFile)
   throws IOException {
-    // 1. Moving the new files into place.
-    Path p = null;
-    try {
-      p = StoreFile.rename(this.fs, compactedFile.getPath(),
-        StoreFile.getRandomFilename(fs, this.homedir));
-    } catch (IOException e) {
-      LOG.error("Failed move of compacted file " + compactedFile.getPath(), e);
-      return;
+    // 1. Moving the new files into place -- if there is a new file (may not
+    // be if all cells were expired or deleted).
+    StoreFile result = null;
+    if (compactedFile != null) {
+      Path p = null;
+      try {
+        p = StoreFile.rename(this.fs, compactedFile.getPath(),
+          StoreFile.getRandomFilename(fs, this.homedir));
+      } catch (IOException e) {
+        LOG.error("Failed move of compacted file " + compactedFile.getPath(), e);
+        return null;
+      }
+      result = new StoreFile(this.fs, p, blockcache, this.conf, this.inMemory);
     }
-    StoreFile finalCompactedFile = new StoreFile(this.fs, p, blockcache, 
-      this.conf, this.inMemory);
     this.lock.writeLock().lock();
     try {
       try {
+        // 2. Unloading
         // 3. Loading the new TreeMap.
         // Change this.storefiles so it reflects new state but do not
         // delete old store files until we have sent out notification of
@@ -939,10 +962,12 @@ public class Store implements HConstants, HeapSize {
             this.storefiles.remove(e.getKey());
           }
         }
-        // Add new compacted Reader and store file.
-        Long orderVal = Long.valueOf(finalCompactedFile.getMaxSequenceId());
-        this.storefiles.put(orderVal, finalCompactedFile);
-        // Tell observers that list of Readers has changed.
+        // If a StoreFile result, move it into place.  May be null.
+        if (result != null) {
+          Long orderVal = Long.valueOf(result.getMaxSequenceId());
+          this.storefiles.put(orderVal, result);
+        }
+        // Tell observers that list of StoreFiles has changed.
         notifyChangedReadersObservers();
         // Finally, delete old store files.
         for (StoreFile hsf: compactedFiles) {
@@ -950,11 +975,10 @@ public class Store implements HConstants, HeapSize {
         }
       } catch (IOException e) {
         e = RemoteExceptionHandler.checkIOException(e);
-        LOG.error("Failed replacing compacted files for " +
-            this.storeNameStr +
-            ". Compacted file is " + finalCompactedFile.toString() +
-            ".  Files replaced are " + compactedFiles.toString() +
-            " some of which may have been already removed", e);
+        LOG.error("Failed replacing compacted files in " + this.storeNameStr +
+          ". Compacted file is " + (result == null? "none": result.toString()) +
+          ".  Files replaced " + compactedFiles.toString() +
+          " some of which may have been already removed", e);
       }
       // 4. Compute new store size
       this.storeSize = 0L;
@@ -969,6 +993,7 @@ public class Store implements HConstants, HeapSize {
     } finally {
       this.lock.writeLock().unlock();
     }
+    return result;
   }
 
   // ////////////////////////////////////////////////////////////////////////////
@@ -1459,8 +1484,12 @@ public class Store implements HConstants, HeapSize {
     }
   }
 
+  HRegion getHRegion() {
+    return this.region;
+  }
+
   HRegionInfo getHRegionInfo() {
-    return this.regioninfo;
+    return this.region.regionInfo;
   }
 
   /**
@@ -1595,22 +1624,46 @@ public class Store implements HConstants, HeapSize {
 
     // Setting up the QueryMatcher
     Get get = new Get(row);
-    NavigableSet<byte[]> qualifiers = 
+    NavigableSet<byte[]> qualifiers =
       new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     qualifiers.add(qualifier);
     QueryMatcher matcher = new QueryMatcher(get, f, qualifiers, this.ttl,
       keyComparator, 1);
-    
-    // Read from memstore
-    if (this.memstore.get(matcher, result)) {
+
+    boolean newTs = true;
+    KeyValue kv = null;
+    // Read from memstore first:
+    this.memstore.internalGet(this.memstore.kvset,
+                                  matcher, result);
+    if (!result.isEmpty()) {
+      kv = result.get(0).clone();
+      newTs = false;
+    } else {
+      // try the snapshot.
+      this.memstore.internalGet(this.memstore.snapshot,
+          matcher, result);
+      if (!result.isEmpty()) {
+        kv = result.get(0).clone();
+      }
+    }
+
+    if (kv != null) {
       // Received early-out from memstore
       // Make a copy of the KV and increment it
-      KeyValue kv = result.get(0).clone();
       byte [] buffer = kv.getBuffer();
       int valueOffset = kv.getValueOffset();
       value = Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG) + amount;
       Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(value), 0,
         Bytes.SIZEOF_LONG);
+      if (newTs) {
+        long currTs = System.currentTimeMillis();
+        if (currTs == kv.getTimestamp()) {
+          currTs++; // just in case something wacky happens.
+        }
+        byte [] stampBytes = Bytes.toBytes(currTs);
+        Bytes.putBytes(buffer, kv.getTimestampOffset(), stampBytes, 0,
+            Bytes.SIZEOF_LONG);
+      }
       return new ICVResult(value, 0, kv);
     }
     // Check if we even have storefiles

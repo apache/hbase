@@ -279,9 +279,9 @@ public class QueryMatcher {
     MatchCode mc = columns.checkColumn(bytes, columnOffset, columnLength);
     if (mc == MatchCode.INCLUDE && this.filter != null) {
       switch(this.filter.filterKeyValue(kv)) {
-      case INCLUDE: return MatchCode.INCLUDE;
-      case SKIP: return MatchCode.SKIP;
-      default: return MatchCode.DONE;
+        case INCLUDE: return MatchCode.INCLUDE;
+        case SKIP: return MatchCode.SKIP;
+        default: return MatchCode.DONE;
       }
     }
     return mc;
@@ -325,7 +325,6 @@ public class QueryMatcher {
   public void reset() {
     this.deletes.reset();
     this.columns.reset();
-    if (this.filter != null) this.filter.reset();
   }
 
   /**
