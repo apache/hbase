@@ -47,6 +47,7 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 public class HBaseRpcMetrics implements Updater {
   private MetricsRecord metricsRecord;
   private static Log LOG = LogFactory.getLog(HBaseRpcMetrics.class);
+  private final HBaseRPCStatistics rpcStatistics;
   
   public HBaseRpcMetrics(String hostName, String port, HBaseServer server) {
     MetricsContext context = MetricsUtil.getContext("rpc");
@@ -58,6 +59,8 @@ public class HBaseRpcMetrics implements Updater {
         + hostName + ", port=" + port);
 
     context.registerUpdater(this);
+    
+    rpcStatistics = new HBaseRPCStatistics(this, hostName, port, server);
   }
   
   
@@ -98,6 +101,7 @@ public class HBaseRpcMetrics implements Updater {
   }
 
   public void shutdown() {
-    // Nothing to do
+    if (rpcStatistics != null)
+      rpcStatistics.shutdown();
   }
 }

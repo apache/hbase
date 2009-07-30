@@ -30,6 +30,10 @@ Release 0.19.4 - Unreleased
                too much
    HBASE-1683  OOME on master splitting logs; stuck, won't go down
 
+  IMPROVEMENTS
+   HBASE-1722  Add support for exporting HBase metrics via JMX
+               (Gary Helmling via Stack)
+
 Release 0.19.3 - May 27th, 2009
   BUG FIXES
    HBASE-1413  fall back to filesystem block size default if

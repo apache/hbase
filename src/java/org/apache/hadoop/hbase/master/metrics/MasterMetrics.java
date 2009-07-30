@@ -37,7 +37,9 @@ import org.apache.hadoop.metrics.util.MetricsIntValue;
 public class MasterMetrics implements Updater {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private final MetricsRecord metricsRecord;
-  
+  private final MasterStatistics masterStatistics;
+
+
   /*
    * Count of requests to the cluster since last call to metrics update
    */
@@ -51,11 +53,16 @@ public class MasterMetrics implements Updater {
     metricsRecord.setTag("Master", name);
     context.registerUpdater(this);
     JvmMetrics.init("Master", name);
+
+    // expose the MBean for metrics
+    masterStatistics = new MasterStatistics(this);
+
     LOG.info("Initialized");
   }
   
   public void shutdown() {
-    // nought to do.
+    if (masterStatistics != null)
+      masterStatistics.shutdown();
   }
     
   /**
