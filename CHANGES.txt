@@ -315,6 +315,7 @@ Release 0.20.0 - Unreleased
                what N was
    HBASE-1737  Regions unbalanced when adding new node
    HBASE-1745  [tools] Tool to kick region out of inTransistion
+   HBASE-1757  REST server runs out of fds
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
