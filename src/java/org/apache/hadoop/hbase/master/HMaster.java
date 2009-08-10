@@ -1025,6 +1025,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         servername = 
           Bytes.toString(rr.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
       }
+      // Take region out of the intransistions in case it got stuck there doing
+      // an open or whatever.
+      this.regionManager.clearFromInTransition(regionname);
+      // If servername is still null, then none, exit.
+      if (servername == null) break;
       // Need to make up a HServerInfo 'servername' for that is how
       // items are keyed in regionmanager Maps.
       HServerAddress addr = new HServerAddress(servername);
@@ -1053,6 +1058,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     status.setHBaseVersion(VersionInfo.getVersion());
     status.setServerInfo(serverManager.serversToServerInfo.values());
     status.setDeadServers(serverManager.deadServers);
+    status.setRegionsInTransition(this.regionManager.getRegionsInTransition());
     return status;
   }
 

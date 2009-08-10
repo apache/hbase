@@ -299,13 +299,23 @@ Release 0.20.0 - Unreleased
    HBASE-1717  Put on client-side uses passed-in byte[]s rather than always
                using copies
    HBASE-1647  Filter#filterRow is called too often, filters rows it shouldn't
-               have (DoÄacan GÃ¼ney via Ryan Rawson and Stack)
+               have (Doğacan Güney via Ryan Rawson and Stack)
    HBASE-1718  Reuse of KeyValue during log replay could cause the wrong
                data to be used
    HBASE-1573  Holes in master state change; updated startcode and server
                go into .META. but catalog scanner just got old values (redux)
    HBASE-1534  Got ZooKeeper event, state: Disconnected on HRS and then NPE
                on reinit
+   HBASE-1725  Old TableMap interface's definitions are not generic enough
+               (Doğacan Güney via Stack)
+   HBASE-1732  Flag to disable regionserver restart
+   HBASE-1604  HBaseClient.getConnection() may return a broken connection
+               without throwing an exception (Eugene Kirpichov via Stack)
+   HBASE-1739  hbase-1683 broke splitting; only split three logs no matter
+               what N was
+   HBASE-1737  Regions unbalanced when adding new node
+   HBASE-1745  [tools] Tool to kick region out of inTransistion
+   HBASE-1757  REST server runs out of fds
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
@@ -537,6 +547,8 @@ Release 0.20.0 - Unreleased
    HBASE-1714  Thrift server: prefix scan API
    HBASE-1719  hold a reference to the region in stores instead of only the
                region info
+   HBASE-1743  [debug tool] Add regionsInTransition list to ClusterStatus
+               detailed output
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

@@ -351,7 +351,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     EventType type = event.getType();
     KeeperState state = event.getState();
     LOG.info("Got ZooKeeper event, state: " + state + ", type: " +
-              type + ", path: " + event.getPath());
+      type + ", path: " + event.getPath());
 
     // Ignore events if we're shutting down.
     if (stopRequested.get()) {
@@ -361,7 +361,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
     if (state == KeeperState.Expired) {
       LOG.error("ZooKeeper session expired");
-      restart();
+      boolean restart =
+        this.conf.getBoolean("hbase.regionserver.restart.on.zk.expire", false);
+      if (restart) {
+        restart();
+      } else {
+        abort();
+      }
     } else if (type == EventType.NodeDeleted) {
       watchMasterAddress();
     } else if (type == EventType.NodeCreated) {
