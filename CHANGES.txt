@@ -549,6 +549,7 @@ Release 0.20.0 - Unreleased
                region info
    HBASE-1743  [debug tool] Add regionsInTransition list to ClusterStatus
                detailed output
+   HBASE-1760  Cleanup TODOs in HTable
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
