@@ -566,6 +566,8 @@ Release 0.20.0 - Unreleased
    HBASE-1770  HTable.setWriteBufferSize does not flush the writeBuffer when
                its size is set to a value lower than its current size.
                (Mathias via jgray)
+   HBASE-1771  PE sequentialWrite is 7x slower because of
+               MemStoreFlusher#checkStoreFileCount
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
