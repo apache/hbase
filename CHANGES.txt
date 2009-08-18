@@ -569,6 +569,7 @@ Release 0.20.0 - Unreleased
    HBASE-1771  PE sequentialWrite is 7x slower because of
                MemStoreFlusher#checkStoreFileCount
    HBASE-1772  Up the default ZK session timeout from 30seconds to 60seconds
+   HBASE-1754  Use TCP keepalives
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
