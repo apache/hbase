@@ -325,6 +325,8 @@ Release 0.20.0 - Unreleased
                new updates into the 'kvset' (active part)
    HBASE-1767  test zookeeper broken in trunk and 0.20 branch; broken on
                hudson too
+   HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
+               Purtell)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
