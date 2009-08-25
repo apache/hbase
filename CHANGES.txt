@@ -327,6 +327,7 @@ Release 0.20.0 - Unreleased
                hudson too
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
                Purtell)
+   HBASE-1737  Regions unbalanced when adding new node (recommit)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
