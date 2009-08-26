@@ -328,6 +328,8 @@ Release 0.20.0 - Unreleased
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
                Purtell)
    HBASE-1737  Regions unbalanced when adding new node (recommit)
+   HBASE-1792  [Regression] Cannot save timestamp in the future
+   HBASE-1793  [Regression] HTable.get/getRow with a ts is broken
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
