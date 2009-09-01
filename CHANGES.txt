@@ -335,6 +335,7 @@ Release 0.20.0 - Unreleased
    HBASE-1798  [Regression] Unable to delete a row in the future
    HBASE-1780  HTable.flushCommits clears write buffer in finally clause
    HBASE-1784  Missing rows after medium intensity insert
+   HBASE-1809  NPE thrown in BoundedRangeFileInputStream
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
