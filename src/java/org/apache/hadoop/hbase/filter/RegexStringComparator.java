@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * filtering based on the value of a given column. Use it to test if a given 
  * regular expression matches a cell value in the column.
  * <p>
- * Only EQUAL or NOT_EQUAL {@link CompareOp} comparisons are valid with this 
- * comparator. 
+ * Only EQUAL or NOT_EQUAL {@link org.apache.hadoop.hbase.filter.CompareFilter.CompareOp}
+ * comparisons are valid with this comparator. 
  * <p>
  * For example:
  * <p>
