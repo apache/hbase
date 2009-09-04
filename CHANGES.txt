@@ -341,6 +341,7 @@ Release 0.20.0 - Unreleased
    HBASE-1804  Puts are permitted (and stored) when including an appended colon
    HBASE-1715  Compaction failure in ScanWildcardColumnTracker.checkColumn
    HBASE-1790  filters are not working correctly (HBASE-1710 HBASE-1807 too)
+   HBASE-1779  ThriftServer logged error if getVer() result is empty
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
