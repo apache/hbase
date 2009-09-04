@@ -54,9 +54,11 @@ import org.apache.hadoop.hbase.util.Writables;
 
 
 /**
- * Used to communicate with a single HBase table
- * <p>
- * This class is not MT safe for writing.
+ * Used to communicate with a single HBase table.
+ * This class is not thread safe for writes.
+ * Gets, puts, and deletes take out a row lock for the duration
+ * of their operation.  Scans (currently) do not respect
+ * row locking.
  */
 public class HTable {
   private final HConnection connection;
