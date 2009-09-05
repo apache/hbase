@@ -344,6 +344,7 @@ Release 0.20.0 - Unreleased
    HBASE-1779  ThriftServer logged error if getVer() result is empty
    HBASE-1778  Improve PerformanceEvaluation (Schubert Zhang via Stack)
    HBASE-1812  Document fact that Scanners do not respect row locks
+   HBASE-1751  Fix KeyValue javadoc on getValue for client-side
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
