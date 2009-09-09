@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -74,12 +72,31 @@ public class TestHRegion extends HBaseTestCase {
     super.setUp();
   }
 
-  
   //////////////////////////////////////////////////////////////////////////////
   // New tests that doesn't spin up a mini cluster but rather just test the 
   // individual code pieces in the HRegion. Putting files locally in
   // /tmp/testtable
   //////////////////////////////////////////////////////////////////////////////
+
+  public void testFamilyWithAndWithoutColon() throws Exception {
+    byte [] b = Bytes.toBytes(getName());
+    byte [] cf = Bytes.toBytes("cf");
+    initHRegion(b, getName(), cf);
+    Put p = new Put(b);
+    byte [] cfwithcolon = Bytes.toBytes("cf:");
+    p.add(cfwithcolon, cfwithcolon, cfwithcolon);
+    boolean exception = false;
+    try {
+      this.region.put(p);
+    } catch (NoSuchColumnFamilyException e) {
+      exception = true;
+    }
+    assertTrue(exception);
+    // Can I add it using old style call?
+    p = new Put(b);
+    p.add(cfwithcolon, System.currentTimeMillis(), cfwithcolon);
+    this.region.put(p);
+  }
 
   //////////////////////////////////////////////////////////////////////////////
   // checkAndPut tests
@@ -293,6 +310,41 @@ public class TestHRegion extends HBaseTestCase {
     get = new Get(row).addColumn(fam, splitB);
     result = region.get(get, null);
     assertEquals(1, result.size());
+  }
+  
+  public void testDeleteRowWithFutureTs() throws IOException {
+    byte [] tableName = Bytes.toBytes("testtable");
+    byte [] fam = Bytes.toBytes("info");
+    byte [][] families = {fam};
+    String method = this.getName();
+    initHRegion(tableName, method, families);
+
+    byte [] row = Bytes.toBytes("table_name");
+    // column names
+    byte [] serverinfo = Bytes.toBytes("serverinfo");
+
+    // add data in the far future
+    Put put = new Put(row);
+    put.add(fam, serverinfo, HConstants.LATEST_TIMESTAMP-5,Bytes.toBytes("value"));
+    region.put(put);
+
+    // now delete something in the present
+    Delete delete = new Delete(row);
+    region.delete(delete, null, true);
+
+    // make sure we still see our data
+    Get get = new Get(row).addColumn(fam, serverinfo);
+    Result result = region.get(get, null);
+    assertEquals(1, result.size());
+    
+    // delete the future row
+    delete = new Delete(row,HConstants.LATEST_TIMESTAMP-3,null);
+    region.delete(delete, null, true);
+
+    // make sure it is gone
+    get = new Get(row).addColumn(fam, serverinfo);
+    result = region.get(get, null);
+    assertEquals(0, result.size());
   }
 
   public void testScanner_DeleteOneFamilyNotAnother() throws IOException {

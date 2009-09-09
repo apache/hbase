@@ -26,6 +26,7 @@ import java.io.DataOutputStream;
 import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;
@@ -33,7 +34,7 @@ import junit.framework.TestCase;
 /**
  * Tests the value filter
  */
-public class TestValueFilter extends TestCase {
+public class TestSingleColumnValueFilter extends TestCase {
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
   private static final byte [] COLUMN_QUALIFIER = Bytes.toBytes("foo");
@@ -61,19 +62,19 @@ public class TestValueFilter extends TestCase {
   }
 
   private Filter basicFilterNew() {
-    return new ValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-      ValueFilter.CompareOp.GREATER_OR_EQUAL, VAL_2);
+    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
+      CompareOp.GREATER_OR_EQUAL, VAL_2);
   }
 
   private Filter substrFilterNew() {
-    return new ValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-      ValueFilter.CompareOp.EQUAL,
+    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
+      CompareOp.EQUAL,
       new SubstringComparator(QUICK_SUBSTR));
   }
 
   private Filter regexFilterNew() {
-    return new ValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-      ValueFilter.CompareOp.EQUAL,
+    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
+      CompareOp.EQUAL,
       new RegexStringComparator(QUICK_REGEX));
   }
 
@@ -88,7 +89,7 @@ public class TestValueFilter extends TestCase {
     kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_4);
     assertTrue("basicFilter4", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     assertFalse("basicFilterAllRemaining", filter.filterAllRemaining());
-    assertTrue("basicFilterNotNull", filter.filterRow());
+    assertFalse("basicFilterNotNull", filter.filterRow());
   }
 
   private void substrFilterTests(Filter filter) 
@@ -101,7 +102,7 @@ public class TestValueFilter extends TestCase {
       FULLSTRING_2);
     assertFalse("substrFalse", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     assertFalse("substrFilterAllRemaining", filter.filterAllRemaining());
-    assertTrue("substrFilterNotNull", filter.filterRow());
+    assertFalse("substrFilterNotNull", filter.filterRow());
   }
 
   private void regexFilterTests(Filter filter) 
@@ -114,7 +115,7 @@ public class TestValueFilter extends TestCase {
       FULLSTRING_2);
     assertFalse("regexFalse", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     assertFalse("regexFilterAllRemaining", filter.filterAllRemaining());
-    assertTrue("regexFilterNotNull", filter.filterRow());
+    assertFalse("regexFilterNotNull", filter.filterRow());
   }    
                  
   private Filter serializationTest(Filter filter)
@@ -129,7 +130,7 @@ public class TestValueFilter extends TestCase {
     // Recompose filter.
     DataInputStream in =
       new DataInputStream(new ByteArrayInputStream(buffer));
-    Filter newFilter = new ValueFilter();
+    Filter newFilter = new SingleColumnValueFilter();
     newFilter.readFields(in);
   
     return newFilter;

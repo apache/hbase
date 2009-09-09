@@ -122,7 +122,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   private final Map<Integer, byte []> locksToRows =
     new ConcurrentHashMap<Integer, byte []>();
   protected final Map<byte [], Store> stores =
-    new ConcurrentSkipListMap<byte [], Store>(KeyValue.FAMILY_COMPARATOR);
+    new ConcurrentSkipListMap<byte [], Store>(Bytes.BYTES_RAWCOMPARATOR);
   
   //These variable are just used for getting data out of the region, to test on
   //client side
@@ -1022,9 +1022,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @return map of values
    * @throws IOException
    */
-  public Result getClosestRowBefore(final byte [] row,
-    final byte [] family)
-  throws IOException{
+  public Result getClosestRowBefore(final byte [] row, final byte [] family)
+  throws IOException {
     // look across all the HStores for this region and determine what the
     // closest key is across all column families, since the data may be sparse
     KeyValue key = null;
@@ -1038,22 +1037,16 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       if (key == null) {
         return null;
       }
-      List<KeyValue> results = new ArrayList<KeyValue>();
-      // This will get all results for this store.  TODO: Do I have to make a
-      // new key?
-      if (!this.comparator.matchingRows(kv, key)) {
-        kv = new KeyValue(key.getRow(), HConstants.LATEST_TIMESTAMP);
-      }
+      // This will get all results for this store.  TODO: Do we need to do this?
       Get get = new Get(key.getRow());
+      List<KeyValue> results = new ArrayList<KeyValue>();
       store.get(get, null, results);
-      
       return new Result(results);
     } finally {
       splitsAndClosesLock.readLock().unlock();
     }
   }
 
-  //TODO
   /**
    * Return an iterator that scans over the HRegion, returning the indicated 
    * columns and rows specified by the {@link Scan}.
@@ -1115,7 +1108,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       //Check to see if this is a deleteRow insert
       if(delete.getFamilyMap().isEmpty()){
         for(byte [] family : regionInfo.getTableDesc().getFamiliesKeys()){
-          delete.deleteFamily(family);
+          // Don't eat the timestamp
+          delete.deleteFamily(family, delete.getTimeStamp());
         }
       } else {
         for(byte [] family : delete.getFamilyMap().keySet()) {
@@ -1166,7 +1160,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           Get g = new Get(kv.getRow());
           NavigableSet<byte []> qualifiers =
             new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
-          qualifiers.add(kv.getQualifier());
+          byte [] q = kv.getQualifier();
+          if (q != null && q.length > 0) qualifiers.add(kv.getQualifier());
           get(store, g, qualifiers, result);
           if (result.isEmpty()) {
             // Nothing to delete
@@ -1199,7 +1194,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @throws IOException
    */
   public void put(Put put) throws IOException {
-    this.put(put, null, put.writeToWAL());
+    this.put(put, null, put.getWriteToWAL());
   }
   
   /**
@@ -1217,7 +1212,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @throws IOException
    */
   public void put(Put put, Integer lockid) throws IOException {
-    this.put(put, lockid, put.writeToWAL());
+    this.put(put, lockid, put.getWriteToWAL());
   }
 
   /**
@@ -1337,10 +1332,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       
   
   /**
-   * Checks if any stamps are > now.  If so, sets them to now.
+   * Checks if any stamps is Long.MAX_VALUE.  If so, sets them to now.
    * <p>
-   * This acts to be prevent users from inserting future stamps as well as
-   * to replace LATEST_TIMESTAMP with now.
+   * This acts to replace LATEST_TIMESTAMP with now.
    * @param keys
    * @param now
    * @return <code>true</code> when updating the time stamp completed.
@@ -1350,7 +1344,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       return false;
     }
     for(KeyValue key : keys) {
-      key.updateLatestStamp(now);
+      if(key.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
+        key.updateLatestStamp(now);
+      }
     }
     return true;
   }
@@ -1740,6 +1736,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       outResults.addAll(results);
       resetFilters();
+      if(filter != null && filter.filterAllRemaining()) {
+        return false;
+      }
       return returnResult;
     }
 
@@ -1763,6 +1762,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         // see if current row should be filtered based on row key
         if ((filter != null && filter.filterRowKey(row, 0, row.length)) ||
             (oldFilter != null && oldFilter.filterRowKey(row, 0, row.length))) {
+          if(!results.isEmpty() && !Bytes.equals(currentRow, row)) {
+            return true;
+          }
           this.storeHeap.next(results);
           results.clear();
           resetFilters();
@@ -2432,6 +2434,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       } else {
         // Default behavior
         Scan scan = new Scan();
+        // scan.addFamily(HConstants.CATALOG_FAMILY);
         InternalScanner scanner = region.getScanner(scan);
         try {
           List<KeyValue> kvs = new ArrayList<KeyValue>();
@@ -2444,6 +2447,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         } finally {
           scanner.close();
         }
+        // System.out.println(region.getClosestRowBefore(Bytes.toBytes("GeneratedCSVContent2,E3652782193BC8D66A0BA1629D0FAAAB,9993372036854775807")));
       }
     } finally {
       region.close();
@@ -2481,7 +2485,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         printUsageAndExit("ERROR: Unrecognized option <" + args[1] + ">");
       }
       majorCompact = true;
-    
     }
     Path tableDir  = new Path(args[0]);
     HBaseConfiguration c = new HBaseConfiguration();

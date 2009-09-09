@@ -54,16 +54,18 @@ import org.apache.hadoop.hbase.util.Writables;
 
 
 /**
- * Used to communicate with a single HBase table
- * TODO: checkAndSave in oldAPI
- * TODO: Regex deletes.
+ * Used to communicate with a single HBase table.
+ * This class is not thread safe for writes.
+ * Gets, puts, and deletes take out a row lock for the duration
+ * of their operation.  Scans (currently) do not respect
+ * row locking.
  */
 public class HTable {
   private final HConnection connection;
   private final byte [] tableName;
   protected final int scannerTimeout;
   private volatile HBaseConfiguration configuration;
-  private ArrayList<Put> writeBuffer;
+  private final ArrayList<Put> writeBuffer = new ArrayList<Put>();
   private long writeBufferSize;
   private boolean autoFlush;
   private long currentWriteBufferSize;
@@ -123,7 +125,6 @@ public class HTable {
       conf.getInt("hbase.regionserver.lease.period", 60 * 1000);
     this.configuration = conf;
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
-    this.writeBuffer = new ArrayList<Put>();
     this.writeBufferSize = conf.getLong("hbase.client.write.buffer", 2097152);
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
@@ -352,7 +353,9 @@ public class HTable {
   */
   public RowResult getClosestRowBefore(final byte[] row, final byte[] family)
   throws IOException {
-    Result r = getRowOrBefore(row, family);
+    // Do parse in case we are passed a family with a ':' on it.
+    final byte [] f = KeyValue.parseColumn(family)[0];
+    Result r = getRowOrBefore(row, f);
     return r == null || r.isEmpty()? null: r.getRowResult();
   }
 
@@ -580,14 +583,18 @@ public class HTable {
    * @throws IOException
    */
   public void flushCommits() throws IOException {
+    int last = 0;
     try {
-      connection.processBatchOfRows(writeBuffer, tableName);
+      last = connection.processBatchOfRows(writeBuffer, tableName);
     } finally {
+      writeBuffer.subList(0, last).clear();
       currentWriteBufferSize = 0;
-      writeBuffer.clear();
+      for (int i = 0; i < writeBuffer.size(); i++) {
+        currentWriteBufferSize += writeBuffer.get(i).heapSize();
+      }
     }
   }
-   
+
   /**
    * Release held resources
    * 
@@ -672,19 +679,17 @@ public class HTable {
   }
 
   /**
-   * Set the size of the buffer in bytes
+   * Set the size of the buffer in bytes.
+   * If the new size is lower than the current size of data in the 
+   * write buffer, the buffer is flushed.
    * @param writeBufferSize
+   * @throws IOException
    */
-  public void setWriteBufferSize(long writeBufferSize) {
+  public void setWriteBufferSize(long writeBufferSize) throws IOException {
     this.writeBufferSize = writeBufferSize;
-  }
-
-  /**
-   * Get the write buffer 
-   * @return the current write buffer
-   */
-  public ArrayList<Put> getWriteBuffer() {
-    return writeBuffer;
+    if(currentWriteBufferSize > writeBufferSize) {
+      flushCommits();
+    }
   }
 
   // Old API. Pre-hbase-880, hbase-1304.
@@ -792,9 +797,8 @@ public class HTable {
       g.addColumn(fq[0], fq[1]);
     }
     g.setMaxVersions(numVersions);
-    if (timestamp != HConstants.LATEST_TIMESTAMP) {
-      g.setTimeStamp(timestamp);
-    }
+    g.setTimeRange(0, 
+        timestamp == HConstants.LATEST_TIMESTAMP ? timestamp : timestamp+1);
     Result r = get(g);
     return r == null || r.size() <= 0? null: r.getCellValues();
   }
@@ -1050,9 +1054,8 @@ public class HTable {
       }
     }
     g.setMaxVersions(numVersions);
-    if (ts != HConstants.LATEST_TIMESTAMP) {
-      g.setTimeStamp(ts);
-    }
+    g.setTimeRange(0,  
+        ts == HConstants.LATEST_TIMESTAMP ? ts : ts+1);
     Result r = get(g);
     return r == null || r.size() <= 0? null: r.getRowResult();
   }
@@ -1306,6 +1309,8 @@ public class HTable {
         scan.addColumn(splits[0], splits[1]);
       }
     }
+    scan.setTimeRange(0,  
+        timestamp == HConstants.LATEST_TIMESTAMP ? timestamp : timestamp+1);
     OldClientScanner s = new OldClientScanner(new ClientScanner(scan));
     s.initialize();
     return s;
@@ -1702,7 +1707,8 @@ public class HTable {
       final long timestamp, final RowLock rl) throws IOException {
     final Get g = new Get(row, rl);
     g.addColumn(column);
-    g.setTimeStamp(timestamp);
+    g.setTimeRange(0,  
+        timestamp == HConstants.LATEST_TIMESTAMP ? timestamp : timestamp+1);
     return exists(g);
   }
 
@@ -1787,7 +1793,7 @@ public class HTable {
     private HRegionInfo currentRegion = null;
     private ScannerCallable callable = null;
     private final LinkedList<Result> cache = new LinkedList<Result>();
-    private final int caching = HTable.this.scannerCaching;
+    private final int caching;
     private long lastNext;
     // Keep lastResult returned successfully in case we have to reset scanner.
     private Result lastResult = null;
@@ -1800,7 +1806,14 @@ public class HTable {
       }
       this.scan = scan;
       this.lastNext = System.currentTimeMillis();
-      
+
+      // Use the caching from the Scan.  If not set, use the default cache setting for this table.
+      if (this.scan.getCaching() > 0) {
+        this.caching = this.scan.getCaching();
+      } else {
+        this.caching = HTable.this.scannerCaching;
+      }
+
       // Removed filter validation.  We have a new format now, only one of all
       // the current filters has a validate() method.  We can add it back,
       // need to decide on what we're going to do re: filter redesign.

@@ -1,5 +1,7 @@
 HBase Change Log
-Release 0.20.0 - Unreleased
+
+Release 0.20.0 - Tue Sep  8 12:48:41 PDT 2009
+
   INCOMPATIBLE CHANGES
    HBASE-1147  Modify the scripts to use Zookeeper
    HBASE-1144  Store the ROOT region location in Zookeeper
@@ -26,6 +28,7 @@ Release 0.20.0 - Unreleased
    HBASE-1582  Translate ColumnValueFilter and RowFilterSet to the new
                Filter interface (Clint Morgan and Stack)
    HBASE-1599  Fix TestFilterSet, broken up on hudson (Jon Gray via Stack)
+   HBASE-1799  deprecate o.a.h.h.rest in favor of stargate
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)
@@ -316,6 +319,34 @@ Release 0.20.0 - Unreleased
    HBASE-1737  Regions unbalanced when adding new node
    HBASE-1745  [tools] Tool to kick region out of inTransistion
    HBASE-1757  REST server runs out of fds
+   HBASE-1768  REST server has upper limit of 5k PUT
+   HBASE-1766  Add advanced features to HFile.main() to be able to analyze
+               storefile problems
+   HBASE-1761  getclosest doesn't understand delete family; manifests as
+               "HRegionInfo was null or empty in .META" A.K.A the BS problem
+   HBASE-1738  Scanner doesnt reset when a snapshot is created, could miss
+               new updates into the 'kvset' (active part)
+   HBASE-1767  test zookeeper broken in trunk and 0.20 branch; broken on
+               hudson too
+   HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
+               Purtell)
+   HBASE-1737  Regions unbalanced when adding new node (recommit)
+   HBASE-1792  [Regression] Cannot save timestamp in the future
+   HBASE-1793  [Regression] HTable.get/getRow with a ts is broken
+   HBASE-1698  Review documentation for o.a.h.h.mapreduce
+   HBASE-1798  [Regression] Unable to delete a row in the future
+   HBASE-1780  HTable.flushCommits clears write buffer in finally clause
+   HBASE-1784  Missing rows after medium intensity insert
+   HBASE-1809  NPE thrown in BoundedRangeFileInputStream
+   HBASE-1810  ConcurrentModificationException in region assignment
+               (Mathias Herberts via Stack)
+   HBASE-1804  Puts are permitted (and stored) when including an appended colon
+   HBASE-1715  Compaction failure in ScanWildcardColumnTracker.checkColumn
+   HBASE-1790  filters are not working correctly (HBASE-1710 HBASE-1807 too)
+   HBASE-1779  ThriftServer logged error if getVer() result is empty
+   HBASE-1778  Improve PerformanceEvaluation (Schubert Zhang via Stack)
+   HBASE-1812  Document fact that Scanners do not respect row locks
+   HBASE-1751  Fix KeyValue javadoc on getValue for client-side
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
@@ -549,6 +580,19 @@ Release 0.20.0 - Unreleased
                region info
    HBASE-1743  [debug tool] Add regionsInTransition list to ClusterStatus
                detailed output
+   HBASE-1760  Cleanup TODOs in HTable
+   HBASE-1759  Ability to specify scanner caching on a per-scan basis
+               (Ken Weiner via jgray)
+   HBASE-1763  Put writeToWAL methods do not have proper getter/setter names
+               (second commit to fix compile error in hregion)
+   HBASE-1770  HTable.setWriteBufferSize does not flush the writeBuffer when
+               its size is set to a value lower than its current size.
+               (Mathias via jgray)
+   HBASE-1771  PE sequentialWrite is 7x slower because of
+               MemStoreFlusher#checkStoreFileCount
+   HBASE-1772  Up the default ZK session timeout from 30seconds to 60seconds
+   HBASE-1754  Use TCP keepalives
+   HBASE-1800  Too many ZK connections
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

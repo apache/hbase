@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Comparator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -68,7 +69,8 @@ public class KeyValue implements Writable, HeapSize {
    */
   public static final char COLUMN_FAMILY_DELIMITER = ':';
 
-  public static final byte[] COLUMN_FAMILY_DELIM_ARRAY = new byte[]{COLUMN_FAMILY_DELIMITER};
+  public static final byte[] COLUMN_FAMILY_DELIM_ARRAY =
+    new byte[]{COLUMN_FAMILY_DELIMITER};
   
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values.
@@ -105,30 +107,6 @@ public class KeyValue implements Writable, HeapSize {
    */
   public static KeyComparator ROOT_KEY_COMPARATOR = new RootKeyComparator();
 
-  /**
-   * Comparator that compares the family portion of columns only.
-   * Use this making NavigableMaps of Stores or when you need to compare
-   * column family portion only of two column names.
-   */
-  public static final RawComparator<byte []> FAMILY_COMPARATOR =
-    new RawComparator<byte []> () {
-      public int compare(byte [] a, int ao, int al, byte [] b, int bo, int bl) {
-        int indexa = KeyValue.getDelimiter(a, ao, al, COLUMN_FAMILY_DELIMITER);
-        if (indexa < 0) {
-          indexa = al;
-        }
-        int indexb = KeyValue.getDelimiter(b, bo, bl, COLUMN_FAMILY_DELIMITER);
-        if (indexb < 0) {
-          indexb = bl;
-        }
-        return Bytes.compareTo(a, ao, indexa, b, bo, indexb);
-      }
-
-      public int compare(byte[] a, byte[] b) {
-        return compare(a, 0, a.length, b, 0, b.length);
-      }
-    };
-  
   /**
    * Get the appropriate row comparator for the specified table.
    * 
@@ -291,11 +269,12 @@ public class KeyValue implements Writable, HeapSize {
   
   /**
    * Constructs KeyValue structure filled with null value.
+   * Sets type to {@link KeyValue.Type#Maximum}
    * @param row - row key (arbitrary byte array)
    * @param timestamp
    */
   public KeyValue(final byte [] row, final long timestamp) {
-    this(row, timestamp, Type.Put);
+    this(row, timestamp, Type.Maximum);
   }
 
   /**
@@ -309,13 +288,14 @@ public class KeyValue implements Writable, HeapSize {
 
   /**
    * Constructs KeyValue structure filled with null value.
+   * Sets type to {@link KeyValue.Type#Maximum}
    * @param row - row key (arbitrary byte array)
    * @param family family name
    * @param qualifier column qualifier
    */
   public KeyValue(final byte [] row, final byte [] family, 
       final byte [] qualifier) {
-    this(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Put);
+    this(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Maximum);
   }
 
   /**
@@ -569,48 +549,9 @@ public class KeyValue implements Writable, HeapSize {
    * @return Fully copied clone of this KeyValue
    */
   public KeyValue clone() {
-    byte [] bytes = new byte[this.length];
-    System.arraycopy(this.bytes, this.offset, bytes, 0, this.length);
-    return new KeyValue(bytes, 0, bytes.length);
-  }
-
-  /**
-   * Clones a row.
-   * 
-   * @param timestamp  The new time stamp for the row.
-   * @return Clone of bb's key portion with only the row and timestamp filled in.
-   */
-  public KeyValue cloneRow(final long timestamp) {
-    return new KeyValue(getBuffer(), getRowOffset(), getRowLength(),
-        null, 0, 0, null, 0, 0, 
-        timestamp, Type.codeToType(getType()), null, 0, 0);
-  }
-
-  /**
-   * @return Clone of bb's key portion with type set to Type.Maximum. Use this
-   * doing lookups where you are doing getClosest.  Using Maximum, you'll be
-   * sure to trip over all of the other key types since Maximum sorts first.
-   */
-  public KeyValue cloneMaximum() {
-     return createKey(Type.Maximum);
-  }
-
-  /**
-   * Make a clone with the new type. Does not copy value.
-   * 
-   * @param newtype New type to set on clone of this key.
-   * @return Clone of this key with type set to <code>newtype</code>
-   */
-  private KeyValue createKey(final Type newtype) {
-    int keylength = getKeyLength();
-    int l = keylength + ROW_OFFSET;
-    byte [] other = new byte[l];
-    System.arraycopy(getBuffer(), getOffset(), other, 0, l);
-    // Set value length to zero.
-    Bytes.putInt(other, Bytes.SIZEOF_INT, 0);
-    // Set last byte, the type, to new type
-    other[l - 1] = newtype.getCode();
-    return new KeyValue(other, 0, other.length);
+    byte [] b = new byte[this.length];
+    System.arraycopy(this.bytes, this.offset, b, 0, this.length);
+    return new KeyValue(b, 0, b.length);
   }
 
   //---------------------------------------------------------------------------
@@ -855,9 +796,8 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   public boolean updateLatestStamp(final byte [] now) {
-    int tsOffset = getTimestampOffset();
-    if(Bytes.compareTo(now, 0, Bytes.SIZEOF_LONG, 
-        this.bytes, tsOffset, Bytes.SIZEOF_LONG) < 0) {
+    if(this.isLatestTimestamp()) {
+      int tsOffset = getTimestampOffset();
       System.arraycopy(now, 0, this.bytes, tsOffset, Bytes.SIZEOF_LONG);
       return true;
     }
@@ -885,8 +825,10 @@ public class KeyValue implements Writable, HeapSize {
   }
   
   /**
-   * Do not use unless you have to.  Use {@link #getBuffer()} with appropriate
-   * offset and lengths instead.
+   * Returns value in a new byte array.
+   * Primarily for use client-side. If server-side, use
+   * {@link #getBuffer()} with appropriate offsets and lengths instead to
+   * save on allocations.
    * @return Value in a new byte array.
    */
   public byte [] getValue() {
@@ -946,17 +888,27 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * @return True if Delete KeyValue type.
+   * @return True if a delete type, a {@link KeyValue.Type#Delete} or
+   * a {KeyValue.Type#DeleteFamily} or a {@link KeyValue.Type#DeleteColumn}
+   * KeyValue type.
    */
-  public boolean isDeleteType() {
-    return getType() == Type.Delete.code;
+  public boolean isDelete() {
+    int t = getType();
+    return Type.Delete.getCode() <= t && t <= Type.DeleteFamily.getCode();
   }
 
   /**
-   * @return True if DeleteColumn KeyValue type.
+   * @return True if this KV is a {@link KeyValue.Type#Delete} type.
    */
-  public boolean isDeleteColumnType() {
-    return getType() == Type.DeleteColumn.code;
+  public boolean isDeleteType() {
+    return getType() == Type.Delete.getCode();
+  }
+
+  /**
+   * @return True if this KV is a delete family type.
+   */
+  public boolean isDeleteFamily() {
+    return getType() == Type.DeleteFamily.getCode();
   }
 
   /**
@@ -1258,13 +1210,13 @@ public class KeyValue implements Writable, HeapSize {
     return index;
   }
 
-  /*
+  /**
    * @param b
    * @param delimiter
-   * @return Index of delimiter having started from end of <code>b</code> moving
-   * leftward.
+   * @return Index of delimiter having started from start of <code>b</code>
+   * moving rightward.
    */
-  static int getDelimiter(final byte [] b, int offset, final int length,
+  public static int getDelimiter(final byte [] b, int offset, final int length,
       final int delimiter) {
     if (b == null) {
       throw new NullPointerException();
@@ -1279,12 +1231,13 @@ public class KeyValue implements Writable, HeapSize {
     return result;
   }
 
-  /*
+  /**
+   * Find index of passed delimiter walking from end of buffer backwards.
    * @param b
    * @param delimiter
    * @return Index of delimiter
    */
-  static int getDelimiterInReverse(final byte [] b, final int offset,
+  public static int getDelimiterInReverse(final byte [] b, final int offset,
       final int length, final int delimiter) {
     if (b == null) {
       throw new NullPointerException();
@@ -1655,6 +1608,21 @@ public class KeyValue implements Writable, HeapSize {
           llength - (leftFarDelimiter - loffset),
           right, rightFarDelimiter, rlength - (rightFarDelimiter - roffset));
       return result;
+    }
+  }
+
+  /**
+   * Comparator that compares row component only of a KeyValue.
+   */
+  public static class RowComparator implements Comparator<KeyValue> {
+    final KVComparator comparator;
+
+    public RowComparator(final KVComparator c) {
+      this.comparator = c;
+    }
+
+    public int compare(KeyValue left, KeyValue right) {
+      return comparator.compareRows(left, right);
     }
   }
 

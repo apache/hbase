@@ -164,7 +164,7 @@ public class TestPut extends HBaseClusterTestCase {
     }
   }
   
-  public void testRowsPutBufferedManyManyFlushes() {
+  public void testRowsPutBufferedManyManyFlushes() throws IOException {
     table.setAutoFlush(false);
     table.setWriteBufferSize(10);
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
