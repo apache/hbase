@@ -1,6 +1,9 @@
 HBase Change Log
 
 Release 0.20.1 - Unreleased
+  BUG FIXES
+   HBASE-1824  [stargate] default timestamp should be LATEST_TIMESTAMP
+
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
    HBASE-1765  Delay Result deserialization until asked for and permit
