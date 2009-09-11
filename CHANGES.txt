@@ -6,6 +6,7 @@ Release 0.20.1 - Unreleased
    HBASE-1795  log recovery doesnt reset the max sequence id, new logfiles can
                get tossed as 'duplicates'
    HBASE-1794  recovered log files are not inserted into the storefile map
+   HBASE-1740  ICV has a subtle race condition only visible under high load
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
