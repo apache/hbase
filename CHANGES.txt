@@ -3,6 +3,9 @@ HBase Change Log
 Release 0.20.1 - Unreleased
   BUG FIXES
    HBASE-1824  [stargate] default timestamp should be LATEST_TIMESTAMP
+   HBASE-1795  log recovery doesnt reset the max sequence id, new logfiles can
+               get tossed as 'duplicates'
+   HBASE-1794  recovered log files are not inserted into the storefile map
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
