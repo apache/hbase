@@ -8,6 +8,7 @@ Release 0.20.1 - Unreleased
    HBASE-1794  recovered log files are not inserted into the storefile map
    HBASE-1740  ICV has a subtle race condition only visible under high load
    HBASE-1808  [stargate] fix how columns are specified for scanners
+   HBASE-1828  CompareFilters are broken from client-side
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
