@@ -438,6 +438,23 @@ public class HTable {
   }
   
   /**
+   * Bulk commit a List of Deletes to the table.
+   * @param deletes List of deletes.  List is modified by this method.  On
+   * exception holds deletes that were NOT applied.
+   * @throws IOException
+   * @since 0.20.1
+   */
+  public synchronized void delete(final ArrayList<Delete> deletes)
+  throws IOException {
+    int last = 0;
+    try {
+      last = connection.processBatchOfDeletes(deletes, this.tableName);
+    } finally {
+      deletes.subList(0, last).clear();
+    }
+  }
+
+  /**
    * Commit a Put to the table.
    * <p>
    * If autoFlush is false, the update is buffered.
@@ -463,12 +480,12 @@ public class HTable {
    * @since 0.20.0
    */
   public synchronized void put(final List<Put> puts) throws IOException {
-    for(Put put : puts) {
+    for (Put put : puts) {
       validatePut(put);
       writeBuffer.add(put);
       currentWriteBufferSize += put.heapSize();
     }
-    if(autoFlush || currentWriteBufferSize > writeBufferSize) {
+    if (autoFlush || currentWriteBufferSize > writeBufferSize) {
       flushCommits();
     }
   }
