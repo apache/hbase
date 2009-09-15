@@ -24,6 +24,7 @@ Release 0.20.1 - Unreleased
    HBASE-1823  Ability for Scanners to bypass the block cache
    HBASE-1827  Add disabling block cache scanner flag to the shell
    HBASE-1574  Client and server APIs to do batch deletes
+   HBASE-1833  hfile.main fixes
 
 Release 0.20.0 - Tue Sep  8 12:48:41 PDT 2009
 
