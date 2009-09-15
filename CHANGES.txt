@@ -12,6 +12,7 @@ Release 0.20.1 - Unreleased
    HBASE-1836  test of indexed hbase broken
    HBASE-1838  [javadoc] Add javadoc to Delete explaining behavior when no
                timestamp provided
+   HBASE-1821  Filtering by SingleColumnValueFilter bug
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
