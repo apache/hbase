@@ -14,6 +14,7 @@ Release 0.20.1 - Unreleased
                timestamp provided
    HBASE-1821  Filtering by SingleColumnValueFilter bug
    HBASE-1840  RowLock fails when used with IndexTable
+   HBASE-1818  HFile code review and refinement (Schubert Zhang via Stack)
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
