@@ -15,6 +15,8 @@ Release 0.20.1 - Unreleased
    HBASE-1821  Filtering by SingleColumnValueFilter bug
    HBASE-1840  RowLock fails when used with IndexTable
    HBASE-1818  HFile code review and refinement (Schubert Zhang via Stack)
+   HBASE-1830  HbaseObjectWritable methods should allow null HBCs
+               for when Writable is not Configurable (Stack via jgray)
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
