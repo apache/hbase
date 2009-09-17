@@ -21,17 +21,18 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -249,7 +250,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     if (trr == null) {
       trr = new TableRecordReader();
     }
-    Scan sc = new Scan(scan);
+    Scan sc = new Scan(this.scan);
     sc.setStartRow(tSplit.getStartRow());
     sc.setStopRow(tSplit.getEndRow());
     trr.setScan(sc);
@@ -276,9 +277,6 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     }
     if (table == null) {
       throw new IOException("No table was provided.");
-    }
-    if (!scan.hasFamilies()) {
-      throw new IOException("Expecting at least one column.");
     }
     int realNumSplits = startKeys.length;
     InputSplit[] splits = new InputSplit[realNumSplits];
@@ -320,7 +318,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    * @return The internal scan instance.
    */
   public Scan getScan() {
-    if (scan == null) scan = new Scan();
+    if (this.scan == null) this.scan = new Scan();
     return scan;
   }
 

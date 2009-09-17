@@ -22,14 +22,13 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
 /**
@@ -37,7 +36,6 @@ import org.apache.hadoop.util.GenericOptionsParser;
  * input row has columns that have content.
  */
 public class RowCounter {
-  
   /** Name of this 'program'. */
   static final String NAME = "rowcounter";
 
@@ -48,7 +46,7 @@ public class RowCounter {
   extends TableMapper<ImmutableBytesWritable, Result> {
     
     /** Counter enumeration to count the actual rows. */
-    private static enum Counters { ROWS }
+    private static enum Counters {ROWS}
 
     /**
      * Maps the data.
@@ -84,11 +82,12 @@ public class RowCounter {
    */
   public static Job createSubmittableJob(Configuration conf, String[] args) 
   throws IOException {
-    Job job = new Job(conf, NAME);
+    String tableName = args[0];
+    Job job = new Job(conf, NAME + "_" + tableName);
     job.setJarByClass(RowCounter.class);
     // Columns are space delimited
     StringBuilder sb = new StringBuilder();
-    final int columnoffset = 2;
+    final int columnoffset = 1;
     for (int i = columnoffset; i < args.length; i++) {
       if (i > columnoffset) {
         sb.append(" ");
@@ -96,13 +95,14 @@ public class RowCounter {
       sb.append(args[i]);
     }
     Scan scan = new Scan();
-    scan.addColumns(sb.toString());
+    if (sb.length() > 0) scan.addColumns(sb.toString());
     // Second argument is the table name.
-    TableMapReduceUtil.initTableMapperJob(args[1], scan,
+    TableMapReduceUtil.initTableMapperJob(tableName, scan,
       RowCounterMapper.class, ImmutableBytesWritable.class, Result.class, job);
+    job.setOutputFormatClass(NullOutputFormat.class);
     job.setNumReduceTasks(0);
     // first argument is the output directory.
-    FileOutputFormat.setOutputPath(job, new Path(args[0]));
+    // FileOutputFormat.setOutputPath(job, new Path(args[0]));
     return job;
   }
 
@@ -115,10 +115,9 @@ public class RowCounter {
   public static void main(String[] args) throws Exception {
     HBaseConfiguration conf = new HBaseConfiguration();
     String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
-    if (otherArgs.length < 3) {
+    if (otherArgs.length < 1) {
       System.err.println("ERROR: Wrong number of parameters: " + args.length);
-      System.err.println("Usage: " + NAME + 
-        " <outputdir> <tablename> <column1> [<column2>...]");
+      System.err.println("Usage: RowCounter <tablename> [<column1> <column2>...]");
       System.exit(-1);
     }
     Job job = createSubmittableJob(conf, otherArgs);
