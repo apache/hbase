@@ -25,6 +25,8 @@ Release 0.20.1 - Unreleased
                to contact a failed regionserver
    HBASE-1856  HBASE-1765 broke MapReduce when using Result.list()
                (Lars George via Stack)
+   HBASE-1857  WrongRegionException when setting region online after .META.
+               split (Cosmin Lehane via Stack)
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1

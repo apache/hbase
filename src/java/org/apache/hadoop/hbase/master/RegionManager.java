@@ -622,7 +622,7 @@ class RegionManager implements HConstants {
           return onlineMetaRegions.get(newRegion.getRegionName());
         } 
         return onlineMetaRegions.get(onlineMetaRegions.headMap(
-            newRegion.getTableDesc().getName()).lastKey());
+            newRegion.getRegionName()).lastKey());
       }
     }
   }
