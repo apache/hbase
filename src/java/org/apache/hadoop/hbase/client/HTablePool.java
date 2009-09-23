@@ -114,7 +114,7 @@ public class HTablePool {
     }
   }
 
-  private HTable newHTable(String tableName) {
+  protected HTable newHTable(String tableName) {
     try {
       return new HTable(config, Bytes.toBytes(tableName));
     } catch(IOException ioe) {
