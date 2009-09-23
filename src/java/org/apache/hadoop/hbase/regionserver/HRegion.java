@@ -2756,6 +2756,7 @@ public class HRegion implements HConstants {
     }
     Path tableDir  = new Path(args[0]);
     HBaseConfiguration c = new HBaseConfiguration();
+    c.set("fs.default.name", c.get(HConstants.HBASE_DIR));
     FileSystem fs = FileSystem.get(c);
     String tmp = c.get("hbase.tmp.dir", "/tmp");
     Path logdir = new Path(new Path(tmp),

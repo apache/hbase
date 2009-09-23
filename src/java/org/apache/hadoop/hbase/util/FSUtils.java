@@ -298,6 +298,7 @@ public class FSUtils {
   public static void main(final String [] args)
   throws IOException {
     HBaseConfiguration c = new HBaseConfiguration();
+    c.set("fs.default.name", c.get(HConstants.HBASE_DIR));
     FileSystem fs = FileSystem.get(c);
     System.out.println("majorCompacted=" + isMajorCompacted(fs, getRootDir(c)));
   }

@@ -31,6 +31,8 @@ Release 0.19.4 - Unreleased
    HBASE-1683  OOME on master splitting logs; stuck, won't go down
    HBASE-1726  Migration to 0.20 looses index information from HTableDescriptor
                (Clint Morgan via Stack)
+   HBASE-1862  [migration] Migration tools need to have the filesystem set for
+               them
 
   IMPROVEMENTS
    HBASE-1722  Add support for exporting HBase metrics via JMX
