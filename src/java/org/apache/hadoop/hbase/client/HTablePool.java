@@ -114,6 +114,11 @@ public class HTablePool {
     }
   }
 
+  /**
+   * @param tableName
+   * @return HTable instance.
+   * @deprecated Use createHTable
+   */
   protected HTable newHTable(String tableName) {
     try {
       return new HTable(config, Bytes.toBytes(tableName));
