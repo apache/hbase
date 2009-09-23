@@ -27,6 +27,7 @@ Release 0.20.1 - Unreleased
                (Lars George via Stack)
    HBASE-1857  WrongRegionException when setting region online after .META.
                split (Cosmin Lehane via Stack)
+   HBASE-1809  NPE thrown in BoundedRangeFileInputStream
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
