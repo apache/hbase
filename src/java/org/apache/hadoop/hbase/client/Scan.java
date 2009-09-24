@@ -127,6 +127,7 @@ public class Scan implements Writable {
     stopRow  = scan.getStopRow();
     maxVersions = scan.getMaxVersions();
     caching = scan.getCaching();
+    cacheBlocks = scan.getCacheBlocks();
     filter = scan.getFilter(); // clone?
     oldFilter = scan.getOldFilter(); // clone?
     TimeRange ctr = scan.getTimeRange();
@@ -489,6 +490,8 @@ public class Scan implements Writable {
     sb.append("" + this.maxVersions);
     sb.append(", caching=");
     sb.append("" + this.caching);
+    sb.append(", cacheBlocks=");
+    sb.append("" + this.cacheBlocks);
     sb.append(", timeRange=");
     sb.append("[" + this.tr.getMin() + "," + this.tr.getMax() + ")");
     sb.append(", families=");
