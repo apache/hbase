@@ -279,12 +279,12 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
    * @see org.apache.hadoop.mapred.InputFormat#getSplits(org.apache.hadoop.mapred.JobConf, int)
    */
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
+    if (this.table == null) {
+      throw new IOException("No table was provided");
+    }
     byte [][] startKeys = this.table.getStartKeys();
     if (startKeys == null || startKeys.length == 0) {
       throw new IOException("Expecting at least one region");
-    }
-    if (this.table == null) {
-      throw new IOException("No table was provided");
     }
     if (this.inputColumns == null || this.inputColumns.length == 0) {
       throw new IOException("Expecting at least one column");
