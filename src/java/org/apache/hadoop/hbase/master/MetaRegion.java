@@ -65,6 +65,13 @@ public class MetaRegion implements Comparable<MetaRegion> {
     return regionInfo.getStartKey();
   }
 
+  
+  /** @return the endKey */
+  public byte [] getEndKey() {
+    return regionInfo.getEndKey();
+  }
+
+  
   public HRegionInfo getRegionInfo() {
     return regionInfo;
   }
