@@ -24,12 +24,14 @@ import java.util.Random;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class HBaseBackedTransactionLogger implements TransactionLogger {
@@ -93,15 +95,15 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
 
   public TransactionStatus getStatusForTransaction(long transactionId) {
     try {
-      RowResult result = table.getRow(getRow(transactionId));
+      Result result = table.get(new Get(getRow(transactionId)));
       if (result == null || result.isEmpty()) {
         return null;
       }
-      Cell statusCell = result.get(STATUS_COLUMN_BYTES);
+      byte [] statusCell = result.getValue(STATUS_COLUMN_BYTES);
       if (statusCell == null) {
         throw new RuntimeException("No status cell for row " + transactionId);
       }
-      String statusString = Bytes.toString(statusCell.getValue());
+      String statusString = Bytes.toString(statusCell);
       return TransactionStatus.valueOf(statusString);
 
     } catch (IOException e) {
@@ -115,22 +117,21 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
 
   public void setStatusForTransaction(long transactionId,
       TransactionStatus status) {
-    BatchUpdate update = new BatchUpdate(getRow(transactionId));
-    update.put(STATUS_COLUMN, Bytes.toBytes(status.name()));
+    Put update = new Put(getRow(transactionId));
+    update.add(STATUS_COLUMN_BYTES, HConstants.LATEST_TIMESTAMP, Bytes.toBytes(status.name()));
 
     try {
-      table.commit(update);
+      table.put(update);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
 
   public void forgetTransaction(long transactionId) {
-    BatchUpdate update = new BatchUpdate(getRow(transactionId));
-    update.delete(STATUS_COLUMN);
+    Delete delete = new Delete(getRow(transactionId));
 
     try {
-      table.commit(update);
+      table.delete(delete);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

@@ -32,6 +32,7 @@ Release 0.20.1 - Unreleased
    HBASE-1865  0.20.0 TableInputFormatBase NPE
    HBASE-1866  Scan(Scan) copy constructor does not copy value of
                cacheBlocks
+   HBASE-1858  Master can't split logs created by THBase (Clint Morgan via Stack)
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
