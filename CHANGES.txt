@@ -35,6 +35,8 @@ Release 0.20.1 - Unreleased
    HBASE-1858  Master can't split logs created by THBase (Clint Morgan via Stack)
    HBASE-1871  Wrong type used in TableMapReduceUtil.initTableReduceJob()
                (Lars George via Stack)
+   HBASE-1869  IndexedTable delete fails when used in conjunction with RowLock()
+               (Keith Thomas via Stack)
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
