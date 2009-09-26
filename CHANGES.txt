@@ -33,6 +33,8 @@ Release 0.20.1 - Unreleased
    HBASE-1866  Scan(Scan) copy constructor does not copy value of
                cacheBlocks
    HBASE-1858  Master can't split logs created by THBase (Clint Morgan via Stack)
+   HBASE-1871  Wrong type used in TableMapReduceUtil.initTableReduceJob()
+               (Lars George via Stack)
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
