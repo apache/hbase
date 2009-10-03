@@ -129,6 +129,9 @@ public class Store implements HConstants, HeapSize {
   // reflected in the TreeMaps).
   private volatile long maxSeqId = -1;
 
+  // The most-recent log-seq-id before we recovered from the LOG.
+  private long maxSeqIdBeforeLogRecovery = -1;
+
   private final Path regionCompactionDir;
   private final Object compactLock = new Object();
   private final int compactionThreshold;
@@ -216,19 +219,25 @@ public class Store implements HConstants, HeapSize {
     // loadStoreFiles calculates this.maxSeqId. as side-effect.
     this.storefiles.putAll(loadStoreFiles());
 
+    this.maxSeqIdBeforeLogRecovery = this.maxSeqId;
+
     // Do reconstruction log.
     long newId = runReconstructionLog(reconstructionLog, this.maxSeqId, reporter);
     if (newId != -1) {
       this.maxSeqId = newId; // start with the log id we just recovered.
     }
   }
-
+    
   HColumnDescriptor getFamily() {
     return this.family;
   }
 
   long getMaxSequenceId() {
     return this.maxSeqId;
+  }
+  
+  long getMaxSeqIdBeforeLogRecovery() {
+    return maxSeqIdBeforeLogRecovery;
   }
 
   /**

@@ -299,7 +299,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
     // Load in all the HStores.
     long maxSeqId = -1;
-    long minSeqId = Integer.MAX_VALUE;
+    long minSeqIdToRecover = Integer.MAX_VALUE;
+    
     for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
       Store store = instantiateHStore(this.basedir, c, oldLogFile, reporter);
       this.stores.put(c.getName(), store);
@@ -307,13 +308,15 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       if (storeSeqId > maxSeqId) {
         maxSeqId = storeSeqId;
       }
-      if (storeSeqId < minSeqId) {
-        minSeqId = storeSeqId;
+      
+      long storeSeqIdBeforeRecovery = store.getMaxSeqIdBeforeLogRecovery();
+      if (storeSeqIdBeforeRecovery < minSeqIdToRecover) {
+        minSeqIdToRecover = storeSeqIdBeforeRecovery;
       }
     }
 
     // Play log if one.  Delete when done.
-    doReconstructionLog(oldLogFile, minSeqId, maxSeqId, reporter);
+    doReconstructionLog(oldLogFile, minSeqIdToRecover, maxSeqId, reporter);
     if (fs.exists(oldLogFile)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Deleting old log file: " + oldLogFile);
