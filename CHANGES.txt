@@ -69,6 +69,9 @@ Release 0.20.1 - Unreleased
    HBASE-1832  Faster enable/disable/delete
    HBASE-1481  Add fast row key only scanning
    HBASE-1506  [performance] Make splits faster
+   HBASE-1722  Add support for exporting HBase metrics via JMX
+               (Gary Helming via Stack)
+
 
 Release 0.20.0 - Tue Sep  8 12:48:41 PDT 2009
 
