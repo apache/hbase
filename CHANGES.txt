@@ -44,6 +44,8 @@ Release 0.20.1 - Unreleased
                (Clint Morgan via Stack)
    HBASE-1878  BaseScanner results can't be trusted at all (Related to
                hbase-1784)
+   HBASE-1831  Scanning API must be reworked to allow for fully functional
+               Filters client-side
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
