@@ -30,13 +30,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.regionserver.HRegionServer.ToDoEntry;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils;
 
@@ -220,8 +217,8 @@ class CompactSplitThread extends Thread implements HConstants {
         newRegions[i].getRegionInfo()));
       t.put(put);
     }
-    // Now tell the master about the new regions.  Note that we'll online 
-    // the A region ourselves on this server.  Master only has to online B.
+        
+    // Now tell the master about the new regions
     server.reportSplit(oldRegionInfo, newRegions[0].getRegionInfo(),
       newRegions[1].getRegionInfo());
     LOG.info("region split, META updated, and report to master all" +
@@ -229,15 +226,8 @@ class CompactSplitThread extends Thread implements HConstants {
       ", new regions: " + newRegions[0].toString() + ", " +
       newRegions[1].toString() + ". Split took " +
       StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
-    // Server region A.  Let master assign region B.
-    HRegionInfo hri = newRegions[0].getRegionInfo();
-    HMsg msg = new HMsg(HMsg.Type.MSG_REGION_OPEN, hri,
-      Bytes.toBytes("Local immediate open"));
-    try {
-      this.server.toDo.put(new HRegionServer.ToDoEntry(msg));
-    } catch (InterruptedException e) {
-      throw new IOException("Failed queue of open of " + hri, e);
-    }
+    
+    // Do not serve the new regions. Let the Master assign them.
   }
 
   /**
