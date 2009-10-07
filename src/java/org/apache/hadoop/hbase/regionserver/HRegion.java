@@ -299,7 +299,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
     // Load in all the HStores.
     long maxSeqId = -1;
-    long minSeqId = Integer.MAX_VALUE;
+    long minSeqIdToRecover = Integer.MAX_VALUE;
+    
     for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
       Store store = instantiateHStore(this.basedir, c, oldLogFile, reporter);
       this.stores.put(c.getName(), store);
@@ -307,13 +308,15 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       if (storeSeqId > maxSeqId) {
         maxSeqId = storeSeqId;
       }
-      if (storeSeqId < minSeqId) {
-        minSeqId = storeSeqId;
+      
+      long storeSeqIdBeforeRecovery = store.getMaxSeqIdBeforeLogRecovery();
+      if (storeSeqIdBeforeRecovery < minSeqIdToRecover) {
+        minSeqIdToRecover = storeSeqIdBeforeRecovery;
       }
     }
 
     // Play log if one.  Delete when done.
-    doReconstructionLog(oldLogFile, minSeqId, maxSeqId, reporter);
+    doReconstructionLog(oldLogFile, minSeqIdToRecover, maxSeqId, reporter);
     if (fs.exists(oldLogFile)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Deleting old log file: " + oldLogFile);
@@ -1706,13 +1709,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
     }
 
-    /**
-     * Get the next row of results from this region.
-     * @param results list to append results to
-     * @return true if there are more rows, false if scanner is done
-     * @throws NotServerRegionException If this region is closing or closed
-     */
-    @Override
     public boolean next(List<KeyValue> outResults) throws IOException {
       if (closing.get() || closed.get()) {
         close();
@@ -1726,12 +1722,23 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       outResults.addAll(results);
       resetFilters();
-      if(filter != null && filter.filterAllRemaining()) {
+      if (isFilterDone()) {
         return false;
       }
       return returnResult;
     }
 
+    /*
+     * @return True if a filter rules the scanner is over, done.
+     */
+    boolean isFilterDone() {
+      return this.filter != null && this.filter.filterAllRemaining();
+    }
+
+    /*
+     * @return true if there are more rows, false if scanner is done
+     * @throws IOException
+     */
     private boolean nextInternal() throws IOException {
       // This method should probably be reorganized a bit... has gotten messy
       KeyValue kv;

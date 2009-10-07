@@ -454,11 +454,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
           LOG.warn("unable to report to master for " + (now - lastMsg) +
             " milliseconds - retrying");
         }
-        if ((now - lastMsg) >= msgInterval) {
+        // Send messages to the master IF this.msgInterval has elapsed OR if
+        // we have something to tell (and we didn't just fail sending master).
+        if ((now - lastMsg) >= msgInterval ||
+            (outboundArray.length == 0 && !this.outboundMsgs.isEmpty())) {
           try {
             doMetrics();
             MemoryUsage memory =
-                ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+              ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
             HServerLoad hsl = new HServerLoad(requestCount.get(),
               (int)(memory.getUsed()/1024/1024),
               (int)(memory.getMax()/1024/1024));
@@ -1888,9 +1891,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     requestCount.incrementAndGet();
     try {
       HRegion r = getRegion(regionName);
-      InternalScanner s = r.getScanner(scan);
-      long scannerId = addScanner(s);
-      return scannerId;
+      return addScanner(r.getScanner(scan));
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t, "Failed openScanner"));
     }
@@ -1945,7 +1946,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
           break;
         }
       }
-      return results.toArray(new Result[0]);
+      // Below is an ugly hack where we cast the InternalScanner to be a
+      // HRegion.RegionScanner.  The alternative is to change InternalScanner
+      // interface but its used everywhere whereas we just need a bit of info
+      // from HRegion.RegionScanner, IF its filter if any is done with the scan
+      // and wants to tell the client to stop the scan.  This is done by passing
+      // a null result.
+      return ((HRegion.RegionScanner)s).isFilterDone() && results.isEmpty()?
+        null: results.toArray(new Result[0]);
     } catch (Throwable t) {
       if (t instanceof NotServingRegionException) {
         this.scanners.remove(scannerId);
@@ -2526,8 +2534,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
   public static void main(String [] args) {
     Configuration conf = new HBaseConfiguration();
     @SuppressWarnings("unchecked")
-    Class<? extends HRegionServer> regionServerClass = (Class<? extends HRegionServer>) conf
-        .getClass(HConstants.REGION_SERVER_IMPL, HRegionServer.class);
+    Class<? extends HRegionServer> regionServerClass =
+      (Class<? extends HRegionServer>) conf.getClass(HConstants.REGION_SERVER_IMPL,
+        HRegionServer.class);
     doMain(args, regionServerClass);
   }
 

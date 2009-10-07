@@ -17,49 +17,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
+import org.apache.hadoop.hbase.KeyValue;
+
 import java.io.DataOutput;
 import java.io.IOException;
-
-import org.apache.hadoop.hbase.util.Bytes;
+import java.io.DataInput;
 
 /**
- * A binary comparator which lexicographically compares against the specified 
- * byte array using {@link Bytes#compareTo(byte[], byte[])}.
+ * A filter that will only return the first KV from each row.
+ * <p>
+ * This filter can be used to more efficiently perform row count operations.
  */
-public class BinaryComparator implements WritableByteArrayComparable {
-  
-  private byte [] value;
+public class FirstKeyOnlyFilter implements Filter {
+  private boolean foundKV = false;
 
-  /**
-   *  Writable constructor, do not use.
-   */
-  public BinaryComparator() {
+  public FirstKeyOnlyFilter() {
   }
 
-  /**
-   * Constructor.
-   * @param value the value to compare against
-   */
-  public BinaryComparator(byte [] value) {
-    this.value = value;
+  public void reset() {
+    foundKV = false;
   }
 
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    value = Bytes.readByteArray(in);
+  public boolean filterRowKey(byte[] buffer, int offset, int length) {
+    return false;
   }
 
-  @Override
+  public boolean filterAllRemaining() {
+    return false;
+  }
+
+  public ReturnCode filterKeyValue(KeyValue v) {
+    if(foundKV) return ReturnCode.NEXT_ROW;
+    foundKV = true;
+    return ReturnCode.INCLUDE;
+  }
+
+  public boolean filterRow() {
+    return false;
+  }
+
   public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, value);
   }
 
-  @Override
-  public int compareTo(byte [] value) {
-    return Bytes.compareTo(this.value, value);
+  public void readFields(DataInput in) throws IOException {
   }
 }

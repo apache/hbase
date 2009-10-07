@@ -40,6 +40,13 @@ Release 0.20.1 - Unreleased
                (Lars George via Stack)
    HBASE-1869  IndexedTable delete fails when used in conjunction with RowLock()
                (Keith Thomas via Stack)
+   HBASE-1883  HRegion passes the wrong minSequenceNumber to doReconstructionLog
+               (Clint Morgan via Stack)
+   HBASE-1878  BaseScanner results can't be trusted at all (Related to
+               hbase-1784)
+   HBASE-1831  Scanning API must be reworked to allow for fully functional
+               Filters client-side
+   HBASE-1890  hbase-1506 where assignment is done at regionserver doesn't work
 
   IMPROVEMENTS
    HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
@@ -57,6 +64,17 @@ Release 0.20.1 - Unreleased
    HBASE-1855  HMaster web application doesn't show the region end key in the
                table detail page (Andrei Dragomir via Stack)
    HBASE-1870  Bytes.toFloat(bytes[],int) is marked private
+   HBASE-1874  Client Scanner mechanism that is used for HbaseAdmin methods
+               (listTables, tableExists), is very slow if the client is far
+               away from the HBase cluster (Andrei Dragomir via Stack)
+   HBASE-1879  ReadOnly transactions generate WAL activity (Clint Morgan via Stack)
+   HBASE-1875  Compression test utility (elsif via Stack)
+   HBASE-1832  Faster enable/disable/delete
+   HBASE-1481  Add fast row key only scanning
+   HBASE-1506  [performance] Make splits faster
+   HBASE-1722  Add support for exporting HBase metrics via JMX
+               (Gary Helming via Stack)
+
 
 Release 0.20.0 - Tue Sep  8 12:48:41 PDT 2009
 

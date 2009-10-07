@@ -1,6 +1,4 @@
-/*
- * Copyright 2008 The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,19 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**Provides row-level filters applied to HRegion scan results during calls to
- * {@link org.apache.hadoop.hbase.client.ResultScanner#next()}. 
+package org.apache.hadoop.hbase.master.metrics;
 
-<p>Since HBase 0.20.0, {@link org.apache.hadoop.hbase.filter.Filter} is the new
-Interface used filtering.  It replaces the deprecated
-{@link org.apache.hadoop.hbase.filter.RowFilterInterface}.
-Filters run the extent of a table unless you wrap your filter in a
-{@link org.apache.hadoop.hbase.filter.WhileMatchFilter}.
-The latter returns as soon as the filter stops matching.
-</p>
-<p>Do not rely on filters carrying state across rows; its not reliable in current
-hbase as we have no handlers in place for when regions split, close or server
-crashes.
-</p>
-*/
-package org.apache.hadoop.hbase.filter;
+import javax.management.ObjectName;
+
+import org.apache.hadoop.metrics.util.MBeanUtil;
+import org.apache.hadoop.metrics.util.MetricsDynamicMBeanBase;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
+
+/**
+ * Exports the {@link MasterMetrics} statistics as an MBean
+ * for JMX.
+ */
+public class MasterStatistics extends MetricsDynamicMBeanBase {
+  private final ObjectName mbeanName;
+
+  public MasterStatistics(MetricsRegistry registry) {
+    super(registry, "MasterStatistics");
+    mbeanName = MBeanUtil.registerMBean("Master", "MasterStatistics", this);    
+  }
+
+  public void shutdown() {
+    if (mbeanName != null)
+      MBeanUtil.unregisterMBean(mbeanName);
+  }
+}

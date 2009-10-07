@@ -227,7 +227,6 @@ public class TransactionalRegion extends HRegion {
     }
     LOG.debug("Begining transaction " + key + " in region "
         + super.getRegionInfo().getRegionNameAsString());
-    this.hlog.writeStartToLog(super.getRegionInfo(), transactionId);
 
     maybeTriggerOldTransactionFlush();
   }
@@ -367,7 +366,6 @@ public class TransactionalRegion extends HRegion {
       }
       // Otherwise we were read-only and commitable, so we can forget it.
       state.setStatus(Status.COMMITED);
-      this.hlog.writeCommitToLog(super.getRegionInfo(), state.getTransactionId());
       retireTransaction(state);
       return TransactionalRegionInterface.COMMIT_OK_READ_ONLY;
     }
@@ -449,7 +447,9 @@ public class TransactionalRegion extends HRegion {
 
     state.setStatus(Status.ABORTED);
 
-    this.hlog.writeAbortToLog(super.getRegionInfo(), state.getTransactionId());
+    if (state.hasWrite()) {
+      this.hlog.writeAbortToLog(super.getRegionInfo(), state.getTransactionId());
+    }
 
     // Following removes needed if we have voted
     if (state.getSequenceNumber() != null) {
@@ -475,9 +475,11 @@ public class TransactionalRegion extends HRegion {
       this.delete(delete, null, true);
     }
     
-    // Now the transaction lives in the WAL, we can writa a commit to the log 
+    // Now the transaction lives in the WAL, we can write a commit to the log 
     // so we don't have to recover it.
-    this.hlog.writeCommitToLog(super.getRegionInfo(), state.getTransactionId());
+    if (state.hasWrite()) {
+      this.hlog.writeCommitToLog(super.getRegionInfo(), state.getTransactionId());
+    }
 
     state.setStatus(Status.COMMITED);
     if (state.hasWrite()

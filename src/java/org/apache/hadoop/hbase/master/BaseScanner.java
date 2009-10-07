@@ -365,23 +365,25 @@ abstract class BaseScanner extends Chore implements HConstants {
     String serverName = null;
     String sa = serverAddress;
     long sc = startCode;
-    if (sa == null || sa.length() <= 0) {
-      // Scans are sloppy.  They don't respect row locks and they get and 
-      // cache a row internally so may have data that is a little stale.  Make
-      // sure that for sure this serverAddress is null.  We are trying to
-      // avoid double-assignments.  See hbase-1784.  Will have to wait till
-      // 0.21 hbase where we use zk to mediate state transitions to do better.
-      Get g = new Get(info.getRegionName());
-      g.addFamily(HConstants.CATALOG_FAMILY);
-      Result r = regionServer.get(meta.getRegionName(), g);
-      if (r != null && !r.isEmpty()) {
-        sa = getServerAddress(r);
-        if (sa != null && sa.length() > 0) {
-          // Reget startcode in case its changed in the meantime too.
-          sc = getStartCode(r);
-          LOG.debug("GET got values when meta found none: serverAddress=" + sa
-              + ", startCode=" + sc);
-        }
+    // Scans are sloppy. They don't respect row locks and they get and
+    // cache a row internally so may have data that is stale. Make sure that for
+    // sure we have the right server and servercode. We are trying to avoid
+    // double-assignments. See hbase-1784. Will have to wait till 0.21 hbase
+    // where we use zk to mediate state transitions to do better.
+    Get g = new Get(info.getRegionName());
+    g.addFamily(HConstants.CATALOG_FAMILY);
+    Result r = regionServer.get(meta.getRegionName(), g);
+    if (r != null && !r.isEmpty()) {
+      sa = getServerAddress(r);
+      if (sa != null && sa.length() > 0 && !sa.equalsIgnoreCase(serverAddress)) {
+        LOG.debug("GET on " + info.getRegionNameAsString() + " got different " +
+          "address than SCAN: sa=" + sa + ", serverAddress=" + serverAddress);
+      }
+      // Reget startcode in case its changed in the meantime too.
+      sc = getStartCode(r);
+      if (sc != startCode) {
+        LOG.debug("GET on " + info.getRegionNameAsString() + " got different " +
+          "startcode than SCAN: sc=" + sc + ", serverAddress=" + startCode);
       }
     }
     if (sa != null && sa.length() > 0) {
