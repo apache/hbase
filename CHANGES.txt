@@ -1,6 +1,14 @@
 HBase Change Log
 
-Release 0.20.1 - Unreleased
+Release 0.20.2 - Unreleased
+  INCOMPATIBLE CHANGES
+
+  BUG FIXES
+
+  IMPROVEMENTS
+   HBASE-1899  Use scanner caching in shell count
+
+Release 0.20.1
   INCOMPATIBLE CHANGES
    HBASE-1854  Remove the Region Historian
 
