@@ -4,6 +4,7 @@ Release 0.20.2 - Unreleased
   INCOMPATIBLE CHANGES
 
   BUG FIXES
+   HBASE-1905  Remove unused config. hbase.hstore.blockCache.blockSize
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
