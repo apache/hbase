@@ -5,6 +5,8 @@ Release 0.20.2 - Unreleased
 
   BUG FIXES
    HBASE-1905  Remove unused config. hbase.hstore.blockCache.blockSize
+   HBASE-1906  FilterList of prefix and columnvalue not working properly
+               with deletes and multiple values
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
