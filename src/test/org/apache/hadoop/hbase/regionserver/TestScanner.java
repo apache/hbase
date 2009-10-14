@@ -184,7 +184,6 @@ public class TestScanner extends HBaseTestCase {
       Filter newFilter = new PrefixFilter(prefix);
       Scan scan = new Scan();
       scan.setFilter(newFilter);
-      scan.setStartRow(prefix);
       rowPrefixFilter(scan);
       RowFilterInterface oldFilter = new PrefixRowFilter(Bytes.toBytes("ab"));
       scan = new Scan();
