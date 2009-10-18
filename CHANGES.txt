@@ -8,6 +8,9 @@ Release 0.20.2 - Unreleased
    HBASE-1906  FilterList of prefix and columnvalue not working properly
                with deletes and multiple values
    HBASE-1896  WhileMatchFilter.reset should call encapsulated filter reset
+   HBASE-1912  When adding a secondary index to an existing table, it will
+               cause NPE during re-indexing (Mingjui Ray Liao via Andrew
+               Purtell)
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
