@@ -1765,7 +1765,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           if (hasResults()) return true;
         }
         // See if current row should be filtered based on row key
-        if (this.filter != null && this.filter.filterRowKey(row, 0, row.length)) {
+        if ((this.filter != null && this.filter.filterRowKey(row, 0, row.length)) ||
+            (oldFilter != null && this.oldFilter.filterRowKey(row, 0, row.length))) {
           readAndDumpCurrentResult();
           resetFilters();
           filterCurrentRow = true;
