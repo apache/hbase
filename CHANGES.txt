@@ -12,6 +12,7 @@ Release 0.20.2 - Unreleased
                cause NPE during re-indexing (Mingjui Ray Liao via Andrew
                Purtell)
    HBASE-1917  TestScanner.testFilters failing
+   HBASE-1908  ROOT not reassigned if only one regionserver left
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
