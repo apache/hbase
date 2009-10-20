@@ -268,7 +268,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
           sb.append(ioe.toString());
         }
       } else {
-        sb.append(v); 
+        sb.append(Bytes.toStringBinary(v)); 
       }
       sb.append(")");
     }

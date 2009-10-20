@@ -1278,11 +1278,12 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // queue at time iterator was taken out.  Apparently goes from oldest.
     for (ToDoEntry e: this.toDo) {
       HMsg msg = e.msg;
-      if (msg == null) {
+      if (msg != null) {
+        if (msg.isType(HMsg.Type.MSG_REGION_OPEN)) {
+          addProcessingMessage(msg.getRegionInfo());
+        }
+      } else {
         LOG.warn("Message is empty: " + e);
-      }
-      if (e.msg.isType(HMsg.Type.MSG_REGION_OPEN)) {
-        addProcessingMessage(e.msg.getRegionInfo());
       }
     }
   }
@@ -1956,7 +1957,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
         null: results.toArray(new Result[0]);
     } catch (Throwable t) {
       if (t instanceof NotServingRegionException) {
-        this.scanners.remove(scannerId);
+        String scannerName = String.valueOf(scannerId);
+        this.scanners.remove(scannerName);
       }
       throw convertThrowableToIOE(cleanup(t));
     }

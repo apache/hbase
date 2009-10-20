@@ -50,7 +50,6 @@ package org.apache.hadoop.hbase.migration.nineteen.onelab.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;                        //TODO: remove
 
 import org.apache.hadoop.hbase.util.Hash;
 
@@ -67,7 +66,7 @@ import org.apache.hadoop.hbase.util.Hash;
  * @version 1.1 - 19 Jan. 08
  * 
  */
-public final class CountingBloomFilter extends Filter {
+public final class CountingBloomFilter extends Filter implements Cloneable {
   /** Storage for the counting buckets */
   private long[] buckets;
 
@@ -254,7 +253,6 @@ public final class CountingBloomFilter extends Filter {
   }//end or()
 
   @Override
-  @SuppressWarnings("unused")
   public void xor(Filter filter){
     throw new UnsupportedOperationException("xor() is undefined for "
         + this.getClass().getName());

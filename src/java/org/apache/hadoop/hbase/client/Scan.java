@@ -235,27 +235,32 @@ public class Scan implements Writable {
    * @return The columns in an old style string format.
    */
   public String getInputColumns() {
-    String cols = "";
+    StringBuilder cols = new StringBuilder();
     for (Map.Entry<byte[], NavigableSet<byte[]>> e : 
       familyMap.entrySet()) {
       byte[] fam = e.getKey();
-      if (cols.length() > 0) cols += " ";
+      if (cols.length() > 0) {
+        cols.append(" ");
+      }
       NavigableSet<byte[]> quals = e.getValue();
       // check if this family has qualifiers
       if (quals != null && quals.size() > 0) {
-        String cs = "";
         for (byte[] qual : quals) {
-          if (cs.length() > 0) cs += " ";
+          if (cols.length() > 0) {
+            cols.append(" ");
+          }
           // encode values to make parsing easier later
-          cs += Bytes.toStringBinary(fam) + ":" + Bytes.toStringBinary(qual);
+          cols.append(Bytes.toStringBinary(fam));
+          cols.append(":");
+          cols.append(Bytes.toStringBinary(qual));
         }
-        cols += cs;
       } else {
         // only add the family but with old style delimiter 
-        cols += Bytes.toStringBinary(fam) + ":";
+        cols.append(Bytes.toStringBinary(fam));
+        cols.append(":");
       }
     }
-    return cols;
+    return cols.toString();
   }
   
   /**

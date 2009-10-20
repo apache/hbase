@@ -338,6 +338,9 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   
   @Override
   public boolean equals(Object obj) {
+    if (!(obj instanceof HStoreKey)) {
+      return false;
+    }
     HStoreKey other = (HStoreKey)obj;
     // Do a quick check.
     if (this.row.length != other.row.length ||
@@ -479,7 +482,8 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     byte [][] result = new byte [2][];
     int index = getFamilyDelimiterIndex(c);
     if (index == -1) {
-      throw new ColumnNameParseException("Impossible column name: " + c);
+      throw new ColumnNameParseException("Impossible column name: " + 
+        Bytes.toStringBinary(c));
     }
     result[0] = new byte [index];
     System.arraycopy(c, 0, result[0], 0, index);
@@ -647,7 +651,10 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     
     @Override
     public boolean equals(Object obj) {
-      return false;
+      if (obj == null || !(obj instanceof HStoreKey)) {
+        return false;
+      }
+      return compareTo((HStoreKey)obj) == 0;
     }
 
     @Override

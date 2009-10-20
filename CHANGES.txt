@@ -13,6 +13,7 @@ Release 0.20.2 - Unreleased
                Purtell)
    HBASE-1917  TestScanner.testFilters failing
    HBASE-1908  ROOT not reassigned if only one regionserver left
+   HBASE-1916  FindBugs and javac warnings cleanup
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
