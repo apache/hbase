@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.util.ProgramDriver;
+import org.apache.hadoop.hbase.migration.nineteen.HStoreFileToStoreFile;
 
 /**
  * Driver for hbase mapreduce jobs. Select which to run by passing
@@ -34,6 +35,9 @@ public class Driver {
     ProgramDriver pgd = new ProgramDriver();
     pgd.addClass(RowCounter.NAME, RowCounter.class,
       "Count rows in HBase table");
+    pgd.addClass(HStoreFileToStoreFile.JOBNAME,
+      HStoreFileToStoreFile.class,
+      "Bulk convert 0.19 HStoreFiles to 0.20 StoreFiles");
     pgd.addClass(Export.NAME, Export.class, "Write table data to HDFS.");
     pgd.addClass(Import.NAME, Import.class, "Import data written by Export.");
     pgd.driver(args);

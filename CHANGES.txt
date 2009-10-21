@@ -14,6 +14,7 @@ Release 0.20.2 - Unreleased
    HBASE-1917  TestScanner.testFilters failing
    HBASE-1908  ROOT not reassigned if only one regionserver left
    HBASE-1916  FindBugs and javac warnings cleanup
+   HBASE-1924  MapReduce Driver lost hsf2sf backporting hbase-1684
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
