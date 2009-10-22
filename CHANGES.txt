@@ -17,6 +17,7 @@ Release 0.20.2 - Unreleased
    HBASE-1924  MapReduce Driver lost hsf2sf backporting hbase-1684
    HBASE-1777  column length is not checked before saved to memstore
    HBASE-1895  HConstants.MAX_ROW_LENGTH is incorrectly 64k, should be 32k
+   HBASE-1925  IllegalAccessError: Has not been initialized (getMaxSequenceId)
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
