@@ -69,7 +69,6 @@ class ServerManager implements HConstants {
   private static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
   
   private final AtomicInteger quiescedServers = new AtomicInteger(0);
-  private final ZooKeeperWrapper zooKeeperWrapper;
 
   /** The map of known server names to server info */
   final Map<String, HServerInfo> serversToServerInfo =
@@ -140,7 +139,6 @@ class ServerManager implements HConstants {
    */
   public ServerManager(HMaster master) {
     this.master = master;
-    zooKeeperWrapper = master.getZooKeeperWrapper();
     this.nobalancingCount = master.getConfiguration().
       getInt("hbase.regions.nobalancing.count", 4);
     serverMonitorThread = new ServerMonitor(master.metaRescanInterval,
@@ -218,7 +216,7 @@ class ServerManager implements HConstants {
     // We must set this watcher here because it can be set on a fresh start
     // or on a failover
     Watcher watcher = new ServerExpirer(serverName, info.getServerAddress());
-    zooKeeperWrapper.updateRSLocationGetWatch(info, watcher);
+    master.getZooKeeperWrapper().updateRSLocationGetWatch(info, watcher);
     serversToServerInfo.put(serverName, info);
     serverAddressToServerInfo.put(info.getServerAddress(), info);
     serversToLoad.put(serverName, load);

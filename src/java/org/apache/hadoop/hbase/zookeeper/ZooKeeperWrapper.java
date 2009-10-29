@@ -317,6 +317,7 @@ public class ZooKeeperWrapper implements HConstants {
     try {
       return readAddressOrThrow(znode, watcher);
     } catch (IOException e) {
+      e.printStackTrace();
       return null;
     }
   }
@@ -493,7 +494,7 @@ public class ZooKeeperWrapper implements HConstants {
 
     try {
       zooKeeper.create(outOfSafeModeZNode, new byte[0], Ids.OPEN_ACL_UNSAFE,
-                       CreateMode.EPHEMERAL);
+                       CreateMode.PERSISTENT);
       LOG.debug("Wrote out of safe mode");
       return true;
     } catch (InterruptedException e) {

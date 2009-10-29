@@ -26,6 +26,7 @@ Release 0.20.2 - Unreleased
    HBASE-1899  Use scanner caching in shell count
    HBASE-1903  Enable DEBUG by default
    HBASE-1918  Don't do DNS resolving in .META. scanner for each row
+   HBASE-1921  When the Master's session times out and there's only one, cluster is wedged
 
 Release 0.20.1 - Released October 12th, 2009
   INCOMPATIBLE CHANGES

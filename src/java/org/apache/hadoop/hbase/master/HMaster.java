@@ -126,7 +126,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   final int numRetries;
   final long maxRegionOpenTime;
   final int leaseTimeout;
-  private final ZooKeeperWrapper zooKeeperWrapper;
+  private ZooKeeperWrapper zooKeeperWrapper;
   private final ZKMasterAddressWatcher zkMasterAddressWatcher;
 
   volatile DelayQueue<RegionServerOperation> delayedToDoQueue =
@@ -251,27 +251,32 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     serverManager = new ServerManager(this);
     regionManager = new RegionManager(this);
     
-    writeAddressToZooKeeper();
+    writeAddressToZooKeeper(true);
     
     // We're almost open for business
     this.closed.set(false);
     LOG.info("HMaster initialized on " + this.address.toString());
   }
 
-  private void writeAddressToZooKeeper() {
-    while (true) {
+  /*
+   * Return true if we are the master, false if the cluster must shut down
+   * or if we only retry once.
+   */
+  private boolean writeAddressToZooKeeper(boolean retry) {
+    do {
       zkMasterAddressWatcher.waitForMasterAddressAvailability();
       // Check if we need to shutdown instead of taking control
-      if(this.shutdownRequested.get())
-      {
-        return;
+      if(this.shutdownRequested.get()){
+        LOG.debug("Won't start Master because cluster is shuting down");
+        return false;
       } else if(zooKeeperWrapper.writeMasterAddress(address)) {
         zooKeeperWrapper.setClusterState(true);
         // Watch our own node
         zooKeeperWrapper.readMasterAddress(this);
-        return;
+        return true;
       }
-    }
+    } while (retry);
+    return false;
   }
 
   private void bootstrap() throws IOException {
@@ -1152,8 +1157,25 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             event.getPath().equals(
                 this.zooKeeperWrapper.getMasterElectionZNode())) 
                 && !shutdownRequested.get()) {
-      LOG.error("Master lost its znode, killing itself now");
-      System.exit(1);
+
+      LOG.info("Master lost its znode, trying to get a new one");
+
+      // Can we still be the master? If not, goodbye
+
+      zooKeeperWrapper.close();
+      try {
+        zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
+
+        if(!writeAddressToZooKeeper(false)) {
+          throw new Exception("Another Master is currently active");
+        }
+
+        // Verify the cluster to see if anything happened while we were away
+        verifyClusterState();
+      } catch (Exception e) {
+        LOG.error("Killing master because of", e);
+        System.exit(1);
+      }
     }
   }
    
