@@ -90,6 +90,8 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    */
   public Put(Put putToCopy) {
     this(putToCopy.getRow(), putToCopy.getRowLock());
+    this.timestamp = putToCopy.timestamp;
+    this.writeToWAL = putToCopy.writeToWAL;
     this.familyMap = 
       new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
     for(Map.Entry<byte [], List<KeyValue>> entry :
@@ -217,6 +219,8 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   
   /**
    * Method for setting the timestamp
+   * NOTE - This does not affect the timestamp for values previously added to this Put.
+   * It only affects the timestamp for values added after this method is called.
    * @param timestamp
    */
   public Put setTimeStamp(long timestamp) {
