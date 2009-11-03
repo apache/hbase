@@ -2024,8 +2024,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       Integer lid = getLockFromId(delete.getLockId());
       HRegion region = getRegion(regionName);
       region.delete(delete, lid, writeToWAL);
-    } catch(WrongRegionException ex) {
-    } catch (NotServingRegionException ex) {
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
