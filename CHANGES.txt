@@ -31,6 +31,8 @@ Release 0.20.2 - Unreleased
    HBASE-1919  code: HRS.delete seems to ignore exceptions it shouldnt
    HBASE-1951  Stack overflow when calling HTable.checkAndPut() 
                when deleting a lot of values
+   HBASE-1781  Weird behavior of WildcardColumnTracker.checkColumn(), 
+               looks like recursive loop
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
