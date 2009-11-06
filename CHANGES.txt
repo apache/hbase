@@ -35,6 +35,7 @@ Release 0.20.2 - Unreleased
                looks like recursive loop
    HBASE-1949  KeyValue expiration by Time-to-Live during major compaction is
                broken (Gary Helmling via Stack)
+   HBASE-1957  Get-s can't set a Filter (Roman Kalyakin via Stack)
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
