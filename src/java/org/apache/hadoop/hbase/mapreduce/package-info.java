@@ -133,7 +133,8 @@ the keys need to be orderd so reducer 0 gets keys 0-2 and reducer 1 gets keys
 3-4 (See TotalOrderPartitioner up in hadoop for more on what this means). 
 To achieve total ordering, you will likely need to write a Partitioner
 that is intimate with your tables key namespace and that knows how
-to distribute keys among the reducers so a total order is maintained.
+to distribute keys among the reducers so a total order is maintained
+(You need at least hadoop 0.20.1 setting your own Partitioner -- see MAPREDUCE-565).
 </p>
 <p>See org.apache.hadoop.hbase.mapreduce.TestHFileOutputFormat for an example that puts together
 {@link org.apache.hadoop.hbase.mapreduce.KeyValueSortReducer} and {@link org.apache.hadoop.hbase.mapreduce.HFileOutputFormat}.</p>
