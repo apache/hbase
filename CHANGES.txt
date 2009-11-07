@@ -36,6 +36,7 @@ Release 0.20.2 - Unreleased
    HBASE-1949  KeyValue expiration by Time-to-Live during major compaction is
                broken (Gary Helmling via Stack)
    HBASE-1957  Get-s can't set a Filter (Roman Kalyakin via Stack)
+   HBASE-1959  Compress tables during 0.19 to 0.20 migration (Dave Latham via Stack)
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count

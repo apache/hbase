@@ -373,9 +373,11 @@ public class Migrate extends Configured implements Tool {
       Integer.parseInt(regiondir.getName()),
       Bytes.toBytes(familydir.getName()), Long.parseLong(mf.getName()), null);
     BloomFilterMapFile.Reader src = hsf.getReader(fs, false, false);
+    String compression = conf.get("migrate.compression", "NONE").trim();
+    Compression.Algorithm compressAlgorithm = Compression.Algorithm.valueOf(compression);
     HFile.Writer tgt = StoreFile.getWriter(fs, familydir,
       conf.getInt("hfile.min.blocksize.size", 64*1024),
-      Compression.Algorithm.NONE, getComparator(basedir));
+      compressAlgorithm, getComparator(basedir));
     // From old 0.19 HLogEdit.
     ImmutableBytesWritable deleteBytes =
       new ImmutableBytesWritable("HBASE::DELETEVAL".getBytes("UTF-8"));
@@ -449,6 +451,8 @@ public class Migrate extends Configured implements Tool {
       hri.getTableDesc().setMemStoreFlushSize(catalogMemStoreFlushSize);
       result = true;
     }
+    String compression = getConf().get("migrate.compression", "NONE").trim();
+    Compression.Algorithm compressAlgorithm = Compression.Algorithm.valueOf(compression);
     // Remove the old MEMCACHE_FLUSHSIZE if present
     hri.getTableDesc().remove(Bytes.toBytes("MEMCACHE_FLUSHSIZE"));
     for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
@@ -456,7 +460,7 @@ public class Migrate extends Configured implements Tool {
       hcd.setBlockCacheEnabled(true);
       // Set compression to none.  Previous was 'none'.  Needs to be upper-case.
       // Any other compression we are turning off.  Have user enable it.
-      hcd.setCompressionType(Algorithm.NONE);
+      hcd.setCompressionType(compressAlgorithm);
       result = true;
     }
     return result;
