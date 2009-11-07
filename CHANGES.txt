@@ -37,6 +37,9 @@ Release 0.20.2 - Unreleased
                broken (Gary Helmling via Stack)
    HBASE-1957  Get-s can't set a Filter (Roman Kalyakin via Stack)
    HBASE-1959  Compress tables during 0.19 to 0.20 migration (Dave Latham via Stack)
+   HBASE-1928  ROOT and META tables stay in transition state (making the system
+               not usable) if the designated regionServer dies before the
+               assignment is complete (Yannis Pavlidis via Stack)
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
