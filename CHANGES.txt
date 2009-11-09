@@ -48,6 +48,7 @@ Release 0.20.2 - Unreleased
    HBASE-1921  When the Master's session times out and there's only one, cluster is wedged
    HBASE-1947  If HBase starts/stops often in less than 24 hours, 
                you end up with lots of store files
+   HBASE-1867  Tool to regenerate an hbase table from the data files
 
 Release 0.20.1 - Released October 12th, 2009
   INCOMPATIBLE CHANGES
