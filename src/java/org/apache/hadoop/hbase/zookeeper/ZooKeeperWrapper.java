@@ -501,6 +501,10 @@ public class ZooKeeperWrapper implements HConstants {
       LOG.warn("Failed to create out of safe mode in ZooKeeper: " + e);
     } catch (KeeperException e) {
       LOG.warn("Failed to create out of safe mode in ZooKeeper: " + e);
+      if (e.getMessage().contains("KeeperErrorCode = NodeExists")) {
+        LOG.info("Node exists; just move on");
+        return true;
+      }
     }
 
     return false;

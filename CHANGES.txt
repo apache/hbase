@@ -45,6 +45,8 @@ Release 0.20.2 - Unreleased
                java5
    HBASE-1967  [Transactional] client.TestTransactions.testPutPutScan fails
                sometimes - Temporary fix
+   HBASE-1965  On restart of branch, master complains about not being able
+               to set safe mode
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
