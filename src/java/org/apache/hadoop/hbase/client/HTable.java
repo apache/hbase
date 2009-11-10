@@ -709,6 +709,14 @@ public class HTable {
     }
   }
 
+  /**
+   * Get the write buffer
+   * @return the current write buffer
+   */
+  public ArrayList<Put> getWriteBuffer() {
+    return writeBuffer;
+  }
+
   // Old API. Pre-hbase-880, hbase-1304.
   
   /**

@@ -41,19 +41,22 @@ Release 0.20.2 - Unreleased
                not usable) if the designated regionServer dies before the
                assignment is complete (Yannis Pavlidis via Stack)
    HBASE-1962  Bulk loading script makes regions incorrectly (loadtable.rb)
-   HBASE-1966  Apply the fix from site/ to remove the forrest dependency on java5
-   HBASE-1967  [Transactional] client.TestTransactions.testPutPutScan fails sometimes
-               Temporary fix
+   HBASE-1966  Apply the fix from site/ to remove the forrest dependency on
+               java5
+   HBASE-1967  [Transactional] client.TestTransactions.testPutPutScan fails
+               sometimes - Temporary fix
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
    HBASE-1903  Enable DEBUG by default
    HBASE-1918  Don't do DNS resolving in .META. scanner for each row
-   HBASE-1921  When the Master's session times out and there's only one, cluster is wedged
+   HBASE-1921  When the Master's session times out and there's only one,
+               cluster is wedged
    HBASE-1947  If HBase starts/stops often in less than 24 hours, 
                you end up with lots of store files
    HBASE-1867  Tool to regenerate an hbase table from the data files
    HBASE-1829  Make use of start/stop row in TableInputFormat
+   HBASE-1968  Give clients access to the write buffer
 
 Release 0.20.1 - Released October 12th, 2009
   INCOMPATIBLE CHANGES
