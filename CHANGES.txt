@@ -4,6 +4,8 @@ Release 0.20.3 - Unreleased
   INCOMPATIBLE CHANGES
 
   BUG FIXES
+   HBASE-1999 When HTable goes away, close zk session in shutdown hook or
+              something...
 
   IMPROVEMENTS
 
