@@ -28,7 +28,8 @@ Release 0.20.2 - November 18th, 2009
    HBASE-1777  column length is not checked before saved to memstore
    HBASE-1895  HConstants.MAX_ROW_LENGTH is incorrectly 64k, should be 32k
    HBASE-1925  IllegalAccessError: Has not been initialized (getMaxSequenceId)
-   HBASE-1929  If hbase-default.xml is not in CP, zk session timeout is 10 secs!
+   HBASE-1929  If hbase-default.xml is not in CP, zk session timeout is 10
+               seconds
    HBASE-1927  Scanners not closed properly in certain circumstances
    HBASE-1934  NullPointerException in ClientScanner (Andrew Purtell via Stack)
    HBASE-1946  Unhandled exception at regionserver (Dmitriy Lyfar via Stack)
@@ -37,7 +38,8 @@ Release 0.20.2 - November 18th, 2009
                (Andrew McCall via Clint Morgan and Stack)
    HBASE-1953  Overhaul of overview.html (html fixes, typos, consistency) -
                no content changes (Lars Francke via Stack)
-   HBASE-1954  Transactional scans do not see newest put (Clint Morgan via Stack)
+   HBASE-1954  Transactional scans do not see newest put (Clint Morgan via
+               Stack)
    HBASE-1919  code: HRS.delete seems to ignore exceptions it shouldnt
    HBASE-1951  Stack overflow when calling HTable.checkAndPut() 
                when deleting a lot of values
@@ -46,7 +48,8 @@ Release 0.20.2 - November 18th, 2009
    HBASE-1949  KeyValue expiration by Time-to-Live during major compaction is
                broken (Gary Helmling via Stack)
    HBASE-1957  Get-s can't set a Filter (Roman Kalyakin via Stack)
-   HBASE-1959  Compress tables during 0.19 to 0.20 migration (Dave Latham via Stack)
+   HBASE-1959  Compress tables during 0.19 to 0.20 migration (Dave Latham via
+               Stack)
    HBASE-1928  ROOT and META tables stay in transition state (making the system
                not usable) if the designated regionServer dies before the
                assignment is complete (Yannis Pavlidis via Stack)
@@ -57,6 +60,7 @@ Release 0.20.2 - November 18th, 2009
                sometimes - Temporary fix
    HBASE-1965  On restart of branch, master complains about not being able
                to set safe mode
+   HBASE-2003  [shell] deleteall ignores column if specified
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count
