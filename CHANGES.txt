@@ -14,6 +14,9 @@ Release 0.20.3 - Unreleased
    HBASE-1961 HBase EC2 scripts
    HBASE-1970 Export does one version only; make it configurable how many
               it does
+   HBASE-1975 SingleColumnValueFilter: Add ability to match the value of
+              previous versions of the specified column
+              (Jeremiah Jacquet via Stack)
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
