@@ -74,7 +74,6 @@ public class HConnectionManager implements HConstants {
       @Override
       public void run() {
         HConnectionManager.deleteAllConnections(true);
-        System.out.println("Shutdown hook -- remove");
       }
     });
   }

@@ -12,6 +12,8 @@ Release 0.20.3 - Unreleased
 
   IMPROVEMENTS
    HBASE-1961 HBase EC2 scripts
+   HBASE-1970 Export does one version only; make it configurable how many
+              it does
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
