@@ -11,6 +11,7 @@ Release 0.20.3 - Unreleased
               C++ implementation when size % 4 >= 2 (Olivier Gillet via Stack)
 
   IMPROVEMENTS
+   HBASE-1961 HBase EC2 scripts
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
