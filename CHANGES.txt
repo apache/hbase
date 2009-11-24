@@ -17,6 +17,8 @@ Release 0.20.3 - Unreleased
    HBASE-1975 SingleColumnValueFilter: Add ability to match the value of
               previous versions of the specified column
               (Jeremiah Jacquet via Stack)
+   HBASE-1987 The Put object has no simple read methods for checking what
+              has already been added (Ryan Smith via Stack)
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
