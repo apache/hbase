@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.ipc.RemoteException;
 
+
 /**
  * Retries scanner operations such as create, next, etc.
  * Used by {@link ResultScanner}s made by {@link HTable}.
@@ -75,7 +76,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
       try {
         rrs = server.next(scannerId, caching);
       } catch (IOException e) {
-    	IOException ioe = null;
+        IOException ioe = null;
         if (e instanceof RemoteException) {
           ioe = RemoteExceptionHandler.decodeRemoteException((RemoteException)e);
         }
@@ -86,26 +87,26 @@ public class ScannerCallable extends ServerCallable<Result[]> {
           throw new DoNotRetryIOException("Reset scanner", ioe);
         }
       }
-      return rrs == null || rrs.length == 0? null: rrs;
+      return rrs;
     }
     return null;
   }
   
   private void close() {
-	if (this.scannerId == -1L) {
-	  return;
-	}
-	try {
-		this.server.close(this.scannerId);
-	} catch (IOException e) {
-	  // ignore
-	}
-	this.scannerId = -1L;
+    if (this.scannerId == -1L) {
+      return;
+    }
+    try {
+      this.server.close(this.scannerId);
+    } catch (IOException e) {
+      // Ignore, probably already closed
+    }
+    this.scannerId = -1L;
   }
 
   protected long openScanner() throws IOException {
-    return server.openScanner(
-        this.location.getRegionInfo().getRegionName(), scan);
+    return this.server.openScanner(this.location.getRegionInfo().getRegionName(),
+      this.scan);
   }
   
   protected Scan getScan() {
@@ -116,7 +117,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
    * Call this when the next invocation of call should close the scanner
    */
   public void setClose() {
-    closed = true;
+    this.closed = true;
   }
   
   /**

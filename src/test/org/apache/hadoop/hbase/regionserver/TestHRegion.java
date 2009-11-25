@@ -40,6 +40,10 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -60,6 +64,8 @@ public class TestHRegion extends HBaseTestCase {
   // Test names
   private final byte[] tableName = Bytes.toBytes("testtable");;
   private final byte[] qual1 = Bytes.toBytes("qual1");
+  private final byte[] qual2 = Bytes.toBytes("qual2");
+  private final byte[] qual3 = Bytes.toBytes("qual3");
   private final byte[] value1 = Bytes.toBytes("value1");
   private final byte[] value2 = Bytes.toBytes("value2");
   private final byte [] row = Bytes.toBytes("rowA");
@@ -77,6 +83,127 @@ public class TestHRegion extends HBaseTestCase {
   // individual code pieces in the HRegion. Putting files locally in
   // /tmp/testtable
   //////////////////////////////////////////////////////////////////////////////
+  
+
+  /**
+   * An involved filter test.  Has multiple column families and deletes in mix.
+   */
+  public void testWeirdCacheBehaviour() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testWeirdCacheBehaviour");
+    byte[][] FAMILIES = new byte[][] { Bytes.toBytes("trans-blob"),
+        Bytes.toBytes("trans-type"), Bytes.toBytes("trans-date"),
+        Bytes.toBytes("trans-tags"), Bytes.toBytes("trans-group") };
+    initHRegion(TABLE, getName(), FAMILIES);
+    String value = "this is the value";
+    String value2 = "this is some other value";
+    String keyPrefix1 = "prefix1"; // UUID.randomUUID().toString();
+    String keyPrefix2 = "prefix2"; // UUID.randomUUID().toString();
+    String keyPrefix3 = "prefix3"; // UUID.randomUUID().toString();
+    putRows(this.region, 3, value, keyPrefix1);
+    putRows(this.region, 3, value, keyPrefix2);
+    putRows(this.region, 3, value, keyPrefix3);
+    // this.region.flushCommits();
+    putRows(this.region, 3, value2, keyPrefix1);
+    putRows(this.region, 3, value2, keyPrefix2);
+    putRows(this.region, 3, value2, keyPrefix3);
+    System.out.println("Checking values for key: " + keyPrefix1);
+    assertEquals("Got back incorrect number of rows from scan", 3,
+      getNumberOfRows(keyPrefix1, value2, this.region));
+    System.out.println("Checking values for key: " + keyPrefix2);
+    assertEquals("Got back incorrect number of rows from scan", 3,
+      getNumberOfRows(keyPrefix2, value2, this.region));
+    System.out.println("Checking values for key: " + keyPrefix3);
+    assertEquals("Got back incorrect number of rows from scan", 3,
+      getNumberOfRows(keyPrefix3, value2, this.region));
+    deleteColumns(this.region, value2, keyPrefix1);
+    deleteColumns(this.region, value2, keyPrefix2);
+    deleteColumns(this.region, value2, keyPrefix3);
+    System.out.println("Starting important checks.....");
+    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix1,
+      0, getNumberOfRows(keyPrefix1, value2, this.region));
+    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix2,
+      0, getNumberOfRows(keyPrefix2, value2, this.region));
+    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix3,
+      0, getNumberOfRows(keyPrefix3, value2, this.region));
+  }
+
+  private void deleteColumns(HRegion r, String value, String keyPrefix)
+  throws IOException {
+    InternalScanner scanner = buildScanner(keyPrefix, value, r);
+    int count = 0;
+    boolean more = false;
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    do {
+      more = scanner.next(results);
+      if (results != null && !results.isEmpty())
+        count++;
+      else
+        break;
+      Delete delete = new Delete(results.get(0).getRow());
+      delete.deleteColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"));
+      r.delete(delete, null, false);
+      results.clear();
+    } while (more);
+    assertEquals("Did not perform correct number of deletes", 3, count);
+  }
+
+  private int getNumberOfRows(String keyPrefix, String value, HRegion r) throws Exception {
+    InternalScanner resultScanner = buildScanner(keyPrefix, value, r);
+    int numberOfResults = 0;
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    boolean more = false;
+    do {
+      more = resultScanner.next(results);
+      if (results != null && !results.isEmpty()) numberOfResults++;
+      else break;
+      for (KeyValue kv: results) {
+        System.out.println("kv=" + kv.toString() + ", " + Bytes.toString(kv.getValue()));
+      }
+      results.clear();
+    } while(more);
+    return numberOfResults;
+  }
+
+  private InternalScanner buildScanner(String keyPrefix, String value, HRegion r)
+  throws IOException {
+    // Defaults FilterList.Operator.MUST_PASS_ALL.
+    FilterList allFilters = new FilterList();
+    allFilters.addFilter(new PrefixFilter(Bytes.toBytes(keyPrefix)));
+    // Only return rows where this column value exists in the row.
+    SingleColumnValueFilter filter =
+      new SingleColumnValueFilter(Bytes.toBytes("trans-tags"),
+        Bytes.toBytes("qual2"), CompareOp.EQUAL, Bytes.toBytes(value));
+    filter.setFilterIfMissing(true);
+    allFilters.addFilter(filter);
+    Scan scan = new Scan();
+    scan.addFamily(Bytes.toBytes("trans-blob"));
+    scan.addFamily(Bytes.toBytes("trans-type"));
+    scan.addFamily(Bytes.toBytes("trans-date"));
+    scan.addFamily(Bytes.toBytes("trans-tags"));
+    scan.addFamily(Bytes.toBytes("trans-group"));
+    scan.setFilter(allFilters);
+    return r.getScanner(scan);
+  }
+
+  private void putRows(HRegion r, int numRows, String value, String key)
+  throws IOException {
+    for (int i = 0; i < numRows; i++) {
+      String row = key + "_" + i/* UUID.randomUUID().toString() */;
+      System.out.println(String.format("Saving row: %s, with value %s", row,
+        value));
+      Put put = new Put(Bytes.toBytes(row));
+      put.add(Bytes.toBytes("trans-blob"), null,
+        Bytes.toBytes("value for blob"));
+      put.add(Bytes.toBytes("trans-type"), null, Bytes.toBytes("statement"));
+      put.add(Bytes.toBytes("trans-date"), null,
+        Bytes.toBytes("20090921010101999"));
+      put.add(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"),
+        Bytes.toBytes(value));
+      put.add(Bytes.toBytes("trans-group"), null,
+        Bytes.toBytes("adhocTransactionGroupId"));
+      r.put(put);
+    }
+  }
 
   public void testFamilyWithAndWithoutColon() throws Exception {
     byte [] b = Bytes.toBytes(getName());
@@ -208,11 +335,11 @@ public class TestHRegion extends HBaseTestCase {
     
     //checkAndPut with wrong value
     Store store = region.getStore(fam1);
-    int size = store.memstore.kvset.size();
+    store.memstore.kvset.size();
     
     boolean res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
     assertEquals(true, res);
-    size = store.memstore.kvset.size();
+    store.memstore.kvset.size();
     
     Get get = new Get(row1);
     get.addColumn(fam2, qf1);
@@ -790,7 +917,7 @@ public class TestHRegion extends HBaseTestCase {
     scan.addFamily(fam1);
     scan.addFamily(fam2);
     try {
-      InternalScanner is = region.getScanner(scan);
+      region.getScanner(scan);
     } catch (Exception e) {
       assertTrue("Families could not be found in Region", false);
     }
@@ -811,7 +938,7 @@ public class TestHRegion extends HBaseTestCase {
     scan.addFamily(fam2);
     boolean ok = false;
     try {
-      InternalScanner is = region.getScanner(scan);
+      region.getScanner(scan);
     } catch (Exception e) {
       ok = true;
     }
@@ -1246,7 +1373,6 @@ public class TestHRegion extends HBaseTestCase {
     byte [] col2 = Bytes.toBytes("Pub222");
 
 
-
     Put put = new Put(row1);
     put.add(family, col1, Bytes.toBytes(10L));
     region.put(put);
@@ -1275,11 +1401,166 @@ public class TestHRegion extends HBaseTestCase {
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(false, s.next(results));
     assertEquals(0, results.size());
-
-
-
-    
   }
+
+  public void testIncrementColumnValue_UpdatingInPlace() throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 1L;
+    long amount = 3L;
+
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    region.put(put);
+
+    long result = region.incrementColumnValue(row, fam1, qual1, amount, true);
+    
+    assertEquals(value+amount, result);
+
+    Store store = region.getStore(fam1);
+    assertEquals(1, store.memstore.kvset.size());
+    assertTrue(store.memstore.snapshot.isEmpty());
+
+    assertICV(row, fam1, qual1, value+amount);
+  }
+
+  public void testIncrementColumnValue_ConcurrentFlush() throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 1L;
+    long amount = 3L;
+
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    region.put(put);
+
+    // now increment during a flush
+    Thread t = new Thread() {
+      public void run() {
+        try {
+          region.flushcache();
+        } catch (IOException e) {
+          LOG.info("test ICV, got IOE during flushcache()");
+        }
+      }
+    };
+    t.start();
+    long r = region.incrementColumnValue(row, fam1, qual1, amount, true);
+    assertEquals(value+amount, r);
+
+    // this also asserts there is only 1 KeyValue in the set.
+    assertICV(row, fam1, qual1, value+amount);
+  }
+
+  public void testIncrementColumnValue_UpdatingInPlace_Negative()
+    throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 3L;
+    long amount = -1L;
+
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    region.put(put);
+
+    long result = region.incrementColumnValue(row, fam1, qual1, amount, true);
+    assertEquals(value+amount, result);
+
+    assertICV(row, fam1, qual1, value+amount);
+  }
+
+  public void testIncrementColumnValue_AddingNew()
+    throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 1L;
+    long amount = 3L;
+
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    put.add(fam1, qual2, Bytes.toBytes(value));
+    region.put(put);
+
+    long result = region.incrementColumnValue(row, fam1, qual3, amount, true);
+    assertEquals(amount, result);
+
+    Get get = new Get(row);
+    get.addColumn(fam1, qual3);
+    Result rr = region.get(get, null);
+    assertEquals(1, rr.size());
+
+    // ensure none of the other cols were incremented.
+    assertICV(row, fam1, qual1, value);
+    assertICV(row, fam1, qual2, value);
+    assertICV(row, fam1, qual3, amount);
+  }
+
+  public void testIncrementColumnValue_UpdatingFromSF() throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 1L;
+    long amount = 3L;
+
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    put.add(fam1, qual2, Bytes.toBytes(value));
+    region.put(put);
+
+    // flush to disk.
+    region.flushcache();
+
+    Store store = region.getStore(fam1);
+    assertEquals(0, store.memstore.kvset.size());
+
+    long r = region.incrementColumnValue(row, fam1, qual1, amount, true);
+    assertEquals(value+amount, r);
+
+    assertICV(row, fam1, qual1, value+amount);
+  }
+
+  public void testIncrementColumnValue_AddingNewAfterSFCheck()
+    throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 1L;
+    long amount = 3L;
+
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    put.add(fam1, qual2, Bytes.toBytes(value));
+    region.put(put);
+    region.flushcache();
+
+    Store store = region.getStore(fam1);
+    assertEquals(0, store.memstore.kvset.size());
+
+    long r = region.incrementColumnValue(row, fam1, qual3, amount, true);
+    assertEquals(amount, r);
+
+    assertICV(row, fam1, qual3, amount);
+
+    region.flushcache();
+
+    // ensure that this gets to disk.
+    assertICV(row, fam1, qual3, amount);
+  }
+
+  private void assertICV(byte [] row,
+                         byte [] familiy,
+                         byte[] qualifier,
+                         long amount) throws IOException {
+    // run a get and see?
+    Get get = new Get(row);
+    get.addColumn(familiy, qualifier);
+    Result result = region.get(get, null);
+    assertEquals(1, result.size());
+
+    KeyValue kv = result.raw()[0];
+    long r = Bytes.toLong(kv.getValue());
+    assertEquals(amount, r);
+  }
+
+
   
   public void testScanner_Wildcard_FromMemStoreAndFiles_EnforceVersions()
   throws IOException {
@@ -1600,32 +1881,20 @@ public class TestHRegion extends HBaseTestCase {
     conf.setLong("hbase.hregion.max.filesize", 1024 * 128);
     return conf;
   }  
-  
-  //////////////////////////////////////////////////////////////////////////////
-  // Helpers
-  //////////////////////////////////////////////////////////////////////////////
-  private HBaseConfiguration initHRegion() {
-    HBaseConfiguration conf = new HBaseConfiguration();
-    
-    conf.set("hbase.hstore.compactionThreshold", "2");
-    conf.setLong("hbase.hregion.max.filesize", 65536);
-    
-    return conf;
-  }
-  
+
   private void initHRegion (byte [] tableName, String callingMethod,
-      byte[] ... families) throws IOException{
+    byte[] ... families)
+  throws IOException {
     initHRegion(tableName, callingMethod, new HBaseConfiguration(), families);
   }
   
   private void initHRegion (byte [] tableName, String callingMethod,
-      HBaseConfiguration conf, byte [] ... families) throws IOException{
+    HBaseConfiguration conf, byte [] ... families)
+  throws IOException{
     HTableDescriptor htd = new HTableDescriptor(tableName);
     for(byte [] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
       htd.addFamily(new HColumnDescriptor(family));
     }
-    
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     Path path = new Path(DIR + callingMethod); 
     region = HRegion.createHRegion(info, path, conf);

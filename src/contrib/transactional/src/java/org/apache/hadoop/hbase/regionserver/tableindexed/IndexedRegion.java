@@ -93,11 +93,11 @@ class IndexedRegion extends TransactionalRegion {
   @Override
   public void put(Put put, Integer lockId, boolean writeToWAL)
       throws IOException {
-    updateIndexes(put); // Do this first because will want to see the old row
+    updateIndexes(put, lockId); // Do this first because will want to see the old row
     super.put(put, lockId, writeToWAL);
   }
 
-  private void updateIndexes(Put put) throws IOException {
+  private void updateIndexes(Put put, Integer lockId) throws IOException {
     List<IndexSpecification> indexesToUpdate = new LinkedList<IndexSpecification>();
 
     // Find the indexes we need to update
@@ -119,7 +119,7 @@ class IndexedRegion extends TransactionalRegion {
       oldGet.addColumn(neededCol);  
     }
     
-    Result oldResult = super.get(oldGet, null);
+    Result oldResult = super.get(oldGet, lockId);
     
     // Add the old values to the new if they are not there
     if (oldResult != null && oldResult.raw() != null) {
@@ -220,7 +220,7 @@ class IndexedRegion extends TransactionalRegion {
   @Override
   public void delete(Delete delete, final Integer lockid, boolean writeToWAL)
       throws IOException {
-
+    // First remove the existing indexes.
     if (!getIndexes().isEmpty()) {
       // Need all columns
       NavigableSet<byte[]> neededColumns = getColumnsForIndexes(getIndexes());
@@ -230,20 +230,24 @@ class IndexedRegion extends TransactionalRegion {
        get.addColumn(col);
       }
       
-      Result oldRow = super.get(get, null);
+      Result oldRow = super.get(get, lockid);
       SortedMap<byte[], byte[]> oldColumnValues = convertToValueMap(oldRow);
       
       
       for (IndexSpecification indexSpec : getIndexes()) {
         removeOldIndexEntry(indexSpec, delete.getRow(), oldColumnValues);
       }
+    }
+    
+    super.delete(delete, lockid, writeToWAL);
 
-      // Handle if there is still a version visible.
-      if (delete.getTimeStamp() != HConstants.LATEST_TIMESTAMP) {
-        get.setTimeRange(1, delete.getTimeStamp());
-        oldRow = super.get(get, null);
-        SortedMap<byte[], byte[]> currentColumnValues = convertToValueMap(oldRow);
-        
+    if (!getIndexes().isEmpty()) {
+      Get get = new Get(delete.getRow());
+      
+      // Rebuild index if there is still a version visible.
+      Result currentRow = super.get(get, lockid);
+      if (!currentRow.isEmpty()) {
+        SortedMap<byte[], byte[]> currentColumnValues = convertToValueMap(currentRow);
         for (IndexSpecification indexSpec : getIndexes()) {
           if (IndexMaintenanceUtils.doesApplyToIndex(indexSpec, currentColumnValues)) {
             updateIndex(indexSpec, delete.getRow(), currentColumnValues);
@@ -251,7 +255,7 @@ class IndexedRegion extends TransactionalRegion {
         }
       }
     }
-    super.delete(delete, lockid, writeToWAL);
+   
   }
 
   private SortedMap<byte[], byte[]> convertToValueMap(Result result) {
@@ -260,9 +264,11 @@ class IndexedRegion extends TransactionalRegion {
     if (result == null || result.raw() == null) {
       return currentColumnValues;
     }
-    
-    for(KeyValue kv : result.list()) {
-      currentColumnValues.put(kv.getColumn(), kv.getValue());
+    List<KeyValue> list = result.list();
+    if (list != null) {
+      for(KeyValue kv : result.list()) {
+        currentColumnValues.put(kv.getColumn(), kv.getValue());
+      }
     }
     return currentColumnValues;
   }

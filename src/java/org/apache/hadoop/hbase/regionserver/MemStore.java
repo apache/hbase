@@ -420,7 +420,7 @@ public class MemStore implements HeapSize {
    * Immutable data structure to hold member found in set and the set it was
    * found in.  Include set because it is carrying context.
    */
-  private class Member {
+  private static class Member {
     final KeyValue kv;
     final NavigableSet<KeyValue> set;
     Member(final NavigableSet<KeyValue> s, final KeyValue kv) {
@@ -495,6 +495,43 @@ public class MemStore implements HeapSize {
     } finally {
       this.lock.readLock().unlock();
     }
+  }
+
+  /**
+   * Gets from either the memstore or the snapshop, and returns a code
+   * to let you know which is which.
+   *
+   * @param matcher
+   * @param result
+   * @return 1 == memstore, 2 == snapshot, 0 == none
+   */
+  int getWithCode(QueryMatcher matcher, List<KeyValue> result) throws IOException {
+    this.lock.readLock().lock();
+    try {
+      boolean fromMemstore = internalGet(this.kvset, matcher, result);
+      if (fromMemstore || matcher.isDone())
+        return 1;
+
+      matcher.update();
+      boolean fromSnapshot = internalGet(this.snapshot, matcher, result);
+      if (fromSnapshot || matcher.isDone())
+        return 2;
+
+      return 0;
+    } finally {
+      this.lock.readLock().unlock();
+    }
+  }
+
+  /**
+   * Small utility functions for use by Store.incrementColumnValue
+   * _only_ under the threat of pain and everlasting race conditions.
+   */
+  void readLockLock() {
+    this.lock.readLock().lock();
+  }
+  void readLockUnlock() {
+    this.lock.readLock().unlock();
   }
   
   /**
@@ -591,9 +628,9 @@ public class MemStore implements HeapSize {
     boolean cacheNextRow() {
       // Prevent snapshot being cleared while caching a row.
       lock.readLock().lock();
-      this.result.clear();
-      this.idx = 0;
       try {
+        this.result.clear();
+        this.idx = 0;
         // Look at each set, kvset and snapshot.
         // Both look for matching entries for this.current row returning what
         // they

@@ -69,12 +69,16 @@ import org.apache.hadoop.io.WritableFactories;
  * {@link #setMaxVersions(int) setMaxVersions}.
  * <p>
  * To add a filter, execute {@link #setFilter(org.apache.hadoop.hbase.filter.Filter) setFilter}.
+ * <p>
+ * Expert: To explicitly disable server-side block caching for this scan, 
+ * execute {@link #setCacheBlocks(boolean)}.
  */
 public class Scan implements Writable {
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
   private int caching = -1;
+  private boolean cacheBlocks = true;
   private Filter filter = null;
   private RowFilterInterface oldFilter = null;
   private TimeRange tr = new TimeRange();
@@ -123,6 +127,7 @@ public class Scan implements Writable {
     stopRow  = scan.getStopRow();
     maxVersions = scan.getMaxVersions();
     caching = scan.getCaching();
+    cacheBlocks = scan.getCacheBlocks();
     filter = scan.getFilter(); // clone?
     oldFilter = scan.getOldFilter(); // clone?
     TimeRange ctr = scan.getTimeRange();
@@ -230,27 +235,32 @@ public class Scan implements Writable {
    * @return The columns in an old style string format.
    */
   public String getInputColumns() {
-    String cols = "";
+    StringBuilder cols = new StringBuilder();
     for (Map.Entry<byte[], NavigableSet<byte[]>> e : 
       familyMap.entrySet()) {
       byte[] fam = e.getKey();
-      if (cols.length() > 0) cols += " ";
+      if (cols.length() > 0) {
+        cols.append(" ");
+      }
       NavigableSet<byte[]> quals = e.getValue();
       // check if this family has qualifiers
       if (quals != null && quals.size() > 0) {
-        String cs = "";
         for (byte[] qual : quals) {
-          if (cs.length() > 0) cs += " ";
+          if (cols.length() > 0) {
+            cols.append(" ");
+          }
           // encode values to make parsing easier later
-          cs += Bytes.toStringBinary(fam) + ":" + Bytes.toStringBinary(qual);
+          cols.append(Bytes.toStringBinary(fam));
+          cols.append(":");
+          cols.append(Bytes.toStringBinary(qual));
         }
-        cols += cs;
       } else {
         // only add the family but with old style delimiter 
-        cols += Bytes.toStringBinary(fam) + ":";
+        cols.append(Bytes.toStringBinary(fam));
+        cols.append(":");
       }
     }
-    return cols;
+    return cols.toString();
   }
   
   /**
@@ -449,6 +459,29 @@ public class Scan implements Writable {
   }
   
   /**
+   * Set whether blocks should be cached for this Scan.
+   * <p>
+   * This is true by default.  When true, default settings of the table and
+   * family are used (this will never override caching blocks if the block
+   * cache is disabled for that family or entirely).
+   * 
+   * @param cacheBlocks if false, default settings are overridden and blocks
+   * will not be cached
+   */
+  public void setCacheBlocks(boolean cacheBlocks) {
+    this.cacheBlocks = cacheBlocks;
+  }
+  
+  /**
+   * Get whether blocks should be cached for this Scan.
+   * @return true if default caching should be used, false if blocks should not
+   * be cached
+   */
+  public boolean getCacheBlocks() {
+    return cacheBlocks;
+  }
+  
+  /**
    * @return String
    */
   @Override
@@ -462,6 +495,8 @@ public class Scan implements Writable {
     sb.append("" + this.maxVersions);
     sb.append(", caching=");
     sb.append("" + this.caching);
+    sb.append(", cacheBlocks=");
+    sb.append("" + this.cacheBlocks);
     sb.append(", timeRange=");
     sb.append("[" + this.tr.getMin() + "," + this.tr.getMax() + ")");
     sb.append(", families=");
@@ -518,6 +553,7 @@ public class Scan implements Writable {
     this.stopRow = Bytes.readByteArray(in);
     this.maxVersions = in.readInt();
     this.caching = in.readInt();
+    this.cacheBlocks = in.readBoolean();
     if(in.readBoolean()) {
       this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
       this.filter.readFields(in);
@@ -550,6 +586,7 @@ public class Scan implements Writable {
     Bytes.writeByteArray(out, this.stopRow);
     out.writeInt(this.maxVersions);
     out.writeInt(this.caching);
+    out.writeBoolean(this.cacheBlocks);
     if(this.filter == null) {
       out.writeBoolean(false);
     } else {

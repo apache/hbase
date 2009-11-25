@@ -78,23 +78,23 @@ public class TestGetDeleteTracker extends HBaseTestCase implements HConstants {
 
     //ts1
     ts1 = System.nanoTime();
-    del10 = dt.new Delete(col1, 0, col1Len, del, ts1);
-    del11 = dt.new Delete(col2, 0, col2Len, del, ts1);
-    delQf10 = dt.new Delete(col1, 0, col1Len, delCol, ts1);
-    delQf11 = dt.new Delete(col2, 0, col2Len, delCol, ts1);
-    delFam10 = dt.new Delete(empty, 0, 0, delFam, ts1);
+    del10 = new Delete(col1, 0, col1Len, del, ts1);
+    del11 = new Delete(col2, 0, col2Len, del, ts1);
+    delQf10 = new Delete(col1, 0, col1Len, delCol, ts1);
+    delQf11 = new Delete(col2, 0, col2Len, delCol, ts1);
+    delFam10 = new Delete(empty, 0, 0, delFam, ts1);
     
     //ts2
     ts2 = System.nanoTime();
-    del20 = dt.new Delete(col1, 0, col1Len, del, ts2);
-    del21 = dt.new Delete(col2, 0, col2Len, del, ts2);
-    delQf20 = dt.new Delete(col1, 0, col1Len, delCol, ts2);
-    delQf21 = dt.new Delete(col2, 0, col2Len, delCol, ts2);
-    delFam20 = dt.new Delete(empty, 0, 0, delFam, ts1);
+    del20 = new Delete(col1, 0, col1Len, del, ts2);
+    del21 = new Delete(col2, 0, col2Len, del, ts2);
+    delQf20 = new Delete(col1, 0, col1Len, delCol, ts2);
+    delQf21 = new Delete(col2, 0, col2Len, delCol, ts2);
+    delFam20 = new Delete(empty, 0, 0, delFam, ts1);
     
     //ts3
     ts3 = System.nanoTime();
-    del30 = dt.new Delete(col1, 0, col1Len, del, ts3);
+    del30 = new Delete(col1, 0, col1Len, del, ts3);
   }
   
   public void testUpdate_CompareDeletes() {
@@ -308,6 +308,21 @@ public class TestGetDeleteTracker extends HBaseTestCase implements HConstants {
     dt.update();
     
     assertEquals(true, dt.isDeleted(col2, 0, col2Len, ts1));
+  }
+
+  // HBASE-1951
+  public void testStackOverflow() {
+    List<Delete> dels = new ArrayList<Delete>();
+    Delete adel = new Delete(col1, 0, col1Len, del, 0L);
+    for(long i = 0; i < 9000; i++) {
+      dt.add(adel.buffer, adel.qualifierOffset, adel.qualifierLength,
+          i, adel.type);
+    }
+
+
+    //update()
+    dt.update();
+    assertEquals(false, dt.isDeleted(col2, 0, col2Len, 7000000));
   }
   
 }

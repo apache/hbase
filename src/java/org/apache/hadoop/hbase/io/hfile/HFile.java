@@ -138,7 +138,7 @@ public class HFile {
   /**
    * Maximum length of key in HFile.
    */
-  public final static int MAXIMUM_KEY_LENGTH = 64 * 1024;
+  public final static int MAXIMUM_KEY_LENGTH = Integer.MAX_VALUE;
   
   /**
    * Default blocksize for hfile.
@@ -168,7 +168,7 @@ public class HFile {
     protected String name;
 
     // Total uncompressed bytes, maybe calculate a compression ratio later.
-    private int totalBytes = 0;
+    private long totalBytes = 0;
 
     // Total # of key/value entries, ie: how many times add() was called.
     private int entryCount = 0;
@@ -320,13 +320,12 @@ public class HFile {
      */
     private void finishBlock() throws IOException {
       if (this.out == null) return;
-      long size = releaseCompressingStream(this.out);
+      int size = releaseCompressingStream(this.out);
       this.out = null;
       blockKeys.add(firstKey);
-      int written = longToInt(size);
       blockOffsets.add(Long.valueOf(blockBegin));
-      blockDataSizes.add(Integer.valueOf(written));
-      this.totalBytes += written;
+      blockDataSizes.add(Integer.valueOf(size));
+      this.totalBytes += size;
     }
 
     /*
@@ -620,7 +619,7 @@ public class HFile {
       appendFileInfo(this.fileinfo, FileInfo.AVG_KEY_LEN,
         Bytes.toBytes(avgKeyLen), false);
       int avgValueLen = this.entryCount == 0? 0:
-        (int)(this.keylength/this.entryCount);
+        (int)(this.valuelength/this.entryCount);
       appendFileInfo(this.fileinfo, FileInfo.AVG_VALUE_LEN,
         Bytes.toBytes(avgValueLen), false);
       appendFileInfo(this.fileinfo, FileInfo.COMPARATOR,
@@ -898,7 +897,7 @@ public class HFile {
       if (blockIndex == null) {
         throw new IOException("Block index not loaded");
       }
-      if (block < 0 || block > blockIndex.count) {
+      if (block < 0 || block >= blockIndex.count) {
         throw new IOException("Requested block is out of range: " + block +
           ", max: " + blockIndex.count);
       }
@@ -1251,6 +1250,7 @@ public class HFile {
           block.rewind();
           currKeyLen = block.getInt();
           currValueLen = block.getInt();
+          return true;
         }
         currBlock = 0;
         block = reader.readBlock(currBlock, cacheBlocks);
@@ -1639,13 +1639,16 @@ public class HFile {
     try {
       // create options
       Options options = new Options();
-      options.addOption("v", "verbose", false, "verbose output");
-      options.addOption("p", "printkv", false, "print key/value pairs");
-      options.addOption("m", "printmeta", false, "print meta data of file");
-      options.addOption("k", "checkrow", false, "enable row order check");
-      options.addOption("a", "checkfamily", false, "enable family check");
-      options.addOption("f", "file", true, "file to scan");
-      options.addOption("r", "region", true, "region to scan");
+      options.addOption("v", "verbose", false, "Verbose output; emits file and meta data delimiters");
+      options.addOption("p", "printkv", false, "Print key/value pairs");
+      options.addOption("m", "printmeta", false, "Print meta data of file");
+      options.addOption("k", "checkrow", false,
+        "Enable row order check; looks for out-of-order keys");
+      options.addOption("a", "checkfamily", false, "Enable family check");
+      options.addOption("f", "file", true,
+        "File to scan. Pass full-path; e.g. hdfs://a:9000/hbase/.META./12/34");
+      options.addOption("r", "region", true,
+        "Region to scan. Pass region name; e.g. '.META.,,1'");
       if (args.length == 0) {
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp("HFile ", options, true);
@@ -1660,6 +1663,8 @@ public class HFile {
       boolean checkFamily = cmd.hasOption("a");
       // get configuration, file system and get list of files
       HBaseConfiguration conf = new HBaseConfiguration();
+      conf.set("fs.default.name",
+        conf.get(org.apache.hadoop.hbase.HConstants.HBASE_DIR));
       FileSystem fs = FileSystem.get(conf);
       ArrayList<Path> files = new ArrayList<Path>();
       if (cmd.hasOption("f")) {
@@ -1675,18 +1680,17 @@ public class HFile {
         Path regionDir = new Path(tableDir, Integer.toString(enc));
         if (verbose) System.out.println("region dir -> " + regionDir);
         List<Path> regionFiles = getStoreFiles(fs, regionDir);
-        System.out.println("Number of region files found -> " + 
+        if (verbose) System.out.println("Number of region files found -> " + 
           regionFiles.size());
         if (verbose) {
           int i = 1;
           for (Path p : regionFiles) {
-            System.out.println("Found file[" + i++ + "] -> " + p);
+            if (verbose) System.out.println("Found file[" + i++ + "] -> " + p);
           }
         }
         files.addAll(regionFiles);
       }
       // iterate over all files found
-      System.out.println("\nStart scan of files...\n");
       for (Path file : files) {
         if (verbose) System.out.println("Scanning -> " + file);
         if (!fs.exists(file)) {
@@ -1756,7 +1760,6 @@ public class HFile {
         }
         reader.close();
       }
-      System.out.println("\nDone.");
     } catch (Exception e) {
       e.printStackTrace();
     }

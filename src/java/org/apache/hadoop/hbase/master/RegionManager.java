@@ -48,9 +48,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -105,7 +105,6 @@ class RegionManager implements HConstants {
   private final int maxAssignInOneGo;
 
   final HMaster master;
-  private final RegionHistorian historian;
   private final LoadBalancer loadBalancer;
 
   /** Set of regions to split. */
@@ -128,8 +127,6 @@ class RegionManager implements HConstants {
     regionsToFlush = Collections.synchronizedSortedMap(
         new TreeMap<byte[],Pair<HRegionInfo,HServerAddress>>
         (Bytes.BYTES_COMPARATOR));
-
-  private final ZooKeeperWrapper zooKeeperWrapper;
   private final int zooKeeperNumRetries;
   private final int zooKeeperPause;
 
@@ -137,7 +134,6 @@ class RegionManager implements HConstants {
     HBaseConfiguration conf = master.getConfiguration();
 
     this.master = master;
-    this.historian = RegionHistorian.getInstance();
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
     this.loadBalancer = new LoadBalancer(conf);
 
@@ -147,7 +143,6 @@ class RegionManager implements HConstants {
     // Scans the meta table
     metaScannerThread = new MetaScanner(master);
 
-    zooKeeperWrapper = master.getZooKeeperWrapper();
     zooKeeperNumRetries = conf.getInt(ZOOKEEPER_RETRIES, DEFAULT_ZOOKEEPER_RETRIES);
     zooKeeperPause = conf.getInt(ZOOKEEPER_PAUSE, DEFAULT_ZOOKEEPER_PAUSE);
 
@@ -199,8 +194,8 @@ class RegionManager implements HConstants {
 
     // figure out what regions need to be assigned and aren't currently being
     // worked on elsewhere.
-    Set<RegionState> regionsToAssign = regionsAwaitingAssignment(info.getServerAddress(),
-        isSingleServer);
+    Set<RegionState> regionsToAssign =
+      regionsAwaitingAssignment(info.getServerAddress(), isSingleServer);
     if (regionsToAssign.size() == 0) {
       // There are no regions waiting to be assigned.
       if (!inSafeMode()) {
@@ -227,69 +222,88 @@ class RegionManager implements HConstants {
    * Note that no synchronization is needed while we iterate over
    * regionsInTransition because this method is only called by assignRegions
    * whose caller owns the monitor for RegionManager
-   */ 
+   * 
+   * TODO: This code is unintelligible.  REWRITE. Add TESTS! St.Ack 09/30/2009
+   * @param thisServersLoad
+   * @param regionsToAssign
+   * @param info
+   * @param returnMsgs
+   */
   private void assignRegionsToMultipleServers(final HServerLoad thisServersLoad,
     final Set<RegionState> regionsToAssign, final HServerInfo info, 
     final ArrayList<HMsg> returnMsgs) {
-
     boolean isMetaAssign = false;
     for (RegionState s : regionsToAssign) {
       if (s.getRegionInfo().isMetaRegion())
         isMetaAssign = true;
     }
-
     int nRegionsToAssign = regionsToAssign.size();
+    // Now many regions to assign this server.
     int nregions = regionsPerServer(nRegionsToAssign, thisServersLoad);
     LOG.debug("Assigning for " + info + ": total nregions to assign=" +
       nRegionsToAssign + ", nregions to reach balance=" + nregions +
       ", isMetaAssign=" + isMetaAssign);
-    nRegionsToAssign -= nregions;
-    if (nRegionsToAssign > 0 || isMetaAssign) {
-      // We still have more regions to assign. See how many we can assign
-      // before this server becomes more heavily loaded than the next
-      // most heavily loaded server.
-      HServerLoad heavierLoad = new HServerLoad();
-      int nservers = computeNextHeaviestLoad(thisServersLoad, heavierLoad);
-
-      nregions = 0;
-      
-      // Advance past any less-loaded servers
-      for (HServerLoad load = new HServerLoad(thisServersLoad);
+    if (nRegionsToAssign <= nregions) {
+      // I do not know whats supposed to happen in this case.  Assign one.
+      LOG.debug("Assigning one region only (playing it safe..)");
+      assignRegions(regionsToAssign, 1, info, returnMsgs);
+    } else {
+      nRegionsToAssign -= nregions;
+      if (nRegionsToAssign > 0 || isMetaAssign) {
+        // We still have more regions to assign. See how many we can assign
+        // before this server becomes more heavily loaded than the next
+        // most heavily loaded server.
+        HServerLoad heavierLoad = new HServerLoad();
+        int nservers = computeNextHeaviestLoad(thisServersLoad, heavierLoad);
+        nregions = 0;
+        // Advance past any less-loaded servers
+        for (HServerLoad load = new HServerLoad(thisServersLoad);
         load.compareTo(heavierLoad) <= 0 && nregions < nRegionsToAssign;
         load.setNumberOfRegions(load.getNumberOfRegions() + 1), nregions++) {
-        // continue;
-      }
-
-      LOG.debug("Doing for " + info + " nregions: " + nregions +
-      " and nRegionsToAssign: " + nRegionsToAssign);
-      if (nregions < nRegionsToAssign) {
-        // There are some more heavily loaded servers
-        // but we can't assign all the regions to this server.
-        if (nservers > 0) {
-          // There are other servers that can share the load.
-          // Split regions that need assignment across the servers.
-          nregions = (int) Math.ceil((1.0 * nRegionsToAssign)
-              / (1.0 * nservers));
+          // continue;
+        }
+        LOG.debug("Doing for " + info + " nregions: " + nregions +
+            " and nRegionsToAssign: " + nRegionsToAssign);
+        if (nregions < nRegionsToAssign) {
+          // There are some more heavily loaded servers
+          // but we can't assign all the regions to this server.
+          if (nservers > 0) {
+            // There are other servers that can share the load.
+            // Split regions that need assignment across the servers.
+            nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/(1.0 * nservers));
+          } else {
+            // No other servers with same load.
+            // Split regions over all available servers
+            nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/
+                (1.0 * master.serverManager.numServers()));
+          }
         } else {
-          // No other servers with same load.
-          // Split regions over all available servers
-          nregions = (int) Math.ceil((1.0 * nRegionsToAssign)
-              / (1.0 * master.serverManager.numServers()));
+          // Assign all regions to this server
+          nregions = nRegionsToAssign;
         }
-      } else {
-        // Assign all regions to this server
-        nregions = nRegionsToAssign;
+        assignRegions(regionsToAssign, nregions, info, returnMsgs);
       }
+    }
+  }
 
-      if (nregions > this.maxAssignInOneGo) {
-        nregions = this.maxAssignInOneGo;
-      }
-      
-      for (RegionState s: regionsToAssign) {
-        doRegionAssignment(s, info, returnMsgs);
-        if (--nregions <= 0) {
-          break;
-        }
+  /*
+   * Assign <code>nregions</code> regions.
+   * @param regionsToAssign
+   * @param nregions
+   * @param info
+   * @param returnMsgs
+   */
+  private void assignRegions(final Set<RegionState> regionsToAssign,
+      final int nregions, final HServerInfo info,
+      final ArrayList<HMsg> returnMsgs) {
+    int count = nregions;
+    if (count > this.maxAssignInOneGo) {
+      count = this.maxAssignInOneGo;
+    }
+    for (RegionState s: regionsToAssign) {
+      doRegionAssignment(s, info, returnMsgs);
+      if (--count <= 0) {
+        break;
       }
     }
   }
@@ -325,31 +339,6 @@ class RegionManager implements HConstants {
     rs.setPendingOpen(sinfo.getServerName());
     this.regionsInTransition.put(regionName, rs);
 
-    // Since the meta/root may not be available at this moment, we
-    try {
-      // TODO move this into an actual class, and use the RetryableMetaOperation
-      master.toDoQueue.put(
-        new RegionServerOperation(master) {
-            protected boolean process() throws IOException {
-              if (!rootAvailable() || !metaTableAvailable()) {
-                return true; // the two above us will put us on the delayed queue
-              }
-              
-              // this call can cause problems if meta/root is offline!
-              historian.addRegionAssignment(rs.getRegionInfo(),
-                  sinfo.getServerName());
-              return true;
-            }
-          public String toString() {
-            return "RegionAssignmentHistorian from " + sinfo.getServerName();
-          }
-        }
-      );
-    } catch (InterruptedException e) {
-      // ignore and don't write the region historian
-      LOG.info("doRegionAssignment: Couldn't queue the region historian due to exception: " + e);
-    }
-
     returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo()));
   }
 
@@ -360,7 +349,6 @@ class RegionManager implements HConstants {
    */
   private int regionsPerServer(final int numUnassignedRegions,
     final HServerLoad thisServersLoad) {
-    
     SortedMap<HServerLoad, Set<String>> lightServers =
       new TreeMap<HServerLoad, Set<String>>();
 
@@ -374,14 +362,13 @@ class RegionManager implements HConstants {
     // until they reach load equal with ours. Then, see how many regions are left
     // unassigned. That is how many regions we should assign to this server.
     int nRegions = 0;
-    for (Map.Entry<HServerLoad, Set<String>> e : lightServers.entrySet()) {
+    for (Map.Entry<HServerLoad, Set<String>> e: lightServers.entrySet()) {
       HServerLoad lightLoad = new HServerLoad(e.getKey());
       do {
         lightLoad.setNumberOfRegions(lightLoad.getNumberOfRegions() + 1);
         nRegions += 1;
       } while (lightLoad.compareTo(thisServersLoad) <= 0
           && nRegions < numUnassignedRegions);
-
       nRegions *= e.getValue().size();
       if (nRegions >= numUnassignedRegions) {
         break;
@@ -389,7 +376,7 @@ class RegionManager implements HConstants {
     }
     return nRegions;
   }
-  
+
   /*
    * Get the set of regions that should be assignable in this pass.
    * 
@@ -410,8 +397,9 @@ class RegionManager implements HConstants {
       // make sure root isnt assigned here first.
       // if so return 'empty list'
       // by definition there is no way this could be a ROOT region (since it's
-      // unassigned) so just make sure it isn't hosting META regions.
-      if (!isMetaServer) {
+      // unassigned) so just make sure it isn't hosting META regions (unless
+      // it's the only server left).
+      if (!isMetaServer || isSingleServer) {
         regionsToAssign.add(rootState);
       }
       return regionsToAssign;
@@ -520,25 +508,30 @@ class RegionManager implements HConstants {
     LOG.info("Skipped " + skipped + " region(s) that are in transition states");
   }
 
+  /*
+   * PathFilter that accepts hbase tables only.
+   */
   static class TableDirFilter implements PathFilter {
-
     public boolean accept(Path path) {
       // skip the region servers' log dirs && version file
-      // HBASE-1112 want to sperate the log dirs from table's data dirs by a special character.
+      // HBASE-1112 want to separate the log dirs from table's data dirs by a
+      // special character.
       String pathname = path.getName();
-      return !pathname.startsWith("log_") && !pathname.equals(VERSION_FILE_NAME);
+      return !pathname.equals(HLog.HREGION_LOGDIR_NAME) &&
+        !pathname.equals(VERSION_FILE_NAME);
     }
     
   }
-  
-  static class RegionDirFilter implements PathFilter {
 
+  /*
+   * PathFilter that accepts all but compaction.dir names.
+   */
+  static class RegionDirFilter implements PathFilter {
     public boolean accept(Path path) { 
       return !path.getName().equals(HREGION_COMPACTIONDIR_NAME);
     }
-    
   }
-  
+
   /**
    * @return the rough number of the regions on fs
    * Note: this method simply counts the regions on fs by accumulating all the dirs 
@@ -547,10 +540,8 @@ class RegionManager implements HConstants {
    */
   public int countRegionsOnFS() throws IOException {
     int regions = 0;
-    
-    FileStatus[] tableDirs = 
+    FileStatus[] tableDirs =
       master.fs.listStatus(master.rootdir, new TableDirFilter());
-    
     FileStatus[] regionDirs;
     RegionDirFilter rdf = new RegionDirFilter();
     for(FileStatus tabledir : tableDirs) {
@@ -559,7 +550,6 @@ class RegionManager implements HConstants {
         regions += regionDirs.length;
       }
     }
-    
     return regions;
   }
   
@@ -618,8 +608,8 @@ class RegionManager implements HConstants {
     } catch(Exception iex) {
       LOG.warn("meta scanner", iex);
     }
-    zooKeeperWrapper.clearRSDirectory();
-    zooKeeperWrapper.close();
+    master.getZooKeeperWrapper().clearRSDirectory();
+    master.getZooKeeperWrapper().close();
   }
   
   /**
@@ -650,7 +640,7 @@ class RegionManager implements HConstants {
           return onlineMetaRegions.get(newRegion.getRegionName());
         } 
         return onlineMetaRegions.get(onlineMetaRegions.headMap(
-            newRegion.getTableDesc().getName()).lastKey());
+            newRegion.getRegionName()).lastKey());
       }
     }
   }
@@ -844,6 +834,44 @@ class RegionManager implements HConstants {
       }
     }
     return false;
+  }
+
+  /**
+   * Is this server assigned to transition the ROOT table. HBASE-1928
+   *
+   * @param server Server
+   * @return true if server is transitioning the ROOT table
+   */
+  public boolean isRootServerCandidate(final String server) {
+    for (RegionState s : regionsInTransition.values()) {
+      if (s.getRegionInfo().isRootRegion()
+          && !s.isUnassigned()
+          && s.getServerName() != null
+          && s.getServerName().equals(server)) {
+        // Has an outstanding root region to be assigned.
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Is this server assigned to transition a META table. HBASE-1928
+   *
+   * @param server Server
+   * @return if this server was transitioning a META table then a not null HRegionInfo pointing to it
+   */
+  public HRegionInfo getMetaServerRegionInfo(final String server) {
+    for (RegionState s : regionsInTransition.values()) {
+      if (s.getRegionInfo().isMetaRegion()
+          && !s.isUnassigned()
+          && s.getServerName() != null
+          && s.getServerName().equals(server)) {
+        // Has an outstanding meta region to be assigned.
+        return s.getRegionInfo();
+      }
+    }
+    return null;
   }
 
   /**
@@ -1081,7 +1109,7 @@ class RegionManager implements HConstants {
 
   private boolean tellZooKeeperOutOfSafeMode() {
     for (int attempt = 0; attempt < zooKeeperNumRetries; ++attempt) {
-      if (zooKeeperWrapper.writeOutOfSafeMode()) {
+      if (master.getZooKeeperWrapper().writeOutOfSafeMode()) {
         return true;
       }
 
@@ -1173,7 +1201,7 @@ class RegionManager implements HConstants {
 
   private void writeRootRegionLocationToZooKeeper(HServerAddress address) {
     for (int attempt = 0; attempt < zooKeeperNumRetries; ++attempt) {
-      if (zooKeeperWrapper.writeRootRegionLocation(address)) {
+      if (master.getZooKeeperWrapper().writeRootRegionLocation(address)) {
         return;
       }
 

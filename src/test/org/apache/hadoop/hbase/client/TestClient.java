@@ -20,17 +20,39 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.QualifierFilter;
+import org.apache.hadoop.hbase.filter.RegexStringComparator;
+import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestClient extends HBaseClusterTestCase {
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
 
+/**
+ * Tests from client-side of a cluster.
+ */
+public class TestClient extends HBaseClusterTestCase {
+  final Log LOG = LogFactory.getLog(getClass());
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
@@ -44,9 +66,311 @@ public class TestClient extends HBaseClusterTestCase {
   public TestClient() {
     super();
   }
+
+  /**
+   * Test from client side of an involved filter against a multi family that
+   * involves deletes.
+   * 
+   * @throws Exception
+   */
+  public void testWeirdCacheBehaviour() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testWeirdCacheBehaviour");
+    byte[][] FAMILIES = new byte[][] { Bytes.toBytes("trans-blob"),
+        Bytes.toBytes("trans-type"), Bytes.toBytes("trans-date"),
+        Bytes.toBytes("trans-tags"), Bytes.toBytes("trans-group") };
+    HTable ht = createTable(TABLE, FAMILIES);
+    String value = "this is the value";
+    String value2 = "this is some other value";
+    String keyPrefix1 = UUID.randomUUID().toString();
+    String keyPrefix2 = UUID.randomUUID().toString();
+    String keyPrefix3 = UUID.randomUUID().toString();
+    putRows(ht, 3, value, keyPrefix1);
+    putRows(ht, 3, value, keyPrefix2);
+    putRows(ht, 3, value, keyPrefix3);
+    ht.flushCommits();
+    putRows(ht, 3, value2, keyPrefix1);
+    putRows(ht, 3, value2, keyPrefix2);
+    putRows(ht, 3, value2, keyPrefix3);
+    HTable table = new HTable(conf, Bytes.toBytes("testWeirdCacheBehaviour"));
+    System.out.println("Checking values for key: " + keyPrefix1);
+    assertEquals("Got back incorrect number of rows from scan", 3,
+        getNumberOfRows(keyPrefix1, value2, table));
+    System.out.println("Checking values for key: " + keyPrefix2);
+    assertEquals("Got back incorrect number of rows from scan", 3,
+        getNumberOfRows(keyPrefix2, value2, table));
+    System.out.println("Checking values for key: " + keyPrefix3);
+    assertEquals("Got back incorrect number of rows from scan", 3,
+        getNumberOfRows(keyPrefix3, value2, table));
+    deleteColumns(ht, value2, keyPrefix1);
+    deleteColumns(ht, value2, keyPrefix2);
+    deleteColumns(ht, value2, keyPrefix3);
+    System.out.println("Starting important checks.....");
+    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix1,
+      0, getNumberOfRows(keyPrefix1, value2, table));
+    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix2,
+      0, getNumberOfRows(keyPrefix2, value2, table));
+    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix3,
+      0, getNumberOfRows(keyPrefix3, value2, table));
+    ht.setScannerCaching(0);
+    assertEquals("Got back incorrect number of rows from scan", 0,
+      getNumberOfRows(keyPrefix1, value2, table)); ht.setScannerCaching(100);
+    assertEquals("Got back incorrect number of rows from scan", 0,
+      getNumberOfRows(keyPrefix2, value2, table));
+  }
+
+  private void deleteColumns(HTable ht, String value, String keyPrefix)
+  throws IOException {
+    ResultScanner scanner = buildScanner(keyPrefix, value, ht);
+    Iterator<Result> it = scanner.iterator();
+    int count = 0;
+    while (it.hasNext()) {
+      Result result = it.next();
+      Delete delete = new Delete(result.getRow());
+      delete.deleteColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"));
+      ht.delete(delete);
+      count++;
+    }
+    assertEquals("Did not perform correct number of deletes", 3, count);
+  }
+
+  private int getNumberOfRows(String keyPrefix, String value, HTable ht)
+      throws Exception {
+    ResultScanner resultScanner = buildScanner(keyPrefix, value, ht);
+    Iterator<Result> scanner = resultScanner.iterator();
+    int numberOfResults = 0;
+    while (scanner.hasNext()) {
+      Result result = scanner.next();
+      System.out.println("Got back key: " + Bytes.toString(result.getRow()));
+      for (KeyValue kv : result.raw()) {
+        System.out.println("kv=" + kv.toString() + ", "
+            + Bytes.toString(kv.getValue()));
+      }
+      numberOfResults++;
+    }
+    return numberOfResults;
+  }
+
+  private ResultScanner buildScanner(String keyPrefix, String value, HTable ht)
+      throws IOException {
+    // OurFilterList allFilters = new OurFilterList();
+    FilterList allFilters = new FilterList(/* FilterList.Operator.MUST_PASS_ALL */);
+    allFilters.addFilter(new PrefixFilter(Bytes.toBytes(keyPrefix)));
+    SingleColumnValueFilter filter = new SingleColumnValueFilter(Bytes
+        .toBytes("trans-tags"), Bytes.toBytes("qual2"), CompareOp.EQUAL, Bytes
+        .toBytes(value));
+    filter.setFilterIfMissing(true);
+    allFilters.addFilter(filter);
+
+    // allFilters.addFilter(new
+    // RowExcludingSingleColumnValueFilter(Bytes.toBytes("trans-tags"),
+    // Bytes.toBytes("qual2"), CompareOp.EQUAL, Bytes.toBytes(value)));
+
+    Scan scan = new Scan();
+    scan.addFamily(Bytes.toBytes("trans-blob"));
+    scan.addFamily(Bytes.toBytes("trans-type"));
+    scan.addFamily(Bytes.toBytes("trans-date"));
+    scan.addFamily(Bytes.toBytes("trans-tags"));
+    scan.addFamily(Bytes.toBytes("trans-group"));
+    scan.setFilter(allFilters);
+
+    return ht.getScanner(scan);
+  }
+
+  private void putRows(HTable ht, int numRows, String value, String key)
+      throws IOException {
+    for (int i = 0; i < numRows; i++) {
+      String row = key + "_" + UUID.randomUUID().toString();
+      System.out.println(String.format("Saving row: %s, with value %s", row,
+          value));
+      Put put = new Put(Bytes.toBytes(row));
+      put.add(Bytes.toBytes("trans-blob"), null, Bytes
+          .toBytes("value for blob"));
+      put.add(Bytes.toBytes("trans-type"), null, Bytes.toBytes("statement"));
+      put.add(Bytes.toBytes("trans-date"), null, Bytes
+          .toBytes("20090921010101999"));
+      put.add(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"), Bytes
+          .toBytes(value));
+      put.add(Bytes.toBytes("trans-group"), null, Bytes
+          .toBytes("adhocTransactionGroupId"));
+      ht.put(put);
+    }
+  }
+
+  /**
+   * Test filters when multiple regions.  It does counts.  Needs eye-balling of
+   * logs to ensure that we're not scanning more regions that we're supposed to.
+   * Related to the TestFilterAcrossRegions over in the o.a.h.h.filter package.
+   * @throws IOException
+   */
+  public void testFilterAcrossMutlipleRegions() throws IOException {
+    byte [] name = Bytes.toBytes(getName());
+    HTable t = createTable(name, FAMILY);
+    int rowCount = loadTable(t);
+    assertRowCount(t, rowCount);
+    // Split the table.  Should split on a reasonable key; 'lqj'
+    Map<HRegionInfo, HServerAddress> regions  = splitTable(t);
+    assertRowCount(t, rowCount);
+    // Get end key of first region.
+    byte [] endKey = regions.keySet().iterator().next().getEndKey();
+    // Count rows with a filter that stops us before passed 'endKey'.
+    // Should be count of rows in first region.
+    int endKeyCount = countRows(t, createScanWithRowFilter(endKey));
+    assertTrue(endKeyCount < rowCount);
+
+    // How do I know I did not got to second region?  Thats tough.  Can't really
+    // do that in client-side region test.  I verified by tracing in debugger.
+    // I changed the messages that come out when set to DEBUG so should see
+    // when scanner is done. Says "Finished with scanning..." with region name.
+    // Check that its finished in right region.
+
+    // New test.  Make it so scan goes into next region by one and then two.
+    // Make sure count comes out right.
+    byte [] key = new byte [] {endKey[0], endKey[1], (byte)(endKey[2] + 1)};
+    int plusOneCount = countRows(t, createScanWithRowFilter(key));
+    assertEquals(endKeyCount + 1, plusOneCount);
+    key = new byte [] {endKey[0], endKey[1], (byte)(endKey[2] + 2)};
+    int plusTwoCount = countRows(t, createScanWithRowFilter(key));
+    assertEquals(endKeyCount + 2, plusTwoCount);
+
+    // New test.  Make it so I scan one less than endkey.
+    key = new byte [] {endKey[0], endKey[1], (byte)(endKey[2] - 1)};
+    int minusOneCount = countRows(t, createScanWithRowFilter(key));
+    assertEquals(endKeyCount - 1, minusOneCount);
+    // For above test... study logs.  Make sure we do "Finished with scanning.."
+    // in first region and that we do not fall into the next region.
+    
+    key = new byte [] {'a', 'a', 'a'};
+    int countBBB = countRows(t,
+      createScanWithRowFilter(key, null, CompareFilter.CompareOp.EQUAL));
+    assertEquals(1, countBBB);
+
+    int countGreater = countRows(t, createScanWithRowFilter(endKey, null,
+      CompareFilter.CompareOp.GREATER_OR_EQUAL));
+    // Because started at start of table.
+    assertEquals(0, countGreater);
+    countGreater = countRows(t, createScanWithRowFilter(endKey, endKey,
+      CompareFilter.CompareOp.GREATER_OR_EQUAL));
+    assertEquals(rowCount - endKeyCount, countGreater);
+  }
   
-  public void XtestSuperSimple() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testSuperSimple");
+  /**
+   * Load table with rows from 'aaa' to 'zzz'.
+   * @param t
+   * @return Count of rows loaded.
+   * @throws IOException
+   */
+  private int loadTable(final HTable t) throws IOException {
+    // Add data to table.
+    byte[] k = new byte[3];
+    int rowCount = 0;
+    for (byte b1 = 'a'; b1 < 'z'; b1++) {
+      for (byte b2 = 'a'; b2 < 'z'; b2++) {
+        for (byte b3 = 'a'; b3 < 'z'; b3++) {
+          k[0] = b1;
+          k[1] = b2;
+          k[2] = b3;
+          Put put = new Put(k);
+          put.add(FAMILY, new byte[0], k);
+          t.put(put);
+          rowCount++;
+        }
+      }
+    }
+    return rowCount;
+  }
+
+  /*
+   * @param key
+   * @return Scan with RowFilter that does LESS than passed key.
+   */
+  private Scan createScanWithRowFilter(final byte [] key) {
+    return createScanWithRowFilter(key, null, CompareFilter.CompareOp.LESS);
+  }
+
+  /*
+   * @param key
+   * @param op
+   * @param startRow
+   * @return Scan with RowFilter that does CompareOp op on passed key.
+   */
+  private Scan createScanWithRowFilter(final byte [] key,
+      final byte [] startRow, CompareFilter.CompareOp op) {
+    // Make sure key is of some substance... non-null and > than first key.
+    assertTrue(key != null && key.length > 0 &&
+      Bytes.BYTES_COMPARATOR.compare(key, new byte [] {'a', 'a', 'a'}) >= 0);
+    LOG.info("Key=" + Bytes.toString(key));
+    Scan s = startRow == null? new Scan(): new Scan(startRow);
+    Filter f = new RowFilter(op, new BinaryComparator(key));
+    f = new WhileMatchFilter(f);
+    s.setFilter(f);
+    return s;
+  }
+
+  /*
+   * @param t
+   * @param s
+   * @return Count of rows in table.
+   * @throws IOException
+   */
+  private int countRows(final HTable t, final Scan s)
+  throws IOException {
+    // Assert all rows in table.
+    ResultScanner scanner = t.getScanner(s);
+    int count = 0;
+    for (Result result: scanner) {
+      count++;
+      assertTrue(result.size() > 0);
+      // LOG.info("Count=" + count + ", row=" + Bytes.toString(result.getRow()));
+    }
+    return count;
+  }
+
+  private void assertRowCount(final HTable t, final int expected)
+  throws IOException {
+    assertEquals(expected, countRows(t, new Scan()));
+  }
+
+  /*
+   * Split table into multiple regions.
+   * @param t Table to split.
+   * @return Map of regions to servers.
+   * @throws IOException
+   */
+  private Map<HRegionInfo, HServerAddress> splitTable(final HTable t)
+  throws IOException {
+    // Split this table in two.
+    HBaseAdmin admin = new HBaseAdmin(this.conf);
+    admin.split(t.getTableName());
+    Map<HRegionInfo, HServerAddress> regions = waitOnSplit(t);
+    assertTrue(regions.size() > 1);
+    return regions;
+  }
+
+  /*
+   * Wait on table split.  May return because we waited long enough on the split
+   * and it didn't happen.  Caller should check.
+   * @param t
+   * @return Map of table regions; caller needs to check table actually split.
+   */
+  private Map<HRegionInfo, HServerAddress> waitOnSplit(final HTable t)
+  throws IOException {
+    Map<HRegionInfo, HServerAddress> regions = t.getRegionsInfo();
+    int originalCount = regions.size();
+    for (int i = 0; i < this.conf.getInt("hbase.test.retries", 30); i++) {
+      Thread.currentThread();
+      try {
+        Thread.sleep(this.conf.getInt("hbase.server.thread.wakefrequency", 1000));
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      regions = t.getRegionsInfo();
+      if (regions.size() > originalCount) break;
+    }
+    return regions;
+  }
+
+  public void testSuperSimple() throws Exception {
+    byte [] TABLE = Bytes.toBytes(getName());
     HTable ht = createTable(TABLE, FAMILY);
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, VALUE);
@@ -59,7 +383,41 @@ public class TestClient extends HBaseClusterTestCase {
     scanner.close();
     System.out.println("Done.");
   }
-  
+
+  public void testFilters() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testFilters");
+    HTable ht = createTable(TABLE, FAMILY);
+    byte [][] ROWS = makeN(ROW, 10);
+    byte [][] QUALIFIERS = {
+        Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"), 
+        Bytes.toBytes("col2-<d2v1>-<d3v2>"), Bytes.toBytes("col3-<d2v1>-<d3v2>"), 
+        Bytes.toBytes("col4-<d2v1>-<d3v2>"), Bytes.toBytes("col5-<d2v1>-<d3v2>"), 
+        Bytes.toBytes("col6-<d2v1>-<d3v2>"), Bytes.toBytes("col7-<d2v1>-<d3v2>"), 
+        Bytes.toBytes("col8-<d2v1>-<d3v2>"), Bytes.toBytes("col9-<d2v1>-<d3v2>")
+    };
+    for(int i=0;i<10;i++) {
+      Put put = new Put(ROWS[i]);
+      put.add(FAMILY, QUALIFIERS[i], VALUE);
+      ht.put(put);
+    }
+    Scan scan = new Scan();
+    scan.addFamily(FAMILY);
+    Filter filter = new QualifierFilter(CompareOp.EQUAL,
+        new RegexStringComparator("col[1-5]"));
+    scan.setFilter(filter);
+    ResultScanner scanner = ht.getScanner(scan);
+    int expectedIndex = 1;
+    for(Result result : ht.getScanner(scan)) {
+      assertEquals(result.size(), 1);
+      assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[expectedIndex]));
+      assertTrue(Bytes.equals(result.raw()[0].getQualifier(), 
+          QUALIFIERS[expectedIndex]));
+      expectedIndex++;
+    }
+    assertEquals(expectedIndex, 6);
+    scanner.close();
+  }
+
   /**
    * Test simple table and non-existent row cases.
    */
@@ -1031,9 +1389,8 @@ public class TestClient extends HBaseClusterTestCase {
         result.size() == 9);
     
   }
-  
+
   public void testDeletes() throws Exception {
-    
     byte [] TABLE = Bytes.toBytes("testDeletes");
     
     byte [][] ROWS = makeNAscii(ROW, 6);
@@ -1075,6 +1432,9 @@ public class TestClient extends HBaseClusterTestCase {
     put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
     put.add(FAMILIES[0], QUALIFIER, ts[2], VALUES[2]);
     put.add(FAMILIES[0], QUALIFIER, ts[3], VALUES[3]);
+    put.add(FAMILIES[0], null, ts[4], VALUES[4]);
+    put.add(FAMILIES[0], null, ts[2], VALUES[2]);
+    put.add(FAMILIES[0], null, ts[3], VALUES[3]);
     ht.put(put);
     
     delete = new Delete(ROW);
@@ -1082,7 +1442,7 @@ public class TestClient extends HBaseClusterTestCase {
     ht.delete(delete);
     
     get = new Get(ROW);
-    get.addFamily(FAMILIES[0]);
+    get.addColumn(FAMILIES[0], QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
     assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
@@ -1091,13 +1451,23 @@ public class TestClient extends HBaseClusterTestCase {
         0, 2);
     
     scan = new Scan(ROW);
-    scan.addFamily(FAMILIES[0]);
+    scan.addColumn(FAMILIES[0], QUALIFIER);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
     assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
         new long [] {ts[1], ts[2], ts[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
+    
+    // Test for HBASE-1847
+    delete = new Delete(ROW);
+    delete.deleteColumn(FAMILIES[0], null);
+    ht.delete(delete);
+    
+    // Cleanup null qualifier
+    delete = new Delete(ROW);
+    delete.deleteColumns(FAMILIES[0], null);
+    ht.delete(delete);
     
     // Expected client behavior might be that you can re-put deleted values
     // But alas, this is not to be.  We can't put them back in either case.
@@ -1280,8 +1650,38 @@ public class TestClient extends HBaseClusterTestCase {
     assertTrue(Bytes.equals(result.sorted()[0].getValue(), VALUES[1]));
     assertTrue(Bytes.equals(result.sorted()[1].getValue(), VALUES[2]));
     scanner.close();
+    
+    // Add test of bulk deleting.
+    for (int i = 0; i < 10; i++) {
+      byte [] bytes = Bytes.toBytes(i);
+      put = new Put(bytes);
+      put.add(FAMILIES[0], QUALIFIER, bytes);
+      ht.put(put);
+    }
+    for (int i = 0; i < 10; i++) {
+      byte [] bytes = Bytes.toBytes(i);
+      get = new Get(bytes);
+      get.addFamily(FAMILIES[0]);
+      result = ht.get(get);
+      assertTrue(result.size() == 1);
+    }
+    ArrayList<Delete> deletes = new ArrayList<Delete>();
+    for (int i = 0; i < 10; i++) {
+      byte [] bytes = Bytes.toBytes(i);
+      delete = new Delete(bytes);
+      delete.deleteFamily(FAMILIES[0]);
+      deletes.add(delete);
+    }
+    ht.delete(deletes);
+    for (int i = 0; i < 10; i++) {
+      byte [] bytes = Bytes.toBytes(i);
+      get = new Get(bytes);
+      get.addFamily(FAMILIES[0]);
+      result = ht.get(get);
+      assertTrue(result.size() == 0);
+    }
   }
-  
+
   /**
    * Baseline "scalability" test.
    * 
@@ -2406,7 +2806,7 @@ public class TestClient extends HBaseClusterTestCase {
   }
   
   private byte [][] makeN(byte [] base, int n) {
-    if(n > 256) {
+    if (n > 256) {
       return makeNBig(base, n);
     }
     byte [][] ret = new byte[n][];

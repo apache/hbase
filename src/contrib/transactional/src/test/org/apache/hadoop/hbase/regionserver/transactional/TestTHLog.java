@@ -86,8 +86,6 @@ public class TestTHLog extends HBaseTestCase implements
     // Write columns named 1, 2, 3, etc. and then values of single byte
     // 1, 2, 3...
     long transactionId = 1;
-    log.writeStartToLog(regionInfo, transactionId);
-
     log.writeUpdateToLog(regionInfo, transactionId, new Put(row1).add(family,
         column, val1));
     log.writeUpdateToLog(regionInfo, transactionId, new Put(row2).add(family,
@@ -105,23 +103,7 @@ public class TestTHLog extends HBaseTestCase implements
     Map<Long, List<KeyValue>> commits = logRecoveryMangaer.getCommitsFromLog(
         filename, -1, null);
 
-    assertEquals(1, commits.size());
-    assertTrue(commits.containsKey(transactionId));
-    assertEquals(3, commits.get(transactionId).size());
-
-    List<KeyValue> updates = commits.get(transactionId);
-
-    KeyValue update1 = updates.get(0);
-    assertTrue(Bytes.equals(row1, update1.getRow()));
-    assertTrue(Bytes.equals(val1, update1.getValue()));
-
-    KeyValue update2 = updates.get(1);
-    assertTrue(Bytes.equals(row2, update2.getRow()));
-    assertTrue(Bytes.equals(val2, update2.getValue()));
-
-    KeyValue update3 = updates.get(2);
-    assertTrue(Bytes.equals(row3, update3.getRow()));
-    assertTrue(Bytes.equals(val3, update3.getValue()));
+    assertNull(commits);
 
   }
 
@@ -135,8 +117,6 @@ public class TestTHLog extends HBaseTestCase implements
         regionInfo, conf);
 
     long transactionId = 1;
-    log.writeStartToLog(regionInfo, transactionId);
-
     log.writeUpdateToLog(regionInfo, transactionId, new Put(row1).add(family,
         column, val1));
     log.writeUpdateToLog(regionInfo, transactionId, new Put(row2).add(family,
@@ -153,7 +133,7 @@ public class TestTHLog extends HBaseTestCase implements
     Map<Long, List<KeyValue>> commits = logRecoveryMangaer.getCommitsFromLog(
         filename, -1, null);
 
-    assertEquals(0, commits.size());
+    assertNull(commits);
   }
 
   /**
@@ -168,11 +148,9 @@ public class TestTHLog extends HBaseTestCase implements
     long transaction1Id = 1;
     long transaction2Id = 2;
 
-    log.writeStartToLog(regionInfo, transaction1Id);
     log.writeUpdateToLog(regionInfo, transaction1Id, new Put(row1).add(family,
         column, val1));
 
-    log.writeStartToLog(regionInfo, transaction2Id);
     log.writeUpdateToLog(regionInfo, transaction2Id, new Put(row2).add(family,
         column, val2));
 
@@ -190,9 +168,7 @@ public class TestTHLog extends HBaseTestCase implements
     Map<Long, List<KeyValue>> commits = logMangaer.getCommitsFromLog(filename,
         -1, null);
 
-    assertEquals(2, commits.size());
-    assertEquals(2, commits.get(transaction1Id).size());
-    assertEquals(1, commits.get(transaction2Id).size());
+    assertNull(commits);
   }
 
   /**
@@ -207,11 +183,9 @@ public class TestTHLog extends HBaseTestCase implements
     long transaction1Id = 1;
     long transaction2Id = 2;
 
-    log.writeStartToLog(regionInfo, transaction1Id);
     log.writeUpdateToLog(regionInfo, transaction1Id, new Put(row1).add(family,
         column, val1));
 
-    log.writeStartToLog(regionInfo, transaction2Id);
     log.writeUpdateToLog(regionInfo, transaction2Id, new Put(row2).add(family,
         column, val2));
     log.writeAbortToLog(regionInfo, transaction2Id);
@@ -229,8 +203,7 @@ public class TestTHLog extends HBaseTestCase implements
     Map<Long, List<KeyValue>> commits = logMangaer.getCommitsFromLog(filename,
         -1, null);
 
-    assertEquals(1, commits.size());
-    assertEquals(2, commits.get(transaction1Id).size());
+    assertNull(commits);
   }
 
   /**
@@ -245,11 +218,9 @@ public class TestTHLog extends HBaseTestCase implements
     long transaction1Id = 1;
     long transaction2Id = 2;
 
-    log.writeStartToLog(regionInfo, transaction1Id);
     log.writeUpdateToLog(regionInfo, transaction1Id, new Put(row1).add(family,
         column, val1));
 
-    log.writeStartToLog(regionInfo, transaction2Id);
     log.writeUpdateToLog(regionInfo, transaction2Id, new Put(row2).add(family,
         column, val2));
     log.writeCommitToLog(regionInfo, transaction2Id);
@@ -267,8 +238,7 @@ public class TestTHLog extends HBaseTestCase implements
     Map<Long, List<KeyValue>> commits = logMangaer.getCommitsFromLog(filename,
         -1, null);
 
-    assertEquals(1, commits.size());
-    assertEquals(1, commits.get(transaction2Id).size());
+    assertNull(commits);
   }
 
   // FIXME Cannot do this test without a global transacton manager

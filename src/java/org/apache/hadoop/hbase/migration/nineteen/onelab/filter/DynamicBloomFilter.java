@@ -82,7 +82,7 @@ import org.apache.hadoop.hbase.util.Hash;
  * @version 1.0 - 6 Feb. 07
  * 
  */
-public class DynamicBloomFilter extends Filter {
+public class DynamicBloomFilter extends Filter implements Cloneable {
   /** 
    * Threshold for the maximum number of key to record in a dynamic Bloom filter row.
    */
@@ -233,7 +233,7 @@ public class DynamicBloomFilter extends Filter {
   }//end toString()
 
   @Override
-  public Object clone(){
+  public Object clone() {
     DynamicBloomFilter dbf = new DynamicBloomFilter(vectorSize, nbHash, hashType, nr);
     dbf.currentNbRecord = this.currentNbRecord;
     dbf.matrix = new BloomFilter[this.matrix.length];

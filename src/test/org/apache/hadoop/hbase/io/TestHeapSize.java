@@ -16,7 +16,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
@@ -285,15 +284,6 @@ public class TestHeapSize extends TestCase {
     // Region Overhead
     cl = HRegion.class;
     actual = HRegion.FIXED_OVERHEAD;
-    expected = ClassSize.estimateBase(cl, false);
-    if(expected != actual) {
-      ClassSize.estimateBase(cl, true);
-      assertEquals(expected, actual);
-    }
-    
-    // RegionHistorian Overhead
-    cl = RegionHistorian.class;
-    actual = RegionHistorian.FIXED_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
     if(expected != actual) {
       ClassSize.estimateBase(cl, true);

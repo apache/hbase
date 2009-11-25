@@ -71,7 +71,6 @@ import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -430,6 +429,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         LOG.warn("No response from master on reportForDuty. Sleeping and " +
           "then trying again.");
       }
+      HMsg outboundArray[] = null;
       long lastMsg = 0;
       // Now ask master what it wants us to do and tell it what we have done
       for (int tries = 0; !stopRequested.get() && isHealthy();) {
@@ -450,17 +450,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
           LOG.warn("unable to report to master for " + (now - lastMsg) +
             " milliseconds - retrying");
         }
-        if ((now - lastMsg) >= msgInterval) {
-          HMsg outboundArray[] = null;
-          synchronized(this.outboundMsgs) {
-            outboundArray =
-              this.outboundMsgs.toArray(new HMsg[outboundMsgs.size()]);
-            this.outboundMsgs.clear();
-          }
+        // Send messages to the master IF this.msgInterval has elapsed OR if
+        // we have something to tell (and we didn't just fail sending master).
+        if ((now - lastMsg) >= msgInterval ||
+            ((outboundArray == null || outboundArray.length == 0) && !this.outboundMsgs.isEmpty())) {
           try {
             doMetrics();
             MemoryUsage memory =
-                ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+              ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
             HServerLoad hsl = new HServerLoad(requestCount.get(),
               (int)(memory.getUsed()/1024/1024),
               (int)(memory.getMax()/1024/1024));
@@ -469,9 +466,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
             }
             this.serverInfo.setLoad(hsl);
             this.requestCount.set(0);
+            outboundArray = getOutboundMsgs(outboundArray);
             HMsg msgs[] = hbaseMaster.regionServerReport(
               serverInfo, outboundArray, getMostLoadedRegions());
             lastMsg = System.currentTimeMillis();
+            outboundArray = updateOutboundMsgs(outboundArray);
             if (this.quiesced.get() && onlineRegions.size() == 0) {
               // We've just told the master we're exiting because we aren't
               // serving any regions. So set the stop bit and exit.
@@ -567,24 +566,20 @@ public class HRegionServer implements HConstants, HRegionInterface,
             if (e instanceof IOException) {
               e = RemoteExceptionHandler.checkIOException((IOException) e);
             }
-            if (tries < this.numRetries) {
-              LOG.warn("Processing message (Retry: " + tries + ")", e);
-              tries++;
-            } else {
-              LOG.error("Exceeded max retries: " + this.numRetries, e);
-              if (checkFileSystem()) {
-                // Filesystem is OK.  Something is up w/ ZK or master.  Sleep
-                // a little while if only to stop our logging many times a
-                // millisecond.
-                Thread.sleep(1000);
-              }
+            tries++;
+            if (tries > 0 && (tries % this.numRetries) == 0) {
+              // Check filesystem every so often.
+              checkFileSystem();
             }
             if (this.stopRequested.get()) {
-                LOG.info("Stop was requested, clearing the toDo " +
-                        "despite of the exception");
-                toDo.clear();
-                continue;
+              LOG.info("Stop requested, clearing toDo despite exception");
+              toDo.clear();
+              continue;
             }
+            LOG.warn("Attempt=" + tries, e);
+            // No point retrying immediately; this is probably connection to
+            // master issue.  Doing below will cause us to sleep.
+            lastMsg = System.currentTimeMillis();
           }
         }
         // Do some housekeeping before going to sleep
@@ -597,7 +592,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
         abort();
       }
     }
-    RegionHistorian.getInstance().offline();
     this.leases.closeAfterLeasesExpire();
     this.worker.stop();
     this.server.stop();
@@ -681,6 +675,34 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
 
     LOG.info(Thread.currentThread().getName() + " exiting");
+  }
+
+  /*
+   * @param msgs Current outboundMsgs array
+   * @return Messages to send or returns current outboundMsgs if it already had
+   * content to send.
+   */
+  private HMsg [] getOutboundMsgs(final HMsg [] msgs) {
+    // If passed msgs are not null, means we haven't passed them to master yet.
+    if (msgs != null) return msgs;
+    synchronized(this.outboundMsgs) {
+      return this.outboundMsgs.toArray(new HMsg[outboundMsgs.size()]);
+    }
+  }
+
+  /*
+   * @param msgs Messages we sent the master.
+   * @return Null
+   */
+  private HMsg [] updateOutboundMsgs(final HMsg [] msgs) {
+    if (msgs == null) return null;
+    synchronized(this.outboundMsgs) {
+      for (HMsg m: msgs) {
+        int index = this.outboundMsgs.indexOf(m);
+        if (index != -1) this.outboundMsgs.remove(index);
+      }
+    }
+    return null;
   }
 
   /**
@@ -1252,11 +1274,12 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // queue at time iterator was taken out.  Apparently goes from oldest.
     for (ToDoEntry e: this.toDo) {
       HMsg msg = e.msg;
-      if (msg == null) {
+      if (msg != null) {
+        if (msg.isType(HMsg.Type.MSG_REGION_OPEN)) {
+          addProcessingMessage(msg.getRegionInfo());
+        }
+      } else {
         LOG.warn("Message is empty: " + e);
-      }
-      if (e.msg.isType(HMsg.Type.MSG_REGION_OPEN)) {
-        addProcessingMessage(e.msg.getRegionInfo());
       }
     }
   }
@@ -1554,20 +1577,17 @@ public class HRegionServer implements HConstants, HRegionInterface,
   }
   
   void openRegion(final HRegionInfo regionInfo) {
-    // If historian is not online and this is not a meta region, online it.
-    if (!regionInfo.isMetaRegion() &&
-        !RegionHistorian.getInstance().isOnline()) {
-      RegionHistorian.getInstance().online(this.conf);
-    }
     Integer mapKey = Bytes.mapKey(regionInfo.getRegionName());
     HRegion region = this.onlineRegions.get(mapKey);
     if (region == null) {
       try {
         region = instantiateRegion(regionInfo);
-        // Startup a compaction early if one is needed, if region has references.
-        if (region.hasReferences()) {
+        // Startup a compaction early if one is needed, if region has references
+        // or if a store has too many store files
+        if (region.hasReferences() || region.hasTooManyStoreFiles()) {
           this.compactSplitThread.compactionRequested(region,
-            "Region has references on open");
+            region.hasReferences() ? "Region has references on open" :
+                                     "Region has too many store files");
         }
       } catch (Throwable e) {
         Throwable t = cleanup(e,
@@ -1794,7 +1814,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       throw convertThrowableToIOE(cleanup(t));
     }
   }
-  
+
   public int put(final byte[] regionName, final Put [] puts)
   throws IOException {
     // Count of Puts processed.
@@ -1820,7 +1840,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // All have been processed successfully.
     return -1;
   }
-  
 
   /**
    * 
@@ -1871,9 +1890,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     requestCount.incrementAndGet();
     try {
       HRegion r = getRegion(regionName);
-      InternalScanner s = r.getScanner(scan);
-      long scannerId = addScanner(s);
-      return scannerId;
+      return addScanner(r.getScanner(scan));
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t, "Failed openScanner"));
     }
@@ -1921,17 +1938,25 @@ public class HRegionServer implements HConstants, HRegionInterface,
         // Collect values to be returned here
         List<KeyValue> values = new ArrayList<KeyValue>();
         boolean moreRows = s.next(values);
-        if(!values.isEmpty()) {
+        if (!values.isEmpty()) {
           results.add(new Result(values));
         }
-        if(!moreRows) {
+        if (!moreRows) {
           break;
         }
       }
-      return results.toArray(new Result[0]);
+      // Below is an ugly hack where we cast the InternalScanner to be a
+      // HRegion.RegionScanner.  The alternative is to change InternalScanner
+      // interface but its used everywhere whereas we just need a bit of info
+      // from HRegion.RegionScanner, IF its filter if any is done with the scan
+      // and wants to tell the client to stop the scan.  This is done by passing
+      // a null result.
+      return ((HRegion.RegionScanner)s).isFilterDone() && results.isEmpty()?
+        null: results.toArray(new Result[0]);
     } catch (Throwable t) {
       if (t instanceof NotServingRegionException) {
-        this.scanners.remove(scannerId);
+        String scannerName = String.valueOf(scannerId);
+        this.scanners.remove(scannerName);
       }
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1985,7 +2010,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
   //
   // Methods that do the actual work for the remote API
   //
-  
   public void delete(final byte [] regionName, final Delete delete)
   throws IOException {
     checkOpen();
@@ -1996,13 +2020,37 @@ public class HRegionServer implements HConstants, HRegionInterface,
       Integer lid = getLockFromId(delete.getLockId());
       HRegion region = getRegion(regionName);
       region.delete(delete, lid, writeToWAL);
-    } catch(WrongRegionException ex) {
-    } catch (NotServingRegionException ex) {
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
   }
-  
+
+  public int delete(final byte[] regionName, final Delete [] deletes)
+  throws IOException {
+    // Count of Deletes processed.
+    int i = 0;
+    checkOpen();
+    try {
+      boolean writeToWAL = true;
+      this.cacheFlusher.reclaimMemStoreMemory();
+      Integer[] locks = new Integer[deletes.length];
+      HRegion region = getRegion(regionName);
+      for (i = 0; i < deletes.length; i++) {
+        this.requestCount.incrementAndGet();
+        locks[i] = getLockFromId(deletes[i].getLockId());
+        region.delete(deletes[i], locks[i], writeToWAL);
+      }
+    } catch (WrongRegionException ex) {
+      LOG.debug("Batch deletes: " + i, ex);
+      return i;
+    } catch (NotServingRegionException ex) {
+      return i;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
+    }
+    // All have been processed successfully.
+    return -1;
+  }
 
   public long lockRow(byte [] regionName, byte [] row)
   throws IOException {
@@ -2484,8 +2532,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
   public static void main(String [] args) {
     Configuration conf = new HBaseConfiguration();
     @SuppressWarnings("unchecked")
-    Class<? extends HRegionServer> regionServerClass = (Class<? extends HRegionServer>) conf
-        .getClass(HConstants.REGION_SERVER_IMPL, HRegionServer.class);
+    Class<? extends HRegionServer> regionServerClass =
+      (Class<? extends HRegionServer>) conf.getClass(HConstants.REGION_SERVER_IMPL,
+        HRegionServer.class);
     doMain(args, regionServerClass);
   }
 

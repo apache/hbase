@@ -1,5 +1,143 @@
 HBase Change Log
 
+Release 0.20.2 - Unreleased
+  INCOMPATIBLE CHANGES
+
+  BUG FIXES
+   HBASE-1905  Remove unused config. hbase.hstore.blockCache.blockSize
+   HBASE-1906  FilterList of prefix and columnvalue not working properly
+               with deletes and multiple values
+   HBASE-1896  WhileMatchFilter.reset should call encapsulated filter reset
+   HBASE-1912  When adding a secondary index to an existing table, it will
+               cause NPE during re-indexing (Mingjui Ray Liao via Andrew
+               Purtell)
+   HBASE-1917  TestScanner.testFilters failing
+   HBASE-1908  ROOT not reassigned if only one regionserver left
+   HBASE-1916  FindBugs and javac warnings cleanup
+   HBASE-1924  MapReduce Driver lost hsf2sf backporting hbase-1684
+   HBASE-1777  column length is not checked before saved to memstore
+   HBASE-1895  HConstants.MAX_ROW_LENGTH is incorrectly 64k, should be 32k
+   HBASE-1925  IllegalAccessError: Has not been initialized (getMaxSequenceId)
+   HBASE-1929  If hbase-default.xml is not in CP, zk session timeout is 10 secs!
+   HBASE-1927  Scanners not closed properly in certain circumstances
+   HBASE-1934  NullPointerException in ClientScanner (Andrew Purtell via Stack)
+   HBASE-1946  Unhandled exception at regionserver (Dmitriy Lyfar via Stack)
+   HBASE-1941  Put's copy feature has a bug (Dave Latham via Stack) 
+   HBASE-1682  IndexedRegion does not properly handle deletes
+               (Andrew McCall via Clint Morgan and Stack)
+   HBASE-1953  Overhaul of overview.html (html fixes, typos, consistency) -
+               no content changes (Lars Francke via Stack)
+   HBASE-1954  Transactional scans do not see newest put (Clint Morgan via Stack)
+   HBASE-1919  code: HRS.delete seems to ignore exceptions it shouldnt
+   HBASE-1951  Stack overflow when calling HTable.checkAndPut() 
+               when deleting a lot of values
+   HBASE-1781  Weird behavior of WildcardColumnTracker.checkColumn(), 
+               looks like recursive loop
+   HBASE-1949  KeyValue expiration by Time-to-Live during major compaction is
+               broken (Gary Helmling via Stack)
+   HBASE-1957  Get-s can't set a Filter (Roman Kalyakin via Stack)
+   HBASE-1959  Compress tables during 0.19 to 0.20 migration (Dave Latham via Stack)
+   HBASE-1928  ROOT and META tables stay in transition state (making the system
+               not usable) if the designated regionServer dies before the
+               assignment is complete (Yannis Pavlidis via Stack)
+   HBASE-1962  Bulk loading script makes regions incorrectly (loadtable.rb)
+   HBASE-1966  Apply the fix from site/ to remove the forrest dependency on
+               java5
+   HBASE-1967  [Transactional] client.TestTransactions.testPutPutScan fails
+               sometimes - Temporary fix
+   HBASE-1965  On restart of branch, master complains about not being able
+               to set safe mode
+
+  IMPROVEMENTS
+   HBASE-1899  Use scanner caching in shell count
+   HBASE-1903  Enable DEBUG by default
+   HBASE-1918  Don't do DNS resolving in .META. scanner for each row
+   HBASE-1921  When the Master's session times out and there's only one,
+               cluster is wedged
+   HBASE-1947  If HBase starts/stops often in less than 24 hours, 
+               you end up with lots of store files
+   HBASE-1867  Tool to regenerate an hbase table from the data files
+   HBASE-1829  Make use of start/stop row in TableInputFormat
+   HBASE-1904  Add tutorial for installing HBase on Windows using Cygwin as a
+               test and development environment (Wim Van Leuven via Stack)
+   HBASE-1968  Give clients access to the write buffer
+
+Release 0.20.1 - Released October 12th, 2009
+  INCOMPATIBLE CHANGES
+   HBASE-1854  Remove the Region Historian
+
+  BUG FIXES
+   HBASE-1824  [stargate] default timestamp should be LATEST_TIMESTAMP
+   HBASE-1795  log recovery doesnt reset the max sequence id, new logfiles can
+               get tossed as 'duplicates'
+   HBASE-1794  recovered log files are not inserted into the storefile map
+   HBASE-1740  ICV has a subtle race condition only visible under high load
+   HBASE-1808  [stargate] fix how columns are specified for scanners
+   HBASE-1828  CompareFilters are broken from client-side
+   HBASE-1836  test of indexed hbase broken
+   HBASE-1838  [javadoc] Add javadoc to Delete explaining behavior when no
+               timestamp provided
+   HBASE-1821  Filtering by SingleColumnValueFilter bug
+   HBASE-1840  RowLock fails when used with IndexTable
+   HBASE-1818  HFile code review and refinement (Schubert Zhang via Stack)
+   HBASE-1830  HbaseObjectWritable methods should allow null HBCs
+               for when Writable is not Configurable (Stack via jgray)
+   HBASE-1847  Delete latest of a null qualifier when non-null qualifiers
+               exist throws a RuntimeException 
+   HBASE-1853  Each time around the regionserver core loop, we clear the
+               messages to pass master, even if we failed to deliver them
+   HBASE-1815  HBaseClient can get stuck in an infinite loop while attempting
+               to contact a failed regionserver
+   HBASE-1856  HBASE-1765 broke MapReduce when using Result.list()
+               (Lars George via Stack)
+   HBASE-1857  WrongRegionException when setting region online after .META.
+               split (Cosmin Lehane via Stack)
+   HBASE-1809  NPE thrown in BoundedRangeFileInputStream
+   HBASE-1859  Misc shell fixes patch (Kyle Oba via Stack)
+   HBASE-1865  0.20.0 TableInputFormatBase NPE
+   HBASE-1866  Scan(Scan) copy constructor does not copy value of
+               cacheBlocks
+   HBASE-1858  Master can't split logs created by THBase (Clint Morgan via Stack)
+   HBASE-1871  Wrong type used in TableMapReduceUtil.initTableReduceJob()
+               (Lars George via Stack)
+   HBASE-1869  IndexedTable delete fails when used in conjunction with RowLock()
+               (Keith Thomas via Stack)
+   HBASE-1883  HRegion passes the wrong minSequenceNumber to doReconstructionLog
+               (Clint Morgan via Stack)
+   HBASE-1878  BaseScanner results can't be trusted at all (Related to
+               hbase-1784)
+   HBASE-1831  Scanning API must be reworked to allow for fully functional
+               Filters client-side
+   HBASE-1890  hbase-1506 where assignment is done at regionserver doesn't work
+
+  IMPROVEMENTS
+   HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
+   HBASE-1765  Delay Result deserialization until asked for and permit
+               access to the raw binary to prevent forced deserialization
+   HBASE-1687  bin/hbase script doesn't allow for different memory settings for
+               each daemon type
+   HBASE-1823  Ability for Scanners to bypass the block cache
+   HBASE-1827  Add disabling block cache scanner flag to the shell
+   HBASE-1574  Client and server APIs to do batch deletes
+   HBASE-1833  hfile.main fixes
+   HBASE-1684  Backup (Export/Import) contrib tool for 0.20
+   HBASE-1860  Change HTablePool#createHTable from private to protected
+   HBASE-48    Bulk load tools
+   HBASE-1855  HMaster web application doesn't show the region end key in the
+               table detail page (Andrei Dragomir via Stack)
+   HBASE-1870  Bytes.toFloat(bytes[],int) is marked private
+   HBASE-1874  Client Scanner mechanism that is used for HbaseAdmin methods
+               (listTables, tableExists), is very slow if the client is far
+               away from the HBase cluster (Andrei Dragomir via Stack)
+   HBASE-1879  ReadOnly transactions generate WAL activity (Clint Morgan via Stack)
+   HBASE-1875  Compression test utility (elsif via Stack)
+   HBASE-1832  Faster enable/disable/delete
+   HBASE-1481  Add fast row key only scanning
+   HBASE-1506  [performance] Make splits faster
+   HBASE-1722  Add support for exporting HBase metrics via JMX
+               (Gary Helming via Stack)
+
+
 Release 0.20.0 - Tue Sep  8 12:48:41 PDT 2009
 
   INCOMPATIBLE CHANGES

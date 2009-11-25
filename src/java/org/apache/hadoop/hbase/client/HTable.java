@@ -438,6 +438,23 @@ public class HTable {
   }
   
   /**
+   * Bulk commit a List of Deletes to the table.
+   * @param deletes List of deletes.  List is modified by this method.  On
+   * exception holds deletes that were NOT applied.
+   * @throws IOException
+   * @since 0.20.1
+   */
+  public synchronized void delete(final ArrayList<Delete> deletes)
+  throws IOException {
+    int last = 0;
+    try {
+      last = connection.processBatchOfDeletes(deletes, this.tableName);
+    } finally {
+      deletes.subList(0, last).clear();
+    }
+  }
+
+  /**
    * Commit a Put to the table.
    * <p>
    * If autoFlush is false, the update is buffered.
@@ -463,12 +480,12 @@ public class HTable {
    * @since 0.20.0
    */
   public synchronized void put(final List<Put> puts) throws IOException {
-    for(Put put : puts) {
+    for (Put put : puts) {
       validatePut(put);
       writeBuffer.add(put);
       currentWriteBufferSize += put.heapSize();
     }
-    if(autoFlush || currentWriteBufferSize > writeBufferSize) {
+    if (autoFlush || currentWriteBufferSize > writeBufferSize) {
       flushCommits();
     }
   }
@@ -690,6 +707,14 @@ public class HTable {
     if(currentWriteBufferSize > writeBufferSize) {
       flushCommits();
     }
+  }
+
+  /**
+   * Get the write buffer
+   * @return the current write buffer
+   */
+  public ArrayList<Put> getWriteBuffer() {
+    return writeBuffer;
   }
 
   // Old API. Pre-hbase-880, hbase-1304.
@@ -1823,7 +1848,7 @@ public class HTable {
     }
 
     public void initialize() throws IOException {
-      nextScanner(this.caching);
+      nextScanner(this.caching, false);
     }
 
     protected Scan getScan() {
@@ -1834,13 +1859,36 @@ public class HTable {
       return lastNext;
     }
 
+   /**
+     * @param endKey
+     * @return Returns true if the passed region endkey.
+     */
+    private boolean checkScanStopRow(final byte [] endKey) {
+      if (this.scan.getStopRow().length > 0) {
+        // there is a stop row, check to see if we are past it.
+        byte [] stopRow = scan.getStopRow();
+        int cmp = Bytes.compareTo(stopRow, 0, stopRow.length,
+          endKey, 0, endKey.length);
+        if (cmp <= 0) {
+          // stopRow <= endKey (endKey is equals to or larger than stopRow)
+          // This is a stop.
+          return true;
+        }
+      }
+      return false; //unlikely.
+    }
+
     /*
      * Gets a scanner for the next region.  If this.currentRegion != null, then
      * we will move to the endrow of this.currentRegion.  Else we will get
-     * scanner at the scan.getStartRow().
+     * scanner at the scan.getStartRow().  We will go no further, just tidy
+     * up outstanding scanners, if <code>currentRegion != null</code> and
+     * <code>done</code> is true.
      * @param nbRows
+     * @param done Server-side says we're done scanning.
      */
-    private boolean nextScanner(int nbRows) throws IOException {
+    private boolean nextScanner(int nbRows, final boolean done)
+    throws IOException {
       // Close the previous scanner if it's open
       if (this.callable != null) {
         this.callable.setClose();
@@ -1850,21 +1898,24 @@ public class HTable {
       
       // Where to start the next scanner
       byte [] localStartKey = null;
-      
-      // if we're at the end of the table, then close and return false
-      // to stop iterating
+
+      // if we're at end of table, close and return false to stop iterating
       if (this.currentRegion != null) {
-        if (CLIENT_LOG.isDebugEnabled()) {
-          CLIENT_LOG.debug("Finished with region " + this.currentRegion);
-        }
         byte [] endKey = this.currentRegion.getEndKey();
         if (endKey == null ||
             Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY) ||
-            filterSaysStop(endKey)) {
+            checkScanStopRow(endKey) ||
+            done) {
           close();
+          if (CLIENT_LOG.isDebugEnabled()) {
+            CLIENT_LOG.debug("Finished with scanning at " + this.currentRegion);
+          }
           return false;
         }
         localStartKey = endKey;
+        if (CLIENT_LOG.isDebugEnabled()) {
+          CLIENT_LOG.debug("Finished with region " + this.currentRegion);
+        }
       } else {
         localStartKey = this.scan.getStartRow();
       }
@@ -1895,40 +1946,6 @@ public class HTable {
       return s;
     }
 
-    /**
-     * @param endKey
-     * @return Returns true if the passed region endkey is judged beyond
-     * filter.
-     */
-    private boolean filterSaysStop(final byte [] endKey) {
-      if (scan.getStopRow().length > 0) {
-        // there is a stop row, check to see if we are past it.
-        byte [] stopRow = scan.getStopRow();
-        int cmp = Bytes.compareTo(stopRow, 0, stopRow.length,
-            endKey, 0, endKey.length);
-        if (cmp <= 0) {
-          // stopRow <= endKey (endKey is equals to or larger than stopRow)
-          // This is a stop.
-          return true;
-        }
-      }
-
-      if(!scan.hasFilter()) {
-        return false;
-      }
-
-      if (scan.getFilter() != null) {
-        // Let the filter see current row.
-        scan.getFilter().filterRowKey(endKey, 0, endKey.length);
-        return scan.getFilter().filterAllRemaining();
-      }
-      if (scan.getOldFilter() != null) {
-        scan.getOldFilter().filterRowKey(endKey, 0, endKey.length);
-        return scan.getOldFilter().filterAllRemaining();
-      }
-      return false; //unlikely.
-    }
-
     public Result next() throws IOException {
       // If the scanner is closed but there is some rows left in the cache,
       // it will first empty it before returning null
@@ -1946,6 +1963,9 @@ public class HTable {
         boolean skipFirst = false;
         do {
           try {
+            // Server returns a null values if scanning is to stop.  Else,
+            // returns an empty array if scanning is to go on and we've just
+            // exhausted current region.
             values = getConnection().getRegionServerWithRetries(callable);
             if (skipFirst) {
               skipFirst = false;
@@ -1959,12 +1979,14 @@ public class HTable {
             }
             // Else, its signal from depths of ScannerCallable that we got an
             // NSRE on a next and that we need to reset the scanner.
-            this.scan.setStartRow(this.lastResult.getRow());
-            // Clear region as flag to nextScanner to use this.scan.startRow.
+            if (this.lastResult != null) {
+              this.scan.setStartRow(this.lastResult.getRow());
+              // Skip first row returned.  We already let it out on previous
+              // invocation.
+              skipFirst = true;
+            }
+            // Clear region
             this.currentRegion = null;
-            // Skip first row returned.  We already let it out on previous
-            // invocation.
-            skipFirst = true;
             continue;
           } catch (IOException e) {
             if (e instanceof UnknownScannerException &&
@@ -1983,7 +2005,8 @@ public class HTable {
               this.lastResult = rs;
             }
           }
-        } while (countdown > 0 && nextScanner(countdown));
+          // Values == null means server-side filter has determined we must STOP
+        } while (countdown > 0 && nextScanner(countdown, values == null));
       }
 
       if (cache.size() > 0) {

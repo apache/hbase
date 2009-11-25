@@ -129,6 +129,9 @@ public class Store implements HConstants, HeapSize {
   // reflected in the TreeMaps).
   private volatile long maxSeqId = -1;
 
+  // The most-recent log-seq-id before we recovered from the LOG.
+  private long maxSeqIdBeforeLogRecovery = -1;
+
   private final Path regionCompactionDir;
   private final Object compactLock = new Object();
   private final int compactionThreshold;
@@ -216,16 +219,25 @@ public class Store implements HConstants, HeapSize {
     // loadStoreFiles calculates this.maxSeqId. as side-effect.
     this.storefiles.putAll(loadStoreFiles());
 
-    // Do reconstruction log.
-    runReconstructionLog(reconstructionLog, this.maxSeqId, reporter);
-  }
+    this.maxSeqIdBeforeLogRecovery = this.maxSeqId;
 
+    // Do reconstruction log.
+    long newId = runReconstructionLog(reconstructionLog, this.maxSeqId, reporter);
+    if (newId != -1) {
+      this.maxSeqId = newId; // start with the log id we just recovered.
+    }
+  }
+    
   HColumnDescriptor getFamily() {
     return this.family;
   }
 
   long getMaxSequenceId() {
     return this.maxSeqId;
+  }
+  
+  long getMaxSeqIdBeforeLogRecovery() {
+    return maxSeqIdBeforeLogRecovery;
   }
 
   /**
@@ -245,13 +257,14 @@ public class Store implements HConstants, HeapSize {
    * @param reconstructionLog
    * @param msid
    * @param reporter
+   * @return the new max sequence id as per the log
    * @throws IOException
    */
-  private void runReconstructionLog(final Path reconstructionLog,
+  private long runReconstructionLog(final Path reconstructionLog,
     final long msid, final Progressable reporter)
   throws IOException {
     try {
-      doReconstructionLog(reconstructionLog, msid, reporter);
+      return doReconstructionLog(reconstructionLog, msid, reporter);
     } catch (EOFException e) {
       // Presume we got here because of lack of HADOOP-1700; for now keep going
       // but this is probably not what we want long term.  If we got here there
@@ -268,6 +281,7 @@ public class Store implements HConstants, HeapSize {
         " opening " + Bytes.toString(this.storeName), e);
       throw e;
     }
+    return -1;
   }
 
   /*
@@ -277,20 +291,22 @@ public class Store implements HConstants, HeapSize {
    * We can ignore any log message that has a sequence ID that's equal to or 
    * lower than maxSeqID.  (Because we know such log messages are already 
    * reflected in the MapFiles.)
+   *
+   * @return the new max sequence id as per the log, or -1 if no log recovered
    */
-  private void doReconstructionLog(final Path reconstructionLog,
+  private long doReconstructionLog(final Path reconstructionLog,
     final long maxSeqID, final Progressable reporter)
   throws UnsupportedEncodingException, IOException {
     if (reconstructionLog == null || !this.fs.exists(reconstructionLog)) {
       // Nothing to do.
-      return;
+      return -1;
     }
     // Check its not empty.
     FileStatus [] stats = this.fs.listStatus(reconstructionLog);
     if (stats == null || stats.length == 0) {
       LOG.warn("Passed reconstruction log " + reconstructionLog +
         " is zero-length");
-      return;
+      return -1;
     }
     // TODO: This could grow large and blow heap out.  Need to get it into
     // general memory usage accounting.
@@ -302,7 +318,7 @@ public class Store implements HConstants, HeapSize {
     SequenceFile.Reader logReader = new SequenceFile.Reader(this.fs,
       reconstructionLog, this.conf);
     try {
-      HLogKey key = new HLogKey();
+      HLogKey key = HLog.newKey(conf);
       KeyValue val = new KeyValue();
       long skippedEdits = 0;
       long editsCount = 0;
@@ -320,8 +336,7 @@ public class Store implements HConstants, HeapSize {
         }
         // Check this edit is for me. Also, guard against writing the special
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
-        if (/* commented out for now - stack via jgray key.isTransactionEntry() || */
-            val.matchingFamily(HLog.METAFAMILY) ||
+        if (val.matchingFamily(HLog.METAFAMILY) ||
           !Bytes.equals(key.getRegionName(), region.regionInfo.getRegionName()) ||
           !val.matchingFamily(family.getName())) {
           continue;
@@ -352,8 +367,21 @@ public class Store implements HConstants, HeapSize {
       if (LOG.isDebugEnabled()) {
         LOG.debug("flushing reconstructionCache");
       }
-      internalFlushCache(reconstructedCache, maxSeqIdInLog + 1);
+
+      long newFileSeqNo = maxSeqIdInLog + 1;
+      StoreFile sf = internalFlushCache(reconstructedCache, newFileSeqNo);
+      // add it to the list of store files with maxSeqIdInLog+1
+      if (sf == null) {
+        throw new IOException("Flush failed with a null store file");
+      }
+      // Add new file to store files.  Clear snapshot too while we have the
+      // Store write lock.
+      this.storefiles.put(newFileSeqNo, sf);
+      notifyChangedReadersObservers();
+
+      return newFileSeqNo;
     }
+    return -1; // the reconstructed cache was 0 sized
   }
 
   /*
@@ -416,7 +444,7 @@ public class Store implements HConstants, HeapSize {
       lock.readLock().unlock();
     }
   }
-  
+
   /**
    * Adds a value to the memstore
    * 
@@ -527,10 +555,10 @@ public class Store implements HConstants, HeapSize {
             flushed += this.memstore.heapSizeChange(kv, true);
           }
         }
-        // B. Write out the log sequence number that corresponds to this output
-        // MapFile.  The MapFile is current up to and including logCacheFlushId.
-        StoreFile.appendMetadata(writer, logCacheFlushId);
       } finally {
+        // Write out the log sequence number that corresponds to this output
+        // hfile.  The hfile is current up to and including logCacheFlushId.
+        StoreFile.appendMetadata(writer, logCacheFlushId);
         writer.close();
       }
     }
@@ -1412,48 +1440,37 @@ public class Store implements HConstants, HeapSize {
     // Column matching and version enforcement
     QueryMatcher matcher = new QueryMatcher(get, this.family.getName(), columns,
       this.ttl, keyComparator, versionsToReturn(get.getMaxVersions()));
-    
-    // Read from memstore
-    if(this.memstore.get(matcher, result)) {
-      // Received early-out from memstore
-      return;
-    }
-    
-    // Check if we even have storefiles
-    if (this.storefiles.isEmpty()) {
-      return;
-    }
-    
-    // Get storefiles for this store
-    List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
-    for (StoreFile sf : this.storefiles.descendingMap().values()) {
-      HFile.Reader r = sf.getReader();
-      if (r == null) {
-        LOG.warn("StoreFile " + sf + " has a null Reader");
-        continue;
+    this.lock.readLock().lock();
+    try {
+      // Read from memstore
+      if(this.memstore.get(matcher, result)) {
+        // Received early-out from memstore
+        return;
       }
-      storefileScanners.add(r.getScanner());
-    }
     
-    // StoreFileGetScan will handle reading this store's storefiles
-    StoreFileGetScan scanner = new StoreFileGetScan(storefileScanners, matcher);
+      // Check if we even have storefiles
+      if (this.storefiles.isEmpty()) {
+        return;
+      }
     
-    // Run a GET scan and put results into the specified list 
-    scanner.get(result);
-  }
-
-  /*
-   * Data structure to hold incrementColumnValue result.
-   */
-  static class ICVResult {
-    final long value;
-    final long sizeAdded;
-    final KeyValue kv;
-
-    ICVResult(long value, long sizeAdded, KeyValue kv) {
-      this.value = value;
-      this.sizeAdded = sizeAdded;
-      this.kv = kv;
+      // Get storefiles for this store
+      List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
+      for (StoreFile sf : this.storefiles.descendingMap().values()) {
+        HFile.Reader r = sf.getReader();
+        if (r == null) {
+          LOG.warn("StoreFile " + sf + " has a null Reader");
+          continue;
+        }
+        storefileScanners.add(r.getScanner());
+      }
+    
+      // StoreFileGetScan will handle reading this store's storefiles
+      StoreFileGetScan scanner = new StoreFileGetScan(storefileScanners, matcher);
+    
+      // Run a GET scan and put results into the specified list 
+      scanner.get(result);
+    } finally {
+      this.lock.readLock().unlock();
     }
   }
 
@@ -1462,17 +1479,17 @@ public class Store implements HConstants, HeapSize {
    * @param row
    * @param f
    * @param qualifier
-   * @param amount
-   * @return The new value.
+   * @param newValue the new value to set into memstore
+   * @return memstore size delta
    * @throws IOException
    */
-  public ICVResult incrementColumnValue(byte [] row, byte [] f,
-      byte [] qualifier, long amount)
+  public long updateColumnValue(byte [] row, byte [] f,
+      byte [] qualifier, long newValue)
   throws IOException {
-    long value = 0;
     List<KeyValue> result = new ArrayList<KeyValue>();
     KeyComparator keyComparator = this.comparator.getRawComparator();
 
+    KeyValue kv = null;
     // Setting up the QueryMatcher
     Get get = new Get(row);
     NavigableSet<byte[]> qualifiers =
@@ -1481,81 +1498,53 @@ public class Store implements HConstants, HeapSize {
     QueryMatcher matcher = new QueryMatcher(get, f, qualifiers, this.ttl,
       keyComparator, 1);
 
-    boolean newTs = true;
-    KeyValue kv = null;
-    // Read from memstore first:
-    this.memstore.internalGet(this.memstore.kvset,
-                                  matcher, result);
-    if (!result.isEmpty()) {
-      kv = result.get(0).clone();
-      newTs = false;
-    } else {
-      // try the snapshot.
-      this.memstore.internalGet(this.memstore.snapshot,
-          matcher, result);
-      if (!result.isEmpty()) {
-        kv = result.get(0).clone();
-      }
-    }
+    // lock memstore snapshot for this critical section:
+    this.lock.readLock().lock();
+    memstore.readLockLock();
+    try {
+      int memstoreCode = this.memstore.getWithCode(matcher, result);
 
-    if (kv != null) {
-      // Received early-out from memstore
-      // Make a copy of the KV and increment it
-      byte [] buffer = kv.getBuffer();
-      int valueOffset = kv.getValueOffset();
-      value = Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG) + amount;
-      Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(value), 0,
-        Bytes.SIZEOF_LONG);
-      if (newTs) {
-        long currTs = System.currentTimeMillis();
-        if (currTs == kv.getTimestamp()) {
-          currTs++; // just in case something wacky happens.
-        }
-        byte [] stampBytes = Bytes.toBytes(currTs);
-        Bytes.putBytes(buffer, kv.getTimestampOffset(), stampBytes, 0,
+      if (memstoreCode != 0) {
+        // was in memstore (or snapshot)
+        kv = result.get(0).clone();
+        byte [] buffer = kv.getBuffer();
+        int valueOffset = kv.getValueOffset();
+        Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(newValue), 0,
             Bytes.SIZEOF_LONG);
+        if (memstoreCode == 2) {
+          // from snapshot, assign new TS
+          long currTs = System.currentTimeMillis();
+          if (currTs == kv.getTimestamp()) {
+            currTs++; // unlikely but catastrophic
+          }
+          Bytes.putBytes(buffer, kv.getTimestampOffset(),
+              Bytes.toBytes(currTs), 0, Bytes.SIZEOF_LONG);
+        }
+      } else {
+        kv = new KeyValue(row, f, qualifier,
+            System.currentTimeMillis(),
+            Bytes.toBytes(newValue));
       }
-      return new ICVResult(value, 0, kv);
+      return add(kv);
+      // end lock
+    } finally {
+      memstore.readLockUnlock();
+      this.lock.readLock().unlock();
     }
-    // Check if we even have storefiles
-    if(this.storefiles.isEmpty()) {
-      return createNewKeyValue(row, f, qualifier, value, amount);
-    }
-    
-    // Get storefiles for this store
-    List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
-    for (StoreFile sf : this.storefiles.descendingMap().values()) {
-      Reader r = sf.getReader();
-      if (r == null) {
-        LOG.warn("StoreFile " + sf + " has a null Reader");
-        continue;
-      }
-      storefileScanners.add(r.getScanner());
-    }
-    
-    // StoreFileGetScan will handle reading this store's storefiles
-    StoreFileGetScan scanner = new StoreFileGetScan(storefileScanners, matcher);
-    
-    // Run a GET scan and put results into the specified list 
-    scanner.get(result);
-    if(result.size() > 0) {
-      value = Bytes.toLong(result.get(0).getValue());
-    }
-    return createNewKeyValue(row, f, qualifier, value, amount);
+  }
+
+  /**
+   * See if there's too much store files in this store
+   * @return true if number of store files is greater than
+   *  the number defined in compactionThreshold
+   */
+  public boolean hasTooManyStoreFiles() {
+    return this.storefiles.size() > this.compactionThreshold;
   }
   
-  private ICVResult createNewKeyValue(byte [] row, byte [] f, 
-      byte [] qualifier, long value, long amount) {
-    long newValue = value + amount;
-    KeyValue newKv = new KeyValue(row, f, qualifier,
-        System.currentTimeMillis(),
-        Bytes.toBytes(newValue));
-    return new ICVResult(newValue, newKv.heapSize(), newKv);
-  }
-
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (17 * ClassSize.REFERENCE) +
-      (5 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
+      (6 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
       ClassSize.align(ClassSize.ARRAY));
   
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +

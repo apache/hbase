@@ -108,8 +108,7 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    */
   public int put(final byte[] regionName, final Put [] puts)
   throws IOException;
-  
-  
+
   /**
    * Deletes all the KeyValues that match those found in the Delete object, 
    * if their ts <= to the Delete. In case of a delete with a specific ts it
@@ -120,7 +119,19 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    */
   public void delete(final byte[] regionName, final Delete delete)
   throws IOException;
-  
+
+  /**
+   * Put an array of deletes into the specified region
+   * 
+   * @param regionName
+   * @param deletes
+   * @return The number of processed deletes.  Returns -1 if all Deletes
+   * processed successfully.
+   * @throws IOException
+   */
+  public int delete(final byte[] regionName, final Delete [] deletes)
+  throws IOException;
+
   /**
    * Atomically checks if a row/family/qualifier value match the expectedValue.
    * If it does, it adds the put.
@@ -175,7 +186,7 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
   /**
    * Get the next set of values
    * @param scannerId clientId passed to openScanner
-   * @return map of values
+   * @return map of values; returns null if no results.
    * @throws IOException
    */
   public Result next(long scannerId) throws IOException;
@@ -184,7 +195,9 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * Get the next set of values
    * @param scannerId clientId passed to openScanner
    * @param numberOfRows the number of rows to fetch
-   * @return map of values
+   * @return Array of Results (map of values); array is empty if done with this
+   * region and null if we are NOT to go to the next region (happens when a
+   * filter rules that the scan is done).
    * @throws IOException
    */
   public Result [] next(long scannerId, int numberOfRows) throws IOException;

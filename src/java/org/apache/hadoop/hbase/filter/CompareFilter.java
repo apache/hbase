@@ -25,10 +25,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.io.ObjectWritable;
 
 /**
  * This is a generic filter to be used to filter by comparison.  It takes an 
@@ -126,16 +124,16 @@ public abstract class CompareFilter implements Filter {
           compareOp.name());
     }
   }
-  
+
   public void readFields(DataInput in) throws IOException {
     compareOp = CompareOp.valueOf(in.readUTF());
     comparator = (WritableByteArrayComparable)
-        HbaseObjectWritable.readObject(in, null);
+      HbaseObjectWritable.readObject(in, null);
   }
 
   public void write(DataOutput out) throws IOException {
     out.writeUTF(compareOp.name());
-    ObjectWritable.writeObject(out, comparator,
-        WritableByteArrayComparable.class, null);
+    HbaseObjectWritable.writeObject(out, comparator,
+      WritableByteArrayComparable.class, null);
   }
 }

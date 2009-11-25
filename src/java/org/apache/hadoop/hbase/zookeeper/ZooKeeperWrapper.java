@@ -82,7 +82,7 @@ public class ZooKeeperWrapper implements HConstants {
                             ZOOKEEPER_CONFIG_NAME);
     }
 
-    int sessionTimeout = conf.getInt("zookeeper.session.timeout", 10 * 1000);
+    int sessionTimeout = conf.getInt("zookeeper.session.timeout", 60 * 1000);
     try {
       zooKeeper = new ZooKeeper(quorumServers, sessionTimeout, watcher);
     } catch (IOException e) {
@@ -317,6 +317,7 @@ public class ZooKeeperWrapper implements HConstants {
     try {
       return readAddressOrThrow(znode, watcher);
     } catch (IOException e) {
+      e.printStackTrace();
       return null;
     }
   }
@@ -493,13 +494,17 @@ public class ZooKeeperWrapper implements HConstants {
 
     try {
       zooKeeper.create(outOfSafeModeZNode, new byte[0], Ids.OPEN_ACL_UNSAFE,
-                       CreateMode.EPHEMERAL);
+                       CreateMode.PERSISTENT);
       LOG.debug("Wrote out of safe mode");
       return true;
     } catch (InterruptedException e) {
       LOG.warn("Failed to create out of safe mode in ZooKeeper: " + e);
     } catch (KeeperException e) {
       LOG.warn("Failed to create out of safe mode in ZooKeeper: " + e);
+      if (e.getMessage().contains("KeeperErrorCode = NodeExists")) {
+        LOG.info("Node exists; just move on");
+        return true;
+      }
     }
 
     return false;

@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -113,7 +112,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * Once set, it is never cleared.
    */
   final AtomicBoolean closing = new AtomicBoolean(false);
-  private final RegionHistorian historian;
 
   //////////////////////////////////////////////////////////////////////////////
   // Members
@@ -221,7 +219,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     this.conf = null;
     this.flushListener = null;
     this.fs = null;
-    this.historian = null;
     this.memstoreFlushSize = 0;
     this.log = null;
     this.regionCompactionDir = null;
@@ -262,7 +259,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
     String encodedNameStr = Integer.toString(this.regionInfo.getEncodedName());
     this.regiondir = new Path(basedir, encodedNameStr);
-    this.historian = RegionHistorian.getInstance();
     if (LOG.isDebugEnabled()) {
       // Write out region name as string and its encoded name.
       LOG.debug("Opening region " + this + ", encoded=" +
@@ -303,7 +299,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
     // Load in all the HStores.
     long maxSeqId = -1;
-    long minSeqId = Integer.MAX_VALUE;
+    long minSeqIdToRecover = Integer.MAX_VALUE;
+    
     for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
       Store store = instantiateHStore(this.basedir, c, oldLogFile, reporter);
       this.stores.put(c.getName(), store);
@@ -311,13 +308,15 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       if (storeSeqId > maxSeqId) {
         maxSeqId = storeSeqId;
       }
-      if (storeSeqId < minSeqId) {
-        minSeqId = storeSeqId;
+      
+      long storeSeqIdBeforeRecovery = store.getMaxSeqIdBeforeLogRecovery();
+      if (storeSeqIdBeforeRecovery < minSeqIdToRecover) {
+        minSeqIdToRecover = storeSeqIdBeforeRecovery;
       }
     }
 
     // Play log if one.  Delete when done.
-    doReconstructionLog(oldLogFile, minSeqId, maxSeqId, reporter);
+    doReconstructionLog(oldLogFile, minSeqIdToRecover, maxSeqId, reporter);
     if (fs.exists(oldLogFile)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Deleting old log file: " + oldLogFile);
@@ -669,8 +668,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         LOG.debug("Cleaned up " + FSUtils.getPath(splits) + " " + deleted);
       }
       HRegion regions[] = new HRegion [] {regionA, regionB};
-      this.historian.addRegionSplit(this.regionInfo,
-        regionA.getRegionInfo(), regionB.getRegionInfo());
       return regions;
     }
   }
@@ -786,7 +783,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         String timeTaken = StringUtils.formatTimeDiff(System.currentTimeMillis(), 
             startTime);
         LOG.info("compaction completed on region " + this + " in " + timeTaken);
-        this.historian.addRegionCompaction(regionInfo, timeTaken);
       } finally {
         synchronized (writestate) {
           writestate.compacting = false;
@@ -971,14 +967,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     
     if (LOG.isDebugEnabled()) {
       long now = System.currentTimeMillis();
-      String timeTaken = StringUtils.formatTimeDiff(now, startTime);
       LOG.debug("Finished memstore flush of ~" +
         StringUtils.humanReadableInt(currentMemStoreSize) + " for region " +
         this + " in " + (now - startTime) + "ms, sequence id=" + sequenceId +
         ", compaction requested=" + compactionRequested);
-      if (!regionInfo.isMetaRegion()) {
-        this.historian.addRegionFlush(regionInfo, timeTaken);
-      }
     }
     return compactionRequested;
   }
@@ -1161,7 +1153,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           NavigableSet<byte []> qualifiers =
             new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
           byte [] q = kv.getQualifier();
-          if (q != null && q.length > 0) qualifiers.add(kv.getQualifier());
+          if(q == null) q = HConstants.EMPTY_BYTE_ARRAY;
+          qualifiers.add(q);
           get(store, g, qualifiers, result);
           if (result.isEmpty()) {
             // Nothing to delete
@@ -1716,13 +1709,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
     }
 
-    /**
-     * Get the next row of results from this region.
-     * @param results list to append results to
-     * @return true if there are more rows, false if scanner is done
-     * @throws NotServerRegionException If this region is closing or closed
-     */
-    @Override
     public boolean next(List<KeyValue> outResults) throws IOException {
       if (closing.get() || closed.get()) {
         close();
@@ -1736,63 +1722,81 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       outResults.addAll(results);
       resetFilters();
-      if(filter != null && filter.filterAllRemaining()) {
+      if (isFilterDone()) {
         return false;
       }
       return returnResult;
     }
 
+    /*
+     * @return True if a filter rules the scanner is over, done.
+     */
+    boolean isFilterDone() {
+      return this.filter != null && this.filter.filterAllRemaining();
+    }
+
+    /*
+     * @return true if there are more rows, false if scanner is done
+     * @throws IOException
+     */
     private boolean nextInternal() throws IOException {
-      // This method should probably be reorganized a bit... has gotten messy
-      KeyValue kv;
-      byte[] currentRow = null;
+      byte [] currentRow = null;
       boolean filterCurrentRow = false;
       while (true) {
-        kv = this.storeHeap.peek();
-        if (kv == null) {
-          return false;
-        }
+        KeyValue kv = this.storeHeap.peek();
+        if (kv == null) return false;
         byte [] row = kv.getRow();
-        if (filterCurrentRow && Bytes.equals(currentRow, row)) {
-          // filter all columns until row changes
-          this.storeHeap.next(results);
-          results.clear();
+        boolean samerow = Bytes.equals(currentRow, row);
+        if (samerow && filterCurrentRow) {
+          // Filter all columns until row changes
+          readAndDumpCurrentResult();
           continue;
         }
-        // see if current row should be filtered based on row key
-        if ((filter != null && filter.filterRowKey(row, 0, row.length)) ||
-            (oldFilter != null && oldFilter.filterRowKey(row, 0, row.length))) {
-          if(!results.isEmpty() && !Bytes.equals(currentRow, row)) {
-            return true;
+        if (!samerow) {
+          // Continue on the next row:
+          currentRow = row;
+          filterCurrentRow = false;
+          // See if we passed stopRow
+          if (this.stopRow != null &&
+              comparator.compareRows(this.stopRow, 0, this.stopRow.length, 
+                currentRow, 0, currentRow.length) <= 0) {
+            return false;
           }
-          this.storeHeap.next(results);
-          results.clear();
+          if (hasResults()) return true;
+        }
+        // See if current row should be filtered based on row key
+        if ((this.filter != null && this.filter.filterRowKey(row, 0, row.length)) ||
+            (oldFilter != null && this.oldFilter.filterRowKey(row, 0, row.length))) {
+          readAndDumpCurrentResult();
           resetFilters();
           filterCurrentRow = true;
           currentRow = row;
           continue;
         }
-        if(!Bytes.equals(currentRow, row)) {
-          // Continue on the next row:
-          currentRow = row;
-          filterCurrentRow = false;
-          // See if we passed stopRow
-          if(stopRow != null &&
-              comparator.compareRows(stopRow, 0, stopRow.length, 
-                  currentRow, 0, currentRow.length) <= 0) {
-            return false;
-          }
-          // if there are _no_ results or current row should be filtered
-          if (results.isEmpty() || filter != null && filter.filterRow()) {
-            // make sure results is empty
-            results.clear();
-            resetFilters();
-            continue;
-          }
-          return true;
-        }
         this.storeHeap.next(results);
       }
+    }
+
+    private void readAndDumpCurrentResult() throws IOException {
+      this.storeHeap.next(this.results);
+      this.results.clear();
+    }
+
+    /*
+     * Do we have results to return or should we continue.  Call when we get to
+     * the end of a row.  Does house cleaning -- clearing results and resetting
+     * filters -- if we are to continue.
+     * @return True if we should return else false if need to keep going.
+     */
+    private boolean hasResults() {
+      if (this.results.isEmpty() ||
+          this.filter != null && this.filter.filterRow()) {
+        // Make sure results is empty, reset filters
+        this.results.clear();
+        resetFilters();
+        return false;
+      }
+      return true;
     }
 
     public void close() {
@@ -1840,10 +1844,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     Path regionDir = HRegion.getRegionDir(tableDir, info.getEncodedName());
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
-    // Note in historian the creation of new region.
-    if (!info.isMetaRegion()) {
-      RegionHistorian.getInstance().addRegionCreation(info);
-    }
     HRegion region = new HRegion(tableDir,
       new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf, null),
       fs, conf, info, null);
@@ -2317,25 +2317,46 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     boolean flush = false;
     // Lock row
     Integer lid = obtainRowLock(row);
-    long result = 0L;
+    long result = amount;
     try {
       Store store = stores.get(family);
-      // Determine what to do and perform increment on returned KV, no insertion 
-      Store.ICVResult vas =
-        store.incrementColumnValue(row, family, qualifier, amount);
-      // Write incremented value to WAL before inserting
+
+      // Get the old value:
+      Get get = new Get(row);
+      get.addColumn(family, qualifier);
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      NavigableSet<byte[]> qualifiers = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+      qualifiers.add(qualifier);
+      store.get(get, qualifiers, results);
+
+      if (!results.isEmpty()) {
+        KeyValue kv = results.get(0);
+        byte [] buffer = kv.getBuffer();
+        int valueOffset = kv.getValueOffset();
+        result += Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG);
+      }
+
+      // bulid the KeyValue now:
+      KeyValue newKv = new KeyValue(row, family,
+          qualifier, System.currentTimeMillis(),
+          Bytes.toBytes(result));
+
+      // now log it:
       if (writeToWAL) {
         long now = System.currentTimeMillis();
         List<KeyValue> edits = new ArrayList<KeyValue>(1);
-        edits.add(vas.kv);
+        edits.add(newKv);
         this.log.append(regionInfo.getRegionName(),
           regionInfo.getTableDesc().getName(), edits,
           (regionInfo.isMetaRegion() || regionInfo.isRootRegion()), now);
       }
-      // Insert to the Store
-      store.add(vas.kv);
-      result = vas.value;
-      long size = this.memstoreSize.addAndGet(vas.sizeAdded);
+
+      // Now request the ICV to the store, this will set the timestamp
+      // appropriately depending on if there is a value in memcache or not.
+      // returns the
+      long size = store.updateColumnValue(row, family, qualifier, result);
+
+      size = this.memstoreSize.addAndGet(size);
       flush = isFlushSize(size);
     } finally {
       releaseRowLock(lid);
@@ -2365,7 +2386,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (3 * Bytes.SIZEOF_LONG) + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
-      (20 * ClassSize.REFERENCE) + ClassSize.OBJECT);
+      (19 * ClassSize.REFERENCE) + ClassSize.OBJECT);
   
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) + 
@@ -2374,7 +2395,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       (16 * ClassSize.CONCURRENT_HASHMAP_ENTRY) + 
       (16 * ClassSize.CONCURRENT_HASHMAP_SEGMENT) +
       ClassSize.CONCURRENT_SKIPLISTMAP + ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY +
-      RegionHistorian.FIXED_OVERHEAD + HLog.FIXED_OVERHEAD +
       ClassSize.align(ClassSize.OBJECT + (5 * Bytes.SIZEOF_BOOLEAN)) +
       (3 * ClassSize.REENTRANT_LOCK));
   
@@ -2463,6 +2483,20 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     boolean old = this.splitRequest;
     this.splitRequest = b;
     return old;
+  }
+
+  /**
+   * Checks every store to see if one has too many
+   * store files
+   * @return true if any store has too many store files
+   */
+  public boolean hasTooManyStoreFiles() {
+    for(Store store : stores.values()) {
+      if(store.hasTooManyStoreFiles()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

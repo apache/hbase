@@ -45,11 +45,13 @@ import org.apache.hadoop.hbase.util.Bytes;
  * long value), then you can pass in your own comparator instead.
  * <p>
  * You must also specify a family and qualifier.  Only the value of this column 
- * will be tested.  All other 
+ * will be tested.
  * <p>
- * To prevent the entire row from being emitted if this filter determines the
- * column does not pass (it should be filtered), wrap this filter with a
- * {@link SkipFilter}.
+ * To prevent the entire row from being emitted if the column is not found
+ * on a row, use {@link #setFilterIfMissing}.
+ * <p>
+ * Otherwise, if the column is found, the entire row will be emitted only if
+ * the value passes.  If the value fails, the row will be filtered out.
  * <p>
  * To filter based on the value of all scanned columns, use {@link ValueFilter}.
  */
@@ -60,7 +62,10 @@ public class SingleColumnValueFilter implements Filter {
   private byte [] columnQualifier; 
   private CompareOp compareOp;
   private WritableByteArrayComparable comparator;
-
+  private boolean foundColumn = false;
+  private boolean matchedColumn = false;
+  private boolean filterIfMissing = false;
+  
   /**
    * Writable constructor, do not use.
    */
@@ -104,28 +109,42 @@ public class SingleColumnValueFilter implements Filter {
     this.compareOp = compareOp;
     this.comparator = comparator;
   }
-  
+
   public boolean filterRowKey(byte[] rowKey, int offset, int length) {
+    // We don't filter on the row key... we filter later on column value so
+    // always return false.
     return false;
   }
 
   public ReturnCode filterKeyValue(KeyValue keyValue) {
+    // System.out.println("REMOVE KEY=" + keyValue.toString() + ", value=" + Bytes.toString(keyValue.getValue()));
+    if (this.matchedColumn) {
+      // We already found and matched the single column, all keys now pass
+      return ReturnCode.INCLUDE;
+    } else if (this.foundColumn) {
+      // We found but did not match the single column, skip to next row
+      return ReturnCode.NEXT_ROW;
+    }
     if (!keyValue.matchingColumn(this.columnFamily, this.columnQualifier)) {
       return ReturnCode.INCLUDE;
     }
+    foundColumn = true;
     if (filterColumnValue(keyValue.getBuffer(),
         keyValue.getValueOffset(), keyValue.getValueLength())) {
       return ReturnCode.NEXT_ROW;
     }
+    this.matchedColumn = true;
     return ReturnCode.INCLUDE;
   }
 
-  private boolean filterColumnValue(final byte[] data, final int offset,
+  private boolean filterColumnValue(final byte [] data, final int offset,
       final int length) {
-    int compareResult = comparator.compareTo(Arrays.copyOfRange(data, offset,
-        offset + length));
-
-    switch (compareOp) {
+    // TODO: Can this filter take a rawcomparator so don't have to make this
+    // byte array copy?
+    int compareResult =
+      this.comparator.compareTo(Arrays.copyOfRange(data, offset, offset + length));
+    LOG.debug("compareResult=" + compareResult + " " + Bytes.toString(data, offset, length));
+    switch (this.compareOp) {
     case LESS:
       return compareResult <= 0;
     case LESS_OR_EQUAL:
@@ -148,10 +167,34 @@ public class SingleColumnValueFilter implements Filter {
   }
 
   public boolean filterRow() {
-    return false;
+    // If column was found, return false if it was matched, true if it was not
+    // If column not found, return true if we filter if missing, false if not
+    return this.foundColumn? !this.matchedColumn: this.filterIfMissing;
   }
 
   public void reset() {
+    foundColumn = false;
+    matchedColumn = false;
+  }
+
+  /**
+   * Get whether entire row should be filtered if column is not found.
+   * @return true if row should be skipped if column not found, false if row
+   * should be let through anyways
+   */
+  public boolean getFilterIfMissing() {
+    return filterIfMissing;
+  }
+
+  /**
+   * Set whether entire row should be filtered if column is not found.
+   * <p>
+   * If true, the entire row will be skipped if the column is not found.
+   * <p>
+   * If false, the row will pass if the column is not found.  This is default.
+   */
+  public void setFilterIfMissing(boolean filterIfMissing) {
+    this.filterIfMissing = filterIfMissing;
   }
 
   public void readFields(final DataInput in) throws IOException {
@@ -163,9 +206,12 @@ public class SingleColumnValueFilter implements Filter {
     if(this.columnQualifier.length == 0) {
       this.columnQualifier = null;
     }
-    compareOp = CompareOp.valueOf(in.readUTF());
-    comparator = (WritableByteArrayComparable) HbaseObjectWritable.readObject(in,
-        null);
+    this.compareOp = CompareOp.valueOf(in.readUTF());
+    this.comparator =
+      (WritableByteArrayComparable)HbaseObjectWritable.readObject(in, null);
+    this.foundColumn = in.readBoolean();
+    this.matchedColumn = in.readBoolean();
+    this.filterIfMissing = in.readBoolean();
   }
 
   public void write(final DataOutput out) throws IOException {
@@ -174,5 +220,8 @@ public class SingleColumnValueFilter implements Filter {
     out.writeUTF(compareOp.name());
     HbaseObjectWritable.writeObject(out, comparator,
         WritableByteArrayComparable.class, null);
+    out.writeBoolean(foundColumn);
+    out.writeBoolean(matchedColumn);
+    out.writeBoolean(filterIfMissing);
   }
 }

@@ -322,11 +322,15 @@ public class Migrate extends Configured implements Tool {
       // only be family directories.  Under each of these, should be a mapfile
       // and info directory and in these only one file.
       Path d = tableDirs[i].getPath();
-      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) continue;
+      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
+        continue;
+      }
       FileStatus [] regionDirs = fs.listStatus(d, new DirFilter(fs));
       for (int j = 0; j < regionDirs.length; j++) {
         Path dd = regionDirs[j].getPath();
-        if (dd.equals(HConstants.HREGION_COMPACTIONDIR_NAME)) continue;
+        if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
+          continue;
+        }
         // Else its a region name.  Now look in region for families.
         FileStatus [] familyDirs = fs.listStatus(dd, new DirFilter(fs));
         for (int k = 0; k < familyDirs.length; k++) {
@@ -369,9 +373,11 @@ public class Migrate extends Configured implements Tool {
       Integer.parseInt(regiondir.getName()),
       Bytes.toBytes(familydir.getName()), Long.parseLong(mf.getName()), null);
     BloomFilterMapFile.Reader src = hsf.getReader(fs, false, false);
+    String compression = conf.get("migrate.compression", "NONE").trim();
+    Compression.Algorithm compressAlgorithm = Compression.Algorithm.valueOf(compression);
     HFile.Writer tgt = StoreFile.getWriter(fs, familydir,
       conf.getInt("hfile.min.blocksize.size", 64*1024),
-      Compression.Algorithm.NONE, getComparator(basedir));
+      compressAlgorithm, getComparator(basedir));
     // From old 0.19 HLogEdit.
     ImmutableBytesWritable deleteBytes =
       new ImmutableBytesWritable("HBASE::DELETEVAL".getBytes("UTF-8"));
@@ -445,6 +451,8 @@ public class Migrate extends Configured implements Tool {
       hri.getTableDesc().setMemStoreFlushSize(catalogMemStoreFlushSize);
       result = true;
     }
+    String compression = getConf().get("migrate.compression", "NONE").trim();
+    Compression.Algorithm compressAlgorithm = Compression.Algorithm.valueOf(compression);
     // Remove the old MEMCACHE_FLUSHSIZE if present
     hri.getTableDesc().remove(Bytes.toBytes("MEMCACHE_FLUSHSIZE"));
     for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
@@ -452,7 +460,7 @@ public class Migrate extends Configured implements Tool {
       hcd.setBlockCacheEnabled(true);
       // Set compression to none.  Previous was 'none'.  Needs to be upper-case.
       // Any other compression we are turning off.  Have user enable it.
-      hcd.setCompressionType(Algorithm.NONE);
+      hcd.setCompressionType(compressAlgorithm);
       result = true;
     }
     return result;

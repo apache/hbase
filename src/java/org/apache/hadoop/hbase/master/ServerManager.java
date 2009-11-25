@@ -69,7 +69,6 @@ class ServerManager implements HConstants {
   private static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
   
   private final AtomicInteger quiescedServers = new AtomicInteger(0);
-  private final ZooKeeperWrapper zooKeeperWrapper;
 
   /** The map of known server names to server info */
   final Map<String, HServerInfo> serversToServerInfo =
@@ -140,7 +139,6 @@ class ServerManager implements HConstants {
    */
   public ServerManager(HMaster master) {
     this.master = master;
-    zooKeeperWrapper = master.getZooKeeperWrapper();
     this.nobalancingCount = master.getConfiguration().
       getInt("hbase.regions.nobalancing.count", 4);
     serverMonitorThread = new ServerMonitor(master.metaRescanInterval,
@@ -218,7 +216,7 @@ class ServerManager implements HConstants {
     // We must set this watcher here because it can be set on a fresh start
     // or on a failover
     Watcher watcher = new ServerExpirer(serverName, info.getServerAddress());
-    zooKeeperWrapper.updateRSLocationGetWatch(info, watcher);
+    master.getZooKeeperWrapper().updateRSLocationGetWatch(info, watcher);
     serversToServerInfo.put(serverName, info);
     serverAddressToServerInfo.put(info.getServerAddress(), info);
     serversToLoad.put(serverName, load);
@@ -477,7 +475,7 @@ class ServerManager implements HConstants {
       
       // Should we tell it close regions because its overloaded?  If its
       // currently opening regions, leave it alone till all are open.
-      if ((openingCount < this.nobalancingCount)) {
+      if (openingCount < this.nobalancingCount) {
         this.master.regionManager.assignRegions(serverInfo, mostLoadedRegions,
             returnMsgs);
       }
@@ -676,6 +674,18 @@ class ServerManager implements HConstants {
     if (info != null) {
       LOG.info("Removing server's info " + serverName);
       master.regionManager.offlineMetaServer(info.getServerAddress());
+
+      //HBASE-1928: Check whether this server has been transitioning the ROOT table
+      if (this.master.regionManager.isRootServerCandidate (serverName)) {
+         this.master.regionManager.unsetRootRegion();
+         this.master.regionManager.reassignRootRegion();
+      }
+
+      //HBASE-1928: Check whether this server has been transitioning the META table
+      HRegionInfo metaServerRegionInfo = this.master.regionManager.getMetaServerRegionInfo (serverName);
+      if (metaServerRegionInfo != null) {
+         this.master.regionManager.setUnassigned(metaServerRegionInfo, true);
+      }
 
       infoUpdated = true;
 
