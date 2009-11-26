@@ -20,6 +20,7 @@ Release 0.20.3 - Unreleased
    HBASE-1987 The Put object has no simple read methods for checking what
               has already been added (Ryan Smith via Stack)
    HBASE-2009 [EC2] Support mapreduce
+   HBASE-2012 [EC2] LZO support
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
