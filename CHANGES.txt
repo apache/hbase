@@ -21,6 +21,8 @@ Release 0.20.3 - Unreleased
               has already been added (Ryan Smith via Stack)
    HBASE-2009 [EC2] Support mapreduce
    HBASE-2012 [EC2] LZO support
+   HBASE-2011 Add zktop like output to HBase's master UI (Lars George via
+              Andrew Purtell)
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
