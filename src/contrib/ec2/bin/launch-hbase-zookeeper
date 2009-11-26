@@ -36,7 +36,7 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hbase-ec2-env.sh
 
 type=$ZOO_INSTANCE_TYPE
-[ -z "$type" ] && type=$INSTANCE_TYPE
+[ -z "$type" ] && type=$SLAVE_INSTANCE_TYPE
 arch=$ZOO_ARCH
 [ -z "$arch" ] && arch=$ARCH
 
