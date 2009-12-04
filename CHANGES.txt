@@ -9,6 +9,8 @@ Release 0.20.3 - Unreleased
    HBASE-1997  zk tick time bounds maximum zk session time
    HBASE-1979  MurmurHash does not yield the same results as the reference
                C++ implementation when size % 4 >= 2 (Olivier Gillet via Stack)
+   HBASE-1994  Master will lose hlog entries while splitting if region has
+               empty oldlogfile.log (Lars George via Stack)
 
   IMPROVEMENTS
    HBASE-1961  HBase EC2 scripts
