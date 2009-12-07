@@ -26,6 +26,8 @@ Release 0.20.3 - Unreleased
    HBASE-2011  Add zktop like output to HBase's master UI (Lars George via
                Andrew Purtell)
    HBASE-2018  Updates to .META. blocked under high MemStore load
+   HBASE-2029 Reduce shell exception dump on console
+              (Lars George and J-D via Stack)
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
