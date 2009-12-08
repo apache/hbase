@@ -29,6 +29,8 @@ Release 0.20.3 - Unreleased
    HBASE-2018  Updates to .META. blocked under high MemStore load
    HBASE-2029  Reduce shell exception dump on console
                (Lars George and J-D via Stack)
+   HBASE-2027 HConnectionManager.HBASE_INSTANCES leaks TableServers
+              (Dave Latham via Stack)
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
