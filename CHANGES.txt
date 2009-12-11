@@ -13,6 +13,8 @@ Release 0.20.3 - Unreleased
                empty oldlogfile.log (Lars George via Stack)
    HBASE-2022  NPE in housekeeping kills RS
    HBASE-2033  Shell scan 'limit' is off by one
+   HBASE-2034  [Bulk load tools] loadtable.rb calls an undefined method
+               `descendingIterator' (Ching-Shen Chen via Stack)
 
   IMPROVEMENTS
    HBASE-1961  HBase EC2 scripts
