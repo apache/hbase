@@ -416,12 +416,7 @@ module HBase
           scan = Scan.new(startrow.to_java_bytes)
         end
         for c in columns
-          split = KeyValue.parseColumn(c.to_java_bytes)
-          if split[1] != nil
-            scan.addColumn(split[0], split[1])
-          else
-            scan.addFamily(split[0])
-          end
+          scan.addColumns(c)
         end
         if filter != nil
           scan.setFilter(filter)
