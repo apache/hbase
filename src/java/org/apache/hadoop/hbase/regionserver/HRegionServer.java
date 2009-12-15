@@ -207,9 +207,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
   LogRoller hlogRoller;
   LogFlusher hlogFlusher;
   
-  // limit compactions while starting up
-  CompactionLimitThread compactionLimitThread;
-
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
 
@@ -908,61 +905,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     return this.fsOk;
   }
 
-  /**
-   * Thread for toggling safemode after some configurable interval.
-   */
-  private class CompactionLimitThread extends Thread {
-    protected CompactionLimitThread() {}
-
-    @Override
-    public void run() {
-      // First wait until we exit safe mode
-      synchronized (safeMode) {
-        while(safeMode.get()) {
-          LOG.debug("Waiting to exit safe mode");
-          try {
-            safeMode.wait();
-          } catch (InterruptedException e) {
-            // ignore
-          }
-        }
-      }
-
-      // now that safemode is off, slowly increase the per-cycle compaction
-      // limit, finally setting it to unlimited (-1)
-
-      int compactionCheckInterval = 
-        conf.getInt("hbase.regionserver.thread.splitcompactcheckfrequency",
-            20 * 1000);
-      final int limitSteps[] = {
-        1, 1, 1, 1,
-        2, 2, 2, 2, 2, 2,
-        3, 3, 3, 3, 3, 3, 3, 3, 
-        4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-        -1
-      };
-      for (int i = 0; i < limitSteps.length; i++) {
-        // Just log changes.
-        if (compactSplitThread.getLimit() != limitSteps[i] &&
-            LOG.isDebugEnabled()) {
-          LOG.debug("setting compaction limit to " + limitSteps[i]);
-        }
-        compactSplitThread.setLimit(limitSteps[i]);
-        try {
-          Thread.sleep(compactionCheckInterval);
-        } catch (InterruptedException ex) {
-          // unlimit compactions before exiting
-          compactSplitThread.setLimit(-1);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(this.getName() + " exiting on interrupt");
-          }
-          return;
-        }
-      }
-      LOG.info("compactions no longer limited");
-    }
-  }
-
   /*
    * Thread to shutdown the region server in an orderly manner.  This thread
    * is registered as a shutdown hook in the HRegionServer constructor and is
@@ -1224,17 +1166,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
           this.serverInfo.setInfoPort(port);
         }
       } 
-    }
-
-    // Set up the safe mode handler if safe mode has been configured.
-    if (!conf.getBoolean("hbase.regionserver.safemode", true)) {
-      safeMode.set(false);
-      compactSplitThread.setLimit(-1);
-      LOG.debug("skipping safe mode");
-    } else {
-      this.compactionLimitThread = new CompactionLimitThread();
-      Threads.setDaemonThreadRunning(this.compactionLimitThread, n + ".safeMode",
-        handler);
     }
 
     // Start Server.  This service is like leases in that it internally runs

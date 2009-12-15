@@ -40,6 +40,7 @@ Release 0.20.3 - Unreleased
    HBASE-2027  HConnectionManager.HBASE_INSTANCES leaks TableServers
                (Dave Latham via Stack)
    HBASE-2031  When starting HQuorumPeer, try to match on more than 1 address
+   HBASE-2046  Remove CompactionLimitThread
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
