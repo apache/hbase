@@ -16,6 +16,8 @@ Release 0.20.3 - Unreleased
    HBASE-2034  [Bulk load tools] loadtable.rb calls an undefined method
                `descendingIterator' (Ching-Shen Chen via Stack)
    HBASE-2043  Shell's scan broken
+   HBASE-2047  Example command in the "Getting Started" 
+               documentation doesn't work (Benoit Sigoure via JD)
 
   IMPROVEMENTS
    HBASE-1961  HBase EC2 scripts
