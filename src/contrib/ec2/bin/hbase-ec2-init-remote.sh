@@ -21,7 +21,7 @@ HBASE_VERSION=`echo $HBASE_HOME | cut -d '-' -f 2`
 # Hadoop configuration
 ###############################################################################
 
-cat > $HADOOP_HOME/conf/core-site.xml <<EOF
+cat > $HADOOP_HOME/conf/hadoop-site.xml <<EOF
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
@@ -33,24 +33,10 @@ cat > $HADOOP_HOME/conf/core-site.xml <<EOF
   <name>fs.default.name</name>
   <value>hdfs://$MASTER_HOST:8020</value>
 </property>
-</configuration>
-EOF
-
-cat > $HADOOP_HOME/conf/hdfs-site.xml <<EOF
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration>
 <property>
   <name>fs.default.name</name>
   <value>hdfs://$MASTER_HOST:8020</value>
 </property>
-</configuration>
-EOF
-
-cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration>
 <property>
   <name>mapred.job.tracker</name>
   <value>$MASTER_HOST:8021</value>
