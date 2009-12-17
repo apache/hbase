@@ -19,7 +19,7 @@
   Map<byte [], MetaRegion> onlineRegions = master.getOnlineMetaRegions();
   Map<String, HServerInfo> serverToServerInfos =
     master.getServersToServerInfo();
-  int interval = conf.getInt("hbase.regionserver.msginterval", 3000)/1000;
+  int interval = conf.getInt("hbase.regionserver.msginterval", 1000)/1000;
   if (interval == 0) {
       interval = 1;
   }

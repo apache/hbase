@@ -41,6 +41,8 @@ Release 0.20.3 - Unreleased
                (Dave Latham via Stack)
    HBASE-2031  When starting HQuorumPeer, try to match on more than 1 address
    HBASE-2046  Remove CompactionLimitThread
+   HBASE-2052  Make hbase more 'live' when comes to noticing table creation, 
+               splits, etc., for 0.20.3
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
