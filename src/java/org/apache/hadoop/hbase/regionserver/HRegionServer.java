@@ -207,9 +207,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
   LogRoller hlogRoller;
   LogFlusher hlogFlusher;
   
-  // limit compactions while starting up
-  CompactionLimitThread compactionLimitThread;
-
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
 
@@ -257,7 +254,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // Config'ed params
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
-    this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
+    this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 1 * 1000);
     this.serverLeaseTimeout =
       conf.getInt("hbase.master.lease.period", 120 * 1000);
 
@@ -904,61 +901,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     return this.fsOk;
   }
 
-  /**
-   * Thread for toggling safemode after some configurable interval.
-   */
-  private class CompactionLimitThread extends Thread {
-    protected CompactionLimitThread() {}
-
-    @Override
-    public void run() {
-      // First wait until we exit safe mode
-      synchronized (safeMode) {
-        while(safeMode.get()) {
-          LOG.debug("Waiting to exit safe mode");
-          try {
-            safeMode.wait();
-          } catch (InterruptedException e) {
-            // ignore
-          }
-        }
-      }
-
-      // now that safemode is off, slowly increase the per-cycle compaction
-      // limit, finally setting it to unlimited (-1)
-
-      int compactionCheckInterval = 
-        conf.getInt("hbase.regionserver.thread.splitcompactcheckfrequency",
-            20 * 1000);
-      final int limitSteps[] = {
-        1, 1, 1, 1,
-        2, 2, 2, 2, 2, 2,
-        3, 3, 3, 3, 3, 3, 3, 3, 
-        4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-        -1
-      };
-      for (int i = 0; i < limitSteps.length; i++) {
-        // Just log changes.
-        if (compactSplitThread.getLimit() != limitSteps[i] &&
-            LOG.isDebugEnabled()) {
-          LOG.debug("setting compaction limit to " + limitSteps[i]);
-        }
-        compactSplitThread.setLimit(limitSteps[i]);
-        try {
-          Thread.sleep(compactionCheckInterval);
-        } catch (InterruptedException ex) {
-          // unlimit compactions before exiting
-          compactSplitThread.setLimit(-1);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(this.getName() + " exiting on interrupt");
-          }
-          return;
-        }
-      }
-      LOG.info("compactions no longer limited");
-    }
-  }
-
   /*
    * Thread to shutdown the region server in an orderly manner.  This thread
    * is registered as a shutdown hook in the HRegionServer constructor and is
@@ -1222,17 +1164,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       } 
     }
 
-    // Set up the safe mode handler if safe mode has been configured.
-    if (!conf.getBoolean("hbase.regionserver.safemode", true)) {
-      safeMode.set(false);
-      compactSplitThread.setLimit(-1);
-      LOG.debug("skipping safe mode");
-    } else {
-      this.compactionLimitThread = new CompactionLimitThread();
-      Threads.setDaemonThreadRunning(this.compactionLimitThread, n + ".safeMode",
-        handler);
-    }
-
     // Start Server.  This service is like leases in that it internally runs
     // a thread.
     this.server.start();
@@ -1270,9 +1201,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
     if (this.toDo.isEmpty()) {
       return;
     }
-    // This iterator is 'safe'.  We are guaranteed a view on state of the
-    // queue at time iterator was taken out.  Apparently goes from oldest.
+    // This iterator isn't safe if elements are gone and HRS.Worker could
+    // remove them (it already checks for null there). Goes from oldest.
     for (ToDoEntry e: this.toDo) {
+      if(e == null) {
+        LOG.warn("toDo gave a null entry during iteration");
+        break;
+      }
       HMsg msg = e.msg;
       if (msg != null) {
         if (msg.isType(HMsg.Type.MSG_REGION_OPEN)) {
@@ -1808,7 +1743,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
     try {
-      cacheFlusher.reclaimMemStoreMemory();
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
       region.put(put, getLockFromId(put.getLockId()));
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
@@ -1822,7 +1759,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     checkOpen();
     try {
       HRegion region = getRegion(regionName);
-      this.cacheFlusher.reclaimMemStoreMemory();
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
       Integer[] locks = new Integer[puts.length];
       for (i = 0; i < puts.length; i++) {
         this.requestCount.incrementAndGet();
@@ -1863,7 +1802,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
     try {
-      cacheFlusher.reclaimMemStoreMemory();
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
       return region.checkAndPut(row, family, qualifier, value, put,
           getLockFromId(put.getLockId()), true);
     } catch (Throwable t) {
@@ -2015,10 +1956,12 @@ public class HRegionServer implements HConstants, HRegionInterface,
     checkOpen();
     try {
       boolean writeToWAL = true;
-      this.cacheFlusher.reclaimMemStoreMemory();
       this.requestCount.incrementAndGet();
-      Integer lid = getLockFromId(delete.getLockId());
       HRegion region = getRegion(regionName);
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
+      Integer lid = getLockFromId(delete.getLockId());
       region.delete(delete, lid, writeToWAL);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
@@ -2032,9 +1975,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
     checkOpen();
     try {
       boolean writeToWAL = true;
-      this.cacheFlusher.reclaimMemStoreMemory();
-      Integer[] locks = new Integer[deletes.length];
       HRegion region = getRegion(regionName);
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
+      Integer[] locks = new Integer[deletes.length];
       for (i = 0; i < deletes.length; i++) {
         this.requestCount.incrementAndGet();
         locks[i] = getLockFromId(deletes[i].getLockId());

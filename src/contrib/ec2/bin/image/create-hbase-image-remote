@@ -30,8 +30,9 @@ arch=$ARCH
 echo "Remote: INSTANCE_TYPE is $type"
 echo "Remote: ARCH is $arch"
 
-# Remove environment script since it contains sensitive information
+# Remove sensitive information
 rm -f "$bin"/hbase-ec2-env.sh
+rm -f "$bin"/credentials.sh
 
 # Install Java
 echo "Downloading and installing java binary."
@@ -98,7 +99,7 @@ echo "Installing LZO codec support for HBase"
 cd /usr/local/hbase-${HBASE_VERSION}
 wget -nv http://iridiant.s3.amazonaws.com/hbase/lzo-linux-${HADOOP_VERSION}.tar.gz
 tar xzf lzo-linux-${HADOOP_VERSION}.tar.gz
-rm -f lzo-linux-${HADOOP_VERSION}.tar.gz
+rm lzo-linux-${HADOOP_VERSION}.tar.gz
 
 # Bundle and upload image
 cd ~root

@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.ipc.RemoteException;
 
-
 /**
  * Retries scanner operations such as create, next, etc.
  * Used by {@link ResultScanner}s made by {@link HTable}.

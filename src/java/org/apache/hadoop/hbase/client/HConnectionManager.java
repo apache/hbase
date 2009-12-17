@@ -24,10 +24,10 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
-import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -67,7 +67,17 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 public class HConnectionManager implements HConstants {
   private static final Delete [] DELETE_ARRAY_TYPE = new Delete[0];
   private static final Put [] PUT_ARRAY_TYPE = new Put[0];
-  
+
+  // Register a shutdown hook, one that cleans up RPC and closes zk sessions.
+  static {
+    Runtime.getRuntime().addShutdownHook(new Thread("HCM.shutdownHook") {
+      @Override
+      public void run() {
+        HConnectionManager.deleteAllConnections(true);
+      }
+    });
+  }
+
   /*
    * Not instantiable.
    */
@@ -75,12 +85,20 @@ public class HConnectionManager implements HConstants {
     super();
   }
   
-  // A Map of master HBaseConfiguration -> connection information for that 
-  // instance. Note that although the Map is synchronized, the objects it 
-  // contains are mutable and hence require synchronized access to them
+  private static final int MAX_CACHED_HBASE_INSTANCES=31;
+  // A LRU Map of master HBaseConfiguration -> connection information for that 
+  // instance. The objects it contains are mutable and hence require
+  // synchronized access to them.  We set instances to 31.  The zk default max
+  // connections is 30 so should run into zk issues before hit this value of 31.
   private static 
   final Map<HBaseConfiguration, TableServers> HBASE_INSTANCES =
-    new WeakHashMap<HBaseConfiguration, TableServers>();
+    new LinkedHashMap<HBaseConfiguration, TableServers>
+      ((int) (MAX_CACHED_HBASE_INSTANCES/0.75F)+1, 0.75F, true) {
+      @Override
+      protected boolean removeEldestEntry(Map.Entry<HBaseConfiguration, TableServers> eldest) {
+        return size() > MAX_CACHED_HBASE_INSTANCES;
+      }
+  };
   
   private static final Map<String, ClientZKWatcher> ZK_WRAPPERS = 
     new HashMap<String, ClientZKWatcher>();
@@ -186,8 +204,10 @@ public class HConnectionManager implements HConstants {
      */
     public void process(WatchedEvent event) {
       KeeperState state = event.getState();
-      LOG.debug("Got ZooKeeper event, state: " + state + ", type: "
-          + event.getType() + ", path: " + event.getPath());
+      if(!state.equals(KeeperState.SyncConnected)) {
+        LOG.debug("Got ZooKeeper event, state: " + state + ", type: "
+            + event.getType() + ", path: " + event.getPath());
+      }
       if (state == KeeperState.Expired) {
         resetZooKeeper();
       }
@@ -268,7 +288,7 @@ public class HConnectionManager implements HConstants {
             "Unable to find region server interface " + serverClassName, e);
       }
 
-      this.pause = conf.getLong("hbase.client.pause", 2 * 1000);
+      this.pause = conf.getLong("hbase.client.pause", 1 * 1000);
       this.numRetries = conf.getInt("hbase.client.retries.number", 10);
       this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
       this.rpcTimeout = conf.getLong("hbase.regionserver.lease.period", 60000);
@@ -689,7 +709,7 @@ public class HConnectionManager implements HConstants {
             if (LOG.isDebugEnabled()) {
               LOG.debug("locateRegionInMeta attempt " + tries + " of " +
                 this.numRetries + " failed; retrying after sleep of " +
-                getPauseTime(tries), e);
+                getPauseTime(tries) + " because: " + e.getMessage());
             }
             relocateRegion(parentTable, metaKey);
           } else {
@@ -846,7 +866,9 @@ public class HConnectionManager implements HConstants {
       SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
       if (tableLocations.put(startKey, location) == null) {
-        LOG.debug("Cached location " + location);
+        LOG.debug("Cached location for " +
+            location.getRegionInfo().getRegionNameAsString() +
+            " is " + location.getServerAddress());
       }
     }
     

@@ -1,6 +1,51 @@
 HBase Change Log
 
-Release 0.20.2 - Unreleased
+Release 0.20.3 - Unreleased
+  INCOMPATIBLE CHANGES
+
+  BUG FIXES
+   HBASE-1999  When HTable goes away, close zk session in shutdown hook or
+               something...
+   HBASE-1997  zk tick time bounds maximum zk session time
+   HBASE-1979  MurmurHash does not yield the same results as the reference
+               C++ implementation when size % 4 >= 2 (Olivier Gillet via Stack)
+   HBASE-1994  Master will lose hlog entries while splitting if region has
+               empty oldlogfile.log (Lars George via Stack)
+   HBASE-2022  NPE in housekeeping kills RS
+   HBASE-2033  Shell scan 'limit' is off by one
+   HBASE-2034  [Bulk load tools] loadtable.rb calls an undefined method
+               `descendingIterator' (Ching-Shen Chen via Stack)
+   HBASE-2043  Shell's scan broken
+   HBASE-2047  Example command in the "Getting Started" 
+               documentation doesn't work (Benoit Sigoure via JD)
+   HBASE-2048  Small inconsistency in the "Example API Usage"
+               (Benoit Sigoure via JD)
+
+  IMPROVEMENTS
+   HBASE-1961  HBase EC2 scripts
+   HBASE-1970  Export does one version only; make it configurable how many
+               it does
+   HBASE-1975  SingleColumnValueFilter: Add ability to match the value of
+               previous versions of the specified column
+               (Jeremiah Jacquet via Stack)
+   HBASE-1987  The Put object has no simple read methods for checking what
+               has already been added (Ryan Smith via Stack)
+   HBASE-2009  [EC2] Support mapreduce
+   HBASE-2012  [EC2] LZO support
+   HBASE-2011  Add zktop like output to HBase's master UI (Lars George via
+               Andrew Purtell)
+   HBASE-2018  Updates to .META. blocked under high MemStore load
+   HBASE-2029  Reduce shell exception dump on console
+               (Lars George and J-D via Stack)
+   HBASE-2027  HConnectionManager.HBASE_INSTANCES leaks TableServers
+               (Dave Latham via Stack)
+   HBASE-2031  When starting HQuorumPeer, try to match on more than 1 address
+   HBASE-2046  Remove CompactionLimitThread
+   HBASE-2052  Make hbase more 'live' when comes to noticing table creation, 
+               splits, etc., for 0.20.3
+   HBASE-2049  Cleanup HLog binary log output (Dave Latham via Stack)
+
+Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
 
   BUG FIXES
@@ -18,7 +63,8 @@ Release 0.20.2 - Unreleased
    HBASE-1777  column length is not checked before saved to memstore
    HBASE-1895  HConstants.MAX_ROW_LENGTH is incorrectly 64k, should be 32k
    HBASE-1925  IllegalAccessError: Has not been initialized (getMaxSequenceId)
-   HBASE-1929  If hbase-default.xml is not in CP, zk session timeout is 10 secs!
+   HBASE-1929  If hbase-default.xml is not in CP, zk session timeout is 10
+               seconds
    HBASE-1927  Scanners not closed properly in certain circumstances
    HBASE-1934  NullPointerException in ClientScanner (Andrew Purtell via Stack)
    HBASE-1946  Unhandled exception at regionserver (Dmitriy Lyfar via Stack)
@@ -27,7 +73,8 @@ Release 0.20.2 - Unreleased
                (Andrew McCall via Clint Morgan and Stack)
    HBASE-1953  Overhaul of overview.html (html fixes, typos, consistency) -
                no content changes (Lars Francke via Stack)
-   HBASE-1954  Transactional scans do not see newest put (Clint Morgan via Stack)
+   HBASE-1954  Transactional scans do not see newest put (Clint Morgan via
+               Stack)
    HBASE-1919  code: HRS.delete seems to ignore exceptions it shouldnt
    HBASE-1951  Stack overflow when calling HTable.checkAndPut() 
                when deleting a lot of values
@@ -36,7 +83,8 @@ Release 0.20.2 - Unreleased
    HBASE-1949  KeyValue expiration by Time-to-Live during major compaction is
                broken (Gary Helmling via Stack)
    HBASE-1957  Get-s can't set a Filter (Roman Kalyakin via Stack)
-   HBASE-1959  Compress tables during 0.19 to 0.20 migration (Dave Latham via Stack)
+   HBASE-1959  Compress tables during 0.19 to 0.20 migration (Dave Latham via
+               Stack)
    HBASE-1928  ROOT and META tables stay in transition state (making the system
                not usable) if the designated regionServer dies before the
                assignment is complete (Yannis Pavlidis via Stack)
@@ -47,6 +95,7 @@ Release 0.20.2 - Unreleased
                sometimes - Temporary fix
    HBASE-1965  On restart of branch, master complains about not being able
                to set safe mode
+   HBASE-2003  [shell] deleteall ignores column if specified
 
   IMPROVEMENTS
    HBASE-1899  Use scanner caching in shell count

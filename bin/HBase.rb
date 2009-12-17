@@ -361,7 +361,8 @@ module HBase
     def delete(row, column, timestamp = HConstants::LATEST_TIMESTAMP)
       now = Time.now 
       d = Delete.new(row.to_java_bytes, timestamp, nil)
-      d.deleteColumn(Bytes.toBytes(column))
+      split = KeyValue.parseColumn(column.to_java_bytes)
+      d.deleteColumn(split[0], split.length > 1 ? split[1] : nil, timestamp)
       @table.delete(d)
       @formatter.header()
       @formatter.footer(now)
@@ -370,6 +371,10 @@ module HBase
     def deleteall(row, column = nil, timestamp = HConstants::LATEST_TIMESTAMP)
       now = Time.now 
       d = Delete.new(row.to_java_bytes, timestamp, nil)
+      if column != nil
+        split = KeyValue.parseColumn(column.to_java_bytes)
+        d.deleteColumns(split[0], split.length > 1 ? split[1] : nil, timestamp)
+      end
       @table.delete(d)
       @formatter.header()
       @formatter.footer(now)
@@ -411,12 +416,7 @@ module HBase
           scan = Scan.new(startrow.to_java_bytes)
         end
         for c in columns
-          split = KeyValue.parseColumn(c.to_java_bytes)
-          if split[1] != nil
-            scan.addColumn(split[0], split[1])
-          else
-            scan.addFamily(split[0])
-          end
+          scan.addColumns(c)
         end
         if filter != nil
           scan.setFilter(filter)
@@ -435,7 +435,6 @@ module HBase
       while i.hasNext()
         r = i.next().getRowResult()
         row = String.from_java_bytes r.getRow()
-        count += 1
         if limit != -1 and count >= limit
           break
         end
@@ -444,6 +443,7 @@ module HBase
           cell = toString(column, v, maxlength)
           @formatter.row([row, "column=%s, %s" % [column, cell]])
         end
+        count += 1
       end
       @formatter.footer(now, count)
     end
