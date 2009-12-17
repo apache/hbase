@@ -37,7 +37,7 @@ EC2_ROOT_SSH_KEY=
 HBASE_VERSION=0.20.2
 
 # The version of Hadoop to use.
-HADOOP_VERSION=0.20.1
+HADOOP_VERSION=0.18.3
 
 # The Amazon S3 bucket where the HBase AMI is stored.
 # Change this value only if you are creating your own (private) AMI
