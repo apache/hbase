@@ -22,6 +22,8 @@ Release 0.20.3 - Unreleased
                (Benoit Sigoure via JD)
    HBASE-1960  Master should wait for DFS to come up when creating 
                hbase.version
+   HBASE-2054  memstore size 0 is >= than blocking -2.0g size
+   HBASE-2057  Cluster won't stop 
 
   IMPROVEMENTS
    HBASE-1961  HBase EC2 scripts
