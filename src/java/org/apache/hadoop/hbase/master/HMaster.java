@@ -81,8 +81,6 @@ import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -192,21 +190,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     // fs.default.name; its value is probably the default.
     this.conf.set("fs.default.name", this.rootdir.toString());
     this.fs = FileSystem.get(conf);
-    if (this.fs instanceof DistributedFileSystem) {
-      // Make sure dfs is not in safe mode
-      String message = "Waiting for dfs to exit safe mode...";
-      while (((DistributedFileSystem) fs).setSafeMode(
-          FSConstants.SafeModeAction.SAFEMODE_GET)) {
-        LOG.info(message);
-        try {
-          Thread.sleep(this.threadWakeFrequency);
-        } catch (InterruptedException e) {
-          //continue
-        }
-      }
-    }
     this.conf.set(HConstants.HBASE_DIR, this.rootdir.toString());
     this.rand = new Random();
+
+    // If FS is in safe mode wait till out of it.
+    FSUtils.waitOnSafeMode(this.conf, this.threadWakeFrequency);
 
     try {
       // Make sure the hbase root directory exists!

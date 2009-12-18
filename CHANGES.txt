@@ -20,6 +20,8 @@ Release 0.20.3 - Unreleased
                documentation doesn't work (Benoit Sigoure via JD)
    HBASE-2048  Small inconsistency in the "Example API Usage"
                (Benoit Sigoure via JD)
+   HBASE-1960  Master should wait for DFS to come up when creating 
+               hbase.version
 
   IMPROVEMENTS
    HBASE-1961  HBase EC2 scripts

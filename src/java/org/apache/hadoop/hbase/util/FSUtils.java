@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -127,6 +128,40 @@ public class FSUtils {
     throw io;
   }
   
+  /**
+   * If DFS, check safe mode and if so, wait until we clear it.
+   * @param conf
+   * @param wait Sleep between retries
+   * @throws IOException
+   */
+  public static void waitOnSafeMode(final HBaseConfiguration conf,
+    final long wait)
+  throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    if (!(fs instanceof DistributedFileSystem)) return;
+    DistributedFileSystem dfs = (DistributedFileSystem)fs;
+    // Are there any data nodes up yet?
+    // Currently the safe mode check falls through if the namenode is up but no
+    // datanodes have reported in yet.
+    while (dfs.getDataNodeStats().length == 0) {
+      LOG.info("Waiting for dfs to come up...");
+      try {
+        Thread.sleep(wait);
+      } catch (InterruptedException e) {
+        //continue
+      }
+    }
+    // Make sure dfs is not in safe mode
+    while (dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET)) {
+      LOG.info("Waiting for dfs to exit safe mode...");
+      try {
+        Thread.sleep(wait);
+      } catch (InterruptedException e) {
+        //continue
+      }
+    }
+  }
+
   /**
    * Verifies current version of file system
    * 
