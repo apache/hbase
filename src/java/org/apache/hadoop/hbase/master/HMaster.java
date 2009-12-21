@@ -394,6 +394,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return regionManager.getOnlineMetaRegions();
   }
 
+  /**
+   * @return the server manager instance
+   */
+  public ServerManager getServerManager() {
+    return this.serverManager;
+  }
+
   /** Main processing loop */
   @Override
   public void run() {
@@ -741,6 +748,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         // assigned and scanned.
         if (!regionManager.areAllMetaRegionsOnline()) {
           throw new NotAllMetaRegionsOnlineException();
+        }
+        if (!this.serverManager.canAssignUserRegions()) {
+          throw new IOException("not enough servers to create table yet");
         }
         createTable(newRegion);
         LOG.info("created table " + desc.getNameAsString());
@@ -1172,7 +1182,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
 
   private static void printUsageAndExit() {
-    System.err.println("Usage: java org.apache.hbase.HMaster start|stop");
+    System.err.println("Usage: Master [opts] start|stop");
+    System.err.println(" start  Start Master. If local mode, start Master and RegionServer in same JVM");
+    System.err.println(" stop   Start cluster shutdown; Master signals RegionServer shutdown");
+    System.err.println(" where [opts] are:");
+    System.err.println("   --minServers=<servers>    Minimum RegionServers needed to host user tables.");
     System.exit(0);
   }
 
@@ -1188,6 +1202,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     // Process command-line args. TODO: Better cmd-line processing
     // (but hopefully something not as painful as cli options).
     for (String cmd: args) {
+
+      if (cmd.startsWith("--minServers=")) {
+        conf.setInt("hbase.regions.server.count.min",
+          Integer.valueOf(cmd.substring(13)));
+        continue;
+      }
 
       if (cmd.equals("start")) {
         try {

@@ -52,6 +52,8 @@ Release 0.20.3 - Unreleased
                Andrew Purtell)
    HBASE-2028  Add HTable.incrementColumnValue support to shell (Lars George
                via Andrew Purtell)
+   HBASE-1982  [EC2] Handle potentially large and uneven instance startup
+               times
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
