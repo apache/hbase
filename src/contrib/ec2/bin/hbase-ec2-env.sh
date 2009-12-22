@@ -42,7 +42,6 @@ HADOOP_VERSION=0.20.1
 # The Amazon S3 bucket where the HBase AMI is stored.
 # Change this value only if you are creating your own (private) AMI
 # so you can store it in a bucket you own.
-#S3_BUCKET=hbase-images
 S3_BUCKET=iridiant-bundles
 
 # Enable public access web interfaces
@@ -52,7 +51,7 @@ ENABLE_WEB_PORTS=false
 # Allows you to add a private Yum repo and pull packages from it as your
 # instances boot up. Format is <repo-descriptor-URL> <pkg1> ... <pkgN>
 # The repository descriptor will be fetched into /etc/yum/repos.d.
-EXTRA_PACKAGES="http://iridiant.s3.amazonaws.com/yum/iridiant.repo heritrix"
+EXTRA_PACKAGES=
 
 # Use only c1.xlarge unless you know what you are doing
 MASTER_INSTANCE_TYPE=${MASTER_INSTANCE_TYPE:-c1.xlarge}
