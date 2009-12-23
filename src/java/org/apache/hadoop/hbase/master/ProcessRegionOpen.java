@@ -103,8 +103,16 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
           master.regionManager.metaScannerThread.interrupt();
         }
       }
-      // If updated successfully, remove from pending list.
-      master.regionManager.removeRegion(regionInfo);
+      // If updated successfully, remove from pending list if the state
+      // is consistent. For example, a disable could be called before the
+      // synchronization.
+      if(master.regionManager.
+        isOfflined(regionInfo.getRegionNameAsString())) {
+        LOG.warn("We opened a region while it was asked to be closed.");
+      } else {
+        master.regionManager.removeRegion(regionInfo);
+      }
+
       return true;
     }
   }

@@ -21,7 +21,7 @@
 
 <project name="hbasebuildcontrib">
 
-  <property name="version" value="0.20.2-0.18.3"/>
+  <property name="version" value="0.20.0"/>
   <property name="name" value="${ant.project.name}"/>
   <property name="root" value="${basedir}"/>
 

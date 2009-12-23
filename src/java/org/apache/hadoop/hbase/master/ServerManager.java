@@ -35,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -48,7 +49,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
@@ -139,11 +139,12 @@ class ServerManager implements HConstants {
    */
   public ServerManager(HMaster master) {
     this.master = master;
-    this.nobalancingCount = master.getConfiguration().
-      getInt("hbase.regions.nobalancing.count", 4);
-    serverMonitorThread = new ServerMonitor(master.metaRescanInterval,
+    HBaseConfiguration c = master.getConfiguration();
+    this.nobalancingCount = c.getInt("hbase.regions.nobalancing.count", 4);
+    this.minimumServerCount = c.getInt("hbase.regions.server.count.min", 0);
+    this.serverMonitorThread = new ServerMonitor(master.metaRescanInterval,
       master.shutdownRequested);
-    serverMonitorThread.start();
+    this.serverMonitorThread.start();
   }
  
   /**
@@ -412,6 +413,8 @@ class ServerManager implements HConstants {
     // Next, process messages for this server
     return processMsgs(serverInfo, mostLoadedRegions, msgs);
   }
+
+  private int minimumServerCount;
 
   /*
    * Process all the incoming messages from a server that's contacted us.
@@ -867,4 +870,16 @@ class ServerManager implements HConstants {
   public boolean isDead(String serverName) {
     return deadServers.contains(serverName);
   }
+
+  public boolean canAssignUserRegions() {
+    if (minimumServerCount == 0) {
+      return true;
+    }
+    return (numServers() >= minimumServerCount);
+  }
+
+  public void setMinimumServerCount(int minimumServerCount) {
+    this.minimumServerCount = minimumServerCount;
+  }
+
 }

@@ -77,8 +77,8 @@ echo "ZooKeeper quorum is $ZOOKEEPER_QUORUM."
 
 # Start Zookeeper quorum
 
+sleep 5
 echo "Initializing the ZooKeeper quorum ensemble."
-
 for host in $public_names ; do 
   echo "    $host"
   scp $SSH_OPTS "$bin"/hbase-ec2-init-zookeeper-remote.sh "root@${host}:/var/tmp"
