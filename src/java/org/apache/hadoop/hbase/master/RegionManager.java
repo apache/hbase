@@ -957,7 +957,7 @@ class RegionManager implements HConstants {
         s = new RegionState(info);
         regionsInTransition.put(info.getRegionNameAsString(), s);
       }
-      if (force || (!s.isPendingOpen() && !s.isOpen())) {
+      if (force || (!s.isPendingOpen() || !s.isOpen())) {
         s.setUnassigned();
       }
     }
@@ -1030,7 +1030,7 @@ class RegionManager implements HConstants {
    * @param regionInfo
    * @param setOffline
    */
-  public void setClosing(final String serverName, final HRegionInfo regionInfo,
+  public void setClosing(String serverName, final HRegionInfo regionInfo,
       final boolean setOffline) {
     synchronized (this.regionsInTransition) {
       RegionState s =
@@ -1038,6 +1038,12 @@ class RegionManager implements HConstants {
       if (s == null) {
         s = new RegionState(regionInfo);
       }
+      // If region was asked to open before getting here, we could be taking
+      // the wrong server name
+      if(s.isPendingOpen()) {
+        serverName = s.getServerName();
+      }
+
       s.setClosing(serverName, setOffline);
       this.regionsInTransition.put(regionInfo.getRegionNameAsString(), s);
     }
@@ -1640,10 +1646,10 @@ class RegionManager implements HConstants {
     }
     
     synchronized void setClosed() {
-      if (!pendingClose && !pendingOpen) {
+      if (!pendingClose && !pendingOpen && !closing) {
         throw new IllegalStateException(
             "Cannot set a region to be closed if it was not already marked as" +
-            " pending close or pending open. State: " + toString());
+            " pending close, pending open or closing. State: " + toString());
       }
       this.unassigned = false;
       this.pendingOpen = false;
