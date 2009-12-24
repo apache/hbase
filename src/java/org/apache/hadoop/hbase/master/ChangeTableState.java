@@ -79,6 +79,14 @@ class ChangeTableState extends TableOperation {
         continue;
       }
 
+      if(!this.online && this.master.regionManager.
+          isPendingOpen(i.getRegionNameAsString())) {
+        LOG.debug("Skipping region " + i.toString() +
+          " because it is pending open, will tell it to close later");
+        continue;
+      }
+
+
       // Update meta table
       Put put = updateRegionInfo(i);
       server.put(m.getRegionName(), put);

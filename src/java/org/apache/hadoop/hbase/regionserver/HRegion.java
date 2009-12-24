@@ -1947,10 +1947,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     info.setOffline(true);
     put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(info));
     srvr.put(metaRegionName, put);
-    Delete del = new Delete(row);
-    del.deleteColumns(CATALOG_FAMILY, SERVER_QUALIFIER);
-    del.deleteColumns(CATALOG_FAMILY, STARTCODE_QUALIFIER);
-    srvr.delete(metaRegionName, del);
+    cleanRegionInMETA(srvr, metaRegionName, info);
   }
   
   /**
