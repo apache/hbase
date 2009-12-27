@@ -259,6 +259,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         return false;
       } else if(zooKeeperWrapper.writeMasterAddress(address)) {
         zooKeeperWrapper.setClusterState(true);
+        zooKeeperWrapper.setClusterStateWatch(zkMasterAddressWatcher);
         // Watch our own node
         zooKeeperWrapper.readMasterAddress(this);
         return true;
