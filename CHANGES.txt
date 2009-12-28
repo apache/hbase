@@ -60,6 +60,7 @@ Release 0.20.3 - Unreleased
    HBASE-1982  [EC2] Handle potentially large and uneven instance startup
                times
    HBASE-2062  Metrics documentation outdated (Lars George via JD)
+   HBASE-2045  Update trunk and branch zk to just-release 3.2.2.
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
