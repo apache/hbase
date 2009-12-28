@@ -28,6 +28,7 @@ Release 0.20.3 - Unreleased
                its regions around
    HBASE-2065  Cannot disable a table if any of its region is opening 
                at the same time
+   HBASE-2026  NPE in StoreScanner on compaction
 
   IMPROVEMENTS
    HBASE-1961  HBase EC2 scripts
