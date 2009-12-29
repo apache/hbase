@@ -61,6 +61,7 @@ Release 0.20.3 - Unreleased
                times
    HBASE-2062  Metrics documentation outdated (Lars George via JD)
    HBASE-2045  Update trunk and branch zk to just-release 3.2.2.
+   HBASE-2074  Improvements to the hadoop-config script (Bassam Tabbara via Stack)
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
