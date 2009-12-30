@@ -32,6 +32,8 @@ Release 0.20.3 - Unreleased
    HBASE-2075  Master requires HDFS superuser privileges due to waitOnSafeMode
    HBASE-2077  NullPointerException with an open scanner that expired causing 
                an immediate region server shutdown (Sam Pullara via JD)
+   HBASE-2078  Add JMX settings as commented out lines to hbase-env.sh
+               (Lars George via JD)
 
   IMPROVEMENTS
    HBASE-1961  HBase EC2 scripts
@@ -66,6 +68,7 @@ Release 0.20.3 - Unreleased
    HBASE-2045  Update trunk and branch zk to just-release 3.2.2.
    HBASE-2074  Improvements to the hadoop-config script (Bassam Tabbara via Stack)
    HBASE-2076  Many javadoc warnings
+   HBASE-2068  MetricsRate is missing "registry" parameter (Lars George via JD)
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
