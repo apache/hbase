@@ -71,6 +71,7 @@ Release 0.20.3 - Unreleased
    HBASE-2068  MetricsRate is missing "registry" parameter (Lars George via JD)
    HBASE-2025  0.20.2 accessed from older client throws
                UndeclaredThrowableException; frustrates rolling upgrade
+   HBASE-2081  Set the retries higher in shell since client pause is lower
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
