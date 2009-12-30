@@ -30,6 +30,8 @@ Release 0.20.3 - Unreleased
                at the same time
    HBASE-2026  NPE in StoreScanner on compaction
    HBASE-2075  Master requires HDFS superuser privileges due to waitOnSafeMode
+   HBASE-2077  NullPointerException with an open scanner that expired causing 
+               an immediate region server shutdown (Sam Pullara via JD)
 
   IMPROVEMENTS
    HBASE-1961  HBase EC2 scripts
