@@ -175,6 +175,37 @@ public class HLog implements HConstants, Syncable {
     }
   }
 
+  // For measuring latency of writes
+  private static volatile long writeOps;
+  private static volatile long writeTime;
+  // For measuring latency of syncs
+  private static volatile long syncOps;
+  private static volatile long syncTime;
+
+  public static long getWriteOps() {
+    long ret = writeOps;
+    writeOps = 0;
+    return ret;
+  }
+
+  public static long getWriteTime() {
+    long ret = writeTime;
+    writeTime = 0;
+    return ret;
+  }
+
+  public static long getSyncOps() {
+    long ret = syncOps;
+    syncOps = 0;
+    return ret;
+  }
+
+  public static long getSyncTime() {
+    long ret = syncTime;
+    syncTime = 0;
+    return ret;
+  }
+
   /**
    * Create an edit log at the given <code>dir</code> location.
    *
@@ -615,6 +646,8 @@ public class HLog implements HConstants, Syncable {
       this.writer.sync();
     }
     this.unflushedEntries.set(0);
+    syncTime += System.currentTimeMillis() - lastLogFlushTime;
+    syncOps++;
   }
 
   void optionalSync() {
@@ -653,13 +686,15 @@ public class HLog implements HConstants, Syncable {
     try {
       this.editsSize.addAndGet(logKey.heapSize() + logEdit.heapSize());
       this.writer.append(logKey, logEdit);
-      if (sync || this.unflushedEntries.incrementAndGet() >= flushlogentries) {
-        sync();
-      }
       long took = System.currentTimeMillis() - now;
+      writeTime += took;
+      writeOps++;
       if (took > 1000) {
         LOG.warn(Thread.currentThread().getName() + " took " + took +
           "ms appending an edit to hlog; editcount=" + this.numEntries.get());
+      }
+      if (sync || this.unflushedEntries.incrementAndGet() >= flushlogentries) {
+        sync();
       }
     } catch (IOException e) {
       LOG.fatal("Could not append. Requesting close of hlog", e);
@@ -734,8 +769,11 @@ public class HLog implements HConstants, Syncable {
         return;
       }
       synchronized (updateLock) {
+        long now = System.currentTimeMillis();
         this.writer.append(makeKey(regionName, tableName, logSeqId, System.currentTimeMillis()), 
             completeCacheFlushLogEdit());
+        writeTime += System.currentTimeMillis() - now;
+        writeOps++;
         this.numEntries.incrementAndGet();
         Long seq = this.lastSeqWritten.get(regionName);
         if (seq != null && logSeqId >= seq.longValue()) {
