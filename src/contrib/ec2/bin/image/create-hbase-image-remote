@@ -73,7 +73,7 @@ rm -f hbase-$HBASE_VERSION.tar.gz
 # Configure HBase
 sed -i \
   -e "s|# export JAVA_HOME=.*|export JAVA_HOME=/usr/local/jdk${JAVA_VERSION}|" \
-  -e 's|# export HBASE_OPTS=.*|export HBASE_OPTS="$HBASE_OPTS -server -XX:+HeapDumpOnOutOfMemoryError -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=90 -XX:NewSize=64m -XX:MaxNewSize=64m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts"|' \
+  -e 's|# export HBASE_OPTS=.*|export HBASE_OPTS="$HBASE_OPTS -server -XX:+HeapDumpOnOutOfMemoryError"|' \
   -e 's|# export HBASE_LOG_DIR=.*|export HBASE_LOG_DIR=/mnt/hbase/logs|' \
   -e 's|# export HBASE_SLAVE_SLEEP=.*|export HBASE_SLAVE_SLEEP=1|' \
   /usr/local/hbase-$HBASE_VERSION/conf/hbase-env.sh
