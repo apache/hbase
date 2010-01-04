@@ -70,7 +70,8 @@ public class HTable {
   private boolean autoFlush;
   private long currentWriteBufferSize;
   protected int scannerCaching;
-
+  private long maxScannerResultSize;
+  
   /**
    * Creates an object to access a HBase table
    *
@@ -129,6 +130,9 @@ public class HTable {
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
     this.scannerCaching = conf.getInt("hbase.client.scanner.caching", 1);
+    this.maxScannerResultSize = conf.getLong(
+      HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, 
+      HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
   }
 
   /**
@@ -1954,6 +1958,7 @@ public class HTable {
       }
       if (cache.size() == 0) {
         Result [] values = null;
+        long remainingResultSize = maxScannerResultSize;
         int countdown = this.caching;
         // We need to reset it if it's a new callable that was created 
         // with a countdown in nextScanner
@@ -2001,12 +2006,15 @@ public class HTable {
           if (values != null && values.length > 0) {
             for (Result rs : values) {
               cache.add(rs);
+              for (KeyValue kv : rs.raw()) {
+                  remainingResultSize -= kv.heapSize();
+              }
               countdown--;
               this.lastResult = rs;
             }
           }
           // Values == null means server-side filter has determined we must STOP
-        } while (countdown > 0 && nextScanner(countdown, values == null));
+        } while (remainingResultSize > 0 && countdown > 0 && nextScanner(countdown, values == null));
       }
 
       if (cache.size() > 0) {
