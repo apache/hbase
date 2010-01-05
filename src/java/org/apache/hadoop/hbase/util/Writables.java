@@ -22,11 +22,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.DataInput;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Utility class with methods for manipulating Writable objects
@@ -192,5 +194,32 @@ public class Writables {
       return 0;
     }
     return Bytes.toLong(c.getValue());
+  }
+
+  /**
+   * Reads a zero-compressed encoded long from input stream and returns it.
+   * This method is a copy of {@link WritableUtils#readVLong(java.io.DataInput)}
+   * changed to allow the first byte to be provided as an argument.
+   * todo add this method to hadoop WritableUtils and refactor the base method
+   * to use it.
+   *
+   * @param stream    Binary input stream
+   * @param firstByte the first byte of the vlong
+   * @return deserialized long from stream.
+   * @throws java.io.IOException    io error
+   */
+  public static long readVLong(DataInput stream, byte firstByte)
+    throws IOException {
+    int len = WritableUtils.decodeVIntSize(firstByte);
+    if (len == 1) {
+      return firstByte;
+    }
+    long i = 0;
+    for (int idx = 0; idx < len - 1; idx++) {
+      byte b = stream.readByte();
+      i = i << 8;
+      i = i | (b & 0xFF);
+    }
+    return (WritableUtils.isNegativeVInt(firstByte) ? (i ^ -1L) : i);
   }
 }

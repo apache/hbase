@@ -111,6 +111,9 @@ public interface HConstants {
   /** Default region server interface class name. */
   static final String DEFAULT_REGION_SERVER_CLASS = HRegionInterface.class.getName();
 
+  /** Parameter name for what region implementation to use. */
+  static final String REGION_IMPL= "hbase.hregion.impl";
+
   /** Parameter name for how often threads should wake up */
   static final String THREAD_WAKE_FREQUENCY = "hbase.server.thread.wakefrequency";
   

@@ -1,24 +1,23 @@
 package org.apache.hadoop.hbase.util;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang.ArrayUtils;
+
 import java.io.Serializable;
+import java.util.Arrays;
 
 /**
- * A generic class for pairs.
- * @param <T1> 
- * @param <T2> 
+ * A generic class for immutable pairs.
+ * @param <T1>
+ * @param <T2>
  */
-public class Pair<T1, T2> implements Serializable
+public final class Pair<T1, T2> implements Serializable
 {
   private static final long serialVersionUID = -3986244606585552569L;
   protected T1 first = null;
   protected T2 second = null;
+  private int hashcode;
 
-  /**
-   * Default constructor.
-   */
-  public Pair()
-  {
-  }
 
   /**
    * Constructor
@@ -29,24 +28,7 @@ public class Pair<T1, T2> implements Serializable
   {
     this.first = a;
     this.second = b;
-  }
-
-  /**
-   * Replace the first element of the pair.
-   * @param a
-   */
-  public void setFirst(T1 a)
-  {
-    this.first = a;
-  }
-
-  /**
-   * Replace the second element of the pair.
-   * @param b 
-   */
-  public void setSecond(T2 b)
-  {
-    this.second = b;
+    hashcode = new HashCodeBuilder().append(first).append(second).toHashCode();
   }
 
   /**
@@ -67,9 +49,36 @@ public class Pair<T1, T2> implements Serializable
     return second;
   }
 
+  /**
+   * Creates a new instance of the pair encapsulating the supplied values.
+   *
+   * @param one  the first value
+   * @param two  the second value
+   * @param <T1> the type of the first element.
+   * @param <T2> the type of the second element.
+   * @return the new instance
+   */
+  public static <T1, T2> Pair<T1, T2> of(T1 one, T2 two)
+  {
+    return new Pair<T1, T2>(one, two);
+  }
+
   private static boolean equals(Object x, Object y)
   {
-     return (x == null && y == null) || (x != null && x.equals(y));
+    // Null safe compare first
+    if (x == null || y == null) {
+      return x == y;
+    }
+
+    Class clazz = x.getClass();
+    // If they are both the same type of array
+    if (clazz.isArray() && clazz == y.getClass()) {
+      // Do an array compare instead
+      return ArrayUtils.isEquals(x, y);
+    } else {
+      // Standard comparison
+      return x.equals(y);
+    }
   }
 
   @Override
@@ -83,17 +92,12 @@ public class Pair<T1, T2> implements Serializable
   @Override
   public int hashCode()
   {
-    if (first == null)
-      return (second == null) ? 0 : second.hashCode() + 1;
-    else if (second == null)
-      return first.hashCode() + 2;
-    else
-      return first.hashCode() * 17 + second.hashCode();
+    return hashcode;
   }
 
   @Override
   public String toString()
   {
-    return "{" + getFirst() + "," + getSecond() + "}";
+    return "{" + getFirst() + "," + getSecond() + "}"; // TODO user ToStringBuilder
   }
 }

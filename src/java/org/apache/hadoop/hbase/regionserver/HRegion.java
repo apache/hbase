@@ -19,53 +19,54 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+ import org.apache.commons.logging.Log;
+ import org.apache.commons.logging.LogFactory;
+ import org.apache.hadoop.fs.FSDataOutputStream;
+ import org.apache.hadoop.fs.FileStatus;
+ import org.apache.hadoop.fs.FileSystem;
+ import org.apache.hadoop.fs.Path;
+ import org.apache.hadoop.hbase.DroppedSnapshotException;
+ import org.apache.hadoop.hbase.HBaseConfiguration;
+ import org.apache.hadoop.hbase.HColumnDescriptor;
+ import org.apache.hadoop.hbase.HConstants;
+ import org.apache.hadoop.hbase.HRegionInfo;
+ import org.apache.hadoop.hbase.HTableDescriptor;
+ import org.apache.hadoop.hbase.KeyValue;
+ import org.apache.hadoop.hbase.NotServingRegionException;
+ import org.apache.hadoop.hbase.client.Delete;
+ import org.apache.hadoop.hbase.client.Get;
+ import org.apache.hadoop.hbase.client.Put;
+ import org.apache.hadoop.hbase.client.Result;
+ import org.apache.hadoop.hbase.client.Scan;
+ import org.apache.hadoop.hbase.filter.Filter;
+ import org.apache.hadoop.hbase.filter.RowFilterInterface;
+ import org.apache.hadoop.hbase.io.HeapSize;
+ import org.apache.hadoop.hbase.io.Reference.Range;
+ import org.apache.hadoop.hbase.io.hfile.BlockCache;
+ import org.apache.hadoop.hbase.ipc.HRegionInterface;
+ import org.apache.hadoop.hbase.util.Bytes;
+ import org.apache.hadoop.hbase.util.ClassSize;
+ import org.apache.hadoop.hbase.util.FSUtils;
+ import org.apache.hadoop.hbase.util.Writables;
+ import org.apache.hadoop.util.Progressable;
+ import org.apache.hadoop.util.StringUtils;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.DroppedSnapshotException;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.Reference.Range;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.StringUtils;
+ import java.io.IOException;
+ import java.io.UnsupportedEncodingException;
+ import java.util.ArrayList;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.NavigableSet;
+ import java.util.TreeMap;
+ import java.util.TreeSet;
+ import java.util.concurrent.ConcurrentHashMap;
+ import java.util.concurrent.ConcurrentSkipListMap;
+ import java.util.concurrent.atomic.AtomicBoolean;
+ import java.util.concurrent.atomic.AtomicLong;
+ import java.util.concurrent.locks.ReentrantReadWriteLock;
+ import java.lang.reflect.Constructor;
 
-/**
+ /**
  * HRegion stores data for a certain region of a table.  It stores all columns
  * for each row. A given table consists of one or more HRegions.
  *
@@ -228,7 +229,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   }
   
   /**
-   * HRegion constructor.
+   * HRegion constructor.  This constructor should only be used for testing and
+   * extensions.  Instances of HRegion should be instantiated with the
+   * {@link org.apache.hadoop.hbase.regionserver.HRegion#newHRegion( org.apache.hadoop.fs.Path, HLog, org.apache.hadoop.fs.FileSystem, org.apache.hadoop.hbase.HBaseConfiguration, org.apache.hadoop.hbase.HRegionInfo, FlushRequester)} method.
    *
    * @param basedir qualified path of directory where region should be located,
    * usually the table directory.
@@ -246,8 +249,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @param flushListener an object that implements CacheFlushListener or null
    * making progress to master -- otherwise master might think region deploy
    * failed.  Can be null.
+   *
+   * @see org.apache.hadoop.hbase.regionserver.HRegion#newHRegion(org.apache.hadoop.fs.Path, HLog, org.apache.hadoop.fs.FileSystem, org.apache.hadoop.hbase.HBaseConfiguration, org.apache.hadoop.hbase.HRegionInfo, FlushRequester)
    */
-  public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf, 
+  public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf,
       HRegionInfo regionInfo, FlushRequester flushListener) {
     this.basedir = basedir;
     this.comparator = regionInfo.getComparator();
@@ -655,10 +660,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       // Done!
       // Opening the region copies the splits files from the splits directory
       // under each region.
-      HRegion regionA = new HRegion(basedir, log, fs, conf, regionAInfo, null);
+      HRegion regionA = HRegion.newHRegion(basedir, log, fs, conf, regionAInfo, null);
       regionA.initialize(dirA, null);
       regionA.close();
-      HRegion regionB = new HRegion(basedir, log, fs, conf, regionBInfo, null);
+      HRegion regionB = HRegion.newHRegion(basedir, log, fs, conf, regionBInfo, null);
       regionB.initialize(dirB, null);
       regionB.close();
 
@@ -881,7 +886,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @throws DroppedSnapshotException Thrown when replay of hlog is required
    * because a Snapshot was not properly persisted.
    */
-  private boolean internalFlushcache() throws IOException {
+  protected boolean internalFlushcache() throws IOException {
     final long startTime = System.currentTimeMillis();
     // Clear flush flag.
     // Record latest flush time
@@ -908,12 +913,19 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     this.updatesLock.writeLock().lock();
     // Get current size of memstores.
     final long currentMemStoreSize = this.memstoreSize.get();
+    List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>();
     try {
-      for (Store s: stores.values()) {
-        s.snapshot();
-      }
       sequenceId = log.startCacheFlush();
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
+      // create the store flushers
+      for (Store s : stores.values()) {
+        storeFlushers.add(s.getStoreFlusher(completeSequenceId));
+      }
+
+      // prepare flush (take a snapshot)
+      for (StoreFlusher flusher: storeFlushers) {
+         flusher.prepare();
+      }
     } finally {
       this.updatesLock.writeLock().unlock();
     }
@@ -927,12 +939,29 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       // A.  Flush memstore to all the HStores.
       // Keep running vector of all store files that includes both old and the
       // just-made new flush store file.
-      for (Store hstore: stores.values()) {
-        boolean needsCompaction = hstore.flushCache(completeSequenceId);
-        if (needsCompaction) {
-          compactionRequested = true;
-        }
+      for (StoreFlusher flusher : storeFlushers) {
+        flusher.flushCache();
       }
+
+      internalPreFlashcacheCommit();
+
+      /**
+       * Switch between memstore and the new store file
+       */
+      this.newScannerLock.writeLock().lock();
+      try {
+        for (StoreFlusher flusher : storeFlushers) {
+          boolean needsCompaction = flusher.commit();
+          if (needsCompaction) {
+            compactionRequested = true;
+          }
+        }
+      } finally {
+        this.newScannerLock.writeLock().unlock();
+      }
+
+      // clear the stireFlushers list
+      storeFlushers.clear();
       // Set down the memstore size by amount of flush.
       this.memstoreSize.addAndGet(-currentMemStoreSize);
     } catch (Throwable t) {
@@ -974,8 +1003,18 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     }
     return compactionRequested;
   }
-  
-  /**
+
+
+   /**
+    * A hook for sub classed wishing to perform operations prior to the cache
+    * flush commit stage.
+    *
+    * @throws java.io.IOException allow children to throw exception
+    */
+   protected void internalPreFlashcacheCommit() throws IOException {
+   }
+
+   /**
    * Get the sequence number to be associated with this cache flush. Used by
    * TransactionalRegion to not complete pending transactions.
    * 
@@ -1070,11 +1109,15 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           scan.addFamily(family);
         }
       }
-      return new RegionScanner(scan, additionalScanners);
-      
+      return instantiateInternalScanner(scan, additionalScanners);
+
     } finally {
       newScannerLock.readLock().unlock();
     }
+  }
+
+  protected InternalScanner instantiateInternalScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
+    return new RegionScanner(scan, additionalScanners);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -1091,6 +1134,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     checkReadOnly();
     checkResources();
     splitsAndClosesLock.readLock().lock();
+    newScannerLock.writeLock().lock();
     Integer lid = null;
     try {
       byte [] row = delete.getRow();
@@ -1118,6 +1162,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
     } finally {
       if(lockid == null) releaseRowLock(lid);
+      newScannerLock.writeLock().unlock();
       splitsAndClosesLock.readLock().unlock();
     }
   }
@@ -1224,6 +1269,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     // will be extremely rare; we'll deal with it when it happens.
     checkResources();
     splitsAndClosesLock.readLock().lock();
+    newScannerLock.writeLock().lock();
     try {
       // We obtain a per-row lock, so other clients will block while one client
       // performs an update. The read lock is released by the client calling
@@ -1248,6 +1294,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         if(lockid == null) releaseRowLock(lid);
       }
     } finally {
+      newScannerLock.writeLock().unlock();
       splitsAndClosesLock.readLock().unlock();
     }
   }
@@ -1822,6 +1869,45 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   }
   
   // Utility methods
+  /**
+   * A utility method to create new instances of HRegion based on the
+   * {@link org.apache.hadoop.hbase.HConstants#REGION_IMPL} configuration
+   * property. 
+   * @param basedir qualified path of directory where region should be located,
+   * usually the table directory.
+   * @param log The HLog is the outbound log for any updates to the HRegion
+   * (There's a single HLog for all the HRegions on a single HRegionServer.)
+   * The log file is a logfile from the previous execution that's
+   * custom-computed for this HRegion. The HRegionServer computes and sorts the
+   * appropriate log info for this HRegion. If there is a previous log file
+   * (implying that the HRegion has been written-to before), then read it from
+   * the supplied path.
+   * @param fs is the filesystem.
+   * @param conf is global configuration settings.
+   * @param regionInfo - HRegionInfo that describes the region
+   * is new), then read them from the supplied path.
+   * @param flushListener an object that implements CacheFlushListener or null
+   * making progress to master -- otherwise master might think region deploy
+   * failed.  Can be null.
+   * @return the new instance
+   */
+   public static HRegion newHRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf,
+                                    HRegionInfo regionInfo, FlushRequester flushListener) {
+     try {
+       @SuppressWarnings("unchecked")
+       Class<? extends HRegion> regionClass =
+           (Class<? extends HRegion>) conf.getClass(HConstants.REGION_IMPL, HRegion.class);
+
+       Constructor<? extends HRegion> c =
+           regionClass.getConstructor(Path.class, HLog.class, FileSystem.class,
+               HBaseConfiguration.class, HRegionInfo.class, FlushRequester.class);
+
+       return c.newInstance(basedir, log, fs, conf, regionInfo, flushListener);
+     } catch (Throwable e) {
+       // todo: what sould I throw here?
+       throw new IllegalStateException("Could not instantiate a region instance.", e);
+     }
+   }
 
   /**
    * Convenience method creating new HRegions. Used by createTable and by the
@@ -1844,7 +1930,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     Path regionDir = HRegion.getRegionDir(tableDir, info.getEncodedName());
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
-    HRegion region = new HRegion(tableDir,
+    HRegion region = HRegion.newHRegion(tableDir,
       new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf, null),
       fs, conf, info, null);
     region.initialize(null, null);
@@ -1873,7 +1959,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     if (info == null) {
       throw new NullPointerException("Passed region info is null");
     }
-    HRegion r = new HRegion(
+    HRegion r = HRegion.newHRegion(
         HTableDescriptor.getTableDir(rootDir, info.getTableDesc().getName()),
         log, FileSystem.get(conf), conf, info, null);
     r.initialize(null, null);
@@ -2183,7 +2269,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       LOG.debug("Files for new region");
       listPaths(fs, newRegionDir);
     }
-    HRegion dstRegion = new HRegion(basedir, log, fs, conf, newRegionInfo, null);
+    HRegion dstRegion = HRegion.newHRegion(basedir, log, fs, conf, newRegionInfo, null);
     dstRegion.initialize(null, null);
     dstRegion.compactStores();
     if (LOG.isDebugEnabled()) {
@@ -2437,9 +2523,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     String metaStr = Bytes.toString(HConstants.META_TABLE_NAME);
     // Currently expects tables have one region only.
     if (p.getName().startsWith(rootStr)) {
-      region = new HRegion(p, log, fs, c, HRegionInfo.ROOT_REGIONINFO, null);
+      region = HRegion.newHRegion(p, log, fs, c, HRegionInfo.ROOT_REGIONINFO, null);
     } else if (p.getName().startsWith(metaStr)) {
-      region = new HRegion(p, log, fs, c, HRegionInfo.FIRST_META_REGIONINFO,
+      region = HRegion.newHRegion(p, log, fs, c, HRegionInfo.FIRST_META_REGIONINFO,
           null);
     } else {
       throw new IOException("Not a known catalog table: " + p.toString());

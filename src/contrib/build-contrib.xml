@@ -257,6 +257,7 @@
       errorProperty="tests.failed" failureProperty="tests.failed"
       timeout="${test.timeout}">
       
+      <jvmarg value="-ea"/>
       <sysproperty key="test.build.data" value="${build.test}/data"/>
       <sysproperty key="build.test" value="${build.test}"/>
       <sysproperty key="contrib.name" value="${name}"/>

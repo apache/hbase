@@ -40,7 +40,6 @@ Release 0.20.3 - Unreleased
                (Lars George and Gary Helmling via Stack)
 
   IMPROVEMENTS
-   HBASE-1961  HBase EC2 scripts
    HBASE-1970  Export does one version only; make it configurable how many
                it does
    HBASE-1975  SingleColumnValueFilter: Add ability to match the value of
@@ -86,6 +85,11 @@ Release 0.20.3 - Unreleased
                (Erik Rozendaal and Dave Latham via Stack)
    HBASE-2021  Add compaction details to master UI
                (Lars George via Stack)
+
+  NEW FEATURES
+   HBASE-1961  HBase EC2 scripts
+   HBASE-2037  Alternate indexed hbase implementation; speeds scans by adding
+               indexes to regions rather secondary tables
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES

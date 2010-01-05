@@ -379,7 +379,7 @@ public class ZooKeeperWrapper implements HConstants {
     try {
       return readAddressOrThrow(znode, watcher);
     } catch (IOException e) {
-      e.printStackTrace();
+      LOG.debug("readAddress " +znode, e);
       return null;
     }
   }

@@ -44,8 +44,8 @@ import org.apache.hadoop.hbase.KeyValue;
  * has same attributes as ConcurrentSkipListSet: e.g. tolerant of concurrent
  * get and set and won't throw ConcurrentModificationException when iterating.
  */
-class KeyValueSkipListSet implements NavigableSet<KeyValue> {
-  private final ConcurrentNavigableMap<KeyValue, KeyValue> delegatee;
+class KeyValueSkipListSet implements NavigableSet<KeyValue>, Cloneable {
+  private ConcurrentNavigableMap<KeyValue, KeyValue> delegatee;
 
   KeyValueSkipListSet(final KeyValue.KVComparator c) {
     this.delegatee = new ConcurrentSkipListMap<KeyValue, KeyValue>(c);
@@ -200,5 +200,18 @@ class KeyValueSkipListSet implements NavigableSet<KeyValue> {
 
   public <T> T[] toArray(T[] a) {
     throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  public KeyValueSkipListSet clone()  {
+    assert this.delegatee.getClass() == ConcurrentSkipListMap.class;
+    KeyValueSkipListSet clonedSet = null;
+    try {
+      clonedSet = (KeyValueSkipListSet) super.clone();
+    } catch (CloneNotSupportedException e) {
+      throw new InternalError(e.getMessage());
+    }
+    clonedSet.delegatee = ((ConcurrentSkipListMap) this.delegatee).clone();
+    return clonedSet;
   }
 }

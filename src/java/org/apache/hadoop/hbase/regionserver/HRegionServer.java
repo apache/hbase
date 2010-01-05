@@ -1558,7 +1558,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   
   protected HRegion instantiateRegion(final HRegionInfo regionInfo)
       throws IOException {
-    HRegion r = new HRegion(HTableDescriptor.getTableDir(rootDir, regionInfo
+    HRegion r = HRegion.newHRegion(HTableDescriptor.getTableDir(rootDir, regionInfo
         .getTableDesc().getName()), this.hlog, this.fs, conf, regionInfo,
         this.cacheFlusher);
     r.initialize(null,  new Progressable() {

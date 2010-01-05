@@ -26,6 +26,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.math.BigInteger;
+import java.math.BigDecimal;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -39,27 +40,27 @@ import org.apache.hadoop.io.WritableUtils;
  * HashSets, etc.
  */
 public class Bytes {
-  
+
   /**
    * Size of boolean in bytes
    */
   public static final int SIZEOF_BOOLEAN = Byte.SIZE/Byte.SIZE;
-  
+
   /**
    * Size of byte in bytes
    */
   public static final int SIZEOF_BYTE = SIZEOF_BOOLEAN;
-  
+
   /**
    * Size of char in bytes
    */
   public static final int SIZEOF_CHAR = Character.SIZE/Byte.SIZE;
-  
+
   /**
    * Size of double in bytes
    */
   public static final int SIZEOF_DOUBLE = Double.SIZE/Byte.SIZE;
-  
+
   /**
    * Size of float in bytes
    */
@@ -69,7 +70,7 @@ public class Bytes {
    * Size of int in bytes
    */
   public static final int SIZEOF_INT = Integer.SIZE/Byte.SIZE;
-  
+
   /**
    * Size of long in bytes
    */
@@ -80,7 +81,7 @@ public class Bytes {
    */
   public static final int SIZEOF_SHORT = Short.SIZE/Byte.SIZE;
 
-  
+
   /**
    * Estimate of size cost to pay beyond payload in jvm for instance of byte [].
    * Estimate based on study of jhat and jprofiler numbers.
@@ -118,16 +119,27 @@ public class Bytes {
    */
   public static RawComparator<byte []> BYTES_RAWCOMPARATOR =
     new ByteArrayComparator();
-  
+
   /**
    * Read byte-array written with a WritableableUtils.vint prefix.
    * @param in Input to read from.
    * @return byte array read off <code>in</code>
-   * @throws IOException 
+   * @throws IOException
    */
   public static byte [] readByteArray(final DataInput in)
   throws IOException {
     int len = WritableUtils.readVInt(in);
+    return readByteArray(in, len);
+  }
+
+  /**
+   * Read byte-array from data input.
+   * logic,
+   * @param in Input to read from.
+   * @return byte array read off <code>in</code>
+   * @throws IOException io error
+   */
+  public static byte[] readByteArray(DataInput in, int len) throws IOException {
     if (len < 0) {
       throw new NegativeArraySizeException(Integer.toString(len));
     }
@@ -135,7 +147,7 @@ public class Bytes {
     in.readFully(result, 0, len);
     return result;
   }
-  
+
   /**
    * Read byte-array written with a WritableableUtils.vint prefix.
    * IOException is converted to a RuntimeException.
@@ -380,7 +392,7 @@ public class Bytes {
     }
     return result;
   }
-  
+
   /**
    * Convert a boolean to a byte array.
    * @param b
@@ -456,7 +468,7 @@ public class Bytes {
     }
     return l;
   }
-  
+
   /**
    * Put a long value out to the specified byte array position.
    * @param bytes the byte array
@@ -570,7 +582,7 @@ public class Bytes {
     b[0] = (byte)(val);
     return b;
   }
-  
+
   /**
    * Converts a byte array to an int value
    * @param bytes
@@ -609,7 +621,7 @@ public class Bytes {
     }
     return n;
   }
-  
+
   /**
    * Put an int value out to the specified byte array position.
    * @param bytes the byte array
@@ -628,7 +640,7 @@ public class Bytes {
     bytes[offset] = (byte)(val);
     return offset + SIZEOF_INT;
   }
-  
+
   /**
    * Convert a short value to a byte array
    * @param val
@@ -679,7 +691,7 @@ public class Bytes {
     n ^= bytes[offset+1] & 0xFF;
     return n;
   }
-  
+
   /**
    * Put a short value out to the specified byte array position.
    * @param bytes the byte array
@@ -696,7 +708,239 @@ public class Bytes {
     bytes[offset] = (byte)(val);
     return offset + SIZEOF_SHORT;
   }
-  
+
+  /**
+   * Convert a char value to a byte array
+   *
+   * @param val
+   * @return the byte array
+   */
+  public static byte[] toBytes(char val) {
+    byte[] b = new byte[SIZEOF_CHAR];
+    b[1] = (byte) (val);
+    val >>= 8;
+    b[0] = (byte) (val);
+    return b;
+  }
+
+  /**
+   * Converts a byte array to a char value
+   *
+   * @param bytes
+   * @return the char value
+   */
+  public static char toChar(byte[] bytes) {
+    return toChar(bytes, 0);
+  }
+
+
+  /**
+   * Converts a byte array to a char value
+   *
+   * @param bytes
+   * @param offset
+   * @return the char value
+   */
+  public static char toChar(byte[] bytes, int offset) {
+    return toChar(bytes, offset, SIZEOF_CHAR);
+  }
+
+  /**
+   * Converts a byte array to a char value
+   *
+   * @param bytes
+   * @param offset
+   * @param length
+   * @return the char value
+   */
+  public static char toChar(byte[] bytes, int offset, final int length) {
+    if (bytes == null || length != SIZEOF_CHAR ||
+      (offset + length > bytes.length)) {
+      return (char)-1;
+    }
+    char n = 0;
+    n ^= bytes[offset] & 0xFF;
+    n <<= 8;
+    n ^= bytes[offset + 1] & 0xFF;
+    return n;
+  }
+
+  /**
+   * Put a char value out to the specified byte array position.
+   *
+   * @param bytes  the byte array
+   * @param offset position in the array
+   * @param val    short to write out
+   * @return incremented offset
+   */
+  public static int putChar(byte[] bytes, int offset, char val) {
+    if (bytes == null || (bytes.length - offset < SIZEOF_CHAR)) {
+      return offset;
+    }
+    bytes[offset + 1] = (byte) (val);
+    val >>= 8;
+    bytes[offset] = (byte) (val);
+    return offset + SIZEOF_CHAR;
+  }
+
+  /**
+   * Convert a char array value to a byte array
+   *
+   * @param val
+   * @return the byte array
+   */
+  public static byte[] toBytes(char[] val) {
+    byte[] bytes = new byte[val.length * 2];
+    putChars(bytes,0,val);
+    return bytes;
+  }
+
+  /**
+   * Converts a byte array to a char array value
+   *
+   * @param bytes
+   * @return the char value
+   */
+  public static char[] toChars(byte[] bytes) {
+    return toChars(bytes, 0, bytes.length);
+  }
+
+
+  /**
+   * Converts a byte array to a char array value
+   *
+   * @param bytes
+   * @param offset
+   * @return the char value
+   */
+  public static char[] toChars(byte[] bytes, int offset) {
+    return toChars(bytes, offset, bytes.length-offset);
+  }
+
+  /**
+   * Converts a byte array to a char array value
+   *
+   * @param bytes
+   * @param offset
+   * @param length
+   * @return the char value
+   */
+  public static char[] toChars(byte[] bytes, int offset, final int length) {
+    int max = offset + length;
+    if (bytes == null || (max > bytes.length) || length %2 ==1) {
+      return null;
+    }
+
+    char[] chars = new char[length / 2];
+    for (int i = 0, j = offset; i < chars.length && j < max; i++, j += 2) {
+      char c = 0;
+      c ^= bytes[j] & 0xFF;
+      c <<= 8;
+      c ^= bytes[j + 1] & 0xFF;
+      chars[i] = c;
+    }
+    return chars;
+  }
+
+  /**
+   * Put a char array value out to the specified byte array position.
+   *
+   * @param bytes  the byte array
+   * @param offset position in the array
+   * @param val    short to write out
+   * @return incremented offset
+   */
+  public static int putChars(byte[] bytes, int offset, char[] val) {
+    int max = val.length * 2 + offset;
+    if (bytes == null || (bytes.length < max)) {
+      return offset;
+    }
+    for (int i=0,j=offset; i<val.length && j<max;i++, j+=2){
+      char c = val[i];
+      bytes[j + 1] = (byte) (c);
+      bytes[j] = (byte) (c >>>8);
+    }
+
+    return offset + SIZEOF_CHAR;
+  }
+
+
+  /**
+   * Convert a BigDecimal value to a byte array
+   *
+   * @param val
+   * @return the byte array
+   */
+  public static byte[] toBytes(BigDecimal val) {
+    byte[] valueBytes = val.unscaledValue().toByteArray();
+    byte[] result = new byte[valueBytes.length + SIZEOF_INT];
+    int offset = putInt(result, 0, val.scale());
+    putBytes(result, offset, valueBytes, 0, valueBytes.length);
+    return result;
+  }
+
+  /**
+   * Converts a byte array to a BigDecimal
+   *
+   * @param bytes
+   * @return the char value
+   */
+  public static BigDecimal toBigDecimal(byte[] bytes) {
+    return toBigDecimal(bytes, 0, bytes.length);
+  }
+
+
+  /**
+   * Converts a byte array to a BigDecimal value
+   *
+   * @param bytes
+   * @param offset
+   * @return the char value
+   */
+  public static BigDecimal toBigDecimal(byte[] bytes, int offset) {
+    return toBigDecimal(bytes, offset, bytes.length);
+  }
+
+  /**
+   * Converts a byte array to a BigDecimal value
+   *
+   * @param bytes
+   * @param offset
+   * @param length
+   * @return the char value
+   */
+  public static BigDecimal toBigDecimal(byte[] bytes, int offset, final int length) {
+    if (bytes == null || length < SIZEOF_INT + 1 ||
+      (offset + length > bytes.length)) {
+      return null;
+    }
+
+    int scale = toInt(bytes, 0);
+    byte[] tcBytes = new byte[length - SIZEOF_INT];
+    System.arraycopy(bytes, SIZEOF_INT, tcBytes, 0, length - SIZEOF_INT);
+    return new BigDecimal(new BigInteger(tcBytes), scale);
+  }
+
+  /**
+   * Put a BigDecimal value out to the specified byte array position.
+   *
+   * @param bytes  the byte array
+   * @param offset position in the array
+   * @param val    BigDecimal to write out
+   * @return incremented offset
+   */
+  public static int putBigDecimal(byte[] bytes, int offset, BigDecimal val) {
+    if (bytes == null) {
+      return offset;
+    }
+
+    byte[] valueBytes = val.unscaledValue().toByteArray();
+    byte[] result = new byte[valueBytes.length + SIZEOF_INT];
+    offset = putInt(result, offset, val.scale());
+    return putBytes(result, offset, valueBytes, 0, valueBytes.length);
+  }
+
+
   /**
    * @param vint Integer to make a vint of.
    * @return Vint as bytes array.
@@ -759,7 +1003,7 @@ public class Bytes {
    * Reads a zero-compressed encoded long from input stream and returns it.
    * @param buffer Binary array
    * @param offset Offset into array at which vint begins.
-   * @throws java.io.IOException 
+   * @throws java.io.IOException
    * @return deserialized long from stream.
    */
   public static long readVLong(final byte [] buffer, final int offset)
@@ -822,7 +1066,7 @@ public class Bytes {
       (left == null || right == null || (left.length != right.length))? false:
         compareTo(left, right) == 0;
   }
-  
+
   /**
    * @param b
    * @return Runs {@link WritableComparator#hashBytes(byte[], int)} on the
@@ -885,7 +1129,7 @@ public class Bytes {
     System.arraycopy(c, 0, result, a.length + b.length, c.length);
     return result;
   }
-  
+
   /**
    * @param a
    * @param length
@@ -920,7 +1164,7 @@ public class Bytes {
     for(int i=0;i<length;i++) padding[i] = 0;
     return add(padding,a);
   }
-  
+
   /**
    * @param a
    * @param length
@@ -931,7 +1175,7 @@ public class Bytes {
     for(int i=0;i<length;i++) padding[i] = 0;
     return add(a,padding);
   }
-  
+
   /**
    * Split passed range.  Expensive operation relatively.  Uses BigInteger math.
    * Useful splitting ranges for MapReduce jobs.
@@ -986,7 +1230,7 @@ public class Bytes {
     result[num+1] = b;
     return result;
   }
-  
+
   /**
    * @param t
    * @return Array of byte arrays made from passed array of Text
@@ -1007,7 +1251,7 @@ public class Bytes {
   public static byte [][] toByteArrays(final String column) {
     return toByteArrays(toBytes(column));
   }
-  
+
   /**
    * @param column
    * @return A byte array of a byte array where first and only entry is
@@ -1018,7 +1262,7 @@ public class Bytes {
     result[0] = column;
     return result;
   }
-  
+
   /**
    * Binary search for keys in indexes.
    * @param arr array of byte arrays to search for
@@ -1032,7 +1276,7 @@ public class Bytes {
       int length, RawComparator<byte []> comparator) {
     int low = 0;
     int high = arr.length - 1;
-    
+
     while (low <= high) {
       int mid = (low+high) >>> 1;
       // we have to compare in this order, because the comparator order
@@ -1046,7 +1290,7 @@ public class Bytes {
       else if (cmp < 0)
         high = mid - 1;
       // BAM. how often does this really happen?
-      else 
+      else
         return mid;
     }
     return - (low+1);
@@ -1055,13 +1299,13 @@ public class Bytes {
   /**
    * Bytewise binary increment/deincrement of long contained in byte array
    * on given amount.
-   * 
+   *
    * @param value - array of bytes containing long (length <= SIZEOF_LONG)
    * @param amount value will be incremented on (deincremented if negative)
    * @return array of bytes containing incremented long (length == SIZEOF_LONG)
    * @throws IOException - if value.length > SIZEOF_LONG
    */
-  public static byte [] incrementBytes(byte[] value, long amount) 
+  public static byte [] incrementBytes(byte[] value, long amount)
   throws IOException {
     byte[] val = value;
     if (val.length < SIZEOF_LONG) {
@@ -1094,7 +1338,7 @@ public class Bytes {
     if (amount < 0) {
       amo = -amount;
       sign = -1;
-    } 
+    }
     for(int i=0;i<value.length;i++) {
       int cur = ((int)amo % 256) * sign;
       amo = (amo >> 8);
@@ -1136,5 +1380,5 @@ public class Bytes {
     }
     return value;
   }
-  
+
 }

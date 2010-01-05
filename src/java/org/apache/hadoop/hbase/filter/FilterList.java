@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -156,17 +157,19 @@ public class FilterList implements Filter {
   }
 
   public ReturnCode filterKeyValue(KeyValue v) {
-    for (Filter filter : filters) {
+    Iterator<Filter> iter = filters.iterator();
+    while (iter.hasNext()) {
+      Filter filter = iter.next();
       if (operator == Operator.MUST_PASS_ALL) {
         if (filter.filterAllRemaining()) {
           return ReturnCode.NEXT_ROW;
         }
         switch (filter.filterKeyValue(v)) {
-        case INCLUDE:
-          continue;
-        case NEXT_ROW:
-        case SKIP:
-          return ReturnCode.SKIP;
+          case INCLUDE:
+            continue;
+          case NEXT_ROW:
+          case SKIP:
+            return ReturnCode.SKIP;
         }
       } else if (operator == Operator.MUST_PASS_ONE) {
         if (filter.filterAllRemaining()) {
@@ -174,11 +177,16 @@ public class FilterList implements Filter {
         }
 
         switch (filter.filterKeyValue(v)) {
-        case INCLUDE:
-          return ReturnCode.INCLUDE;
-        case NEXT_ROW:
-        case SKIP:
-          continue;
+          case INCLUDE:
+            // let all the other filters look at this KeyValue since their correct operation may depend on it
+            while (iter.hasNext()){
+              Filter nextFilter = iter.next();
+              nextFilter.filterKeyValue(v);
+            }
+            return ReturnCode.INCLUDE;
+          case NEXT_ROW:
+          case SKIP:
+            continue;
         }
       }
     }

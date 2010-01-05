@@ -1,0 +1,11 @@
+displayName;clazz;primitive;kind
+Byte;Byte;byte;integer
+Char;Character;char;integer
+Short;Short;short;integer
+Integer;Integer;int;integer
+Long;Long;long;integer
+Float;Float;float;floatingPoint
+Double;Double;double;floatingPoint
+ByteArray;byte[];byte[];integerArray
+CharArray;char[];char[];integerArray
+BigDecimal;BigDecimal;BigDecimal;comparable

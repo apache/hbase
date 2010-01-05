@@ -27,6 +27,9 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.HashMap;
+import java.util.Collections;
+import java.util.SortedSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -34,7 +37,9 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 
@@ -74,6 +79,15 @@ import org.apache.hadoop.io.WritableFactories;
  * execute {@link #setCacheBlocks(boolean)}.
  */
 public class Scan implements Writable {
+  // An empty navigable set to be used when adding a whole family
+  private static final NavigableSet<byte[]> EMPTY_NAVIGABLE_SET
+    = new TreeSet<byte[]>();
+  // Version -1 first scan version. negative number used to distnguish
+  // from previous version which would use this value to envode the start-key
+  // length
+  private static final byte SCAN_VERSION = (byte) -1;
+
+
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
@@ -84,6 +98,9 @@ public class Scan implements Writable {
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
+  // additional data for the scan
+  protected Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
+    new HashMap<ImmutableBytesWritable, ImmutableBytesWritable>();
   
   /**
    * Create a Scan operation across all rows.
@@ -153,7 +170,7 @@ public class Scan implements Writable {
    */
   public Scan addFamily(byte [] family) {
     familyMap.remove(family);
-    familyMap.put(family, null);
+    familyMap.put(family, EMPTY_NAVIGABLE_SET);
     return this;
   }
   
@@ -489,6 +506,80 @@ public class Scan implements Writable {
   public boolean getCacheBlocks() {
     return cacheBlocks;
   }
+
+  /**
+   * @param key The key.
+   * @return The value.
+   */
+  public byte[] getValue(byte[] key) {
+    return getValue(new ImmutableBytesWritable(key));
+  }
+
+  private byte[] getValue(final ImmutableBytesWritable key) {
+    ImmutableBytesWritable ibw = values.get(key);
+    if (ibw == null)
+      return null;
+    return ibw.get();
+  }
+
+  /**
+   * @param key The key.
+   * @return The value as a string.
+   */
+  public String getValue(String key) {
+    byte[] value = getValue(Bytes.toBytes(key));
+    if (value == null)
+      return null;
+    return Bytes.toString(value);
+  }
+
+  /**
+   * @return All values.
+   */
+  public Map<ImmutableBytesWritable,ImmutableBytesWritable> getValues() {
+     return Collections.unmodifiableMap(values);
+  }
+
+  /**
+   * @param key The key.
+   * @param value The value.
+   */
+  public void setValue(byte[] key, byte[] value) {
+    setValue(new ImmutableBytesWritable(key), value);
+  }
+
+  /*
+   * @param key The key.
+   * @param value The value.
+   */
+  private void setValue(final ImmutableBytesWritable key,
+      final byte[] value) {
+    values.put(key, new ImmutableBytesWritable(value));
+  }
+
+  /*
+   * @param key The key.
+   * @param value The value.
+   */
+  private void setValue(final ImmutableBytesWritable key,
+      final ImmutableBytesWritable value) {
+    values.put(key, value);
+  }
+
+  /**
+   * @param key The key.
+   * @param value The value.
+   */
+  public void setValue(String key, String value) {
+    setValue(Bytes.toBytes(key), Bytes.toBytes(value));
+  }
+
+  /**
+   * @param key Key whose key and value we're to remove from HTD parameters.
+   */
+  public void remove(final byte [] key) {
+    values.remove(new ImmutableBytesWritable(key));
+  }
   
   /**
    * @return String
@@ -541,6 +632,21 @@ public class Scan implements Writable {
       }
     }
     sb.append("}");
+    
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+        values.entrySet()) {
+      String key = Bytes.toString(e.getKey().get());
+      String value = Bytes.toString(e.getValue().get());
+      if (key == null) {
+        continue;
+      }
+      sb.append(", ");
+      sb.append(key);
+      sb.append(" => '");
+      sb.append(value);
+      sb.append("'");
+    }
+
     return sb.toString();
   }
   
@@ -558,7 +664,13 @@ public class Scan implements Writable {
   //Writable
   public void readFields(final DataInput in)
   throws IOException {
-    this.startRow = Bytes.readByteArray(in);
+    byte versionOrLength = in.readByte();
+    if (versionOrLength == SCAN_VERSION) {
+      this.startRow = Bytes.readByteArray(in);
+    } else {
+      int length = (int) Writables.readVLong(in, versionOrLength);
+      this.startRow = Bytes.readByteArray(in, length);
+    }
     this.stopRow = Bytes.readByteArray(in);
     this.maxVersions = in.readInt();
     this.caching = in.readInt();
@@ -587,10 +699,22 @@ public class Scan implements Writable {
       }
       this.familyMap.put(family, set);
     }
-  }  
+    this.values.clear();
+    if (versionOrLength == SCAN_VERSION) {
+      int numValues = in.readInt();
+      for (int i = 0; i < numValues; i++) {
+        ImmutableBytesWritable key = new ImmutableBytesWritable();
+        ImmutableBytesWritable value = new ImmutableBytesWritable();
+        key.readFields(in);
+        value.readFields(in);
+        values.put(key, value);
+      }
+    }
+  }
 
   public void write(final DataOutput out)
   throws IOException {
+    out.writeByte(SCAN_VERSION);
     Bytes.writeByteArray(out, this.startRow);
     Bytes.writeByteArray(out, this.stopRow);
     out.writeInt(this.maxVersions);
@@ -623,6 +747,12 @@ public class Scan implements Writable {
       } else {
         out.writeInt(0);
       }
+    }
+    out.writeInt(values.size());
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+        values.entrySet()) {
+      e.getKey().write(out);
+      e.getValue().write(out);
     }
   }
 }
