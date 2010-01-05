@@ -84,6 +84,8 @@ Release 0.20.3 - Unreleased
    HBASE-2053  Upper bound of outstanding WALs can be overrun
    HBASE-1996  Configure scanner buffer in bytes instead of number of rows
                (Erik Rozendaal and Dave Latham via Stack)
+   HBASE-2021  Add compaction details to master UI
+               (Lars George via Stack)
 
 Release 0.20.2 - November 18th, 2009
   INCOMPATIBLE CHANGES
