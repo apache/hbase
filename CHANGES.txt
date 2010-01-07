@@ -87,6 +87,8 @@ Release 0.20.3 - Unreleased
                (Erik Rozendaal and Dave Latham via Stack)
    HBASE-2021  Add compaction details to master UI
                (Lars George via Stack)
+   HBASE-2095  TIF should support more confs for the scanner (Bassam Tabbara
+               via Andrew Purtell)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
