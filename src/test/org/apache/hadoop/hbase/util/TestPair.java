@@ -132,6 +132,30 @@ public class TestPair extends HBaseTestCase {
   }
 
   /**
+   * Test hashCode() method works correctly with primitive arrays.
+   */
+  public void testHashCodeWithPrimitiveArray() {
+    // Set up test data
+    Pair<?, ?> pair1 = Pair.of(new byte[] {1, 2, 3}, new byte[] {4, 5, 6});
+    Pair<?, ?> pair2 = Pair.of(new byte[] {1, 2, 3}, new byte[] {4, 5, 6});
+
+    Assert.assertEquals(pair1.hashCode(), pair2.hashCode());
+    Assert.assertFalse(pair1.hashCode() == Pair.of(1, 2).hashCode());
+  }
+
+  /**
+   * Test hashCode() method works correctly with object arrays.
+   */
+  public void testHashCodeWithObjectArray() {
+    // Set up test data
+    Pair<?, ?> pair1 = Pair.of(new Object[] {"one", "two", "three"}, new Object[] {"four", "five", "six"});
+    Pair<?, ?> pair2 = Pair.of(new Object[] {"one", "two", "three"}, new Object[] {"four", "five", "six"});
+
+    Assert.assertEquals(pair1.hashCode(), pair2.hashCode());
+    Assert.assertFalse(pair1.hashCode() == Pair.of(1, 2).hashCode());
+  }
+
+  /**
    * Tests the the pair class serializes and deserializes without a problem.
    *
    * @throws IOException            exception - should not occur
