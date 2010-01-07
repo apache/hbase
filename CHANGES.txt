@@ -38,6 +38,7 @@ Release 0.20.3 - Unreleased
                (Scott Wang via Andrew Purtell)
    HBASE-2068  MetricsRate is missing "registry" parameter
                (Lars George and Gary Helmling via Stack)
+   HBASE-2035  Binary values are formatted wrong in shel
 
   IMPROVEMENTS
    HBASE-1970  Export does one version only; make it configurable how many
