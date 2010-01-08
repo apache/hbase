@@ -40,6 +40,7 @@ Release 0.20.3 - Unreleased
                (Lars George and Gary Helmling via Stack)
    HBASE-2035  Binary values are formatted wrong in shel
    HBASE-2094  hbase-2037 breaks mapreduce jobs going from 0.20.2 to 0.20.3
+   HBASE-2093  [stargate] RowSpec parse bug (Andrew Purtell via JD)
 
   IMPROVEMENTS
    HBASE-1970  Export does one version only; make it configurable how many
