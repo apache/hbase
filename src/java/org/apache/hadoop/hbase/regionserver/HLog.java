@@ -130,7 +130,7 @@ public class HLog implements HConstants, Syncable {
     Collections.synchronizedSortedMap(new TreeMap<Long, Path>());
 
   /*
-   * Map of region to last sequence/edit id. 
+   * Map of regions to first sequence/edit id in their memstore.
    */
   private final ConcurrentSkipListMap<byte [], Long> lastSeqWritten =
     new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
@@ -173,6 +173,37 @@ public class HLog implements HConstants, Syncable {
     } catch (UnsupportedEncodingException e) {
       assert(false);
     }
+  }
+
+  // For measuring latency of writes
+  private static volatile long writeOps;
+  private static volatile long writeTime;
+  // For measuring latency of syncs
+  private static volatile long syncOps;
+  private static volatile long syncTime;
+
+  public static long getWriteOps() {
+    long ret = writeOps;
+    writeOps = 0;
+    return ret;
+  }
+
+  public static long getWriteTime() {
+    long ret = writeTime;
+    writeTime = 0;
+    return ret;
+  }
+
+  public static long getSyncOps() {
+    long ret = syncOps;
+    syncOps = 0;
+    return ret;
+  }
+
+  public static long getSyncTime() {
+    long ret = syncTime;
+    syncTime = 0;
+    return ret;
   }
 
   /**
@@ -290,21 +321,21 @@ public class HLog implements HConstants, Syncable {
    * cacheFlushLock and then completeCacheFlush could be called which would wait
    * for the lock on this and consequently never release the cacheFlushLock
    *
-   * @return If lots of logs, flush the returned region so next time through
+   * @return If lots of logs, flush the returned regions so next time through
    * we can clean logs. Returns null if nothing to flush.
    * @throws FailedLogCloseException
    * @throws IOException
    */
-  public byte [] rollWriter() throws FailedLogCloseException, IOException {
+  public byte [][] rollWriter() throws FailedLogCloseException, IOException {
     // Return if nothing to flush.
     if (this.writer != null && this.numEntries.get() <= 0) {
       return null;
     }
-    byte [] regionToFlush = null;
+    byte [][] regionsToFlush = null;
     this.cacheFlushLock.lock();
     try {
       if (closed) {
-        return regionToFlush;
+        return regionsToFlush;
       }
       synchronized (updateLock) {
         // Clean up current writer.
@@ -330,7 +361,7 @@ public class HLog implements HConstants, Syncable {
             }
             this.outputfiles.clear();
           } else {
-            regionToFlush = cleanOldLogs();
+            regionsToFlush = cleanOldLogs();
           }
         }
         this.numEntries.set(0);
@@ -340,7 +371,7 @@ public class HLog implements HConstants, Syncable {
     } finally {
       this.cacheFlushLock.unlock();
     }
-    return regionToFlush;
+    return regionsToFlush;
   }
 
   protected SequenceFile.Writer createWriter(Path path) throws IOException {
@@ -363,8 +394,7 @@ public class HLog implements HConstants, Syncable {
    * we can clean logs. Returns null if nothing to flush.
    * @throws IOException
    */
-  private byte [] cleanOldLogs() throws IOException {
-    byte [] regionToFlush = null;
+  private byte [][] cleanOldLogs() throws IOException {
     Long oldestOutstandingSeqNum = getOldestOutstandingSeqNum();
     // Get the set of all log files whose final ID is older than or
     // equal to the oldest pending region operation
@@ -372,29 +402,60 @@ public class HLog implements HConstants, Syncable {
       new TreeSet<Long>(this.outputfiles.headMap(
         (Long.valueOf(oldestOutstandingSeqNum.longValue() + 1L))).keySet());
     // Now remove old log files (if any)
-    byte [] oldestRegion = null;
-    if (LOG.isDebugEnabled()) {
-      // Find region associated with oldest key -- helps debugging.
-      oldestRegion = getOldestRegion(oldestOutstandingSeqNum);
-      LOG.debug("Found " + sequenceNumbers.size() + " hlogs to remove " +
-        " out of total " + this.outputfiles.size() + "; " +
-        "oldest outstanding seqnum is " + oldestOutstandingSeqNum +
-        " from region " + Bytes.toStringBinary(oldestRegion));
-    }
-    if (sequenceNumbers.size() > 0) {
+    int logsToRemove = sequenceNumbers.size();
+    if (logsToRemove > 0) {
+      if (LOG.isDebugEnabled()) {
+        // Find associated region; helps debugging.
+        byte [] oldestRegion = getOldestRegion(oldestOutstandingSeqNum);
+        LOG.debug("Found " + logsToRemove + " hlogs to remove " +
+          " out of total " + this.outputfiles.size() + "; " +
+          "oldest outstanding seqnum is " + oldestOutstandingSeqNum +
+          " from region " + Bytes.toString(oldestRegion));
+      }
       for (Long seq : sequenceNumbers) {
         deleteLogFile(this.outputfiles.remove(seq), seq);
       }
     }
-    int countOfLogs = this.outputfiles.size() - sequenceNumbers.size();
-    if (countOfLogs > this.maxLogs) {
-      regionToFlush = oldestRegion != null?
-        oldestRegion: getOldestRegion(oldestOutstandingSeqNum);
-      LOG.info("Too many hlogs: logs=" + countOfLogs + ", maxlogs=" +
-        this.maxLogs + "; forcing flush of region with oldest edits: " +
-        Bytes.toStringBinary(regionToFlush));
+
+    // If too many log files, figure which regions we need to flush.
+    byte [][] regions = null;
+    int logCount = this.outputfiles.size() - logsToRemove;
+    if (logCount > this.maxLogs && this.outputfiles != null &&
+        this.outputfiles.size() > 0) {
+      regions = findMemstoresWithEditsOlderThan(this.outputfiles.firstKey(),
+        this.lastSeqWritten);
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < regions.length; i++) {
+        if (i > 0) sb.append(", ");
+        sb.append(Bytes.toStringBinary(regions[i]));
+      }
+      LOG.info("Too many hlogs: logs=" + logCount + ", maxlogs=" +
+        this.maxLogs + "; forcing flush of " + regions.length + " regions(s): " +
+        sb.toString());
     }
-    return regionToFlush;
+    return regions;
+  }
+
+  /**
+   * Return regions (memstores) that have edits that are less than the passed
+   * <code>oldestWALseqid</code>.
+   * @param oldestWALseqid
+   * @param regionsToSeqids
+   * @return All regions whose seqid is < than <code>oldestWALseqid</code> (Not
+   * necessarily in order).  Null if no regions found.
+   */
+  static byte [][] findMemstoresWithEditsOlderThan(final long oldestWALseqid,
+      final Map<byte [], Long> regionsToSeqids) {
+    //  This method is static so it can be unit tested the easier.
+    List<byte []> regions = null;
+    for (Map.Entry<byte [], Long> e: regionsToSeqids.entrySet()) {
+      if (e.getValue().longValue() < oldestWALseqid) {
+        if (regions == null) regions = new ArrayList<byte []>();
+        regions.add(e.getKey());
+      }
+    }
+    return regions == null?
+      null: regions.toArray(new byte [][] {HConstants.EMPTY_BYTE_ARRAY});
   }
 
   /*
@@ -537,7 +598,8 @@ public class HLog implements HConstants, Syncable {
       long seqNum = obtainSeqNum();
       logKey.setLogSeqNum(seqNum);
       // The 'lastSeqWritten' map holds the sequence number of the oldest
-      // write for each region. When the cache is flushed, the entry for the
+      // write for each region (i.e. the first edit added to the particular
+      // memstore). When the cache is flushed, the entry for the
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
       this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum));
@@ -586,7 +648,8 @@ public class HLog implements HConstants, Syncable {
     long seqNum [] = obtainSeqNum(edits.size());
     synchronized (this.updateLock) {
       // The 'lastSeqWritten' map holds the sequence number of the oldest
-      // write for each region. When the cache is flushed, the entry for the
+      // write for each region (i.e. the first edit added to the particular
+      // memstore). . When the cache is flushed, the entry for the
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
       this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum[0]));
@@ -615,6 +678,8 @@ public class HLog implements HConstants, Syncable {
       this.writer.sync();
     }
     this.unflushedEntries.set(0);
+    syncTime += System.currentTimeMillis() - lastLogFlushTime;
+    syncOps++;
   }
 
   void optionalSync() {
@@ -653,13 +718,15 @@ public class HLog implements HConstants, Syncable {
     try {
       this.editsSize.addAndGet(logKey.heapSize() + logEdit.heapSize());
       this.writer.append(logKey, logEdit);
-      if (sync || this.unflushedEntries.incrementAndGet() >= flushlogentries) {
-        sync();
-      }
       long took = System.currentTimeMillis() - now;
+      writeTime += took;
+      writeOps++;
       if (took > 1000) {
         LOG.warn(Thread.currentThread().getName() + " took " + took +
           "ms appending an edit to hlog; editcount=" + this.numEntries.get());
+      }
+      if (sync || this.unflushedEntries.incrementAndGet() >= flushlogentries) {
+        sync();
       }
     } catch (IOException e) {
       LOG.fatal("Could not append. Requesting close of hlog", e);
@@ -734,8 +801,11 @@ public class HLog implements HConstants, Syncable {
         return;
       }
       synchronized (updateLock) {
+        long now = System.currentTimeMillis();
         this.writer.append(makeKey(regionName, tableName, logSeqId, System.currentTimeMillis()), 
             completeCacheFlushLogEdit());
+        writeTime += System.currentTimeMillis() - now;
+        writeOps++;
         this.numEntries.incrementAndGet();
         Long seq = this.lastSeqWritten.get(regionName);
         if (seq != null && logSeqId >= seq.longValue()) {

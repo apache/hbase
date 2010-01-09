@@ -1,0 +1,24 @@
+<project name="ec2" default="package" basedir=".">
+  <import file="../build-contrib.xml"/>
+
+  <target name="compile">
+    <copy todir="${build.dir}">
+      <fileset dir="${root}">
+	<exclude name="build.xml"/>
+      </fileset>
+    </copy>
+    <exec executable="sed">
+      <arg value="-i"/>
+      <arg value="-e"/> <arg value="s/@HBASE_VERSION@/${version}/g"/>
+      <arg value="${build.dir}/bin/hbase-ec2-env.sh"/>
+    </exec>
+  </target>
+
+  <target name="package" depends="compile">
+    <mkdir dir="${dist.dir}/contrib/${name}"/>
+    <copy todir="${dist.dir}/contrib/${name}">
+      <fileset dir="${build.dir}"/>
+    </copy>
+  </target>
+
+</project>

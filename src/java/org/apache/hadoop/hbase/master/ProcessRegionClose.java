@@ -59,33 +59,36 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
   @Override
   protected boolean process() throws IOException {
     Boolean result = null;
-    if (offlineRegion) {
+    if (offlineRegion || reassignRegion) {
       result =
         new RetryableMetaOperation<Boolean>(getMetaRegion(), this.master) {
           public Boolean call() throws IOException {
-            LOG.info("region closed: " + regionInfo.getRegionNameAsString());
 
             // We can't proceed unless the meta region we are going to update
             // is online. metaRegionAvailable() will put this operation on the
             // delayedToDoQueue, so return true so the operation is not put 
             // back on the toDoQueue
 
-            if (metaRegionAvailable()) {
+            if(offlineRegion) {
               // offline the region in meta and then remove it from the
               // set of regions in transition
               HRegion.offlineRegionInMETA(server, metaRegionName,
                   regionInfo);
               master.regionManager.removeRegion(regionInfo);
+              LOG.info("region closed: " + regionInfo.getRegionNameAsString());
+            } else {
+              // we are reassigning the region eventually, so set it unassigned
+              // and remove the server info
+              HRegion.cleanRegionInMETA(server, metaRegionName,
+                  regionInfo);
+              master.regionManager.setUnassigned(regionInfo, false);
+              LOG.info("region set as unassigned: " + regionInfo.getRegionNameAsString());
             }
             return true;
           }
         }.doWithRetries();
         result = result == null ? true : result;
 
-    } else if (reassignRegion) {
-      LOG.info("region set as unassigned: " + regionInfo.getRegionNameAsString());
-      // we are reassigning the region eventually, so set it unassigned
-      master.regionManager.setUnassigned(regionInfo, false);
     } else {
       LOG.info("Region was neither offlined, or asked to be reassigned, what gives: " +
       regionInfo.getRegionNameAsString());

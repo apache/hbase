@@ -161,6 +161,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   
   private MasterMetrics metrics;
 
+  private long lastFragmentationQuery = -1L;
+  private Map<String, Integer> fragmentation = null;
+  
   /** 
    * Build the HMaster out of a raw configuration item.
    * @param conf configuration
@@ -261,6 +264,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         return false;
       } else if(zooKeeperWrapper.writeMasterAddress(address)) {
         zooKeeperWrapper.setClusterState(true);
+        zooKeeperWrapper.setClusterStateWatch(zkMasterAddressWatcher);
         // Watch our own node
         zooKeeperWrapper.readMasterAddress(this);
         return true;
@@ -1179,6 +1183,17 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
   }
    
+  public Map<String, Integer> getTableFragmentation() throws IOException {
+    long now = System.currentTimeMillis();
+    // only check every two minutes by default
+    int check = this.conf.getInt("hbase.master.fragmentation.check.frequency", 2 * 60 * 1000);
+    if (lastFragmentationQuery == -1 || now - lastFragmentationQuery > check) {
+      fragmentation = FSUtils.getTableFragmentation(this);
+      lastFragmentationQuery = now;
+    }
+    return fragmentation;
+  }
+  
   /*
    * Main program
    */

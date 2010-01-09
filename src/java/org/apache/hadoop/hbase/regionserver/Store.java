@@ -31,6 +31,7 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.SortedSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -507,21 +508,12 @@ public class Store implements HConstants, HeapSize {
    * @return true if a compaction is needed
    * @throws IOException
    */
-  boolean flushCache(final long logCacheFlushId) throws IOException {
-    // Get the snapshot to flush.  Presumes that a call to
-    // this.memstore.snapshot() has happened earlier up in the chain.
-    KeyValueSkipListSet snapshot = this.memstore.getSnapshot();
+  private StoreFile flushCache(final long logCacheFlushId,
+    SortedSet<KeyValue> snapshot) throws IOException {
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
-    StoreFile sf = internalFlushCache(snapshot, logCacheFlushId);
-    if (sf == null) {
-      return false;
-    }
-    // Add new file to store files.  Clear snapshot too while we have the
-    // Store write lock.
-    int size = updateStorefiles(logCacheFlushId, sf, snapshot);
-    return size >= this.compactionThreshold;
+    return internalFlushCache(snapshot, logCacheFlushId);
   }
 
   /*
@@ -530,7 +522,7 @@ public class Store implements HConstants, HeapSize {
    * @return StoreFile created.
    * @throws IOException
    */
-  private StoreFile internalFlushCache(final KeyValueSkipListSet set,
+  private StoreFile internalFlushCache(final SortedSet<KeyValue> set,
     final long logCacheFlushId)
   throws IOException {
     HFile.Writer writer = null;
@@ -600,20 +592,18 @@ public class Store implements HConstants, HeapSize {
    * @param sf
    * @param set That was used to make the passed file <code>p</code>.
    * @throws IOException
-   * @return Count of store files.
+   * @return Whether compaction is required.
    */
-  private int updateStorefiles(final long logCacheFlushId,
-    final StoreFile sf, final KeyValueSkipListSet set)
+  private boolean updateStorefiles(final long logCacheFlushId,
+    final StoreFile sf, final SortedSet<KeyValue> set)
   throws IOException {
-    int count = 0;
     this.lock.writeLock().lock();
     try {
       this.storefiles.put(Long.valueOf(logCacheFlushId), sf);
-      count = this.storefiles.size();
       // Tell listeners of the change in readers.
       notifyChangedReadersObservers();
       this.memstore.clearSnapshot(set);
-      return count;
+      return this.storefiles.size() >= this.compactionThreshold;
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -1555,5 +1545,42 @@ public class Store implements HConstants, HeapSize {
   @Override
   public long heapSize() {
     return DEEP_OVERHEAD + this.memstore.heapSize();
+  }
+
+  public StoreFlusher getStoreFlusher(long cacheFlushId) {
+    return new StoreFlusherImpl(cacheFlushId);
+  }
+
+  private class StoreFlusherImpl implements StoreFlusher {
+
+    private long cacheFlushId;
+    private SortedSet<KeyValue> snapshot;
+    private StoreFile storeFile;
+
+    private StoreFlusherImpl(long cacheFlushId) {
+      this.cacheFlushId = cacheFlushId;
+    }
+
+
+    @Override
+    public void prepare() {
+      memstore.snapshot();
+      this.snapshot = memstore.getSnapshot();
+    }
+
+    @Override
+    public void flushCache() throws IOException {
+      storeFile = Store.this.flushCache(cacheFlushId, snapshot);
+    }
+
+    @Override
+    public boolean commit() throws IOException {
+      if (storeFile == null) {
+      return false;
+      }
+      // Add new file to store files.  Clear snapshot too while we have the
+      // Store write lock.
+      return Store.this.updateStorefiles(cacheFlushId,storeFile, snapshot);
+    }
   }
 }

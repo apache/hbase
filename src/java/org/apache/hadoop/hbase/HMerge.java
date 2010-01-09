@@ -150,12 +150,12 @@ class HMerge implements HConstants {
       for (int i = 0; i < info.length - 1; i++) {
         if (currentRegion == null) {
           currentRegion =
-            new HRegion(tabledir, hlog, fs, conf, info[i], null);
+            HRegion.newHRegion(tabledir, hlog, fs, conf, info[i], null);
           currentRegion.initialize(null, null);
           currentSize = currentRegion.getLargestHStoreSize();
         }
         nextRegion =
-          new HRegion(tabledir, hlog, fs, conf, info[i + 1], null);
+          HRegion.newHRegion(tabledir, hlog, fs, conf, info[i + 1], null);
         nextRegion.initialize(null, null);
         nextSize = nextRegion.getLargestHStoreSize();
 
@@ -324,7 +324,7 @@ class HMerge implements HConstants {
 
       // Scan root region to find all the meta regions
       
-      root = new HRegion(rootTableDir, hlog, fs, conf,
+      root = HRegion.newHRegion(rootTableDir, hlog, fs, conf,
           HRegionInfo.ROOT_REGIONINFO, null);
       root.initialize(null, null);
 

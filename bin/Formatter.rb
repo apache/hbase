@@ -95,8 +95,7 @@ module Formatter
       if str.instance_of? Fixnum
           return
       end
-      # Remove double-quotes added by 'dump'.
-      return str.dump[1..-2]
+      return str
     end
 
     def output(width, str)

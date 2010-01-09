@@ -102,6 +102,31 @@ public class RegionServerMetrics implements Updater {
   public final MetricsIntValue memstoreSizeMB =
     new MetricsIntValue("memstoreSizeMB");
 
+  /**
+   * Size of the compaction queue.
+   */
+  public final MetricsIntValue compactionQueueSize = 
+    new MetricsIntValue("compactionQueueSize");
+  
+  /**
+   * filesystem read latency
+   */
+  public final MetricsTimeVaryingRate fsReadLatency = 
+    new MetricsTimeVaryingRate("fsReadLatency");
+
+  /**
+   * filesystem write latency
+   */
+  public final MetricsTimeVaryingRate fsWriteLatency = 
+    new MetricsTimeVaryingRate("fsWriteLatency");
+
+  /**
+   * filesystem sync latency
+   */
+  public final MetricsTimeVaryingRate fsSyncLatency = 
+    new MetricsTimeVaryingRate("fsSyncLatency");
+
+
   public RegionServerMetrics() {
     MetricsContext context = MetricsUtil.getContext("hbase");
     metricsRecord = MetricsUtil.createRecord(context, "regionserver");

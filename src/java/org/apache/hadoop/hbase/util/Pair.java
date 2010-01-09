@@ -1,24 +1,20 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 /**
- * A generic class for pairs.
- * @param <T1> 
- * @param <T2> 
+ * A generic class for immutable pairs.
+ * @param <T1>
+ * @param <T2>
  */
-public class Pair<T1, T2> implements Serializable
+public final class Pair<T1, T2> implements Serializable
 {
   private static final long serialVersionUID = -3986244606585552569L;
   protected T1 first = null;
   protected T2 second = null;
+  private int hashcode;
 
-  /**
-   * Default constructor.
-   */
-  public Pair()
-  {
-  }
 
   /**
    * Constructor
@@ -29,24 +25,38 @@ public class Pair<T1, T2> implements Serializable
   {
     this.first = a;
     this.second = b;
+
+    // generate a hash code
+    hashcode = first != null ? generateHashCode(first) : 0;
+    hashcode = 31 * hashcode + (second != null ? generateHashCode(second) : 0);
   }
 
-  /**
-   * Replace the first element of the pair.
-   * @param a
-   */
-  public void setFirst(T1 a)
-  {
-    this.first = a;
-  }
-
-  /**
-   * Replace the second element of the pair.
-   * @param b 
-   */
-  public void setSecond(T2 b)
-  {
-    this.second = b;
+  private static int generateHashCode(Object o) {
+    if (o.getClass().isArray()) {
+      if (o instanceof long[]) {
+          return Arrays.hashCode((long[]) o);
+      } else if (o instanceof int[]) {
+          return Arrays.hashCode((int[]) o);
+      } else if (o instanceof short[]) {
+          return Arrays.hashCode((short[]) o);
+      } else if (o instanceof char[]) {
+          return Arrays.hashCode((char[]) o);
+      } else if (o instanceof byte[]) {
+          return Arrays.hashCode((byte[]) o);
+      } else if (o instanceof double[]) {
+          return Arrays.hashCode((double[]) o);
+      } else if (o instanceof float[]) {
+          return Arrays.hashCode((float[]) o);
+      } else if (o instanceof boolean[]) {
+          return Arrays.hashCode((boolean[]) o);
+      } else {
+          // Not an array of primitives
+          return Arrays.hashCode((Object[]) o);
+      }
+    } else {
+      // Standard comparison
+      return o.hashCode();
+    }
   }
 
   /**
@@ -67,9 +77,55 @@ public class Pair<T1, T2> implements Serializable
     return second;
   }
 
+  /**
+   * Creates a new instance of the pair encapsulating the supplied values.
+   *
+   * @param one  the first value
+   * @param two  the second value
+   * @param <T1> the type of the first element.
+   * @param <T2> the type of the second element.
+   * @return the new instance
+   */
+  public static <T1, T2> Pair<T1, T2> of(T1 one, T2 two)
+  {
+    return new Pair<T1, T2>(one, two);
+  }
+
   private static boolean equals(Object x, Object y)
   {
-     return (x == null && y == null) || (x != null && x.equals(y));
+    // Null safe compare first
+    if (x == null || y == null) {
+      return x == y;
+    }
+
+    Class clazz = x.getClass();
+    // If they are both the same type of array
+    if (clazz.isArray() && clazz == y.getClass()) {
+      // NOTE: this section is borrowed from EqualsBuilder in commons-lang
+      if (x instanceof long[]) {
+          return Arrays.equals((long[]) x, (long[]) y);
+      } else if (x instanceof int[]) {
+          return Arrays.equals((int[]) x, (int[]) y);
+      } else if (x instanceof short[]) {
+          return Arrays.equals((short[]) x, (short[]) y);
+      } else if (x instanceof char[]) {
+          return Arrays.equals((char[]) x, (char[]) y);
+      } else if (x instanceof byte[]) {
+          return Arrays.equals((byte[]) x, (byte[]) y);
+      } else if (x instanceof double[]) {
+          return Arrays.equals((double[]) x, (double[]) y);
+      } else if (x instanceof float[]) {
+          return Arrays.equals((float[]) x, (float[]) y);
+      } else if (x instanceof boolean[]) {
+          return Arrays.equals((boolean[]) x, (boolean[]) y);
+      } else {
+          // Not an array of primitives
+          return Arrays.deepEquals((Object[]) x, (Object[]) y);
+      }
+    } else {
+      // Standard comparison
+      return x.equals(y);
+    }
   }
 
   @Override
@@ -83,12 +139,7 @@ public class Pair<T1, T2> implements Serializable
   @Override
   public int hashCode()
   {
-    if (first == null)
-      return (second == null) ? 0 : second.hashCode() + 1;
-    else if (second == null)
-      return first.hashCode() + 2;
-    else
-      return first.hashCode() * 17 + second.hashCode();
+    return hashcode;
   }
 
   @Override

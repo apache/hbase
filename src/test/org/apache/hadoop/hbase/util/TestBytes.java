@@ -21,8 +21,10 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.math.BigDecimal;
 
 import junit.framework.TestCase;
+import junit.framework.Assert;
 
 public class TestBytes extends TestCase {
   public void testNullHashCode() {
@@ -68,6 +70,27 @@ public class TestBytes extends TestCase {
     }
     assertEquals(3, parts.length);
     assertTrue(Bytes.equals(parts[1], middle));
+  }
+
+  public void testToChars() throws Exception {
+    char[] chars = new char[]{'b', 'l', 'a', 'b', 'l', 'a', 'b', 'l', 'a'};
+    byte[] bytes = Bytes.toBytes(chars);
+    char[] chars2 = Bytes.toChars(bytes);
+    assertTrue(Arrays.equals(chars, chars2));
+  }
+
+  public void testToBigDecimal() throws Exception {
+    BigDecimal bd1 = new BigDecimal("3.14");
+    byte[] bytes = Bytes.toBytes(bd1);
+    BigDecimal bd2 = Bytes.toBigDecimal(bytes);
+    assertEquals(bd1, bd2);
+  }
+
+  public void testToChar() throws Exception {
+    for (char c = 0; c < Character.MAX_VALUE; c++) {
+      byte[] b = Bytes.toBytes(c);
+      assertEquals(c, Bytes.toChar(b));
+    }
   }
 
   public void testToLong() throws Exception {

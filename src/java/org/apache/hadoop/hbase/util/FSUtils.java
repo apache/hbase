@@ -24,6 +24,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,6 +41,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 
 /**
@@ -143,13 +146,18 @@ public class FSUtils {
     // Are there any data nodes up yet?
     // Currently the safe mode check falls through if the namenode is up but no
     // datanodes have reported in yet.
-    while (dfs.getDataNodeStats().length == 0) {
-      LOG.info("Waiting for dfs to come up...");
-      try {
-        Thread.sleep(wait);
-      } catch (InterruptedException e) {
-        //continue
+    try {
+      while (dfs.getDataNodeStats().length == 0) {
+        LOG.info("Waiting for dfs to come up...");
+        try {
+          Thread.sleep(wait);
+        } catch (InterruptedException e) {
+          //continue
+        }
       }
+    } catch (IOException e) {
+      // getDataNodeStats can fail if superuser privilege is required to run
+      // the datanode report, just ignore it
     }
     // Make sure dfs is not in safe mode
     while (dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET)) {
@@ -360,6 +368,98 @@ public class FSUtils {
       }
     }
     return true;
+  }
+
+  /**
+   * Returns the total overall fragmentation percentage. Includes .META. and 
+   * -ROOT- as well.
+   *  
+   * @param master  The master defining the HBase root and file system.
+   * @return A map for each table and its percentage.
+   * @throws IOException When scanning the directory fails.
+   */
+  public static int getTotalTableFragmentation(final HMaster master) 
+  throws IOException {
+    Map<String, Integer> map = getTableFragmentation(master);
+    return map != null && map.size() > 0 ? map.get("-TOTAL-").intValue() : -1;
+  }
+    
+  /**
+   * Runs through the HBase rootdir and checks how many stores for each table
+   * have more than one file in them. Checks -ROOT- and .META. too. The total 
+   * percentage across all tables is stored under the special key "-TOTAL-". 
+   * 
+   * @param master  The master defining the HBase root and file system.
+   * @return A map for each table and its percentage.
+   * @throws IOException When scanning the directory fails.
+   */
+  public static Map<String, Integer> getTableFragmentation(
+    final HMaster master) 
+  throws IOException {
+    Path path = master.getRootDir();
+    // since HMaster.getFileSystem() is package private
+    FileSystem fs = path.getFileSystem(master.getConfiguration());
+    return getTableFragmentation(fs, path);
+  }
+    
+  /**
+   * Runs through the HBase rootdir and checks how many stores for each table
+   * have more than one file in them. Checks -ROOT- and .META. too. The total 
+   * percentage across all tables is stored under the special key "-TOTAL-". 
+   * 
+   * @param fs  The file system to use.
+   * @param hbaseRootDir  The root directory to scan.
+   * @return A map for each table and its percentage.
+   * @throws IOException When scanning the directory fails.
+   */
+  public static Map<String, Integer> getTableFragmentation(
+    final FileSystem fs, final Path hbaseRootDir)
+  throws IOException {
+    Map<String, Integer> frags = new HashMap<String, Integer>();
+    int cfCountTotal = 0;
+    int cfFragTotal = 0;
+    DirFilter df = new DirFilter(fs);
+    // presumes any directory under hbase.rootdir is a table
+    FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
+    for (int i = 0; i < tableDirs.length; i++) {
+      // Skip the .log directory.  All others should be tables.  Inside a table,
+      // there are compaction.dir directories to skip.  Otherwise, all else
+      // should be regions.  Then in each region, should only be family
+      // directories.  Under each of these, should be one file only.
+      Path d = tableDirs[i].getPath();
+      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
+        continue;
+      }
+      int cfCount = 0;
+      int cfFrag = 0;
+      FileStatus [] regionDirs = fs.listStatus(d, df);
+      for (int j = 0; j < regionDirs.length; j++) {
+        Path dd = regionDirs[j].getPath();
+        if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
+          continue;
+        }
+        // else its a region name, now look in region for families
+        FileStatus [] familyDirs = fs.listStatus(dd, df);
+        for (int k = 0; k < familyDirs.length; k++) {
+          cfCount++;
+          cfCountTotal++;
+          Path family = familyDirs[k].getPath();
+          // now in family make sure only one file
+          FileStatus [] familyStatus = fs.listStatus(family);
+          if (familyStatus.length > 1) {
+            cfFrag++;
+            cfFragTotal++;
+          }
+        }
+      }
+      // compute percentage per table and store in result list
+      frags.put(d.getName(), new Integer(
+        Math.round((float) cfFrag / cfCount * 100)));
+    }
+    // set overall percentage for all tables
+    frags.put("-TOTAL-", new Integer(
+      Math.round((float) cfFragTotal / cfCountTotal * 100)));
+    return frags;
   }
 
   /**

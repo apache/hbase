@@ -87,7 +87,7 @@ require 'HBase'
 # Setup the HBase module.  Create a configuration.
 # Turn off retries in hbase and ipc.  Human doesn't want to wait on N retries.
 @configuration = org.apache.hadoop.hbase.HBaseConfiguration.new()
-@configuration.setInt("hbase.client.retries.number", 5)
+@configuration.setInt("hbase.client.retries.number", 7)
 @configuration.setInt("ipc.client.connect.max.retries", 3)
 
 # Do lazy create of admin because if we are pointed at bad master, it will hang
@@ -298,8 +298,7 @@ NAME, VERSIONS, COMPRESSION, etc.  Constants do not need to be quoted.  Type
 'Object.constants' to see a (messy) list of all constants in the environment.
 
 In case you are using binary keys or values and need to enter them into the 
-shell then use double-quotes to make use of hexadecimal or octal notations, 
-for example:
+shell then use double-quotes to make use of hexadecimal for example:
 
   hbase> get 't1', "key\\x03\\x3f\\xcd"
   hbase> get 't1', "key\\003\\023\\011"

@@ -20,9 +20,6 @@ import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.client.Delete
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter
 import org.apache.hadoop.hbase.HConstants
-import org.apache.hadoop.hbase.io.BatchUpdate
-import org.apache.hadoop.hbase.io.RowResult
-import org.apache.hadoop.hbase.io.Cell
 import org.apache.hadoop.hbase.io.hfile.Compression
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.HColumnDescriptor
@@ -204,7 +201,7 @@ module HBase
       htd = HTableDescriptor.new(tableName)
       for arg in args
         if arg.instance_of? String
-          htd.addFamily(HColumnDescriptor.new(makeColumnName(arg)))
+          htd.addFamily(HColumnDescriptor.new(arg))
         else
           raise TypeError.new(arg.class.to_s + " of " + arg.to_s + " is not of Hash type") \
             unless arg.instance_of? Hash
@@ -223,15 +220,20 @@ module HBase
       htd = @admin.getTableDescriptor(tableName.to_java_bytes)
       method = args.delete(METHOD)
       if method == "delete"
-        @admin.deleteColumn(tableName, makeColumnName(args[NAME]))
+        @admin.deleteColumn(tableName, args[NAME])
       elsif method == "table_att"
-        args[MAX_FILESIZE]? htd.setMaxFileSize(JLong.valueOf(args[MAX_FILESIZE])) :  
-          htd.setMaxFileSize(HTableDescriptor::DEFAULT_MAX_FILESIZE);
-        args[READONLY]? htd.setReadOnly(JBoolean.valueOf(args[READONLY])) : 
-          htd.setReadOnly(HTableDescriptor::DEFAULT_READONLY);
-        args[MEMSTORE_FLUSHSIZE]? 
-          htd.setMemStoreFlushSize(JLong.valueOf(args[MEMSTORE_FLUSHSIZE])) :
-          htd.setMemStoreFlushSize(HTableDescriptor::DEFAULT_MEMSTORE_FLUSH_SIZE);
+        if args[MAX_FILESIZE]
+          htd.setMaxFileSize(JLong.valueOf(args[MAX_FILESIZE])) 
+        end
+        if args[READONLY] 
+          htd.setReadOnly(JBoolean.valueOf(args[READONLY])) 
+        end  
+        if args[MEMSTORE_FLUSHSIZE]
+          htd.setMemStoreFlushSize(JLong.valueOf(args[MEMSTORE_FLUSHSIZE]))
+        end
+        if args[DEFERRED_LOG_FLUSH]
+          htd.setDeferredLogFlush(JBoolean.valueOf(args[DEFERRED_LOG_FLUSH]))
+        end
         @admin.modifyTable(tableName.to_java_bytes, htd)
       else
         descriptor = hcd(args) 
@@ -253,18 +255,6 @@ module HBase
       @admin.closeRegion(regionName, s)
       @formatter.header()
       @formatter.footer(now)
-    end
-
-    # Make a legal column  name of the passed String
-    # Check string ends in colon. If not, add it.
-    def makeColumnName(arg)
-      index = arg.index(':')
-      if not index
-        # Add a colon.  If already a colon, its in the right place,
-        # or an exception will come up out of the addFamily
-        arg << ':'
-      end
-      arg
     end
 
     def shutdown()
@@ -326,7 +316,6 @@ module HBase
       name = arg[NAME]
       raise ArgumentError.new("Column family " + arg + " must have a name") \
         unless name
-      name = makeColumnName(name)
       # TODO: What encoding are Strings in jruby?
       return HColumnDescriptor.new(name.to_java_bytes,
         # JRuby uses longs for ints. Need to convert.  Also constants are String 
@@ -404,6 +393,7 @@ module HBase
         timestamp = args["TIMESTAMP"] || nil
         columns = args["COLUMNS"] || getAllColumns()
         cache = args["CACHE_BLOCKS"] || true
+        versions = args["VERSIONS"] || 1
         
         if columns.class == String
           columns = [columns]
@@ -425,6 +415,7 @@ module HBase
           scan.setTimeStamp(timestamp)
         end
         scan.setCacheBlocks(cache)
+        scan.setMaxVersions(versions) if versions > 1
       else
         scan = Scan.new()
       end
@@ -433,14 +424,16 @@ module HBase
       @formatter.header(["ROW", "COLUMN+CELL"])
       i = s.iterator()
       while i.hasNext()
-        r = i.next().getRowResult()
-        row = String.from_java_bytes r.getRow()
+        r = i.next()
+        row = Bytes::toStringBinary(r.getRow())
         if limit != -1 and count >= limit
           break
         end
-        for k, v in r
-          column = String.from_java_bytes k
-          cell = toString(column, v, maxlength)
+        for kv in r.list
+          family = String.from_java_bytes kv.getFamily()
+          qualifier = Bytes::toStringBinary(kv.getQualifier())
+          column = family + ':' + qualifier
+          cell = toString(column, kv, maxlength)
           @formatter.row([row, "column=%s, %s" % [column, cell]])
         end
         count += 1
@@ -450,14 +443,19 @@ module HBase
 
     def put(row, column, value, timestamp = nil)
       now = Time.now 
-      bu = nil
+      p = nil
       if timestamp
-        bu = BatchUpdate.new(row, timestamp)
+        p = Put.new(row.to_java_bytes, timestamp)
       else
-        bu = BatchUpdate.new(row)
+        p = Put.new(row.to_java_bytes)
       end
-      bu.put(column, value.to_java_bytes)
-      @table.commit(bu)
+      split = KeyValue.parseColumn(column.to_java_bytes)
+      if split.length > 1
+        p.add(split[0], split[1], value.to_java_bytes)
+      else
+        p.add(split[0], nil, value.to_java_bytes)
+      end
+      @table.put(p)
       @formatter.header()
       @formatter.footer(now)
     end
@@ -484,20 +482,19 @@ module HBase
         Bytes.equals(tn, HConstants::ROOT_TABLE_NAME)
     end
 
-    # Make a String of the passed cell.
+    # Make a String of the passed kv 
     # Intercept cells whose format we know such as the info:regioninfo in .META.
-    def toString(column, cell, maxlength)
+    def toString(column, kv, maxlength)
       if isMetaTable()
         if column == 'info:regioninfo'
-          hri = Writables.getHRegionInfoOrNull(cell.getValue())
-          return "timestamp=%d, value=%s" % [cell.getTimestamp(), hri.toString()]
+          hri = Writables.getHRegionInfoOrNull(kv.getValue())
+          return "timestamp=%d, value=%s" % [kv.getTimestamp(), hri.toString()]
         elsif column == 'info:serverstartcode'
-          return "timestamp=%d, value=%s" % [cell.getTimestamp(), \
-            Bytes.toLong(cell.getValue())]
+          return "timestamp=%d, value=%s" % [kv.getTimestamp(), \
+            Bytes.toLong(kv.getValue())]
         end
       end
-      cell.toString()
-      val = cell.toString()
+      val = "timestamp=" + kv.getTimestamp().to_s + ", value=" + Bytes::toStringBinary(kv.getValue())
       maxlength != -1 ? val[0, maxlength] : val    
     end
   
@@ -506,7 +503,7 @@ module HBase
       now = Time.now 
       result = nil
       if args == nil or args.length == 0 or (args.length == 1 and args[MAXLENGTH] != nil)
-        result = @table.getRow(row.to_java_bytes)
+        get = Get.new(row.to_java_bytes)
       else
         # Its a hash.
         columns = args[COLUMN] 
@@ -520,42 +517,47 @@ module HBase
           if not ts
             raise ArgumentError.new("Failed parse of " + args + ", " + args.class)
           end
-          result = @table.getRow(row.to_java_bytes, ts)
+          get = Get.new(row.to_java_bytes, ts)
         else
+          get = Get.new(row.to_java_bytes)
           # Columns are non-nil
           if columns.class == String
             # Single column
-            result = @table.get(row, columns,
-              args[TIMESTAMP]? args[TIMESTAMP]: HConstants::LATEST_TIMESTAMP,
-              args[VERSIONS]? args[VERSIONS]: 1)
+            split = KeyValue.parseColumn(columns.to_java_bytes)
+            if (split.length > 1) 
+              get.addColumn(split[0], split[1])
+            else
+              get.addFamily(split[0])
+            end
           elsif columns.class == Array
-            result = @table.getRow(row, columns.to_java(:string),
-              args[TIMESTAMP]? args[TIMESTAMP]: HConstants::LATEST_TIMESTAMP)
+            for column in columns
+              split = KeyValue.parseColumn(columns.to_java_bytes)
+              if (split.length > 1)
+                get.addColumn(split[0], split[1])
+              else
+                get.addFamily(split[0])
+              end
+            end
           else
             raise ArgumentError.new("Failed parse column argument type " +
               args + ", " + args.class)
           end
+          get.setMaxVersions(args[VERSIONS] ? args[VERSIONS] : 1)
+          if args[TIMESTAMP] 
+            get.setTimeStamp(args[TIMESTAMP])
+          end
         end
       end
+      result = @table.get(get)
       # Print out results.  Result can be Cell or RowResult.
       maxlength = args[MAXLENGTH] || -1
-      h = nil
-      if result.instance_of? RowResult
-        h = String.from_java_bytes result.getRow()
-        @formatter.header(["COLUMN", "CELL"])
-        if result
-          for k, v in result
-            column = String.from_java_bytes k
-            @formatter.row([column, toString(column, v, maxlength)])
-          end
-        end
-      else
-        # Presume Cells
-        @formatter.header()
-        if result 
-          for c in result
-            @formatter.row([toString(nil, c, maxlength)])
-          end
+      @formatter.header(["COLUMN", "CELL"])
+      if !result.isEmpty()
+        for kv in result.list()
+          family = String.from_java_bytes kv.getFamily()
+          qualifier = Bytes::toStringBinary(kv.getQualifier())
+          column = family + ':' + qualifier
+          @formatter.row([column, toString(column, kv, maxlength)])
         end
       end
       @formatter.footer(now)
@@ -612,26 +614,26 @@ module HBase
     for i in 1..10
       table.put('x%d' % i, 'x:%d' % i, 'x%d' % i)
     end
-    table.get('x1', {COLUMN => 'x:1'})
+    table.get('x1', {COLUMNS => 'x:1'})
     if formatter.rowCount() != 1
       raise IOError.new("Failed first put")
     end
-    table.scan(['x:'])
+    table.scan({COLUMNS => ['x:']})
     if formatter.rowCount() != 10
       raise IOError.new("Failed scan of expected 10 rows")
     end
     # Verify that limit works.
-    table.scan(['x:'], {LIMIT => 3})
+    table.scan({COLUMNS => ['x:'], LIMIT => 4})
     if formatter.rowCount() != 3
       raise IOError.new("Failed scan of expected 3 rows")
     end
     # Should only be two rows if we start at 8 (Row x10 sorts beside x1).
-    table.scan(['x:'], {STARTROW => 'x8', LIMIT => 3})
+    table.scan({COLUMNS => ['x:'], STARTROW => 'x8', LIMIT => 3})
     if formatter.rowCount() != 2
       raise IOError.new("Failed scan of expected 2 rows")
     end
     # Scan between two rows
-    table.scan(['x:'], {STARTROW => 'x5', ENDROW => 'x8'})
+    table.scan({COLUMNS => ['x:'], STARTROW => 'x5', ENDROW => 'x8'})
     if formatter.rowCount() != 3
       raise IOError.new("Failed endrow test")
     end
@@ -643,9 +645,9 @@ module HBase
     end
     # Verify that delete works
     table.delete('x1', 'x:1');
-    table.scan(['x:1'])
+    table.scan({COLUMNS => ['x:1']})
     scan1 = formatter.rowCount()
-    table.scan(['x:'])
+    table.scan({COLUMNS => ['x:']})
     scan2 = formatter.rowCount()
     if scan1 != 0 or scan2 != 9
       raise IOError.new("Failed delete test")
@@ -653,9 +655,9 @@ module HBase
     # Verify that deletall works
     table.put('x2', 'x:1', 'x:1')
     table.deleteall('x2')
-    table.scan(['x:2'])
+    table.scan({COLUMNS => ['x:2']})
     scan1 = formatter.rowCount()
-    table.scan(['x:'])
+    table.scan({COLUMNS => ['x:']})
     scan2 = formatter.rowCount()
     if scan1 != 0 or scan2 != 8
       raise IOError.new("Failed deleteall test")
