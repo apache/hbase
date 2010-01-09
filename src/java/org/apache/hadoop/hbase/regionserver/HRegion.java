@@ -1133,9 +1133,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   throws IOException {
     checkReadOnly();
     checkResources();
-    splitsAndClosesLock.readLock().lock();
-    newScannerLock.writeLock().lock();
     Integer lid = null;
+    newScannerLock.writeLock().lock();
+    splitsAndClosesLock.readLock().lock();
     try {
       byte [] row = delete.getRow();
       // If we did not pass an existing row lock, obtain a new one
@@ -1162,8 +1162,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
     } finally {
       if(lockid == null) releaseRowLock(lid);
-      newScannerLock.writeLock().unlock();
       splitsAndClosesLock.readLock().unlock();
+      newScannerLock.writeLock().unlock();
     }
   }
   
@@ -1268,8 +1268,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     // read lock, resources may run out.  For now, the thought is that this
     // will be extremely rare; we'll deal with it when it happens.
     checkResources();
-    splitsAndClosesLock.readLock().lock();
     newScannerLock.writeLock().lock();
+    splitsAndClosesLock.readLock().lock();
     try {
       // We obtain a per-row lock, so other clients will block while one client
       // performs an update. The read lock is released by the client calling
@@ -1294,8 +1294,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         if(lockid == null) releaseRowLock(lid);
       }
     } finally {
-      newScannerLock.writeLock().unlock();
       splitsAndClosesLock.readLock().unlock();
+      newScannerLock.writeLock().unlock();
     }
   }
 

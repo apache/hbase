@@ -41,6 +41,7 @@ Release 0.20.3 - Unreleased
    HBASE-2035  Binary values are formatted wrong in shel
    HBASE-2094  hbase-2037 breaks mapreduce jobs going from 0.20.2 to 0.20.3
    HBASE-2093  [stargate] RowSpec parse bug (Andrew Purtell via JD)
+   HBASE-2097  Deadlock between HRegion.put and HRegion.close (Stack via JD)
 
   IMPROVEMENTS
    HBASE-1970  Export does one version only; make it configurable how many

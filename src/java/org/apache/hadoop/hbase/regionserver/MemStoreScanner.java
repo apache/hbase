@@ -87,7 +87,6 @@ class MemStoreScanner implements KeyValueScanner {
     this.kvsetIterator = kvsetRef.iterator();
     this.snapshotIterator = snapshotRef.iterator();
     this.nextKV = currentKvsetKV = currentSnapshotKV = null;
-    LOG.debug("New scanner created " + System.identityHashCode(this));
   }
 
   private void fill() {
@@ -154,7 +153,6 @@ class MemStoreScanner implements KeyValueScanner {
   }
 
   public synchronized void close() {
-    LOG.debug("Close requested " + System.identityHashCode(this));
     this.kvsetRef = EMPTY_SET;
     this.snapshotRef = EMPTY_SET;
     this.kvsetIterator = EMPTY_ITERATOR;
