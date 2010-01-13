@@ -43,6 +43,9 @@ Release 0.20.3 - Unreleased
    HBASE-2093  [stargate] RowSpec parse bug (Andrew Purtell via JD)
    HBASE-2097  Deadlock between HRegion.put and HRegion.close (Stack via JD)
    HBASE-2101  KeyValueSortReducer collapses all values to last passed
+   HBASE-2113  For indexed contrib, fast-forward to next row if no more
+               results left... big performance improvement
+   HBASE-2112  New 'indexed' contrib is missing commons-lang.jar when package
 
   IMPROVEMENTS
    HBASE-1970  Export does one version only; make it configurable how many

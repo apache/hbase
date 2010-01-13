@@ -19,12 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestCase;
@@ -38,18 +32,26 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopRowFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.PrefixRowFilter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Test of a long-lived scanner validating as we go.
@@ -118,6 +120,7 @@ public class TestScanner extends HBaseTestCase {
       }
       s.close();
       assertEquals(0, count);
+      assertEquals(1, results.size());
       // Now do something a bit more imvolved.
       scan = new Scan(startrow, stoprow);
       scan.addFamily(HConstants.CATALOG_FAMILY);
@@ -525,4 +528,43 @@ public class TestScanner extends HBaseTestCase {
     LOG.info("Found " + count + " items");
     return count;
   }
+
+
+  /**
+   * When there's more than one column it changes the configuration of the
+   * KeyValueHeap and triggers a different execution path in the RegionScanner.
+   */
+  public void testScanWithTwoColumns() throws IOException {
+    this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
+    final byte[] row1 = Bytes.toBytes("row1");
+    final byte[] row2 = Bytes.toBytes("row2");
+    final byte[] qual1 = Bytes.toBytes("a");
+    final byte[] qual2 = Bytes.toBytes("b");
+    final byte[] val1 = Bytes.toBytes(1);
+    final byte[] val2 = Bytes.toBytes(-1);
+    /**
+     * prime the region.
+     */
+    Put put1 = new Put(row1);
+    put1.add(HConstants.CATALOG_FAMILY,qual1, val1);
+    put1.add(HConstants.CATALOG_FAMILY,qual2, val1);
+    r.put(put1);
+    Put put2 = new Put(row2);
+    put2.add(HConstants.CATALOG_FAMILY, qual1, val2);
+    put2.add(HConstants.CATALOG_FAMILY, qual2, val2);
+    r.put(put2);
+    /**
+     * Scan for the second row.
+     */
+    Scan scan = new Scan();
+    scan.setFilter(new SingleColumnValueFilter(HConstants.CATALOG_FAMILY,
+      qual2, CompareFilter.CompareOp.EQUAL, val2));
+
+    InternalScanner scanner1 = r.getScanner(scan);
+    List<KeyValue> res = new ArrayList<KeyValue>();
+    assertFalse(scanner1.next(res));
+    assertEquals(2, res.size());
+    scanner1.close();
+  }
+
 }
