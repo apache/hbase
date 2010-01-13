@@ -46,6 +46,7 @@ Release 0.20.3 - Unreleased
    HBASE-2113  For indexed contrib, fast-forward to next row if no more
                results left... big performance improvement
    HBASE-2112  New 'indexed' contrib is missing commons-lang.jar when package
+   HBASE-2119  Fix top-level NOTICES.txt file. Its stale.
 
   IMPROVEMENTS
    HBASE-1970  Export does one version only; make it configurable how many
