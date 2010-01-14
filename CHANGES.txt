@@ -47,6 +47,8 @@ Release 0.20.3 - Unreleased
                results left... big performance improvement
    HBASE-2112  New 'indexed' contrib is missing commons-lang.jar when package
    HBASE-2119  Fix top-level NOTICES.txt file. Its stale.
+   HBASE-2120  [stargate] Unable to delete column families (Greg Lu via Andrew
+               Purtell)
 
   IMPROVEMENTS
    HBASE-1970  Export does one version only; make it configurable how many
