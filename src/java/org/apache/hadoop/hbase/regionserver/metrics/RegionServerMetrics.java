@@ -242,6 +242,12 @@ public class RegionServerMetrics implements Updater {
         Long.valueOf(this.blockCacheCount.get()));
     sb = Strings.appendKeyValue(sb, this.blockCacheHitRatio.getName(),
         Long.valueOf(this.blockCacheHitRatio.get()));
+    sb = Strings.appendKeyValue(sb, "fsReadLatency",
+        Long.valueOf(this.fsReadLatency.getPreviousIntervalAverageTime()));
+    sb = Strings.appendKeyValue(sb, "fsWriteLatency",
+        Long.valueOf(this.fsWriteLatency.getPreviousIntervalAverageTime()));
+    sb = Strings.appendKeyValue(sb, "fsSyncLatency",
+        Long.valueOf(this.fsSyncLatency.getPreviousIntervalAverageTime()));
     return sb.toString();
   }
 }
