@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.transactional;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 
@@ -42,8 +43,8 @@ class CleanOldTransactionsChore extends Chore {
   public CleanOldTransactionsChore(
       final TransactionalRegionServer regionServer,
       final AtomicBoolean stopRequest) {
-    super(regionServer.getConfiguration().getInt(SLEEP_CONF, DEFAULT_SLEEP),
-        stopRequest);
+    super(((Configuration)regionServer.getConfiguration())
+        .getInt(SLEEP_CONF, DEFAULT_SLEEP), stopRequest);
     this.regionServer = regionServer;
   }
 

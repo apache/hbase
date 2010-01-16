@@ -22,7 +22,9 @@ import java.lang.management.MemoryUsage;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
+import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -155,18 +157,30 @@ public class RegionServerMetrics implements Updater {
       this.memstoreSizeMB.pushMetric(this.metricsRecord);
       this.regions.pushMetric(this.metricsRecord);
       this.requests.pushMetric(this.metricsRecord);
-
+      this.compactionQueueSize.pushMetric(this.metricsRecord);
       this.blockCacheSize.pushMetric(this.metricsRecord);
       this.blockCacheFree.pushMetric(this.metricsRecord);
       this.blockCacheCount.pushMetric(this.metricsRecord);
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
+      // mix in HFile metrics
+      this.fsReadLatency.inc((int)HFile.getReadOps(), HFile.getReadTime());
+      this.fsWriteLatency.inc((int)HFile.getWriteOps(), HFile.getWriteTime());
+      // mix in HLog metrics
+      this.fsWriteLatency.inc((int)HLog.getWriteOps(), HLog.getWriteTime());
+      this.fsSyncLatency.inc((int)HLog.getSyncOps(), HLog.getSyncTime());
+      // push the result
+      this.fsReadLatency.pushMetric(this.metricsRecord);
+      this.fsWriteLatency.pushMetric(this.metricsRecord);
+      this.fsSyncLatency.pushMetric(this.metricsRecord);
     }
     this.metricsRecord.update();
     this.lastUpdate = System.currentTimeMillis();
   }
-  
+
   public void resetAllMinMax() {
-    // Nothing to do
+    this.atomicIncrementTime.resetMinMax();
+    this.fsReadLatency.resetMinMax();
+    this.fsWriteLatency.resetMinMax();
   }
 
   /**
@@ -202,6 +216,8 @@ public class RegionServerMetrics implements Updater {
       Integer.valueOf(this.storefileIndexSizeMB.get()));
     sb = Strings.appendKeyValue(sb, "memstoreSize",
       Integer.valueOf(this.memstoreSizeMB.get()));
+    sb = Strings.appendKeyValue(sb, "compactionQueueSize",
+      Integer.valueOf(this.compactionQueueSize.get()));
     // Duplicate from jvmmetrics because metrics are private there so
     // inaccessible.
     MemoryUsage memory =
@@ -218,6 +234,13 @@ public class RegionServerMetrics implements Updater {
         Long.valueOf(this.blockCacheCount.get()));
     sb = Strings.appendKeyValue(sb, "blockCacheHitRatio",
         Long.valueOf(this.blockCacheHitRatio.get()));
+    sb = Strings.appendKeyValue(sb, "fsReadLatency",
+        Long.valueOf(this.fsReadLatency.getPreviousIntervalAverageTime()));
+    sb = Strings.appendKeyValue(sb, "fsWriteLatency",
+        Long.valueOf(this.fsWriteLatency.getPreviousIntervalAverageTime()));
+    sb = Strings.appendKeyValue(sb, "fsSyncLatency",
+        Long.valueOf(this.fsSyncLatency.getPreviousIntervalAverageTime()));
+
     return sb.toString();
   }
 }

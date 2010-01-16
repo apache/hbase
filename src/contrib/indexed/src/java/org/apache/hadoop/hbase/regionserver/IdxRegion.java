@@ -287,6 +287,17 @@ public class IdxRegion extends HRegion {
       return result;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p/>
+     * Fast forwards the scanner by calling {@link #seekNext()}.
+     */
+    @Override
+    protected void nextRow(byte[] currentRow) throws IOException {
+      seekNext();
+      super.nextRow(currentRow);
+    }
+
     protected void seekNext() throws IOException {
       KeyValue keyValue;
       do {

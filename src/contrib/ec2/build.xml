@@ -19,6 +19,22 @@
     <copy todir="${dist.dir}/contrib/${name}">
       <fileset dir="${build.dir}"/>
     </copy>
+    <exec executable="chmod">
+      <arg value="755"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/hbase-ec2"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/cmd-hbase-cluster"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/create-hbase-image"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/delete-hbase-cluster"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/init-hbase-cluster-secgroups"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/launch-hbase-cluster"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/launch-hbase-master"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/launch-hbase-slaves"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/launch-hbase-zookeeper"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/list-hbase-clusters"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/revoke-hbase-cluster-secgroups"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/terminate-hbase-cluster"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/image/create-hbase-image-remote"/>
+    </exec>
   </target>
 
 </project>

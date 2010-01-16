@@ -24,6 +24,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -144,7 +145,7 @@ public class TransactionalRegionServer extends HRegionServer implements
     getTransactionalRegion(hri.getRegionName()).prepareToClose();
     super.closeRegion(hri, reportWhenCompleted);
   }
-  
+
   public void abort(final byte[] regionName, final long transactionId)
       throws IOException {
     checkOpen();
