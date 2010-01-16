@@ -100,6 +100,7 @@ Release 0.20.3 - Unreleased
                (Lars George via Stack)
    HBASE-2095  TIF should support more confs for the scanner (Bassam Tabbara
                via Andrew Purtell)
+   HBASE-2133  Increase default number of client handlers
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
