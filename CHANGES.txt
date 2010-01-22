@@ -112,6 +112,7 @@ Release 0.20.3 - Unreleased
    HBASE-2149  hbase.regionserver.global.memstore.lowerLimit is too low
    HBASE-2157  LATEST_TIMESTAMP not replaced by current timestamp in KeyValue
                (bulk loading)
+   HBASE-2144  Now does \x20 for spaces
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
