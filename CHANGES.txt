@@ -61,6 +61,7 @@ Release 0.20.3 - Unreleased
    HBASE-2138  unknown metrics type (Stack via JD)
    HBASE-2152  Add default jmxremote.{access|password} files into conf
                (Lars George and Gary Helmling via Stack)
+   HBASE-2154  Fix Client#next(int) javadoc
 
   IMPROVEMENTS
    HBASE-1970  Export does one version only; make it configurable how many
