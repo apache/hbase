@@ -62,6 +62,8 @@ Release 0.20.3 - Unreleased
    HBASE-2152  Add default jmxremote.{access|password} files into conf
                (Lars George and Gary Helmling via Stack)
    HBASE-2154  Fix Client#next(int) javadoc
+   HBASE-2146  RPC related metrics are missing in 0.20.3 since recent change
+               (Gary Helmling via Stack)
 
   IMPROVEMENTS
    HBASE-1970  Export does one version only; make it configurable how many

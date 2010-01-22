@@ -17,12 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -60,6 +54,7 @@ public class HBaseRpcMetrics implements Updater {
 
     context.registerUpdater(this);
     
+    this.initMethods();
     rpcStatistics = new HBaseRPCStatistics(this.registry, hostName, port);
   }
   
@@ -75,6 +70,17 @@ public class HBaseRpcMetrics implements Updater {
   public MetricsTimeVaryingRate rpcProcessingTime = new MetricsTimeVaryingRate("RpcProcessingTime", registry);
 
   //public Map <String, MetricsTimeVaryingRate> metricsList = Collections.synchronizedMap(new HashMap<String, MetricsTimeVaryingRate>());
+
+  /**
+   * Register metrics for all know RPC methods ahead of time.  This helps with
+   * JMX usage, where trying to retrieve the RPC-method metrics before they're
+   * incremented could otherwise cause spurious AttributeNotFoundExceptions.
+   */
+  private void initMethods() {
+    for (String name : HBaseRPC.getMappedMethodNames()) {
+      create(name);
+    }
+  }
 
   private MetricsTimeVaryingRate get(String key) {
     return (MetricsTimeVaryingRate) registry.get(key);
