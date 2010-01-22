@@ -64,6 +64,7 @@ Release 0.20.3 - Unreleased
    HBASE-2154  Fix Client#next(int) javadoc
    HBASE-2146  RPC related metrics are missing in 0.20.3 since recent change
                (Gary Helmling via Stack)
+   HBASE-2156  HBASE-2037 broke Scan
 
   IMPROVEMENTS
    HBASE-1970  Export does one version only; make it configurable how many

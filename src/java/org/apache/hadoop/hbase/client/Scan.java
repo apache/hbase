@@ -183,7 +183,7 @@ public class Scan implements Writable {
    */
   public Scan addColumn(byte [] family, byte [] qualifier) {
     NavigableSet<byte []> set = familyMap.get(family);
-    if(set == null) {
+    if(set == null || set == EMPTY_NAVIGABLE_SET) {
       set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
     }
     set.add(qualifier);
