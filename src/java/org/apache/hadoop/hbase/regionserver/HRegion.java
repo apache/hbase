@@ -68,7 +68,7 @@ package org.apache.hadoop.hbase.regionserver;
  import java.util.concurrent.atomic.AtomicLong;
  import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-/**
+ /**
  * HRegion stores data for a certain region of a table.  It stores all columns
  * for each row. A given table consists of one or more HRegions.
  *

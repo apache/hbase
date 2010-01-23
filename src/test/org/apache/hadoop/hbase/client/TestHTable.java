@@ -330,23 +330,41 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
    * For HADOOP-2579
    */
   public void testTableNotFoundExceptionWithATable() {
-   try {
-     HBaseAdmin admin = new HBaseAdmin(conf);
-     HTableDescriptor testTableADesc =
-       new HTableDescriptor("table");
-     testTableADesc.addFamily(column);
-     admin.createTable(testTableADesc);
+    try {
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      HTableDescriptor testTableADesc =
+          new HTableDescriptor("table");
+      testTableADesc.addFamily(column);
+      admin.createTable(testTableADesc);
 
-     // This should throw a TableNotFoundException, it has not been created
-     new HTable(conf, "notATable");
-     
-     fail("Should have thrown a TableNotFoundException");
-   } catch (TableNotFoundException e) {
-     // expected
-   } catch (IOException e) {
-     e.printStackTrace();
-     fail("Should have thrown a TableNotFoundException instead of a " +
-       e.getClass());
-   }
-   }
+      // This should throw a TableNotFoundException, it has not been created
+      new HTable(conf, "notATable");
+
+      fail("Should have thrown a TableNotFoundException");
+    } catch (TableNotFoundException e) {
+      // expected
+    } catch (IOException e) {
+      e.printStackTrace();
+      fail("Should have thrown a TableNotFoundException instead of a " +
+          e.getClass());
+    }
+  }
+
+  /**
+   * For HBASE-2156
+   * @throws Exception
+   */
+  public void testScanVariableReuse() throws Exception {
+    Scan scan = new Scan();
+    scan.addFamily(CATALOG_FAMILY);
+    scan.addColumn(CATALOG_FAMILY, row);
+
+    assertTrue(scan.getFamilyMap().get(CATALOG_FAMILY).size() == 1);
+
+    scan = new Scan();
+    scan.addFamily(CATALOG_FAMILY);
+
+    assertTrue(scan.getFamilyMap().get(CATALOG_FAMILY).size() == 0);
+  }
+
 }
