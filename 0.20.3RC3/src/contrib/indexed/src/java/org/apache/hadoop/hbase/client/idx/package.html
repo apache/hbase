@@ -1,0 +1,339 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<!--
+   Copyright 2010 The Apache Software Foundation
+
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<head />
+<body bgcolor="white">
+<h2>Indexed HBase</h2>
+      <p>
+        This page gives the high levels for the indexed hbase contrib.
+        It is assumed that the reader has in-depth knowledge of HBase.
+      </p>
+<h2>Table Of Contents</h2>
+        <ol>
+          <li>
+            <a href=#IndexedHBase-IndexedHBase>Indexed HBase</a>
+            <ol>
+              <li>
+                <a href=#IndexedHBase-Purpose>Purpose</a>
+              </li>
+              <li>
+                <a href=#IndexedHBase-WhydowethinkIHbaseoutperformsTHBase%3F>Why do we think IHbase outperforms ITHBase?</a>
+              </li>
+            </ol>
+          </li>
+          <li>
+            <a href=#IndexedHBase-Usage>Usage</a>
+          </li>
+          <li>
+            <a href=#IndexedHBase-Implementationnotes>Implementation notes</a>
+          </li>
+        </ol>
+
+      <h3>
+        <a name=IndexedHBase-Purpose></a>Purpose
+      </h3>
+      <p>
+        The goal of the indexed HBase contrib is to speed up scans by indexing HBase columns.
+        Indexed HBase (IHBase) is different from the indexed tables in transactional HBase (ITHBase):
+        while the indexes in ITHBase are, in fact, hbase tables using the indexed column's values
+        as row keys, IHBase creates indexes at the region level.
+        The differences are summarized in the table below.
+      </p>
+      <table >
+        <tbody>
+        <tr>
+          <th >
+            Feature
+          </th>
+          <th >
+            ITHBase
+          </th>
+          <th >
+            IHBase
+          </th>
+          <th >
+            Comment
+          </th>
+        </tr>
+        <tr>
+          <td >
+            global ordering
+          </td>
+          <td >
+            yes
+          </td>
+          <td >
+            no
+          </td>
+          <td >
+            IHBase has an index for each region. The flip side of not having global ordering
+            is compatibility with the good old HRegion: results are coming back in row
+            order (and not value order as in ITHBase)
+          </td>
+        </tr>
+        <tr>
+          <td >
+            Full table scan?
+          </td>
+          <td >
+            no
+          </td>
+          <td >
+            no
+          </td>
+          <td >
+            THbase does a partial scan on the index table. ITHBase supports specifying start/end rows to limit the number of scanned regions
+          </td>
+        </tr>
+        <tr>
+          <td >
+            Multiple Index Usage<br clear=all>
+          </td>
+          <td >
+            no
+          </td>
+          <td >
+            yes
+          </td>
+          <td >
+            IHBase can take advantage of multiple indexes in the same scan. IHBase IdxScan object accepts an Expression which allows intersection/unison of several indexed column criteria
+          </td>
+        </tr>
+        <tr>
+          <td >
+            Extra disk storage
+          </td>
+          <td >
+            yes
+          </td>
+          <td >
+            no
+          </td>
+          <td >
+            IHBase indexes are created when the region starts/flushes and do not require any extra storage
+          </td>
+        </tr>
+        <tr>
+          <td >
+            Extra RAM
+          </td>
+          <td >
+            yes
+          </td>
+          <td >
+            yes
+          </td>
+          <td >
+            IHBase indexes are in memory and hence increase the memory overhead.
+            THBbase indexes increase the number of regions each region server has to support thus costing memory too
+          </td>
+        </tr>
+        <tr>
+          <td >
+            Parallel scanning support
+          </td>
+          <td >
+            no
+          </td>
+          <td >
+            yes
+          </td>
+          <td >
+            In ITHBase the index table needs to be consulted and then GETs are issued
+            for each matching row. The behavior of IHBase (as perceived by the client)
+            is no different than a regular scan and hence supports parallel
+            scanning seamlessly. <font color=darkgray>parallel GET can be implemented
+            to speedup THbase scans</font>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+      <h3>
+        <a name=IndexedHBase-WhydowethinkIHbaseoutperformsTHBase%3F></a>Why do we think IHbase outperforms THBase?
+      </h3>
+      <ol>
+        <li>
+          More flexible:
+          <ol>
+            <li>
+              Supports range queries and multi-index queries
+            </li>
+            <li>
+              Supports different types - not only byte arrays
+            </li>
+          </ol>
+        </li>
+        <li>
+          Less overhead: THBase pays at least two 'table roundtrips' - one for the index table and the other for the main table
+        </li>
+        <li>
+          Quicker index expression evaluation: IHBase is using dedicated index data structures while ITHBase is using the regular HRegion scan facilities
+        </li>
+      </ol>
+      <h2>
+        <a name=IndexedHBase-Usage></a>Usage
+      </h2>
+      <p>
+        To use Indexed HBase do the following:
+      </p>
+      <ol>
+        <li>
+          Set the hbase.region.impl property to IdxRegion
+          <div class=panelMacro>
+            <table >
+              <tbody>
+              <tr>
+                <td valign=top>
+                  <img align=absmiddle alt="" border=0 height=16 width=16>
+                </td>
+                <td>
+                  <b>IdxRegion HBase configuration snippet</b><br>
+                  <div class="code panel" style=BORDER-WIDTH:1px>
+                    <div class="codeContent panelContent">
+                    <pre class=code-java>&lt;property&gt;
+  &lt;name&gt;hbase.hregion.impl&lt;/name&gt;
+  &lt;value&gt;org.apache.hadoop.hbase.regionserver.IdxRegion&lt;/value&gt;
+&lt;/property&gt;</pre>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </li>
+        <li>
+          When creating a table define which columns to index using IdxColumnDescriptor.
+          The supported types are all the <a href="http://java.sun.com/docs/books/tutorial/java/nutsandbolts/datatypes.html"> java primitive data types</a>
+          except boolean, byte[], char[] and BigDecimal
+          <div class=panelMacro>
+            <table class="infoMacro zeroBorder">
+              <tbody>
+              <tr>
+                <td valign=top>
+                  <img align=absmiddle alt="" border=0 height=16 width=16>
+                </td>
+                <td>
+                  <b>Creating an HTable with an index on family:qual column</b><br>
+                  <p>
+                    Note that this snippet assumes that all the values assigned to family:qual are exactly 8 bytes, preferrably created using Bytes.toBytes(long). The table may have rows in which family:qual is missing, those rows will not be included in the index.
+                  </p>
+                  <div class="code panel" style=BORDER-WIDTH:1px>
+                    <div class="codeContent panelContent">
+                    <pre class=code-java><span class=code-object>byte</span>[] tableName = Bytes.toBytes(<span class=code-quote>"table"</span>);
+<span class=code-object>byte</span>[] familyName = Bytes.toBytes(<span class=code-quote>"family"</span>);
+<span class=code-object>byte</span>[] qualifier = Bytes.toBytes(<span class=code-quote>"qual"</span>);
+
+IdxColumnDescriptor idxColumnDescriptor = <span class=code-keyword>new</span> IdxColumnDescriptor(familyPairName);
+IdxIndexDescriptor indexDescriptor  = <span class=code-keyword>new</span> IdxIndexDescriptor(qualifier, IdxQualifierType.LONG);
+idxColumnDescriptor.addIndexDescriptor(indexDescriptor);
+HTableDescriptor htd = <span class=code-keyword>new</span> HTableDescriptor(tableName);
+htd.addFamily(idxColumnDescriptor);
+    
+HBaseConfiguration conf = <span class=code-keyword>new</span> HBaseConfiguration();
+conf.setClass(HConstants.REGION_IMPL, IdxRegion.class, IdxRegion.class);
+HBaseAdmin admin = <span class=code-keyword>new</span> HBaseAdmin(conf);
+admin.createTable(htd);
+HTable table = <span class=code-keyword>new</span> HTable(conf, desc.getName());
+     . . .</pre>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </li>
+        <li>
+          When scanning make sure you instantiate an IdxScan and that you set the Expression property
+          <div class=panelMacro>
+            <table class="infoMacro zeroBorder">
+              <tbody>
+              <tr>
+                <td valign=top>
+                  <img align=absmiddle alt="" border=0 height=16 width=16>
+                </td>
+                <td>
+                  <b>Indexed scans</b><br>
+                  <p>
+                    Notes:
+                  </p>
+                  <ul>
+                    <li>
+                    <font color=brown><b>Setting an expression doesn't exclude setting a mathcing filter. This duplication is absolutely essential for getting correct scan results</b> </font>
+                    </li>
+                    <li>
+                    The index expression must accept any row accepted by the filter
+                    </li>
+                    <li>
+                    The filter may accept a subset of the rows accepted by the index expression (e.g. narrow down the results set)
+                    </li>
+                    <li>
+                    Setting a filter without setting an expression is supported and would revert to a 'good old scan'
+                    </li>
+                    <li>
+                    The supported expression types are comparison, and, or. Comparisons support GT, GTE, EQ, LTE, LT
+                    </li>
+                    <li>
+                    The caller may combine any number of index expressions using any of the existing indexes. Trying to add an expression for a non-indexed column would result in a runtime error
+                    <div class="code panel" style=BORDER-WIDTH:1px>
+                    <div class="codeContent panelContent">
+                    <pre class=code-java>. . .
+IdxScan idxScan = <span class=code-keyword>new</span> IdxScan();
+idxScan.setExpression(Expression.comparison(familyName, qualifier, Comparison.Operator.EQ, Bytes.toBytes(42L));
+idxScan.setFilter(<span class=code-keyword>new</span> SingleColumnValueFilter(familyName, qualifier, CompareFilter.CompareOp.EQUAL, Bytes.toBytes(42L)));
+idxScan.setCaching(1000);
+
+ResultScanner scanner = table.getScanner(idxScan);
+<span class=code-keyword>for</span> (Result res : scanner) {
+   <span class=code-comment>// Do stuff with res
+</span>}</pre>
+                    </div>
+                    </div>
+                    </li>
+                  </ul>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </li>
+      </ol>
+      <h2>
+        <a name=IndexedHBase-Implementationnotes></a>Implementation notes
+      </h2>
+      <ul>
+        <li>
+          We only index Store files. Every index scan performs a full memstore scan. Indexing the memstore will be implemented only if scanning the memstore will prove to be a performance bottleneck
+        </li>
+        <li>
+          Index expression evaluation is performed using bitsets. There are two types of bitsets: compressed and expanded. An index will typically store a compressed bitset while an expression evaluator will most probably use an expanded bitset
+        </li>
+        <li>
+          TODO
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+<div id=footer>
+</div>
+<br></body>
+</html>
