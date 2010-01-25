@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.20.3 - Unreleased
+Release 0.20.3 - January 25th, 2010
   INCOMPATIBLE CHANGES
 
   BUG FIXES
