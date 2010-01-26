@@ -71,8 +71,8 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
-import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -190,8 +190,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
     this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
     // The filesystem hbase wants to use is probably not what is set into
-    // fs.default.name; its value is probably the default.
-    this.conf.set("fs.default.name", this.rootdir.toString());
+    // fs.defaultFS; its value is probably the default.
+    this.conf.set("fs.defaultFS", this.rootdir.toString());
     this.fs = FileSystem.get(conf);
     this.conf.set(HConstants.HBASE_DIR, this.rootdir.toString());
     this.rand = new Random();
@@ -710,7 +710,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));
     }
     
-    return addConfig(mw, "fs.default.name");
+    return addConfig(mw, "fs.defaultFS");
   }
 
   private MapWritable addConfig(final MapWritable mw, final String key) {

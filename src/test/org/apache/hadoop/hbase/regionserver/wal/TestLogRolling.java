@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +28,9 @@ import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -85,9 +88,6 @@ public class TestLogRolling extends HBaseClusterTestCase {
     // We flush the cache after every 8192 bytes
     conf.setInt("hbase.hregion.memstore.flush.size", 8192);
 
-    // Make lease timeout longer, lease checks less frequent
-    conf.setInt("hbase.master.lease.period", 10 * 1000);
-
     // Increase the amount of time between client retries
     conf.setLong("hbase.client.pause", 15 * 1000);
 
@@ -99,7 +99,6 @@ public class TestLogRolling extends HBaseClusterTestCase {
   private void startAndWriteData() throws Exception {
     // When the META table can be opened, the region servers are running
     new HTable(conf, HConstants.META_TABLE_NAME);
-
     this.server = cluster.getRegionThreads().get(0).getRegionServer();
     this.log = server.getLog();
     
@@ -109,15 +108,12 @@ public class TestLogRolling extends HBaseClusterTestCase {
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(desc);
     HTable table = new HTable(conf, tableName);
-
     for (int i = 1; i <= 256; i++) {    // 256 writes should cause 8 log rolls
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
       put.add(HConstants.CATALOG_FAMILY, null, value);
       table.put(put);
-
       if (i % 32 == 0) {
         // After every 32 writes sleep to let the log roller run
-
         try {
           Thread.sleep(2000);
         } catch (InterruptedException e) {
@@ -126,14 +122,14 @@ public class TestLogRolling extends HBaseClusterTestCase {
       }
     }
   }
-  
+
   /**
    * Tests that logs are deleted
    * 
    * @throws Exception
    */
   public void testLogRolling() throws Exception {
-    tableName = getName();
+    this.tableName = getName();
     try {
       startAndWriteData();
       LOG.info("after writing there are " + log.getNumLogFiles() + " log files");
@@ -158,5 +154,4 @@ public class TestLogRolling extends HBaseClusterTestCase {
       throw e;
     }
   }
-
 }

@@ -24,7 +24,6 @@ import java.util.Random;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -39,16 +38,12 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
   /** The name of the transaction status table. */
   public static final String TABLE_NAME = "__GLOBAL_TRX_LOG__";
 
-  private static final String INFO_FAMILY = "Info:";
-
   /**
    * Column which holds the transaction status.
    * 
    */
-  private static final String STATUS_COLUMN = INFO_FAMILY + "Status";
-  private static final byte[] STATUS_COLUMN_BYTES = Bytes
-      .toBytes(STATUS_COLUMN);
-
+  private static final byte [] STATUS_FAMILY = Bytes.toBytes("Info");
+  private static final byte [] STATUS_QUALIFIER = Bytes.toBytes("Status");
   /**
    * Create the table.
    * 
@@ -57,7 +52,7 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
    */
   public static void createTable() throws IOException {
     HTableDescriptor tableDesc = new HTableDescriptor(TABLE_NAME);
-    tableDesc.addFamily(new HColumnDescriptor(INFO_FAMILY));
+    tableDesc.addFamily(new HColumnDescriptor(STATUS_FAMILY));
     HBaseAdmin admin = new HBaseAdmin(new HBaseConfiguration());
     admin.createTable(tableDesc);
   }
@@ -99,11 +94,11 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
       if (result == null || result.isEmpty()) {
         return null;
       }
-      byte [] statusCell = result.getValue(STATUS_COLUMN_BYTES);
-      if (statusCell == null) {
+      byte [] statusValue = result.getValue(STATUS_FAMILY, STATUS_QUALIFIER);
+      if (statusValue == null) {
         throw new RuntimeException("No status cell for row " + transactionId);
       }
-      String statusString = Bytes.toString(statusCell);
+      String statusString = Bytes.toString(statusValue);
       return TransactionStatus.valueOf(statusString);
 
     } catch (IOException e) {
@@ -117,11 +112,10 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
 
   public void setStatusForTransaction(long transactionId,
       TransactionStatus status) {
-    Put update = new Put(getRow(transactionId));
-    update.add(STATUS_COLUMN_BYTES, HConstants.LATEST_TIMESTAMP, Bytes.toBytes(status.name()));
-
+    Put put = new Put(getRow(transactionId));
+    put.add(STATUS_FAMILY, STATUS_QUALIFIER, Bytes.toBytes(status.name()));
     try {
-      table.put(update);
+      table.put(put);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -129,7 +123,7 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
 
   public void forgetTransaction(long transactionId) {
     Delete delete = new Delete(getRow(transactionId));
-
+    delete.deleteColumns(STATUS_FAMILY, STATUS_QUALIFIER);
     try {
       table.delete(delete);
     } catch (IOException e) {

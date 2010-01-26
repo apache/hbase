@@ -25,15 +25,14 @@ import java.util.List;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.regionserver.HLog;
-import org.apache.hadoop.hbase.regionserver.HLogKey;
-import org.apache.hadoop.hbase.regionserver.LogRollListener;
-import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.LogRollListener;
 
 /**
  * Add support for transactional operations to the regionserver's
@@ -45,11 +44,6 @@ class THLog extends HLog {
   public THLog(FileSystem fs, Path dir, HBaseConfiguration conf,
       LogRollListener listener) throws IOException {
     super(fs, dir, conf, listener);
-  }
-
-  @Override
-  protected SequenceFile.Writer createWriter(Path path) throws IOException {
-    return super.createWriter(path, THLogKey.class, KeyValue.class);
   }
 
   @Override

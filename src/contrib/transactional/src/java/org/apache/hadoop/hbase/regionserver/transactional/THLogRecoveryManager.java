@@ -40,8 +40,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.transactional.HBaseBackedTransactionLogger;
 import org.apache.hadoop.hbase.client.transactional.TransactionLogger;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -106,12 +106,8 @@ class THLogRecoveryManager {
     Set<Long> commitedTransactions = new HashSet<Long>();
     Set<Long> abortedTransactions = new HashSet<Long>();
 
-    SequenceFile.Reader logReader = new SequenceFile.Reader(fileSystem,
-        reconstructionLog, conf);
-    
-      try {
-      THLogKey key = new THLogKey();
-      KeyValue val = new KeyValue();
+    HLog.Reader reader = HLog.getReader(fileSystem, reconstructionLog, conf);
+    try {
       long skippedEdits = 0;
       long totalEdits = 0;
       long startCount = 0;
@@ -122,7 +118,10 @@ class THLogRecoveryManager {
       int reportInterval = conf.getInt("hbase.hstore.report.interval.edits",
           2000);
 
-      while (logReader.next(key, val)) {
+      HLog.Entry entry;
+      while ((entry = reader.next()) != null) {
+        THLogKey key = (THLogKey)entry.getKey();
+        KeyValue val = entry.getEdit();
         if (LOG.isTraceEnabled()) {
           LOG.trace("Processing edit: key: " + key.toString() + " val: "
               + val.toString());
@@ -199,7 +198,7 @@ class THLogRecoveryManager {
             + " aborts, and " + commitCount + " commits.");
       }
     } finally {
-      logReader.close();
+      reader.close();
     }
 
     if (pendingTransactionsById.size() > 0) {

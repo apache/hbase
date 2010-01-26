@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
+import java.io.File;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -36,6 +37,7 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.search.Similarity;
+import org.apache.lucene.store.FSDirectory;
 
 /**
  * Create a local index, unwrap Lucene documents created by reduce, add them to
@@ -80,8 +82,8 @@ public class IndexOutputFormat extends
     }
 
     // build locally first
-    final IndexWriter writer = new IndexWriter(fs.startLocalOutput(perm, temp)
-        .toString(), analyzer, true);
+    final IndexWriter writer = new IndexWriter(FSDirectory.open(new File(fs.startLocalOutput(perm, temp)
+        .toString())), analyzer, true, IndexWriter.MaxFieldLength.LIMITED);
 
     // no delete, so no need for maxBufferedDeleteTerms
     writer.setMaxBufferedDocs(indexConf.getMaxBufferedDocs());
@@ -105,7 +107,7 @@ public class IndexOutputFormat extends
       boolean closed;
       private long docCount = 0;
 
-      public void write(ImmutableBytesWritable key, 
+      public void write(ImmutableBytesWritable key,
           LuceneDocumentWrapper value)
       throws IOException {
         // unwrap and index doc

@@ -125,7 +125,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
         // mangle the conf so that the fs parameter points to the minidfs we
         // just started up
         FileSystem filesystem = dfsCluster.getFileSystem();
-        conf.set("fs.default.name", filesystem.getUri().toString());      
+        conf.set("fs.defaultFS", filesystem.getUri().toString());      
         Path parentdir = filesystem.getHomeDirectory();
         conf.set(HConstants.HBASE_DIR, parentdir.toString());
         filesystem.mkdirs(parentdir);

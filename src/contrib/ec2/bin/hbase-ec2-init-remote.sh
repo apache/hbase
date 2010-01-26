@@ -98,7 +98,7 @@ cat > $HADOOP_HOME/conf/core-site.xml <<EOF
   <value>/mnt/hadoop</value>
 </property>
 <property>
-  <name>fs.default.name</name>
+  <name>fs.defaultFS</name>
   <value>hdfs://$MASTER_HOST:8020</value>
 </property>
 </configuration>
@@ -108,7 +108,7 @@ cat > $HADOOP_HOME/conf/hdfs-site.xml <<EOF
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
 <property>
-  <name>fs.default.name</name>
+  <name>fs.defaultFS</name>
   <value>hdfs://$MASTER_HOST:8020</value>
 </property>
 <property>

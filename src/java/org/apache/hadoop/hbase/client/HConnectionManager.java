@@ -92,11 +92,12 @@ public class HConnectionManager implements HConstants {
   // synchronized access to them.  We set instances to 31.  The zk default max
   // connections is 30 so should run into zk issues before hit this value of 31.
   private static 
-  final Map<HBaseConfiguration, TableServers> HBASE_INSTANCES =
-    new LinkedHashMap<HBaseConfiguration, TableServers>
+  final Map<Integer, TableServers> HBASE_INSTANCES =
+    new LinkedHashMap<Integer, TableServers>
       ((int) (MAX_CACHED_HBASE_INSTANCES/0.75F)+1, 0.75F, true) {
+      private static final long serialVersionUID = 1L;
       @Override
-      protected boolean removeEldestEntry(Map.Entry<HBaseConfiguration, TableServers> eldest) {
+      protected boolean removeEldestEntry(Map.Entry<Integer, TableServers> eldest) {
         return size() > MAX_CACHED_HBASE_INSTANCES;
       }
   };
@@ -112,11 +113,12 @@ public class HConnectionManager implements HConstants {
    */
   public static HConnection getConnection(HBaseConfiguration conf) {
     TableServers connection;
+    Integer key = conf.hashCode();
     synchronized (HBASE_INSTANCES) {
-      connection = HBASE_INSTANCES.get(conf);
+      connection = HBASE_INSTANCES.get(key);
       if (connection == null) {
         connection = new TableServers(conf);
-        HBASE_INSTANCES.put(conf, connection);
+        HBASE_INSTANCES.put(key, connection);
       }
     }
     return connection;
@@ -683,12 +685,11 @@ public class HConnectionManager implements HConstants {
           if (regionInfoRow == null) {
             throw new TableNotFoundException(Bytes.toString(tableName));
           }
-
           byte [] value = regionInfoRow.getValue(CATALOG_FAMILY, 
               REGIONINFO_QUALIFIER);
           if (value == null || value.length == 0) {
             throw new IOException("HRegionInfo was null or empty in " + 
-              Bytes.toString(parentTable));
+              Bytes.toString(parentTable) + ", row=" + regionInfoRow);
           }
           // convert the row result into the HRegionLocation we need!
           HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(
@@ -1279,10 +1280,8 @@ public class HConnectionManager implements HConstants {
         masterChecked = false;
       }
       if (stopProxy) {
-        synchronized (servers) {
-          for (HRegionInterface i: servers.values()) {
-            HBaseRPC.stopProxy(i);
-          }
+        for (HRegionInterface i: servers.values()) {
+          HBaseRPC.stopProxy(i);
         }
       }
     }

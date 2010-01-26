@@ -249,18 +249,14 @@ public class LocalHBaseCluster implements HConstants {
 
   /**
    * Shut down the mini HBase cluster
+   * @throws IOException 
    */
-  public void shutdown() {
+  public void shutdown() throws IOException {
     LOG.debug("Shutting down HBase Cluster");
-    // Be careful how the hdfs shutdown thread runs in context where more than
-    // one regionserver in the mix.
-    Thread shutdownThread = null;
+    // Be careful about how we shutdown hdfs.  Its done elsewhere.
     synchronized (this.regionThreads) {
       for (RegionServerThread t: this.regionThreads) {
-        Thread tt = t.getRegionServer().setHDFSShutdownThreadOnExit(null);
-        if (shutdownThread == null && tt != null) {
-          shutdownThread = tt;
-        }
+        t.getRegionServer().setShutdownHDFS(false);
       }
     }
     if(this.master != null) {
@@ -291,10 +287,7 @@ public class LocalHBaseCluster implements HConstants {
         }
       }
     }
-    Threads.shutdown(shutdownThread);
-    LOG.info("Shutdown " +
-      ((this.regionThreads != null)? this.master.getName(): "0 masters") +
-      " " + this.regionThreads.size() + " region server(s)");
+    LOG.info("Shutdown " + this.regionThreads.size() + " region server(s)");
   }
 
   /**

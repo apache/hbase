@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,10 +23,10 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
@@ -43,7 +43,7 @@ import org.apache.commons.logging.LogFactory;
  */
 @Deprecated
 public class IndexTableReduce extends MapReduceBase implements
-    Reducer<ImmutableBytesWritable, RowResult, ImmutableBytesWritable, LuceneDocumentWrapper> {
+    Reducer<ImmutableBytesWritable, Result, ImmutableBytesWritable, LuceneDocumentWrapper> {
   private static final Log LOG = LogFactory.getLog(IndexTableReduce.class);
   private IndexConfiguration indexConf;
 
@@ -65,40 +65,37 @@ public class IndexTableReduce extends MapReduceBase implements
     super.close();
   }
 
-  public void reduce(ImmutableBytesWritable key, Iterator<RowResult> values,
+  public void reduce(ImmutableBytesWritable key, Iterator<Result> values,
       OutputCollector<ImmutableBytesWritable, LuceneDocumentWrapper> output,
       Reporter reporter)
   throws IOException {
-    if (!values.hasNext()) {
-      return;
-    }
-
-    Document doc = new Document();
-
-    // index and store row key, row key already UTF-8 encoded
-    Field keyField = new Field(indexConf.getRowkeyName(),
-      Bytes.toString(key.get(), key.getOffset(), key.getLength()),
-      Field.Store.YES, Field.Index.UN_TOKENIZED);
-    keyField.setOmitNorms(true);
-    doc.add(keyField);
-
-    while (values.hasNext()) {
-      RowResult value = values.next();
-
+    Document doc = null;
+    while(values.hasNext()) {
+      Result r = values.next();
+      if (doc == null) {
+        doc = new Document();
+        // index and store row key, row key already UTF-8 encoded
+        Field keyField = new Field(indexConf.getRowkeyName(),
+          Bytes.toString(key.get(), key.getOffset(), key.getLength()),
+          Field.Store.YES, Field.Index.NOT_ANALYZED);
+        keyField.setOmitNorms(true);
+        doc.add(keyField);
+      }
       // each column (name-value pair) is a field (name-value pair)
-      for (Map.Entry<byte [], Cell> entry : value.entrySet()) {
+      for (KeyValue kv: r.list()) {
         // name is already UTF-8 encoded
-        String column = Bytes.toString(entry.getKey());
-        byte[] columnValue = entry.getValue().getValue();
+        String column = Bytes.toString(KeyValue.makeColumn(kv.getFamily(),
+            kv.getQualifier()));
+        byte[] columnValue = kv.getValue();
         Field.Store store = indexConf.isStore(column)?
           Field.Store.YES: Field.Store.NO;
         Field.Index index = indexConf.isIndex(column)?
           (indexConf.isTokenize(column)?
-            Field.Index.TOKENIZED: Field.Index.UN_TOKENIZED):
+            Field.Index.ANALYZED: Field.Index.NOT_ANALYZED):
             Field.Index.NO;
 
         // UTF-8 encode value
-        Field field = new Field(column, Bytes.toString(columnValue), 
+        Field field = new Field(column, Bytes.toString(columnValue),
           store, index);
         field.setBoost(indexConf.getBoost(column));
         field.setOmitNorms(indexConf.isOmitNorms(column));

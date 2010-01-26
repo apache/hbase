@@ -18,10 +18,10 @@
 -->
 
 <project name="hbase" default="jar">
-  <property name="version" value="0.20.4-dev"/>
+  <property name="version" value="0.20.3-0.21.0"/>
   <property name="Name" value="HBase"/>
   <property name="final.name" value="hbase-${version}"/>
-  <property name="year" value="2010"/>
+  <property name="year" value="2009"/>
  
   <!-- Load all the default properties, and any the user wants    -->
   <!-- to contribute (without having to type -D or edit this file -->
@@ -488,7 +488,7 @@
       <sysproperty key="contrib.name" value="${name}"/>
       
       <sysproperty key="user.dir" value="${build.test}/data"/>
-      <sysproperty key="fs.default.name" value="${fs.default.name}"/>
+      <sysproperty key="fs.defaultFS" value="${fs.defaultFS}"/>
       <sysproperty key="hadoop.test.localoutputfile" value="${hadoop.test.localoutputfile}"/>
       <sysproperty key="test.log.dir" value="${hadoop.log.dir}"/> 
       <classpath refid="test.classpath"/>

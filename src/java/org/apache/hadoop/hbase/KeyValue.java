@@ -1184,6 +1184,18 @@ public class KeyValue implements Writable, HeapSize {
   }
   
   /**
+   * Makes a column in family:qualifier form from separate byte arrays.
+   * <p>
+   * Not recommended for usage as this is old-style API.
+   * @param family
+   * @param qualifier
+   * @return family:qualifier
+   */
+  public static byte [] makeColumn(byte [] family, byte [] qualifier) {
+    return Bytes.add(family, COLUMN_FAMILY_DELIM_ARRAY, qualifier);
+  }
+  
+  /**
    * @param b
    * @return Index of the family-qualifier colon delimiter character in passed
    * buffer.

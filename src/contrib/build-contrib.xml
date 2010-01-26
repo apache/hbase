@@ -21,7 +21,7 @@
 
 <project name="hbasebuildcontrib">
 
-  <property name="version" value="0.20.4-dev"/>
+  <property name="version" value="0.20.3-0.21.0"/>
   <property name="name" value="${ant.project.name}"/>
   <property name="root" value="${basedir}"/>
 
@@ -268,7 +268,7 @@
       -->
       <sysproperty key="user.dir" value="${build.test}/data"/>
       
-      <sysproperty key="fs.default.name" value="${fs.default.name}"/>
+      <sysproperty key="fs.defaultFS" value="${fs.defaultFS}"/>
       <sysproperty key="hbase.test.localoutputfile" value="${hbase.test.localoutputfile}"/>
       <sysproperty key="hbase.log.dir" value="${hbase.log.dir}"/> 
       <classpath refid="test.classpath"/>

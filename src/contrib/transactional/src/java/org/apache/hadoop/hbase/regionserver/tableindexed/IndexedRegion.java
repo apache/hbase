@@ -37,7 +37,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Leases;
@@ -49,7 +48,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 import org.apache.hadoop.hbase.client.tableindexed.IndexedTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
-import org.apache.hadoop.hbase.regionserver.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.transactional.TransactionalRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -116,7 +115,12 @@ class IndexedRegion extends TransactionalRegion {
 
     Get oldGet = new Get(put.getRow());
     for (byte [] neededCol : neededColumns) {
-      oldGet.addColumn(neededCol);  
+      byte [][] famQf = KeyValue.parseColumn(neededCol);
+      if(famQf.length == 1) {
+        oldGet.addFamily(famQf[0]);
+      } else {
+        oldGet.addColumn(famQf[0], famQf[1]);
+      }
     }
     
     Result oldResult = super.get(oldGet, lockId);
@@ -124,8 +128,10 @@ class IndexedRegion extends TransactionalRegion {
     // Add the old values to the new if they are not there
     if (oldResult != null && oldResult.raw() != null) {
       for (KeyValue oldKV : oldResult.raw()) {
-        if (!newColumnValues.containsKey(oldKV.getColumn())) {
-          newColumnValues.put(oldKV.getColumn(), oldKV.getValue());
+        byte [] column = KeyValue.makeColumn(oldKV.getFamily(), 
+            oldKV.getQualifier());
+        if (!newColumnValues.containsKey(column)) {
+          newColumnValues.put(column, oldKV.getValue());
         }
       }
     }
@@ -181,7 +187,8 @@ class IndexedRegion extends TransactionalRegion {
         Bytes.BYTES_COMPARATOR);
     for (List<KeyValue> familyPuts : put.getFamilyMap().values()) {
       for (KeyValue kv : familyPuts) {
-        columnValues.put(kv.getColumn(), kv.getValue());
+        byte [] column = KeyValue.makeColumn(kv.getFamily(), kv.getQualifier());
+        columnValues.put(column, kv.getValue());
       }
     }
     return columnValues;
@@ -196,7 +203,8 @@ class IndexedRegion extends TransactionalRegion {
   private boolean possiblyAppliesToIndex(IndexSpecification indexSpec, Put put) {
     for (List<KeyValue> familyPuts : put.getFamilyMap().values()) {
       for (KeyValue kv : familyPuts) {
-        if (indexSpec.containsColumn(kv.getColumn())) {
+        byte [] column = KeyValue.makeColumn(kv.getFamily(), kv.getQualifier());
+        if (indexSpec.containsColumn(column)) {
           return true;
         }
       }
@@ -227,7 +235,12 @@ class IndexedRegion extends TransactionalRegion {
 
       Get get = new Get(delete.getRow());
       for (byte [] col : neededColumns) {
-       get.addColumn(col);
+        byte [][] famQf = KeyValue.parseColumn(col);
+        if(famQf.length == 1) {
+          get.addFamily(famQf[0]);
+        } else {
+          get.addColumn(famQf[0], famQf[1]);
+        }
       }
       
       Result oldRow = super.get(get, lockid);
@@ -267,7 +280,8 @@ class IndexedRegion extends TransactionalRegion {
     List<KeyValue> list = result.list();
     if (list != null) {
       for(KeyValue kv : result.list()) {
-        currentColumnValues.put(kv.getColumn(), kv.getValue());
+        byte [] column = KeyValue.makeColumn(kv.getFamily(), kv.getQualifier());
+        currentColumnValues.put(column, kv.getValue());
       }
     }
     return currentColumnValues;

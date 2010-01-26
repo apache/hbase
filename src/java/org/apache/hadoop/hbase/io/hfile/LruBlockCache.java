@@ -366,7 +366,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
         long overflow = bucket.overflow();
         if(overflow > 0) {
           long bucketBytesToFree = Math.min(overflow,
-            (long)Math.ceil((bytesToFree - bytesFreed) / remainingBuckets));
+            (bytesToFree - bytesFreed) / remainingBuckets);
           bytesFreed += bucket.free(bucketBytesToFree);
         } 
         remainingBuckets--;
@@ -644,8 +644,9 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
   
   public static long calculateOverhead(long maxSize, long blockSize, int concurrency){
+    // FindBugs ICAST_INTEGER_MULTIPLY_CAST_TO_LONG
     return CACHE_FIXED_OVERHEAD + ClassSize.CONCURRENT_HASHMAP +
-        ((int)Math.ceil(maxSize*1.2/blockSize) 
+        ((long)Math.ceil(maxSize*1.2/blockSize) 
             * ClassSize.CONCURRENT_HASHMAP_ENTRY) +
         (concurrency * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
   }

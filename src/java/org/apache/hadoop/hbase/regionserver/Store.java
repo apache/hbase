@@ -55,6 +55,8 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -163,11 +165,15 @@ public class Store implements HConstants, HeapSize {
     final Progressable reporter)
   throws IOException {
     HRegionInfo info = region.regionInfo;
+    this.fs = fs;
     this.homedir = getStoreHomedir(basedir, info.getEncodedName(),
       family.getName());
+    if (!this.fs.exists(this.homedir)) {
+      if (!this.fs.mkdirs(this.homedir))
+        throw new IOException("Failed create of: " + this.homedir.toString());
+    }
     this.region = region;
     this.family = family;
-    this.fs = fs;
     this.conf = conf;
     this.blockcache = family.isBlockCacheEnabled();
     this.blocksize = family.getBlocksize();

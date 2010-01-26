@@ -36,8 +36,8 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -333,7 +333,7 @@ public class Merge extends Configured implements Tool {
    *
    * @throws IOException
    */
-  private int parseArgs(String[] args) {
+  private int parseArgs(String[] args) throws IOException {
     GenericOptionsParser parser =
       new GenericOptionsParser(this.getConf(), args);
     

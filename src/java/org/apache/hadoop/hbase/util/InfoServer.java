@@ -23,10 +23,8 @@ import java.util.Map;
 
 import org.apache.hadoop.http.HttpServer;
 import org.mortbay.jetty.handler.ContextHandlerCollection;
-import org.mortbay.jetty.handler.HandlerCollection;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
-import org.mortbay.jetty.webapp.WebAppContext;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -50,19 +48,7 @@ public class InfoServer extends HttpServer {
   public InfoServer(String name, String bindAddress, int port, boolean findPort)
   throws IOException {
     super(name, bindAddress, port, findPort);
-
-    HandlerCollection handlers =
-        new ContextHandlerCollection();
-
-    if (name.equals("master")) {
-      // Put up the rest webapp.
-      WebAppContext wac = new WebAppContext();
-      wac.setContextPath("/api");
-      wac.setWar(getWebAppDir("rest"));
-
-      handlers.addHandler(wac);
-    }
-    webServer.addHandler(handlers);
+    webServer.addHandler(new ContextHandlerCollection());
   }
 
   protected void addDefaultApps(ContextHandlerCollection parent, String appDir)
@@ -78,7 +64,9 @@ public class InfoServer extends HttpServer {
         break;
       }
     }
-    defaultContexts.put(oldLogsContext, Boolean.FALSE);
+    if (oldLogsContext != null) {
+      this.defaultContexts.put(oldLogsContext, Boolean.FALSE);
+    }
     // Now do my logs.
     // set up the context for "/logs/" if "hadoop.log.dir" property is defined. 
     String logDir = System.getProperty("hbase.log.dir");

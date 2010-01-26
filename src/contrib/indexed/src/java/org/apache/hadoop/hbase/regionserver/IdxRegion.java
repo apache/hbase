@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.idx.IdxScan;
 import org.apache.hadoop.hbase.client.idx.exp.Expression;
 import org.apache.hadoop.hbase.regionserver.idx.support.sets.IntSet;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.metrics.util.MBeanUtil;

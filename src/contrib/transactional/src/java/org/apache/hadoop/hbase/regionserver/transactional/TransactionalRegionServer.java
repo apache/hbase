@@ -39,10 +39,10 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.transactional.TransactionalRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
-import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.util.Progressable;
@@ -108,6 +108,8 @@ public class TransactionalRegionServer extends HRegionServer implements
 
   @Override
   protected HLog instantiateHLog(Path logdir) throws IOException {
+    conf.set("hbase.regionserver.hlog.keyclass",
+        THLogKey.class.getCanonicalName());
     HLog newlog = new THLog(super.getFileSystem(), logdir, conf, super.getLogRoller());
     return newlog;
   }

@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -119,8 +119,8 @@ public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
   @Override
   public int hashCode() {
     int result = Bytes.hashCode(this.regionName);
-    result ^= (int)this.logSeqNum;
-    result ^= (int)this.writeTime;
+    result ^= this.logSeqNum;
+    result ^= this.writeTime;
     return result;
   }
 

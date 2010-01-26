@@ -17,12 +17,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
@@ -31,9 +35,6 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.SequenceFile.Reader;
-
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
@@ -42,7 +43,12 @@ public class TestHLog extends HBaseTestCase implements HConstants {
 
   @Override
   public void setUp() throws Exception {
-    cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    // Enable append for these tests.
+    this.conf.setBoolean("dfs.support.append", true);
+    // Make block sizes small.
+    this.conf.setInt("dfs.blocksize", 1024 * 1024);
+    this.conf.setInt("hbase.regionserver.flushlogentries", 1);
+    cluster = new MiniDFSCluster(conf, 3, true, (String[])null);
     // Set the hbase.rootdir to be the home directory in mini dfs.
     this.conf.set(HConstants.HBASE_DIR,
       this.cluster.getFileSystem().getHomeDirectory().toString());
@@ -78,9 +84,11 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         for (int i = 0; i < howmany; i++) {
           for (int j = 0; j < howmany; j++) {
             List<KeyValue> edit = new ArrayList<KeyValue>();
+            byte [] family = Bytes.toBytes("column");
+            byte [] qualifier = Bytes.toBytes(Integer.toString(j));
             byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
-            edit.add(new KeyValue(rowName, column, System.currentTimeMillis(),
-              column));
+            edit.add(new KeyValue(rowName, family, qualifier, 
+                System.currentTimeMillis(), column));
             System.out.println("Region " + i + ": " + edit);
             log.append(Bytes.toBytes("" + i), tableName, edit,
               System.currentTimeMillis());
@@ -99,19 +107,123 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     }
   }
 
+  /**
+   * Test new HDFS-265 sync.
+   * @throws Exception
+   */
+  public void testSync() throws Exception {
+    byte [] bytes = Bytes.toBytes(getName());
+    // First verify that using streams all works.
+    Path p = new Path(this.dir, getName() + ".fsdos");
+    FSDataOutputStream out = fs.create(p);
+    out.write(bytes);
+    out.sync();
+    FSDataInputStream in = fs.open(p);
+    assertTrue(in.available() > 0);
+    byte [] buffer = new byte [1024];
+    int read = in.read(buffer);
+    assertEquals(bytes.length, read);
+    out.close();
+    in.close();
+    Path subdir = new Path(this.dir, "hlogdir");
+    HLog wal = new HLog(this.fs, subdir, this.conf, null);
+    final int total = 20;
+    for (int i = 0; i < total; i++) {
+      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
+      wal.append(bytes, bytes, kvs, System.currentTimeMillis());
+    }
+    // Now call sync and try reading.  Opening a Reader before you sync just
+    // gives you EOFE.
+    wal.sync();
+    // Open a Reader.
+    Path walPath = wal.computeFilename(wal.getFilenum());
+    HLog.Reader reader = HLog.getReader(fs, walPath, conf);
+    int count = 0;
+    HLog.Entry entry = new HLog.Entry();
+    while ((entry = reader.next(entry)) != null) count++;
+    assertEquals(total, count);
+    reader.close();
+    // Add test that checks to see that an open of a Reader works on a file
+    // that has had a sync done on it.
+    for (int i = 0; i < total; i++) {
+      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
+      wal.append(bytes, bytes, kvs, System.currentTimeMillis());
+    }
+    reader = HLog.getReader(fs, walPath, conf);
+    count = 0;
+    while((entry = reader.next(entry)) != null) count++;
+    assertTrue(count >= total);
+    reader.close();
+    // If I sync, should see double the edits.
+    wal.sync();
+    reader = HLog.getReader(fs, walPath, conf);
+    count = 0;
+    while((entry = reader.next(entry)) != null) count++;
+    assertEquals(total * 2, count);
+    // Now do a test that ensures stuff works when we go over block boundary,
+    // especially that we return good length on file.
+    final byte [] value = new byte[1025 * 1024];  // Make a 1M value.
+    for (int i = 0; i < total; i++) {
+      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      kvs.add(new KeyValue(Bytes.toBytes(i), bytes, value));
+      wal.append(bytes, bytes, kvs, System.currentTimeMillis());
+    }
+    // Now I should have written out lots of blocks.  Sync then read.
+    wal.sync();
+    reader = HLog.getReader(fs, walPath, conf);
+    count = 0;
+    while((entry = reader.next(entry)) != null) count++;
+    assertEquals(total * 3, count);
+    reader.close();
+    // Close it and ensure that closed, Reader gets right length also.
+    wal.close();
+    reader = HLog.getReader(fs, walPath, conf);
+    count = 0;
+    while((entry = reader.next(entry)) != null) count++;
+    assertEquals(total * 3, count);
+    reader.close();
+  }
+
+  /**
+   * Test the findMemstoresWithEditsOlderThan method.
+   * @throws IOException
+   */
+  public void testFindMemstoresWithEditsOlderThan() throws IOException {
+    Map<byte [], Long> regionsToSeqids = new HashMap<byte [], Long>();
+    for (int i = 0; i < 10; i++) {
+      Long l = Long.valueOf(i);
+      regionsToSeqids.put(l.toString().getBytes(), l);
+    }
+    byte [][] regions =
+      HLog.findMemstoresWithEditsOlderThan(1, regionsToSeqids);
+    assertEquals(1, regions.length);
+    assertTrue(Bytes.equals(regions[0], "0".getBytes()));
+    regions = HLog.findMemstoresWithEditsOlderThan(3, regionsToSeqids);
+    int count = 3;
+    assertEquals(count, regions.length);
+    // Regions returned are not ordered.
+    for (int i = 0; i < count; i++) {
+      assertTrue(Bytes.equals(regions[i], "0".getBytes()) ||
+        Bytes.equals(regions[i], "1".getBytes()) ||
+        Bytes.equals(regions[i], "2".getBytes()));
+    }
+  }
+ 
   private void verifySplits(List<Path> splits, final int howmany)
   throws IOException {
     assertEquals(howmany, splits.size());
     for (int i = 0; i < splits.size(); i++) {
-      SequenceFile.Reader r =
-        new SequenceFile.Reader(this.fs, splits.get(i), this.conf);
+      HLog.Reader reader = HLog.getReader(this.fs, splits.get(i), conf);
       try {
-        HLogKey key = new HLogKey();
-        KeyValue kv = new KeyValue();
         int count = 0;
         String previousRegion = null;
         long seqno = -1;
-        while(r.next(key, kv)) {
+        HLog.Entry entry = new HLog.Entry();
+        while((entry = reader.next(entry)) != null) {
+          HLogKey key = entry.getKey();
+          KeyValue kv = entry.getEdit();
           String region = Bytes.toString(key.getRegionName());
           // Assert that all edits are for same region.
           if (previousRegion != null) {
@@ -125,20 +237,21 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         }
         assertEquals(howmany * howmany, count);
       } finally {
-        r.close();
+        reader.close();
       }
     }
   }
 
   /**
+   * Tests that we can write out an edit, close, and then read it back in again.
    * @throws IOException
    */
-  public void testAppend() throws IOException {
+  public void testEditAdd() throws IOException {
     final int COL_COUNT = 10;
     final byte [] regionName = Bytes.toBytes("regionname");
     final byte [] tableName = Bytes.toBytes("tablename");
     final byte [] row = Bytes.toBytes("row");
-    Reader reader = null;
+    HLog.Reader reader = null;
     HLog log = new HLog(fs, dir, this.conf, null);
     try {
       // Write columns named 1, 2, 3, etc. and then values of single byte
@@ -146,7 +259,8 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       long timestamp = System.currentTimeMillis();
       List<KeyValue> cols = new ArrayList<KeyValue>();
       for (int i = 0; i < COL_COUNT; i++) {
-        cols.add(new KeyValue(row, Bytes.toBytes("column:" + Integer.toString(i)),
+        cols.add(new KeyValue(row, Bytes.toBytes("column"), 
+            Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[] { (byte)(i + '0') }));
       }
       log.append(regionName, tableName, cols, System.currentTimeMillis());
@@ -156,18 +270,21 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       Path filename = log.computeFilename(log.getFilenum());
       log = null;
       // Now open a reader on the log and assert append worked.
-      reader = new SequenceFile.Reader(fs, filename, conf);
-      HLogKey key = new HLogKey();
-      KeyValue val = new KeyValue();
+      reader = HLog.getReader(fs, filename, conf);
+      HLog.Entry entry = new HLog.Entry();
       for (int i = 0; i < COL_COUNT; i++) {
-        reader.next(key, val);
+        reader.next(entry);
+        HLogKey key = entry.getKey();
+        KeyValue val = entry.getEdit();
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
         assertTrue(Bytes.equals(row, val.getRow()));
         assertEquals((byte)(i + '0'), val.getValue()[0]);
         System.out.println(key + " " + val);
       }
-      while (reader.next(key, val)) {
+      while ((entry = reader.next(null)) != null) {
+        HLogKey key = entry.getKey();
+        KeyValue val = entry.getEdit();
         // Assert only one more row... the meta flushed row.
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));

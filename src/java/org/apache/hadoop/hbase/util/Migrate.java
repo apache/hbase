@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.migration.nineteen.io.BloomFilterMapFile;
 import org.apache.hadoop.hbase.migration.nineteen.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -115,7 +114,7 @@ public class Migrate extends Configured implements Tool {
   }
 
   /*
-   * Sets the hbase rootdir as fs.default.name.
+   * Sets the hbase rootdir as fs.defaultFS.
    * @return True if succeeded.
    */
   private boolean setFsDefaultName() {
@@ -130,7 +129,7 @@ public class Migrate extends Configured implements Tool {
           " configuration parameter '" + HConstants.HBASE_DIR + "'", e);
       return false;
     }
-    getConf().set("fs.default.name", rd.toString());
+    getConf().set("fs.defaultFS", rd.toString());
     return true;
   }
 
@@ -163,7 +162,7 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  public int run(String[] args) {
+  public int run(String[] args) throws IOException {
     if (parseArgs(args) != 0) {
       return -1;
     }
@@ -511,7 +510,7 @@ public class Migrate extends Configured implements Tool {
     return result;
   }
 
-  private int parseArgs(String[] args) {
+  private int parseArgs(String[] args) throws IOException {
     Options opts = new Options();
     GenericOptionsParser parser =
       new GenericOptionsParser(this.getConf(), opts, args);
