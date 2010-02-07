@@ -74,7 +74,8 @@ Release 0.20.3 - January 25th, 2010
                (Gary Helmling via Stack)
    HBASE-2156  HBASE-2037 broke Scan
    HBASE-2057  Cluster won't stop (Gary Helmling and JD via JD)
-   HBASE-2160  Can't put with ts in she
+   HBASE-2160  Can't put with ts in shell
+   HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
 
   IMPROVEMENTS
    HBASE-1970  Export does one version only; make it configurable how many
