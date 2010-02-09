@@ -7,6 +7,7 @@ Release 0.20.4 - Unreleased
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
+   HBASE-2185  Add html version of default hbase-site.xml (Kay Kay via Stack)
 
   NEW FEATURES
 
