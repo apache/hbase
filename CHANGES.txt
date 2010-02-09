@@ -4,6 +4,7 @@ Release 0.20.4 - Unreleased
   INCOMPATIBLE CHANGES
 
   BUG FIXES
+   HBASE-2173  New idx javadoc not included with the rest
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
