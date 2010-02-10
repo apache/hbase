@@ -125,6 +125,8 @@ Release 0.20.3 - January 25th, 2010
    HBASE-2157  LATEST_TIMESTAMP not replaced by current timestamp in KeyValue
                (bulk loading)
    HBASE-2144  Now does \x20 for spaces
+   HBASE-2198  SingleColumnValueFilter should be able to find the column
+               value even when it's not specifically added as input on the scan
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
