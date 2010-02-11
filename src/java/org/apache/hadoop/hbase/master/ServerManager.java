@@ -455,7 +455,13 @@ class ServerManager implements HConstants {
           break;
 
         case MSG_REPORT_SPLIT:
-          processSplitRegion(region, incomingMsgs[++i], incomingMsgs[++i]);
+          processSplitRegion(region, incomingMsgs[++i].getRegionInfo(),
+            incomingMsgs[++i].getRegionInfo());
+          break;
+        
+        case MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS:
+          processSplitRegion(region, incomingMsgs[i].getDaughterA(),
+            incomingMsgs[i].getDaughterB());
           break;
 
         default:
@@ -497,14 +503,14 @@ class ServerManager implements HConstants {
    * @param splitB
    * @param returnMsgs
    */
-  private void processSplitRegion(HRegionInfo region, HMsg splitA, HMsg splitB) {
+  private void processSplitRegion(HRegionInfo region, HRegionInfo a, HRegionInfo b) {
     synchronized (master.regionManager) {
       // Cancel any actions pending for the affected region.
       // This prevents the master from sending a SPLIT message if the table
       // has already split by the region server. 
       master.regionManager.endActions(region.getRegionName());
-      assignSplitDaughter(splitA.getRegionInfo());
-      assignSplitDaughter(splitB.getRegionInfo());
+      assignSplitDaughter(a);
+      assignSplitDaughter(b);
       if (region.isMetaTable()) {
         // A meta region has split.
         master.regionManager.offlineMetaRegion(region.getStartKey());
