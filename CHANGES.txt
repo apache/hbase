@@ -12,6 +12,9 @@ Release 0.20.4 - Unreleased
    HBASE-2189  HCM trashes meta cache even when not needed
    HBASE-2190  HRS should report to master when HMsg are available
    HBASE-2177  Use datestamp timestamping gc logging.
+   HBASE-2222  Improve log "Trying to contact region server Some server for
+               region, row 'ip_info_100,,1263329969690', but failed after
+               11 attempts".
 
   NEW FEATURES
 
