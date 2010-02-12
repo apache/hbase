@@ -5,6 +5,8 @@ Release 0.20.4 - Unreleased
 
   BUG FIXES
    HBASE-2173  New idx javadoc not included with the rest
+   HBASE-2199  hbase.client.tableindexed.IndexSpecification,
+               lines 72-73 should be reversed (Adrian Popescu via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
