@@ -11,6 +11,7 @@ Release 0.20.4 - Unreleased
    HBASE-2185  Add html version of default hbase-site.xml (Kay Kay via Stack)
    HBASE-2189  HCM trashes meta cache even when not needed
    HBASE-2190  HRS should report to master when HMsg are available
+   HBASE-2177  Use datestamp timestamping gc logging.
 
   NEW FEATURES
 
