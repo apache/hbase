@@ -7,6 +7,16 @@ Release 0.20.4 - Unreleased
    HBASE-2173  New idx javadoc not included with the rest
    HBASE-2199  hbase.client.tableindexed.IndexSpecification,
                lines 72-73 should be reversed (Adrian Popescu via Stack)
+   HBASE-2202  IdxRegion crash when binary characters
+   HBASE-2203  [IHBase] Include only those columns required for indexed scan
+   HBASE-2204  [IHBASE] Index expression evaluation should fail with a
+               DoNotRetryException in case of an invalid index specification
+   HBASE-2205  [IHBASE] Updated Idx pacakge javadocs
+   HBASE-2206  [IHBASE] Idx memory allocation fix
+   HBASE-2207  [IHBASE] Index partial column values
+   HBASE-2227  [IHBASE] Idx Expression functionality is incompatible with
+               SingleColumnValueFilter
+   HBASE-2167  PE for IHBase
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream

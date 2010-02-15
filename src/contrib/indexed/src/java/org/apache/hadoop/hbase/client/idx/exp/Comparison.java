@@ -34,6 +34,7 @@ public class Comparison extends Expression {
   private byte[] qualifier;
   private Operator operator;
   private byte[] value;
+  private boolean includeMissing = true;
 
   /**
    * No args constructor.
@@ -53,14 +54,46 @@ public class Comparison extends Expression {
   }
 
   /**
-   * Full constructor with all required fields.
+   * Convenience constrcutor that takes strings and converts from to byte[].
+   *
    * @param columnName the column name
    * @param qualifier  the column qualifier
    * @param operator   the operator
    * @param value      the value
+   * @param includeMissing include missing ids
+   */
+  public Comparison(String columnName, String qualifier, Operator operator,
+    byte[] value, boolean includeMissing) {
+    this(Bytes.toBytes(columnName), Bytes.toBytes(qualifier), operator,
+      value, includeMissing);
+  }
+
+  /**
+   * Partial constructor with all required fields.
+   *
+   * @param columnName     the column name
+   * @param qualifier      the column qualifier
+   * @param operator       the operator
+   * @param value          the value
    */
   public Comparison(byte[] columnName, byte[] qualifier, Operator operator,
-                    byte[] value) {
+    byte[] value) {
+    this(columnName, qualifier, operator, value, true);
+  }
+
+  /**
+   * Full constructor with all fields.
+   *
+   * @param columnName     the column name
+   * @param qualifier      the column qualifier
+   * @param operator       the operator
+   * @param value          the value
+   * @param includeMissing should the comparison result include ids which are
+   *                       missing from the index. Same idea as {@link org.apache.hadoop.hbase.filter.SingleColumnValueFilter#filterIfMissing}.
+   *                       Default value is true.
+   */
+  public Comparison(byte[] columnName, byte[] qualifier, Operator operator,
+    byte[] value, boolean includeMissing) {
     assert columnName != null : "The columnName must not be null";
     assert qualifier != null : "The qualifier must not be null";
     assert operator != null : "The operator must not be null";
@@ -70,6 +103,7 @@ public class Comparison extends Expression {
     this.qualifier = qualifier;
     this.operator = operator;
     this.value = value;
+    this.includeMissing = includeMissing;
   }
 
   /**
@@ -103,6 +137,15 @@ public class Comparison extends Expression {
    */
   public byte[] getValue() {
     return value;
+  }
+
+  /**
+   * Gets whether to include missing columns or not.
+   *
+   * @return true to include missing columns.
+   */
+  public boolean getIncludeMissing() {
+    return includeMissing;
   }
 
   /**
@@ -163,24 +206,28 @@ public class Comparison extends Expression {
    */
   public enum Operator {
     /**
-     * The equals function.
+     * The equals operator.
      */
     EQ,
     /**
-     * The greater than function.
+     * The greater than operator.
      */
     GT,
     /**
-     * The greater than or equals function.
+     * The greater than or equals operator.
      */
     GTE,
     /**
-     * The less than function.
+     * The less than operator.
      */
     LT,
     /**
-     * The less than or equals function.
+     * The less than or equals operator.
      */
-    LTE
+    LTE,
+    /**
+     * The not equals operator.
+     */
+    NEQ,
   }
 }

@@ -20,8 +20,7 @@
 package org.apache.hadoop.hbase.client.idx;
 
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.VersionedWritable;
 import org.apache.hadoop.io.WritableUtils;
 
 import java.io.DataInput;
@@ -31,8 +30,28 @@ import java.util.Arrays;
 
 /**
  * The description of an indexed column family qualifier.
+ * <p>
+ * The description is composed of the following properties:
+ * <ol>
+ * <li> The qualifier name - specified which qualifier to index. The values
+ * stored to this qualifier will serve as index keys.
+ * <li>  The qualifier type - type information for the qualifier. The type
+ * information allows for custom ordering of index keys (which are qualifier
+ * values) which may come handy when range queries are executed.
+ * <li> offset - combine this property with the length property to allow partial
+ * value extraction. Useful for keeping the index size small while for qualifiers
+ * with large values. the offset specifies the starting point in the value from
+ * which to extract the index key
+ * <li> length - see also offset's description, the length property allows
+ * to limit the number of bytes extracted to serve as index keys. If the bytes
+ * are random a length of 1 or 2 bytes would yield very good results.
+ * </ol>
+ * </p>
  */
-public class IdxIndexDescriptor implements Writable {
+public class IdxIndexDescriptor extends VersionedWritable {
+
+  private static final byte VERSION = 1;
+
   /**
    * Qualifier name;
    */
@@ -43,6 +62,18 @@ public class IdxIndexDescriptor implements Writable {
    * properties. 
    */
   private IdxQualifierType qualifierType;
+
+  /**
+   * Where to grab the column qualifier's value from. The default is from
+   * its first byte.
+   */
+  private int offset = 0;
+
+  /**
+   * Up-to where to grab the column qualifier's value. The default is
+   * all of it. A positive number would indicate a set limit.
+   */
+  private int length = -1;
 
   /**
    * Empty constructor to support the writable interface - DO NOT USE.
@@ -59,6 +90,22 @@ public class IdxIndexDescriptor implements Writable {
     IdxQualifierType qualifierType) {
     this.qualifierName = qualifierName;
     this.qualifierType = qualifierType;
+  }
+
+  /**
+   * Construct a new index descriptor.
+   *
+   * @param qualifierName the qualifier name
+   * @param qualifierType the qualifier type
+   * @param offset        the offset (from kv value start) from which to extract the
+   *                      index key
+   * @param length        the length to extract (everything by default)
+   */
+  public IdxIndexDescriptor(byte[] qualifierName, IdxQualifierType qualifierType,
+    int offset, int length) {
+    this(qualifierName, qualifierType);
+    this.offset = offset;
+    this.length = length;
   }
 
   /**
@@ -94,12 +141,51 @@ public class IdxIndexDescriptor implements Writable {
   }
 
   /**
+   * The offset from which to extract the values.
+   *
+   * @return the current offset value.
+   */
+  public int getOffset() {
+    return offset;
+  }
+
+  /**
+   * Sets the offset
+   *
+   * @param offset the offset from which to extract the values.
+   */
+  public void setOffset(int offset) {
+    this.offset = offset;
+  }
+
+  /**
+   * The length of the block extracted from the qualifier's value.
+   *
+   * @return the length of the extracted value
+   */
+  public int getLength() {
+    return length;
+  }
+
+  /**
+   * The length of the extracted value.
+   *
+   * @param length the length of the extracted value.
+   */
+  public void setLength(int length) {
+    this.length = length;
+  }
+
+  /**
    * {@inheritDoc}
    */
   @Override
   public void write(DataOutput dataOutput) throws IOException {
+    super.write(dataOutput);
     Bytes.writeByteArray(dataOutput, qualifierName);
     WritableUtils.writeEnum(dataOutput, qualifierType);
+    dataOutput.writeInt(offset);
+    dataOutput.writeInt(length);
   }
 
   /**
@@ -107,8 +193,19 @@ public class IdxIndexDescriptor implements Writable {
    */
   @Override
   public void readFields(DataInput dataInput) throws IOException {
+    super.readFields(dataInput);
     qualifierName = Bytes.readByteArray(dataInput);
     qualifierType = WritableUtils.readEnum(dataInput, IdxQualifierType.class);
+    this.offset = dataInput.readInt();
+    this.length = dataInput.readInt();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public byte getVersion() {
+    return VERSION;
   }
 
   /**
@@ -122,6 +219,12 @@ public class IdxIndexDescriptor implements Writable {
     IdxIndexDescriptor that = (IdxIndexDescriptor) o;
 
     if (!Arrays.equals(qualifierName, that.qualifierName)) return false;
+
+    if (this.qualifierType != that.qualifierType) return false;
+
+    if (this.offset != that.offset) return false;
+
+    if (this.length != that.length) return false;
 
     return true;
   }

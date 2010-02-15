@@ -69,13 +69,49 @@ public abstract class Expression implements Writable {
   /**
    * Creates and returns an {@link Comparison}
    * instance.
-   * @param family the column family name
-   * @param qualifier  the qualifier
-   * @param operator   the operator
-   * @param value      the value
+   *
+   * @param family         the column family name
+   * @param qualifier      the qualifier
+   * @param operator       the operator
+   * @param value          the value
+   * @param includeMissing include ids missing from the index.
+   *                       Same idea as {@link org.apache.hadoop.hbase.filter.SingleColumnValueFilter#filterIfMissing}.
+   *                       true by default
+   * @return the instance
+   */
+  public static Comparison comparison(byte[] family, byte[] qualifier, Comparison.Operator operator, byte[] value, boolean includeMissing) {
+    return new Comparison(family, qualifier, operator, value, includeMissing);
+  }
+
+  /**
+   * Creates and returns an {@link Comparison}
+   * instance.
+   *
+   * @param family    the column family name
+   * @param qualifier the qualifier
+   * @param operator  the operator
+   * @param value     the value
    * @return the instance
    */
   public static Comparison comparison(String family, String qualifier, Comparison.Operator operator, byte[] value) {
     return new Comparison(family, qualifier, operator, value);
   }
+
+  /**
+   * Creates and returns an {@link Comparison}
+   * instance.
+   *
+   * @param family         the column family name
+   * @param qualifier      the qualifier
+   * @param operator       the operator
+   * @param value          the value
+   * @param includeMissing include ids missing from the index.
+   *                       Same idea as {@link org.apache.hadoop.hbase.filter.SingleColumnValueFilter#filterIfMissing}.
+   *                       true by default
+   * @return the instance
+   */
+  public static Comparison comparison(String family, String qualifier, Comparison.Operator operator, byte[] value, boolean includeMissing) {
+    return new Comparison(family, qualifier, operator, value, includeMissing);
+  }
+
 }

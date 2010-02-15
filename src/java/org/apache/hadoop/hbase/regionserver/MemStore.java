@@ -590,6 +590,15 @@ public class MemStore implements HeapSize {
   }
 
   /**
+   * Get an estimate of the number of key values stored in this store.
+   *
+   * @return the number of key/values in this memstore.
+   */
+  public int numKeyValues() {
+    return kvset.size() + snapshot.size();
+  }
+
+  /**
    * Code to help figure if our approximation of object heap sizes is close
    * enough.  See hbase-900.  Fills memstores then waits so user can heap
    * dump and bring up resultant hprof in something like jprofiler which

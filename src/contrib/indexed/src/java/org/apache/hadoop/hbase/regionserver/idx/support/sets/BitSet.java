@@ -177,12 +177,14 @@ class BitSet extends IntSetBase {
    */
   @Override
   public IntSet complement() {
-    size = -1;
-    for (int i = 0; i < words.length; i++) {
-      words[i] = ~words[i];
+    if (capacity > 0) {
+      size = -1;
+      for (int i = 0; i < words.length; i++) {
+        words[i] = ~words[i];
+      }
+      words[words.length - 1] ^= capacity % WORD_BIT_COUNT == 0 ?
+        0 : -1L << capacity;  // get rid of the trailing ones
     }
-    words[words.length - 1] ^= capacity % WORD_BIT_COUNT == 0 ?
-      0 : -1L << capacity;  // get rid of the trailing ones
     return this;
   }
 

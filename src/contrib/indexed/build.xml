@@ -19,19 +19,32 @@
 
 <!-- 
 Before you can run these subtargets directly, you need 
-to call at top-level: ant deploy-contrib compile-core-test
+to call at top-level: ant compile-core-test
 -->
 <project name="indexed" default="jar">
   <import file="../build-contrib.xml"/>
 
-  <property name="lib.dir" value="${basedir}/lib"/> 
+  <property name="lib.dir" value="${basedir}/lib"/>
+
+  <!-- Override ../build-contrib.xml jar -->
+  <target name="jar" depends="compile, compile-test" unless="skip.contrib">
+    <echo message="contrib: ${name}"/>
+    <jar
+      jarfile="${build.dir}/hbase-${version}-${name}.jar"
+      basedir="${build.classes}"
+    />
+    <jar jarfile="${build.dir}/hbase-${version}-${name}-test.jar" >
+      <fileset dir="${build.test}" includes="org/**" />
+      <fileset dir="${src.test}" includes="**/*.properties" />
+    </jar>
+  </target>
 
   <!--Override ../build-contrib.xml package-->
   <target name="package" depends="jar" unless="skip.contrib">
     <mkdir dir="${dist.dir}/contrib/${name}"/>
     <copy todir="${dist.dir}/contrib/${name}" includeEmptyDirs="false" flatten="true">
       <fileset dir="${build.dir}">
-        <include name="hbase-${version}-${name}.jar" />
+        <include name="hbase-${version}-${name}*.jar" />
       </fileset>
     </copy>
     <mkdir dir="${dist.dir}/contrib/${name}/lib"/>

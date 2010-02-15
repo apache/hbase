@@ -36,8 +36,7 @@ public class TestSparseBitSet extends IntSetBaseTestCase {
    * FIXED SIZE constant.
    */
   public void testHeapSize() {
-    assertEquals(ClassSize.estimateBase(SparseBitSet.class, false),
-      SparseBitSet.FIXED_SIZE);
+    assertEquals(ClassSize.estimateBase(SparseBitSet.class, false), SparseBitSet.FIXED_SIZE);
   }
 
 }

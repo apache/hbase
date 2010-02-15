@@ -22,9 +22,8 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.idx.IdxIndexDescriptor;
-import org.apache.hadoop.hbase.regionserver.idx.support.arrays.BinarySearch;
-import org.apache.hadoop.hbase.regionserver.idx.support.arrays.ObjectArrayList;
 import org.apache.hadoop.hbase.regionserver.idx.support.arrays.BigDecimalArrayList;
+import org.apache.hadoop.hbase.regionserver.idx.support.arrays.BinarySearch;
 import org.apache.hadoop.hbase.regionserver.idx.support.arrays.ByteArrayArrayList;
 import org.apache.hadoop.hbase.regionserver.idx.support.arrays.ByteArrayList;
 import org.apache.hadoop.hbase.regionserver.idx.support.arrays.CharArrayArrayList;
@@ -34,6 +33,7 @@ import org.apache.hadoop.hbase.regionserver.idx.support.arrays.FloatArrayList;
 import org.apache.hadoop.hbase.regionserver.idx.support.arrays.IntegerArrayList;
 import org.apache.hadoop.hbase.regionserver.idx.support.arrays.List;
 import org.apache.hadoop.hbase.regionserver.idx.support.arrays.LongArrayList;
+import org.apache.hadoop.hbase.regionserver.idx.support.arrays.ObjectArrayList;
 import org.apache.hadoop.hbase.regionserver.idx.support.arrays.ShortArrayList;
 import org.apache.hadoop.hbase.regionserver.idx.support.sets.IntSet;
 import org.apache.hadoop.hbase.regionserver.idx.support.sets.IntSetBuilder;
@@ -44,8 +44,17 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class CompleteIndexBuilder {
 
-  private HColumnDescriptor columnDescriptor;
-  private IdxIndexDescriptor indexDescriptor;
+  private final HColumnDescriptor columnDescriptor;
+  private final IdxIndexDescriptor indexDescriptor;
+  /**
+   * Offset extracted from the index descriptor.
+   */
+  private final int offset;
+
+  /**
+   * Length extracted from the index descriptor.
+   */
+  private final int length;
 
   /**
    * The target keystore.
@@ -56,6 +65,7 @@ public class CompleteIndexBuilder {
    */
   private ObjectArrayList<IntSetBuilder> valueStoreBuilders;
 
+
   /**
    * Construct a new complete index builder.
    *
@@ -64,46 +74,59 @@ public class CompleteIndexBuilder {
    */
   public CompleteIndexBuilder(HColumnDescriptor columnDescriptor,
     IdxIndexDescriptor indexDescriptor) {
+    this(columnDescriptor, indexDescriptor, 1);
+  }
+
+  /**
+   * Construct a new complete index builder.
+   *
+   * @param columnDescriptor the column descriptor
+   * @param indexDescriptor  the index descriptor
+   * @param initialSize the initial arrays size, use -1 for defaults
+   */
+  public CompleteIndexBuilder(HColumnDescriptor columnDescriptor,
+    IdxIndexDescriptor indexDescriptor, int initialSize) {
     this.columnDescriptor = columnDescriptor;
     this.indexDescriptor = indexDescriptor;
+    this.offset = indexDescriptor.getOffset();
+    this.length = indexDescriptor.getLength();
 
     switch (this.indexDescriptor.getQualifierType()) {
       case BYTE_ARRAY:
-        keyStore = new ByteArrayArrayList();
+        keyStore = new ByteArrayArrayList(initialSize);
         break;
       case LONG:
-        keyStore = new LongArrayList();
+        keyStore = new LongArrayList(initialSize);
         break;
       case DOUBLE:
-        keyStore = new DoubleArrayList();
+        keyStore = new DoubleArrayList(initialSize);
         break;
       case BYTE:
-        keyStore = new ByteArrayList();
+        keyStore = new ByteArrayList(initialSize);
         break;
       case CHAR:
-        keyStore = new CharArrayList();
+        keyStore = new CharArrayList(initialSize);
         break;
       case SHORT:
-        keyStore = new ShortArrayList();
+        keyStore = new ShortArrayList(initialSize);
         break;
       case INT:
-        keyStore = new IntegerArrayList();
+        keyStore = new IntegerArrayList(initialSize);
         break;
       case FLOAT:
-        keyStore = new FloatArrayList();
+        keyStore = new FloatArrayList(initialSize);
         break;
       case BIG_DECIMAL:
-        keyStore = new BigDecimalArrayList();
+        keyStore = new BigDecimalArrayList(initialSize);
         break;
       case CHAR_ARRAY:
-        keyStore = new CharArrayArrayList();
+        keyStore = new CharArrayArrayList(initialSize);
         break;
       default:
         throw new IllegalStateException("Unsupported type " +
           this.indexDescriptor.getQualifierType());
     }
-    valueStoreBuilders = new ObjectArrayList<IntSetBuilder>();
-
+    valueStoreBuilders = new ObjectArrayList<IntSetBuilder>(initialSize);
   }
 
   /**
@@ -115,7 +138,7 @@ public class CompleteIndexBuilder {
   public void addKeyValue(KeyValue kv, int id) {
     assert Bytes.equals(indexDescriptor.getQualifierName(), kv.getQualifier())
       && Bytes.equals(columnDescriptor.getName(), kv.getFamily());
-    byte[] key = kv.getValue();
+    byte[] key = extractKey(kv);
     int index = BinarySearch.search(keyStore, keyStore.size(), key);
     IntSetBuilder intsetBuilder;
     if (index < 0) {
@@ -127,6 +150,25 @@ public class CompleteIndexBuilder {
       intsetBuilder = valueStoreBuilders.get(index);
     }
     intsetBuilder.addNext(id);
+  }
+
+  /**
+   * Extract the key from the KeyValue value.
+   *
+   * @param kv the key value from which to extract the key
+   * @return the extracted keyvalue.
+   */
+  private byte[] extractKey(KeyValue kv) {
+    int valueLength = kv.getValueLength();
+    int l = length == -1 ? valueLength - offset : length;
+    if (offset + l > valueLength) {
+      throw new ArrayIndexOutOfBoundsException(String.format("Can't extract key: " +
+        "Offset (%d) + Length (%d) > valueLength (%d)", offset, l, valueLength));
+    }
+    int o = kv.getValueOffset() + this.offset;
+    byte[] result = new byte[l];
+    System.arraycopy(kv.getBuffer(), o, result, 0, l);
+    return result;
   }
 
   /**
@@ -161,15 +203,28 @@ public class CompleteIndexBuilder {
 
       IntSet[] heads = new IntSet[precalcSize];
       IntSet currentHead = IntSetBuilder.newEmptyIntSet(numKeyValues);
+      int maxHeadIndex = -1;
       for (int i = 0; i < indexSize; i++) {
         currentHead = currentHead.unite(valueStore[i]);
         if (i % interval == 0) {
+          maxHeadIndex = i;
           heads[i / interval] = currentHead;
           currentHead = currentHead.clone();
         }
       }
+      
+      IntSet allIds;
+      if (maxHeadIndex < 0) {
+        allIds = IntSetBuilder.newEmptyIntSet(numKeyValues);
+      } else {
+        allIds = currentHead.clone();
+        // Add all remaning key values to the allKeys set
+        for (int i = maxHeadIndex; i < indexSize; i++) {
+          allIds = allIds.unite(valueStore[i]);
+        }
+      }
 
-      return new CompleteIndex(keyStore, valueStore, heads, tails,
+      return new CompleteIndex(keyStore, valueStore, heads, tails, allIds,
         numKeyValues, interval);
     } else {
       return new EmptyIndex(keyStore, numKeyValues);

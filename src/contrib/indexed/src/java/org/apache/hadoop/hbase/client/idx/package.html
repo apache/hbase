@@ -190,6 +190,7 @@
       <h2>
         <a name=IndexedHBase-Usage></a>Usage
       </h2>
+      <p><font color=red><b>WARNING: The "indexed" contrib and "transactional" contrib are not compatible with each other!</b></font></p>
       <p>
         To use Indexed HBase do the following:
       </p>
@@ -222,7 +223,7 @@
         <li>
           When creating a table define which columns to index using IdxColumnDescriptor.
           The supported types are all the <a href="http://java.sun.com/docs/books/tutorial/java/nutsandbolts/datatypes.html"> java primitive data types</a>
-          except boolean, byte[], char[] and BigDecimal
+          as well as byte[], char[] and BigDecimal
           <div class=panelMacro>
             <table class="infoMacro zeroBorder">
               <tbody>
@@ -241,18 +242,17 @@
 <span class=code-object>byte</span>[] familyName = Bytes.toBytes(<span class=code-quote>"family"</span>);
 <span class=code-object>byte</span>[] qualifier = Bytes.toBytes(<span class=code-quote>"qual"</span>);
 
-IdxColumnDescriptor idxColumnDescriptor = <span class=code-keyword>new</span> IdxColumnDescriptor(familyPairName);
+IdxColumnDescriptor idxColumnDescriptor = <span class=code-keyword>new</span> IdxColumnDescriptor(familyName);
 IdxIndexDescriptor indexDescriptor  = <span class=code-keyword>new</span> IdxIndexDescriptor(qualifier, IdxQualifierType.LONG);
 idxColumnDescriptor.addIndexDescriptor(indexDescriptor);
 HTableDescriptor htd = <span class=code-keyword>new</span> HTableDescriptor(tableName);
 htd.addFamily(idxColumnDescriptor);
     
 HBaseConfiguration conf = <span class=code-keyword>new</span> HBaseConfiguration();
-conf.setClass(HConstants.REGION_IMPL, IdxRegion.class, IdxRegion.class);
 HBaseAdmin admin = <span class=code-keyword>new</span> HBaseAdmin(conf);
 admin.createTable(htd);
 HTable table = <span class=code-keyword>new</span> HTable(conf, desc.getName());
-     . . .</pre>
+. . .</pre>
                     </div>
                   </div>
                 </td>
@@ -262,7 +262,7 @@ HTable table = <span class=code-keyword>new</span> HTable(conf, desc.getName());
           </div>
         </li>
         <li>
-          When scanning make sure you instantiate an IdxScan and that you set the Expression property
+          When scanning make sure you instantiate an instance of IdxScan and that you set the Expression property
           <div class=panelMacro>
             <table class="infoMacro zeroBorder">
               <tbody>
@@ -277,7 +277,8 @@ HTable table = <span class=code-keyword>new</span> HTable(conf, desc.getName());
                   </p>
                   <ul>
                     <li>
-                    <font color=brown><b>Setting an expression doesn't exclude setting a mathcing filter. This duplication is absolutely essential for getting correct scan results</b> </font>
+                    <font color=brown><b>When creating an IdxScan instance you must provide both an expression and filter.  The filter
+is essential for correct scan results</b> </font>
                     </li>
                     <li>
                     The index expression must accept any row accepted by the filter

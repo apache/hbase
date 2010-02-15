@@ -79,9 +79,30 @@ public class EmptyIndex implements IdxIndex {
     return IntSetBuilder.newEmptyIntSet(numKeyValues);
   }
 
+  /**
+   * {@inheritDoc}
+   * <p/>
+   * Returns an empty set.
+   */
+  @Override
+  public IntSet all() {
+    return IntSetBuilder.newEmptyIntSet(numKeyValues);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public String probeToString(byte[] bytes) {
     return ArrayUtils.toString(keyStore.fromBytes(bytes));
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public int size() {
+    return 0;
   }
 
   @Override

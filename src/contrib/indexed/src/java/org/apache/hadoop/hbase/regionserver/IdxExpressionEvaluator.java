@@ -98,9 +98,17 @@ public class IdxExpressionEvaluator implements HeapSize {
                     Bytes.toString(comparison.getQualifier())));
 
     IntSet matched = null;
+    boolean resultIncludesMissing = false;
     switch (comparison.getOperator()) {
       case EQ:
         matched = index.lookup(comparison.getValue());
+        break;
+      case NEQ:
+        matched = index.lookup(comparison.getValue());
+        matched = matched.complement();
+        // When we complement the matched set we may include ids which are
+        // missing from the index
+        resultIncludesMissing = true;
         break;
       case GT:
         matched = index.tail(comparison.getValue(), false);
@@ -116,13 +124,19 @@ public class IdxExpressionEvaluator implements HeapSize {
         break;
     }
 
+    if (comparison.getIncludeMissing() != resultIncludesMissing) {
+      matched = resultIncludesMissing ? matched.intersect(index.all()) : matched.unite(index.all().complement());
+    }
+
     if (LOG.isDebugEnabled() && matched != null) {
       LOG.debug(String.format("Evaluation of comparison on column: '%s', " +
-          "qualifier: '%s', operator: %s, value: '%s' yielded %s matches",
-          Bytes.toString(comparison.getColumnName()),
-          Bytes.toString(comparison.getQualifier()), 
-          comparison.getOperator(),
-          index.probeToString(comparison.getValue()), matched.size()));
+        "qualifier: '%s', operator: %s, value: '%s' include missing: '%b' " +
+        "yielded %s matches",
+        Bytes.toString(comparison.getColumnName()),
+        Bytes.toString(comparison.getQualifier()),
+        comparison.getOperator(),
+        index.probeToString(comparison.getValue()),
+        comparison.getIncludeMissing(), matched.size()));
     }
 
     return matched != null ? matched : null;

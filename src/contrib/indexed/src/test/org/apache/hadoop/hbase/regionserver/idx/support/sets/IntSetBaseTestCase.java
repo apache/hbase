@@ -195,6 +195,9 @@ public abstract class IntSetBaseTestCase extends HBaseTestCase {
 
 
   public void testComplement() {
+    IntSetBase emptySet = newSet(0);
+    Assert.assertEquals(emptySet.complement().size(), emptySet.size());
+
     for (int capacity = 950; capacity < 1050; capacity++) {
       IntSetBase intSet = newSet(capacity);
       Assert.assertEquals(intSet.size(), 0);

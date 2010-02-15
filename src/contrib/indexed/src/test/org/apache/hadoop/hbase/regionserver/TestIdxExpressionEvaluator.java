@@ -19,25 +19,32 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import junit.framework.TestCase;
 import junit.framework.Assert;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.regionserver.idx.support.sets.IntSet;
-//import org.apache.hadoop.hbase.regionserver.idx.support.sets.BitSet;
-import org.apache.hadoop.hbase.regionserver.idx.support.sets.IntSetBuilder;
-import org.apache.hadoop.hbase.client.idx.exp.Expression;
+import junit.framework.TestCase;
 import org.apache.hadoop.hbase.client.idx.exp.Comparison;
+import org.apache.hadoop.hbase.client.idx.exp.Expression;
+import org.apache.hadoop.hbase.regionserver.idx.support.sets.IntSet;
+import org.apache.hadoop.hbase.regionserver.idx.support.sets.IntSetBuilder;
+import org.apache.hadoop.hbase.regionserver.idx.support.sets.TestBitSet;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.easymock.EasyMock;
 
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Tests the {@link IdxExpressionEvaluator} class.
  */
 public class TestIdxExpressionEvaluator extends TestCase {
+
+  private static final int NUM_KEY_VALUES = 107;
+  private static final byte[] FAMILY = Bytes.toBytes("f");
+  private static final byte[] QUALIFIER = Bytes.toBytes("q");
+
   private TestSearchContext searchContext;
+  private static final long[] KEYS = new long[]{1, 4, 9, 7, 1, 2, 8, 1, 4, 1, 9};
+  private static final int[] IDS = new int[]{1, 7, 8, 32, 40, 66, 67, 80, 86, 90, 106};
 
   @Override
   protected void setUp() throws Exception {
@@ -60,12 +67,104 @@ public class TestIdxExpressionEvaluator extends TestCase {
 
     // perform the test
     IdxExpressionEvaluator evaluator = new IdxExpressionEvaluator();
-    Expression exp = Expression.comparison(column, qualifier, Comparison.Operator.EQ, value);
+    Expression exp = Expression.comparison(column, qualifier, Comparison.Operator.EQ, value, false);
     IntSet intSet = evaluator.evaluate(searchContext, exp);
 
     // assert the evaluator interacted with the indices correctly
     Assert.assertNotNull("The response from the evaluator should not be null", intSet);
     EasyMock.verify(index);
+  }
+
+  /**
+   * Tests the neq op.
+   */
+  public void testNEQ() {
+    IntSet intSet = evaluateComprison(Comparison.Operator.NEQ, 1L, false);
+    assertSetsEqual(makeSet(7, 8, 32, 66, 67, 86, 106), intSet);
+
+    intSet = evaluateComprison(Comparison.Operator.NEQ, 1L, true);
+    assertSetsEqual(makeSet(IDS).complement().unite(makeSet(7, 8, 32, 66, 67, 86, 106)), intSet);
+  }
+
+  /**
+   * Tests the eq op.
+   */
+  public void testEQ() {
+    IntSet intSet = evaluateComprison(Comparison.Operator.EQ, 4L, false);
+    assertSetsEqual(makeSet(7, 86), intSet);
+
+    intSet = evaluateComprison(Comparison.Operator.EQ, 4L, true);
+    assertSetsEqual(makeSet(IDS).complement().unite(makeSet(7, 86)), intSet);
+  }
+
+  /**
+   * Tests the gt op.
+   */
+  public void testGT() {
+    IntSet intSet = evaluateComprison(Comparison.Operator.GT, 7L, false);
+    assertSetsEqual(makeSet(8, 67, 106), intSet);
+
+    intSet = evaluateComprison(Comparison.Operator.GT, 7L, true);
+    assertSetsEqual(makeSet(IDS).complement().unite(makeSet(8, 67, 106)), intSet);
+
+  }
+
+  /**
+   * Tests the gt op.
+   */
+  public void testGTE() {
+    IntSet intSet = evaluateComprison(Comparison.Operator.GTE, 8L, false);
+    assertSetsEqual(makeSet(8, 67, 106), intSet);
+
+    intSet = evaluateComprison(Comparison.Operator.GTE, 8L, true);
+    assertSetsEqual(makeSet(IDS).complement().unite(makeSet(8, 67, 106)), intSet);
+  }
+
+  /**
+   * Tests the gt op.
+   */
+  public void testLT() {
+    IntSet intSet = evaluateComprison(Comparison.Operator.LT, 3L, false);
+    assertSetsEqual(makeSet(1, 40, 66, 80, 90), intSet);
+
+    intSet = evaluateComprison(Comparison.Operator.LT, 3L, true);
+    assertSetsEqual(makeSet(IDS).complement().unite(makeSet(1, 40, 66, 80, 90)), intSet);
+
+  }
+
+  /**
+   * Tests the gt op.
+   */
+  public void testLTE() {
+    IntSet intSet = evaluateComprison(Comparison.Operator.LTE, 2L, false);
+    assertSetsEqual(makeSet(1, 40, 66, 80, 90), intSet);
+
+    intSet = evaluateComprison(Comparison.Operator.LTE, 2L, true);
+    assertSetsEqual(makeSet(IDS).complement().unite(makeSet(1, 40, 66, 80, 90)), intSet);
+  }
+
+  private IntSet evaluateComprison(Comparison.Operator op, long value, boolean includeMissing) {
+    IdxIndex index = TestCompleteIndex.fillIndex(KEYS, IDS, FAMILY, QUALIFIER, NUM_KEY_VALUES);
+    TestSearchContext sc = new TestSearchContext();
+    sc.indices.put(Pair.of(FAMILY, QUALIFIER), index);
+
+    IdxExpressionEvaluator evaluator = new IdxExpressionEvaluator();
+    return evaluator.evaluate(sc,
+      Expression.comparison(FAMILY, QUALIFIER, op, Bytes.toBytes(value), includeMissing));
+  }
+
+  private static void assertSetsEqual(IntSet is1, IntSet is2) {
+    Assert.assertEquals(is1.capacity(), is2.capacity());
+    Assert.assertEquals(is1.size(), is2.size());
+    IntSet.IntSetIterator iter = is1.iterator();
+    while (iter.hasNext()) {
+      int element = iter.next();
+      Assert.assertTrue("element: " + element, is2.contains(element));
+    }
+  }
+
+  private IntSet makeSet(int... elements) {
+    return TestBitSet.createBitSet(NUM_KEY_VALUES, elements);
   }
 
   /**
@@ -77,7 +176,7 @@ public class TestIdxExpressionEvaluator extends TestCase {
     byte[] qualifier1 = Bytes.toBytes("qualifier1");
     byte[] value1 = Bytes.toBytes("value1");
     IdxIndex index1 = EasyMock.createMock(IdxIndex.class);
-    IntSet bitSet1 = new IntSetBuilder().start().addAll(1,2,3,4,5).finish(100);
+    IntSet bitSet1 = new IntSetBuilder().start().addAll(1, 2, 3, 4, 5).finish(100);
     EasyMock.expect(index1.head(value1, false)).andReturn(bitSet1);
     EasyMock.expect(index1.probeToString(value1)).andReturn(Bytes.toString(value1)).anyTimes();
     EasyMock.replay(index1);
@@ -96,8 +195,8 @@ public class TestIdxExpressionEvaluator extends TestCase {
     // perform the test
     IdxExpressionEvaluator evaluator = new IdxExpressionEvaluator();
     Expression exp = Expression.or(
-        Expression.comparison(column1, qualifier1, Comparison.Operator.LT, value1),
-        Expression.comparison(column2, qualifier2, Comparison.Operator.GT, value2)
+      Expression.comparison(column1, qualifier1, Comparison.Operator.LT, value1, false),
+      Expression.comparison(column2, qualifier2, Comparison.Operator.GT, value2, false)
     );
     IntSet intSet = evaluator.evaluate(searchContext, exp);
 
@@ -137,8 +236,8 @@ public class TestIdxExpressionEvaluator extends TestCase {
     // perform the test
     IdxExpressionEvaluator evaluator = new IdxExpressionEvaluator();
     Expression exp = Expression.and(
-        Expression.comparison(column1, qualifier1, Comparison.Operator.LTE, value1),
-        Expression.comparison(column2, qualifier2, Comparison.Operator.GTE, value2)
+      Expression.comparison(column1, qualifier1, Comparison.Operator.LTE, value1, false),
+      Expression.comparison(column2, qualifier2, Comparison.Operator.GTE, value2, false)
     );
     IntSet intSet = evaluator.evaluate(searchContext, exp);
 
@@ -160,7 +259,7 @@ public class TestIdxExpressionEvaluator extends TestCase {
     byte[] column1 = Bytes.toBytes("column1");
     byte[] qualifier1 = Bytes.toBytes("qualifier1");
     byte[] value1 = Bytes.toBytes("value1");
-    IntSet bitSet1 = new IntSetBuilder().start().addAll(1,2,3,4,5,6).finish(100);
+    IntSet bitSet1 = new IntSetBuilder().start().addAll(1, 2, 3, 4, 5, 6).finish(100);
     EasyMock.expect(index1.head(value1, true)).andReturn(bitSet1);
     EasyMock.expect(index1.probeToString(value1)).andReturn(Bytes.toString(value1)).anyTimes();
     EasyMock.replay(index1);
@@ -189,11 +288,11 @@ public class TestIdxExpressionEvaluator extends TestCase {
     // perform the test
     IdxExpressionEvaluator evaluator = new IdxExpressionEvaluator();
     Expression exp = Expression.or(
-        Expression.and(
-            Expression.comparison(column1, qualifier1, Comparison.Operator.LTE, value1),
-            Expression.comparison(column2, qualifier2, Comparison.Operator.GTE, value2)
-        ),
-        Expression.comparison(column3, qualifier3, Comparison.Operator.EQ, value3)
+      Expression.and(
+        Expression.comparison(column1, qualifier1, Comparison.Operator.LTE, value1, false),
+        Expression.comparison(column2, qualifier2, Comparison.Operator.GTE, value2, false)
+      ),
+      Expression.comparison(column3, qualifier3, Comparison.Operator.EQ, value3, false)
     );
 
     IntSet intSet = evaluator.evaluate(searchContext, exp);
@@ -243,7 +342,7 @@ public class TestIdxExpressionEvaluator extends TestCase {
 
     public TestSearchContext() {
       super(null, null);
-      indices = new HashMap<Pair<byte[],byte[]>, IdxIndex>();
+      indices = new HashMap<Pair<byte[], byte[]>, IdxIndex>();
     }
 
     @Override

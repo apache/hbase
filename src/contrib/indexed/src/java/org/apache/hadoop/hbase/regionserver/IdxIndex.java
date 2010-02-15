@@ -55,9 +55,24 @@ public interface IdxIndex extends HeapSize {
   IntSet head(byte[] probe, boolean inclusive);
 
   /**
+   * Finds all the results which match any key in this index.
+   *
+   * @return all the ids in this index.
+   */
+  IntSet all();
+
+  /**
    * Returns a string representation of the provided bytes probe.
+   *
    * @param bytes the bytes
    * @return the string representation
    */
   String probeToString(byte[] bytes);
+
+  /**
+   * The number of entries in the index.
+   *
+   * @return the number of entries in the index
+   */
+  int size();
 }

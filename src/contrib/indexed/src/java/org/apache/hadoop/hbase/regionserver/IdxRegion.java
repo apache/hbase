@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.JmxHelper;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.idx.IdxScan;
 import org.apache.hadoop.hbase.client.idx.exp.Expression;
@@ -154,14 +155,33 @@ public class IdxRegion extends HRegion {
       // Grab a new search context
       IdxSearchContext searchContext = indexManager.newSearchContext();
       // use the expression evaluator to determine the final set of ints
-      IntSet matchedExpression = expressionEvaluator.evaluate(searchContext,
-        expression);
+      IntSet matchedExpression = null;
+      try {
+        matchedExpression = expressionEvaluator.evaluate(
+          searchContext, expression
+        );
+      } catch (RuntimeException e) {
+        throw new DoNotRetryIOException(e.getMessage(), e);
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug(String.format("%s rows matched the index expression",
           matchedExpression.size()));
       }
       return new IdxRegionScanner(scan, searchContext, matchedExpression);
     }
+  }
+
+  /**
+   * Calculates the average number of key/values in this regions memstores.
+   *
+   * @return the average number of key values
+   */
+  int averageNumberOfMemStoreSKeys() {
+    int totalKVs = 0;
+    for (Store store : stores.values()) {
+      totalKVs += store.memstore.numKeyValues();
+    }
+    return totalKVs / this.stores.size();
   }
 
   /**
@@ -368,7 +388,7 @@ public class IdxRegion extends HRegion {
       for (byte[] family : regionInfo.getTableDesc().getFamiliesKeys()) {
         Store store = stores.get(family);
         scanners.addAll(getMemstoreScanners(store, scan.getStartRow()));
-        break;  // we only need one
+        //break;  // we only need one
       }
       return new KeyValueHeap(scanners.toArray(new KeyValueScanner[scanners.size()]), comparator);
     }

@@ -83,39 +83,31 @@ public class IdxRegionMBeanImpl extends StandardMBean
    *
    * @param regionInfo the region info to create the object name from.
    * @return an valid object name.
+   * @throws IllegalStateException if an error occurs while generating the
+   * object name
    */
-  static ObjectName generateObjectName(HRegionInfo regionInfo) {
+  static ObjectName generateObjectName(HRegionInfo regionInfo)
+      throws IllegalStateException{
     StringBuilder builder =
       new StringBuilder(IdxRegionMBeanImpl.class.getPackage().getName());
     builder.append(':');
     builder.append("table=");
+    // according to HTableDescriptor.isLegalTableName() the table name
+    // will never contain invalid parameters
     builder.append(regionInfo.getTableDesc().getNameAsString());
     builder.append(',');
 
     builder.append("id=");
     builder.append(regionInfo.getRegionId());
     builder.append(',');
-
-    if (regionInfo.getStartKey() != null &&
-      regionInfo.getStartKey().length > 0) {
-      builder.append("startKey=");
-      builder.append(Bytes.toString(regionInfo.getStartKey()));
-      builder.append(',');
-    }
-
-    if (regionInfo.getEndKey() != null &&
-      regionInfo.getEndKey().length > 0) {
-      builder.append("endKey=");
-      builder.append(Bytes.toString(regionInfo.getEndKey()));
-      builder.append(',');
-    }
-
     builder.append("type=IdxRegion");
     try {
       return ObjectName.getInstance(builder.toString());
     } catch (MalformedObjectNameException e) {
-      throw new IllegalStateException("Failed to create a legal object name",
-        e);
+      throw new IllegalStateException("Failed to create a legal object name " +
+          "for JMX console.  Generated name was [" + builder.toString() + "]",
+          e
+      );
     }
   }
 

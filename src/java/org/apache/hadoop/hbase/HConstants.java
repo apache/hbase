@@ -259,8 +259,10 @@ public interface HConstants {
    */
   public static final int WEEK_IN_SECONDS = 7 * 24 * 3600;
 
-  //TODO: HBASE_CLIENT_RETRIES_NUMBER_KEY is only used by TestMigrate. Move it
-  //      there.
+  /**
+   * The key used to store the number of times a client should retry before
+   * giving up.
+   */
   public static final String HBASE_CLIENT_RETRIES_NUMBER_KEY =
     "hbase.client.retries.number";
 

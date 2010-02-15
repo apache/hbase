@@ -38,19 +38,59 @@ public class TestIdxIndexDescriptor extends TestCase {
    * @throws java.io.IOException if an error occurs
    */
   public void testWritable() throws IOException {
-    byte[] qualifierName1 = Bytes.toBytes("qualifer1");
-    IdxIndexDescriptor descriptor
-        = new IdxIndexDescriptor(qualifierName1, IdxQualifierType.INT);
+    final int repeatCount = 3;
+    IdxIndexDescriptor descriptor = createIdxIndexDescriptor();
 
     DataOutputBuffer dataOutputBuffer = new DataOutputBuffer();
-    descriptor.write(dataOutputBuffer);
+    for (int i = 0; i < repeatCount; i++) {
+      descriptor.write(dataOutputBuffer);
+    }
 
     DataInputBuffer dataInputBuffer = new DataInputBuffer();
     dataInputBuffer.reset(dataOutputBuffer.getData(), dataOutputBuffer.getLength());
 
-    IdxIndexDescriptor clonedDescriptor = new IdxIndexDescriptor();
-    clonedDescriptor.readFields(dataInputBuffer);
-
-    Assert.assertEquals("The descriptor was not the same after being written and read", descriptor, clonedDescriptor);
+    for (int i = 0; i < repeatCount; i++) {
+      IdxIndexDescriptor clonedDescriptor = new IdxIndexDescriptor();
+      clonedDescriptor.readFields(dataInputBuffer);
+      Assert.assertEquals("The descriptor was not the same after being written and " +
+        "read attempt=" + i, descriptor, clonedDescriptor);
+    }
   }
+
+  /**
+   * Tests the equals method.
+   */
+  public void testEquals() {
+    IdxIndexDescriptor ix1 = createIdxIndexDescriptor();
+
+    IdxIndexDescriptor ix2 = createIdxIndexDescriptor();
+    Assert.assertEquals(ix1, ix2);
+
+    ix2.getQualifierName()[0]=9;
+    Assert.assertFalse(ix1.equals(ix2));
+
+    ix2 = createIdxIndexDescriptor();
+    ix2.setQualifierType(IdxQualifierType.LONG);
+    Assert.assertFalse(ix1.equals(ix2));
+
+    ix2 = createIdxIndexDescriptor();
+    ix2.setOffset(1);
+    Assert.assertFalse(ix1.equals(ix2));
+
+    ix2 = createIdxIndexDescriptor();
+    ix2.setLength(-1);
+    Assert.assertFalse(ix1.equals(ix2));
+
+  }
+
+  private static IdxIndexDescriptor createIdxIndexDescriptor() {
+    byte[] qualifierName1 = Bytes.toBytes("qualifer1");
+    IdxIndexDescriptor descriptor
+      = new IdxIndexDescriptor(qualifierName1, IdxQualifierType.INT);
+    descriptor.setLength(4);
+    descriptor.setOffset(2);
+    return descriptor;
+  }
+
+
 }

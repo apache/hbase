@@ -84,6 +84,31 @@ public class TestCompleteIndex extends HBaseTestCase {
     Assert.assertTrue(
       bldr.finalizeIndex(NUM_KEY_VALUES).lookup(value).contains(id));
 
+    /**
+     * Test with shorter length.
+     */
+    value = Bytes.toBytes(109L);
+    byte[] intValue = Bytes.toBytes(109);
+    id = 37;
+    bldr = new CompleteIndexBuilder(columnDescriptor,
+      new IdxIndexDescriptor(QUALIFIER, IdxQualifierType.INT, 0, 4));
+    bldr.addKeyValue(new KeyValue(ROW, FAMILY, QUALIFIER, value), id);
+    IdxIndex finalIndex = bldr.finalizeIndex(NUM_KEY_VALUES);
+    Assert.assertEquals(0, finalIndex.lookup(intValue).size());
+    Assert.assertTrue(finalIndex.lookup(Bytes.toBytes(0)).contains(id));
+
+    /**
+     * Test with offset and shorter length.
+     */
+    value = Bytes.toBytes(109L);
+    intValue = Bytes.toBytes(109);
+    id = 39;
+    bldr = new CompleteIndexBuilder(columnDescriptor,
+      new IdxIndexDescriptor(QUALIFIER, IdxQualifierType.INT, 4, 4));
+    bldr.addKeyValue(new KeyValue(ROW, FAMILY, QUALIFIER, value), id);
+    finalIndex = bldr.finalizeIndex(NUM_KEY_VALUES);
+    Assert.assertTrue(finalIndex.lookup(intValue).contains(id));
+    Assert.assertEquals(0, finalIndex.lookup(Bytes.toBytes(0)).size());
   }
 
   /**
@@ -291,17 +316,39 @@ public class TestCompleteIndex extends HBaseTestCase {
     return TestBitSet.createBitSet(NUM_KEY_VALUES, items);
   }
 
-  private static CompleteIndex fillIndex(long[] values, int[] ids) {
-    Assert.assertEquals(values.length, ids.length);
-    HColumnDescriptor columnDescriptor = new HColumnDescriptor(FAMILY);
+  private static CompleteIndex fillIndex(long[] keys, int[] ids) {
+    return fillIndex(keys, ids, FAMILY, QUALIFIER, NUM_KEY_VALUES);
+  }
+
+  /**
+   * A utility method to create a complete index.
+   *
+   * @param keys the index keys
+   * @param ids    the key/value ids
+   * @param family the family id
+   * @param qualifier the qualifier id
+   * @param numKeyValues the total number of key/values when finalizing the
+   * index
+   * @return a new, populated index.
+   */
+  static CompleteIndex fillIndex(long[] keys, int[] ids, byte[] family,
+    byte[] qualifier, int numKeyValues) {
+    Assert.assertEquals(keys.length, ids.length);
+    HColumnDescriptor columnDescriptor = new HColumnDescriptor(family);
     CompleteIndexBuilder completeIndex =
       new CompleteIndexBuilder(columnDescriptor,
-        new IdxIndexDescriptor(QUALIFIER, IdxQualifierType.LONG));
-    for (int i = 0; i < values.length; i++) {
-      completeIndex.addKeyValue(new KeyValue(Bytes.toBytes(ids[i]), FAMILY,
-        QUALIFIER, Bytes.toBytes(values[i])), ids[i]);
+        new IdxIndexDescriptor(qualifier, IdxQualifierType.LONG));
+    for (int i = 0; i < keys.length; i++) {
+      completeIndex.addKeyValue(new KeyValue(Bytes.toBytes(ids[i]), family,
+        qualifier, Bytes.toBytes(keys[i])), ids[i]);
     }
-    return (CompleteIndex) completeIndex.finalizeIndex(NUM_KEY_VALUES);
+    CompleteIndex ix = (CompleteIndex) completeIndex.finalizeIndex(numKeyValues);
+    IntSet allIds = ix.all();
+    Assert.assertEquals(ids.length, allIds.size());
+    for (int id : ids){
+      Assert.assertTrue(allIds.contains(id));
+    }
+    return ix;
   }
 
 }

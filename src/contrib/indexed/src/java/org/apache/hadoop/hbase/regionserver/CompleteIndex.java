@@ -36,39 +36,43 @@ class CompleteIndex implements IdxIndex {
    * The fixed part in the heap size calcualtion.
    */
   static final long FIXED_SIZE = ClassSize.align(ClassSize.OBJECT +
-    ClassSize.REFERENCE + 3 * (ClassSize.ARRAY + ClassSize.REFERENCE) +
+    2 * ClassSize.REFERENCE + 3 * (ClassSize.ARRAY + ClassSize.REFERENCE) +
     Bytes.SIZEOF_LONG + 2 * Bytes.SIZEOF_INT
   );
 
   /**
    * The capacity of the sets.
    */
-  private int numKeyValues;
+  private final int numKeyValues;
   /**
    * The key store - holds the col:qual values.
    */
-  private List<?> keyStore;
+  private final List<?> keyStore;
   /**
-   * The value store - holds sets with {@link numKeyValues} capacity.
+   * The value store - holds sets with {@link #numKeyValues} capacity.
    */
-  private IntSet[] valueStore;
+  private final IntSet[] valueStore;
   /**
    * Sets containing partial calculations of the tail operation.
    */
-  private IntSet[] heads;
+  private final IntSet[] heads;
   /**
    * Sets containing partial calculations of the head operation.
    */
-  private IntSet[] tails;
+  private final IntSet[] tails;
+  /**
+   * A set containing all ids matching any key in this index.
+   */
+  private final IntSet allIds;
   /**
    * The partial calculation interval (used to determine up to which point
    * to use the valueStore before grabbing a pre-calculated set.
    */
-  private int precalcInterval;
+  private final int precalcInterval;
   /**
    * The heap size.
    */
-  private long heapSize;
+  private final long heapSize;
 
   /**
    * Construct a new complete index.
@@ -77,20 +81,22 @@ class CompleteIndex implements IdxIndex {
    * @param valueStore      the value store
    * @param heads           a list of precalculated heads
    * @param tails           a list of precalculated tails
+   * @param allIds         a set containing all ids mathcing any key in this index
    * @param numKeyValues    the total number of KeyValues for this region
    * @param precalcInterval the interval by which tails/heads are precalculated
    */
   CompleteIndex(List<?> keyStore, IntSet[] valueStore,
-    IntSet[] heads, IntSet[] tails,
+    IntSet[] heads, IntSet[] tails, IntSet allIds,
     int numKeyValues, int precalcInterval) {
     this.keyStore = keyStore;
     this.valueStore = valueStore;
     this.heads = heads;
     this.tails = tails;
+    this.allIds = allIds;
     this.numKeyValues = numKeyValues;
     this.precalcInterval = precalcInterval;
     heapSize = FIXED_SIZE + keyStore.heapSize() + calcHeapSize(valueStore) +
-      calcHeapSize(heads) + calcHeapSize(tails);
+      calcHeapSize(heads) + calcHeapSize(tails) + allIds.heapSize();
   }
 
   /**
@@ -161,6 +167,24 @@ class CompleteIndex implements IdxIndex {
     return result;
   }
 
+  /**
+   * Finds all the results which match any key in this index.
+   *
+   * @return all the ids in this index.
+   */
+  @Override
+  public IntSet all() {
+    return allIds.clone();
+  }
+
+  @Override
+  public int size() {
+    return this.keyStore.size();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public long heapSize() {
     return heapSize;

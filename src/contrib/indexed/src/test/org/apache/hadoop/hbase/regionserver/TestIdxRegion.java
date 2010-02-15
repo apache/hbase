@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.client.idx.IdxScan;
 import org.apache.hadoop.hbase.client.idx.exp.And;
 import org.apache.hadoop.hbase.client.idx.exp.Comparison;
 import org.apache.hadoop.hbase.client.idx.exp.Or;
+import org.apache.hadoop.hbase.client.idx.exp.Expression;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -132,6 +134,43 @@ public class TestIdxRegion extends HBaseTestCase {
       fs, conf, info, null);
     region.initialize(null, null);
     return region;
+  }
+
+  /**
+   * Tests that a {@link org.apache.hadoop.hbase.DoNotRetryIOException} is thrown
+   * when an invalid index expression is supplied.
+   *
+   * @throws IOException exception
+   */
+  public void testIndexedScanWithInvalidIndexExpression() throws Exception {
+    byte[] tableName = Bytes.toBytes("testIndexedScanWithStartRow");
+    byte[] family = Bytes.toBytes("family");
+    IdxIndexDescriptor indexDescriptor
+      = new IdxIndexDescriptor(qualLong, IdxQualifierType.LONG);
+
+    // Setting up region
+    String method = "testIndexedScanWithStartRow";
+    initIdxRegion(tableName, method, new HBaseConfiguration(),
+      Pair.of(family, new IdxIndexDescriptor[]{indexDescriptor}));
+
+    IdxScan idxScan = new IdxScan();
+    idxScan.addFamily(family);
+    idxScan.setExpression(
+        Comparison.comparison(
+            family, Bytes.toBytes("invalid"), Comparison.Operator.GTE,
+            Bytes.toBytes(50L)
+        )
+    );
+    InternalScanner scanner = null;
+    try {
+      scanner = region.getScanner(idxScan);
+      Assert.fail("Excepted a DoNotRetryIOException to be thrown when an invalid" +
+          "index expression is specified.");
+    } catch (DoNotRetryIOException e) {
+      // expected
+    } catch (Exception e) {
+      Assert.fail("Expected a DoNotRetryIOException but got some other exception");
+    }
   }
 
   /**
@@ -588,12 +627,93 @@ public class TestIdxRegion extends HBaseTestCase {
     }
 
     checkScanWithTwoFamilies(family1, family2, false, numberOfRows * 2, 3);
-
   }
 
   private void checkScanWithTwoFamilies(byte[] family1, byte[] family2,
     boolean memStoreEmpty, int numRows, int numColumns) throws IOException {
 
+    IdxScan idxScan = createTwoFamiliesScan(family1, family2, memStoreEmpty);
+    InternalScanner scanner = region.getScanner(idxScan);
+    List<KeyValue> res = new ArrayList<KeyValue>();
+    int actualRows = 0;
+    //long start = System.nanoTime();
+    while (scanner.next(res)) {
+      assertEquals(numColumns, res.size());
+      actualRows++;
+      res.clear();
+    }
+    //long end = System.nanoTime();
+    //System.out.println("[top and botoom 10%] memStoreEmpty=" + memStoreEmpty + ", time=" + (end - start)/1000000D);
+    assertEquals(numRows / 10 * 3, actualRows);
+  }
+
+  /**
+   * Verifies that a scan with more than one family where rows are sparse,
+   * is evaluated correctly.
+   *
+   * @throws Exception exception
+   */
+  public void testIndexedScanWithTwoFamiliesWhereRowsMayExistInOneButNotInBoth() throws Exception {
+    String method = "testIndexedScanWithTwoFamiliesWhereRowsMayExistInOneButNotInBoth";
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family1 = Bytes.toBytes("family1");
+    byte[] family2 = Bytes.toBytes("family2");
+    IdxIndexDescriptor indexDescriptor1 = new IdxIndexDescriptor(qualLong, IdxQualifierType.LONG);
+    IdxIndexDescriptor indexDescriptor2 = new IdxIndexDescriptor(qualDouble, IdxQualifierType.DOUBLE);
+    IdxIndexDescriptor indexDescriptor3 = new IdxIndexDescriptor(qualBytes, IdxQualifierType.BYTE_ARRAY);
+
+    initIdxRegion(tableName, method, new HBaseConfiguration(), Pair.of(family1,
+      new IdxIndexDescriptor[]{indexDescriptor1, indexDescriptor2}),
+      Pair.of(family2, new IdxIndexDescriptor[]{indexDescriptor3}));
+
+    int numberOfRows = 1000;
+
+    Random random = new Random(26011788L);
+    for (int row = 0; row < numberOfRows; row++) {
+      Put put = new Put(Bytes.toBytes(random.nextLong()));
+      int val = row % 10;
+      if (val != 9) {
+        put.add(family1, qualLong, Bytes.toBytes((long) val));
+        put.add(family1, qualDouble, Bytes.toBytes((double) val));
+      }
+      if (val != 1 && val != 4) {
+        put.add(family2, qualBytes, Bytes.toBytes(String.format("%04d", val)));
+      }
+      region.put(put);
+    }
+    checkScanWithTwoFamiliesWhereRowsMayExistInOneButNotInBoth(family1, family2, false, numberOfRows);
+
+    region.flushcache();
+
+    checkScanWithTwoFamiliesWhereRowsMayExistInOneButNotInBoth(family1, family2, true, numberOfRows);
+  }
+
+  private void checkScanWithTwoFamiliesWhereRowsMayExistInOneButNotInBoth(byte[] family1, byte[] family2,
+    boolean memStoreEmpty, int numRows) throws IOException {
+
+    IdxScan idxScan = createTwoFamiliesScan(family1, family2, memStoreEmpty);
+    InternalScanner scanner = region.getScanner(idxScan);
+    List<KeyValue> res = new ArrayList<KeyValue>();
+    int actualRows = 0;
+    //long start = System.nanoTime();
+    while (scanner.next(res)) {
+      byte[] firstFamily = res.get(0).getFamily();
+      if (Bytes.equals(firstFamily, family1)){
+        Assert.assertEquals(2, res.size());
+        Assert.assertTrue(Bytes.equals(family1, res.get(1).getFamily()));
+      } else {
+        Assert.assertTrue(Bytes.equals(family2, res.get(0).getFamily()));
+        Assert.assertEquals(1, res.size());
+      }
+      actualRows++;
+      res.clear();
+    }
+    //long end = System.nanoTime();
+    //System.out.println("[top and botoom 10%] memStoreEmpty=" + memStoreEmpty + ", time=" + (end - start)/1000000D);
+    assertEquals(numRows / 10 * 3, actualRows);
+  }
+
+  private IdxScan createTwoFamiliesScan(byte[] family1, byte[] family2, boolean memStoreEmpty) {
     /**
      * Scan the index with a matching or expression on two indices
      */
@@ -616,20 +736,177 @@ public class TestIdxRegion extends HBaseTestCase {
             new BinaryComparator(bytesVal)))
       ));
     }
+    return idxScan;
+  }
+
+  /**
+   * Test that includeMissing works properly - resulting with
+   *
+   * @throws Exception
+   */
+  public void testIndexedScanIncludeMissing() throws Exception {
+    final String method = "testIndexedScanIncludeMissing";
+    final byte[] tableName = Bytes.toBytes(method);
+    final byte[] family1 = Bytes.toBytes("family1");
+    final byte[] family2 = Bytes.toBytes("family2");
+    final byte[] qual1 = Bytes.toBytes("qual1");
+    final byte[] qual2 = Bytes.toBytes("qual2");
+    final IdxIndexDescriptor indexDescriptor1 = new IdxIndexDescriptor(qual1, IdxQualifierType.INT);
+    final IdxIndexDescriptor indexDescriptor2 = new IdxIndexDescriptor(qual2, IdxQualifierType.INT);
+
+    int numberOfRows = 1000;
+
+    initIdxRegion(tableName, method, new HBaseConfiguration(),
+      Pair.of(family1, new IdxIndexDescriptor[]{indexDescriptor1, indexDescriptor2}),
+      Pair.of(family2, new IdxIndexDescriptor[]{indexDescriptor1, indexDescriptor2}));
+
+    Random random = new Random(5032010L);
+
+    putSomeForTestIncludeMissing(family1, family2, qual1, qual2, numberOfRows, random);
+
+    checkIndexedScanIncludeMissing(family1, family2, qual1, qual2, false, numberOfRows);
+
+    region.flushcache();
+
+    checkIndexedScanIncludeMissing(family1, family2, qual1, qual2, true, numberOfRows);
+
+    // Try again with results in both memstore and store files
+    putSomeForTestIncludeMissing(family1, family2, qual1, qual2, numberOfRows, random);
+
+    checkIndexedScanIncludeMissing(family1, family2, qual1, qual2, false, numberOfRows * 2);
+
+  }
+
+  private void putSomeForTestIncludeMissing(byte[] family1, byte[] family2, byte[] qual1, byte[] qual2, int numberOfRows, Random random) throws IOException {
+    for (int row = 0; row < numberOfRows; row++) {
+      Put put = new Put(Bytes.toBytes(random.nextLong()));
+
+      int val = row % 10;
+      byte[] bytesVal1 = Bytes.toBytes(val);
+      byte[] bytesVal2 = Bytes.toBytes(val * val);
+      switch (val) {
+        case 0:
+          put.add(family1, qual1, bytesVal1);
+          put.add(family2, qual1, bytesVal1);
+          break;
+        case 1:
+          put.add(family1, qual1, bytesVal1);
+          put.add(family1, qual2, bytesVal2);
+          break;
+        case 2:
+          put.add(family2, qual1, bytesVal1);
+          put.add(family2, qual2, bytesVal2);
+          break;
+        case 3:
+          put.add(family1, qual2, bytesVal2);
+          put.add(family2, qual2, bytesVal2);
+          break;
+        case 4:
+          put.add(family1, qual2, bytesVal2);
+          put.add(family2, qual1, bytesVal1);
+          break;
+        case 5:
+          put.add(family1, qual1, bytesVal1);
+          put.add(family2, qual2, bytesVal2);
+          break;
+        case 6:
+          put.add(family1, qual2, bytesVal2);
+          put.add(family2, qual1, bytesVal1);
+          put.add(family2, qual2, bytesVal2);
+          break;
+        case 7:
+          put.add(family1, qual1, bytesVal1);
+          put.add(family2, qual1, bytesVal1);
+          put.add(family2, qual2, bytesVal2);
+          break;
+        case 8:
+          put.add(family1, qual1, bytesVal1);
+          put.add(family1, qual2, bytesVal2);
+          put.add(family2, qual2, bytesVal2);
+          break;
+        case 9:
+          put.add(family1, qual1, bytesVal1);
+          put.add(family1, qual2, bytesVal2);
+          put.add(family2, qual1, bytesVal1);
+          break;
+      }
+      region.put(put);
+    }
+  }
+
+  private void checkIndexedScanIncludeMissing(byte[] family1, byte[] family2,
+    byte[] qual1, byte[] qual2,
+    boolean memStoreEmpty, int numRows) throws IOException {
+    IdxScan idxScan = new IdxScan();
+    final byte[] zero = Bytes.toBytes(0);
+    idxScan.setExpression(Expression.comparison(family1, qual1, Comparison.Operator.GTE, zero));
+    if (!memStoreEmpty) {
+      idxScan.setFilter(new SingleColumnValueFilter(family1, qual1, CompareFilter.CompareOp.GREATER_OR_EQUAL,
+        new BinaryComparator(zero)));
+    }
+
+    // Try the same scan but without missing rows
+
+    IdxScan idxScan1 = new IdxScan();
+    idxScan1.setExpression(Comparison.comparison(family1, qual1, Comparison.Operator.GTE, zero, false));
+    if (!memStoreEmpty) {
+      SingleColumnValueFilter scvf = new SingleColumnValueFilter(family1, qual1, CompareFilter.CompareOp.GREATER_OR_EQUAL,
+        new BinaryComparator(zero));
+      scvf.setFilterIfMissing(true);
+      idxScan1.setFilter(scvf);
+    }
+
+    checkScan(numRows, idxScan);
+
+    checkScan(numRows / 10 * 6, idxScan1);
+
+    // A more elaborate test, with expressions from both families and an 'AND' condition
+
+    idxScan = new IdxScan();
+    final byte[] five = Bytes.toBytes(5);
+    final byte[] fifty = Bytes.toBytes(50);
+    idxScan.setExpression(Expression.and(
+      Expression.comparison(family1, qual1, Comparison.Operator.GTE, five),
+      Expression.comparison(family2, qual2, Comparison.Operator.LTE, fifty)));
+    if (!memStoreEmpty) {
+      idxScan.setFilter(new FilterList(Arrays.<Filter>asList(
+        new SingleColumnValueFilter(family1, qual1, CompareFilter.CompareOp.GREATER_OR_EQUAL, new BinaryComparator(five)),
+        new SingleColumnValueFilter(family2, qual2, CompareFilter.CompareOp.LESS_OR_EQUAL, new BinaryComparator(fifty)))));
+    }
+
+    // Try the same scan but without missing rows
+
+    idxScan1 = new IdxScan();
+    idxScan1.setExpression(Expression.and(
+      Expression.comparison(family1, qual1, Comparison.Operator.GTE, five, false),
+      Expression.comparison(family2, qual2, Comparison.Operator.LTE, fifty, false)));
+    if (!memStoreEmpty) {
+      SingleColumnValueFilter fiveFilter = new SingleColumnValueFilter(family1, qual1, CompareFilter.CompareOp.GREATER_OR_EQUAL, new BinaryComparator(five));
+      fiveFilter.setFilterIfMissing(true);
+      SingleColumnValueFilter fiftyFilter = new SingleColumnValueFilter(family2, qual2, CompareFilter.CompareOp.LESS_OR_EQUAL, new BinaryComparator(fifty));
+      fiftyFilter.setFilterIfMissing(true);
+      idxScan1.setFilter(new FilterList(Arrays.<Filter>asList(fiveFilter, fiftyFilter)));
+    }
+
+    checkScan(numRows / 10 * 7, idxScan);
+
+    checkScan(numRows / 10 * 2, idxScan1);
+  }
+
+  private void checkScan(int expectedNumRows, IdxScan idxScan) throws IOException {
     InternalScanner scanner = region.getScanner(idxScan);
     List<KeyValue> res = new ArrayList<KeyValue>();
     int actualRows = 0;
     //long start = System.nanoTime();
-    while (scanner.next(res)) {
-      assertEquals(numColumns, res.size());
+    while (scanner.next(res) || res.size() > 0) {
       actualRows++;
       res.clear();
     }
+
     //long end = System.nanoTime();
     //System.out.println("[top and botoom 10%] memStoreEmpty=" + memStoreEmpty + ", time=" + (end - start)/1000000D);
-    assertEquals(numRows / 10 * 3, actualRows);
+    assertEquals(expectedNumRows, actualRows);
   }
-
 
   public void testIndexedScanWithMultipleVersions() throws Exception {
     byte[] tableName = Bytes.toBytes("testIndexedScanWithMultipleVersions");

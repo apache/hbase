@@ -42,6 +42,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -57,10 +58,12 @@ public class IdxRegionIndexManager implements HeapSize {
       Bytes.SIZEOF_LONG + ClassSize.REENTRANT_LOCK);
 
 
+  private static final int DEFAULT_INITIAL_INDEX_SIZE = 1000;
+
   /**
    * The wrapping region.
    */
-  private IdxRegion region;
+  private final IdxRegion region;
   /**
    * The index map. Each pair holds the column and qualifier.
    */
@@ -75,7 +78,9 @@ public class IdxRegionIndexManager implements HeapSize {
    */
   private long heapSize;
 
-  private ReadWriteLock indexSwitchLock;
+  private final ReadWriteLock indexSwitchLock;
+  private static final double INDEX_SIZE_GROWTH_FACTOR = 1.1;
+  private static final double BYTES_IN_MB = 1024D * 1024D;
 
   /**
    * Create and initialize a new index manager.
@@ -98,20 +103,17 @@ public class IdxRegionIndexManager implements HeapSize {
   public long rebuildIndexes() throws IOException {
     long startMillis = System.currentTimeMillis();
     if (LOG.isInfoEnabled()) {
-      LOG.info(String.format("Initializing index manager for region: %s",
-        region.toString()));
+      LOG.info(String.format("Initializing index manager for region: %s", region.toString()));
     }
     heapSize = FIXED_SIZE;
-    Map<Pair<byte[], byte[]>, CompleteIndexBuilder>
-      builderTable = initIndexTable();
+    Map<Pair<byte[], byte[]>, CompleteIndexBuilder> builderTable = initIndexTable();
     // if the region is closing/closed then a fillIndex method will throw a
     // NotServingRegion exection when an attempt to obtain a scanner is made
     // NOTE: when the region is being created isClosing() returns true
     if (!(region.isClosing() || region.isClosed()) && !builderTable.isEmpty()) {
       try {
         ObjectArrayList<KeyValue> newKeys = fillIndex(builderTable);
-        Map<Pair<byte[], byte[]>, IdxIndex> newIndexMap =
-          finalizeIndex(builderTable, newKeys);
+        Map<Pair<byte[], byte[]>, IdxIndex> newIndexMap = finalizeIndex(builderTable, newKeys);
         switchIndex(newKeys, newIndexMap);
       } catch (NotServingRegionException e) {
         // the not serving exception may also be thrown during the scan if
@@ -119,8 +121,7 @@ public class IdxRegionIndexManager implements HeapSize {
         LOG.warn("Aborted index initialization", e);
       }
     } else {
-    switchIndex(new ObjectArrayList<KeyValue>(),
-      Collections.<Pair<byte[], byte[]>, IdxIndex>emptyMap());
+      switchIndex(new ObjectArrayList<KeyValue>(), Collections.<Pair<byte[], byte[]>, IdxIndex>emptyMap());
     }
     return System.currentTimeMillis() - startMillis;
   }
@@ -143,20 +144,19 @@ public class IdxRegionIndexManager implements HeapSize {
    * @return the initiated map of builders keyed by column:qualifer pair
    * @throws IOException thrown by {@link IdxColumnDescriptor#getIndexDescriptors(org.apache.hadoop.hbase.HColumnDescriptor)}
    */
-  private Map<Pair<byte[], byte[]>,
-    CompleteIndexBuilder> initIndexTable() throws IOException {
+  private Map<Pair<byte[], byte[]>, CompleteIndexBuilder> initIndexTable()
+    throws IOException {
     Map<Pair<byte[], byte[]>, CompleteIndexBuilder> indexBuilders =
       new HashMap<Pair<byte[], byte[]>, CompleteIndexBuilder>();
-    for (HColumnDescriptor columnDescriptor :
-      region.getRegionInfo().getTableDesc().getColumnFamilies()) {
-      Collection<IdxIndexDescriptor> indexDescriptors =
-        IdxColumnDescriptor.getIndexDescriptors(columnDescriptor).values();
+    for (HColumnDescriptor columnDescriptor : region.getRegionInfo().getTableDesc().getColumnFamilies()) {
+      Collection<IdxIndexDescriptor> indexDescriptors = IdxColumnDescriptor.getIndexDescriptors(columnDescriptor).values();
+
       for (IdxIndexDescriptor indexDescriptor : indexDescriptors) {
-        LOG.info(String.format("Adding index for region: '%s' index: %s",
-          region.getRegionNameAsString(), indexDescriptor.toString()));
-        indexBuilders.put(Pair.of(columnDescriptor.getName(),
-          indexDescriptor.getQualifierName()),
-          new CompleteIndexBuilder(columnDescriptor, indexDescriptor));
+        LOG.info(String.format("Adding index for region: '%s' index: %s", region.getRegionNameAsString(), indexDescriptor.toString()));
+        Pair<byte[], byte[]> key = Pair.of(columnDescriptor.getName(), indexDescriptor.getQualifierName());
+        IdxIndex currentIndex = indexMap != null ? indexMap.get(key) : null;
+        int initialSize = currentIndex == null ? DEFAULT_INITIAL_INDEX_SIZE : (int) Math.round(currentIndex.size() * INDEX_SIZE_GROWTH_FACTOR);
+        indexBuilders.put(key, new CompleteIndexBuilder(columnDescriptor, indexDescriptor, initialSize));
       }
     }
     return indexBuilders;
@@ -174,38 +174,54 @@ public class IdxRegionIndexManager implements HeapSize {
     CompleteIndexBuilder> builders) throws IOException {
     ObjectArrayList<KeyValue> newKeys = this.keys == null ?
       new ObjectArrayList<KeyValue>() :
-      new ObjectArrayList<KeyValue>(this.keys.size());
+      // in case we already have keys in the store try to guess the new size
+      new ObjectArrayList<KeyValue>(this.keys.size() + this.region.averageNumberOfMemStoreSKeys() * 2);
 
     StopWatch stopWatch = new StopWatch();
     stopWatch.start();
 
-    InternalScanner scanner = region.getScanner(new Scan());
-    boolean moreRows;
-    int id = 0;
-    do {
-      List<KeyValue> nextRow = new ArrayList<KeyValue>();
-      moreRows = scanner.next(nextRow);
-      if (nextRow.size() > 0) {
-        KeyValue
-          firstOnRow = KeyValue.createFirstOnRow(nextRow.get(0).getRow());
-        newKeys.add(firstOnRow);
-        // add keyvalue to the heapsize
-        heapSize += firstOnRow.heapSize();
-        for (KeyValue keyValue : nextRow) {
-          CompleteIndexBuilder idx = builders.get(Pair.of(keyValue.getFamily(),
-            keyValue.getQualifier()));
-          if (idx != null) {
-            idx.addKeyValue(keyValue, id);
+    InternalScanner scanner = region.getScanner(createScan(builders.keySet()));
+    try {
+      boolean moreRows;
+      int id = 0;
+      do {
+        List<KeyValue> nextRow = new ArrayList<KeyValue>();
+        moreRows = scanner.next(nextRow);
+        if (nextRow.size() > 0) {
+          KeyValue firstOnRow = KeyValue.createFirstOnRow(nextRow.get(0).getRow());
+          newKeys.add(firstOnRow);
+          // add keyvalue to the heapsize
+          heapSize += firstOnRow.heapSize();
+          for (KeyValue keyValue : nextRow) {
+            try {
+              CompleteIndexBuilder idx = builders.get(Pair.of(keyValue.getFamily(),
+                keyValue.getQualifier()));
+              // we must have an index since we've limited the
+              // scan to include only indexed columns
+              assert idx != null;
+              idx.addKeyValue(keyValue, id);
+            } catch (Exception e) {
+              LOG.error("Failed to add " + keyValue + " to the index", e);
+            }
           }
+          id++;
         }
-        id++;
-      }
-    } while (moreRows);
+      } while (moreRows);
+      stopWatch.stop();
+      LOG.info("Filled indices for region: '" + region.getRegionNameAsString()
+        + "' with " + id + " entries in " + stopWatch.toString());
+      return newKeys;
+    } finally {
+      scanner.close();
+    }
+  }
 
-    stopWatch.stop();
-    LOG.info("Filled indices for region: '" + region.getRegionNameAsString()
-      + "' with " + id + " entries in " + stopWatch.toString());
-    return newKeys;
+  private Scan createScan(Set<Pair<byte[], byte[]>> columns) {
+    Scan scan = new Scan();
+    for (Pair<byte[], byte[]> column : columns) {
+      scan.addColumn(column.getFirst(), column.getSecond());
+    }
+    return scan;
   }
 
   /**
@@ -216,25 +232,37 @@ public class IdxRegionIndexManager implements HeapSize {
    * @param newKeys  the set of keys for the new index to be finalized
    * @return the new index map
    */
-  private Map<Pair<byte[], byte[]>, IdxIndex>
-  finalizeIndex(Map<Pair<byte[], byte[]>,
+  private Map<Pair<byte[], byte[]>, IdxIndex> finalizeIndex(Map<Pair<byte[], byte[]>,
     CompleteIndexBuilder> builders, ObjectArrayList<KeyValue> newKeys) {
-    Map<Pair<byte[], byte[]>, IdxIndex>
-      newIndexes = new HashMap<Pair<byte[], byte[]>, IdxIndex>();
+    Map<Pair<byte[], byte[]>, IdxIndex> newIndexes = new HashMap<Pair<byte[], byte[]>, IdxIndex>();
     for (Map.Entry<Pair<byte[], byte[]>, CompleteIndexBuilder> indexEntry :
       builders.entrySet()) {
-      IdxIndex index = indexEntry.getValue().finalizeIndex(newKeys.size());
-      newIndexes.put(indexEntry.getKey(), index);
+      final IdxIndex index = indexEntry.getValue().finalizeIndex(newKeys.size());
+      final Pair<byte[], byte[]> key = indexEntry.getKey();
+      newIndexes.put(key, index);
       // adjust the heapsize
-      heapSize += ClassSize.align(ClassSize.MAP_ENTRY +
+      long indexSize = ClassSize.align(ClassSize.MAP_ENTRY +
         ClassSize.align(ClassSize.OBJECT + 2 * ClassSize.ARRAY +
-          indexEntry.getKey().getFirst().length +
-          indexEntry.getKey().getSecond().length) + index.heapSize()
-      );
+          key.getFirst().length +
+          key.getSecond().length) + index.heapSize());
+      LOG.info(String.format("Final index size: %f mb for region: '%s' index: %s",
+        toMb(indexSize), Bytes.toString(key.getFirst()), Bytes.toString(key.getSecond())));
+      heapSize += indexSize;
     }
+    LOG.info(String.format("Total index heap overhead: %f mb for region: '%s'",
+      toMb(heapSize), region.getRegionNameAsString()));
     return newIndexes;
   }
 
+  private double toMb(long bytes) {
+    return bytes / BYTES_IN_MB;
+  }
+
+  /**
+   * Create a new search context.
+   *
+   * @return the new search context.
+   */
   public IdxSearchContext newSearchContext() {
     indexSwitchLock.readLock().lock();
     try {
