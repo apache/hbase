@@ -378,7 +378,7 @@ public class ThriftServer {
         HTable table = getTable(tableName);
         Delete delete  = new Delete(row);
         byte [][] famAndQf = KeyValue.parseColumn(column);
-        if (famAndQf[1].length == 0) {
+        if (famAndQf[1] == null) {
           delete.deleteFamily(famAndQf[0], timestamp);
         } else {
           delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
@@ -457,7 +457,7 @@ public class ThriftServer {
         for (Mutation m : mutations) {
           byte[][] famAndQf = KeyValue.parseColumn(m.column);
           if (m.isDelete) {
-            if (famAndQf[1].length == 0)
+            if (famAndQf[1] == null)
               delete.deleteFamily(famAndQf[0], timestamp);
             else
               delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
@@ -496,7 +496,7 @@ public class ThriftServer {
           byte[][] famAndQf = KeyValue.parseColumn(m.column);
           if (m.isDelete) {
             // no qualifier, family only.
-            if (famAndQf[1].length == 0)
+            if (famAndQf[1] == null)
               delete.deleteFamily(famAndQf[0], timestamp);
             else
               delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
