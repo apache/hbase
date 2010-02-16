@@ -17,6 +17,7 @@ Release 0.20.4 - Unreleased
    HBASE-2227  [IHBASE] Idx Expression functionality is incompatible with
                SingleColumnValueFilter
    HBASE-2167  PE for IHBase
+   HBASE-2210  NPE in thrift deleteAll (Igor Ranitovic via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
