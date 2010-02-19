@@ -31,6 +31,7 @@ Release 0.20.4 - Unreleased
                11 attempts".
    HBASE-2220  Add a binary comparator that only compares up to the length
                of the supplied byte array (Bruno Dumon via Stack)
+   HBASE-2241  Change balancer sloppyness from 0.1 to 0.3
 
   NEW FEATURES
 
