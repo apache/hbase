@@ -20,6 +20,7 @@ Release 0.20.4 - Unreleased
    HBASE-2210  NPE in thrift deleteAll (Igor Ranitovic via Stack)
    HBASE-2230  SingleColumnValueFilter has an ungaurded debug log message
    HBASE-2258  The WhileMatchFilter doesn't delegate the call to filterRow()
+   HBASE-2259  StackOverflow in ExplicitColumnTracker when row has many columns
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
