@@ -19,6 +19,7 @@ Release 0.20.4 - Unreleased
    HBASE-2167  PE for IHBase
    HBASE-2210  NPE in thrift deleteAll (Igor Ranitovic via Stack)
    HBASE-2230  SingleColumnValueFilter has an ungaurded debug log message
+   HBASE-2258  The WhileMatchFilter doesn't delegate the call to filterRow()
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
