@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -25,28 +25,33 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTablePool;
+import org.apache.hadoop.hbase.stargate.auth.Authenticator;
+import org.apache.hadoop.hbase.stargate.auth.HBCAuthenticator;
+import org.apache.hadoop.util.StringUtils;
 
 import com.sun.jersey.server.impl.container.servlet.ServletAdaptor;
 
 /**
  * Singleton class encapsulating global REST servlet state and functions.
  */
-public class RESTServlet extends ServletAdaptor {
-  
-  private static final long serialVersionUID = 1L;  
-  public static final int DEFAULT_MAX_AGE = 60 * 60 * 4;       // 4 hours
-  public static final String VERSION_STRING = "0.0.1";
+public class RESTServlet extends ServletAdaptor implements Constants {
 
+  private static final Log LOG = LogFactory.getLog(RESTServlet.class);
+  private static final long serialVersionUID = 1L;  
   private static RESTServlet instance;
 
-  private transient final HBaseConfiguration conf;
-  private transient final HTablePool pool;
-  protected Map<String,Integer> maxAgeMap = 
+  transient final HBaseConfiguration conf;
+  transient final HTablePool pool;
+  Map<String,Integer> maxAgeMap = 
     Collections.synchronizedMap(new HashMap<String,Integer>());
+  boolean multiuser;
+  Authenticator authenticator;
 
   /**
    * @return the RESTServlet singleton instance
@@ -67,7 +72,6 @@ public class RESTServlet extends ServletAdaptor {
     this.conf = new HBaseConfiguration();
     this.pool = new HTablePool(conf, 10);
   }
-
 
   /**
    * Get a table pool for the given table. 
@@ -123,4 +127,45 @@ public class RESTServlet extends ServletAdaptor {
   public void invalidateMaxAge(String tableName) {
     maxAgeMap.remove(tableName);
   }
+
+  /**
+   * @return true if the servlet should operate in multiuser mode
+   */
+  public boolean isMultiUser() {
+    return multiuser;
+  }
+
+  /**
+   * @param flag true if the servlet should operate in multiuser mode 
+   */
+  public void setMultiUser(boolean multiuser) {
+    this.multiuser = multiuser;
+  }
+
+  /**
+   * @return an authenticator
+   */
+  public Authenticator getAuthenticator() {
+    if (authenticator == null) {
+      String className = conf.get("stargate.auth.authenticator");
+      if (className != null) try {
+        Class<?> c = getClass().getClassLoader().loadClass(className);
+        authenticator = (Authenticator)c.newInstance();
+      } catch (Exception e) {
+        LOG.error(StringUtils.stringifyException(e));
+      }
+      if (authenticator == null) {
+        authenticator = new HBCAuthenticator(conf);
+      }
+    }
+    return authenticator;
+  }
+
+  /**
+   * @param authenticator
+   */
+  public void setAuthenticator(Authenticator authenticator) {
+    this.authenticator = authenticator;
+  }
+
 }

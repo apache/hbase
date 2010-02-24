@@ -35,6 +35,7 @@ Release 0.20.4 - Unreleased
    HBASE-2241  Change balancer sloppyness from 0.1 to 0.3
 
   NEW FEATURES
+   HBASE-2257  [stargate] multiuser mode
 
 Release 0.20.3 - January 25th, 2010
   INCOMPATIBLE CHANGES

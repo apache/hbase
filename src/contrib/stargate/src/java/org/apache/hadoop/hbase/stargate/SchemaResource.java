@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.stargate.auth.User;
 import org.apache.hadoop.hbase.stargate.model.ColumnSchemaModel;
 import org.apache.hadoop.hbase.stargate.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -54,20 +55,31 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class SchemaResource implements Constants {
   private static final Log LOG = LogFactory.getLog(SchemaResource.class);
 
-  private String table;
-  private CacheControl cacheControl;
+  User user;
+  String tableName;
+  String actualTableName;
+  CacheControl cacheControl;
+  RESTServlet servlet;
 
-  public SchemaResource(String table) {
-    this.table = table;
+  public SchemaResource(User user, String table) throws IOException {
+    if (user != null) {
+      this.user = user;
+      this.actualTableName = 
+        !user.isAdmin() ? (user.getName() + "." + table) : table;
+    } else {
+      this.actualTableName = table;
+    }
+    this.tableName = table;
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
+    servlet = RESTServlet.getInstance();
   }
 
   private HTableDescriptor getTableSchema() throws IOException,
       TableNotFoundException {
-    HTablePool pool = RESTServlet.getInstance().getTablePool();
-    HTable table = pool.getTable(this.table);
+    HTablePool pool = servlet.getTablePool();
+    HTable table = pool.getTable(actualTableName);
     try {
       return table.getTableDescriptor();
     } finally {
@@ -76,8 +88,7 @@ public class SchemaResource implements Constants {
   }
 
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
+  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response get(@Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
@@ -85,7 +96,7 @@ public class SchemaResource implements Constants {
     try {
       HTableDescriptor htd = getTableSchema();
       TableSchemaModel model = new TableSchemaModel();
-      model.setName(htd.getNameAsString());
+      model.setName(tableName);
       for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
           htd.getValues().entrySet()) {
         model.addAttribute(Bytes.toString(e.getKey().get()), 
@@ -176,10 +187,9 @@ public class SchemaResource implements Constants {
   private Response update(TableSchemaModel model, boolean replace,
       UriInfo uriInfo) {
     try {
-      RESTServlet server = RESTServlet.getInstance();
-      server.invalidateMaxAge(model.getName());
-      HBaseAdmin admin = new HBaseAdmin(server.getConfiguration());
-      byte[] tableName = Bytes.toBytes(model.getName());
+      servlet.invalidateMaxAge(tableName);
+      byte[] tableName = Bytes.toBytes(actualTableName);
+      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
       if (replace || !admin.tableExists(tableName)) {
         return replace(tableName, model, uriInfo, admin);
       } else {
@@ -192,21 +202,31 @@ public class SchemaResource implements Constants {
   }
 
   @PUT
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
+  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response put(TableSchemaModel model, @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
+    }
+    // use the name given in the path, but warn if the name on the path and
+    // the name in the schema are different
+    if (model.getName() != tableName) {
+      LOG.warn("table name mismatch: path='" + tableName + "', schema='" +
+        model.getName() + "'");
     }
     return update(model, true, uriInfo);
   }
 
   @POST
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
+  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response post(TableSchemaModel model, @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
+    }
+    // use the name given in the path, but warn if the name on the path and
+    // the name in the schema are different
+    if (model.getName() != tableName) {
+      LOG.warn("table name mismatch: path='" + tableName + "', schema='" +
+        model.getName() + "'");
     }
     return update(model, false, uriInfo);
   }
@@ -217,10 +237,9 @@ public class SchemaResource implements Constants {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }
     try {
-      HBaseAdmin admin =
-        new HBaseAdmin(RESTServlet.getInstance().getConfiguration());
-      admin.disableTable(table);
-      admin.deleteTable(table);
+      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
+      admin.disableTable(actualTableName);
+      admin.deleteTable(actualTableName);
       return Response.ok().build();
     } catch (TableNotFoundException e) {
       throw new WebApplicationException(Response.Status.NOT_FOUND);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -40,25 +40,35 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTablePool;
+import org.apache.hadoop.hbase.stargate.auth.User;
 import org.apache.hadoop.hbase.stargate.model.TableInfoModel;
 import org.apache.hadoop.hbase.stargate.model.TableRegionModel;
 
 public class RegionsResource implements Constants {
   private static final Log LOG = LogFactory.getLog(RegionsResource.class);
 
-  private String table;
-  private CacheControl cacheControl;
+  User user;
+  String table;
+  CacheControl cacheControl;
+  RESTServlet servlet;
 
-  public RegionsResource(String table) {
+  public RegionsResource(User user, String table) throws IOException {
+    if (user != null) {
+      if (!user.isAdmin()) {
+        throw new WebApplicationException(Response.Status.FORBIDDEN);
+      }
+      this.user = user;
+    }
     this.table = table;
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
+    servlet = RESTServlet.getInstance();
   }
 
   private Map<HRegionInfo,HServerAddress> getTableRegions()
       throws IOException {
-    HTablePool pool = RESTServlet.getInstance().getTablePool();
+    HTablePool pool = servlet.getTablePool();
     HTable table = pool.getTable(this.table);
     try {
       return table.getRegionsInfo();
@@ -68,8 +78,7 @@ public class RegionsResource implements Constants {
   }
 
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
+  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response get(@Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
