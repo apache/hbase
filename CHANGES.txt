@@ -39,6 +39,7 @@ Release 0.20.4 - Unreleased
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
    HBASE-2263  [stargate] multiuser mode: authenticator for zookeeper
+   HBASE-2273  [stargate] export metrics via Hadoop metrics, JMX, and zookeeper
 
 Release 0.20.3 - January 25th, 2010
   INCOMPATIBLE CHANGES
