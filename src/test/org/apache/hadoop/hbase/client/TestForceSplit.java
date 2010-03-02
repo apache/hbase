@@ -27,11 +27,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Tests forced splitting of HTable
@@ -41,8 +43,58 @@ public class TestForceSplit extends HBaseClusterTestCase {
   private static final byte[] tableName = Bytes.toBytes("test");
   private static final byte[] columnName = Bytes.toBytes("a:");
 
+  class WaitOnSplit extends Thread {
+    private final AtomicInteger regionCount = new AtomicInteger(0);
+    private HTable table;
+
+    WaitOnSplit(final HTable t) {
+      super("WaitOnSplit");
+      this.table = t;
+    }
+  
+    public void run() {
+      for (int i = 0; i < 20; i++) {
+        try {
+          sleep(1000);
+        } catch (InterruptedException e) {
+          continue;
+        }
+        // check again    table = new HTable(conf, tableName);
+        Map<HRegionInfo, HServerAddress> regions = null;
+        try {
+          regions = this.table.getRegionsInfo();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+        if (regions == null) continue;
+        this.regionCount.set(regions.size());
+        if (this.regionCount.get() >= 2) break;
+        LOG.debug("Cycle waiting on split");
+      }
+      // Before leaving, print out the regions found in .META.
+      try {
+        HTable metatable = new HTable(conf, HConstants.META_TABLE_NAME);
+        ResultScanner scanner = metatable.getScanner(new Scan());
+        for (Result r: scanner) {
+          LOG.info(r);
+        }
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      
+    }
+
+    /**
+     * @return Count of regions.
+     */
+    int getCount() {
+      return this.regionCount.get();
+    }
+  };
+  
   @Override
   protected void setUp() throws Exception {
+    this.conf.setInt("hbase.client.retries.number", 10);
     super.setUp();
     this.conf.setInt("hbase.io.index.interval", 32);
   }
@@ -98,29 +150,7 @@ public class TestForceSplit extends HBaseClusterTestCase {
     // Scan first row so we are into first region before split happens.
     scanner.next();
 
-    final AtomicInteger count = new AtomicInteger(0);
-    Thread t = new Thread("CheckForSplit") {
-      public void run() {
-        for (int i = 0; i < 20; i++) {
-          try {
-            sleep(1000);
-          } catch (InterruptedException e) {
-            continue;
-          }
-          // check again    table = new HTable(conf, tableName);
-          Map<HRegionInfo, HServerAddress> regions = null;
-          try {
-            regions = table.getRegionsInfo();
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-          if (regions == null) continue;
-          count.set(regions.size());
-          if (count.get() >= 2) break;
-          LOG.debug("Cycle waiting on split");
-        }
-      }
-    };
+    Thread t = new WaitOnSplit(table);
     t.start();
     // tell the master to split the table
     admin.split(Bytes.toString(tableName));
