@@ -85,13 +85,17 @@
     
     <complexType name="Scanner">
     	<sequence>
-    		<element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"></element>
+    		<element name="column" type="base64Binary" minOccurs="0"
+    			maxOccurs="unbounded">
+    		</element>
+    		<element name="filter" type="string" maxOccurs="1" minOccurs="0"></element>
     	</sequence>
     	<attribute name="startRow" type="base64Binary"></attribute>
     	<attribute name="endRow" type="base64Binary"></attribute>
     	<attribute name="batch" type="int"></attribute>
     	<attribute name="startTime" type="int"></attribute>
     	<attribute name="endTime" type="int"></attribute>
+      <attribute name="maxVersions" type="int"></attribute>
     </complexType>
 
     <element name="StorageClusterVersion"

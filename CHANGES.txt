@@ -27,7 +27,6 @@ Release 0.20.4 - Unreleased
    HBASE-2063  For hfileoutputformat, on timeout/failure/kill clean up
                half-written hfile (Ruslan Salyakhov via Stack)
 
-
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
    HBASE-2185  Add html version of default hbase-site.xml (Kay Kay via Stack)
@@ -46,6 +45,7 @@ Release 0.20.4 - Unreleased
    HBASE-2257  [stargate] multiuser mode
    HBASE-2263  [stargate] multiuser mode: authenticator for zookeeper
    HBASE-2273  [stargate] export metrics via Hadoop metrics, JMX, and zookeeper
+   HBASE-2274  [stargate] filter support: JSON descriptors
 
 Release 0.20.3 - January 25th, 2010
   INCOMPATIBLE CHANGES
