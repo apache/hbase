@@ -22,6 +22,9 @@ Release 0.20.4 - Unreleased
    HBASE-2258  The WhileMatchFilter doesn't delegate the call to filterRow()
    HBASE-2259  StackOverflow in ExplicitColumnTracker when row has many columns
    HBASE-2244  META gets inconsistent in a number of crash scenarios
+   HBASE-2284  fsWriteLatency metric may be incorrectly reported
+               (Kannan Muthukkaruppan via Stack)
+
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream

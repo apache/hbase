@@ -604,7 +604,7 @@ public class HLog implements HConstants, Syncable {
       // is greater than or equal to the value in lastSeqWritten.
       this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum));
       boolean sync = regionInfo.isMetaRegion() || regionInfo.isRootRegion();
-      doWrite(logKey, logEdit, sync, logKey.getWriteTime());
+      doWrite(logKey, logEdit, sync);
       this.numEntries.incrementAndGet();
       updateLock.notifyAll();
     }
@@ -656,7 +656,7 @@ public class HLog implements HConstants, Syncable {
       int counter = 0;
       for (KeyValue kv: edits) {
         HLogKey logKey = makeKey(regionName, tableName, seqNum[counter++], now);
-        doWrite(logKey, kv, sync, now);
+        doWrite(logKey, kv, sync);
         this.numEntries.incrementAndGet();
       }
       updateLock.notifyAll();
@@ -709,14 +709,14 @@ public class HLog implements HConstants, Syncable {
     }
   }
   
-  private void doWrite(HLogKey logKey, KeyValue logEdit, boolean sync,
-      final long now)
+  private void doWrite(HLogKey logKey, KeyValue logEdit, boolean sync)
   throws IOException {
     if (!this.enabled) {
       return;
     }
     try {
       this.editsSize.addAndGet(logKey.heapSize() + logEdit.heapSize());
+      long now = System.currentTimeMillis();
       this.writer.append(logKey, logEdit);
       long took = System.currentTimeMillis() - now;
       writeTime += took;
