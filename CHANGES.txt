@@ -26,6 +26,7 @@ Release 0.20.4 - Unreleased
                (Kannan Muthukkaruppan via Stack)
    HBASE-2063  For hfileoutputformat, on timeout/failure/kill clean up
                half-written hfile (Ruslan Salyakhov via Stack)
+   HBASE-2288  Shell fails on alter
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream

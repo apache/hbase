@@ -231,9 +231,6 @@ module HBase
         if args[MEMSTORE_FLUSHSIZE]
           htd.setMemStoreFlushSize(JLong.valueOf(args[MEMSTORE_FLUSHSIZE]))
         end
-        if args[DEFERRED_LOG_FLUSH]
-          htd.setDeferredLogFlush(JBoolean.valueOf(args[DEFERRED_LOG_FLUSH]))
-        end
         @admin.modifyTable(tableName.to_java_bytes, htd)
       else
         descriptor = hcd(args) 
