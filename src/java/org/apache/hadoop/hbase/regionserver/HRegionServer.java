@@ -208,7 +208,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
   // eclipse warning when accessed by inner classes
   protected volatile HLog hlog;
   LogRoller hlogRoller;
-  LogFlusher hlogFlusher;
   
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
@@ -253,7 +252,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.fsOk = true;
     this.conf = conf;
     this.connection = ServerConnectionManager.getConnection(conf);
-
+    
     this.isOnline = false;
     
     // Config'ed params
@@ -330,10 +329,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     
     // Log rolling thread
     this.hlogRoller = new LogRoller(this);
-    
-    // Log flushing thread
-    this.hlogFlusher =
-      new LogFlusher(this.threadWakeFrequency, this.stopRequested);
     
     // Background thread to check for major compactions; needed if region
     // has not gotten updates in a while.  Make it run at a lesser frequency.
@@ -522,7 +517,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
                   try {
                     serverInfo.setStartCode(System.currentTimeMillis());
                     hlog = setupHLog();
-                    this.hlogFlusher.setHLog(hlog);
                   } catch (IOException e) {
                     this.abortRequested = true;
                     this.stopRequested.set(true);
@@ -624,7 +618,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive?  If OOME could have exited already
     cacheFlusher.interruptIfNecessary();
-    hlogFlusher.interrupt();
     compactSplitThread.interruptIfNecessary();
     hlogRoller.interruptIfNecessary();
     this.majorCompactionChecker.interrupt();
@@ -792,7 +785,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
       this.hlog = setupHLog();
-      this.hlogFlusher.setHLog(hlog);
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
       startServiceThreads();
@@ -1148,8 +1140,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
     };
     Threads.setDaemonThreadRunning(this.hlogRoller, n + ".logRoller",
-        handler);
-    Threads.setDaemonThreadRunning(this.hlogFlusher, n + ".logFlusher",
         handler);
     Threads.setDaemonThreadRunning(this.cacheFlusher, n + ".cacheFlusher",
       handler);
@@ -1772,6 +1762,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
         this.cacheFlusher.reclaimMemStoreMemory();
       }
       region.put(put, getLockFromId(put.getLockId()));
+      
+      this.hlog.sync(region.getRegionInfo().isMetaRegion());
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1782,8 +1774,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // Count of Puts processed.
     int i = 0;
     checkOpen();
+    boolean isMetaRegion = false;
     try {
       HRegion region = getRegion(regionName);
+      isMetaRegion = region.getRegionInfo().isMetaRegion();
+      
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
       }
@@ -1802,7 +1797,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
       throw convertThrowableToIOE(cleanup(t));
     }
     // All have been processed successfully.
-    return -1;
+    this.hlog.sync(isMetaRegion);
+    
+    if (i == puts.length) {
+      return -1;
+    } else {
+      return i;
+    }
   }
 
   /**
@@ -1830,8 +1831,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
       }
-      return region.checkAndPut(row, family, qualifier, value, put,
+      boolean retval = region.checkAndPut(row, family, qualifier, value, put,
           getLockFromId(put.getLockId()), true);
+
+      this.hlog.sync(region.getRegionInfo().isMetaRegion());
+      return retval;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1992,6 +1996,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
       Integer lid = getLockFromId(delete.getLockId());
       region.delete(delete, lid, writeToWAL);
+      this.hlog.sync(region.getRegionInfo().isMetaRegion());
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -2002,9 +2007,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // Count of Deletes processed.
     int i = 0;
     checkOpen();
+    boolean isMetaRegion = false;
     try {
       boolean writeToWAL = true;
       HRegion region = getRegion(regionName);
+      isMetaRegion = region.getRegionInfo().isMetaRegion();
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
       }
@@ -2022,6 +2029,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
+    
+    this.hlog.sync(isMetaRegion);
     // All have been processed successfully.
     return -1;
   }
@@ -2477,8 +2486,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
-      return region.incrementColumnValue(row, family, qualifier, amount, 
+      long retval = region.incrementColumnValue(row, family, qualifier, amount, 
           writeToWAL);
+      
+      this.hlog.sync(region.getRegionInfo().isMetaRegion());
+      return retval;
     } catch (IOException e) {
       checkFileSystem();
       throw e;

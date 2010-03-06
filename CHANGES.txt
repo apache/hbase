@@ -28,6 +28,8 @@ Release 0.20.4 - Unreleased
                half-written hfile (Ruslan Salyakhov via Stack)
    HBASE-2288  Shell fails on alter
    HBASE-2293  CME in RegionManager#isMetaServer
+   HBASE-2261  The javadoc in WhileMatchFilter and it's tests in TestFilter are
+               not accurate/wrong
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
@@ -48,6 +50,8 @@ Release 0.20.4 - Unreleased
    HBASE-2263  [stargate] multiuser mode: authenticator for zookeeper
    HBASE-2273  [stargate] export metrics via Hadoop metrics, JMX, and zookeeper
    HBASE-2274  [stargate] filter support: JSON descriptors
+   HBASE-2298  Backport of "HLog Group Commit" to 0.20 branch
+               (Nicolas Spiegelberg via Stack)
 
 Release 0.20.3 - January 25th, 2010
   INCOMPATIBLE CHANGES
