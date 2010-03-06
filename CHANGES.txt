@@ -44,6 +44,10 @@ Release 0.20.4 - Unreleased
                of the supplied byte array (Bruno Dumon via Stack)
    HBASE-2241  Change balancer sloppyness from 0.1 to 0.3
    HBASE-2262  ZKW.ensureExists should check for existence
+   HBASE-2249  The PerformanceEvaluation read tests don't take the MemStore
+               into account
+   HBASE-2249  The PerformanceEvaluation read tests don't take the MemStore
+               into account
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode

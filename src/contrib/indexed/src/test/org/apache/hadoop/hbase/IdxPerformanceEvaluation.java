@@ -46,15 +46,9 @@ import java.io.IOException;
  * split in a single node cluster is very high which can cause timeout issues on
  * the client side, especially during the sequentialWrite test.
  * <p/>
- * <p>A suggested schema change would be to add a second column family and column
- * to the 'TestTable' table.  The second value would be the first ten bytes of
- * the larger 1KB value.  This would allow the scan to use an index hint to
- * dramatically reduce the number of rows it needs to filter without the cost
- * of keeping every 1KB value in memory.
- * <p/>
- * <p>Another point that's mentioned in the help output is that this evaluation
- * requires more than the default 1GB of VM memory to complete.
- * See the {@link #printUsage(String)} output for more details.
+ * <p>This evaluation creates an index on the first two bytes to the value.  This
+ * still provides a big performance boost without requiring huge amounts of memory.
+ * </p>
  */
 public class IdxPerformanceEvaluation extends PerformanceEvaluation {
   protected static final Log LOG = LogFactory.getLog(IdxPerformanceEvaluation.class);
@@ -104,34 +98,16 @@ public class IdxPerformanceEvaluation extends PerformanceEvaluation {
   protected void printUsage(String message) {
     System.err.println("");
     System.err.println(
-      "NOTE: In order to run this evaluration you need to ensure you have \n" +
+      "NOTE: In order to run this evaluation you need to ensure you have \n" +
         "enabled the IdxRegion in your hbase-site.xml."
-    );
-    System.err.println("");
-    System.err.println(
-      "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-    );
-    System.err.println(
-      "WARNING: By default this evaluation creates an index on one million \n" +
-        "(specified by the 'rows' argument) randomly generated 1KB byte arrays. \n" +
-        "This means that in order to populate an index there must be \n" +
-        "((rows * 1000) * 1.2) bytes (1200 MB for default values) of \n" +
-        "memory allocated to the region servers.  If you are running this \n" +
-        "evaluation on a single node cluster with the default memory \n" +
-        "configuration you'll need to increase the HBASE_HEAPSIZE \n" +
-        "environment variable to at least 1200 MB (preferably 1500 MB) \n" +
-        "in hbase-env.sh.");
-    System.err.println(
-      "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     );
     System.err.println("");
     super.printUsage(message);
   }
 
   static class IndexedFilteredScanTest extends FilteredScanTest {
-    public IndexedFilteredScanTest(final HBaseConfiguration conf, final int startRow,
-      final int perClientRunRows, final int totalRows, final Status status, byte[] tableName) {
-      super(conf, startRow, perClientRunRows, totalRows, status, tableName);
+    IndexedFilteredScanTest(HBaseConfiguration conf, TestOptions options, Status status) {
+      super(conf, options, status);
     }
 
     @Override
