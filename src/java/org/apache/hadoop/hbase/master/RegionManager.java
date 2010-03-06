@@ -334,9 +334,12 @@ class RegionManager implements HConstants {
   private void doRegionAssignment(final RegionState rs,
       final HServerInfo sinfo, final ArrayList<HMsg> returnMsgs) {
     String regionName = rs.getRegionInfo().getRegionNameAsString();
-    LOG.info("Assigning region " + regionName + " to " + sinfo.getServerName());
+    LOG.info("Assigning region " + regionName +
+        " to " + sinfo.getServerName());
     rs.setPendingOpen(sinfo.getServerName());
-    this.regionsInTransition.put(regionName, rs);
+    synchronized (this.regionsInTransition) {
+      this.regionsInTransition.put(regionName, rs);
+    }
 
     returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo()));
   }
@@ -387,11 +390,14 @@ class RegionManager implements HConstants {
                                                      boolean isSingleServer) {
     // set of regions we want to assign to this server
     Set<RegionState> regionsToAssign = new HashSet<RegionState>();
-
     boolean isMetaServer = isMetaServer(addr);
+    RegionState rootState = null;
+    synchronized (this.regionsInTransition) {
+      // Handle if root is unassigned... only assign root if root is offline.
+      rootState = regionsInTransition.get
+          (HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString());
+    }
 
-    // Handle if root is unassigned... only assign root if root is offline.
-    RegionState rootState = regionsInTransition.get(HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString());
     if (rootState != null && rootState.isUnassigned()) {
       // make sure root isnt assigned here first.
       // if so return 'empty list'
@@ -406,34 +412,37 @@ class RegionManager implements HConstants {
 
     // Look over the set of regions that aren't currently assigned to
     // determine which we should assign to this server.
-    boolean reassigningMetas = numberOfMetaRegions.get() != onlineMetaRegions.size();
+    boolean reassigningMetas =
+        numberOfMetaRegions.get() != onlineMetaRegions.size();
     boolean isMetaOrRoot = isMetaServer || isRootServer(addr);
     if (reassigningMetas && isMetaOrRoot && !isSingleServer) {
       return regionsToAssign; // dont assign anything to this server.
     }
 
-    for (RegionState s: regionsInTransition.values()) {
-      HRegionInfo i = s.getRegionInfo();
-      if (i == null) {
-        continue;
+    synchronized (this.regionsInTransition) {
+      for (RegionState s: regionsInTransition.values()) {
+        HRegionInfo i = s.getRegionInfo();
+        if (i == null) {
+          continue;
+        }
+        if (reassigningMetas &&
+            !i.isMetaRegion()) {
+          // Can't assign user regions until all meta regions have been assigned
+          // and are on-line
+          continue;
+        }
+        if (!i.isMetaRegion() &&
+            !master.getServerManager().canAssignUserRegions()) {
+          LOG.debug("user region " + i.getRegionNameAsString() +
+            " is in transition but not enough servers yet");
+          continue;
+        }
+        if (s.isUnassigned()) {
+          regionsToAssign.add(s);
+        }
       }
-      if (reassigningMetas &&
-          !i.isMetaRegion()) {
-        // Can't assign user regions until all meta regions have been assigned
-        // and are on-line
-        continue;
-      }
-      if (!i.isMetaRegion() && 
-          !master.getServerManager().canAssignUserRegions()) {
-        LOG.debug("user region " + i.getRegionNameAsString() +
-          " is in transition but not enough servers yet");
-        continue;
-      }
-      if (s.isUnassigned()) {
-        regionsToAssign.add(s);
-      }
+      return regionsToAssign;
     }
-    return regionsToAssign;
   }
   
   /*
@@ -829,13 +838,15 @@ class RegionManager implements HConstants {
 
     // This might be expensive, but we need to make sure we dont
     // get double assignment to the same regionserver.
-    for (RegionState s : regionsInTransition.values()) {
-      if (s.getRegionInfo().isMetaRegion()
-          && !s.isUnassigned()
-          && s.getServerName() != null
-          && s.getServerName().equals(server.toString())) {
-        // Has an outstanding meta region to be assigned.
-        return true;
+    synchronized (this.regionsInTransition) {
+      for (RegionState s : regionsInTransition.values()) {
+        if (s.getRegionInfo().isMetaRegion()
+            && !s.isUnassigned()
+            && s.getServerName() != null
+            && s.getServerName().equals(server.toString())) {
+          // Has an outstanding meta region to be assigned.
+          return true;
+        }
       }
     }
     return false;
@@ -848,13 +859,15 @@ class RegionManager implements HConstants {
    * @return true if server is transitioning the ROOT table
    */
   public boolean isRootServerCandidate(final String server) {
-    for (RegionState s : regionsInTransition.values()) {
-      if (s.getRegionInfo().isRootRegion()
-          && !s.isUnassigned()
-          && s.getServerName() != null
-          && s.getServerName().equals(server)) {
-        // Has an outstanding root region to be assigned.
-        return true;
+    synchronized (this.regionsInTransition) {
+      for (RegionState s : regionsInTransition.values()) {
+        if (s.getRegionInfo().isRootRegion()
+            && !s.isUnassigned()
+            && s.getServerName() != null
+            && s.getServerName().equals(server)) {
+          // Has an outstanding root region to be assigned.
+          return true;
+        }
       }
     }
     return false;
@@ -867,13 +880,15 @@ class RegionManager implements HConstants {
    * @return if this server was transitioning a META table then a not null HRegionInfo pointing to it
    */
   public HRegionInfo getMetaServerRegionInfo(final String server) {
-    for (RegionState s : regionsInTransition.values()) {
-      if (s.getRegionInfo().isMetaRegion()
-          && !s.isUnassigned()
-          && s.getServerName() != null
-          && s.getServerName().equals(server)) {
-        // Has an outstanding meta region to be assigned.
-        return s.getRegionInfo();
+    synchronized (this.regionsInTransition) {
+      for (RegionState s : regionsInTransition.values()) {
+        if (s.getRegionInfo().isMetaRegion()
+            && !s.isUnassigned()
+            && s.getServerName() != null
+            && s.getServerName().equals(server)) {
+          // Has an outstanding meta region to be assigned.
+          return s.getRegionInfo();
+        }
       }
     }
     return null;
@@ -922,7 +937,9 @@ class RegionManager implements HConstants {
    * @param info
    */
   public void removeRegion(HRegionInfo info) {
-    this.regionsInTransition.remove(info.getRegionNameAsString());
+    synchronized (this.regionsInTransition) {
+      this.regionsInTransition.remove(info.getRegionNameAsString());
+    }
   }
   
   /**
@@ -930,7 +947,9 @@ class RegionManager implements HConstants {
    * @return true if the named region is in a transition state
    */
   public boolean regionIsInTransition(String regionName) {
-    return regionsInTransition.containsKey(regionName);
+    synchronized (this.regionsInTransition) {
+      return regionsInTransition.containsKey(regionName);
+    }
   }
 
   /**
@@ -938,11 +957,13 @@ class RegionManager implements HConstants {
    * @return true if the region is unassigned, pendingOpen or open
    */
   public boolean regionIsOpening(String regionName) {
-    RegionState state = regionsInTransition.get(regionName);
-    if (state != null) {
-      return state.isOpening();
+    synchronized (this.regionsInTransition) {
+      RegionState state = regionsInTransition.get(regionName);
+      if (state != null) {
+        return state.isOpening();
+      }
+      return false;
     }
-    return false;
   }
 
   /** 
@@ -951,15 +972,16 @@ class RegionManager implements HConstants {
    * @param force if true mark region unassigned whatever its current state
    */
   public void setUnassigned(HRegionInfo info, boolean force) {
-    synchronized(this.regionsInTransition) {
-      RegionState s = regionsInTransition.get(info.getRegionNameAsString());
+    RegionState s = null;
+    synchronized (this.regionsInTransition) {
+      s = regionsInTransition.get(info.getRegionNameAsString());
       if (s == null) {
         s = new RegionState(info);
         regionsInTransition.put(info.getRegionNameAsString(), s);
       }
-      if (force || (!s.isPendingOpen() || !s.isOpen())) {
-        s.setUnassigned();
-      }
+    }
+    if (force || (!s.isPendingOpen() || !s.isOpen())) {
+      s.setUnassigned();
     }
   }
   
@@ -1139,13 +1161,15 @@ class RegionManager implements HConstants {
    */
   public boolean inSafeMode() {
     if (safeMode) {
-      if(isInitialMetaScanComplete() && regionsInTransition.size() == 0 &&
-         tellZooKeeperOutOfSafeMode()) {
-        master.connection.unsetRootRegionLocation();
-        safeMode = false;
-        LOG.info("exiting safe mode");
-      } else {
-        LOG.info("in safe mode");
+      synchronized (this.regionsInTransition) {
+        if(isInitialMetaScanComplete() && regionsInTransition.size() == 0 &&
+           tellZooKeeperOutOfSafeMode()) {
+          master.connection.unsetRootRegionLocation();
+          safeMode = false;
+          LOG.info("exiting safe mode");
+        } else {
+          LOG.info("in safe mode");
+        }
       }
     }
     return safeMode;
