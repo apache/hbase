@@ -30,6 +30,7 @@ Release 0.20.4 - Unreleased
    HBASE-2293  CME in RegionManager#isMetaServer
    HBASE-2261  The javadoc in WhileMatchFilter and it's tests in TestFilter are
                not accurate/wrong
+   HBASE-2299  [EC2] mapreduce fixups for PE
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
