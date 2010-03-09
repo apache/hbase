@@ -49,6 +49,7 @@ Release 0.20.4 - Unreleased
                into account
    HBASE-2249  The PerformanceEvaluation read tests don't take the MemStore
                into account
+   HBASE-2277  Update branch to hadoop 0.20.2
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
