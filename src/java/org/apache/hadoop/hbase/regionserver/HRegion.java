@@ -1724,8 +1724,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   
   private void waitOnRowLocks() {
     synchronized (lockedRows) {
-      while (this.lockedRows.size() > 0) {
-        LOG.debug("waiting for " + this.lockedRows.size() + " row locks");
+      while (!this.lockedRows.isEmpty()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Waiting on " + this.lockedRows.size() + " row locks");
+        } 
         try {
           this.lockedRows.wait();
         } catch (InterruptedException e) {
