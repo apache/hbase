@@ -22,7 +22,9 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -118,8 +120,9 @@ public class HLog implements HConstants, Syncable {
   private final long blocksize;
   private final int flushlogentries;
   private final AtomicInteger unflushedEntries = new AtomicInteger(0);
-  private final boolean append;
-  private final Method syncfs;
+  private final Method syncfs;       // refers to SequenceFileWriter.syncFs()
+  private OutputStream hdfs_out;     // OutputStream associated with the current SequenceFile.writer
+  private Method getNumCurrentReplicas; // refers to DFSOutputStream.getNumCurrentReplicas
   private final static Object [] NO_ARGS = new Object []{};
   
   // used to indirectly tell syncFs to force the sync
@@ -138,6 +141,7 @@ public class HLog implements HConstants, Syncable {
 
   /*
    * Map of regions to first sequence/edit id in their memstore.
+   * The sequenceid is the id of the last write into the current HLog.
    */
   private final ConcurrentSkipListMap<byte [], Long> lastSeqWritten =
     new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
@@ -146,14 +150,17 @@ public class HLog implements HConstants, Syncable {
 
   private final AtomicLong logSeqNum = new AtomicLong(0);
 
+  // The timestamp (in ms) when the log file was created.
   private volatile long filenum = -1;
   
+  //number of transactions in the current Hlog.
   private final AtomicInteger numEntries = new AtomicInteger(0);
 
-  // Size of edits written so far. Used figuring when to rotate logs.
+  // Edit size of the current log. Used in figuring when to rotate logs.
   private final AtomicLong editsSize = new AtomicLong(0);
 
-  // If > than this size, roll the log.
+  // If > than this size, roll the log. This is typically 0.95 times the size 
+  // of the default Hdfs block size.
   private final long logrollsize;
 
   // This lock prevents starting a log roll during a cache flush.
@@ -259,14 +266,37 @@ public class HLog implements HConstants, Syncable {
       ", enabled=" + this.enabled +
       ", flushlogentries=" + this.flushlogentries +
       ", optionallogflushinternal=" + this.optionalFlushInterval + "ms");
+
     rollWriter();
-    // Test if syncfs is available.
-    this.append = isAppend(conf);
-    Method m = null;
-    if (this.append) {
+
+    // handle the reflection necessary to call getNumCurrentReplicas()
+    this.getNumCurrentReplicas = null;
+    if(this.hdfs_out != null) {
       try {
+        this.getNumCurrentReplicas = 
+          this.hdfs_out.getClass().getMethod("getNumCurrentReplicas", 
+                                             new Class<?> []{});
+        this.getNumCurrentReplicas.setAccessible(true);
+      } catch (NoSuchMethodException e) {
+        // Thrown if getNumCurrentReplicas() function isn't available
+      } catch (SecurityException e) {
+        // Thrown if we can't get access to getNumCurrentReplicas()
+        this.getNumCurrentReplicas = null; // could happen on setAccessible()
+      }
+    }
+    if(this.getNumCurrentReplicas != null) {
+      LOG.info("Using getNumCurrentReplicas--HDFS-826");
+    } else {
+      LOG.info("getNumCurrentReplicas--HDFS-826 not available" );
+    }
+    
+    // Test if syncfs is available.
+    Method m = null;
+    if (isAppend(conf)) {
+      try {
+        // function pointer to writer.syncFs()
         m = this.writer.getClass().getMethod("syncFs", new Class<?> []{});
-        LOG.debug("Using syncFs--hadoop-4379");
+        LOG.info("Using syncFs--hadoop-4379");
       } catch (SecurityException e) {
         throw new IOException("Failed test for syncfs", e);
       } catch (NoSuchMethodException e) {
@@ -275,7 +305,7 @@ public class HLog implements HConstants, Syncable {
       }
     }
     this.syncfs = m;
-    
+
     logSyncerThread = new LogSyncer(this.optionalFlushInterval);
     Threads.setDaemonThreadRunning(logSyncerThread,
         Thread.currentThread().getName() + ".logSyncer");
@@ -338,7 +368,7 @@ public class HLog implements HConstants, Syncable {
    *
    * @return If lots of logs, flush the returned regions so next time through
    * we can clean logs. Returns null if nothing to flush.
-   * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
+   * @throws FailedLogCloseException
    * @throws IOException
    */
   public byte [][] rollWriter() throws FailedLogCloseException, IOException {
@@ -358,6 +388,26 @@ public class HLog implements HConstants, Syncable {
         this.filenum = System.currentTimeMillis();
         Path newPath = computeFilename(this.filenum);
         this.writer = createWriter(newPath);
+
+        // Get at the private FSDataOutputStream inside in SequenceFile.
+        // Make it accessible.  Our goal is to get at the underlying
+        // DFSOutputStream so that we can find out HDFS pipeline errors proactively.
+        try {
+          final Field field = writer.getClass().getDeclaredField("out");
+          field.setAccessible(true);
+          // get variable: writer.out
+          FSDataOutputStream writer_out = 
+            (FSDataOutputStream)field.get(writer);
+          // writer's OutputStream: writer.out.getWrappedStream()
+          // important: only valid for the lifetime of this.writer
+          this.hdfs_out = writer_out.getWrappedStream();
+        } catch (NoSuchFieldException ex) {
+          this.hdfs_out = null;
+        } catch (Exception ex) {
+          LOG.error("Problem obtaining hdfs_out: " + ex);
+          this.hdfs_out = null;
+        }
+        
         LOG.info((oldFile != null?
             "Roll " + FSUtils.getPath(oldFile) + ", entries=" +
             this.numEntries.get() +
@@ -390,6 +440,11 @@ public class HLog implements HConstants, Syncable {
 
   protected SequenceFile.Writer createWriter(Path path) throws IOException {
     return createWriter(path, HLogKey.class, KeyValue.class);
+  }
+  
+  // usage: see TestLogRolling.java
+  OutputStream getOutputStream() {
+    return this.hdfs_out;
   }
 
   protected SequenceFile.Writer createWriter(Path path,
@@ -799,17 +854,34 @@ public class HLog implements HConstants, Syncable {
         try {
           long now = System.currentTimeMillis();
           this.writer.sync();
-          if (this.append && syncfs != null) {
+          if (this.syncfs != null) {
             try {
              this.syncfs.invoke(this.writer, NO_ARGS); 
             } catch (Exception e) {
               throw new IOException("Reflection", e);
             }
           }
-          syncTime += System.currentTimeMillis() - now;
-          syncOps++;
+          this.syncTime += System.currentTimeMillis() - now;
+          this.syncOps++;
           this.forceSync = false;
           this.unflushedEntries.set(0);
+            
+          // if the number of replicas in HDFS has fallen below the initial   
+          // value, then roll logs.   
+          try {
+            int numCurrentReplicas = getLogReplication();
+            if (numCurrentReplicas != 0 &&  
+                numCurrentReplicas < fs.getDefaultReplication()) {  
+              LOG.warn("HDFS pipeline error detected. " +   
+                  "Found " + numCurrentReplicas + " replicas but expecting " +
+                  fs.getDefaultReplication() + " replicas. " +  
+                  " Requesting close of hlog.");  
+            requestLogRoll();   
+            } 
+          } catch (Exception e) {   
+              LOG.warn("Unable to invoke DFSOutputStream.getNumCurrentReplicas" + e +
+                       " still proceeding ahead...");  
+          }
         } catch (IOException e) {
           LOG.fatal("Could not append. Requesting close of hlog", e);
           requestLogRoll();
@@ -817,6 +889,29 @@ public class HLog implements HConstants, Syncable {
         }
       }
     }
+  }
+  
+  /**
+   * This method gets the datanode replication count for the current HLog.
+   *
+   * If the pipeline isn't started yet or is empty, you will get the default 
+   * replication factor.  Therefore, if this function returns 0, it means you 
+   * are not properly running with the HDFS-826 patch.
+   * 
+   * @throws Exception
+   */
+  int getLogReplication() throws Exception {
+    if(this.getNumCurrentReplicas != null && this.hdfs_out != null) {
+      Object repl = this.getNumCurrentReplicas.invoke(this.hdfs_out, NO_ARGS);
+      if (repl instanceof Integer) {  
+        return ((Integer)repl).intValue();  
+      }
+    }
+    return 0;
+  }
+  
+  boolean canGetCurReplicas() {
+    return this.getNumCurrentReplicas != null;
   }
 
   private void requestLogRoll() {
@@ -1225,7 +1320,7 @@ public class HLog implements HConstants, Syncable {
   * @param conf
   * @return True if append enabled and we have the syncFs in our path.
   */
-  private static boolean isAppend(final HBaseConfiguration conf) {
+  static boolean isAppend(final HBaseConfiguration conf) {
     boolean append = conf.getBoolean("dfs.support.append", false);
     if (append) {
       try {
@@ -1320,7 +1415,7 @@ public class HLog implements HConstants, Syncable {
   public static String getHLogDirectoryName(HServerInfo info) {
     return getHLogDirectoryName(HServerInfo.getServerName(info));
   }
-
+  
   /**
    * Construct the HLog directory name
    * 

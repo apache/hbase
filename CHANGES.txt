@@ -52,6 +52,8 @@ Release 0.20.4 - Unreleased
    HBASE-2249  The PerformanceEvaluation read tests don't take the MemStore
                into account
    HBASE-2277  Update branch to hadoop 0.20.2
+   HBASE-2234  Roll Hlog if any datanode in the write pipeline dies
+               (Nicolas Spiegelberg via Stack)
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
