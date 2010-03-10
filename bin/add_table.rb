@@ -4,7 +4,7 @@
 # 
 # To see usage for this script, run: 
 #
-#  ${HBASE_HOME}/bin/hbase org.jruby.Main addtable.rb
+#  ${HBASE_HOME}/bin/hbase org.jruby.Main add_table.rb
 #
 include Java
 import org.apache.hadoop.hbase.util.Bytes
