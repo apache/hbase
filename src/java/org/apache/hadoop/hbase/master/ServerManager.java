@@ -155,7 +155,7 @@ class ServerManager implements HConstants {
   public void regionServerStartup(final HServerInfo serverInfo) 
   throws Leases.LeaseStillHeldException {
     HServerInfo info = new HServerInfo(serverInfo);
-    String serverName = HServerInfo.getServerName(info);
+    String serverName = info.getServerName();
     if (serversToServerInfo.containsKey(serverName) ||
         deadServers.contains(serverName)) {
       LOG.debug("Server start was rejected: " + serverInfo);
@@ -212,7 +212,7 @@ class ServerManager implements HConstants {
    */
   public void recordNewServer(HServerInfo info, boolean useInfoLoad) {
     HServerLoad load = useInfoLoad ? info.getLoad() : new HServerLoad();
-    String serverName = HServerInfo.getServerName(info);
+    String serverName = info.getServerName();
     info.setLoad(load);
     // We must set this watcher here because it can be set on a fresh start
     // or on a failover
@@ -834,7 +834,7 @@ class ServerManager implements HConstants {
         serverAddressToServerInfo.remove(serverAddress);
         HServerInfo info = serversToServerInfo.remove(server);
         if (info != null) {
-          String serverName = HServerInfo.getServerName(info);
+          String serverName = info.getServerName();
           HServerLoad load = serversToLoad.remove(serverName);
           if (load != null) {
             synchronized (loadToServers) {

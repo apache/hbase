@@ -56,6 +56,8 @@ Release 0.20.4 - Unreleased
    HBASE-2277  Update branch to hadoop 0.20.2
    HBASE-2234  Roll Hlog if any datanode in the write pipeline dies
                (Nicolas Spiegelberg via Stack)
+   HBASE-2174  Stop from resolving HRegionServer addresses to names using DNS
+               on every heartbeat (Karthik Ranganathan via Stack)
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
