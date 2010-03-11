@@ -666,7 +666,15 @@ public class PerformanceEvaluation implements HConstants {
    * Subclass to particularize what happens per row.
    */
   static abstract class Test {
-    protected final Random rand = new Random(System.currentTimeMillis());
+    // Below is make it so when Tests are all running in the one
+    // jvm, that they each have a differently seeded Random. 
+    private static final Random randomSeed =
+      new Random(System.currentTimeMillis());
+    private static long nextRandomSeed() {
+      return randomSeed.nextLong();
+    }
+    protected final Random rand = new Random(nextRandomSeed());
+
     protected final int startRow;
     protected final int perClientRunRows;
     protected final int totalRows;
