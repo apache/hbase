@@ -43,7 +43,7 @@ class BitSet extends IntSetBase {
    * The fixed part in the heap size calcualtion.
    */
   static final int FIXED_SIZE = ClassSize.align(ClassSize.OBJECT +
-    Bytes.SIZEOF_INT * 4 + ClassSize.ARRAY +
+    Bytes.SIZEOF_INT * 4 + ClassSize.align(ClassSize.ARRAY) +
     ClassSize.REFERENCE + Bytes.SIZEOF_LONG);
 
   /**

@@ -36,7 +36,7 @@ class CompleteIndex implements IdxIndex {
    * The fixed part in the heap size calcualtion.
    */
   static final long FIXED_SIZE = ClassSize.align(ClassSize.OBJECT +
-    2 * ClassSize.REFERENCE + 3 * (ClassSize.ARRAY + ClassSize.REFERENCE) +
+    5 * ClassSize.REFERENCE + ClassSize.align(3 * ClassSize.ARRAY) +
     Bytes.SIZEOF_LONG + 2 * Bytes.SIZEOF_INT
   );
 
