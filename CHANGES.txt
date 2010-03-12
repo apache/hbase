@@ -39,6 +39,8 @@ Release 0.20.4 - Unreleased
                seed over multiple testing threads (Tatsuya Kawano via Stack)
    HBASE-2287  TypeError in shell (Alexey Kovyrin via Stack)
    HBASE-2311  Not having assertions enabled causes index contrib tests to fail
+   HBASE-2034  Client sync block can cause 1 thread of a multi-threaded client
+               to block all others (Karthik Ranganathan via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
