@@ -2,7 +2,8 @@ HBase Change Log
 
 Release 0.20.4 - Unreleased
   INCOMPATIBLE CHANGES
-
+   HBASE-2219  Stop using code mapping for method names in the RPC
+               (Ryan Rawson via Stack)
   BUG FIXES
    HBASE-2173  New idx javadoc not included with the rest
    HBASE-2199  hbase.client.tableindexed.IndexSpecification,
