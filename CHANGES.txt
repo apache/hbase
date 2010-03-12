@@ -38,6 +38,7 @@ Release 0.20.4 - Unreleased
    HBASE-2269  PerformanceEvaluation "--nomapred" may assign duplicate random
                seed over multiple testing threads (Tatsuya Kawano via Stack)
    HBASE-2287  TypeError in shell (Alexey Kovyrin via Stack)
+   HBASE-2311  Not having assertions enabled causes index contrib tests to fail
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream

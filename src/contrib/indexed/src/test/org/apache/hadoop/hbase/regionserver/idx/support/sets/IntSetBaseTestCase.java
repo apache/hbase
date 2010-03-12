@@ -24,7 +24,7 @@ import junit.framework.AssertionFailedError;
 import org.apache.hadoop.hbase.HBaseTestCase;
 
 /**
- * A base test-case of {@link IntSets}.
+ * A base test-case of {@link IntSet}.
  */
 public abstract class IntSetBaseTestCase extends HBaseTestCase {
 
@@ -97,11 +97,14 @@ public abstract class IntSetBaseTestCase extends HBaseTestCase {
 
   public void testAdd() {
     IntSetBase bitSet = newSet(1000);
-
+    boolean ea = true;
     try {
       bitSet.addNext(-1);
       Assert.fail("expected an error");
     } catch (AssertionError ignored) {
+    } catch (ArrayIndexOutOfBoundsException ignored) {
+      System.err.println("Assertions are not set. Use java -ea ... ");
+      ea = false;
     }
 
     addSome(bitSet);
@@ -109,13 +112,17 @@ public abstract class IntSetBaseTestCase extends HBaseTestCase {
 
     try {
       bitSet.addNext(805);
-      Assert.fail("expected an error");
+      if (ea) {
+        Assert.fail("expected an error");
+      }
     } catch (AssertionError ignored) {
     }
 
     try {
       bitSet.addNext(1000);
-      Assert.fail("expected an error");
+      if (ea) {
+        Assert.fail("expected an error");
+      }
     } catch (AssertionError ignored) {
     }
   }
