@@ -42,6 +42,7 @@ Release 0.20.4 - Unreleased
    HBASE-2311  Not having assertions enabled causes index contrib tests to fail
    HBASE-2034  Client sync block can cause 1 thread of a multi-threaded client
                to block all others (Karthik Ranganathan via Stack)
+   HBASE-2305  Client port for ZK has no default (Suraj Varma via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
