@@ -25,11 +25,16 @@ import java.io.IOException;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
 
 /**
- * This comparator is for use with {@link CompareFilter} implementations, such 
- * as {@link RowFilter}, {@link QualifierFilter}, and {@link ValueFilter}, for 
- * filtering based on the value of a given column. Use it to test if a given 
+ * This comparator is for use with {@link CompareFilter} implementations, such
+ * as {@link RowFilter}, {@link QualifierFilter}, and {@link ValueFilter}, for
+ * filtering based on the value of a given column. Use it to test if a given
  * regular expression matches a cell value in the column.
  * <p>
  * Only EQUAL or NOT_EQUAL {@link org.apache.hadoop.hbase.filter.CompareFilter.CompareOp}
@@ -51,6 +56,10 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class RegexStringComparator extends WritableByteArrayComparable {
 
+  private static final Log LOG = LogFactory.getLog(RegexStringComparator.class);
+
+  private Charset charset = Charset.forName(HConstants.UTF8_ENCODING);
+
   private Pattern pattern;
 
   /** Nullary constructor for Writable, do not use */
@@ -62,26 +71,47 @@ public class RegexStringComparator extends WritableByteArrayComparable {
    */
   public RegexStringComparator(String expr) {
     super(Bytes.toBytes(expr));
-    this.pattern = Pattern.compile(expr);
+    this.pattern = Pattern.compile(expr, Pattern.DOTALL);
+  }
+
+  /**
+   * Specifies the {@link Charset} to use to convert the row key to a String.
+   * <p>
+   * The row key needs to be converted to a String in order to be matched
+   * against the regular expression.  This method controls which charset is
+   * used to do this conversion.
+   * <p>
+   * If the row key is made of arbitrary bytes, the charset {@code ISO-8859-1}
+   * is recommended.
+   * @param charset The charset to use.
+   */
+  public void setCharset(final Charset charset) {
+    this.charset = charset;
   }
 
   @Override
   public int compareTo(byte[] value) {
     // Use find() for subsequence match instead of matches() (full sequence
     // match) to adhere to the principle of least surprise.
-    return pattern.matcher(Bytes.toString(value)).find() ? 0 : 1;
+    return pattern.matcher(new String(value, charset)).find() ? 0 : 1;
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    String expr = in.readUTF();
+    final String expr = in.readUTF();
     this.value = Bytes.toBytes(expr);
     this.pattern = Pattern.compile(expr);
+    try {
+      this.charset = Charset.forName(in.readUTF());
+    } catch (IllegalCharsetNameException e) {
+      LOG.error("invalid charset", e);
+    }
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeUTF(pattern.toString());
+    out.writeUTF(charset.name());
   }
 
 }

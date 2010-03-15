@@ -43,6 +43,8 @@ Release 0.20.4 - Unreleased
    HBASE-2034  Client sync block can cause 1 thread of a multi-threaded client
                to block all others (Karthik Ranganathan via Stack)
    HBASE-2305  Client port for ZK has no default (Suraj Varma via Stack)
+   HBASE-2323  filter.RegexStringComparator does not work with certain bytes
+               (Benoit Sigoure via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
