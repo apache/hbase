@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
@@ -439,7 +440,7 @@ public class HLog implements HConstants, Syncable {
   }
 
   protected SequenceFile.Writer createWriter(Path path) throws IOException {
-    return createWriter(path, HLogKey.class, KeyValue.class);
+    return createWriter(path, HLogKey.class, WALEdit.class);
   }
   
   // usage: see TestLogRolling.java
@@ -448,7 +449,7 @@ public class HLog implements HConstants, Syncable {
   }
 
   protected SequenceFile.Writer createWriter(Path path,
-      Class<? extends HLogKey> keyClass, Class<? extends KeyValue> valueClass)
+      Class<? extends HLogKey> keyClass, Class<? extends WALEdit> valueClass)
       throws IOException {
     return SequenceFile.createWriter(this.fs, this.conf, path, keyClass,
         valueClass, fs.getConf().getInt("io.file.buffer.size", 4096), fs
@@ -637,12 +638,13 @@ public class HLog implements HConstants, Syncable {
    * @param now Time of this edit write.
    * @throws IOException
    */
-  public void append(HRegionInfo regionInfo, KeyValue logEdit,
-    final long now)
+  public void append(HRegionInfo regionInfo, WALEdit logEdit,
+    final long now,
+    final boolean isMetaRegion)
   throws IOException {
     byte [] regionName = regionInfo.getRegionName();
     byte [] tableName = regionInfo.getTableDesc().getName();
-    this.append(regionInfo, makeKey(regionName, tableName, -1, now), logEdit);
+    this.append(regionInfo, makeKey(regionName, tableName, -1, now), logEdit, isMetaRegion);
   }
 
   /**
@@ -664,7 +666,8 @@ public class HLog implements HConstants, Syncable {
    * @param logKey
    * @throws IOException
    */
-  public void append(HRegionInfo regionInfo, HLogKey logKey, KeyValue logEdit)
+  public void append(HRegionInfo regionInfo, HLogKey logKey, WALEdit logEdit,
+                     final boolean isMetaRegion)
   throws IOException {
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
@@ -683,6 +686,10 @@ public class HLog implements HConstants, Syncable {
       this.unflushedEntries.incrementAndGet();
       this.numEntries.incrementAndGet();
     }
+
+    // sync txn to file system
+    this.sync(isMetaRegion);
+
     if (this.editsSize.get() > this.logrollsize) {
       if (listener != null) {
         listener.logRollRequested();
@@ -714,29 +721,34 @@ public class HLog implements HConstants, Syncable {
    * @param now
    * @throws IOException
    */
-  public void append(byte [] regionName, byte [] tableName, List<KeyValue> edits,
-    final long now)
+  public void append(byte [] regionName, byte [] tableName, WALEdit edits,
+    final long now, final boolean isMetaRegion)
   throws IOException {
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
     }
-    long seqNum [] = obtainSeqNum(edits.size());
+    long seqNum = obtainSeqNum();
+
     synchronized (this.updateLock) {
       // The 'lastSeqWritten' map holds the sequence number of the oldest
       // write for each region (i.e. the first edit added to the particular
       // memstore). . When the cache is flushed, the entry for the
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
-      this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum[0]));
+      this.lastSeqWritten.putIfAbsent(regionName, seqNum);
       int counter = 0;
-      for (KeyValue kv: edits) {
-        HLogKey logKey = makeKey(regionName, tableName, seqNum[counter++], now);
-        doWrite(logKey, kv);
-        this.numEntries.incrementAndGet();
-      }
+
+      HLogKey logKey = makeKey(regionName, tableName, seqNum, now);
+      doWrite(logKey, edits);
+      this.numEntries.incrementAndGet();
+
       // Only count 1 row as an unflushed entry
       this.unflushedEntries.incrementAndGet();
     }
+
+    // sync txn to file system
+    this.sync(isMetaRegion);
+
     if (this.editsSize.get() > this.logrollsize) {
         requestLogRoll();
     }
@@ -920,7 +932,7 @@ public class HLog implements HConstants, Syncable {
     }
   }
   
-  private void doWrite(HLogKey logKey, KeyValue logEdit)
+  private void doWrite(HLogKey logKey, WALEdit logEdit)
   throws IOException {
     if (!this.enabled) {
       return;
@@ -1002,7 +1014,8 @@ public class HLog implements HConstants, Syncable {
    * @throws IOException
    */
   public void completeCacheFlush(final byte [] regionName, final byte [] tableName,
-    final long logSeqId)
+    final long logSeqId,
+    final boolean isMetaRegion)
   throws IOException {
     try {
       if (this.closed) {
@@ -1010,8 +1023,11 @@ public class HLog implements HConstants, Syncable {
       }
       synchronized (updateLock) {
         long now = System.currentTimeMillis();
+        KeyValue edit = completeCacheFlushLogEdit();
+        WALEdit edits = new WALEdit();
+        edits.add(edit);
         this.writer.append(makeKey(regionName, tableName, logSeqId, System.currentTimeMillis()), 
-            completeCacheFlushLogEdit());
+          edits);
         writeTime += System.currentTimeMillis() - now;
         writeOps++;
         this.numEntries.incrementAndGet();
@@ -1020,6 +1036,9 @@ public class HLog implements HConstants, Syncable {
           this.lastSeqWritten.remove(regionName);
         }
       }
+      // sync txn to file system
+      this.sync(isMetaRegion);
+
     } finally {
       this.cacheFlushLock.unlock();
     }
@@ -1170,7 +1189,7 @@ public class HLog implements HConstants, Syncable {
             in = new SequenceFile.Reader(fs, logfiles[i].getPath(), conf);
             try {
               HLogKey key = newKey(conf);
-              KeyValue val = new KeyValue();
+              WALEdit val = new WALEdit();
               while (in.next(key, val)) {
                 byte [] regionName = key.getRegionName();
                 LinkedList<HLogEntry> queue = logEntries.get(regionName);
@@ -1185,7 +1204,7 @@ public class HLog implements HConstants, Syncable {
                 // Make the key and value new each time; otherwise same instance
                 // is used over and over.
                 key = newKey(conf);
-                val = new KeyValue();
+                val = new WALEdit();
               }
               LOG.debug("Pushed=" + count + " entries from " +
                 logfiles[i].getPath());
@@ -1254,7 +1273,7 @@ public class HLog implements HConstants, Syncable {
                     }
                     SequenceFile.Writer w =
                       SequenceFile.createWriter(fs, conf, logfile,
-                        getKeyClass(conf), KeyValue.class, getCompressionType(conf));
+                        getKeyClass(conf), WALEdit.class, getCompressionType(conf));
                     wap = new WriterAndPath(logfile, w);
                     logWriters.put(key, wap);
                     if (LOG.isDebugEnabled()) {
@@ -1265,13 +1284,15 @@ public class HLog implements HConstants, Syncable {
                     if (old != null) {
                       // Copy from existing log file
                       HLogKey oldkey = newKey(conf);
-                      KeyValue oldval = new KeyValue();
+                      WALEdit oldval = new WALEdit();
                       for (; old.next(oldkey, oldval); count++) {
                         if (LOG.isDebugEnabled() && count > 0
                             && count % 10000 == 0) {
                           LOG.debug("Copied " + count + " edits");
                         }
                         w.append(oldkey, oldval);
+                        oldkey = newKey(conf);
+                        oldval = new WALEdit();
                       }
                       old.close();
                       fs.delete(oldlogfile, true);
@@ -1339,14 +1360,14 @@ public class HLog implements HConstants, Syncable {
    * Only used when splitting logs
    */
   public static class HLogEntry {
-    private KeyValue edit;
+    private WALEdit edit;
     private HLogKey key;
     /**
      * Constructor for both params
      * @param edit log's edit
      * @param key log's key
      */
-    public HLogEntry(KeyValue edit, HLogKey key) {
+    public HLogEntry(WALEdit edit, HLogKey key) {
       super();
       this.edit = edit;
       this.key = key;
@@ -1355,7 +1376,7 @@ public class HLog implements HConstants, Syncable {
      * Gets the edit
      * @return edit
      */
-    public KeyValue getEdit() {
+    public WALEdit getEdit() {
       return edit;
     }
     /**
@@ -1387,6 +1408,13 @@ public class HLog implements HConstants, Syncable {
     if (!append) {
       return;
     }
+
+    // lease recovery not needed for local file system case.
+    // currently, local file system doesn't implement append either.
+    if (!(fs instanceof DistributedFileSystem)) {
+      return;
+    }
+
     // Trying recovery
     boolean recovered = false;
     while (!recovered) {

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.transactional.HBaseBackedTransactionLogger;
 import org.apache.hadoop.hbase.client.transactional.TransactionLogger;
+import org.apache.hadoop.hbase.regionserver.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.util.Progressable;
@@ -86,7 +87,7 @@ class THLogRecoveryManager {
    * @throws UnsupportedEncodingException
    * @throws IOException
    */
-  public Map<Long, List<KeyValue>> getCommitsFromLog(
+  public Map<Long, List<WALEdit>> getCommitsFromLog(
       final Path reconstructionLog, final long maxSeqID,
       final Progressable reporter) throws UnsupportedEncodingException,
       IOException {
@@ -102,7 +103,8 @@ class THLogRecoveryManager {
       return null;
     }
 
-    SortedMap<Long, List<KeyValue>> pendingTransactionsById = new TreeMap<Long, List<KeyValue>>();
+    SortedMap<Long, List<WALEdit>> pendingTransactionsById =
+        new TreeMap<Long, List<WALEdit>>();
     Set<Long> commitedTransactions = new HashSet<Long>();
     Set<Long> abortedTransactions = new HashSet<Long>();
 
@@ -111,7 +113,7 @@ class THLogRecoveryManager {
     
       try {
       THLogKey key = new THLogKey();
-      KeyValue val = new KeyValue();
+      WALEdit val = new WALEdit();
       long skippedEdits = 0;
       long totalEdits = 0;
       long startCount = 0;
@@ -119,6 +121,9 @@ class THLogRecoveryManager {
       long abortCount = 0;
       long commitCount = 0;
       // How many edits to apply before we send a progress report.
+
+
+
       int reportInterval = conf.getInt("hbase.hstore.report.interval.edits",
           2000);
 
@@ -137,18 +142,18 @@ class THLogRecoveryManager {
         }
         long transactionId = key.getTransactionId();
 
-        List<KeyValue> updates = pendingTransactionsById.get(transactionId);
+        List<WALEdit> updates = pendingTransactionsById.get(transactionId);
         switch (key.getTrxOp()) {
 
         case OP:
           if (updates == null) {
-              updates = new ArrayList<KeyValue>();
+              updates = new ArrayList<WALEdit>();
               pendingTransactionsById.put(transactionId, updates);
               startCount++;
           }
 
           updates.add(val);
-          val = new KeyValue();
+          val = new WALEdit();
           writeCount++;
           break;
 
@@ -210,15 +215,16 @@ class THLogRecoveryManager {
     return null;
   }
   
-  private SortedMap<Long, List<KeyValue>> resolvePendingTransaction(
-      SortedMap<Long, List<KeyValue>> pendingTransactionsById
+  private SortedMap<Long, List<WALEdit>> resolvePendingTransaction(
+      SortedMap<Long, List<WALEdit>> pendingTransactionsById
       ) {
-    SortedMap<Long, List<KeyValue>> commitedTransactionsById = new TreeMap<Long, List<KeyValue>>();
+    SortedMap<Long, List<WALEdit>> commitedTransactionsById =
+      new TreeMap<Long, List<WALEdit>>();
     
     LOG.info("Region log has " + pendingTransactionsById.size()
         + " unfinished transactions. Going to the transaction log to resolve");
 
-    for (Entry<Long, List<KeyValue>> entry : pendingTransactionsById.entrySet()) {
+    for (Entry<Long, List<WALEdit>> entry : pendingTransactionsById.entrySet()) {
       if (entry.getValue().isEmpty()) {
         LOG.debug("Skipping resolving trx ["+entry.getKey()+"] has no writes.");
       }

@@ -1763,7 +1763,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
       region.put(put, getLockFromId(put.getLockId()));
       
-      this.hlog.sync(region.getRegionInfo().isMetaRegion());
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1796,9 +1795,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
-    // All have been processed successfully.
-    this.hlog.sync(isMetaRegion);
-    
+
     if (i == puts.length) {
       return -1;
     } else {
@@ -1834,7 +1831,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       boolean retval = region.checkAndPut(row, family, qualifier, value, put,
           getLockFromId(put.getLockId()), true);
 
-      this.hlog.sync(region.getRegionInfo().isMetaRegion());
       return retval;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
@@ -1996,7 +1992,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
       Integer lid = getLockFromId(delete.getLockId());
       region.delete(delete, lid, writeToWAL);
-      this.hlog.sync(region.getRegionInfo().isMetaRegion());
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -2030,7 +2025,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       throw convertThrowableToIOE(cleanup(t));
     }
     
-    this.hlog.sync(isMetaRegion);
     // All have been processed successfully.
     return -1;
   }
@@ -2489,7 +2483,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       long retval = region.incrementColumnValue(row, family, qualifier, amount, 
           writeToWAL);
       
-      this.hlog.sync(region.getRegionInfo().isMetaRegion());
       return retval;
     } catch (IOException e) {
       checkFileSystem();

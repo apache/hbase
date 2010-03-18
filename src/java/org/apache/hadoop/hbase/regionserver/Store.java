@@ -291,7 +291,7 @@ public class Store implements HConstants, HeapSize {
    *
    * We can ignore any log message that has a sequence ID that's equal to or 
    * lower than maxSeqID.  (Because we know such log messages are already 
-   * reflected in the MapFiles.)
+   * reflected in the HFiles.)
    *
    * @return the new max sequence id as per the log, or -1 if no log recovered
    */
@@ -320,13 +320,22 @@ public class Store implements HConstants, HeapSize {
       reconstructionLog, this.conf);
     try {
       HLogKey key = HLog.newKey(conf);
-      KeyValue val = new KeyValue();
+      WALEdit edits = new WALEdit();
       long skippedEdits = 0;
       long editsCount = 0;
       // How many edits to apply before we send a progress report.
       int reportInterval =
         this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
-      while (logReader.next(key, val)) {
+
+      // TBD: Need to add an exception handler around logReader.next.
+      //
+      // A transaction now appears as a single edit. If logReader.next()
+      // returns an exception, then it must be a incomplete/partial
+      // transaction at the end of the file. Rather than bubble up
+      // the exception, we should catch it and simply ignore the
+      // partial transaction during this recovery phase.
+      //
+      while (logReader.next(key, edits)) {
         if (firstSeqIdInLog == -1) {
           firstSeqIdInLog = key.getLogSeqNum();
         }
@@ -335,15 +344,19 @@ public class Store implements HConstants, HeapSize {
           skippedEdits++;
           continue;
         }
-        // Check this edit is for me. Also, guard against writing the special
-        // METACOLUMN info such as HBASE::CACHEFLUSH entries
-        if (val.matchingFamily(HLog.METAFAMILY) ||
-          !Bytes.equals(key.getRegionName(), region.regionInfo.getRegionName()) ||
-          !val.matchingFamily(family.getName())) {
-          continue;
+        for (KeyValue kv : edits.getKeyValues())
+        {
+          // Check this edit is for me. Also, guard against writing the special
+          // METACOLUMN info such as HBASE::CACHEFLUSH entries
+          if (kv.matchingFamily(HLog.METAFAMILY) ||
+              !Bytes.equals(key.getRegionName(), region.regionInfo.getRegionName()) ||
+              !kv.matchingFamily(family.getName())) {
+              continue;
+            }
+          // Add anything as value as long as we use same instance each time.
+          reconstructedCache.add(kv);
         }
-        // Add anything as value as long as we use same instance each time.
-        reconstructedCache.add(val);
+
         editsCount++;
         // Every 2k edits, tell the reporter we're making progress.
         // Have seen 60k edits taking 3minutes to complete.
@@ -351,7 +364,7 @@ public class Store implements HConstants, HeapSize {
           reporter.progress();
         }
         // Instantiate a new KeyValue to perform Writable on
-        val = new KeyValue();
+        edits = new WALEdit();
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Applied " + editsCount + ", skipped " + skippedEdits +
@@ -362,7 +375,7 @@ public class Store implements HConstants, HeapSize {
     } finally {
       logReader.close();
     }
-    
+
     if (reconstructedCache.size() > 0) {
       // We create a "virtual flush" at maxSeqIdInLog+1.
       if (LOG.isDebugEnabled()) {
