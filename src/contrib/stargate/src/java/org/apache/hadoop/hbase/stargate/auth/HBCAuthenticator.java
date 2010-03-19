@@ -1,6 +1,7 @@
 package org.apache.hadoop.hbase.stargate.auth;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.stargate.User;
 
 public class HBCAuthenticator extends Authenticator {
 
