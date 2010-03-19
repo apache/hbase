@@ -46,6 +46,8 @@ Release 0.20.4 - Unreleased
    HBASE-2323  filter.RegexStringComparator does not work with certain bytes
                (Benoit Sigoure via Stack)
    HBASE-2283  row level atomicity (Kannan Muthukkaruppan via Stack)
+   HBASE-2344  InfoServer and hence HBase Master doesn't fully start if you have
+               HADOOP-6151 patch (Kannan Muthukkaruppan via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
