@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -44,7 +44,6 @@ import org.apache.zookeeper.server.persistence.FileTxnLog;
 public class MiniZooKeeperCluster {
   private static final Log LOG = LogFactory.getLog(MiniZooKeeperCluster.class);
 
-  // TODO: make this more configurable?
   private static final int TICK_TIME = 2000;
   private static final int CONNECTION_TIMEOUT = 30000;
 
@@ -52,10 +51,19 @@ public class MiniZooKeeperCluster {
   private int clientPort = 21810; // use non-standard port
 
   private NIOServerCnxn.Factory standaloneServerFactory;
+  private int tickTime = 0;
 
   /** Create mini ZooKeeper cluster. */
   public MiniZooKeeperCluster() {
     this.started = false;
+  }
+
+  public void setClientPort(int clientPort) {
+    this.clientPort = clientPort;
+  }
+
+  public void setTickTime(int tickTime) {
+    this.tickTime = tickTime;
   }
 
   // / XXX: From o.a.zk.t.ClientBase
@@ -76,6 +84,7 @@ public class MiniZooKeeperCluster {
    */
   public int startup(File baseDir) throws IOException,
       InterruptedException {
+
     setupTestEnv();
 
     shutdown();
@@ -83,7 +92,13 @@ public class MiniZooKeeperCluster {
     File dir = new File(baseDir, "zookeeper").getAbsoluteFile();
     recreateDir(dir);
 
-    ZooKeeperServer server = new ZooKeeperServer(dir, dir, TICK_TIME);
+    int tickTimeToUse;
+    if (this.tickTime > 0) {
+      tickTimeToUse = this.tickTime;
+    } else {
+      tickTimeToUse = TICK_TIME;
+    }
+    ZooKeeperServer server = new ZooKeeperServer(dir, dir, tickTimeToUse);
     while (true) {
       try {
         standaloneServerFactory = new NIOServerCnxn.Factory(clientPort);
