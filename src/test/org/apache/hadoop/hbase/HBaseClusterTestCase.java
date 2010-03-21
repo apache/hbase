@@ -81,6 +81,8 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   }
 
   /**
+   * Subclass hook.
+   * 
    * Run after dfs is ready but before hbase cluster is started up.
    */
   protected void preHBaseClusterSetup() throws Exception {

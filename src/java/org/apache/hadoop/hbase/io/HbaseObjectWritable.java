@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,6 +46,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.client.MultiPutResponse;
+import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.filter.*;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.MapWritable;
@@ -154,6 +157,12 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(FirstKeyOnlyFilter.class, code++);
 
     addToMap(Delete [].class, code++);
+
+    addToMap(MultiPut.class, code++);
+    addToMap(MultiPutResponse.class, code++);
+
+    // List 
+    addToMap(List.class, code++);
   }
   
   private Class<?> declaredClass;
