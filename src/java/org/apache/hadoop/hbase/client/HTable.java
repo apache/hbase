@@ -146,6 +146,9 @@ public class HTable {
 
     int nrHRS = getCurrentNrHRS();
     int nrThreads = conf.getInt("hbase.htable.threads.max", nrHRS);
+    if (nrThreads == 0) {
+      nrThreads = 1; // this sucks but there it is.
+    }
 
     // Unfortunately Executors.newCachedThreadPool does not allow us to
     // set the maximum size of the pool, so we have to do it ourselves.
