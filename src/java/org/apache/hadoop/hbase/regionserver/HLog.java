@@ -1150,7 +1150,8 @@ public class HLog implements HConstants, Syncable {
     final HBaseConfiguration conf)
   throws IOException {
     final Map<byte [], WriterAndPath> logWriters =
-      new TreeMap<byte [], WriterAndPath>(Bytes.BYTES_COMPARATOR);
+      Collections.synchronizedMap(
+        new TreeMap<byte [], WriterAndPath>(Bytes.BYTES_COMPARATOR));
     List<Path> splits = null;
     
     // Number of threads to use when log splitting to rewrite the logs.

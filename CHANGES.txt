@@ -50,6 +50,8 @@ Release 0.20.4 - Unreleased
    HBASE-2283  row level atomicity (Kannan Muthukkaruppan via Stack)
    HBASE-2344  InfoServer and hence HBase Master doesn't fully start if you
                have HADOOP-6151 patch (Kannan Muthukkaruppan via Stack)
+   HBASE-2355  Unsynchronized logWriters map is mutated from several threads in
+               HLog splitting (Todd Lipcon via Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
