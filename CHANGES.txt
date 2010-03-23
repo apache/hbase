@@ -91,6 +91,8 @@ Release 0.20.4 - Unreleased
                avoid traffic on region servers when performing M-R on a subset
                of the table (Kay Kay via Stack)
    HBASE-2319  [stargate] multiuser mode: request shaping
+   HBASE-2349  Backport HBaseTestingUtility to branch (will include adding
+               support for junit4 to branch)
 
 Release 0.20.3 - January 25th, 2010
   INCOMPATIBLE CHANGES
