@@ -24,7 +24,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -78,7 +77,6 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.LineReader;
 
-
 /**
  * Script used evaluating HBase performance and scalability.  Runs a HBase
  * client that steps through one of a set of hardcoded tests or 'experiments'
@@ -120,6 +118,7 @@ public class PerformanceEvaluation implements HConstants {
   private int N = 1;
   private int R = ROWS_PER_GB;
   private boolean flushCommits = false;
+  private boolean writeToWAL = true;
 
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
   /**
@@ -127,7 +126,11 @@ public class PerformanceEvaluation implements HConstants {
    */
   public static final Pattern LINE_PATTERN =
     Pattern.compile("startRow=(\\d+),\\s+" +
-    "perClientRunRows=(\\d+),\\s+totalRows=(\\d+),\\s+clients=(\\d+),\\s+flushCommits=(\\w+)");
+        "perClientRunRows=(\\d+),\\s+" +
+        "totalRows=(\\d+),\\s+" + 
+        "clients=(\\d+),\\s+" + 
+        "flushCommits=(\\w+),\\s+" + 
+        "writeToWAL=(\\w+)");
 
   /**
    * Enum for map metrics.  Keep it out here rather than inside in the Map
@@ -171,8 +174,10 @@ public class PerformanceEvaluation implements HConstants {
         "Run scan test using a filter to find a specific row based on it's value (make sure to use --rows=20)");
   }
 
-  protected void addCommandDescriptor(Class<? extends Test> cmdClass, String name, String description) {
-    CmdDescriptor cmdDescriptor = new CmdDescriptor(cmdClass, name, description);
+  protected void addCommandDescriptor(Class<? extends Test> cmdClass, 
+      String name, String description) {
+    CmdDescriptor cmdDescriptor = 
+      new CmdDescriptor(cmdClass, name, description);
     commands.put(name, cmdDescriptor);
   }
   
@@ -200,6 +205,7 @@ public class PerformanceEvaluation implements HConstants {
     private int totalRows = 0;
     private int clients = 0;
     private boolean flushCommits = false;
+    private boolean writeToWAL = true;
       
     public PeInputSplit() {
       this.startRow = 0;
@@ -207,14 +213,17 @@ public class PerformanceEvaluation implements HConstants {
       this.totalRows = 0;
       this.clients = 0;
       this.flushCommits = false;
+      this.writeToWAL = true;
     }
     
-    public PeInputSplit(int startRow, int rows, int totalRows, int clients, boolean flushCommits) {
+    public PeInputSplit(int startRow, int rows, int totalRows, int clients,
+        boolean flushCommits, boolean writeToWAL) {
       this.startRow = startRow;
       this.rows = rows;
       this.totalRows = totalRows;
       this.clients = clients;
       this.flushCommits = flushCommits;
+      this.writeToWAL = writeToWAL;
     }
     
     @Override
@@ -222,8 +231,9 @@ public class PerformanceEvaluation implements HConstants {
       this.startRow = in.readInt();
       this.rows = in.readInt();
       this.totalRows = in.readInt();
-      this.clients = in.readInt();
+      this.clients = in.readInt();      
       this.flushCommits = in.readBoolean();
+      this.writeToWAL = in.readBoolean();
     }
 
     @Override
@@ -233,6 +243,7 @@ public class PerformanceEvaluation implements HConstants {
       out.writeInt(totalRows);
       out.writeInt(clients);
       out.writeBoolean(flushCommits);
+      out.writeBoolean(writeToWAL);
     }
     
     @Override
@@ -263,6 +274,10 @@ public class PerformanceEvaluation implements HConstants {
 
     public boolean isFlushCommits() {
       return flushCommits;
+    }
+
+    public boolean isWriteToWAL() {
+      return writeToWAL;
     }
   }
   
@@ -296,15 +311,19 @@ public class PerformanceEvaluation implements HConstants {
             int totalRows = Integer.parseInt(m.group(3));
             int clients = Integer.parseInt(m.group(4));
             boolean flushCommits = Boolean.parseBoolean(m.group(5));
+            boolean writeToWAL = Boolean.parseBoolean(m.group(6));
 
             LOG.debug("split["+ splitList.size() + "] " + 
                      " startRow=" + startRow +
                      " rows=" + rows +
                      " totalRows=" + totalRows +
                      " clients=" + clients +
-                     " flushCommits=" + flushCommits);
+                     " flushCommits=" + flushCommits +
+                     " writeToWAL=" + writeToWAL);
 
-            PeInputSplit newSplit = new PeInputSplit(startRow, rows, totalRows, clients, flushCommits);
+            PeInputSplit newSplit =
+              new PeInputSplit(startRow, rows, totalRows, clients, 
+                flushCommits, writeToWAL);
             splitList.add(newSplit);
           }
         }
@@ -424,7 +443,9 @@ public class PerformanceEvaluation implements HConstants {
       
       // Evaluation task
       long elapsedTime = this.pe.runOneClient(this.cmd, value.getStartRow(),
-    		                          value.getRows(), value.getTotalRows(), value.isFlushCommits(), status);
+    		                          value.getRows(), value.getTotalRows(), 
+    		                          value.isFlushCommits(), value.isWriteToWAL(),
+    		                          status);
       // Collect how much time the thing took. Report as map output and
       // to the ELAPSED_TIME counter.
       context.getCounter(Counter.ELAPSED_TIME).increment(elapsedTime);
@@ -475,7 +496,6 @@ public class PerformanceEvaluation implements HConstants {
    * @param cmd Command to run.
    * @throws IOException
    */
-  @SuppressWarnings("unused")
   private void doMultipleClients(final Class<? extends Test> cmd) throws IOException {
     final List<Thread> threads = new ArrayList<Thread>(this.N);
     final int perClientRows = R/N;
@@ -489,7 +509,7 @@ public class PerformanceEvaluation implements HConstants {
           try {
             long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
                perClientRows, R,
-                flushCommits, new Status() {
+                flushCommits, writeToWAL, new Status() {
                   public void setStatus(final String msg) throws IOException {
                     LOG.info("client-" + getName() + " " + msg);
                   }
@@ -577,7 +597,8 @@ public class PerformanceEvaluation implements HConstants {
           ", perClientRunRows=" + (perClientRows / 10) +
           ", totalRows=" + this.R +
           ", clients=" + this.N +
-          ", flushCommits=" + this.flushCommits;
+          ", flushCommits=" + this.flushCommits +
+          ", writeToWAL=" + this.writeToWAL;
           int hash = h.hash(Bytes.toBytes(s));
           m.put(hash, s);
         }
@@ -628,16 +649,18 @@ public class PerformanceEvaluation implements HConstants {
     private int totalRows;
     private byte[] tableName;
     private boolean flushCommits;
+    private boolean writeToWAL = true;
 
     TestOptions() {
     }
 
-    TestOptions(int startRow, int perClientRunRows, int totalRows, byte[] tableName, boolean flushCommits) {
+    TestOptions(int startRow, int perClientRunRows, int totalRows, byte[] tableName, boolean flushCommits, boolean writeToWAL) {
       this.startRow = startRow;
       this.perClientRunRows = perClientRunRows;
       this.totalRows = totalRows;
       this.tableName = tableName;
       this.flushCommits = flushCommits;
+      this.writeToWAL = writeToWAL;
     }
 
     public int getStartRow() {
@@ -658,6 +681,10 @@ public class PerformanceEvaluation implements HConstants {
 
     public boolean isFlushCommits() {
       return flushCommits;
+    }
+
+    public boolean isWriteToWAL() {
+      return writeToWAL;
     }
   }
 
@@ -684,6 +711,7 @@ public class PerformanceEvaluation implements HConstants {
     protected HTable table;
     protected volatile HBaseConfiguration conf;
     protected boolean flushCommits;
+    protected boolean writeToWAL;
 
     /**
      * Note that all subclasses of this class must provide a public contructor
@@ -699,6 +727,7 @@ public class PerformanceEvaluation implements HConstants {
       this.table = null;
       this.conf = conf;
       this.flushCommits = options.isFlushCommits();
+      this.writeToWAL = options.isWriteToWAL();
     }
     
     private String generateStatus(final int sr, final int i, final int lr) {
@@ -764,6 +793,7 @@ public class PerformanceEvaluation implements HConstants {
     }
   }
 
+  @SuppressWarnings("unused")
   static class RandomSeekScanTest extends Test {
     RandomSeekScanTest(HBaseConfiguration conf, TestOptions options, Status status) {
       super(conf, options, status);
@@ -790,6 +820,7 @@ public class PerformanceEvaluation implements HConstants {
 
   }
 
+  @SuppressWarnings("unused")
   static abstract class RandomScanWithRangeTest extends Test {
     RandomScanWithRangeTest(HBaseConfiguration conf, TestOptions options, Status status) {
       super(conf, options, status);
@@ -905,6 +936,7 @@ public class PerformanceEvaluation implements HConstants {
       Put put = new Put(row);
       byte[] value = generateValue(this.rand);
       put.add(FAMILY_NAME, QUALIFIER_NAME, value);
+      put.setWriteToWAL(writeToWAL);
       table.put(put);
     }
   }
@@ -966,6 +998,7 @@ public class PerformanceEvaluation implements HConstants {
       Put put = new Put(format(i));
       byte[] value = generateValue(this.rand);
       put.add(FAMILY_NAME, QUALIFIER_NAME, value);
+      put.setWriteToWAL(writeToWAL);
       table.put(put);
     }
 
@@ -1037,7 +1070,9 @@ public class PerformanceEvaluation implements HConstants {
   }
   
   long runOneClient(final Class<? extends Test> cmd, final int startRow,
-                    final int perClientRunRows, final int totalRows, boolean flushCommits, final Status status)
+                    final int perClientRunRows, final int totalRows, 
+                    boolean flushCommits, boolean writeToWAL, 
+                    final Status status)
   throws IOException {
     status.setStatus("Start " + cmd + " at offset " + startRow + " for " +
       perClientRunRows + " rows");
@@ -1045,7 +1080,7 @@ public class PerformanceEvaluation implements HConstants {
 
     Test t = null;
     TestOptions options = new TestOptions(startRow, perClientRunRows,
-        totalRows, getTableDescriptor().getName(), flushCommits);
+        totalRows, getTableDescriptor().getName(), flushCommits, writeToWAL);
     try {
       Constructor<? extends Test> constructor = cmd.getDeclaredConstructor(
           HBaseConfiguration.class,
@@ -1079,7 +1114,8 @@ public class PerformanceEvaluation implements HConstants {
     try {
       admin = new HBaseAdmin(this.conf);
       checkTable(admin);
-      runOneClient(cmd, 0, this.R, this.R, this.flushCommits, status);
+      runOneClient(cmd, 0, this.R, this.R, this.flushCommits, this.writeToWAL,
+        status);
     } catch (Exception e) {
       LOG.error("Failed", e);
     } 
@@ -1142,6 +1178,7 @@ public class PerformanceEvaluation implements HConstants {
       "(rather than use mapreduce)");
     System.err.println(" rows            Rows each client runs. Default: One million");
     System.err.println(" flushCommits    Used to determine if the test should flush the table.  Default: false");
+    System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
     System.err.println();
     System.err.println("Command:");
     for (CmdDescriptor command : commands.values()) {
@@ -1207,8 +1244,14 @@ public class PerformanceEvaluation implements HConstants {
         }
 
         final String flushCommits = "--flushCommits=";
-        if (cmd.startsWith(rows)) {
+        if (cmd.startsWith(flushCommits)) {
           this.flushCommits = Boolean.parseBoolean(cmd.substring(flushCommits.length()));
+          continue;
+        }
+
+        final String writeToWAL = "--writeToWAL=";
+        if (cmd.startsWith(writeToWAL)) {
+          this.flushCommits = Boolean.parseBoolean(cmd.substring(writeToWAL.length()));
           continue;
         }
 
