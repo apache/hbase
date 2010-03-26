@@ -442,7 +442,7 @@ public class HBaseTestingUtility {
    *
    * @throws IOException When removing the rows fails.
    */
-  private void emptyMetaTable() throws IOException {
+  public void emptyMetaTable() throws IOException {
     HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
     ArrayList<Delete> deletes = new ArrayList<Delete>();
     ResultScanner s = t.getScanner(new Scan());
@@ -455,7 +455,7 @@ public class HBaseTestingUtility {
     s.close();
     t.delete(deletes);
   }
-  
+
   /**
    * Starts a <code>MiniMRCluster</code> with a default number of 
    * <code>TaskTracker</code>'s.
@@ -523,7 +523,22 @@ public class HBaseTestingUtility {
    * @throws Exception
    */
   public void expireRegionServerSession(int index) throws Exception {
+    expireRegionServerSession(index, true);
+  }
+
+  /**
+   * Expire a region server's session
+   * @param index which RS
+   * @param hdfsShutdown True if we run the RS shutdown hdfs thread.  Set it to
+   * false if you don't want an RS to shutdown the FS on it way out.  You might
+   * not want it too if lots of RSs all running in the one JVM context.
+   * @throws Exception
+   */
+  public void expireRegionServerSession(final int index,
+    final boolean hdfsShutdown)
+  throws Exception {
     HRegionServer rs = hbaseCluster.getRegionServer(index);
+    if (!hdfsShutdown) rs.setHDFSShutdownThreadOnExit(null);
     expireSession(rs.getZooKeeperWrapper());
   }
 
