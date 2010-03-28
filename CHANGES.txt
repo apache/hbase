@@ -56,6 +56,8 @@ Release 0.20.4 - Unreleased
                empty and won't load region (Cosmin Lehene via Stack)
    HBASE-2338  log recovery: deleted items may be resurrected
                (Aravind Menon via Stack)
+   HBASE-2359  WALEdit doesn't implement HeapSize
+               (Kannan Muthukkaruppan via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream

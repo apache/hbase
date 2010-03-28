@@ -157,9 +157,6 @@ public class HLog implements HConstants, Syncable {
   //number of transactions in the current Hlog.
   private final AtomicInteger numEntries = new AtomicInteger(0);
 
-  // Edit size of the current log. Used in figuring when to rotate logs.
-  private final AtomicLong editsSize = new AtomicLong(0);
-
   // If > than this size, roll the log. This is typically 0.95 times the size 
   // of the default Hdfs block size.
   private final long logrollsize;
@@ -412,7 +409,7 @@ public class HLog implements HConstants, Syncable {
         LOG.info((oldFile != null?
             "Roll " + FSUtils.getPath(oldFile) + ", entries=" +
             this.numEntries.get() +
-            ", calcsize=" + this.editsSize.get() + ", filesize=" +
+            ", filesize=" +
             this.fs.getFileStatus(oldFile).getLen() + ". ": "") +
           "New hlog " + FSUtils.getPath(newPath));
         // Can we delete any of the old log files?
@@ -431,7 +428,6 @@ public class HLog implements HConstants, Syncable {
           }
         }
         this.numEntries.set(0);
-        this.editsSize.set(0);
       }
     } finally {
       this.cacheFlushLock.unlock();
@@ -690,7 +686,7 @@ public class HLog implements HConstants, Syncable {
     // sync txn to file system
     this.sync(isMetaRegion);
 
-    if (this.editsSize.get() > this.logrollsize) {
+    if (this.writer.getLength() > this.logrollsize) {
       if (listener != null) {
         listener.logRollRequested();
       }
@@ -749,7 +745,7 @@ public class HLog implements HConstants, Syncable {
     // sync txn to file system
     this.sync(isMetaRegion);
 
-    if (this.editsSize.get() > this.logrollsize) {
+    if (this.writer.getLength() > this.logrollsize) {
         requestLogRoll();
     }
   }
@@ -938,7 +934,6 @@ public class HLog implements HConstants, Syncable {
       return;
     }
     try {
-      this.editsSize.addAndGet(logKey.heapSize() + logEdit.heapSize());
       long now = System.currentTimeMillis();
       this.writer.append(logKey, logEdit);
       long took = System.currentTimeMillis() - now;
