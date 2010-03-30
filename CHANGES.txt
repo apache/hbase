@@ -86,6 +86,7 @@ Release 0.20.4 - Unreleased
    HBASE-2327  [EC2] Allocate elastic IP addresses for ZK and master nodes
    HBASE-2147  run zookeeper in the same jvm as master during non-distributed mode
    HBASE-2340  Add end-to-end test of sync/flush
+   HBASE-2389  HTable - delete / put unnecessary sync (Kay Kay via Stack)
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode

@@ -485,7 +485,7 @@ public class HTable {
    * @throws IOException
    * @since 0.20.1
    */
-  public synchronized void delete(final ArrayList<Delete> deletes)
+  public void delete(final ArrayList<Delete> deletes)
   throws IOException {
     int last = 0;
     try {
@@ -503,7 +503,7 @@ public class HTable {
    * @throws IOException
    * @since 0.20.0
    */
-  public synchronized void put(final Put put) throws IOException {
+  public void put(final Put put) throws IOException {
     validatePut(put);
     writeBuffer.add(put);
     currentWriteBufferSize += put.heapSize();
@@ -520,7 +520,7 @@ public class HTable {
    * @throws IOException
    * @since 0.20.0
    */
-  public synchronized void put(final List<Put> puts) throws IOException {
+  public void put(final List<Put> puts) throws IOException {
     for (Put put : puts) {
       validatePut(put);
       writeBuffer.add(put);
@@ -599,7 +599,7 @@ public class HTable {
    * @throws IOException
    * @return true if the new put was execute, false otherwise
    */
-  public synchronized boolean checkAndPut(final byte [] row, 
+  public boolean checkAndPut(final byte [] row, 
       final byte [] family, final byte [] qualifier, final byte [] value, 
       final Put put)
   throws IOException {
