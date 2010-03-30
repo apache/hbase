@@ -171,7 +171,7 @@ public class HLog implements HConstants, Syncable {
   private final Object updateLock = new Object();
 
   private final boolean enabled;
-
+   
   /*
    * If more than this many logs, force flush of oldest region to oldest edit
    * goes to disk.  If too many and we crash, then will take forever replaying.
@@ -304,7 +304,7 @@ public class HLog implements HConstants, Syncable {
       }
     }
     this.syncfs = m;
-
+  
     logSyncerThread = new LogSyncer(this.optionalFlushInterval);
     Threads.setDaemonThreadRunning(logSyncerThread,
         Thread.currentThread().getName() + ".logSyncer");
@@ -1133,7 +1133,7 @@ public class HLog implements HConstants, Syncable {
       throw new IOException("cannot create hlog key");
     }
   }
-
+  
   /*
    * @param rootDir
    * @param logfiles
@@ -1156,35 +1156,48 @@ public class HLog implements HConstants, Syncable {
     int logWriterThreads =
       conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
     
-    // Number of logs to read concurrently when log splitting.
-    // More means faster but bigger mem consumption  */
-    int concurrentLogReads =
+    // Number of logs to read into memory before writing to their appropriate 
+    // regions when log splitting.  More means faster but bigger mem consumption
+    int logFilesPerStep =
       conf.getInt("hbase.regionserver.hlog.splitlog.reader.threads", 3);
-    // Is append supported?
-    boolean append = isAppend(conf);
+
+    // append support = we can avoid data loss (yay)
+    // we open for append, then close to recover the correct file length
+    final boolean appendSupport = isAppend(conf);
+
+    // store corrupt logs for post-mortem analysis (empty string = discard)
+    final String corruptDir = 
+      conf.get("hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt");
+
+    List<Path> finishedFiles = new LinkedList<Path>();
+    List<Path> corruptFiles = new LinkedList<Path>();
+
     try {
       int maxSteps = Double.valueOf(Math.ceil((logfiles.length * 1.0) / 
-          concurrentLogReads)).intValue();
+          logFilesPerStep)).intValue();
       for (int step = 0; step < maxSteps; step++) {
+        
+        // Step 1: read N log files into memory
         final Map<byte[], LinkedList<HLogEntry>> logEntries = 
           new TreeMap<byte[], LinkedList<HLogEntry>>(Bytes.BYTES_COMPARATOR);
-        // Stop at logfiles.length when it's the last step
         int endIndex = step == maxSteps - 1? logfiles.length: 
-          step * concurrentLogReads + concurrentLogReads;
-        for (int i = (step * concurrentLogReads); i < endIndex; i++) {
-          // Check for possibly empty file. With appends, currently Hadoop 
-          // reports a zero length even if the file has been sync'd. Revisit if
-          // HADOOP-4751 is committed.
-          long length = logfiles[i].getLen();
+          step * logFilesPerStep + logFilesPerStep;
+        for (int i = (step * logFilesPerStep); i < endIndex; i++) {
+          Path curLogFile = logfiles[i].getPath();
+
+          // make sure we get the right file length before opening for read
+          recoverLog(fs, curLogFile, appendSupport);
+
+          long length = fs.getFileStatus(curLogFile).getLen();
           if (LOG.isDebugEnabled()) {
             LOG.debug("Splitting hlog " + (i + 1) + " of " + logfiles.length +
-              ": " + logfiles[i].getPath() + ", length=" + logfiles[i].getLen());
+              ": " + curLogFile + ", length=" + length);
           }
-          recoverLog(fs, logfiles[i].getPath(), append);
           SequenceFile.Reader in = null;
+          boolean cleanRead = false;
           int count = 0;
           try {
-            in = new SequenceFile.Reader(fs, logfiles[i].getPath(), conf);
+            in = new SequenceFile.Reader(fs, curLogFile, conf);
             try {
               HLogKey key = newKey(conf);
               WALEdit val = new WALEdit();
@@ -1204,20 +1217,24 @@ public class HLog implements HConstants, Syncable {
                 key = newKey(conf);
                 val = new WALEdit();
               }
-              LOG.debug("Pushed=" + count + " entries from " +
-                logfiles[i].getPath());
+              LOG.debug("Pushed=" + count + " entries from " + curLogFile);
+              cleanRead = true;
             } catch (IOException e) {
-              LOG.debug("IOE Pushed=" + count + " entries from " +
-                logfiles[i].getPath());
+              LOG.debug("IOE Pushed=" + count + " entries from " + curLogFile);
               e = RemoteExceptionHandler.checkIOException(e);
               if (!(e instanceof EOFException)) {
-                LOG.warn("Exception processing " + logfiles[i].getPath() +
-                    " -- continuing. Possible DATA LOSS!", e);
+                String msg = "Exception processing " + curLogFile + 
+                             " -- continuing. Possible DATA LOSS!";
+                if (corruptDir.length() > 0) {
+                  msg += "  Storing in hlog corruption directory.";
+                }
+                LOG.warn(msg, e);
               }
             }
           } catch (IOException e) {
             if (length <= 0) {
-              LOG.warn("Empty hlog, continuing: " + logfiles[i] + " count=" + count, e);
+              LOG.warn("Empty hlog, continuing: " + logfiles[i]);
+              cleanRead = true;
               continue;
             }
             throw e;
@@ -1227,91 +1244,99 @@ public class HLog implements HConstants, Syncable {
                 in.close();
               }
             } catch (IOException e) {
-              LOG.warn("Close in finally threw exception -- continuing", e);
+              LOG.warn("File.close() threw exception -- continuing, "
+                     + "but marking file as corrupt.", e);
+              cleanRead = false;
             }
-            // Delete the input file now so we do not replay edits. We could
-            // have gotten here because of an exception. If so, probably
-            // nothing we can do about it. Replaying it, it could work but we
-            // could be stuck replaying for ever. Just continue though we
-            // could have lost some edits.
-            fs.delete(logfiles[i].getPath(), true);
+            if (cleanRead) {
+              finishedFiles.add(curLogFile);
+            } else {
+              corruptFiles.add(curLogFile);
+            }
           }
         }
+
+        // Step 2: Some regionserver log files have been read into memory.  
+        //         Assign them to the appropriate region directory.
+        class ThreadWithException extends Thread {
+          ThreadWithException(String name) { super(name); }
+          public IOException exception = null;
+        }
+        List<ThreadWithException> threadList = 
+          new ArrayList<ThreadWithException>(logEntries.size());
         ExecutorService threadPool =
           Executors.newFixedThreadPool(logWriterThreads);
-        for (final byte[] key : logEntries.keySet()) {
-          Thread thread = new Thread(Bytes.toStringBinary(key)) {
+        for (final byte[] region : logEntries.keySet()) {
+          ThreadWithException thread = new ThreadWithException(Bytes.toStringBinary(region)) {
             @Override
             public void run() {
-              LinkedList<HLogEntry> entries = logEntries.get(key);
+              LinkedList<HLogEntry> entries = logEntries.get(region);
               LOG.debug("Thread got " + entries.size() + " to process");
+              if(entries.size() <= 0) { 
+                LOG.warn("Got a region with no entries to process.");
+                return;
+              }
               long threadTime = System.currentTimeMillis();
               try {
                 int count = 0;
+                // get the logfile associated with this region.  2 logs often
+                // write to the same region, so persist this info across logs
+                WriterAndPath wap = logWriters.get(region);
+                if (wap == null) {
+                  // first write to this region, make new logfile
+                  assert entries.size() > 0;
+                  Path logfile = new Path(HRegion.getRegionDir(HTableDescriptor
+                      .getTableDir(rootDir, 
+                                   entries.getFirst().getKey().getTablename()),
+                      HRegionInfo.encodeRegionName(region)),
+                      HREGION_OLDLOGFILE_NAME);
+
+                  // If splitLog() was running when the user restarted his 
+                  // cluster, then we could already have a 'logfile'. 
+                  // Since we don't delete logs until everything is written to 
+                  // their respective regions, we can safely remove this tmp.
+                  if (fs.exists(logfile)) {
+                    LOG.warn("Deleting old hlog file: " + logfile); 
+                    fs.delete(logfile, true);
+                  }
+                  
+                  // associate an OutputStream with this logfile
+                  SequenceFile.Writer w =
+                    SequenceFile.createWriter(fs, conf, logfile,
+                      getKeyClass(conf), WALEdit.class, getCompressionType(conf));
+                  wap = new WriterAndPath(logfile, w);
+                  logWriters.put(region, wap);
+                  if (LOG.isDebugEnabled()) {
+                    LOG.debug("Creating new hlog file writer for path "
+                        + logfile + " and region " + Bytes.toStringBinary(region));
+                  }
+                }
+                
                 // Items were added to the linkedlist oldest first. Pull them
                 // out in that order.
                 for (ListIterator<HLogEntry> i =
                   entries.listIterator(entries.size());
                     i.hasPrevious();) {
                   HLogEntry logEntry = i.previous();
-                  WriterAndPath wap = logWriters.get(key);
-                  if (wap == null) {
-                    Path logfile = new Path(HRegion.getRegionDir(HTableDescriptor
-                        .getTableDir(rootDir, logEntry.getKey().getTablename()),
-                        HRegionInfo.encodeRegionName(key)),
-                        HREGION_OLDLOGFILE_NAME);
-                    Path oldlogfile = null;
-                    SequenceFile.Reader old = null;
-                    if (fs.exists(logfile)) {
-                      LOG.warn("Old hlog file " + logfile 
-                        + " already exists. Copying existing file to new file");
-                      oldlogfile = new Path(logfile.toString() + ".old");
-                      fs.rename(logfile, oldlogfile);
-                      old = new SequenceFile.Reader(fs, oldlogfile, conf);
-                    }
-                    SequenceFile.Writer w =
-                      SequenceFile.createWriter(fs, conf, logfile,
-                        getKeyClass(conf), WALEdit.class, getCompressionType(conf));
-                    wap = new WriterAndPath(logfile, w);
-                    logWriters.put(key, wap);
-                    if (LOG.isDebugEnabled()) {
-                      LOG.debug("Creating new hlog file writer for path "
-                          + logfile + " and region " + Bytes.toStringBinary(key));
-                    }
-
-                    if (old != null) {
-                      // Copy from existing log file
-                      HLogKey oldkey = newKey(conf);
-                      WALEdit oldval = new WALEdit();
-                      for (; old.next(oldkey, oldval); count++) {
-                        if (LOG.isDebugEnabled() && count > 0
-                            && count % 10000 == 0) {
-                          LOG.debug("Copied " + count + " edits");
-                        }
-                        w.append(oldkey, oldval);
-                        oldkey = newKey(conf);
-                        oldval = new WALEdit();
-                      }
-                      old.close();
-                      fs.delete(oldlogfile, true);
-                    }
-                  }
                   wap.w.append(logEntry.getKey(), logEntry.getEdit());
                   count++;
                 }
+                
                 if (LOG.isDebugEnabled()) {
                   LOG.debug("Applied " + count + " total edits to "
-                      + Bytes.toStringBinary(key) + " in "
+                      + Bytes.toStringBinary(region) + " in "
                       + (System.currentTimeMillis() - threadTime) + "ms");
                 }
               } catch (IOException e) {
                 e = RemoteExceptionHandler.checkIOException(e);
-                LOG.warn("Got while writing region " + Bytes.toStringBinary(key)
-                    + " log " + e);
+                LOG.warn("Got while writing region " 
+                    + Bytes.toStringBinary(region) + " log " + e);
                 e.printStackTrace();
+                exception = e;
               }
             }
           };
+          threadList.add(thread);
           threadPool.execute(thread);
         }
         threadPool.shutdown();
@@ -1320,9 +1345,21 @@ public class HLog implements HConstants, Syncable {
           for(int i = 0; !threadPool.awaitTermination(5, TimeUnit.SECONDS); i++) {
             LOG.debug("Waiting for hlog writers to terminate, iteration #" + i);
           }
-        }catch(InterruptedException ex) {
-          LOG.warn("Hlog writers were interrupted, possible data loss!");
+
+        } catch(InterruptedException ex) {
+          LOG.warn("Hlog writers were interrupted during splitLog().  "
+              +"Retaining log files to avoid data loss.");
+          throw new IOException(ex.getMessage(), ex.getCause());
         }
+        
+        // throw an exception if one of the threads reported one
+        for (ThreadWithException t : threadList) {
+          if (t.exception != null) {
+            throw t.exception;
+          }
+        }
+        
+        // End of for loop. Rinse and repeat
       }
     } finally {
       splits = new ArrayList<Path>(logWriters.size());
@@ -1332,6 +1369,55 @@ public class HLog implements HConstants, Syncable {
         splits.add(wap.p);
       }
     }
+
+    // Step 3: All writes succeeded!  Get rid of the now-unnecessary logs
+    for(Path p : finishedFiles) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Successfully split Hlog file.  Deleting " + p);
+      }
+      try {
+        if (!fs.delete(p, true) && LOG.isDebugEnabled()) {
+          LOG.debug("Delete of split Hlog (" + p + ") failed.");
+        }
+      } catch (IOException e) {
+        // don't throw error here. worst case = double-read
+        LOG.warn("Error deleting successfully split Hlog (" + p + ") -- " + e);
+      }
+    }
+    for (Path p : corruptFiles) {
+      if (corruptDir.length() > 0) {
+        // store any corrupt logs for later analysis
+        Path cp = new Path(conf.get(HBASE_DIR), corruptDir);
+        if(!fs.exists(cp)) {
+          fs.mkdirs(cp);
+        }
+        Path newp = new Path(cp, p.getName());
+        if (!fs.exists(newp)) { 
+          if (!fs.rename(p, newp)) {
+            LOG.warn("Rename of " + p + " to " + newp + " failed.");
+          } else {
+            LOG.warn("Corrupt Hlog (" + p + ") moved to " + newp);
+          }
+        } else {
+          LOG.warn("Corrupt Hlog (" + p + ") already moved to " + newp + 
+                   ".  Ignoring");
+        }
+      } else {
+        // data loss is less important than disk space, delete
+        try {
+          if (!fs.delete(p, true) ) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Delete of split Hlog " + p + " failed.");
+            }
+          } else {
+            LOG.warn("Corrupt Hlog (" + p + ") deleted!");
+          }
+        } catch (IOException e) {
+          LOG.warn("Error deleting corrupt Hlog (" + p + ") -- " + e);
+        }
+      }
+    }
+
     return splits;
   }
 

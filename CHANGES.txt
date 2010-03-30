@@ -64,6 +64,8 @@ Release 0.20.4 - Unreleased
                (Nicolas Spiegelberg via Stack)
    HBASE-2373  Remove confusing log message of how "BaseScanner GET got
                different address/startcode than SCAN"
+   HBASE-2337  log recovery: splitLog deletes old logs prematurely
+               (Nicolas Spiegelberg via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
