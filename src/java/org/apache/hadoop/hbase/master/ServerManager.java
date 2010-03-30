@@ -290,10 +290,8 @@ class ServerManager implements HConstants {
 
     HServerInfo storedInfo = serversToServerInfo.get(info.getServerName());
     if (storedInfo == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received report from unknown server -- telling it " +
-          "to " + CALL_SERVER_STARTUP + ": " + info.getServerName());
-      }
+      LOG.warn("Received report from unknown server -- telling it " +
+        "to " + CALL_SERVER_STARTUP + ": " + info.getServerName());
 
       // The HBaseMaster may have been restarted.
       // Tell the RegionServer to start over and call regionServerStartup()
