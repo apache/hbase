@@ -99,6 +99,8 @@ Release 0.20.4 - Unreleased
    HBASE-2374  TableInputFormat - Configurable parameter to add column families
                (Kay Kay via Stack)
    HBASE-2388  Give a very explicit message when we figure a big GC pause
+   HBASE-2270  Improve how we handle recursive calls in ExplicitColumnTracker 
+               and WildcardColumnTracker
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
