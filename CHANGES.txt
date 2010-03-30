@@ -58,6 +58,8 @@ Release 0.20.4 - Unreleased
                (Aravind Menon via Stack)
    HBASE-2359  WALEdit doesn't implement HeapSize
                (Kannan Muthukkaruppan via Stack)
+   HBASE-2382  Don't rely on fs.getDefaultReplication() to roll HLogs
+               (Nicolas Spiegelberg via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream

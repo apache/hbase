@@ -123,6 +123,7 @@ public class HLog implements HConstants, Syncable {
   private final AtomicInteger unflushedEntries = new AtomicInteger(0);
   private final Method syncfs;       // refers to SequenceFileWriter.syncFs()
   private OutputStream hdfs_out;     // OutputStream associated with the current SequenceFile.writer
+  private int initialReplication;    // initial replication factor of SequenceFile.writer
   private Method getNumCurrentReplicas; // refers to DFSOutputStream.getNumCurrentReplicas
   private final static Object [] NO_ARGS = new Object []{};
   
@@ -386,6 +387,7 @@ public class HLog implements HConstants, Syncable {
         this.filenum = System.currentTimeMillis();
         Path newPath = computeFilename(this.filenum);
         this.writer = createWriter(newPath);
+        this.initialReplication = fs.getFileStatus(newPath).getReplication();
 
         // Get at the private FSDataOutputStream inside in SequenceFile.
         // Make it accessible.  Our goal is to get at the underlying
@@ -879,10 +881,10 @@ public class HLog implements HConstants, Syncable {
           try {
             int numCurrentReplicas = getLogReplication();
             if (numCurrentReplicas != 0 &&  
-                numCurrentReplicas < fs.getDefaultReplication()) {  
+                numCurrentReplicas < this.initialReplication) {  
               LOG.warn("HDFS pipeline error detected. " +   
                   "Found " + numCurrentReplicas + " replicas but expecting " +
-                  fs.getDefaultReplication() + " replicas. " +  
+                  this.initialReplication + " replicas. " +  
                   " Requesting close of hlog.");  
             requestLogRoll();   
             } 
