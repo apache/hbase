@@ -62,6 +62,8 @@ Release 0.20.4 - Unreleased
                (Kannan Muthukkaruppan via Stack)
    HBASE-2382  Don't rely on fs.getDefaultReplication() to roll HLogs
                (Nicolas Spiegelberg via Stack)
+   HBASE-2373  Remove confusing log message of how "BaseScanner GET got
+               different address/startcode than SCAN"
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream

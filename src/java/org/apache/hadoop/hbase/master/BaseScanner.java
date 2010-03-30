@@ -543,16 +543,8 @@ abstract class BaseScanner extends Chore implements HConstants {
     Result r = regionServer.get(meta.getRegionName(), g);
     if (r != null && !r.isEmpty()) {
       sa = getServerAddress(r);
-      if (sa != null && sa.length() > 0 && !sa.equalsIgnoreCase(serverAddress)) {
-        LOG.debug("GET on " + info.getRegionNameAsString() + " got different " +
-          "address than SCAN: sa=" + sa + ", serverAddress=" + serverAddress);
-      }
       // Reget startcode in case its changed in the meantime too.
       sc = getStartCode(r);
-      if (sc != startCode) {
-        LOG.debug("GET on " + info.getRegionNameAsString() + " got different " +
-          "startcode than SCAN: sc=" + sc + ", serverAddress=" + startCode);
-      }
     }
     if (sa != null && sa.length() > 0) {
       serverName = HServerInfo.getServerName(sa, sc);
