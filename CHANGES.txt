@@ -5,6 +5,8 @@ Release 0.20.4 - Unreleased
    HBASE-2219  Stop using code mapping for method names in the RPC
                (Ryan Rawson via Stack)
    HBASE-2066  Perf: parallelize puts
+   HBASE-2378  Bulk insert with multiple reducers broken due to improper
+               ImmutableBytesWritable comparator (Todd Lipcon via Stack)
 
   BUG FIXES
    HBASE-2173  New idx javadoc not included with the rest
@@ -60,8 +62,6 @@ Release 0.20.4 - Unreleased
                (Kannan Muthukkaruppan via Stack)
    HBASE-2382  Don't rely on fs.getDefaultReplication() to roll HLogs
                (Nicolas Spiegelberg via Stack)
-   HBASE-2378  Bulk insert with multiple reducers broken due to improper
-               ImmutableBytesWritable comparator (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
