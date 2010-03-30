@@ -60,6 +60,8 @@ Release 0.20.4 - Unreleased
                (Kannan Muthukkaruppan via Stack)
    HBASE-2382  Don't rely on fs.getDefaultReplication() to roll HLogs
                (Nicolas Spiegelberg via Stack)
+   HBASE-2378  Bulk insert with multiple reducers broken due to improper
+               ImmutableBytesWritable comparator (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
