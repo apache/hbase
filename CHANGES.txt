@@ -68,6 +68,9 @@ Release 0.20.4 - Unreleased
    HBASE-2337  log recovery: splitLog deletes old logs prematurely
                (Nicolas Spiegelberg via Stack)
    HBASE-2365  Double-assignment around split
+   HBASE-2398  NPE in HLog.append when calling writer.getLength
+               (Kannan Muthukkaruppan via Stack)
+            
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream

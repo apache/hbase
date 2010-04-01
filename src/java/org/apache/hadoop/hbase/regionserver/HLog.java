@@ -687,12 +687,6 @@ public class HLog implements HConstants, Syncable {
 
     // sync txn to file system
     this.sync(isMetaRegion);
-
-    if (this.writer.getLength() > this.logrollsize) {
-      if (listener != null) {
-        listener.logRollRequested();
-      }
-    }
   }
 
   /**
@@ -746,10 +740,6 @@ public class HLog implements HConstants, Syncable {
 
     // sync txn to file system
     this.sync(isMetaRegion);
-
-    if (this.writer.getLength() > this.logrollsize) {
-        requestLogRoll();
-    }
   }
 
   /**
@@ -859,6 +849,8 @@ public class HLog implements HConstants, Syncable {
         return;
       }
 
+      boolean logRollRequested = false;
+
       if (this.forceSync ||
          this.unflushedEntries.get() >= this.flushlogentries) {
         try {
@@ -886,7 +878,8 @@ public class HLog implements HConstants, Syncable {
                   "Found " + numCurrentReplicas + " replicas but expecting " +
                   this.initialReplication + " replicas. " +  
                   " Requesting close of hlog.");  
-            requestLogRoll();   
+              requestLogRoll();
+              logRollRequested = true;
             } 
           } catch (Exception e) {   
               LOG.warn("Unable to invoke DFSOutputStream.getNumCurrentReplicas" + e +
@@ -897,6 +890,10 @@ public class HLog implements HConstants, Syncable {
           requestLogRoll();
           throw e;
         }
+      }
+
+      if (!logRollRequested && (this.writer.getLength() > this.logrollsize)) {
+        requestLogRoll();
       }
     }
   }
