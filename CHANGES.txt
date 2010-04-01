@@ -67,6 +67,7 @@ Release 0.20.4 - Unreleased
                different address/startcode than SCAN"
    HBASE-2337  log recovery: splitLog deletes old logs prematurely
                (Nicolas Spiegelberg via Stack)
+   HBASE-2365  Double-assignment around split
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
