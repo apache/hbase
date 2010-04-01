@@ -526,6 +526,7 @@ class ServerManager implements HConstants {
    * @param hri Region to assign.
    */
   private void assignSplitDaughter(final HRegionInfo hri) {
+    // if (this.master.regionManager.isPendingOpen(hri.getRegionNameAsString())) return;
     MetaRegion mr = this.master.regionManager.getFirstMetaRegionForRegion(hri);
     Get g = new Get(hri.getRegionName());
     g.addFamily(HConstants.CATALOG_FAMILY);

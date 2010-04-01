@@ -444,13 +444,16 @@ class TransactionState {
       return next;
     }
 
-    public boolean next(List<KeyValue> results) throws IOException {
+    public boolean next(List<KeyValue> results, int limit) throws IOException {
         KeyValue peek = this.peek();
         if (peek == null) {
           return false;
         }
         byte [] row = peek.getRow();
         results.add(peek);
+        if (limit > 0 && (results.size() == limit)) {
+          return true;
+        }
         while (true){
           if (this.peek() == null) {
             break;
@@ -459,10 +462,16 @@ class TransactionState {
             break;
           }
           results.add(this.next());
+          if (limit > 0 && (results.size() == limit)) {
+            break;
+          }
         }
-        return true;
-        
+        return true;        
     }
-    
+
+    public boolean next(List<KeyValue> results) throws IOException {
+      return next(results, -1);
+    }
+
    }
 }
