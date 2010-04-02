@@ -106,6 +106,8 @@ Release 0.20.4 - Unreleased
    HBASE-2270  Improve how we handle recursive calls in ExplicitColumnTracker 
                and WildcardColumnTracker
    HBASE-1537  Intra-row scanning (Backported by Andrey Stepachev via Stack)
+   HBASE-2087  The wait on compaction because "Too many store files" 
+               holds up all flushing
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
