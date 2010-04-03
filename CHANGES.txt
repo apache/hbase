@@ -106,6 +106,7 @@ Release 0.20.4 - Unreleased
    HBASE-2270  Improve how we handle recursive calls in ExplicitColumnTracker 
                and WildcardColumnTracker
    HBASE-1537  Intra-row scanning (Backported by Andrey Stepachev via Stack)
+   HBASE-2402  [stargate] set maxVersions on gets
    HBASE-2087  The wait on compaction because "Too many store files" 
                holds up all flushing
 
@@ -122,7 +123,7 @@ Release 0.20.4 - Unreleased
    HBASE-2319  [stargate] multiuser mode: request shaping
    HBASE-2349  Backport HBaseTestingUtility to branch (will include adding
                support for junit4 to branch)
-   HBASE-2402  [stargate] set maxVersions on gets
+   HBASE-2403  [stargate] client HTable interface to REST connector
 
 Release 0.20.3 - January 25th, 2010
   INCOMPATIBLE CHANGES
