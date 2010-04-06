@@ -110,6 +110,7 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
           Scan scan = new Scan(firstRow, endRow);
           scan.addColumns(trrInputColumns);
           scan.setOldFilter(trrRowFilter);
+          scan.setCacheBlocks(false);
           this.scanner = this.htable.getScanner(scan);
         } else {
           LOG.debug("TIFB.restart, firstRow: " +

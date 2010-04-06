@@ -28,6 +28,13 @@ Release 0.20.4 - Unreleased
                half-written hfile (Ruslan Salyakhov via Stack)
    HBASE-2288  Shell fails on alter
    HBASE-2293  CME in RegionManager#isMetaServer
+   HBASE-2034  Client sync block can cause 1 thread of a multi-threaded client
+               to block all others (Karthik Ranganathan via Stack)
+   HBASE-2355  Unsynchronized logWriters map is mutated from several threads in
+               HLog splitting (Todd Lipcon via Andrew Purtell)
+   HBASE-2358  Store doReconstructionLog will fail if oldlogfile.log is
+               empty and won't load region (Cosmin Lehene via Stack)
+   HBASE-2365  Double-assignment around split
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
@@ -42,6 +49,12 @@ Release 0.20.4 - Unreleased
                of the supplied byte array (Bruno Dumon via Stack)
    HBASE-2241  Change balancer sloppyness from 0.1 to 0.3
    HBASE-2262  ZKW.ensureExists should check for existence
+   HBASE-2174  Stop from resolving HRegionServer addresses to names using DNS on
+               every heartbeat (Karthik Ranganathan via Stack)
+   HBASE-2087  The wait on compaction because "Too many store files" 
+               holds up all flushing
+   HBASE-2252  Mapping a very big table kills region servers
+   HBASE-2277  Update branch to hadoop 0.20.2
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode

@@ -980,7 +980,7 @@ class RegionManager implements HConstants {
         regionsInTransition.put(info.getRegionNameAsString(), s);
       }
     }
-    if (force || (!s.isPendingOpen() || !s.isOpen())) {
+    if (force || (!s.isPendingOpen() && !s.isOpen())) {
       s.setUnassigned();
     }
   }
