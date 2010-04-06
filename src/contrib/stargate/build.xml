@@ -63,6 +63,15 @@
     <javac srcdir="${src.test}" includes="**/*.java" destdir="${build.test}" debug="${javac.debug}" source="1.6">
       <classpath refid="test.classpath"/>
     </javac>
+    <jar jarfile="${build.dir}/${test.jar.file}" >
+      <fileset dir="${build.test}" includes="org/**" />
+      <fileset dir="${build.classes}" />
+      <fileset dir="${src.test}" includes="**/*.properties" />
+      <manifest>
+        <attribute name="Main-Class"
+          value="org/apache/hadoop/hbase/stargate/PerformanceEvaluation"/>
+      </manifest>
+    </jar>
   </target>
   
   <target name="test" depends="compile-test" description="Build test jar and run tests">

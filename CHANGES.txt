@@ -112,6 +112,7 @@ Release 0.20.4 - Unreleased
                holds up all flushing
    HBASE-2252  Mapping a very big table kills region servers
    HBASE-2411  Findbugs target
+   HBASE-2412  [stargate] PerformanceEvaluation
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode

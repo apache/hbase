@@ -29,15 +29,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import javax.xml.namespace.QName;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -52,7 +49,6 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.stargate.Constants;
 import org.apache.hadoop.hbase.stargate.model.CellModel;
 import org.apache.hadoop.hbase.stargate.model.CellSetModel;
-import org.apache.hadoop.hbase.stargate.model.ColumnSchemaModel;
 import org.apache.hadoop.hbase.stargate.model.RowModel;
 import org.apache.hadoop.hbase.stargate.model.ScannerModel;
 import org.apache.hadoop.hbase.stargate.model.TableSchemaModel;
@@ -65,11 +61,13 @@ public class RemoteHTable {
 
   private static final Log LOG = LogFactory.getLog(RemoteHTable.class);
 
-  Client client;
-  HBaseConfiguration conf;
-  byte[] name;
-  String accessToken;
-  
+  final Client client;
+  final HBaseConfiguration conf;
+  final byte[] name;
+  final String accessToken;
+  final int maxRetries;
+  final long sleepTime;
+
   @SuppressWarnings("unchecked")
   protected String buildRowSpec(final byte[] row, final Map familyMap, 
       final long startTime, final long endTime, final int maxVersions) {
@@ -208,6 +206,8 @@ public class RemoteHTable {
     this.conf = conf;
     this.name = name;
     this.accessToken = accessToken;
+    this.maxRetries = conf.getInt("stargate.client.max.retries", 10);
+    this.sleepTime = conf.getLong("stargate.client.sleep", 1000);
   }
 
   public byte[] getTableName() {
@@ -228,24 +228,24 @@ public class RemoteHTable {
     sb.append(Bytes.toStringBinary(name));
     sb.append('/');
     sb.append("schema");
-    Response response = client.get(sb.toString(), Constants.MIMETYPE_PROTOBUF);
-    if (response.getCode() != 200) {
-      throw new IOException("schema request returned " + response.getCode());
-    }
-    TableSchemaModel schema = new TableSchemaModel();
-    schema.getObjectFromMessage(response.getBody());
-    HTableDescriptor htd = new HTableDescriptor(schema.getName());
-    for (Map.Entry<QName, Object> e: schema.getAny().entrySet()) {
-      htd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
-    }
-    for (ColumnSchemaModel column: schema.getColumns()) {
-      HColumnDescriptor hcd = new HColumnDescriptor(column.getName());
-      for (Map.Entry<QName, Object> e: column.getAny().entrySet()) {
-        hcd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
+    for (int i = 0; i < maxRetries; i++) {
+      Response response = client.get(sb.toString(), Constants.MIMETYPE_PROTOBUF);
+      int code = response.getCode();
+      switch (code) {
+      case 200:
+        TableSchemaModel schema = new TableSchemaModel();
+        schema.getObjectFromMessage(response.getBody());
+        return schema.getTableDescriptor();
+      case 509: 
+        try {
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException e) { }
+        break;
+      default:
+        throw new IOException("schema request returned " + code);
       }
-      htd.addFamily(hcd);
     }
-    return htd;
+    throw new IOException("schema request timed out");
   }
 
   public void close() throws IOException {
@@ -259,24 +259,33 @@ public class RemoteHTable {
     if (get.getFilter() != null) {
       LOG.warn("filters not supported on gets");
     }
-    Response response = client.get(spec, Constants.MIMETYPE_PROTOBUF);
-    int code = response.getCode();
-    if (code == 404) {
-      return new Result();
-    }
-    if (code != 200) {
-      throw new IOException("get request returned " + code);
-    }
-    CellSetModel model = new CellSetModel();
-    model.getObjectFromMessage(response.getBody());
-    Result[] results = buildResultFromModel(model);
-    if (results.length > 0) {
-      if (results.length > 1) {
-        LOG.warn("too many results for get (" + results.length + ")");
+    for (int i = 0; i < maxRetries; i++) {
+      Response response = client.get(spec, Constants.MIMETYPE_PROTOBUF);
+      int code = response.getCode();
+      switch (code) {
+      case 200:
+        CellSetModel model = new CellSetModel();
+        model.getObjectFromMessage(response.getBody());
+        Result[] results = buildResultFromModel(model);
+        if (results.length > 0) {
+          if (results.length > 1) {
+            LOG.warn("too many results for get (" + results.length + ")");
+          }
+          return results[0];
+        }
+        // fall through
+      case 404:
+        return new Result();
+      case 509:
+        try {
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException e) { }
+        break;
+      default:
+        throw new IOException("get request returned " + code);
       }
-      return results[0];
     }
-    return new Result();
+    throw new IOException("get request timed out");
   }
 
   public boolean exists(Get get) throws IOException {
@@ -296,11 +305,23 @@ public class RemoteHTable {
     sb.append(Bytes.toStringBinary(name));
     sb.append('/');
     sb.append(Bytes.toStringBinary(put.getRow()));
-    Response response = client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF,
-      model.createProtobufOutput());
-    if (response.getCode() != 200) {
-      throw new IOException("put failed with " + response.getCode());
+    for (int i = 0; i < maxRetries; i++) {
+      Response response = client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF,
+        model.createProtobufOutput());
+      int code = response.getCode();
+      switch (code) {
+      case 200:
+        return;
+      case 509:
+        try {
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException e) { }
+        break;
+      default:
+        throw new IOException("put request failed with " + code);
+      }
     }
+    throw new IOException("put request timed out");
   }
 
   public void put(List<Put> puts) throws IOException {
@@ -341,20 +362,44 @@ public class RemoteHTable {
     }
     sb.append(Bytes.toStringBinary(name));
     sb.append("/$multiput"); // can be any nonexistent row
-    Response response = client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF,
-      model.createProtobufOutput());
-    if (response.getCode() != 200) {
-      throw new IOException("multiput failed with " + response.getCode());
+    for (int i = 0; i < maxRetries; i++) {
+      Response response = client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF,
+        model.createProtobufOutput());
+      int code = response.getCode();
+      switch (code) {
+      case 200:
+        return;
+      case 509:
+        try {
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException e) { }
+        break;
+      default:
+        throw new IOException("multiput request failed with " + code);
+      }
     }
+    throw new IOException("multiput request timed out");
   }
 
   public void delete(Delete delete) throws IOException {
     String spec = buildRowSpec(delete.getRow(), delete.getFamilyMap(),
       delete.getTimeStamp(), delete.getTimeStamp(), 1);
-    Response response = client.delete(spec);
-    if (response.getCode() != 200) {
-      throw new IOException("delete() returned " + response.getCode());
+    for (int i = 0; i < maxRetries; i++) {
+      Response response = client.delete(spec);
+      int code = response.getCode();
+      switch (code) {
+      case 200:
+        return;
+      case 509:
+        try {
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException e) { }
+        break;
+      default:
+        throw new IOException("delete request failed with " + code);
+      }
     }
+    throw new IOException("delete request timed out");
   }
 
   public void delete(List<Delete> deletes) throws IOException {
@@ -372,6 +417,12 @@ public class RemoteHTable {
     String uri;
 
     public Scanner(Scan scan) throws IOException {
+      ScannerModel model;
+      try {
+        model = ScannerModel.fromScan(scan);
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
       StringBuffer sb = new StringBuffer();
       sb.append('/');
       if (accessToken != null) {
@@ -381,18 +432,24 @@ public class RemoteHTable {
       sb.append(Bytes.toStringBinary(name));
       sb.append('/');
       sb.append("scanner");
-      try {
-        ScannerModel model = ScannerModel.fromScan(scan);
+      for (int i = 0; i < maxRetries; i++) {
         Response response = client.post(sb.toString(),
           Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-        if (response.getCode() != 201) {
-          throw new IOException("scan request failed with " +
-            response.getCode());
+        int code = response.getCode();
+        switch (code) {
+        case 201:
+          uri = response.getLocation();
+          return;
+        case 509:
+          try {
+            Thread.sleep(sleepTime);
+          } catch (InterruptedException e) { }
+          break;
+        default:
+          throw new IOException("scan request failed with " + code);
         }
-        uri = response.getLocation();
-      } catch (Exception e) {
-        throw new IOException(e);
       }
+      throw new IOException("scan request timed out");
     }
 
     @Override
@@ -400,18 +457,28 @@ public class RemoteHTable {
       StringBuilder sb = new StringBuilder(uri);
       sb.append("?n=");
       sb.append(nbRows);
-      Response response = client.get(sb.toString(),
-        Constants.MIMETYPE_PROTOBUF);
-      if (response.getCode() == 206) {
-        return null;
+      for (int i = 0; i < maxRetries; i++) {
+        Response response = client.get(sb.toString(),
+          Constants.MIMETYPE_PROTOBUF);
+        int code = response.getCode();
+        switch (code) {
+        case 200:
+          CellSetModel model = new CellSetModel();
+          model.getObjectFromMessage(response.getBody());
+          return buildResultFromModel(model);
+        case 204:
+        case 206:
+          return null;
+        case 509:
+          try {
+            Thread.sleep(sleepTime);
+          } catch (InterruptedException e) { }
+          break;
+        default:
+          throw new IOException("scanner.next request failed with " + code);
+        }
       }
-      if (response.getCode() != 200) {
-        LOG.error("scanner.next failed with " + response.getCode());
-        return null;
-      }
-      CellSetModel model = new CellSetModel();
-      model.getObjectFromMessage(response.getBody());
-      return buildResultFromModel(model);
+      throw new IOException("scanner.next request timed out");
     }
 
     @Override
