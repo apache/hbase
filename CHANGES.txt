@@ -71,6 +71,7 @@ Release 0.20.4 - Unreleased
    HBASE-2398  NPE in HLog.append when calling writer.getLength
                (Kannan Muthukkaruppan via Stack)
    HBASE-2410  spurious warnings from util.Sleeper
+   HBASE-2419  Remove from RS logs the fat NotServingRegionException stack
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream

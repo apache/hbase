@@ -1495,7 +1495,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
                   + e.msg.toString());
             }
           } catch (InterruptedException ex) {
-            // continue
+            LOG.warn("Processing Worker queue", ex);
           } catch (Exception ex) {
             if (ex instanceof IOException) {
               ex = RemoteExceptionHandler.checkIOException((IOException) ex);
@@ -1764,7 +1764,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
         this.cacheFlusher.reclaimMemStoreMemory();
       }
       region.put(put, getLockFromId(put.getLockId()));
-      
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1792,7 +1791,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
       LOG.debug("Batch puts: " + i, ex);
       return i;
     } catch (NotServingRegionException ex) {
-      LOG.debug("Batch puts: " + i, ex);
+      LOG.debug("Batch puts interrupted at index=" + i + " because:" +
+        ex.getMessage());
       return i;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
@@ -2534,5 +2534,4 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
     return resp;
   }
-
 }
