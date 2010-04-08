@@ -1021,14 +1021,12 @@ public class HConnectionManager implements HConstants {
             LOG.debug("Found ROOT at " + rootRegionAddress);
           }
           break;
-        } catch (IOException e) {
+        } catch (Throwable t) {
+          t = translateException(t);
+
           if (tries == numRetries - 1) {
-            // Don't bother sleeping. We've run out of retries.
-            if (e instanceof RemoteException) {
-              e = RemoteExceptionHandler.decodeRemoteException(
-                  (RemoteException) e);
-            }
-            throw e;
+            throw new NoServerForRegionException("Timed out trying to locate "+
+                "root region because: " + t.getMessage());
           }
           
           // Sleep and retry finding root region.
@@ -1068,15 +1066,7 @@ public class HConnectionManager implements HConstants {
           callable.instantiateServer(tries != 0);
           return callable.call();
         } catch (Throwable t) {
-          if (t instanceof UndeclaredThrowableException) {
-            t = t.getCause();
-          }
-          if (t instanceof RemoteException) {
-            t = RemoteExceptionHandler.decodeRemoteException((RemoteException)t);
-          }
-          if (t instanceof DoNotRetryIOException) {
-            throw (DoNotRetryIOException)t;
-          }
+          t = translateException(t);
           exceptions.add(t);
           if (tries == numRetries - 1) {
             throw new RetriesExhaustedException(callable.getServerName(),
@@ -1098,15 +1088,7 @@ public class HConnectionManager implements HConstants {
         callable.instantiateServer(false);
         return callable.call();
       } catch (Throwable t) {
-        if (t instanceof UndeclaredThrowableException) {
-          t = t.getCause();
-        }
-        if (t instanceof RemoteException) {
-          t = RemoteExceptionHandler.decodeRemoteException((RemoteException) t);
-        }
-        if (t instanceof DoNotRetryIOException) {
-          throw (DoNotRetryIOException) t;
-        }
+        t = translateException(t);
       }
       return null;
     }
@@ -1443,6 +1425,19 @@ public class HConnectionManager implements HConstants {
           );
         }
       };
+    }
+
+    private Throwable translateException(Throwable t) throws IOException {
+      if (t instanceof UndeclaredThrowableException) {
+        t = t.getCause();
+      }
+      if (t instanceof RemoteException) {
+        t = RemoteExceptionHandler.decodeRemoteException((RemoteException)t);
+      }
+      if (t instanceof DoNotRetryIOException) {
+        throw (DoNotRetryIOException)t;
+      }
+      return t;
     }
   }
 }
