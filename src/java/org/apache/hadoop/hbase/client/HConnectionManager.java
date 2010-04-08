@@ -1287,9 +1287,6 @@ public class HConnectionManager implements HConstants {
         }
       }
     }
-  } 
-}
-
     private Throwable translateException(Throwable t) throws IOException {
       if (t instanceof UndeclaredThrowableException) {
         t = t.getCause();
@@ -1302,3 +1299,6 @@ public class HConnectionManager implements HConstants {
       }
       return t;
     }
+  } 
+}
+
