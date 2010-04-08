@@ -56,6 +56,7 @@ Release 0.20.4 - Unreleased
    HBASE-2252  Mapping a very big table kills region servers
    HBASE-2277  Update branch to hadoop 0.20.2
    HBASE-2419  Remove from RS logs the fat NotServingRegionException stack
+   HBASE-2415  Disable META splitting in 0.20 (Todd Lipcon via Stack)
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
