@@ -2,6 +2,7 @@ HBase Change Log
 
 Release 0.20.4 - Unreleased
   INCOMPATIBLE CHANGES
+   HBASE-2165  Improve fragmentation display and implementation
 
   BUG FIXES
    HBASE-2173  New idx javadoc not included with the rest
