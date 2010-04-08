@@ -117,6 +117,8 @@ Release 0.20.4 - Unreleased
    HBASE-2286  [Transactional Contrib] Correctly handle or avoid cases where 
                writes occur in same millisecond (Clint Morgan via J-D)
    HBASE-2415  Disable META splitting in 0.20 (Todd Lipcon via Stack)
+   HBASE-2360  Make sure we have all the hadoop fixes in our our copy of its rpc
+               (Todd Lipcon via Stack)
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
