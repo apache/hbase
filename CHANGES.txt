@@ -72,6 +72,7 @@ Release 0.20.4 - Unreleased
                (Kannan Muthukkaruppan via Stack)
    HBASE-2410  spurious warnings from util.Sleeper
    HBASE-2419  Remove from RS logs the fat NotServingRegionException stack
+   HBASE-2335  mapred package docs don't say zookeeper jar is a dependent
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
