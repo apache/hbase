@@ -281,7 +281,7 @@ public class RESTServlet extends ServletAdaptor
   }
 
   /**
-   * @param flag true if the servlet should operate in multiuser mode 
+   * @param multiuser true if the servlet should operate in multiuser mode 
    */
   public void setMultiUser(boolean multiuser) {
     this.multiuser = multiuser;
