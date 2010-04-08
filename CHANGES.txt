@@ -35,6 +35,7 @@ Release 0.20.4 - Unreleased
    HBASE-2358  Store doReconstructionLog will fail if oldlogfile.log is
                empty and won't load region (Cosmin Lehene via Stack)
    HBASE-2365  Double-assignment around split
+   HBASE-2335  mapred package docs don't say zookeeper jar is a dependent
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
