@@ -506,7 +506,7 @@ public class HBaseClient {
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + id);
 
-        Call call = calls.remove(id);
+        Call call = calls.get(id);
 
         boolean isError = in.readBoolean();     // read if error
         if (isError) {
@@ -516,6 +516,7 @@ public class HBaseClient {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
           call.setValue(value);
+          calls.remove(id);
         }
       } catch (IOException e) {
         markClosed(e);
@@ -711,11 +712,20 @@ public class HBaseClient {
     Call call = new Call(param);
     Connection connection = getConnection(addr, ticket, call);
     connection.sendParam(call);                 // send the parameter
+    boolean interrupted = false;
     synchronized (call) {
       while (!call.done) {
         try {
           call.wait();                           // wait for the result
-        } catch (InterruptedException ignored) {}
+        } catch (InterruptedException ie) {
+          // save the fact that we were interrupted
+          interrupted = true;
+        }
+      }
+
+      if (interrupted) {
+        // set the interrupt flag now that we are done waiting
+        Thread.currentThread().interrupt();
       }
 
       if (call.error != null) {

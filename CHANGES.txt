@@ -57,6 +57,8 @@ Release 0.20.4 - Unreleased
    HBASE-2277  Update branch to hadoop 0.20.2
    HBASE-2419  Remove from RS logs the fat NotServingRegionException stack
    HBASE-2415  Disable META splitting in 0.20 (Todd Lipcon via Stack)
+   HBASE-2360  Make sure we have all the hadoop fixes in our our copy of its rpc
+               (Todd Lipcon via Stack)
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
