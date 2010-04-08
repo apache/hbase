@@ -8,6 +8,7 @@ Release 0.20.4 - Unreleased
    HBASE-2378  Bulk insert with multiple reducers broken due to improper
                ImmutableBytesWritable comparator (Todd Lipcon via Stack)
    HBASE-2392  Upgrade to ZooKeeper 3.3.0
+   HBASE-2165  Improve fragmentation display and implementation
 
   BUG FIXES
    HBASE-2173  New idx javadoc not included with the rest
