@@ -129,7 +129,7 @@ public class User implements Constants {
   }
 
   /**
-   * @param admin true if user is disabled
+   * @param disabled true if user is disabled
    */
   public void setDisabled(boolean disabled) {
     this.disabled = disabled;
