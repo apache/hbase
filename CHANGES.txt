@@ -75,6 +75,7 @@ Release 0.20.4 - Unreleased
    HBASE-2419  Remove from RS logs the fat NotServingRegionException stack
    HBASE-2335  mapred package docs don't say zookeeper jar is a dependent
    HBASE-2417  HCM.locateRootRegion fails hard on "Connection refused"
+   HBASE-2346  Usage of FilterList slows down scans
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
