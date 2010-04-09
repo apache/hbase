@@ -50,6 +50,7 @@ public class FilterList implements Filter {
     MUST_PASS_ONE
   }
 
+  private static final Configuration conf = new HBaseConfiguration();
   private Operator operator = Operator.MUST_PASS_ALL;
   private List<Filter> filters = new ArrayList<Filter>();
 
@@ -211,7 +212,6 @@ public class FilterList implements Filter {
   }
 
   public void readFields(final DataInput in) throws IOException {
-    Configuration conf = new HBaseConfiguration();
     byte opByte = in.readByte();
     operator = Operator.values()[opByte];
     int size = in.readInt();
@@ -225,7 +225,6 @@ public class FilterList implements Filter {
   }
 
   public void write(final DataOutput out) throws IOException {
-    Configuration conf = new HBaseConfiguration();
     out.writeByte(operator.ordinal());
     out.writeInt(filters.size());
     for (Filter filter : filters) {
