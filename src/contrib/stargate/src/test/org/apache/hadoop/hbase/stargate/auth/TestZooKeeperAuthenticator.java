@@ -20,8 +20,8 @@
 
 package org.apache.hadoop.hbase.stargate.auth;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.stargate.MiniClusterTestCase;
+import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.apache.zookeeper.CreateMode;

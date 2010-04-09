@@ -18,14 +18,44 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.stargate.auth;
+package org.apache.hadoop.hbase.stargate.util;
 
-import java.io.IOException;
+public class TokenBucket {
 
-import org.apache.hadoop.hbase.stargate.User;
+  private int tokens;
+  private int rate;
+  private int size;
+  private long lastUpdated;
 
-public abstract class Authenticator {
+  /**
+   * Constructor
+   * @param rate limit in units per second
+   * @param size maximum burst in units per second
+   */
+  public TokenBucket(int rate, int size) {
+    this.rate = rate;
+    this.tokens = this.size = size;
+  }
 
-  public abstract User getUserForToken(String token) throws IOException;
+  /**
+   * @return the number of remaining tokens in the bucket
+   */
+  public int available() {
+    long now = System.currentTimeMillis();
+    long elapsed = now - lastUpdated;
+    lastUpdated = now;
+    tokens += elapsed * rate;
+    if (tokens > size) {
+      tokens = size;
+    }
+    return tokens;
+  }
+
+  /**
+   * @param t the number of tokens to consume from the bucket
+   */
+  public void remove(int t) {
+    tokens -= t;
+  }
 
 }

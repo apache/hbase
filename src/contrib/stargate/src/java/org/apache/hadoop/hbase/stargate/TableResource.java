@@ -28,7 +28,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
-import org.apache.hadoop.hbase.stargate.auth.User;
+import org.apache.hadoop.hbase.stargate.User;
 
 public class TableResource implements Constants {
 
@@ -38,6 +38,11 @@ public class TableResource implements Constants {
   public TableResource(User user, String table) {
     this.user = user;
     this.table = table;
+  }
+
+  @Path("exists")
+  public ExistsResource getExistsResource() throws IOException {
+    return new ExistsResource(user, table);
   }
 
   @Path("regions")
@@ -56,8 +61,9 @@ public class TableResource implements Constants {
   }
 
   @Path("{rowspec: .+}")
-  public RowResource getRowResource(@PathParam("rowspec") String rowspec,
-      @QueryParam("v") String versions) {
+  public RowResource getRowResource(
+      final @PathParam("rowspec") String rowspec,
+      final @QueryParam("v") String versions) {
     try {
       return new RowResource(user, table, rowspec, versions);
     } catch (IOException e) {
@@ -65,4 +71,5 @@ public class TableResource implements Constants {
                   Response.Status.INTERNAL_SERVER_ERROR);
     }
   }
+
 }

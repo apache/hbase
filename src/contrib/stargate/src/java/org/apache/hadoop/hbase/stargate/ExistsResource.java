@@ -31,20 +31,25 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.stargate.model.StorageClusterVersionModel;
 
-public class StorageClusterVersionResource implements Constants {
-  private static final Log LOG =
-    LogFactory.getLog(StorageClusterVersionResource.class);
+public class ExistsResource implements Constants {
 
-  private CacheControl cacheControl;
-  private RESTServlet servlet;
+  User user;
+  String tableName;
+  String actualTableName;
+  CacheControl cacheControl;
+  RESTServlet servlet;
 
-  public StorageClusterVersionResource() throws IOException {
+  public ExistsResource(User user, String table) throws IOException {
+    if (user != null) {
+      this.user = user;
+      this.actualTableName = 
+        !user.isAdmin() ? (user.getName() + "." + table) : table;
+    } else {
+      this.actualTableName = table;
+    }
+    this.tableName = table;
     servlet = RESTServlet.getInstance();
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
@@ -52,23 +57,23 @@ public class StorageClusterVersionResource implements Constants {
   }
 
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON})
-  public Response get(final @Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("GET " + uriInfo.getAbsolutePath());
+  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_BINARY})
+  public Response get(final @Context UriInfo uriInfo) throws IOException {
+    if (!servlet.userRequestLimit(user, 1)) {
+      Response.status(509).build();
     }
-    servlet.getMetrics().incrementRequests(1);
-    HBaseConfiguration conf = servlet.getConfiguration();
     try {
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      StorageClusterVersionModel model = new StorageClusterVersionModel();
-      model.setVersion(admin.getClusterStatus().getHBaseVersion());
-      ResponseBuilder response = Response.ok(model);
-      response.cacheControl(cacheControl);
-      return response.build();
+      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
+      if (!admin.tableExists(actualTableName)) {
+        throw new WebApplicationException(Response.Status.NOT_FOUND);
+      }
     } catch (IOException e) {
-      throw new WebApplicationException(e, 
-                  Response.Status.SERVICE_UNAVAILABLE);
+      throw new WebApplicationException(Response.Status.SERVICE_UNAVAILABLE);
     }
+    ResponseBuilder response = Response.ok();
+    response.cacheControl(cacheControl);
+    return response.build();
   }
+
 }

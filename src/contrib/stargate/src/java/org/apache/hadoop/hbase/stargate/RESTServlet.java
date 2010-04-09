@@ -43,8 +43,12 @@ import org.apache.hadoop.hbase.stargate.auth.HTableAuthenticator;
 import org.apache.hadoop.hbase.stargate.auth.JDBCAuthenticator;
 import org.apache.hadoop.hbase.stargate.auth.ZooKeeperAuthenticator;
 import org.apache.hadoop.hbase.stargate.metrics.StargateMetrics;
+import org.apache.hadoop.hbase.stargate.util.HTableTokenBucket;
+import org.apache.hadoop.hbase.stargate.util.SoftUserData;
+import org.apache.hadoop.hbase.stargate.util.UserData;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
 import org.apache.hadoop.util.StringUtils;
@@ -95,13 +99,12 @@ public class RESTServlet extends ServletAdaptor
         }
         status.endArray();
         status.endObject();
-        updateNode(wrapper, znode, CreateMode.EPHEMERAL, 
+        ensureExists(znode, CreateMode.EPHEMERAL, 
           Bytes.toBytes(status.toString()));
       } catch (Exception e) {
         LOG.error(StringUtils.stringifyException(e));
       }
     }
-
   }
 
   final String znode = INSTANCE_ZNODE_ROOT + "/" + System.currentTimeMillis();
@@ -129,49 +132,38 @@ public class RESTServlet extends ServletAdaptor
     return instance;
   }
 
-  static boolean ensureExists(final ZooKeeperWrapper zkw, final String znode,
-      final CreateMode mode) throws IOException {
-    ZooKeeper zk = zkw.getZooKeeper();
+  private boolean ensureExists(final String znode, final CreateMode mode,
+      final byte[] data) {
     try {
+      ZooKeeper zk = wrapper.getZooKeeper();
       Stat stat = zk.exists(znode, false);
       if (stat != null) {
+        zk.setData(znode, data, -1);
         return true;
       }
-      zk.create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE, mode);
-      LOG.debug("Created ZNode " + znode);
+      zk.create(znode, data, Ids.OPEN_ACL_UNSAFE, mode);
+      LOG.info("Created ZNode " + znode);
       return true;
     } catch (KeeperException.NodeExistsException e) {
       return true;      // ok, move on.
     } catch (KeeperException.NoNodeException e) {
-      return ensureParentExists(zkw, znode, mode) && 
-        ensureExists(zkw, znode, mode);
+      return ensureParentExists(znode, CreateMode.PERSISTENT, new byte[]{}) &&
+        ensureExists(znode, mode, data);
     } catch (KeeperException e) {
-      throw new IOException(e);
+      LOG.warn(StringUtils.stringifyException(e));
     } catch (InterruptedException e) {
-      throw new IOException(e);
+      LOG.warn(StringUtils.stringifyException(e));
     }
+    return false;
   }
 
-  static boolean ensureParentExists(final ZooKeeperWrapper zkw,
-      final String znode, final CreateMode mode) throws IOException {
-    int index = znode.lastIndexOf("/");
+  private boolean ensureParentExists(final String znode, final CreateMode mode,
+      final byte[] data) {
+    int index = znode.lastIndexOf('/');
     if (index <= 0) {   // Parent is root, which always exists.
       return true;
     }
-    return ensureExists(zkw, znode.substring(0, index), mode);
-  }
-
-  static void updateNode(final ZooKeeperWrapper zkw, final String znode, 
-        final CreateMode mode, final byte[] data) throws IOException  {
-    ensureExists(zkw, znode, mode);
-    ZooKeeper zk = zkw.getZooKeeper();
-    try {
-      zk.setData(znode, data, -1);
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    } catch (InterruptedException e) {
-      throw new IOException(e);
-    }
+    return ensureExists(znode.substring(0, index), mode, data);
   }
 
   ZooKeeperWrapper initZooKeeperWrapper() throws IOException {
@@ -187,7 +179,13 @@ public class RESTServlet extends ServletAdaptor
     this.pool = new HTablePool(conf, 10);
     this.wrapper = initZooKeeperWrapper();
     this.statusReporter = new StatusReporter(
-      conf.getInt(STATUS_REPORT_PERIOD_KEY, 1000 * 60), stopping);
+      conf.getInt(STATUS_REPORT_PERIOD_KEY, 1000 * 30), stopping);
+    Threads.setDaemonThreadRunning(statusReporter, "Stargate.statusReporter");
+    this.multiuser = conf.getBoolean("stargate.multiuser", false);
+    if (this.multiuser) {
+      LOG.info("multiuser mode enabled");
+      getAuthenticator();
+    }
   }
 
   @Override
@@ -316,6 +314,7 @@ public class RESTServlet extends ServletAdaptor
       if (authenticator == null) {
         authenticator = new HBCAuthenticator(conf);
       }
+      LOG.info("using authenticator " + authenticator);
     }
     return authenticator;
   }
@@ -325,6 +324,30 @@ public class RESTServlet extends ServletAdaptor
    */
   public void setAuthenticator(Authenticator authenticator) {
     this.authenticator = authenticator;
+  }
+
+  /**
+   * Check if the user has exceeded their request token limit within the
+   * current interval
+   * @param user the user
+   * @param want the number of tokens desired
+   * @throws IOException
+   */
+  public boolean userRequestLimit(final User user, int want) 
+      throws IOException {
+    if (multiuser) {
+      UserData ud = SoftUserData.get(user);
+      HTableTokenBucket tb = (HTableTokenBucket) ud.get(UserData.TOKENBUCKET);
+      if (tb == null) {
+        tb = new HTableTokenBucket(conf, Bytes.toBytes(user.getToken()));
+        ud.put(UserData.TOKENBUCKET, tb);
+      }
+      if (tb.available() < want) {
+        return false;
+      }
+      tb.remove(want);
+    }
+    return true;
   }
 
 }

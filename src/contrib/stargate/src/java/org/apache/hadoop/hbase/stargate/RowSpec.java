@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class RowSpec {
   public static final long DEFAULT_START_TIMESTAMP = 0;
   public static final long DEFAULT_END_TIMESTAMP = Long.MAX_VALUE;
-
+  
   private byte[] row = HConstants.EMPTY_START_ROW;
   private byte[] endRow = null;
   private TreeSet<byte[]> columns =
@@ -44,6 +44,7 @@ public class RowSpec {
   private long startTime = DEFAULT_START_TIMESTAMP;
   private long endTime = DEFAULT_END_TIMESTAMP;
   private int maxVersions = HColumnDescriptor.DEFAULT_VERSIONS;
+  private int maxValues = Integer.MAX_VALUE;
 
   public RowSpec(String path) throws IllegalArgumentException {
     int i = 0;
@@ -53,9 +54,10 @@ public class RowSpec {
     i = parseRowKeys(path, i);
     i = parseColumns(path, i);
     i = parseTimestamp(path, i);
+    i = parseQueryParams(path, i);
   }
 
-  private int parseRowKeys(String path, int i)
+  private int parseRowKeys(final String path, int i)
       throws IllegalArgumentException {
     StringBuilder startRow = new StringBuilder();
     StringBuilder endRow = null;
@@ -105,7 +107,7 @@ public class RowSpec {
     return i;
   }
 
-  private int parseColumns(String path, int i)
+  private int parseColumns(final String path, int i)
       throws IllegalArgumentException {
     if (i >= path.length()) {
       return i;
@@ -148,7 +150,7 @@ public class RowSpec {
     return i;
   }
 
-  private int parseTimestamp(String path, int i)
+  private int parseTimestamp(final String path, int i)
       throws IllegalArgumentException {
     if (i >= path.length()) {
       return i;
@@ -198,6 +200,58 @@ public class RowSpec {
     return i;
   }
 
+  private int parseQueryParams(final String path, int i) {
+    while (i < path.length()) {
+      char c = path.charAt(i);
+      if (c != '?' && c != '&') {
+        break;
+      }
+      if (++i > path.length()) {
+        break;
+      }
+      char what = path.charAt(i);
+      if (++i > path.length()) {
+        break;
+      }
+      c = path.charAt(i);
+      if (c != '=') {
+        throw new IllegalArgumentException("malformed query parameter");
+      }
+      if (++i > path.length()) {
+        break;
+      }
+      switch (what) {
+      case 'm': {
+        StringBuilder sb = new StringBuilder();
+        while (i <= path.length()) {
+          c = path.charAt(i);
+          if (c < '0' || c > '9') {
+            i--;
+            break;
+          }
+          sb.append(c);
+        }
+        maxVersions = Integer.valueOf(sb.toString());
+      } break;
+      case 'n': {
+        StringBuilder sb = new StringBuilder();
+        while (i <= path.length()) {
+          c = path.charAt(i);
+          if (c < '0' || c > '9') {
+            i--;
+            break;
+          }
+          sb.append(c);
+        }
+        maxValues = Integer.valueOf(sb.toString());
+      } break;
+      default:
+        throw new IllegalArgumentException("unknown parameter '" + c + "'");
+      }
+    }
+    return i;
+  }
+
   public RowSpec(byte[] startRow, byte[] endRow, byte[][] columns,
       long startTime, long endTime, int maxVersions) {
     this.row = startRow;
@@ -232,8 +286,16 @@ public class RowSpec {
     return maxVersions;
   }
 
-  public void setMaxVersions(int maxVersions) {
+  public void setMaxVersions(final int maxVersions) {
     this.maxVersions = maxVersions;
+  }
+
+  public int getMaxValues() {
+    return maxValues;
+  }
+
+  public void setMaxValues(final int maxValues) {
+    this.maxValues = maxValues;
   }
 
   public boolean hasColumns() {
@@ -256,7 +318,7 @@ public class RowSpec {
     return endRow;
   }
 
-  public void addColumn(byte[] column) {
+  public void addColumn(final byte[] column) {
     columns.add(column);
   }
 
@@ -276,7 +338,7 @@ public class RowSpec {
     return startTime;
   }
 
-  public void setStartTime(long startTime) {
+  public void setStartTime(final long startTime) {
     this.startTime = startTime;
   }
 
@@ -310,7 +372,10 @@ public class RowSpec {
     result.append(Long.toString(endTime));
     result.append(", maxVersions => ");
     result.append(Integer.toString(maxVersions));
+    result.append(", maxValues => ");
+    result.append(Integer.toString(maxValues));
     result.append("}");
     return result.toString();
   }
+
 }

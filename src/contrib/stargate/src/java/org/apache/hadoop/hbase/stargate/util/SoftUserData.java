@@ -18,34 +18,33 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.stargate;
+package org.apache.hadoop.hbase.stargate.util;
 
-import java.io.IOException;
-import java.util.Iterator;
- 
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.stargate.model.ScannerModel;
+import java.util.Map;
 
-import org.json.JSONObject;
+import org.apache.hadoop.hbase.stargate.User;
+import org.apache.hadoop.hbase.util.SoftValueMap;
 
-public abstract class ResultGenerator implements Iterator<KeyValue> {
+/**
+ * Provides a softmap backed collection of user data. The collection can be
+ * reclaimed by the garbage collector at any time when under heap pressure.
+ */
+public class SoftUserData extends UserData {
 
-  public static ResultGenerator fromRowSpec(final String table, 
-      final RowSpec rowspec, final Filter filter) throws IOException {
-    if (rowspec.isSingleRow()) {
-      return new RowResultGenerator(table, rowspec, filter);
-    } else {
-      return new ScannerResultGenerator(table, rowspec, filter);
+  static final Map<User,UserData> map = new SoftValueMap<User,UserData>();
+
+  public static synchronized UserData get(final User user) {
+    UserData data = map.get(user);
+    if (data == null) {
+      data = new UserData();
+      map.put(user, data);
     }
+    return data;
   }
 
-  public static Filter buildFilter(final String filter) throws Exception {
-    return ScannerModel.buildFilter(new JSONObject(filter));
+  public static synchronized UserData put(final User user,
+      final UserData data) {
+    return map.put(user, data);
   }
-
-  public abstract void putBack(KeyValue kv);
-
-  public abstract void close();
 
 }

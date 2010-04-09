@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.stargate;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,15 +42,15 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hbase.filter.Filter;
 
-import org.apache.hadoop.hbase.stargate.auth.User;
+import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.stargate.model.ScannerModel;
 
 public class ScannerResource implements Constants {
 
   private static final Log LOG = LogFactory.getLog(ScannerResource.class);
 
-  static final Map<String,ScannerInstanceResource> scanners = 
-    new HashMap<String,ScannerInstanceResource>();
+  static final Map<String,ScannerInstanceResource> scanners =
+   Collections.synchronizedMap(new HashMap<String,ScannerInstanceResource>());
 
   User user;
   String tableName;
@@ -68,16 +69,18 @@ public class ScannerResource implements Constants {
     servlet = RESTServlet.getInstance();
   }
 
-  static void delete(String id) {
-    synchronized (scanners) {
-      ScannerInstanceResource instance = scanners.remove(id);
-      if (instance != null) {
-        instance.generator.close();
-      }
+  static void delete(final String id) {
+    ScannerInstanceResource instance = scanners.remove(id);
+    if (instance != null) {
+      instance.generator.close();
     }
   }
 
-  Response update(ScannerModel model, boolean replace, UriInfo uriInfo) {
+  Response update(final ScannerModel model, final boolean replace, 
+      final UriInfo uriInfo) throws IOException {
+    if (!servlet.userRequestLimit(user, 1)) {
+      return Response.status(509).build();
+    }
     servlet.getMetrics().incrementRequests(1);
     byte[] endRow = model.hasEndRow() ? model.getEndRow() : null;
     RowSpec spec = new RowSpec(model.getStartRow(), endRow,
@@ -88,10 +91,9 @@ public class ScannerResource implements Constants {
         new ScannerResultGenerator(actualTableName, spec, filter);
       String id = gen.getID();
       ScannerInstanceResource instance = 
-        new ScannerInstanceResource(actualTableName, id, gen, model.getBatch());
-      synchronized (scanners) {
-        scanners.put(id, instance);
-      }
+        new ScannerInstanceResource(user, actualTableName, id, gen, 
+          model.getBatch());
+      scanners.put(id, instance);
       if (LOG.isDebugEnabled()) {
         LOG.debug("new scanner: " + id);
       }
@@ -108,7 +110,8 @@ public class ScannerResource implements Constants {
 
   @PUT
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response put(ScannerModel model, @Context UriInfo uriInfo) {
+  public Response put(final ScannerModel model, 
+      final @Context UriInfo uriInfo) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
     }
@@ -117,7 +120,8 @@ public class ScannerResource implements Constants {
 
   @POST
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response post(ScannerModel model, @Context UriInfo uriInfo) {
+  public Response post(final ScannerModel model,
+      final @Context UriInfo uriInfo) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("POST " + uriInfo.getAbsolutePath());
     }
@@ -126,14 +130,12 @@ public class ScannerResource implements Constants {
 
   @Path("{scanner: .+}")
   public ScannerInstanceResource getScannerInstanceResource(
-      @PathParam("scanner") String id) {
-    synchronized (scanners) {
-      ScannerInstanceResource instance = scanners.get(id);
-      if (instance == null) {
-        throw new WebApplicationException(Response.Status.NOT_FOUND);
-      }
-      return instance;
+      final @PathParam("scanner") String id) {
+    ScannerInstanceResource instance = scanners.get(id);
+    if (instance == null) {
+      throw new WebApplicationException(Response.Status.NOT_FOUND);
     }
+    return instance;
   }
 
 }

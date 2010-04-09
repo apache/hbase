@@ -25,6 +25,7 @@ import java.io.IOException;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
@@ -47,14 +48,16 @@ public class ScannerInstanceResource implements Constants {
   private static final Log LOG =
     LogFactory.getLog(ScannerInstanceResource.class);
 
+  User user;
   ResultGenerator generator;
   String id;
-  int batch;
+  int batch = 1;
   RESTServlet servlet;
   CacheControl cacheControl;
 
-  public ScannerInstanceResource(String table, String id, 
+  public ScannerInstanceResource(User user, String table, String id, 
       ResultGenerator generator, int batch) throws IOException {
+    this.user = user;
     this.id = id;
     this.generator = generator;
     this.batch = batch;
@@ -66,7 +69,9 @@ public class ScannerInstanceResource implements Constants {
 
   @GET
   @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response get(@Context UriInfo uriInfo) {
+  public Response get(final @Context UriInfo uriInfo, 
+      @QueryParam("n") int maxRows, final @QueryParam("c") int maxValues)
+      throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
@@ -74,7 +79,11 @@ public class ScannerInstanceResource implements Constants {
     CellSetModel model = new CellSetModel();
     RowModel rowModel = null;
     byte[] rowKey = null;
-    int count = batch;
+    int limit = batch;
+    if (maxValues > 0) {
+      limit = maxValues;
+    }
+    int count = limit;
     do {
       KeyValue value = null;
       try {
@@ -87,7 +96,7 @@ public class ScannerInstanceResource implements Constants {
         LOG.info("generator exhausted");
         // respond with 204 (No Content) if an empty cell set would be
         // returned
-        if (count == batch) {
+        if (count == limit) {
           return Response.noContent().build();
         }
         break;
@@ -97,6 +106,20 @@ public class ScannerInstanceResource implements Constants {
         rowModel = new RowModel(rowKey);
       }
       if (!Bytes.equals(value.getRow(), rowKey)) {
+        // the user request limit is a transaction limit, so we need to
+        // account for scanner.next()
+        if (user != null && !servlet.userRequestLimit(user, 1)) {
+          generator.putBack(value);
+          break;
+        }
+        // if maxRows was given as a query param, stop if we would exceed the
+        // specified number of rows
+        if (maxRows > 0) { 
+          if (--maxRows == 0) {
+            generator.putBack(value);
+            break;
+          }
+        }
         model.addRow(rowModel);
         rowKey = value.getRow();
         rowModel = new RowModel(rowKey);
@@ -113,7 +136,7 @@ public class ScannerInstanceResource implements Constants {
 
   @GET
   @Produces(MIMETYPE_BINARY)
-  public Response getBinary(@Context UriInfo uriInfo) {
+  public Response getBinary(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath() + " as " +
         MIMETYPE_BINARY);
@@ -138,7 +161,7 @@ public class ScannerInstanceResource implements Constants {
   }
 
   @DELETE
-  public Response delete(@Context UriInfo uriInfo) {
+  public Response delete(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }

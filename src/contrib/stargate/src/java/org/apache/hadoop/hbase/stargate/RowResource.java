@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.stargate.auth.User;
+import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.stargate.model.CellModel;
 import org.apache.hadoop.hbase.stargate.model.CellSetModel;
 import org.apache.hadoop.hbase.stargate.model.RowModel;
@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class RowResource implements Constants {
   private static final Log LOG = LogFactory.getLog(RowResource.class);
 
+  User user;
   String tableName;
   String actualTableName;
   RowSpec rowspec;
@@ -63,6 +64,7 @@ public class RowResource implements Constants {
 
   public RowResource(User user, String table, String rowspec, String versions)
       throws IOException {
+    this.user = user;
     if (user != null) {
       this.actualTableName =
         !user.isAdmin() ? user.getName() + "." + table : table;
@@ -77,15 +79,18 @@ public class RowResource implements Constants {
     }
     this.servlet = RESTServlet.getInstance();
     cacheControl = new CacheControl();
-    cacheControl.setMaxAge(servlet.getMaxAge(table));
+    cacheControl.setMaxAge(servlet.getMaxAge(actualTableName));
     cacheControl.setNoTransform(false);
   }
 
   @GET
   @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response get(@Context UriInfo uriInfo) {
+  public Response get(final @Context UriInfo uriInfo) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
+    }
+    if (!servlet.userRequestLimit(user, 1)) {
+      return Response.status(509).build();
     }
     servlet.getMetrics().incrementRequests(1);
     try {
@@ -94,6 +99,7 @@ public class RowResource implements Constants {
       if (!generator.hasNext()) {
         throw new WebApplicationException(Response.Status.NOT_FOUND);
       }
+      int count = 0;
       CellSetModel model = new CellSetModel();
       KeyValue value = generator.next();
       byte[] rowKey = value.getRow();
@@ -107,6 +113,9 @@ public class RowResource implements Constants {
         rowModel.addCell(
           new CellModel(value.getColumn(), value.getTimestamp(),
               value.getValue()));
+        if (++count > rowspec.getMaxValues()) {
+          break;
+        }
         value = generator.next();
       } while (value != null);
       model.addRow(rowModel);
@@ -121,9 +130,13 @@ public class RowResource implements Constants {
 
   @GET
   @Produces(MIMETYPE_BINARY)
-  public Response getBinary(@Context UriInfo uriInfo) {
+  public Response getBinary(final @Context UriInfo uriInfo) 
+      throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath() + " as "+ MIMETYPE_BINARY);
+    }
+    if (!servlet.userRequestLimit(user, 1)) {
+      return Response.status(509).build();
     }
     servlet.getMetrics().incrementRequests(1);
     // doesn't make sense to use a non specific coordinate as this can only
@@ -148,13 +161,19 @@ public class RowResource implements Constants {
     }
   }
 
-  Response update(CellSetModel model, boolean replace) {
-    servlet.getMetrics().incrementRequests(1);
+  Response update(final CellSetModel model, final boolean replace) {
     HTablePool pool = servlet.getTablePool();
     HTable table = null;
     try {
+      List<RowModel> rows = model.getRows();
+      // the user request limit is a transaction limit, so we need to
+      // account for updates by row
+      if (user != null && !servlet.userRequestLimit(user, rows.size())) {
+        throw new WebApplicationException(Response.status(509).build());
+      }
       table = pool.getTable(actualTableName);
-      for (RowModel row: model.getRows()) {
+      table.setAutoFlush(false);
+      for (RowModel row: rows) {
         byte[] key = row.getKey();
         Put put = new Put(key);
         for (CellModel cell: row.getCells()) {
@@ -166,6 +185,7 @@ public class RowResource implements Constants {
           LOG.debug("PUT " + put.toString());
         }
       }
+      table.setAutoFlush(true);
       table.flushCommits();
       ResponseBuilder response = Response.ok();
       return response.build();
@@ -179,9 +199,9 @@ public class RowResource implements Constants {
     }
   }
 
-  Response updateBinary(byte[] message, HttpHeaders headers, 
-      boolean replace) {
-    servlet.getMetrics().incrementRequests(1);
+  // This currently supports only update of one row at a time.
+  Response updateBinary(final byte[] message, final HttpHeaders headers,
+      final boolean replace) {
     HTablePool pool = servlet.getTablePool();
     HTable table = null;    
     try {
@@ -215,7 +235,6 @@ public class RowResource implements Constants {
       if (LOG.isDebugEnabled()) {
         LOG.debug("PUT " + put.toString());
       }
-      table.flushCommits();
       return Response.ok().build();
     } catch (IOException e) {
       throw new WebApplicationException(e,
@@ -229,48 +248,70 @@ public class RowResource implements Constants {
 
   @PUT
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response put(CellSetModel model, @Context UriInfo uriInfo) {
+  public Response put(final CellSetModel model,
+      final @Context UriInfo uriInfo) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
     }
+    if (!servlet.userRequestLimit(user, 1)) {
+      return Response.status(509).build();
+    }
+    servlet.getMetrics().incrementRequests(1);
     return update(model, true);
   }
 
   @PUT
   @Consumes(MIMETYPE_BINARY)
-  public Response putBinary(byte[] message, @Context UriInfo uriInfo, 
-      @Context HttpHeaders headers)
+  public Response putBinary(final byte[] message,
+      final @Context UriInfo uriInfo, final @Context HttpHeaders headers)
+      throws IOException
   {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath() + " as "+ MIMETYPE_BINARY);
     }
+    if (!servlet.userRequestLimit(user, 1)) {
+      return Response.status(509).build();
+    }
+    servlet.getMetrics().incrementRequests(1);
     return updateBinary(message, headers, true);
   }
 
   @POST
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response post(CellSetModel model, @Context UriInfo uriInfo) {
+  public Response post(final CellSetModel model,
+      final @Context UriInfo uriInfo) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("POST " + uriInfo.getAbsolutePath());
     }
+    if (!servlet.userRequestLimit(user, 1)) {
+      return Response.status(509).build();
+    }
+    servlet.getMetrics().incrementRequests(1);
     return update(model, false);
   }
 
   @POST
   @Consumes(MIMETYPE_BINARY)
-  public Response postBinary(byte[] message, @Context UriInfo uriInfo, 
-      @Context HttpHeaders headers)
-  {
+  public Response postBinary(final byte[] message,
+      final @Context UriInfo uriInfo, final @Context HttpHeaders headers) 
+      throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("POST " + uriInfo.getAbsolutePath() + " as "+MIMETYPE_BINARY);
     }
+    if (!servlet.userRequestLimit(user, 1)) {
+      return Response.status(509).build();
+    }
+    servlet.getMetrics().incrementRequests(1);
     return updateBinary(message, headers, false);
   }
 
   @DELETE
-  public Response delete(@Context UriInfo uriInfo) {
+  public Response delete(final @Context UriInfo uriInfo) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
+    }
+    if (!servlet.userRequestLimit(user, 1)) {
+      return Response.status(509).build();
     }
     servlet.getMetrics().incrementRequests(1);
     Delete delete = null;
@@ -303,7 +344,6 @@ public class RowResource implements Constants {
       if (LOG.isDebugEnabled()) {
         LOG.debug("DELETE " + delete.toString());
       }
-      table.flushCommits();
     } catch (IOException e) {
       throw new WebApplicationException(e, 
                   Response.Status.SERVICE_UNAVAILABLE);
@@ -314,4 +354,5 @@ public class RowResource implements Constants {
     }
     return Response.ok().build();
   }
+
 }

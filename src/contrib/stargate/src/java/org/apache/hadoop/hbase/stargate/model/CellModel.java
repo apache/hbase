@@ -29,8 +29,10 @@ import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.XmlValue;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.CellMessage.Cell;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.ByteString;
 
@@ -79,11 +81,44 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   /**
    * Constructor
    * @param column
+   * @param qualifier
+   * @param value
+   */
+  public CellModel(byte[] column, byte[] qualifier, byte[] value) {
+    this(column, qualifier, HConstants.LATEST_TIMESTAMP, value);
+  }
+
+  /**
+   * Constructor from KeyValue
+   * @param kv
+   */
+  public CellModel(KeyValue kv) {
+    this(kv.getFamily(), kv.getQualifier(), kv.getTimestamp(), kv.getValue());
+  }
+
+  /**
+   * Constructor
+   * @param column
    * @param timestamp
    * @param value
    */
   public CellModel(byte[] column, long timestamp, byte[] value) {
     this.column = column;
+    this.timestamp = timestamp;
+    this.value = value;
+  }
+
+  /**
+   * Constructor
+   * @param column
+   * @param qualifier
+   * @param timestamp
+   * @param value
+   */
+  public CellModel(byte[] column, byte[] qualifier, long timestamp,
+      byte[] value) {
+    this.column = Bytes.add(column, KeyValue.COLUMN_FAMILY_DELIM_ARRAY,
+      qualifier);
     this.timestamp = timestamp;
     this.value = value;
   }
