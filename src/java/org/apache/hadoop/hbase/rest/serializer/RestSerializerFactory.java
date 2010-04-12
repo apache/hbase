@@ -44,9 +44,6 @@ public class RestSerializerFactory {
     case XML:
       serializer = new SimpleXMLSerializer(response);
       break;
-    case JSON:
-      serializer = new JSONSerializer(response);
-      break;
     default:
       serializer = new SimpleXMLSerializer(response);
       break;

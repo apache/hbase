@@ -41,8 +41,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 
-import agilejson.TOJSON;
-
 /**
  * Holds row name and then a map of columns to cells.
  * @deprecated As of hbase 0.20.0, replaced by new Get/Put/Delete/Result-based API.
@@ -73,7 +71,6 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
    * Get the row for this RowResult
    * @return the row
    */
-  @TOJSON(base64=true)
   public byte [] getRow() {
     return row;
   }
@@ -145,7 +142,6 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
    * 
    * @return Cells
    */
-  @TOJSON
   public RestCell[] getCells() {
     RestCell[] restCells = new RestCell[this.cells.size()];
     int i = 0;

@@ -30,8 +30,6 @@ import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
 import org.apache.hadoop.hbase.rest.serializer.ISerializable;
 
-import agilejson.TOJSON;
-
 public class DatabaseModel extends AbstractModel {
 
   @SuppressWarnings("unused")
@@ -50,12 +48,10 @@ public class DatabaseModel extends AbstractModel {
       tables = a.listTables();
     }
 
-    @TOJSON(prefixLength = 2)
     public boolean isMasterRunning() {
       return master_running;
     }
 
-    @TOJSON
     public HTableDescriptor[] getTables() {
       return tables;
     }

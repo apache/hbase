@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.rest.descriptors;
 
 import org.apache.hadoop.hbase.io.Cell;
 
-import agilejson.TOJSON;
-
 /**
  * 
  */
@@ -88,7 +86,6 @@ public class RestCell extends Cell {
   /**
    * @return the name
    */
-  @TOJSON(base64=true)
   public byte[] getName() {
     return name;
   }

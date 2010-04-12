@@ -23,8 +23,6 @@ import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
 import org.apache.hadoop.hbase.rest.serializer.ISerializable;
 
-import agilejson.TOJSON;
-
 /**
  * 
  */
@@ -53,7 +51,6 @@ public class ScannerIdentifier implements ISerializable {
   /**
    * @return the id
    */
-  @TOJSON
   public Integer getId() {
     return id;
   }
