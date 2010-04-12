@@ -23,8 +23,6 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.rest.RESTConstants;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 /**
  * Factory to produce WhileMatchRowFilters from JSON
@@ -34,28 +32,6 @@ import org.json.JSONObject;
 public class WhileMatchRowFilterFactory implements FilterFactory {
   public RowFilterInterface getFilterFromJSON(String args)
       throws HBaseRestException {
-    JSONObject innerFilterJSON;
-    FilterFactory f;
-    String innerFilterType;
-    String innerFilterArgs;
-
-    try {
-      innerFilterJSON = new JSONObject(args);
-    } catch (JSONException e) {
-      throw new HBaseRestException(e);
-    }
-
-    // Check if filter is correct
-    if ((innerFilterType = innerFilterJSON.optString(TYPE)) == null)
-      throw new MalformedFilterException();
-    if ((innerFilterArgs = innerFilterJSON.optString(ARGUMENTS)) == null)
-      throw new MalformedFilterException();
-
-    if ((f = RESTConstants.filterFactories.get(innerFilterType)) == null)
-      throw new MalformedFilterException();
-
-    RowFilterInterface innerFilter = f.getFilterFromJSON(innerFilterArgs);
-
-    return new WhileMatchRowFilter(innerFilter);
+    throw new HBaseRestException("Not implemented in > 0.20.3 HBase");
   }
 }

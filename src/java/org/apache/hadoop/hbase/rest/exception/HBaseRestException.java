@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.rest.exception;
 
-import agilejson.TOJSON;
-
 public class HBaseRestException extends Exception {
 
   /**
@@ -59,12 +57,10 @@ public class HBaseRestException extends Exception {
     innerMessage = message;
   }
 
-  @TOJSON
   public String getInnerClass() {
     return this.innerClass;
   }
 
-  @TOJSON
   public String getInnerMessage() {
     return this.innerMessage;
   }

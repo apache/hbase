@@ -24,9 +24,6 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.rest.Dispatcher.ContentType;
 
-/**
- * 
- */
 public class HBaseRestParserFactory {
 
   private static final Map<ContentType, Class<?>> parserMap = 
@@ -34,7 +31,6 @@ public class HBaseRestParserFactory {
 
   static {
     parserMap.put(ContentType.XML, XMLRestParser.class);
-    parserMap.put(ContentType.JSON, JsonRestParser.class);
   }
 
   public static IHBaseRestParser getParser(ContentType ct) {

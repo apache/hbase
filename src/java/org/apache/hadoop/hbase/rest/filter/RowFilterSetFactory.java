@@ -25,9 +25,6 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.rest.RESTConstants;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 /**
  * Constructs a RowFilterSet from a JSON argument String.
@@ -46,69 +43,6 @@ public class RowFilterSetFactory implements FilterFactory {
 
   public RowFilterInterface getFilterFromJSON(String args)
       throws HBaseRestException {
-    JSONArray filterArray;
-    Set<RowFilterInterface> set;
-    JSONObject filter;
-
-    try {
-      filterArray = new JSONArray(args);
-    } catch (JSONException e) {
-      throw new HBaseRestException(e);
-    }
-
-    // If only 1 Row, just return the row.
-    if (filterArray.length() == 1) {
-      return getRowFilter(filterArray.optJSONObject(0));
-    }
-
-    // Otherwise continue
-    set = new HashSet<RowFilterInterface>();
-
-    for (int i = 0; i < filterArray.length(); i++) {
-
-      // Get FIlter Object
-      if ((filter = filterArray.optJSONObject(i)) == null) {
-        throw new MalformedFilterException();
-      }
-
-      // Add newly constructed filter to the filter set;
-      set.add(getRowFilter(filter));
-    }
-
-    // Put set into a RowFilterSet and return.
-    return new RowFilterSet(set);
-  }
-
-  /**
-   * A refactored method that encapsulates the creation of a RowFilter given a
-   * JSONObject with a correct form of: { "type" : "MY_TYPE", "args" : MY_ARGS,
-   * }
-   * 
-   * @param filter
-   * @return RowFilter
-   * @throws org.apache.hadoop.hbase.rest.exception.HBaseRestException
-   */
-  protected RowFilterInterface getRowFilter(JSONObject filter)
-      throws HBaseRestException {
-    FilterFactory f;
-    String filterType;
-    String filterArgs;
-
-    // Get Filter's Type
-    if ((filterType = filter.optString(FilterFactoryConstants.TYPE)) == null) {
-      throw new MalformedFilterException();
-    }
-
-    // Get Filter Args
-    if ((filterArgs = filter.optString(FilterFactoryConstants.ARGUMENTS)) == null) {
-      throw new MalformedFilterException();
-    }
-
-    // Get Filter Factory for given Filter Type
-    if ((f = RESTConstants.filterFactories.get(filterType)) == null) {
-      throw new MalformedFilterException();
-    }
-
-    return f.getFilterFromJSON(filterArgs);
+    throw new HBaseRestException("Not implemented in > 0.20.3 HBase");
   }
 }

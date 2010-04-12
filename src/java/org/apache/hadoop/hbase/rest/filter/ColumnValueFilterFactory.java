@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.rest.filter;
 import org.apache.hadoop.hbase.filter.ColumnValueFilter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 /**
  * FilterFactory that constructs a ColumnValueFilter from a JSON arg String.
@@ -39,28 +37,6 @@ public class ColumnValueFilterFactory implements FilterFactory {
 
   public RowFilterInterface getFilterFromJSON(String args)
       throws HBaseRestException {
-    JSONObject innerJSON;
-    String columnName;
-    String compareOp;
-    String value;
-
-    try {
-      innerJSON = new JSONObject(args);
-    } catch (JSONException e) {
-      throw new HBaseRestException(e);
-    }
-
-    if ((columnName = innerJSON.optString(COLUMN_NAME)) == null) {
-      throw new MalformedFilterException();
-    }
-    if ((compareOp = innerJSON.optString(COMPARE_OP)) == null) {
-      throw new MalformedFilterException();
-    }
-    if ((value = innerJSON.optString(VALUE)) == null) {
-      throw new MalformedFilterException();
-    }
-
-    return new ColumnValueFilter(columnName.getBytes(),
-        ColumnValueFilter.CompareOp.valueOf(compareOp), value.getBytes());
+    throw new HBaseRestException("Not implemented in > 0.20.3 HBase");
   }
 }

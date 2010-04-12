@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
-import agilejson.TOJSON;
-
 /**
  * An HColumnDescriptor contains information about a column family such as the
  * number of versions, compression settings, etc.
@@ -331,7 +329,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /**
    * @return Name of this column family with colon as required by client API
    */
-  @TOJSON(fieldName = "name", base64=true)
   public byte [] getNameWithColon() {
     return Bytes.add(this.name, new byte[]{':'});
   }
@@ -397,14 +394,12 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   }
 
   /** @return compression type being used for the column family */
-  @TOJSON
   public Compression.Algorithm getCompression() {
     String n = getValue(COMPRESSION);
     return Compression.Algorithm.valueOf(n.toUpperCase());
   }
   
   /** @return maximum number of versions */
-  @TOJSON
   public synchronized int getMaxVersions() {
     if (this.cachedMaxVersions == -1) {
       String value = getValue(HConstants.VERSIONS);
@@ -424,7 +419,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /**
    * @return Blocksize.
    */
-  @TOJSON
   public synchronized int getBlocksize() {
     if (this.blocksize == null) {
       String value = getValue(BLOCKSIZE);
@@ -445,7 +439,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /**
    * @return Compression type setting.
    */
-  @TOJSON
   public Compression.Algorithm getCompressionType() {
     return getCompression();
   }
@@ -470,7 +463,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /**
    * @return True if we are to keep all in use HRegionServer cache.
    */
-  @TOJSON(prefixLength = 2)
   public boolean isInMemory() {
     String value = getValue(HConstants.IN_MEMORY);
     if (value != null)
@@ -489,7 +481,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /**
    * @return Time-to-live of cell contents, in seconds.
    */
-  @TOJSON
   public int getTimeToLive() {
     String value = getValue(TTL);
     return (value != null)? Integer.valueOf(value).intValue(): DEFAULT_TTL;
@@ -505,7 +496,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /**
    * @return True if MapFile blocks should be cached.
    */
-  @TOJSON(prefixLength = 2)
   public boolean isBlockCacheEnabled() {
     String value = getValue(BLOCKCACHE);
     if (value != null)
@@ -523,7 +513,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /**
    * @return true if a bloom filter is enabled
    */
-  @TOJSON(prefixLength = 2)
   public boolean isBloomfilter() {
     String value = getValue(BLOOMFILTER);
     if (value != null)

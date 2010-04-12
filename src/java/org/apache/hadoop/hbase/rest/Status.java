@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
 import org.apache.hadoop.hbase.rest.serializer.ISerializable;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import agilejson.TOJSON;
-
 public class Status {
 
   @SuppressWarnings("unused")
@@ -108,7 +106,6 @@ public class Status {
     return statusCode;
   }
 
-  @TOJSON
   public Object getMessage() {
     return message;
   }
@@ -124,17 +121,14 @@ public class Status {
       reason = o;
     }
 
-    @TOJSON
     public int getStatusCode() {
       return statusCode;
     }
 
-    @TOJSON
     public boolean getError() {
       return error;
     }
 
-    @TOJSON
     public Object getMessage() {
       return reason;
     }

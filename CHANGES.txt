@@ -40,6 +40,7 @@ Release 0.20.4 - Unreleased
    HBASE-2417  HCM.locateRootRegion fails hard on "Connection refused"
    HBASE-2346  Usage of FilterList slows down scans
    HBASE-2402  [stargate] set maxVersions on gets
+   HBASE-2383  Replace JSON-licensed json dependencies
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream

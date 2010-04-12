@@ -39,8 +39,6 @@ import org.apache.hadoop.hbase.rest.serializer.ISerializable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
-import agilejson.TOJSON;
-
 /**
  * Cell - Used to transport a cell value (byte[]) and the timestamp it was
  * stored with together as a result for get and getRow methods. This promotes
@@ -119,13 +117,11 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
   }
 
   /** @return the current cell's value */
-  @TOJSON(base64=true)
   public byte[] getValue() {
     return valueMap.get(valueMap.firstKey());
   }
 
   /** @return the current cell's timestamp */
-  @TOJSON
   public long getTimestamp() {
     return valueMap.firstKey();
   }

@@ -37,8 +37,6 @@ import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
 import org.apache.hadoop.hbase.rest.serializer.ISerializable;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import agilejson.TOJSON;
-
 public class TableModel extends AbstractModel {
 
   @SuppressWarnings("unused")
@@ -256,7 +254,6 @@ public class TableModel extends AbstractModel {
     /**
      * @return the regionKey
      */
-    @TOJSON(fieldName = "region")
     public byte[][] getRegionKey() {
       return regionKey;
     }
