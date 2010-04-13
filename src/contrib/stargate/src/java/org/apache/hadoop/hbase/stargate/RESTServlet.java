@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.stargate;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -28,6 +29,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -63,8 +69,8 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
-import org.json.JSONStringer;
-
+import com.sun.jersey.api.json.JSONJAXBContext;
+import com.sun.jersey.api.json.JSONMarshaller;
 import com.sun.jersey.server.impl.container.servlet.ServletAdaptor;
 
 /**
@@ -78,29 +84,42 @@ public class RESTServlet extends ServletAdaptor
 
   private static RESTServlet instance;
 
+  @XmlRootElement(name="status")
+  static class StatusModel {  
+    @XmlAttribute long requests;
+    @XmlElement List<String> connectors = new ArrayList<String>();
+    public void addConnector(String host, int port) {
+      connectors.add(host + ":" + Integer.toString(port));
+    }
+  }
+
   class StatusReporter extends Chore {
 
-    public StatusReporter(int period, AtomicBoolean stopping) {
+    final JSONJAXBContext context;
+    final JSONMarshaller marshaller;
+    
+    public StatusReporter(int period, AtomicBoolean stopping) 
+        throws IOException {
       super(period, stopping);
+        try {
+          context = new JSONJAXBContext(StatusModel.class);
+          marshaller = context.createJSONMarshaller();
+        } catch (JAXBException e) {
+          throw new IOException(e);
+        }
     }
 
     @Override
     protected void chore() {
       if (wrapper != null) try {
-        JSONStringer status = new JSONStringer();
-        status.object();
-        status.key("requests").value(metrics.getRequests());
-        status.key("connectors").array();
+        StatusModel model = new StatusModel();
+        model.requests = (long)metrics.getRequests();
         for (Pair<String,Integer> e: connectors) {
-          status.object()
-            .key("host").value(e.getFirst())
-            .key("port").value(e.getSecond())
-            .endObject();
+          model.addConnector(e.getFirst(), e.getSecond());
         }
-        status.endArray();
-        status.endObject();
-        ensureExists(znode, CreateMode.EPHEMERAL, 
-          Bytes.toBytes(status.toString()));
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        marshaller.marshallToJSON(model, os);
+        ensureExists(znode, CreateMode.EPHEMERAL, os.toByteArray());
       } catch (Exception e) {
         LOG.error(StringUtils.stringifyException(e));
       }
