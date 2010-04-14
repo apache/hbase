@@ -80,6 +80,8 @@ Release 0.20.4 - Unreleased
    HBASE-2341  ZK settings for initLimit/syncLimit should not have been removed
                from hbase-default.xml
    HBASE-2383  Replace JSON-licensed json dependencies
+   HBASE-2439  HBase can get stuck if updates to META are blocked
+               (Kannan Muthukkaruppan via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
