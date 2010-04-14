@@ -3,6 +3,7 @@
   import="java.net.URLEncoder" 
   import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.hbase.util.Bytes"
+  import="org.apache.hadoop.hbase.util.JvmVersion"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.master.MetaRegion"
@@ -32,10 +33,19 @@
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
 </head>
 <body>
-
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
 <h1 id="page_title">Master: <%=master.getMasterAddress().getHostname()%>:<%=master.getMasterAddress().getPort()%></h1>
 <p id="links_menu"><a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
+
+<% if (JvmVersion.isBadJvmVersion()) { %>
+  <div class="warning">
+  Your current JVM version <%= System.getProperty("java.version") %> is known to be
+  unstable with HBase. Please see the
+  <a href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A18">HBase wiki</a>
+  for details.
+  </div>
+<% } %>
+
 <hr id="head_rule" />
 
 <h2>Master Attributes</h2>

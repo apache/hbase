@@ -68,6 +68,8 @@ Release 0.20.4 - Unreleased
    HBASE-2423  Update 'Getting Started' for 0.20.4 including making 
                "important configurations more visiable"
    HBASE-2412  [stargate] PerformanceEvaluation
+   HBASE-2440  Master UI should check against known bad JDK versions and warn
+               the use (Todd Lipcon via Stack)
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
