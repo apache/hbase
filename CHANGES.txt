@@ -44,6 +44,8 @@ Release 0.20.4 - Unreleased
    HBASE-2346  Usage of FilterList slows down scans
    HBASE-2402  [stargate] set maxVersions on gets
    HBASE-2383  Replace JSON-licensed json dependencies
+   HBASE-2439  HBase can get stuck if updates to META are blocked
+               (Kannan Muthukkaruppan via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
