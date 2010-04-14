@@ -55,7 +55,11 @@ public class ScanQueryMatcher extends QueryMatcher {
     this.rowComparator = rowComparator;
     this.deletes =  new ScanDeleteTracker();
     this.startKey = KeyValue.createFirstOnRow(scan.getStartRow());
-    this.stopKey = KeyValue.createFirstOnRow(scan.getStopRow());
+    if (scan.isGetScan()) {
+      this.stopKey = KeyValue.createLastOnRow(scan.getStopRow());
+    } else {
+      this.stopKey = KeyValue.createFirstOnRow(scan.getStopRow());
+    }
     this.filter = scan.getFilter();
     this.oldFilter = scan.getOldFilter();
     

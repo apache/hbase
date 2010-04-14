@@ -367,6 +367,7 @@ public class FSUtils {
     return true;
   }
 
+  // TODO move this method OUT of FSUtils. No dependencies to HMaster
   /**
    * Expects to find -ROOT- directory.
    * @param fs

@@ -28,7 +28,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.SortedSet;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -77,7 +79,6 @@ public class MemStore implements HeapSize {
 
   // Used to track own heapSize
   final AtomicLong size;
-
   /**
    * Default constructor. Used for tests.
    */
@@ -110,7 +111,7 @@ public class MemStore implements HeapSize {
 
   /**
    * Creates a snapshot of the current memstore.
-   * Snapshot must be cleared by call to {@link #clearSnapshot(java.util.Map)}
+   * Snapshot must be cleared by call to {@link #clearSnapshot(java.util.SortedSet)}
    * To get the snapshot made by this method, use {@link #getSnapshot()}
    */
   void snapshot() {
@@ -140,7 +141,7 @@ public class MemStore implements HeapSize {
    * call to {@link #snapshot()}
    * @return Return snapshot.
    * @see {@link #snapshot()}
-   * @see {@link #clearSnapshot(java.util.Map)}
+   * @see {@link #clearSnapshot(java.util.SortedSet)}
    */
   KeyValueSkipListSet getSnapshot() {
     return this.snapshot;
@@ -187,7 +188,7 @@ public class MemStore implements HeapSize {
     return s;
   }
 
-  /**
+  /** 
    * Write a delete
    * @param delete
    * @return approximate size of the passed key and value.
@@ -195,69 +196,8 @@ public class MemStore implements HeapSize {
   long delete(final KeyValue delete) {
     long s = 0;
     this.lock.readLock().lock();
-    //Have to find out what we want to do here, to find the fastest way of
-    //removing things that are under a delete.
-    //Actions that will take place here are:
-    //1. Insert a delete and remove all the affected entries already in memstore
-    //2. In the case of a Delete and the matching put is found then don't insert
-    //   the delete
-    //TODO Would be nice with if we had an iterator for this, so we could remove
-    //things that needs to be removed while iterating and don't have to go
-    //back and do it afterwards
 
     try {
-      boolean notpresent = false;
-      List<KeyValue> deletes = new ArrayList<KeyValue>();
-      SortedSet<KeyValue> tail = this.kvset.tailSet(delete);
-
-      //Parse the delete, so that it is only done once
-      byte [] deleteBuffer = delete.getBuffer();
-      int deleteOffset = delete.getOffset();
-
-      int deleteKeyLen = Bytes.toInt(deleteBuffer, deleteOffset);
-      deleteOffset += Bytes.SIZEOF_INT + Bytes.SIZEOF_INT;
-
-      short deleteRowLen = Bytes.toShort(deleteBuffer, deleteOffset);
-      deleteOffset += Bytes.SIZEOF_SHORT;
-      int deleteRowOffset = deleteOffset;
-
-      deleteOffset += deleteRowLen;
-
-      byte deleteFamLen = deleteBuffer[deleteOffset];
-      deleteOffset += Bytes.SIZEOF_BYTE + deleteFamLen;
-
-      int deleteQualifierOffset = deleteOffset;
-      int deleteQualifierLen = deleteKeyLen - deleteRowLen - deleteFamLen -
-        Bytes.SIZEOF_SHORT - Bytes.SIZEOF_BYTE - Bytes.SIZEOF_LONG -
-        Bytes.SIZEOF_BYTE;
-
-      deleteOffset += deleteQualifierLen;
-
-      int deleteTimestampOffset = deleteOffset;
-      deleteOffset += Bytes.SIZEOF_LONG;
-      byte deleteType = deleteBuffer[deleteOffset];
-
-      //Comparing with tail from memstore
-      for (KeyValue kv : tail) {
-        DeleteCode res = DeleteCompare.deleteCompare(kv, deleteBuffer,
-            deleteRowOffset, deleteRowLen, deleteQualifierOffset,
-            deleteQualifierLen, deleteTimestampOffset, deleteType,
-            comparator.getRawComparator());
-        if (res == DeleteCode.DONE) {
-          break;
-        } else if (res == DeleteCode.DELETE) {
-          deletes.add(kv);
-        } // SKIP
-      }
-
-      //Delete all the entries effected by the last added delete
-      for (KeyValue kv : deletes) {
-        notpresent = this.kvset.remove(kv);
-        s -= heapSizeChange(kv, notpresent);
-      }
-
-      // Adding the delete to memstore. Add any value, as long as
-      // same instance each time.
       s += heapSizeChange(delete, this.kvset.add(delete));
     } finally {
       this.lock.readLock().unlock();
@@ -265,7 +205,7 @@ public class MemStore implements HeapSize {
     this.size.addAndGet(s);
     return s;
   }
-
+  
   /**
    * @param kv Find the row that comes after this one.  If null, we return the
    * first.
@@ -318,7 +258,7 @@ public class MemStore implements HeapSize {
   }
 
   /**
-   * @param state
+   * @param state column/delete tracking state
    */
   void getRowKeyAtOrBefore(final GetClosestRowBeforeTracker state) {
     this.lock.readLock().lock();
@@ -442,8 +382,7 @@ public class MemStore implements HeapSize {
     this.lock.readLock().lock();
     try {
       KeyValueScanner [] scanners = new KeyValueScanner[1];
-      scanners[0] = new MemStoreScanner(this.kvset.clone(),
-        this.snapshot.clone(), this.comparator);
+      scanners[0] = new MemStoreScanner();
       return scanners;
     } finally {
       this.lock.readLock().unlock();
@@ -465,10 +404,8 @@ public class MemStore implements HeapSize {
    * @param matcher Column matcher
    * @param result List to add results to
    * @return true if done with store (early-out), false if not
-   * @throws IOException
    */
-  public boolean get(QueryMatcher matcher, List<KeyValue> result)
-  throws IOException {
+  public boolean get(QueryMatcher matcher, List<KeyValue> result) {
     this.lock.readLock().lock();
     try {
       if(internalGet(this.kvset, matcher, result) || matcher.isDone()) {
@@ -485,11 +422,11 @@ public class MemStore implements HeapSize {
    * Gets from either the memstore or the snapshop, and returns a code
    * to let you know which is which.
    *
-   * @param matcher
-   * @param result
+   * @param matcher query matcher
+   * @param result puts results here
    * @return 1 == memstore, 2 == snapshot, 0 == none
    */
-  int getWithCode(QueryMatcher matcher, List<KeyValue> result) throws IOException {
+  int getWithCode(QueryMatcher matcher, List<KeyValue> result) {
     this.lock.readLock().lock();
     try {
       boolean fromMemstore = internalGet(this.kvset, matcher, result);
@@ -517,18 +454,16 @@ public class MemStore implements HeapSize {
   void readLockUnlock() {
     this.lock.readLock().unlock();
   }
-
+  
   /**
    *
    * @param set memstore or snapshot
    * @param matcher query matcher
    * @param result list to add results to
    * @return true if done with store (early-out), false if not
-   * @throws IOException
    */
   boolean internalGet(final NavigableSet<KeyValue> set,
-      final QueryMatcher matcher, final List<KeyValue> result)
-  throws IOException {
+      final QueryMatcher matcher, final List<KeyValue> result) {
     if(set.isEmpty()) return false;
     // Seek to startKey
     SortedSet<KeyValue> tail = set.tailSet(matcher.getStartKey());
@@ -550,11 +485,151 @@ public class MemStore implements HeapSize {
     }
     return false;
   }
+  
 
+  /*
+   * MemStoreScanner implements the KeyValueScanner.
+   * It lets the caller scan the contents of a memstore -- both current
+   * map and snapshot.
+   * This behaves as if it were a real scanner but does not maintain position.
+   */
+  protected class MemStoreScanner implements KeyValueScanner {
+    // Next row information for either kvset or snapshot
+    private KeyValue kvsetNextRow = null;
+    private KeyValue snapshotNextRow = null;
+
+    // iterator based scanning.
+    Iterator<KeyValue> kvsetIt;
+    Iterator<KeyValue> snapshotIt;
+
+    /*
+    Some notes...
+
+     So memstorescanner is fixed at creation time. this includes pointers/iterators into
+    existing kvset/snapshot.  during a snapshot creation, the kvset is null, and the
+    snapshot is moved.  since kvset is null there is no point on reseeking on both,
+      we can save us the trouble. During the snapshot->hfile transition, the memstore
+      scanner is re-created by StoreScanner#updateReaders().  StoreScanner should
+      potentially do something smarter by adjusting the existing memstore scanner.
+
+      But there is a greater problem here, that being once a scanner has progressed
+      during a snapshot scenario, we currently iterate past the kvset then 'finish' up.
+      if a scan lasts a little while, there is a chance for new entries in kvset to
+      become available but we will never see them.  This needs to be handled at the
+      StoreScanner level with coordination with MemStoreScanner.
+
+    */
+
+
+    MemStoreScanner() {
+      super();
+
+      //DebugPrint.println(" MS new@" + hashCode());
+    }
+
+    protected KeyValue getNext(Iterator<KeyValue> it) {
+      KeyValue ret = null;
+      long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
+      //DebugPrint.println( " MS@" + hashCode() + ": threadpoint = " + readPoint);
+
+      while (ret == null && it.hasNext()) {
+        KeyValue v = it.next();
+        if (v.getMemstoreTS() <= readPoint) {
+          ret = v;
+        }
+      }
+      return ret;
+    }
+
+    public synchronized boolean seek(KeyValue key) {
+      if (key == null) {
+        close();
+        return false;
+      }
+
+      // kvset and snapshot will never be empty.
+      // if tailSet cant find anything, SS is empty (not null).
+      SortedSet<KeyValue> kvTail = kvset.tailSet(key);
+      SortedSet<KeyValue> snapshotTail = snapshot.tailSet(key);
+
+      kvsetIt = kvTail.iterator();
+      snapshotIt = snapshotTail.iterator();
+
+      kvsetNextRow = getNext(kvsetIt);
+      snapshotNextRow = getNext(snapshotIt);
+      long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
+
+      //DebugPrint.println( " MS@" + hashCode() + " kvset seek: " + kvsetNextRow + " with size = " +
+      //    kvset.size() + " threadread = " + readPoint);
+      //DebugPrint.println( " MS@" + hashCode() + " snapshot seek: " + snapshotNextRow + " with size = " +
+      //    snapshot.size() + " threadread = " + readPoint);
+
+      KeyValue lowest = getLowest();
+
+      // has data := (lowest != null)
+      return lowest != null;
+    }
+
+    public synchronized KeyValue peek() {
+      //DebugPrint.println(" MS@" + hashCode() + " peek = " + getLowest());
+      return getLowest();
+    }
+
+
+    public synchronized KeyValue next() {
+      KeyValue theNext = getLowest();
+
+      if (theNext == null) {
+          return null;
+      }
+
+      // Advance one of the iterators
+      if (theNext == kvsetNextRow) {
+        kvsetNextRow = getNext(kvsetIt);
+      } else {
+        snapshotNextRow = getNext(snapshotIt);
+      }
+      //long readpoint = ReadWriteConsistencyControl.getThreadReadPoint();
+      //DebugPrint.println(" MS@" + hashCode() + " next: " + theNext + " next_next: " +
+      //    getLowest() + " threadpoint=" + readpoint);
+
+      return theNext;
+    }
+
+    protected KeyValue getLowest() {
+      return getLower(kvsetNextRow,
+          snapshotNextRow);
+    }
+
+    /*
+     * Returns the lower of the two key values, or null if they are both null.
+     * This uses comparator.compare() to compare the KeyValue using the memstore
+     * comparator.
+     */
+    protected KeyValue getLower(KeyValue first, KeyValue second) {
+      if (first == null && second == null) {
+        return null;
+      }
+      if (first != null && second != null) {
+        int compare = comparator.compare(first, second);
+        return (compare <= 0 ? first : second);
+      }
+      return (first != null ? first : second);
+    }
+
+    public synchronized void close() {
+      // Accelerate the GC a bit perhaps?
+      this.kvsetIt = null;
+      this.snapshotIt = null;
+
+      this.kvsetNextRow = null;
+      this.snapshotNextRow = null;
+    }
+  }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (7 * ClassSize.REFERENCE));
-
+  
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
       ClassSize.COPYONWRITE_ARRAYSET + ClassSize.COPYONWRITE_ARRAYLIST +
@@ -568,11 +643,11 @@ public class MemStore implements HeapSize {
    * @return Size
    */
   long heapSizeChange(final KeyValue kv, final boolean notpresent) {
-    return notpresent ?
+    return notpresent ? 
         ClassSize.align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + kv.heapSize()):
         0;
   }
-
+  
   /**
    * Get the entire heap usage for this MemStore not including keys in the
    * snapshot.
@@ -581,7 +656,7 @@ public class MemStore implements HeapSize {
   public long heapSize() {
     return size.get();
   }
-
+  
   /**
    * Get the heap usage of KVs in this MemStore.
    */
@@ -603,7 +678,7 @@ public class MemStore implements HeapSize {
    * enough.  See hbase-900.  Fills memstores then waits so user can heap
    * dump and bring up resultant hprof in something like jprofiler which
    * allows you get 'deep size' on objects.
-   * @param args
+   * @param args main args
    */
   public static void main(String [] args) {
     RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
@@ -638,5 +713,4 @@ public class MemStore implements HeapSize {
     }
     LOG.info("Exiting.");
   }
-
 }

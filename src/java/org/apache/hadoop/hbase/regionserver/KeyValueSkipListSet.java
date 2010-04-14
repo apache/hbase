@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.KeyValue;
+
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -27,8 +29,6 @@ import java.util.NavigableSet;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-
-import org.apache.hadoop.hbase.KeyValue;
 
 /**
  * A {@link java.util.Set} of {@link KeyValue}s implemented on top of a
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.KeyValue;
  * has same attributes as ConcurrentSkipListSet: e.g. tolerant of concurrent
  * get and set and won't throw ConcurrentModificationException when iterating.
  */
-class KeyValueSkipListSet implements NavigableSet<KeyValue>, Cloneable {
+class KeyValueSkipListSet implements NavigableSet<KeyValue> {
   private ConcurrentNavigableMap<KeyValue, KeyValue> delegatee;
 
   KeyValueSkipListSet(final KeyValue.KVComparator c) {
@@ -167,6 +167,7 @@ class KeyValueSkipListSet implements NavigableSet<KeyValue>, Cloneable {
   }
 
   public boolean contains(Object o) {
+    //noinspection SuspiciousMethodCalls
     return this.delegatee.containsKey(o);
   }
 
@@ -200,18 +201,5 @@ class KeyValueSkipListSet implements NavigableSet<KeyValue>, Cloneable {
 
   public <T> T[] toArray(T[] a) {
     throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public KeyValueSkipListSet clone()  {
-    assert this.delegatee.getClass() == ConcurrentSkipListMap.class;
-    KeyValueSkipListSet clonedSet = null;
-    try {
-      clonedSet = (KeyValueSkipListSet) super.clone();
-    } catch (CloneNotSupportedException e) {
-      throw new InternalError(e.getMessage());
-    }
-    clonedSet.delegatee = ((ConcurrentSkipListMap) this.delegatee).clone();
-    return clonedSet;
   }
 }

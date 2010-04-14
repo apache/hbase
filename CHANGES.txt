@@ -3,6 +3,9 @@ HBase Change Log
 Release 0.20.4 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-2165  Improve fragmentation display and implementation
+   HBASE-2248  Provide new non-copy mechanism to assure atomic reads in get
+               and scan (Ryan Rawson via Stack)
+   HBASE-2446  Remove 'indexed' contrib
 
   BUG FIXES
    HBASE-2173  New idx javadoc not included with the rest

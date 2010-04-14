@@ -67,7 +67,7 @@ public class TestClient extends HBaseClusterTestCase {
     super();
   }
 
-  /**
+  /*
    * Test from client side of an involved filter against a multi family that
    * involves deletes.
    * 
@@ -196,7 +196,7 @@ public class TestClient extends HBaseClusterTestCase {
     }
   }
 
-  /**
+  /*
    * Test filters when multiple regions.  It does counts.  Needs eye-balling of
    * logs to ensure that we're not scanning more regions that we're supposed to.
    * Related to the TestFilterAcrossRegions over in the o.a.h.h.filter package.
@@ -253,7 +253,7 @@ public class TestClient extends HBaseClusterTestCase {
     assertEquals(rowCount - endKeyCount, countGreater);
   }
   
-  /**
+  /*
    * Load table with rows from 'aaa' to 'zzz'.
    * @param t
    * @return Count of rows loaded.
@@ -418,7 +418,7 @@ public class TestClient extends HBaseClusterTestCase {
     scanner.close();
   }
 
-  /**
+  /*
    * Test simple table and non-existent row cases.
    */
   public void testSimpleMissing() throws Exception {
@@ -531,7 +531,7 @@ public class TestClient extends HBaseClusterTestCase {
     assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
   }
   
-  /**
+  /*
    * Test basic puts, gets, scans, and deletes for a single row
    * in a multiple family table.
    */
@@ -1438,7 +1438,7 @@ public class TestClient extends HBaseClusterTestCase {
     ht.put(put);
     
     delete = new Delete(ROW);
-    delete.deleteColumn(FAMILIES[0], QUALIFIER);
+    delete.deleteColumn(FAMILIES[0], QUALIFIER); // ts[4]
     ht.delete(delete);
     
     get = new Get(ROW);
@@ -1473,20 +1473,21 @@ public class TestClient extends HBaseClusterTestCase {
     // But alas, this is not to be.  We can't put them back in either case.
     
     put = new Put(ROW);
-    put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
-    put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
+    put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]); // 1000
+    put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]); // 5000
     ht.put(put);
     
-    // The Get returns the latest value but then does not return the
-    // oldest, which was never deleted, ts[1]. 
-    
+
+    // It used to be due to the internal implementation of Get, that
+    // the Get() call would return ts[4] UNLIKE the Scan below. With
+    // the switch to using Scan for Get this is no longer the case.
     get = new Get(ROW);
     get.addFamily(FAMILIES[0]);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
     assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
-        new long [] {ts[2], ts[3], ts[4]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[4]},
+        new long [] {ts[1], ts[2], ts[3]},
+        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
     
     // The Scanner returns the previous values, the expected-unexpected behavior
@@ -1544,7 +1545,7 @@ public class TestClient extends HBaseClusterTestCase {
     result = ht.get(get);
     assertTrue("Expected 2 keys but received " + result.size(),
         result.size() == 2);
-    assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER, 
+    assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER,
         new long [] {ts[0], ts[1]},
         new byte[][] {VALUES[0], VALUES[1]},
         0, 1);
@@ -1582,9 +1583,9 @@ public class TestClient extends HBaseClusterTestCase {
     get.addFamily(FAMILIES[2]);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertTrue("Expected 1 key but received " + result.size(),
-        result.size() == 1);
-    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER, 
+    System.out.println(result);
+    assertEquals(1, result.size());
+    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
         new long [] {ts[2]},
         new byte[][] {VALUES[2]},
         0, 0);
@@ -1594,9 +1595,8 @@ public class TestClient extends HBaseClusterTestCase {
     scan.addFamily(FAMILIES[2]);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertTrue("Expected 1 key but received " + result.size(),
-        result.size() == 1);
-    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER, 
+    assertEquals(1, result.size());
+    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
         new long [] {ts[2]},
         new byte[][] {VALUES[2]},
         0, 0);
@@ -1682,7 +1682,7 @@ public class TestClient extends HBaseClusterTestCase {
     }
   }
 
-  /**
+  /*
    * Baseline "scalability" test.
    * 
    * Tests one hundred families, one million columns, one million versions
@@ -1729,7 +1729,7 @@ public class TestClient extends HBaseClusterTestCase {
     
   }
   
-  /**
+  /*
    * Explicitly test JIRAs related to HBASE-880 / Client API
    */
   public void testJIRAs() throws Exception {
@@ -1745,7 +1745,7 @@ public class TestClient extends HBaseClusterTestCase {
   // JIRA Testers
   //
   
-  /**
+  /*
    * HBASE-867
    *    If millions of columns in a column family, hbase scanner won't come up
    *    
@@ -1835,7 +1835,7 @@ public class TestClient extends HBaseClusterTestCase {
     
   }
   
-  /**
+  /*
    * HBASE-861
    *    get with timestamp will return a value if there is a version with an 
    *    earlier timestamp
@@ -1898,7 +1898,7 @@ public class TestClient extends HBaseClusterTestCase {
     
   }
   
-  /**
+  /*
    * HBASE-33
    *    Add a HTable get/obtainScanner method that retrieves all versions of a 
    *    particular column and row between two timestamps
@@ -1947,7 +1947,7 @@ public class TestClient extends HBaseClusterTestCase {
     
   }
   
-  /**
+  /*
    * HBASE-1014
    *    commit(BatchUpdate) method should return timestamp
    */
@@ -1971,7 +1971,7 @@ public class TestClient extends HBaseClusterTestCase {
     
   }
   
-  /**
+  /*
    * HBASE-1182
    *    Scan for columns > some timestamp 
    */
@@ -2016,7 +2016,7 @@ public class TestClient extends HBaseClusterTestCase {
     
   }
   
-  /**
+  /*
    * HBASE-52
    *    Add a means of scanning over all versions
    */
@@ -2414,7 +2414,7 @@ public class TestClient extends HBaseClusterTestCase {
   
   
   
-  /**
+  /*
    * Verify a single column using gets.
    * Expects family and qualifier arrays to be valid for at least 
    * the range:  idx-2 < idx < idx+2
@@ -2471,7 +2471,7 @@ public class TestClient extends HBaseClusterTestCase {
   }
   
   
-  /**
+  /*
    * Verify a single column using scanners.
    * Expects family and qualifier arrays to be valid for at least 
    * the range:  idx-2 to idx+2
@@ -2533,11 +2533,11 @@ public class TestClient extends HBaseClusterTestCase {
 
   }
   
-  /**
+  /*
    * Verify we do not read any values by accident around a single column
    * Same requirements as getVerifySingleColumn
    */
-  private void getVerifySingleEmpty(HTable ht, 
+  private void getVerifySingleEmpty(HTable ht,
       byte [][] ROWS, int ROWIDX, 
       byte [][] FAMILIES, int FAMILYIDX, 
       byte [][] QUALIFIERS, int QUALIFIERIDX)
@@ -2659,12 +2659,11 @@ public class TestClient extends HBaseClusterTestCase {
         "Got row [" + Bytes.toString(result.getRow()) +"]",
         equals(row, result.getRow()));
     int expectedResults = end - start + 1;
-    assertTrue("Expected " + expectedResults + " keys but result contains " 
-        + result.size(), result.size() == expectedResults);
-    
+    assertEquals(expectedResults, result.size());
+
     KeyValue [] keys = result.sorted();
     
-    for(int i=0;i<keys.length;i++) {
+    for (int i=0; i<keys.length; i++) {
       byte [] value = values[end-i];
       long ts = stamps[end-i];
       KeyValue key = keys[i];
@@ -2683,7 +2682,7 @@ public class TestClient extends HBaseClusterTestCase {
     }
   }
   
-  /**
+  /*
    * Validate that result contains two specified keys, exactly.
    * It is assumed key A sorts before key B.
    */
@@ -2719,10 +2718,7 @@ public class TestClient extends HBaseClusterTestCase {
         equals(valueB, kvB.getValue()));
   }
   
-  /**
-   * 
-   */
-  private void assertSingleResult(Result result, byte [] row, byte [] family, 
+  private void assertSingleResult(Result result, byte [] row, byte [] family,
       byte [] qualifier, byte [] value)
   throws Exception {
     assertTrue("Expected row [" + Bytes.toString(row) + "] " +
@@ -2799,7 +2795,7 @@ public class TestClient extends HBaseClusterTestCase {
     }
     byte [][] ret = new byte[n][];
     for(int i=0;i<n;i++) {
-      byte [] tail = Bytes.toBytes(new Integer(i).toString());
+      byte [] tail = Bytes.toBytes(Integer.toString(i));
       ret[i] = Bytes.add(base, tail);
     }
     return ret;
@@ -2889,22 +2885,14 @@ public class TestClient extends HBaseClusterTestCase {
     return new HTable(conf, tableName);
   }
   
+  @SuppressWarnings({"SimplifiableIfStatement"})
   private boolean equals(byte [] left, byte [] right) {
-    if(left == null && right == null) return true;
-    if(left == null && right.length == 0) return true;
-    if(right == null && left.length == 0) return true;
+    if (left == null && right == null) return true;
+    if (left == null && right.length == 0) return true;
+    if (right == null && left.length == 0) return true;
     return Bytes.equals(left, right);
   }
-  
-  
-  
-  
-  
-  
-  
-  
 
-  
   public void XtestDuplicateVersions() throws Exception {
     
     byte [] TABLE = Bytes.toBytes("testDuplicateVersions");
