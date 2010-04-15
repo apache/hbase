@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.20.4 - Unreleased
+Release 0.20.4 - Thu Apr 15 16:29:44 PDT 2010
   INCOMPATIBLE CHANGES
    HBASE-2165  Improve fragmentation display and implementation
    HBASE-2248  Provide new non-copy mechanism to assure atomic reads in get
@@ -46,6 +46,7 @@ Release 0.20.4 - Unreleased
    HBASE-2383  Replace JSON-licensed json dependencies
    HBASE-2439  HBase can get stuck if updates to META are blocked
                (Kannan Muthukkaruppan via Stack)
+   HBASE-2451  .META. by-passes cache; BLOCKCACHE=>'false'
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
