@@ -2466,11 +2466,11 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   //
   /**
    * @param get get object
-   * @param lockid existing lock id, or null for no previous lock
+   * @param ignoredLockId lock id that is ignored
    * @return result
    * @throws IOException read exceptions
    */
-  public Result get(final Get get, final Integer lockid) throws IOException {
+  public Result get(final Get get, final Integer ignoredLockId) throws IOException {
     // Verify families are all valid
     if (get.hasFamilies()) {
       for (byte [] family: get.familySet()) {
@@ -2481,16 +2481,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         get.addFamily(family);
       }
     }
-    // Lock row
-    Integer lid = getLock(lockid, get.getRow()); 
-    List<KeyValue> result = null;
-    try {
-      result = get(get);
-    } finally {
-      if(lockid == null)
-        releaseRowLock(lid);
-    }
-    return new Result(result);
+    return new Result(get(get));
   }
 
   /*

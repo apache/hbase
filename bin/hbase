@@ -212,4 +212,5 @@ if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
 fi
 
 # run it
-exec "$JAVA" $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+exec "$JAVA" -javaagent:/Users/Stack/checkouts/jcarder.jar=outputdir=/tmp/jc-@TIME@ $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+#exec "$JAVA" $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"

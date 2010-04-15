@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -2029,7 +2030,7 @@ public class TestHRegion extends HBaseTestCase {
   }
 
   protected class PutThread extends Thread {
-    private volatile boolean done;
+    private final AtomicBoolean done = new AtomicBoolean(false);
     private Throwable error = null;
     private int numRows;
     private byte[][] families;
@@ -2043,10 +2044,7 @@ public class TestHRegion extends HBaseTestCase {
     }
 
     public void done() {
-      done = true;
-      synchronized (this) {
-        interrupt();
-      }
+      done.set(true);
     }
 
     public void checkNoError() {
@@ -2057,9 +2055,9 @@ public class TestHRegion extends HBaseTestCase {
 
     @Override
     public void run() {
-      done = false;
+      done.set(false);
       int val = 0;
-      while (!done) {
+      while (!done.get()) {
         try {
           for (int r = 0; r < numRows; r++) {
             byte[] row = Bytes.toBytes("row" + r);
@@ -2102,7 +2100,7 @@ public class TestHRegion extends HBaseTestCase {
   public void testWritesWhileGetting()
     throws IOException, InterruptedException {
     byte[] tableName = Bytes.toBytes("testWritesWhileScanning");
-    int testCount = 200;
+    int testCount = 100;
     int numRows = 1;
     int numFamilies = 10;
     int numQualifiers = 100;
@@ -2137,7 +2135,7 @@ public class TestHRegion extends HBaseTestCase {
       }
 
       if (i != 0 && i % flushInterval == 0) {
-        //System.out.println("iteration = " + i);
+        System.out.println("iteration = " + i);
         flushThread.flush();
       }
 
