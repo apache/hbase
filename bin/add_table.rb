@@ -1,6 +1,5 @@
 # Script adds a table back to a running hbase.
-# Currently only works on a copied aside table.
-# You cannot parse arbitrary table name.
+# Currently only works on if table data is in place.
 # 
 # To see usage for this script, run: 
 #
