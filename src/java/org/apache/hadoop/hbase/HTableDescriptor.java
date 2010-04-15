@@ -644,7 +644,7 @@ ISerializable {
       HConstants.ROOT_TABLE_NAME,
       new HColumnDescriptor[] { new HColumnDescriptor(HConstants.CATALOG_FAMILY,
           10,  // Ten is arbitrary number.  Keep versions to help debuggging.
-          Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
+          Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
           HConstants.FOREVER, false) });
   
   /** Table descriptor for <code>.META.</code> catalog table */
@@ -652,7 +652,7 @@ ISerializable {
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
           new HColumnDescriptor(HConstants.CATALOG_FAMILY,
             10, // Ten is arbitrary number.  Keep versions to help debuggging.
-            Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
+            Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
             HConstants.FOREVER, false),
           new HColumnDescriptor(HConstants.CATALOG_HISTORIAN_FAMILY,
             HConstants.ALL_VERSIONS, Compression.Algorithm.NONE.getName(),
