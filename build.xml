@@ -560,9 +560,6 @@
         <fileset dir="${lib.dir}/jsp-2.1/">
           <include name="*jar" />
         </fileset>
-        <fileset dir="${basedir}/src/contrib/indexed/lib">
-          <include name="*jar" />
-        </fileset>
         <fileset dir="${basedir}/src/contrib/stargate/lib">
           <include name="*jar" />
         </fileset>
@@ -570,8 +567,6 @@
       </auxClasspath>
       <sourcePath path="${src.dir}"/>
       <class location="${basedir}/build/${final.name}.jar" />
-      <sourcePath path="${basedir}/src/contrib/indexed/src/java" />
-      <class location="${basedir}/build/contrib/indexed/hbase-${version}-indexed.jar" />
       <sourcePath path="${basedir}/src/contrib/stargate/src/java" />
       <class location="${basedir}/build/contrib/stargate/hbase-${version}-stargate.jar" />
       <sourcePath path="${basedir}/src/contrib/transactional/src/java" />
