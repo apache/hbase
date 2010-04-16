@@ -32,7 +32,7 @@ Release 0.20.4 - Thu Apr 15 16:29:44 PDT 2010
                half-written hfile (Ruslan Salyakhov via Stack)
    HBASE-2288  Shell fails on alter
    HBASE-2293  CME in RegionManager#isMetaServer
-   HBASE-2034  Client sync block can cause 1 thread of a multi-threaded client
+   HBASE-2023  Client sync block can cause 1 thread of a multi-threaded client
                to block all others (Karthik Ranganathan via Stack)
    HBASE-2355  Unsynchronized logWriters map is mutated from several threads in
                HLog splitting (Todd Lipcon via Andrew Purtell)
