@@ -49,6 +49,7 @@ Release 0.20.4 - Thu Apr 15 16:29:44 PDT 2010
    HBASE-2451  .META. by-passes cache; BLOCKCACHE=>'false'
    HBASE-2453  Revisit compaction policies after HBASE-2248 commit
                (Jonathan Gray via Stack)
+   HBASE-2456  deleteChangedReaderObserver spitting warnings after HBASE-2248 
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
