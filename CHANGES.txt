@@ -84,6 +84,7 @@ Release 0.20.4 - Unreleased
                (Kannan Muthukkaruppan via Stack)
    HBASE-2451   .META. by-passes cache; BLOCKCACHE=>'false'
    HBASE-2456   deleteChangedReaderObserver spitting warnings after HBASE-2248
+   HBASE-2457  RS gets stuck compacting region ad infinitum
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
