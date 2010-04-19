@@ -168,10 +168,29 @@ public class Scan implements Writable {
   }
 
   /**
+   * Builds a scan object with the same specs as get.
+   * @param get get to model scan after
+   */
+  public Scan(Get get) {
+    this.startRow = get.getRow();
+    this.stopRow = get.getRow();
+    this.filter = get.getFilter();
+    this.maxVersions = get.getMaxVersions();
+    this.tr = get.getTimeRange();
+    this.familyMap = get.getFamilyMap();
+  }
+
+  public boolean isGetScan() {
+    return this.startRow != null && this.startRow.length > 0 &&
+      Bytes.equals(this.startRow, this.stopRow);
+  }
+
+  /**
    * Get all columns from the specified family.
    * <p>
    * Overrides previous calls to addColumn for this family.
    * @param family family name
+   * @return this
    */
   public Scan addFamily(byte [] family) {
     familyMap.remove(family);
@@ -185,6 +204,7 @@ public class Scan implements Writable {
    * Overrides previous calls to addFamily for this family.
    * @param family family name
    * @param qualifier column qualifier
+   * @return this
    */
   public Scan addColumn(byte [] family, byte [] qualifier) {
     NavigableSet<byte []> set = familyMap.get(family);

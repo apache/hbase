@@ -660,6 +660,7 @@ public class HTable {
   */
   public void close() throws IOException{
     flushCommits();
+    this.pool.shutdownNow();
   }
   
   /**

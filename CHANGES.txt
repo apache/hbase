@@ -10,6 +10,8 @@ Release 0.20.4 - Unreleased
    HBASE-2392  Upgrade to ZooKeeper 3.3.0
    HBASE-2165  Improve fragmentation display and implementation
    HBASE-2448  Remove 'indexed' contrib
+   HBASE-2248  Provide new non-copy mechanism to assure atomic reads in 
+   	       get and scan
 
   BUG FIXES
    HBASE-2173  New idx javadoc not included with the rest
