@@ -100,7 +100,7 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
           master.regionManager.putMetaRegionOnline(m);
           // Interrupting the Meta Scanner sleep so that it can
           // process regions right away
-          master.regionManager.metaScannerThread.interrupt();
+          master.regionManager.metaScannerThread.triggerNow();
         }
       }
       // If updated successfully, remove from pending list if the state

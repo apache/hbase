@@ -596,11 +596,11 @@ class RegionManager implements HConstants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("telling root scanner to stop");
     }
-    rootScannerThread.interruptIfAlive();
+    rootScannerThread.interruptAndStop();
     if (LOG.isDebugEnabled()) {
       LOG.debug("telling meta scanner to stop");
     }
-    metaScannerThread.interruptIfAlive();
+    metaScannerThread.interruptAndStop();
     if (LOG.isDebugEnabled()) {
       LOG.debug("meta and root scanners notified");
     }
