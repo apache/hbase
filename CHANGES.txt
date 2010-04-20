@@ -161,6 +161,7 @@ Release 0.20.4 - Unreleased
    HBASE-2349  Backport HBaseTestingUtility to branch (will include adding
                support for junit4 to branch)
    HBASE-2403  [stargate] client HTable interface to REST connector
+   HBASE-2438  Addition of a Column Pagination Filter (Paul Kist via Stack)
 
 Release 0.20.3 - January 25th, 2010
   INCOMPATIBLE CHANGES
