@@ -11,7 +11,9 @@ Release 0.20.4 - Unreleased
    HBASE-2165  Improve fragmentation display and implementation
    HBASE-2448  Remove 'indexed' contrib
    HBASE-2248  Provide new non-copy mechanism to assure atomic reads in 
-   	       get and scan
+   	           get and scan
+   HBASE-2294  Enumerate ACID properties of HBase in a well defined spec
+               (Todd Lipcon via Stack)
 
   BUG FIXES
    HBASE-2173  New idx javadoc not included with the rest
