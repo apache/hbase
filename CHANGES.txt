@@ -56,6 +56,8 @@ Release 0.20.4 - Thu Apr 15 16:29:44 PDT 2010
    HBASE-2457  RS gets stuck compacting region ad infinitum
    HBASE-2448  Scanner threads are interrupted without acquiring lock properly
                (Todd Lipcon via Stack)
+   HBASE-2443  IPC client can throw NPE if socket creation fails
+               (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
