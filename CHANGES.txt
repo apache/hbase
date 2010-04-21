@@ -93,6 +93,7 @@ Release 0.20.4 - Unreleased
                (Todd Lipcon via Stack)
    HBASE-2443  IPC client can throw NPE if socket creation fails
                (Todd Lipcon via Stack)
+   HBASE-2474  Bug in 2248 - mixed version reads (not allowed by spec)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream

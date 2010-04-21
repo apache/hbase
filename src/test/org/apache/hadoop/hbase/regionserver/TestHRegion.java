@@ -1000,6 +1000,7 @@ public class TestHRegion extends HBaseTestCase {
     String method = this.getName();
     initHRegion(tableName, method, families);
     
+
     //Putting data in Region
     Put put = new Put(row1);
     put.add(fam1, null, null);
@@ -1009,18 +1010,20 @@ public class TestHRegion extends HBaseTestCase {
     region.put(put);
     
     Scan scan = null;
-    InternalScanner is = null;
+    HRegion.RegionScanner is = null;
     
     //Testing to see how many scanners that is produced by getScanner, starting 
     //with known number, 2 - current = 1
     scan = new Scan();
     scan.addFamily(fam2);
     scan.addFamily(fam4);
-    is = region.getScanner(scan);
+    is = (RegionScanner) region.getScanner(scan);
+    is.initHeap(); // i dont like this test
     assertEquals(1, ((RegionScanner)is).getStoreHeap().getHeap().size());
     
     scan = new Scan();
-    is = region.getScanner(scan);
+    is = (RegionScanner) region.getScanner(scan);
+    is.initHeap();
     assertEquals(families.length -1, 
         ((RegionScanner)is).getStoreHeap().getHeap().size());
   }
@@ -2114,7 +2117,7 @@ public class TestHRegion extends HBaseTestCase {
   public void testWritesWhileGetting()
     throws IOException, InterruptedException {
     byte[] tableName = Bytes.toBytes("testWritesWhileScanning");
-    int testCount = 200;
+    int testCount = 100;
     int numRows = 1;
     int numFamilies = 10;
     int numQualifiers = 100;
@@ -2161,6 +2164,15 @@ public class TestHRegion extends HBaseTestCase {
           result.getCellValue(families[0], qualifiers[0]).getTimestamp();
         Assert.assertTrue(timestamp >= prevTimestamp);
         prevTimestamp = timestamp;
+
+        byte [] gotValue = null;
+        for (KeyValue kv : result.raw()) {
+          byte [] thisValue = kv.getValue();
+          if (gotValue != null) {
+            assertEquals(gotValue, thisValue);
+          }
+          gotValue = thisValue;
+        }
       }
     }
 
