@@ -88,6 +88,7 @@ Release 0.20.4 - Thu Apr 15 16:29:44 PDT 2010
    HBASE-2440  Master UI should check against known bad JDK versions and warn
                the use (Todd Lipcon via Stack)
    HBASE-1892  [performance] make hbase splits run faster
+   HBASE-2474  Bug in 2248 - mixed version reads (not allowed by spec)
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode

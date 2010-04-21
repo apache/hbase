@@ -297,6 +297,7 @@ public class TestMemStore extends TestCase {
         rwcc.completeMemstoreInsert(w);
 
         // Assert that we can read back
+        ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
 
         KeyValueScanner s = this.memstore.getScanners()[0];
         s.seek(kv);
@@ -309,7 +310,7 @@ public class TestMemStore extends TestCase {
     }
   }
 
-  public void no_testReadOwnWritesUnderConcurrency() throws Throwable {
+  public void testReadOwnWritesUnderConcurrency() throws Throwable {
 
     int NUM_THREADS = 8;
 
