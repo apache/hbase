@@ -55,10 +55,16 @@ import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Used to communicate with a single HBase table.
- * This class is not thread safe for writes.
- * Gets, puts, and deletes take out a row lock for the duration
- * of their operation.  Scans (currently) do not respect
- * row locking.
+ * This class is not thread safe. Use one instance per thread.
+ * 
+ * Puts, deletes, checkAndPut and incrementColumnValue are 
+ * done in an exclusive (and thus serial) fashion for each row. 
+ * These calls acquire a row lock which is shared with the lockRow
+ * calls. 
+ * 
+ * Gets and Scans will not return half written data. That is, 
+ * all mutation operations are atomic on a row basis with
+ * respect to other concurrent readers and writers. 
  */
 public class HTable {
   private final HConnection connection;
