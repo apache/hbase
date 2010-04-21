@@ -29,7 +29,7 @@
         <title>Release Notes - Hadoop HBase - Version 0.20.4
         </title>
     <section>
-    
+
 <title>        Sub-task
 </title>
 <ul>
@@ -48,9 +48,9 @@
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2327'>HBASE-2327</a>] -         [EC2] Allocate elastic IP addresses for ZK and master nodes
 </li>
 </ul>
-</section>
-<section>
     
+    </section>
+    <section>
 <title>        Bug
 </title>
 <ul>
@@ -170,6 +170,10 @@
 </li>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2439'>HBASE-2439</a>] -         HBase can get stuck if updates to META are blocked
 </li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2443'>HBASE-2443</a>] -         IPC client can throw NPE if socket creation fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2448'>HBASE-2448</a>] -         Scanner threads are interrupted without acquiring lock properly
+</li>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2451'>HBASE-2451</a>] -         .META. by-passes cache; BLOCKCACHE=&gt;'false'
 </li>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2456'>HBASE-2456</a>] -         deleteChangedReaderObserver spitting warnings after HBASE-2248
@@ -181,10 +185,9 @@
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2460'>HBASE-2460</a>] -         add_table.rb deletes any tables for which the target table name is a prefix
 </li>
 </ul>
-</section>
     
-<section>
-    
+    </section>
+    <section>
 <title>        Improvement
 </title>
 <ul>
@@ -249,17 +252,17 @@
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2453'>HBASE-2453</a>] -         Revisit compaction policies after HBASE-2248 commit
 </li>
 </ul>
-</section>
-<section>
     
+    </section>
+    <section>
 <title>        New Feature
 </title>
 <ul>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2220'>HBASE-2220</a>] -         Add a binary comparator that only compares up to the length of the supplied byte array
 </li>
 </ul>
-</section>
-<section>
+    </section>
+    <section>
                     
 <title>        Task
 </title>
