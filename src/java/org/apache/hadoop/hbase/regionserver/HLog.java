@@ -759,6 +759,8 @@ public class HLog implements HConstants, Syncable {
 
     private final long optionalFlushInterval;
 
+    private boolean syncerShuttingDown = false;
+
     LogSyncer(long optionalFlushInterval) {
       this.optionalFlushInterval = optionalFlushInterval;
     }
@@ -795,6 +797,7 @@ public class HLog implements HConstants, Syncable {
        } catch (InterruptedException e) {
          LOG.debug(getName() + "interrupted while waiting for sync requests");
        } finally {
+         syncerShuttingDown = true;
          syncDone.signalAll();
          lock.unlock();
          LOG.info(getName() + " exiting");
@@ -813,6 +816,10 @@ public class HLog implements HConstants, Syncable {
        }
        lock.lock();
        try {
+         if (syncerShuttingDown) {
+           LOG.warn(getName() + " was shut down while waiting for sync");
+           return;
+         }
          if(force) {
            forceSync = true;
          }
