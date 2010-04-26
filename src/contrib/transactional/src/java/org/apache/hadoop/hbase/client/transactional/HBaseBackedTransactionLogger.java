@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,19 +63,8 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
   }
 
   private Random random = new Random();
-  private HTablePool tablePool = new HTablePool();
+  private HTable table;
 
-  private HTable getTable() {
-    return tablePool.getTable(TABLE_NAME);
-  }
-  
-  private void putTable(HTable t) {
-    if (t == null) {
-      return;
-    }
-    tablePool.putTable(t);
-  }
-  
   public HBaseBackedTransactionLogger() throws IOException {
     initTable();
   }
@@ -87,6 +75,8 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
     if (!admin.tableExists(TABLE_NAME)) {
       throw new RuntimeException("Table not created. Call createTable() first");
     }
+    this.table = new HTable(TABLE_NAME);
+
   }
 
   public long createNewTransactionLog() {
@@ -95,11 +85,7 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
 
     do {
       id = random.nextLong();
-      try {
       existing = getStatusForTransaction(id);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
     } while (existing != null);
     
     setStatusForTransaction(id, TransactionStatus.PENDING);
@@ -107,8 +93,7 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
     return id;
   }
 
-  public TransactionStatus getStatusForTransaction(long transactionId) throws IOException {
-    HTable table = getTable();
+  public TransactionStatus getStatusForTransaction(long transactionId) {
     try {
       Result result = table.get(new Get(getRow(transactionId)));
       if (result == null || result.isEmpty()) {
@@ -123,8 +108,6 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
 
     } catch (IOException e) {
       throw new RuntimeException(e);
-    }finally {
-      putTable(table);
     }
   }
   
@@ -137,26 +120,20 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
     Put update = new Put(getRow(transactionId));
     update.add(STATUS_COLUMN_BYTES, HConstants.LATEST_TIMESTAMP, Bytes.toBytes(status.name()));
 
-    HTable table = getTable();
     try {
       table.put(update);
     } catch (IOException e) {
       throw new RuntimeException(e);
-    } finally {
-      putTable(table);
     }
   }
 
   public void forgetTransaction(long transactionId) {
     Delete delete = new Delete(getRow(transactionId));
-    
-    HTable table = getTable();
+
     try {
       table.delete(delete);
     } catch (IOException e) {
       throw new RuntimeException(e);
-    }finally {
-      putTable(table);
     }
   }
 

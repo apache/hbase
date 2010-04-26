@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
@@ -60,7 +59,7 @@ class IndexedRegion extends TransactionalRegion {
 
   private final HBaseConfiguration conf;
   private final IndexedTableDescriptor indexTableDescriptor;
-  private final HTablePool tablePool;
+  private Map<IndexSpecification, HTable> indexSpecToTable = new HashMap<IndexSpecification, HTable>();
 
   public IndexedRegion(final Path basedir, final HLog log, final FileSystem fs,
       final HBaseConfiguration conf, final HRegionInfo regionInfo,
@@ -68,20 +67,17 @@ class IndexedRegion extends TransactionalRegion {
     super(basedir, log, fs, conf, regionInfo, flushListener, trxLeases);
     this.indexTableDescriptor = new IndexedTableDescriptor(regionInfo.getTableDesc());
     this.conf = conf;
-    this.tablePool = new HTablePool();
   }
 
-  private HTable getIndexTable(IndexSpecification index)
+  private synchronized HTable getIndexTable(IndexSpecification index)
       throws IOException {
-    return tablePool.getTable(index.getIndexedTableName(super
+    HTable indexTable = indexSpecToTable.get(index);
+    if (indexTable == null) {
+      indexTable = new HTable(conf, index.getIndexedTableName(super
           .getRegionInfo().getTableDesc().getName()));
-  }
-  
-  private void putTable(HTable t) {
-    if (t==null) {
-      return;
+      indexSpecToTable.put(index, indexTable);
     }
-    tablePool.putTable(t);
+    return indexTable;
   }
 
   private Collection<IndexSpecification> getIndexes() {
