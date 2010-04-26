@@ -98,6 +98,7 @@ Release 0.20.4 - Unreleased
                running before waiting (Todd Lipcon via Stack)
    HBASE-2481  Client is not getting UnknownScannerExceptions; they are
                being eaten (Jean-Daniel Cryans via Stack)
+   HBASE-2381  missing copyright headers (Andrew Purtell via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
