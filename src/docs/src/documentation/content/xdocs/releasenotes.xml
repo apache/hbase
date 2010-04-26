@@ -18,17 +18,213 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
           "http://forrest.apache.org/dtd/document-v20.dtd">
 
+
 <document> 
 <header> 
     <title>
-        Release Notes - Hadoop HBase - Version 0.20.4
+   Release Notes - Hadoop HBase - Version 0.20.4
     </title>
 </header> 
 <body>
     <section>
-        <title>Release Notes - Hadoop HBase - Version 0.20.4
-        </title>
-    <section>
+<section>
+    
+<title>        Sub-task
+</title>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2242'>HBASE-2242</a>] -         [EC2] Downgrade JDK to 6u17 and rebuild AMIs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2263'>HBASE-2263</a>] -         [stargate] multiuser mode: authenticator for zookeeper
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2274'>HBASE-2274</a>] -         [stargate] support specification of filters for scanners: JSON descriptors
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2319'>HBASE-2319</a>] -         [stargate] multiuser mode: request shaping
+</li>
+</ul>
+</section>
+<section>
+    
+<title>        Bug
+</title>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-1679'>HBASE-1679</a>] -         Flapping DNS does us more harm than it need to
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2023'>HBASE-2023</a>] -         Client sync block can cause 1 thread of a multi-threaded client to block all others
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2063'>HBASE-2063</a>] -         For hfileoutputformat, on timeout/failure/kill clean up half-written hfile
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2087'>HBASE-2087</a>] -         The wait on compaction because &quot;Too many store files&quot; holds up all flushing
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2173'>HBASE-2173</a>] -         New idx javadoc not included with the rest
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2177'>HBASE-2177</a>] -         Add timestamping to gc logging options
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2180'>HBASE-2180</a>] -         Bad random read performance from synchronizing hfile.fddatainputstream
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2199'>HBASE-2199</a>] -         hbase.client.tableindexed.IndexSpecification, lines 72-73 should be reversed
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2202'>HBASE-2202</a>] -         IdxRegion crash when binary characters
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2203'>HBASE-2203</a>] -         [IHBase] Include only those columns required for indexed scan
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2204'>HBASE-2204</a>] -         [IHBASE] Index expression evaluation should fail with a DoNotRetryException in case of an invalid index specification
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2205'>HBASE-2205</a>] -         [IHBASE] Updated Idx pacakge javadocs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2206'>HBASE-2206</a>] -         [IHBASE] Idx memory allocation fix
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2207'>HBASE-2207</a>] -         [IHBASE] Index partial column values 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2210'>HBASE-2210</a>] -         NPE in thrift deleteAll
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2227'>HBASE-2227</a>] -         [IHBASE] Idx Expression functionality is incompatible with SingleColumnValueFilter  
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2241'>HBASE-2241</a>] -         Change balancer sloppyness from 0.1 to 0.3
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2244'>HBASE-2244</a>] -         META gets inconsistent in a number of crash scenarios
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2248'>HBASE-2248</a>] -         Provide new non-copy mechanism to assure atomic reads in get and scan
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2252'>HBASE-2252</a>] -         Mapping a very big table kills region servers
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2258'>HBASE-2258</a>] -         The WhileMatchFilter doesn't delegate the call to filterRow()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2259'>HBASE-2259</a>] -         StackOverflow in ExplicitColumnTracker when row has many columns
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2271'>HBASE-2271</a>] -         tableindexed.TestIndexedTable hanging
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2284'>HBASE-2284</a>] -         fsWriteLatency metric may be incorrectly reported 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2288'>HBASE-2288</a>] -         Shell fails on alter
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2293'>HBASE-2293</a>] -         CME in RegionManager#isMetaServer
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2322'>HBASE-2322</a>] -         deadlock between put and cacheflusher in 0.20 branch
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2335'>HBASE-2335</a>] -         mapred package docs don't say zookeeper jar is a dependency.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2346'>HBASE-2346</a>] -         Usage of FilterList slows down scans
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2355'>HBASE-2355</a>] -         unsychronized logWriters map is mutated from several threads in HLog splitting
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2358'>HBASE-2358</a>] -         Store doReconstructionLog will fail if oldlogfile.log is empty and won't load region
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2365'>HBASE-2365</a>] -         Double-assignment around split
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2373'>HBASE-2373</a>] -         Remove confusing log message of how &quot;BaseScanner GET got different address/startcode than SCAN&quot;
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2378'>HBASE-2378</a>] -         Bulk insert with multiple reducers broken due to improper ImmutableBytesWritable comparator
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2402'>HBASE-2402</a>] -         [stargate] set maxVersions on gets
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2407'>HBASE-2407</a>] -         NPE in TableServers.deleteCachedLocation
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2417'>HBASE-2417</a>] -         HCM.locateRootRegion fails hard on &quot;Connection refused&quot;
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2422'>HBASE-2422</a>] -         Remove fragmentation indicator for 0.20.4... fix in 0.20.5.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2439'>HBASE-2439</a>] -         HBase can get stuck if updates to META are blocked
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2443'>HBASE-2443</a>] -         IPC client can throw NPE if socket creation fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2448'>HBASE-2448</a>] -         Scanner threads are interrupted without acquiring lock properly
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2451'>HBASE-2451</a>] -         .META. by-passes cache; BLOCKCACHE=&gt;'false'
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2456'>HBASE-2456</a>] -         deleteChangedReaderObserver spitting warnings after HBASE-2248
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2457'>HBASE-2457</a>] -         RS gets stuck compacting region ad infinitum
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2458'>HBASE-2458</a>] -         Client stuck in TreeMap,remove
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2460'>HBASE-2460</a>] -         add_table.rb deletes any tables for which the target table name is a prefix
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2474'>HBASE-2474</a>] -         Bug in 2248 - mixed version reads (not allowed by spec)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2493'>HBASE-2493</a>] -         [Transactional Contrib] Avoid unsafe concurrent use of HTable.
+</li>
+</ul>
+</section>
+<section>
+    
+<title>        Improvement
+</title>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-1505'>HBASE-1505</a>] -         [performance] hfile should change how it reads from hdfs -- pread/seek+read -- dependent on recent history
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-1892'>HBASE-1892</a>] -         [performance] make hbase splits run faster
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2167'>HBASE-2167</a>] -         PE for IHBase
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2174'>HBASE-2174</a>] -         Stop from resolving HRegionServer addresses to names using DNS on every heartbeat
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2185'>HBASE-2185</a>] -         Add html version of default hbase-site.xml 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2189'>HBASE-2189</a>] -         HCM trashes meta cache even when not needed
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2190'>HBASE-2190</a>] -         HRS should report to master when HMsg are available
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2198'>HBASE-2198</a>] -         SingleColumnValueFilter should be able to find the column value even when it's not specifically added as input on the scan.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2222'>HBASE-2222</a>] -         Improve log &quot;Trying to contact region server Some server for region , row 'ip_info_100,,1263329969690', but failed after 11 attempts.&quot;
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2230'>HBASE-2230</a>] -         SingleColumnValueFilter has an ungaurded debug log message.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2257'>HBASE-2257</a>] -         [stargate] multiuser mode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2262'>HBASE-2262</a>] -         ZKW.ensureExists should check for existence
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2273'>HBASE-2273</a>] -         [stargate] export metrics via Hadoop metrics, JMX, and ZooKeeper
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2277'>HBASE-2277</a>] -         Update branch to hadoop 0.20.2
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2403'>HBASE-2403</a>] -         [stargate] client HTable interface to REST connector
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2412'>HBASE-2412</a>] -         [stargate] PerformanceEvaluation
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2419'>HBASE-2419</a>] -         Remove from RS logs the fat NotServingRegionException stack
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2436'>HBASE-2436</a>] -         [stargate] review Jersey and JSON dependencies
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2440'>HBASE-2440</a>] -         Master UI should check against known bad JDK versions and warn the user
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2453'>HBASE-2453</a>] -         Revisit compaction policies after HBASE-2248 commit
+</li>
+</ul>
+</section>
+<section>
+    
+<title>        New Feature
+</title>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2220'>HBASE-2220</a>] -         Add a binary comparator that only compares up to the length of the supplied byte array
+</li>
+</ul>
+                    
+</section>
+<section>
+<title>        Task
+</title>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2360'>HBASE-2360</a>] -         Make sure we have all the hadoop fixes in our our copy of its rpc
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2381'>HBASE-2381</a>] -         missing copyright headers
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2383'>HBASE-2383</a>] -         Replace JSON-licensed json dependencies
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2415'>HBASE-2415</a>] -         Disable META splitting in 0.20
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2423'>HBASE-2423</a>] -         Update 'Getting Started' for 0.20.4 including making &quot;important configurations more visiable&quot;
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2427'>HBASE-2427</a>] -         Replace JSON-licensed json dependencies
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2446'>HBASE-2446</a>] -         Remove 'indexed' contrib
+</li>
+</ul>
+            
+
+</section>
+<section>
 
 <title>        Sub-task
 </title>
@@ -49,242 +245,6 @@
 </li>
 </ul>
     
-    </section>
-    <section>
-<title>        Bug
-</title>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-1679'>HBASE-1679</a>] -         Flapping DNS does us more harm than it need to
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2023'>HBASE-2023</a>] -         Client sync block can cause 1 thread of a multi-threaded client to block all others
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2063'>HBASE-2063</a>] -         For hfileoutputformat, on timeout/failure/kill clean up half-written hfile
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2066'>HBASE-2066</a>] -         Perf: parallelize puts
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2087'>HBASE-2087</a>] -         The wait on compaction because &quot;Too many store files&quot; holds up all flushing
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2101'>HBASE-2101</a>] -         KeyValueSortReducer collapses all values to last passed
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2119'>HBASE-2119</a>] -         Fix top-level NOTICES.txt file.  Its stale.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2147'>HBASE-2147</a>] -         run zookeeper in the same jvm as master during non-distributed mode
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2173'>HBASE-2173</a>] -         New idx javadoc not included with the rest
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2177'>HBASE-2177</a>] -         Add timestamping to gc logging options
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2199'>HBASE-2199</a>] -         hbase.client.tableindexed.IndexSpecification, lines 72-73 should be reversed
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2202'>HBASE-2202</a>] -         IdxRegion crash when binary characters
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2203'>HBASE-2203</a>] -         [IHBase] Include only those columns required for indexed scan
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2204'>HBASE-2204</a>] -         [IHBASE] Index expression evaluation should fail with a DoNotRetryException in case of an invalid index specification
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2205'>HBASE-2205</a>] -         [IHBASE] Updated Idx pacakge javadocs
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2206'>HBASE-2206</a>] -         [IHBASE] Idx memory allocation fix
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2207'>HBASE-2207</a>] -         [IHBASE] Index partial column values 
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2219'>HBASE-2219</a>] -         stop using code mapping for method names in the RPC
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2227'>HBASE-2227</a>] -         [IHBASE] Idx Expression functionality is incompatible with SingleColumnValueFilter  
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2241'>HBASE-2241</a>] -         Change balancer sloppyness from 0.1 to 0.3
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2244'>HBASE-2244</a>] -         META gets inconsistent in a number of crash scenarios
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2248'>HBASE-2248</a>] -         Provide new non-copy mechanism to assure atomic reads in get and scan
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2252'>HBASE-2252</a>] -         Mapping a very big table kills region servers
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2258'>HBASE-2258</a>] -         The WhileMatchFilter doesn't delegate the call to filterRow()
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2259'>HBASE-2259</a>] -         StackOverflow in ExplicitColumnTracker when row has many columns
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2269'>HBASE-2269</a>] -         PerformanceEvaluation &quot;--nomapred&quot; may assign duplicate random seed over multiple testing threads
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2271'>HBASE-2271</a>] -         tableindexed.TestIndexedTable hanging
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2283'>HBASE-2283</a>] -         row level atomicity 
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2284'>HBASE-2284</a>] -         fsWriteLatency metric may be incorrectly reported 
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2287'>HBASE-2287</a>] -         TypeError in shell
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2288'>HBASE-2288</a>] -         Shell fails on alter
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2293'>HBASE-2293</a>] -         CME in RegionManager#isMetaServer
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2295'>HBASE-2295</a>] -         Row locks may deadlock with themselves
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2305'>HBASE-2305</a>] -         Client port for ZK has no default
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2307'>HBASE-2307</a>] -         hbase-2295 changed hregion size, testheapsize broke... fix it.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2308'>HBASE-2308</a>] -         Fix the bin/rename_table.rb script, make it work again
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2311'>HBASE-2311</a>] -         Not having assertions enabled causes index contrib tests to fail
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2322'>HBASE-2322</a>] -         deadlock between put and cacheflusher in 0.20 branch
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2323'>HBASE-2323</a>] -         filter.RegexStringComparator does not work with certain bytes
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2335'>HBASE-2335</a>] -         mapred package docs don't say zookeeper jar is a dependency.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2338'>HBASE-2338</a>] -         log recovery: deleted items may be resurrected
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2344'>HBASE-2344</a>] -         InfoServer and hence HBase Master doesn't fully start if you have HADOOP-6151 patch
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2346'>HBASE-2346</a>] -         Usage of FilterList slows down scans
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2355'>HBASE-2355</a>] -         unsychronized logWriters map is mutated from several threads in HLog splitting
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2358'>HBASE-2358</a>] -         Store doReconstructionLog will fail if oldlogfile.log is empty and won't load region
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2359'>HBASE-2359</a>] -         WALEdit doesn't implement HeapSize
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2365'>HBASE-2365</a>] -         Double-assignment around split
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2373'>HBASE-2373</a>] -         Remove confusing log message of how &quot;BaseScanner GET got different address/startcode than SCAN&quot;
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2378'>HBASE-2378</a>] -         Bulk insert with multiple reducers broken due to improper ImmutableBytesWritable comparator
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2389'>HBASE-2389</a>] -         HTable - delete / put unnecessary sync. 
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2398'>HBASE-2398</a>] -         NPE in HLog.append when calling writer.getLength
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2402'>HBASE-2402</a>] -         [stargate] set maxVersions on gets
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2407'>HBASE-2407</a>] -         NPE in TableServers.deleteCachedLocation
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2410'>HBASE-2410</a>] -         spurious warnings from util.Sleeper
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2417'>HBASE-2417</a>] -         HCM.locateRootRegion fails hard on &quot;Connection refused&quot;
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2422'>HBASE-2422</a>] -         Remove fragmentation indicator for 0.20.4... fix in 0.20.5.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2431'>HBASE-2431</a>] -         ZK settings for initLimit/syncLimit shouldn't have been removed from hbase-default.xml
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2439'>HBASE-2439</a>] -         HBase can get stuck if updates to META are blocked
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2443'>HBASE-2443</a>] -         IPC client can throw NPE if socket creation fails
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2448'>HBASE-2448</a>] -         Scanner threads are interrupted without acquiring lock properly
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2451'>HBASE-2451</a>] -         .META. by-passes cache; BLOCKCACHE=&gt;'false'
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2456'>HBASE-2456</a>] -         deleteChangedReaderObserver spitting warnings after HBASE-2248
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2457'>HBASE-2457</a>] -         RS gets stuck compacting region ad infinitum
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2458'>HBASE-2458</a>] -         Client stuck in TreeMap,remove
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2460'>HBASE-2460</a>] -         add_table.rb deletes any tables for which the target table name is a prefix
-</li>
-</ul>
-    
-    </section>
-    <section>
-<title>        Improvement
-</title>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-1505'>HBASE-1505</a>] -         [performance] hfile should change how it reads from hdfs -- pread/seek+read -- dependent on recent history
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-1696'>HBASE-1696</a>] -         [stargate] support specification of filters for scanners
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-1892'>HBASE-1892</a>] -         [performance] make hbase splits run faster
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2074'>HBASE-2074</a>] -         Improvements to the hadoop-config script
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2167'>HBASE-2167</a>] -         PE for IHBase
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2174'>HBASE-2174</a>] -         Stop from resolving HRegionServer addresses to names using DNS on every heartbeat
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2185'>HBASE-2185</a>] -         Add html version of default hbase-site.xml 
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2189'>HBASE-2189</a>] -         HCM trashes meta cache even when not needed
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2190'>HBASE-2190</a>] -         HRS should report to master when HMsg are available
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2198'>HBASE-2198</a>] -         SingleColumnValueFilter should be able to find the column value even when it's not specifically added as input on the scan.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2222'>HBASE-2222</a>] -         Improve log &quot;Trying to contact region server Some server for region , row 'ip_info_100,,1263329969690', but failed after 11 attempts.&quot;
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2230'>HBASE-2230</a>] -         SingleColumnValueFilter has an ungaurded debug log message.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2234'>HBASE-2234</a>] -         Roll Hlog if any datanode in the write pipeline dies
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2257'>HBASE-2257</a>] -         [stargate] multiuser mode
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2262'>HBASE-2262</a>] -         ZKW.ensureExists should check for existence
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2270'>HBASE-2270</a>] -         Improve how we handle recursive calls in ExplicitColumnTracker and WildcardColumnTracker
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2273'>HBASE-2273</a>] -         [stargate] export metrics via Hadoop metrics, JMX, and ZooKeeper
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2277'>HBASE-2277</a>] -         Update branch to hadoop 0.20.2
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2298'>HBASE-2298</a>] -         Backport of &quot;HLog Group Commit&quot; to 0.20 branch.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2302'>HBASE-2302</a>] -         Optimize M-R by bulk excluding regions - less InputSplit-s  to avoid traffic on region servers when performing M-R on a subset of the table
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2349'>HBASE-2349</a>] -         Backport HBaseTestingUtility to branch (will include adding support for junit4 to branch)
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2385'>HBASE-2385</a>] -         Debug Message &quot;Received report from unknown server&quot; should be INFO or WARN
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2388'>HBASE-2388</a>] -         Give a very explicit message when we figure a big GC pause
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2403'>HBASE-2403</a>] -         [stargate] client HTable interface to REST connector
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2411'>HBASE-2411</a>] -         findbugs target
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2412'>HBASE-2412</a>] -         [stargate] PerformanceEvaluation
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2419'>HBASE-2419</a>] -         Remove from RS logs the fat NotServingRegionException stack
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2436'>HBASE-2436</a>] -         [stargate] review Jersey and JSON dependencies
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2440'>HBASE-2440</a>] -         Master UI should check against known bad JDK versions and warn the user
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2453'>HBASE-2453</a>] -         Revisit compaction policies after HBASE-2248 commit
-</li>
-</ul>
-    
-    </section>
-    <section>
-<title>        New Feature
-</title>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2220'>HBASE-2220</a>] -         Add a binary comparator that only compares up to the length of the supplied byte array
-</li>
-</ul>
-    </section>
-    <section>
-                    
-<title>        Task
-</title>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2340'>HBASE-2340</a>] -         Add end-to-end test of sync/flush
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2360'>HBASE-2360</a>] -         Make sure we have all the hadoop fixes in our our copy of its rpc
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2381'>HBASE-2381</a>] -         missing copyright headers
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2383'>HBASE-2383</a>] -         Replace JSON-licensed json dependencies
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2415'>HBASE-2415</a>] -         Disable META splitting in 0.20
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2423'>HBASE-2423</a>] -         Update 'Getting Started' for 0.20.4 including making &quot;important configurations more visiable&quot;
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2427'>HBASE-2427</a>] -         Replace JSON-licensed json dependencies
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2446'>HBASE-2446</a>] -         Remove 'indexed' contrib
-</li>
-</ul>
-            
 </section>
 </section>
 </body>
