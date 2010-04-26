@@ -1,8 +1,7 @@
 HBase Change Log
 
-Release 0.20.4 - Thu Apr 15 16:29:44 PDT 2010
+Release 0.20.4 - Mon Apr 26 08:39:23 PDT 2010
   INCOMPATIBLE CHANGES
-   HBASE-2165  Improve fragmentation display and implementation
    HBASE-2248  Provide new non-copy mechanism to assure atomic reads in get
                and scan (Ryan Rawson via Stack)
    HBASE-2446  Remove 'indexed' contrib
@@ -50,7 +49,7 @@ Release 0.20.4 - Thu Apr 15 16:29:44 PDT 2010
    HBASE-2453  Revisit compaction policies after HBASE-2248 commit
                (Jonathan Gray via Stack)
    HBASE-2456  deleteChangedReaderObserver spitting warnings after HBASE-2248 
-   HBASE-2456  Client stuck in TreeMap,remove (Todd Lipcon via Stack)
+   HBASE-2458  Client stuck in TreeMap,remove (Todd Lipcon via Stack)
    HBASE-2460  add_table.rb deletes any tables for which the target table
                name is a prefix (Todd Lipcon via Stack)
    HBASE-2457  RS gets stuck compacting region ad infinitum
@@ -60,7 +59,8 @@ Release 0.20.4 - Thu Apr 15 16:29:44 PDT 2010
                (Todd Lipcon via Stack)
    HBASE-2481  Client is not getting UnknownScannerExceptions; they are being
                eaten (Jean-Daniel Cryans via Stack)
-   HBASE-2458  Client stuck in TreeMap,remove (Todd Lipcon via Stack)
+   HBASE-2378  Bulk insert with multiple reducers broken due to improper
+               ImmutableBytesWritable comparator
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
