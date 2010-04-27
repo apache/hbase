@@ -719,9 +719,9 @@ public class HLog implements HConstants, Syncable {
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
     }
-    long seqNum = obtainSeqNum();
 
     synchronized (this.updateLock) {
+      long seqNum = obtainSeqNum();
       // The 'lastSeqWritten' map holds the sequence number of the oldest
       // write for each region (i.e. the first edit added to the particular
       // memstore). . When the cache is flushed, the entry for the

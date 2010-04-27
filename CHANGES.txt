@@ -101,6 +101,8 @@ Release 0.20.4 - Unreleased
    HBASE-2381  missing copyright headers (Andrew Purtell via Stack)
    HBASE-2487  Uncaught exceptions in receiving IPC responses orphan clients
                (Todd Lipcon via Stack)
+   HBASE-2476  HLog sequence number is obtained outside updateLock
+               (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
