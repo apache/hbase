@@ -164,6 +164,8 @@ Release 0.20.4 - Unreleased
                is a prefix (Todd Lipcon via Stack)
    HBASE-2488  Master should warn more loudly about unexpected events
                (Todd Lipcon via Stack)
+   HBASE-2393  ThriftServer instantiates a new HTable per request
+               (Bogdan DRAGU via Stack)
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
