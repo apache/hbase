@@ -66,6 +66,8 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
@@ -1492,7 +1494,7 @@ public class HLog implements HConstants, Syncable {
    * @param append
    */
   public static void recoverLog(final FileSystem fs, final Path p,
-      final boolean append) {
+      final boolean append) throws IOException {
     if (!append) {
       return;
     }
@@ -1503,6 +1505,9 @@ public class HLog implements HConstants, Syncable {
       return;
     }
 
+    LOG.debug("Recovering DFS lease for path " + p);
+    long startWaiting = System.currentTimeMillis();
+
     // Trying recovery
     boolean recovered = false;
     while (!recovered) {
@@ -1511,11 +1516,25 @@ public class HLog implements HConstants, Syncable {
         out.close();
         recovered = true;
       } catch (IOException e) {
-        LOG.info("Failed open for append, waiting on lease recovery: " + p, e);
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException ex) {
-          // ignore it and try again
+        e = RemoteExceptionHandler.checkIOException(e);
+        if (e instanceof AlreadyBeingCreatedException) {
+          // We expect that we'll get this message while the lease is still
+          // within its soft limit, but if we get it past that, it means
+          // that the RS is holding onto the file even though it lost its
+          // znode. We could potentially abort after some time here.
+          long waitedFor = System.currentTimeMillis() - startWaiting;
+
+          if (waitedFor > FSConstants.LEASE_SOFTLIMIT_PERIOD) {
+            LOG.warn("Waited " + waitedFor + "ms for lease recovery on " + p
+            + ":" + e.getMessage());
+          }
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException ex) {
+            // ignore it and try again
+          }
+        } else {
+          throw new IOException("Failed to open " + p + " for append", e);
         }
       }
     }

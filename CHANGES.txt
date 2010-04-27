@@ -103,6 +103,8 @@ Release 0.20.4 - Unreleased
                (Todd Lipcon via Stack)
    HBASE-2476  HLog sequence number is obtained outside updateLock
                (Todd Lipcon via Stack)
+   HBASE-2442  Log lease recovery catches IOException too widely
+               (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
