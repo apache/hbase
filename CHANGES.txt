@@ -93,6 +93,8 @@ Release 0.20.4 - Mon Apr 26 08:39:23 PDT 2010
                the use (Todd Lipcon via Stack)
    HBASE-1892  [performance] make hbase splits run faster
    HBASE-2474  Bug in 2248 - mixed version reads (not allowed by spec)
+   HBASE-2490  Improve the javadoc of the client API for HTable
+               (Benoit Sigoure via Stack)
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode

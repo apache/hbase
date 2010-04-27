@@ -79,10 +79,10 @@ public class HTable {
   private long maxScannerResultSize;
   
   /**
-   * Creates an object to access a HBase table
+   * Creates an object to access a HBase table.
    *
-   * @param tableName name of the table
-   * @throws IOException
+   * @param tableName Name of the table.
+   * @throws IOException if a remote or network exception occurs
    */
   public HTable(final String tableName)
   throws IOException {
@@ -90,10 +90,10 @@ public class HTable {
   }
 
   /**
-   * Creates an object to access a HBase table
+   * Creates an object to access a HBase table.
    *
-   * @param tableName name of the table
-   * @throws IOException
+   * @param tableName Name of the table.
+   * @throws IOException if a remote or network exception occurs
    */
   public HTable(final byte [] tableName)
   throws IOException {
@@ -101,11 +101,11 @@ public class HTable {
   }
 
   /**
-   * Creates an object to access a HBase table
+   * Creates an object to access a HBase table.
    * 
-   * @param conf configuration object
-   * @param tableName name of the table
-   * @throws IOException
+   * @param conf Configuration object to use.
+   * @param tableName Name of the table.
+   * @throws IOException if a remote or network exception occurs
    */
   public HTable(HBaseConfiguration conf, final String tableName)
   throws IOException {
@@ -115,9 +115,9 @@ public class HTable {
   /**
    * Creates an object to access a HBase table.
    * 
-   * @param conf configuration object
-   * @param tableName name of the table
-   * @throws IOException
+   * @param conf Configuration object to use.
+   * @param tableName Name of the table.
+   * @throws IOException if a remote or network exception occurs
    */
   public HTable(HBaseConfiguration conf, final byte [] tableName)
   throws IOException {
@@ -142,27 +142,31 @@ public class HTable {
   }
 
   /**
-   * @param tableName name of table to check
-   * @return true if table is on-line
-   * @throws IOException
+   * Tells whether or not a table is enabled or not.
+   * @param tableName Name of table to check.
+   * @return {@code true} if table is online.
+   * @throws IOException if a remote or network exception occurs
    */
   public static boolean isTableEnabled(String tableName) throws IOException {
     return isTableEnabled(Bytes.toBytes(tableName));
   }
+
   /**
-   * @param tableName name of table to check
-   * @return true if table is on-line
-   * @throws IOException
+   * Tells whether or not a table is enabled or not.
+   * @param tableName Name of table to check.
+   * @return {@code true} if table is online.
+   * @throws IOException if a remote or network exception occurs
    */
   public static boolean isTableEnabled(byte[] tableName) throws IOException {
     return isTableEnabled(new HBaseConfiguration(), tableName);
   }
   
   /**
-   * @param conf HBaseConfiguration object
-   * @param tableName name of table to check
-   * @return true if table is on-line
-   * @throws IOException
+   * Tells whether or not a table is enabled or not.
+   * @param conf The Configuration object to use.
+   * @param tableName Name of table to check.
+   * @return {@code true} if table is online.
+   * @throws IOException if a remote or network exception occurs
    */
   public static boolean isTableEnabled(HBaseConfiguration conf, String tableName)
   throws IOException {
@@ -170,10 +174,11 @@ public class HTable {
   }
 
   /**
-   * @param conf HBaseConfiguration object
-   * @param tableName name of table to check
-   * @return true if table is on-line
-   * @throws IOException
+   * Tells whether or not a table is enabled or not.
+   * @param conf The Configuration object to use.
+   * @param tableName Name of table to check.
+   * @return {@code true} if table is online.
+   * @throws IOException if a remote or network exception occurs
    */
   public static boolean isTableEnabled(HBaseConfiguration conf, byte[] tableName)
   throws IOException {
@@ -183,8 +188,8 @@ public class HTable {
   /**
    * Find region location hosting passed row using cached info
    * @param row Row to find.
-   * @return Location of row.
-   * @throws IOException
+   * @return The location of the given row.
+   * @throws IOException if a remote or network exception occurs
    */
   public HRegionLocation getRegionLocation(final String row)
   throws IOException {
@@ -192,49 +197,61 @@ public class HTable {
   }
 
   /**
-   * Find region location hosting passed row using cached info
+   * Finds the region on which the given row is being served.
    * @param row Row to find.
-   * @return Location of row.
-   * @throws IOException
+   * @return Location of the row.
+   * @throws IOException if a remote or network exception occurs
    */
   public HRegionLocation getRegionLocation(final byte [] row)
   throws IOException {
     return connection.getRegionLocation(tableName, row, false);
   }
 
-  /** @return the table name */
+  /**
+   * Gets the name of this table.
+   *
+   * @return the table name.
+   */
   public byte [] getTableName() {
     return this.tableName;
   }
 
   /**
-   * Used by unit tests and tools to do low-level manipulations.  Not for
-   * general use.
+   * <em>INTERNAL</em> Used by unit tests and tools to do low-level
+   * manipulations.
    * @return An HConnection instance.
    */
+  // TODO(tsuna): Remove this.  Unit tests shouldn't require public helpers.
   public HConnection getConnection() {
     return this.connection;
   }
   
   /**
-   * Get the number of rows for caching that will be passed to scanners
-   * @return the number of rows for caching
+   * Gets the number of rows that a scanner will fetch at once.
+   * <p>
+   * The default value comes from {@code hbase.client.scanner.caching}.
    */
   public int getScannerCaching() {
     return scannerCaching;
   }
 
   /**
-   * Set the number of rows for caching that will be passed to scanners
-   * @param scannerCaching the number of rows for caching
+   * Sets the number of rows that a scanner will fetch at once.
+   * <p>
+   * This will override the value specified by
+   * {@code hbase.client.scanner.caching}.
+   * Increasing this value will reduce the amount of work needed each time
+   * {@code next()} is called on a scanner, at the expense of memory use
+   * (since more rows will need to be maintained in memory by the scanners).
+   * @param scannerCaching the number of rows a scanner will fetch at once.
    */
   public void setScannerCaching(int scannerCaching) {
     this.scannerCaching = scannerCaching;
   }
 
   /**
-   * @return table metadata 
-   * @throws IOException
+   * Gets the {@link HTableDescriptor table descriptor} for this table.
+   * @throws IOException if a remote or network exception occurs.
    */
   public HTableDescriptor getTableDescriptor() throws IOException {
     return new UnmodifyableHTableDescriptor(
@@ -242,20 +259,22 @@ public class HTable {
   }
 
   /**
-   * Gets the starting row key for every region in the currently open table
-   * 
+   * Gets the starting row key for every region in the currently open table.
+   * <p>
+   * This is mainly useful for the MapReduce integration.
    * @return Array of region starting row keys
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public byte [][] getStartKeys() throws IOException {
     return getStartEndKeys().getFirst();
   }
 
   /**
-   * Gets the ending row key for every region in the currently open table
-   * 
+   * Gets the ending row key for every region in the currently open table.
+   * <p>
+   * This is mainly useful for the MapReduce integration.
    * @return Array of region ending row keys
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public byte[][] getEndKeys() throws IOException {
     return getStartEndKeys().getSecond();
@@ -263,10 +282,11 @@ public class HTable {
 
   /**
    * Gets the starting and ending row keys for every region in the currently
-   * open table
-   * 
+   * open table.
+   * <p>
+   * This is mainly useful for the MapReduce integration.
    * @return Pair of arrays of region starting and ending row keys
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @SuppressWarnings("unchecked")
   public Pair<byte[][],byte[][]> getStartEndKeys() throws IOException {
@@ -292,10 +312,11 @@ public class HTable {
   }
 
   /**
-   * Get all the regions and their address for this table
-   * 
+   * Gets all the regions and their address for this table.
+   * <p>
+   * This is mainly useful for the MapReduce integration.
    * @return A map of HRegionInfo with it's server address
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public Map<HRegionInfo, HServerAddress> getRegionsInfo() throws IOException {
     final Map<HRegionInfo, HServerAddress> regionMap =
@@ -332,12 +353,11 @@ public class HTable {
 
   /**
    * Return the row that matches <i>row</i> exactly, 
-   * or the one that immediately preceeds it.
+   * or the one that immediately precedes it.
    * 
-   * @param row row key
-   * @param family Column family to look for row in.
-   * @return map of values
-   * @throws IOException
+   * @param row A row key.
+   * @param family Column family to include in the {@link Result}.
+   * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
     */
    public Result getRowOrBefore(final byte[] row, final byte[] family)
@@ -370,11 +390,12 @@ public class HTable {
   }
 
   /** 
-   * Get a scanner on the current table as specified by the {@link Scan} object
+   * Returns a scanner on the current table as specified by the {@link Scan}
+   * object.
    *
-   * @param scan a configured {@link Scan} object
-   * @return scanner
-   * @throws IOException
+   * @param scan A configured {@link Scan} object.
+   * @return A scanner.
+   * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
    */
   public ResultScanner getScanner(final Scan scan) throws IOException {
@@ -382,12 +403,13 @@ public class HTable {
     s.initialize();
     return s;
   }
+
   /**
-   * Get a scanner on the current table as specified by the {@link Scan} object
+   * Gets a scanner on the current table for the given family.
    * 
    * @param family  The column family to scan.
-   * @return The scanner.
-   * @throws IOException
+   * @return A scanner.
+   * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
    */
   public ResultScanner getScanner(byte [] family) throws IOException {
@@ -397,12 +419,12 @@ public class HTable {
   }
   
   /**
-   * Get a scanner on the current table as specified by the {@link Scan} object
+   * Gets a scanner on the current table for the given family and qualifier.
    * 
    * @param family  The column family to scan.
    * @param qualifier  The column qualifier to scan.
-   * @return The scanner.
-   * @throws IOException
+   * @return A scanner.
+   * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
    */
   public ResultScanner getScanner(byte [] family, byte [] qualifier)
@@ -413,10 +435,12 @@ public class HTable {
   }
 
   /**
-   * Method for getting data from a row
-   * @param get the Get to fetch
-   * @return the result
-   * @throws IOException
+   * Extracts certain cells from a given row.
+   * @param get The object that specifies what data to fetch and from which row.
+   * @return The data coming from the specified row, if it exists.  If the row
+   * specified doesn't exist, the {@link Result} instance returned won't
+   * contain any {@link KeyValue}, as indicated by {@link Result#isEmpty()}.
+   * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
    */
   public Result get(final Get get) throws IOException {
@@ -430,9 +454,10 @@ public class HTable {
   }
   
   /**
+   * Deletes the specified cells/row.
    * 
-   * @param delete 
-   * @throws IOException
+   * @param delete The object that specifies what to delete.
+   * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
    */
   public void delete(final Delete delete)
@@ -448,10 +473,14 @@ public class HTable {
   }
   
   /**
-   * Bulk commit a List of Deletes to the table.
-   * @param deletes List of deletes.  List is modified by this method.  On
-   * exception holds deletes that were NOT applied.
-   * @throws IOException
+   * Deletes the specified cells/rows in bulk.
+   * @param deletes List of things to delete.  List gets modified by this
+   * method (in particular it gets re-ordered, so the order in which the elements
+   * are inserted in the list gives no guarantee as to the order in which the
+   * {@link Delete}s are executed).
+   * @throws IOException if a remote or network exception occurs. In that case
+   * the {@code deletes} argument will contain the {@link Delete} instances
+   * that have not be successfully applied.
    * @since 0.20.1
    */
   public synchronized void delete(final ArrayList<Delete> deletes)
@@ -465,11 +494,12 @@ public class HTable {
   }
 
   /**
-   * Commit a Put to the table.
+   * Puts some data in the table.
    * <p>
-   * If autoFlush is false, the update is buffered.
-   * @param put
-   * @throws IOException
+   * If {@link #isAutoFlush isAutoFlush} is false, the update is buffered
+   * until the internal buffer is full.
+   * @param put The data to put.
+   * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
    */
   public synchronized void put(final Put put) throws IOException {
@@ -482,11 +512,17 @@ public class HTable {
   }
   
   /**
-   * Commit a List of Puts to the table.
+   * Puts some data in the table, in batch.
    * <p>
-   * If autoFlush is false, the update is buffered.
-   * @param puts
-   * @throws IOException
+   * If {@link #isAutoFlush isAutoFlush} is false, the update is buffered
+   * until the internal buffer is full.
+   * @param puts The list of mutations to apply.  The list gets modified by this
+   * method (in particular it gets re-ordered, so the order in which the elements
+   * are inserted in the list gives no guarantee as to the order in which the
+   * {@link Put}s are executed).
+   * @throws IOException if a remote or network exception occurs. In that case
+   * the {@code puts} argument will contain the {@link Put} instances that
+   * have not be successfully applied.
    * @since 0.20.0
    */
   public synchronized void put(final List<Put> puts) throws IOException {
@@ -501,15 +537,18 @@ public class HTable {
   }
   
   /**
-   * Atomically increments a column value. If the column value already exists
-   * and is not a big-endian long, this could throw an exception.<p>
-   * 
-   * @param row
-   * @param family
-   * @param qualifier
-   * @param amount
-   * @return The new value.
-   * @throws IOException
+   * Atomically increments a column value.
+   * <p>
+   * Equivalent to {@code {@link #incrementColumnValue(byte[], byte[], byte[],
+   * long, boolean) incrementColumnValue}(row, family, qualifier, amount,
+   * <b>true</b>)}
+   * @param row The row that contains the cell to increment.
+   * @param family The column family of the cell to increment.
+   * @param qualifier The column qualifier of the cell to increment.
+   * @param amount The amount to increment the cell with (or decrement, if the
+   * amount is negative).
+   * @return The new value, post increment.
+   * @throws IOException if a remote or network exception occurs.
    */
   public long incrementColumnValue(final byte [] row, final byte [] family, 
       final byte [] qualifier, final long amount)
@@ -519,17 +558,26 @@ public class HTable {
 
   /**
    * Atomically increments a column value. If the column value already exists
-   * and is not a big-endian long, this could throw an exception.<p>
+   * and is not a big-endian long, this could throw an exception. If the column
+   * value does not yet exist it is initialized to <code>amount</code> and
+   * written to the specified column.
    * 
-   * Setting writeToWAL to false means that in a fail scenario, you will lose 
+   * <p>Setting writeToWAL to false means that in a fail scenario, you will lose
    * any increments that have not been flushed.
-   * @param row
-   * @param family
-   * @param qualifier
-   * @param amount
-   * @param writeToWAL true if increment should be applied to WAL, false if not
-   * @return The new value.
-   * @throws IOException
+   * @param row The row that contains the cell to increment.
+   * @param family The column family of the cell to increment.
+   * @param qualifier The column qualifier of the cell to increment.
+   * @param amount The amount to increment the cell with (or decrement, if the
+   * amount is negative).
+   * @param writeToWAL if {@code true}, the operation will be applied to the
+   * Write Ahead Log (WAL).  This makes the operation slower but safer, as if
+   * the call returns successfully, it is guaranteed that the increment will
+   * be safely persisted.  When set to {@code false}, the call may return
+   * successfully before the increment is safely persisted, so it's possible
+   * that the increment be lost in the event of a failure happening before the
+   * operation gets persisted.
+   * @return The new value, post increment.
+   * @throws IOException if a remote or network exception occurs.
    */
   public long incrementColumnValue(final byte [] row, final byte [] family, 
       final byte [] qualifier, final long amount, final boolean writeToWAL)
@@ -605,9 +653,12 @@ public class HTable {
   }
   
   /**
-   * Commit to the table the buffer of BatchUpdate.
-   * Called automatically in the commit methods when autoFlush is true.
-   * @throws IOException
+   * Executes all the buffered {@link Put} operations.
+   * <p>
+   * This method gets called once automatically for every {@link Put} or batch
+   * of {@link Put}s (when {@link #put(List<Put>)} is used) when
+   * {@link #isAutoFlush} is {@code true}.
+   * @throws IOException if a remote or network exception occurs.
    */
   public void flushCommits() throws IOException {
     int last = 0;
@@ -623,9 +674,9 @@ public class HTable {
   }
 
   /**
-   * Release held resources
+   * Releases any resources help or pending changes in internal buffers.
    * 
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs.
   */
   public void close() throws IOException{
     flushCommits();
@@ -644,10 +695,13 @@ public class HTable {
   }
   
   /**
-   * Obtain a row lock
-   * @param row The row to lock
-   * @return rowLock RowLock containing row and lock id
-   * @throws IOException
+   * Obtains a lock on a row.
+   *
+   * @param row The row to lock.
+   * @return A {@link RowLock} containing the row and lock id.
+   * @throws IOException if a remote or network exception occurs.
+   * @see RowLock
+   * @see #unlockRow
    */
   public RowLock lockRow(final byte [] row)
   throws IOException {
@@ -664,9 +718,12 @@ public class HTable {
   }
 
   /**
-   * Release a row lock
-   * @param rl The row lock to release
-   * @throws IOException
+   * Releases a row lock.
+   *
+   * @param rl The row lock to release.
+   * @throws IOException if a remote or network exception occurs.
+   * @see RowLock
+   * @see #lockRow
    */
   public void unlockRow(final RowLock rl)
   throws IOException {
@@ -682,16 +739,21 @@ public class HTable {
   }
   
   /**
-   * Get the value of autoFlush. If true, updates will not be buffered
-   * @return value of autoFlush
+   * Tells whether or not 'auto-flush' is turned on.
+   *
+   * @return {@code true} if 'auto-flush' is enabled (default), meaning
+   * {@link Put} operations don't get buffered/delayed and are immediately
+   * executed.
+   * @see #setAutoFlush
    */
   public boolean isAutoFlush() {
     return autoFlush;
   }
 
   /**
-   * Set if this instanciation of HTable will autoFlush
-   * @param autoFlush
+   * Turns on or off 'auto-flush' on this instance.
+   * @param autoFlush Whether or not to use 'auto-flush'.
+   * @see #isAutoFlush
    */
   public void setAutoFlush(boolean autoFlush) {
     this.autoFlush = autoFlush;
