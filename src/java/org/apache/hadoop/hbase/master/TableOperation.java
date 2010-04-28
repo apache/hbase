@@ -101,10 +101,8 @@ abstract class TableOperation implements HConstants {
                       Bytes.toStringBinary(values.getRow()));
             continue;
           }
-          String serverAddress = 
-            Bytes.toString(values.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
-          long startCode = 
-            Bytes.toLong(values.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER)); 
+          String serverAddress = BaseScanner.getServerAddress(values);
+          long startCode = BaseScanner.getStartCode(values);
           String serverName = null;
           if (serverAddress != null && serverAddress.length() > 0) {
             serverName = HServerInfo.getServerName(serverAddress, startCode);

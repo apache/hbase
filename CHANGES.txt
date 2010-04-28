@@ -62,6 +62,8 @@ Release 0.20.4 - Mon Apr 26 08:39:23 PDT 2010
    HBASE-2378  Bulk insert with multiple reducers broken due to improper
                ImmutableBytesWritable comparator
    HBASE-2381  missing copyright headers (Andrew Purtell via Stack)
+   HBASE-2497  ProcessServerShutdown throws NullPointerException for offline
+               regions
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream

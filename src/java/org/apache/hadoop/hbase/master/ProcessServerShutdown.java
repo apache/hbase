@@ -26,19 +26,16 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.io.RowResult;
 
 /** 
  * Instantiated when a server's lease has expired, meaning it has crashed.
@@ -143,10 +140,9 @@ class ProcessServerShutdown extends RegionServerOperation {
         // shutdown server but that would mean that we'd reassign regions that
         // were already out being assigned, ones that were product of a split
         // that happened while the shutdown was being processed.
-        String serverAddress = 
-          Bytes.toString(values.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
-        long startCode =
-          Bytes.toLong(values.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER));
+        String serverAddress = BaseScanner.getServerAddress(values);
+        long startCode = BaseScanner.getStartCode(values);
+
         String serverName = null;
         if (serverAddress != null && serverAddress.length() > 0) {
           serverName = HServerInfo.getServerName(serverAddress, startCode);
