@@ -105,6 +105,8 @@ Release 0.20.4 - Unreleased
                (Todd Lipcon via Stack)
    HBASE-2442  Log lease recovery catches IOException too widely
                (Todd Lipcon via Stack)
+   HBASE-2497  ProcessServerShutdown throws NullPointerException for offline
+               regions
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
