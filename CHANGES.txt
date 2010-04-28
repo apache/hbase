@@ -168,6 +168,7 @@ Release 0.20.4 - Unreleased
                (Bogdan DRAGU via Stack)
    HBASE-2490  Improve the javadoc of the client API for HTable
                (Benoit Sigoure via Stack)
+   HBASE-2496  Less ArrayList churn on the scan path
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
