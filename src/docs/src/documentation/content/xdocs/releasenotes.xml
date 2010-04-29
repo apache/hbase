@@ -28,8 +28,11 @@
 <body>
     <section>
 <section>
+
+
+
     
-<title>        Sub-task
+<section><title>        Sub-task
 </title>
 <ul>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2242'>HBASE-2242</a>] -         [EC2] Downgrade JDK to 6u17 and rebuild AMIs
@@ -41,10 +44,8 @@
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2319'>HBASE-2319</a>] -         [stargate] multiuser mode: request shaping
 </li>
 </ul>
-</section>
-<section>
     
-<title>        Bug
+<section><title>        Bug
 </title>
 <ul>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-1679'>HBASE-1679</a>] -         Flapping DNS does us more harm than it need to
@@ -141,13 +142,11 @@
 </li>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2474'>HBASE-2474</a>] -         Bug in 2248 - mixed version reads (not allowed by spec)
 </li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2493'>HBASE-2493</a>] -         [Transactional Contrib] Avoid unsafe concurrent use of HTable.
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2499'>HBASE-2499</a>] -         Race condition when disabling a table leaves regions in transition
 </li>
 </ul>
-</section>
-<section>
     
-<title>        Improvement
+<section><title>        Improvement
 </title>
 <ul>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-1505'>HBASE-1505</a>] -         [performance] hfile should change how it reads from hdfs -- pread/seek+read -- dependent on recent history
@@ -190,20 +189,18 @@
 </li>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2453'>HBASE-2453</a>] -         Revisit compaction policies after HBASE-2248 commit
 </li>
+<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2490'>HBASE-2490</a>] -         Improve the javadoc of the client API for HTable.
+</li>
 </ul>
-</section>
-<section>
     
-<title>        New Feature
+<section><title>        New Feature
 </title>
 <ul>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2220'>HBASE-2220</a>] -         Add a binary comparator that only compares up to the length of the supplied byte array
 </li>
 </ul>
                     
-</section>
-<section>
-<title>        Task
+<section><title>        Task
 </title>
 <ul>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2360'>HBASE-2360</a>] -         Make sure we have all the hadoop fixes in our our copy of its rpc
@@ -222,29 +219,6 @@
 </li>
 </ul>
             
-
-</section>
-<section>
-
-<title>        Sub-task
-</title>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2242'>HBASE-2242</a>] -         [EC2] Downgrade JDK to 6u17 and rebuild AMIs
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2261'>HBASE-2261</a>] -         The javadoc in WhileMatchFilter and it's tests in TestFilter are not accurate/wrong.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2263'>HBASE-2263</a>] -         [stargate] multiuser mode: authenticator for zookeeper
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2274'>HBASE-2274</a>] -         [stargate] support specification of filters for scanners: JSON descriptors
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2299'>HBASE-2299</a>] -         [EC2] mapreduce fixups for PE
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2319'>HBASE-2319</a>] -         [stargate] multiuser mode: request shaping
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HBASE-2327'>HBASE-2327</a>] -         [EC2] Allocate elastic IP addresses for ZK and master nodes
-</li>
-</ul>
-    
 </section>
 </section>
 </body>
