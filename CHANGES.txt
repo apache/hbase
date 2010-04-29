@@ -107,6 +107,7 @@ Release 0.20.4 - Unreleased
                (Todd Lipcon via Stack)
    HBASE-2497  ProcessServerShutdown throws NullPointerException for offline
                regions
+   HBASE-2499  Race condition when disabling a table leaves regions in transition
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
