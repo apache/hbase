@@ -27,7 +27,6 @@
 </header> 
 <body>
     <section>
-<section>
 
 
 
@@ -45,7 +44,7 @@
 </li>
 </ul>
     
-<section><title>        Bug
+</section><section><title>        Bug
 </title>
 <ul>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-1679'>HBASE-1679</a>] -         Flapping DNS does us more harm than it need to
@@ -146,7 +145,7 @@
 </li>
 </ul>
     
-<section><title>        Improvement
+</section><section><title>        Improvement
 </title>
 <ul>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-1505'>HBASE-1505</a>] -         [performance] hfile should change how it reads from hdfs -- pread/seek+read -- dependent on recent history
@@ -193,14 +192,14 @@
 </li>
 </ul>
     
-<section><title>        New Feature
+</section><section><title>        New Feature
 </title>
 <ul>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2220'>HBASE-2220</a>] -         Add a binary comparator that only compares up to the length of the supplied byte array
 </li>
 </ul>
                     
-<section><title>        Task
+</section><section><title>        Task
 </title>
 <ul>
 <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2360'>HBASE-2360</a>] -         Make sure we have all the hadoop fixes in our our copy of its rpc
