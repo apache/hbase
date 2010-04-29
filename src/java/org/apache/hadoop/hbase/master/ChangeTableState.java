@@ -28,9 +28,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
 /**
@@ -85,18 +88,20 @@ class ChangeTableState extends TableOperation {
           " because it is pending open, will tell it to close later");
         continue;
       }
-
-
-      // Update meta table
-      Put put = updateRegionInfo(i);
-      server.put(m.getRegionName(), put);
-      Delete delete = new Delete(i.getRegionName());
-      delete.deleteColumns(CATALOG_FAMILY, SERVER_QUALIFIER);
-      delete.deleteColumns(CATALOG_FAMILY, STARTCODE_QUALIFIER);
-      server.delete(m.getRegionName(), delete);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Removed server and startcode from row and set online=" +
-          this.online + ": " + i.getRegionNameAsString());
+      // If it's already offline then don't set it a second/third time, skip
+      // Same for online, don't set again if already online
+      if (!(i.isOffline() && !online) && !(!i.isOffline() && online)) {
+        // Update meta table
+        Put put = updateRegionInfo(i);
+        server.put(m.getRegionName(), put);
+        Delete delete = new Delete(i.getRegionName());
+        delete.deleteColumns(CATALOG_FAMILY, SERVER_QUALIFIER);
+        delete.deleteColumns(CATALOG_FAMILY, STARTCODE_QUALIFIER);
+        server.delete(m.getRegionName(), delete);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Removed server and startcode from row and set online=" +
+              this.online + ": " + i.getRegionNameAsString());
+        }
       }
       synchronized (master.regionManager) {
         if (this.online) {
@@ -126,6 +131,15 @@ class ChangeTableState extends TableOperation {
 
         // Cause regions being served to be taken off-line and disabled
         for (HRegionInfo i: e.getValue()) {
+          // The scan we did could be totally staled, get the freshest data
+          Get get = new Get(i.getRegionName());
+          get.addColumn(CATALOG_FAMILY, SERVER_QUALIFIER);
+          Result values = server.get(m.getRegionName(), get);
+          String serverAddress = BaseScanner.getServerAddress(values);
+          // If this region is unassigned, skip!
+          if(serverAddress.length() == 0) {
+            continue;
+          }
           if (LOG.isDebugEnabled()) {
             LOG.debug("Adding region " + i.getRegionNameAsString() +
               " to setClosing list");
