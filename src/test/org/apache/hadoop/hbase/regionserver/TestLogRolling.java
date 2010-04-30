@@ -135,7 +135,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
     // When the META table can be opened, the region servers are running
     new HTable(conf, HConstants.META_TABLE_NAME);
 
-    this.server = cluster.getRegionThreads().get(0).getRegionServer();
+    this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
     this.log = server.getLog();
     
     // Create the test table and open it
@@ -219,7 +219,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
     
     // When the META table can be opened, the region servers are running
     new HTable(conf, HConstants.META_TABLE_NAME);
-    this.server = cluster.getRegionThreads().get(0).getRegionServer();
+    this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
     this.log = server.getLog();
     
     assertTrue("Need HDFS-826 for this test", log.canGetCurReplicas());

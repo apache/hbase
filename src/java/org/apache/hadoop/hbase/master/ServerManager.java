@@ -186,11 +186,8 @@ class ServerManager implements HConstants {
       // The startup message was from a known server with the same name.
       // Timeout the old one right away.
       master.getRootRegionLocation();
-      try {
-        master.toDoQueue.put(new ProcessServerShutdown(master, storedInfo));
-      } catch (InterruptedException e) {
-        LOG.error("Insertion into toDoQueue was interrupted", e);
-      }
+      RegionServerOperation op = new ProcessServerShutdown(master, storedInfo);
+      this.master.getRegionServerOperationQueue().put(op);
     }
     recordNewServer(info);
   }
@@ -610,22 +607,9 @@ class ServerManager implements HConstants {
           // Note that the table has been assigned and is waiting for the
           // meta table to be updated.
           master.regionManager.setOpen(region.getRegionNameAsString());
-          // Queue up an update to note the region location.  Do inside
-          // a retry loop in case interrupted.
-          boolean succeeded = false;
-          for (int i = 0; i < 10; i++) {
-            try {
-              master.toDoQueue.
-                put(new ProcessRegionOpen(master, serverInfo, region));
-              succeeded = true;
-              break;
-            } catch (InterruptedException e) {
-              LOG.warn("Putting into toDoQueue was interrupted.", e);
-            }
-          }
-          if (!succeeded) {
-            LOG.warn("FAILED ADDING OPEN TO TODO QUEUE: " + serverInfo);
-          }
+          RegionServerOperation op =
+            new ProcessRegionOpen(master, serverInfo, region);
+          this.master.getRegionServerOperationQueue().put(op);
         }
       }
     }
@@ -662,12 +646,9 @@ class ServerManager implements HConstants {
       //       processed before an open resulting in the master not agreeing on
       //       the region's state.
       master.regionManager.setClosed(region.getRegionNameAsString());
-      try {
-        master.toDoQueue.put(new ProcessRegionClose(master, region,
-            offlineRegion, reassignRegion));
-      } catch (InterruptedException e) {
-        throw new RuntimeException("Putting into toDoQueue was interrupted.", e);
-      }
+      RegionServerOperation op =
+        new ProcessRegionClose(master, region, offlineRegion, reassignRegion);
+      this.master.getRegionServerOperationQueue().put(op);
     }
   }
   
@@ -827,7 +808,7 @@ class ServerManager implements HConstants {
     }
 
     public void process(WatchedEvent event) {
-      if(event.getType().equals(EventType.NodeDeleted)) {
+      if (event.getType().equals(EventType.NodeDeleted)) {
         LOG.info(server + " znode expired");
         // Remove the server from the known servers list and update load info
         serverAddressToServerInfo.remove(serverAddress);
@@ -848,11 +829,8 @@ class ServerManager implements HConstants {
             }
           }
           deadServers.add(server);
-          try {
-            master.toDoQueue.put(new ProcessServerShutdown(master, info));
-          } catch (InterruptedException e) {
-            LOG.error("insert into toDoQueue was interrupted", e);
-          }
+          RegionServerOperation op = new ProcessServerShutdown(master, info);
+          master.getRegionServerOperationQueue().put(op);
         }
         synchronized (serversToServerInfo) {
           serversToServerInfo.notifyAll();
@@ -860,7 +838,7 @@ class ServerManager implements HConstants {
       }
     }
   }
-  
+
   /**
    * @param serverName
    */
@@ -886,5 +864,4 @@ class ServerManager implements HConstants {
   public void setMinimumServerCount(int minimumServerCount) {
     this.minimumServerCount = minimumServerCount;
   }
-
 }

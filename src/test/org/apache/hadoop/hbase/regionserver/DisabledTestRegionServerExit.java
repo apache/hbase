@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 
 /**
  * Tests region server failover when a region server exits both cleanly and
@@ -125,8 +126,8 @@ public class DisabledTestRegionServerExit extends HBaseClusterTestCase {
    * is just shut down.
    */
   private void stopOrAbortMetaRegionServer(boolean abort) {
-    List<LocalHBaseCluster.RegionServerThread> regionThreads =
-      cluster.getRegionThreads();
+    List<JVMClusterUtil.RegionServerThread> regionThreads =
+      cluster.getRegionServerThreads();
     
     int server = -1;
     for (int i = 0; i < regionThreads.size() && server == -1; i++) {
