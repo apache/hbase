@@ -108,7 +108,6 @@ Release 0.20.4 - Unreleased
    HBASE-2497  ProcessServerShutdown throws NullPointerException for offline
                regions
    HBASE-2499  Race condition when disabling a table leaves regions in transition
-   HBASE-2414  Enhance test suite to be able to specify distributed scenarios
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
@@ -173,6 +172,7 @@ Release 0.20.4 - Unreleased
    HBASE-2490  Improve the javadoc of the client API for HTable
                (Benoit Sigoure via Stack)
    HBASE-2496  Less ArrayList churn on the scan path
+   HBASE-2414  Enhance test suite to be able to specify distributed scenarios
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
