@@ -147,8 +147,14 @@ public class JVMClusterUtil {
         }
       }
     }
-    if (hdfsClientFinalizer != null) hdfsClientFinalizer.start();
-    Threads.shutdown(hdfsClientFinalizer);
+    if (hdfsClientFinalizer != null) {
+      // Don't run the shutdown thread.  Plays havoc if we try to start a
+      // minihbasecluster immediately after this one has gone down (In
+      // Filesystem, the shutdown thread is kept in a static and is created
+      // on classloading.  Can only run it once).
+      // hdfsClientFinalizer.start();
+      // Threads.shutdown(hdfsClientFinalizer);
+    }
     LOG.info("Shutdown " +
       ((regionservers != null)? master.getName(): "0 masters") +
       " " + regionservers.size() + " region server(s)");
