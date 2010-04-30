@@ -106,7 +106,7 @@ Release 0.20.4 - Unreleased
    HBASE-2442  Log lease recovery catches IOException too widely
                (Todd Lipcon via Stack)
    HBASE-2497  ProcessServerShutdown throws NullPointerException for offline
-               regions
+               regions (Miklos Kurucz via Stack)
    HBASE-2499  Race condition when disabling a table leaves regions in transition
 
   IMPROVEMENTS
