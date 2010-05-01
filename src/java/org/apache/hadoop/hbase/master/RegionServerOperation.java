@@ -64,7 +64,7 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   long resetExpiration() {
     // Set the future time at which we expect to be released from the
     // DelayQueue we're inserted in on lease expiration.
-    this.expire = System.currentTimeMillis() + this.expirationDuration;
+    this.expire = System.currentTimeMillis() + getExpirationDuration();
     return this.expire;
   }
 
