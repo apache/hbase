@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
@@ -60,7 +61,7 @@ class IndexedRegion extends TransactionalRegion {
 
   private final HBaseConfiguration conf;
   private final IndexedTableDescriptor indexTableDescriptor;
-  private Map<IndexSpecification, HTable> indexSpecToTable = new HashMap<IndexSpecification, HTable>();
+  private final HTablePool tablePool;
 
   public IndexedRegion(final Path basedir, final HLog log, final FileSystem fs,
       final HBaseConfiguration conf, final HRegionInfo regionInfo,
@@ -68,17 +69,20 @@ class IndexedRegion extends TransactionalRegion {
     super(basedir, log, fs, conf, regionInfo, flushListener, trxLeases);
     this.indexTableDescriptor = new IndexedTableDescriptor(regionInfo.getTableDesc());
     this.conf = conf;
+    this.tablePool = new HTablePool();
   }
 
-  private synchronized HTable getIndexTable(IndexSpecification index)
+  private HTable getIndexTable(IndexSpecification index)
       throws IOException {
-    HTable indexTable = indexSpecToTable.get(index);
-    if (indexTable == null) {
-      indexTable = new HTable(conf, index.getIndexedTableName(super
+    return tablePool.getTable(index.getIndexedTableName(super
           .getRegionInfo().getTableDesc().getName()));
-      indexSpecToTable.put(index, indexTable);
+  }
+  
+  private void putTable(HTable t) {
+    if (t==null) {
+      return;
     }
-    return indexTable;
+    tablePool.putTable(t);
   }
 
   private Collection<IndexSpecification> getIndexes() {
@@ -156,6 +160,7 @@ class IndexedRegion extends TransactionalRegion {
     Put indexPut = makeIndexUpdate(indexSpec, put.getRow(), newColumnValues);
     
     HTable indexTable = getIndexTable(indexSpec);
+    try {
     if (indexDelete != null && !Bytes.equals(indexDelete.getRow(), indexPut.getRow())) {
       // Only do the delete if the row changed. This way we save the put after delete issues in HBASE-2256
       LOG.debug("Deleting old index row ["+Bytes.toString(indexDelete.getRow())+"]. New row is ["+Bytes.toString(indexPut.getRow())+"].");
@@ -164,6 +169,9 @@ class IndexedRegion extends TransactionalRegion {
       LOG.debug("Skipping deleting index row ["+Bytes.toString(indexDelete.getRow())+"] because it has not changed.");
     }
     indexTable.put(indexPut);
+    } finally {
+      putTable(indexTable);
+    }
   }
   
  
@@ -283,6 +291,7 @@ class IndexedRegion extends TransactionalRegion {
         }
 
         HTable indexTable = getIndexTable(indexSpec);
+        try {
         if (indexDelete != null
             && (indexPut == null || !Bytes.equals(indexDelete.getRow(),
                 indexPut.getRow()))) {
@@ -308,19 +317,21 @@ class IndexedRegion extends TransactionalRegion {
                     indexTable.delete(columnDelete);
                   }
                 }
-                
-              }
-          }
-        }
 
-        if (indexPut != null) {
-          getIndexTable(indexSpec).put(indexPut);
+              }
+            }
+          }
+
+          if (indexPut != null) {
+            indexTable.put(indexPut);
+          }
+        } finally {
+          putTable(indexTable);
         }
       }
-
     }
+
   }
-   
   
 
   private SortedMap<byte[], byte[]> convertToValueMap(Result result) {
