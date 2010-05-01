@@ -702,10 +702,10 @@ public class HTable {
       connection.processBatchOfPuts(writeBuffer,
           tableName, pool);
     } finally {
-      // the write buffer was adjsuted by processBatchOfPuts
+      // the write buffer was adjusted by processBatchOfPuts
       currentWriteBufferSize = 0;
-      for (int i = 0; i < writeBuffer.size(); i++) {
-        currentWriteBufferSize += writeBuffer.get(i).heapSize();
+      for (Put aPut : writeBuffer) {
+        currentWriteBufferSize += aPut.heapSize();
       }
     }
   }

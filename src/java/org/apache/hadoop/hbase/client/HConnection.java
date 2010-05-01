@@ -192,7 +192,7 @@ public interface HConnection {
    * @throws IOException
    * @throws RuntimeException
    */
-  public <T> T getRegionServerForWithoutRetries(ServerCallable<T> callable) 
+  public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
   
     
@@ -219,5 +219,5 @@ public interface HConnection {
   public void processBatchOfPuts(List<Put> list,
                                  final byte[] tableName, ExecutorService pool) throws IOException;
 
-  
+
 }
