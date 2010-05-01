@@ -112,6 +112,8 @@ Release 0.20.4 - Unreleased
                (Todd Lipcon via Stack)
    HBASE-2493  [Transactional Contrib] Avoid unsafe concurrent use of HTable
                (Clint Morgan via Stack)
+   HBASE-2489  Make the "Filesystem needs to be upgraded" error message more
+               useful (Benoit Sigoure via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
