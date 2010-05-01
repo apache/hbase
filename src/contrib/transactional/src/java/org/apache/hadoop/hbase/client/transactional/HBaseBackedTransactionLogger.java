@@ -95,11 +95,7 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
 
     do {
       id = random.nextLong();
-      try {
       existing = getStatusForTransaction(id);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
     } while (existing != null);
     
     setStatusForTransaction(id, TransactionStatus.PENDING);
@@ -107,7 +103,7 @@ public class HBaseBackedTransactionLogger implements TransactionLogger {
     return id;
   }
 
-  public TransactionStatus getStatusForTransaction(long transactionId) throws IOException {
+  public TransactionStatus getStatusForTransaction(long transactionId) {
     HTable table = getTable();
     try {
       Result result = table.get(new Get(getRow(transactionId)));
