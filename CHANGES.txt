@@ -1,5 +1,8 @@
 HBase Change Log
 
+Release 0.20.5 - Unreleased
+  BUG FIXES
+
 Release 0.20.4 - Mon Apr 26 08:39:23 PDT 2010
   INCOMPATIBLE CHANGES
    HBASE-2248  Provide new non-copy mechanism to assure atomic reads in get
