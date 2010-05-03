@@ -32,6 +32,8 @@ import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -152,6 +154,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   RegionManager regionManager;
   
   private MasterMetrics metrics;
+  final Lock splitLogLock = new ReentrantLock();
 
   /** 
    * Build the HMaster out of a raw configuration item.
@@ -540,14 +543,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       if(this.serverManager.getServerInfo(serverName) == null) {
         LOG.info("Log folder doesn't belong " +
             "to a known region server, splitting");
-        this.regionManager.splitLogLock.lock();
+        this.splitLogLock.lock();
         Path logDir =
           new Path(this.rootdir, HLog.getHLogDirectoryName(serverName));
         try {
           HLog.splitLog(this.rootdir, logDir, this.fs,
               getConfiguration());
         } finally {
-          this.regionManager.splitLogLock.unlock();
+          this.splitLogLock.unlock();
         }
       } else {
         LOG.info("Log folder belongs to an existing region server");
@@ -1141,7 +1144,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       return c.newInstance(conf);
     } catch (Exception e) {
       throw new RuntimeException("Failed construction of " +
-        "Master: " + masterClass.toString(), e);
+        "Master: " + masterClass.toString() +
+        ((e.getCause() != null)? e.getCause().getMessage(): ""), e);
     }
   }
 

@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.master.RegionManager.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -321,8 +322,15 @@ class ServerManager implements HConstants {
     }
   }
 
-  /** Region server is exiting */
+  /**
+   * Region server is exiting with a clean shutdown.
+   * 
+   * In this case, the server sends MSG_REPORT_EXITING in msgs[0] followed by
+   * a MSG_REPORT_CLOSE for each region it was serving. 
+   */
   private void processRegionServerExit(HServerInfo serverInfo, HMsg[] msgs) {
+    assert msgs[0].getType() == Type.MSG_REPORT_EXITING;
+    
     synchronized (serversToServerInfo) {
       try {
         // This method removes ROOT/META from the list and marks them to be reassigned
@@ -339,6 +347,7 @@ class ServerManager implements HConstants {
             for (int i = 1; i < msgs.length; i++) {
               LOG.info("Processing " + msgs[i] + " from " +
                   serverInfo.getServerName());
+              assert msgs[i].getType() == Type.MSG_REGION_CLOSE;
               HRegionInfo info = msgs[i].getRegionInfo();
               // Meta/root region offlining is handed in removeServerInfo above.
               if (!info.isMetaRegion()) {
@@ -352,6 +361,18 @@ class ServerManager implements HConstants {
                 }
               }
             }
+          }
+          
+          // There should not be any regions in transition for this server - the
+          // server should finish transitions itself before closing
+          Map<String, RegionState> inTransition =
+            master.regionManager.getRegionsInTransitionOnServer(
+            serverInfo.getServerName());
+          for (Map.Entry<String, RegionState> entry : inTransition.entrySet()) {
+            LOG.warn("Region server " + serverInfo.getServerName() +
+                " shut down with region " + entry.getKey() + " in transition " +
+                "state " + entry.getValue());
+            master.regionManager.setUnassigned(entry.getValue().getRegionInfo(), true);
           }
         }
         // We don't need to return anything to the server because it isn't
@@ -423,7 +444,7 @@ class ServerManager implements HConstants {
    * @return
    */
   private HMsg[] processMsgs(HServerInfo serverInfo,
-      HRegionInfo[] mostLoadedRegions, HMsg incomingMsgs[]) { 
+      HRegionInfo[] mostLoadedRegions, HMsg incomingMsgs[]) {
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
     if (serverInfo.getServerAddress() == null) {
       throw new NullPointerException("Server address cannot be null; " +
@@ -438,6 +459,10 @@ class ServerManager implements HConstants {
       LOG.info("Processing " + incomingMsgs[i] + " from " +
         serverInfo.getServerName() + "; " + (i + 1) + " of " +
         incomingMsgs.length);
+      if (!this.master.getRegionServerOperationQueue().
+          process(serverInfo, incomingMsgs[i])) {
+        continue;
+      }
       switch (incomingMsgs[i].getType()) {
         case MSG_REPORT_PROCESS_OPEN:
           openingCount++;
