@@ -116,6 +116,8 @@ Release 0.20.4 - Unreleased
                useful (Benoit Sigoure via Stack)
    HBASE-2482  regions in transition do not get reassigned by master when RS
                crashes (Todd Lipcon via Stack)
+   HBASE-2509  NPEs in various places, HRegion.get, HRS.close
+               (Ryan Rawson via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
