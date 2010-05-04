@@ -118,6 +118,8 @@ Release 0.20.4 - Unreleased
                crashes (Todd Lipcon via Stack)
    HBASE-2509  NPEs in various places, HRegion.get, HRS.close
                (Ryan Rawson via Stack)
+   HBASE-2513  hbase-2414 added bug where we'd tight-loop if no root
+               available
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
