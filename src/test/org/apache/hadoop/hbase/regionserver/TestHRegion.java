@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.TreeMap;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,19 +44,17 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter;
-import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.RowFilter;
-import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
-import junit.framework.Assert;
 
 /**
  * Basic stand-alone testing of HRegion.
@@ -91,7 +92,94 @@ public class TestHRegion extends HBaseTestCase {
   // individual code pieces in the HRegion. Putting files locally in
   // /tmp/testtable
   //////////////////////////////////////////////////////////////////////////////
-  
+
+  public void testGetWhileRegionClose() throws IOException {
+    HBaseConfiguration hc = initSplit();
+    int numRows = 100;
+    byte [][] families = {fam1, fam2, fam3};
+    
+    //Setting up region
+    String method = this.getName();
+    initHRegion(tableName, method, hc, families);
+
+    // Put data in region
+    final int startRow = 100;
+    putData(startRow, numRows, qual1, families);
+    putData(startRow, numRows, qual2, families);
+    putData(startRow, numRows, qual3, families);
+    // this.region.flushcache();
+    final AtomicBoolean done = new AtomicBoolean(false);
+    final AtomicInteger gets = new AtomicInteger(0);
+    GetTillDoneOrException [] threads = new GetTillDoneOrException[10];
+    try {
+      // Set ten threads running concurrently getting from the region.
+      for (int i = 0; i < threads.length / 2; i++) {
+        threads[i] = new GetTillDoneOrException(i, Bytes.toBytes("" + startRow),
+          done, gets);
+        threads[i].setDaemon(true);
+        threads[i].start();
+      }
+      // Artificially make the condition by setting closing flag explicitly.
+      // I can't make the issue happen with a call to region.close().
+      this.region.closing.set(true);
+      for (int i = threads.length / 2; i < threads.length; i++) {
+        threads[i] = new GetTillDoneOrException(i, Bytes.toBytes("" + startRow),
+          done, gets);
+        threads[i].setDaemon(true);
+        threads[i].start();
+      }
+    } finally {
+      if (this.region != null) {
+        this.region.close();
+        this.region.getLog().closeAndDelete();
+      }
+    }
+    done.set(true);
+    for (GetTillDoneOrException t: threads) {
+      try {
+        t.join();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      if (t.e != null) {
+        LOG.info("Exception=" + t.e);
+        assertFalse("Found a NPE in " + t.getName(),
+          t.e instanceof NullPointerException);
+      }
+    }
+  }
+
+  /*
+   * Thread that does get on single row until 'done' flag is flipped.  If an
+   * exception causes us to fail, it records it.
+   */
+  class GetTillDoneOrException extends Thread {
+    private final Get g;
+    private final AtomicBoolean done;
+    private final AtomicInteger count;
+    private Exception e;
+
+    GetTillDoneOrException(final int i, final byte[] r, final AtomicBoolean d,
+        final AtomicInteger c) {
+      super("getter." + i);
+      this.g = new Get(r);
+      this.done = d;
+      this.count = c;
+    }
+
+    @Override
+    public void run() {
+      while (!this.done.get()) {
+        try {
+          assertTrue(region.get(g, null).size() > 0);
+          this.count.incrementAndGet();
+        } catch (Exception e) {
+          this.e = e;
+          break;
+        }
+      }
+    }
+  }
 
   /*
    * An involved filter test.  Has multiple column families and deletes in mix.
@@ -1011,13 +1099,13 @@ public class TestHRegion extends HBaseTestCase {
     scan.addFamily(fam4);
     is = (RegionScanner) region.getScanner(scan);
     is.initHeap(); // i dont like this test
-    assertEquals(1, ((RegionScanner)is).getStoreHeap().getHeap().size());
+    assertEquals(1, ((RegionScanner)is).storeHeap.getHeap().size());
     
     scan = new Scan();
     is = (RegionScanner) region.getScanner(scan);
     is.initHeap();
     assertEquals(families.length -1, 
-        ((RegionScanner)is).getStoreHeap().getHeap().size());
+        ((RegionScanner)is).storeHeap.getHeap().size());
   }
 
   public void testRegionScanner_Next() throws IOException {
