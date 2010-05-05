@@ -1,4 +1,5 @@
 HBase Change Log
+Release X.X.X - UNRELEASED
 
 Release 0.20.4 - Mon May  3 16:16:02 PDT 2010
   INCOMPATIBLE CHANGES
