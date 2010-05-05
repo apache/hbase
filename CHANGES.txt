@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.20.4 - Unreleased
+Release X.X.X - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-2219  Stop using code mapping for method names in the RPC
                (Ryan Rawson via Stack)
@@ -201,6 +201,8 @@ Release 0.20.4 - Unreleased
                support for junit4 to branch)
    HBASE-2403  [stargate] client HTable interface to REST connector
    HBASE-2438  Addition of a Column Pagination Filter (Paul Kist via Stack)
+   HBASE-2473  Add to admin create table start and end key params and
+               desired number of regions
 
 Release 0.20.3 - January 25th, 2010
   INCOMPATIBLE CHANGES

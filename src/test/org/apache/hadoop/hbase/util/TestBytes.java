@@ -20,11 +20,10 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.math.BigDecimal;
+import java.util.Arrays;
 
 import junit.framework.TestCase;
-import junit.framework.Assert;
 
 public class TestBytes extends TestCase {
   public void testNullHashCode() {
@@ -70,6 +69,31 @@ public class TestBytes extends TestCase {
     }
     assertEquals(3, parts.length);
     assertTrue(Bytes.equals(parts[1], middle));
+  }
+  
+  public void testSplit3() throws Exception {
+    // Test invalid split cases
+    byte [] low = { 1, 1, 1 };
+    byte [] high = { 1, 1, 3 };
+    
+    // If swapped, should throw IAE
+    try {
+      Bytes.split(high, low, 1);
+      assertTrue("Should not be able to split if low > high", false);
+    } catch(IllegalArgumentException iae) {
+      // Correct
+    }
+    
+    // Single split should work
+    byte [][] parts = Bytes.split(low, high, 1);
+    for (int i = 0; i < parts.length; i++) {
+      System.out.println("" + i + " -> " + Bytes.toStringBinary(parts[i]));
+    }
+    assertTrue("Returned split should have 3 parts but has " + parts.length, parts.length == 3);
+    
+    // If split more than once, this should fail
+    parts = Bytes.split(low, high, 2);
+    assertTrue("Returned split but should have failed", parts == null);
   }
 
   public void testToChars() throws Exception {
