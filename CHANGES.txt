@@ -1,5 +1,7 @@
 HBase Change Log
 Release X.X.X - UNRELEASED
+  BUG FIXES
+   HBASE-2521  no license headers in 5 files
 
 Release 0.20.4 - Mon May  3 16:16:02 PDT 2010
   INCOMPATIBLE CHANGES
