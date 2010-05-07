@@ -28,12 +28,12 @@ import org.apache.hadoop.hbase.rest.descriptors.ScannerDescriptor;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 
 /**
- * 
+ *
  */
 public interface IHBaseRestParser {
   /**
    * Parses a HTableDescriptor given the input array.
-   * 
+   *
    * @param input
    * @return HTableDescriptor
    * @throws HBaseRestException

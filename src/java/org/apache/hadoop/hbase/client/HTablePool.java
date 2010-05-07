@@ -30,17 +30,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A simple pool of HTable instances.<p>
- * 
+ *
  * Each HTablePool acts as a pool for all tables.  To use, instantiate an
  * HTablePool and use {@link #getTable(String)} to get an HTable from the pool.
  * Once you are done with it, return it to the pool with {@link #putTable(HTable)}.<p>
- * 
+ *
  * A pool can be created with a <i>maxSize</i> which defines the most HTable
  * references that will ever be retained for each table.  Otherwise the default
  * is {@link Integer#MAX_VALUE}.<p>
  */
 public class HTablePool {
-  private final Map<String, LinkedList<HTable>> tables = 
+  private final Map<String, LinkedList<HTable>> tables =
       Collections.synchronizedMap(new HashMap<String, LinkedList<HTable>>());
   private final HBaseConfiguration config;
   private final int maxSize;
@@ -64,7 +64,7 @@ public class HTablePool {
 
   /**
    * Get a reference to the specified table from the pool.<p>
-   * 
+   *
    * Create a new one if one is not available.
    * @param tableName
    * @return a reference to the specified table
@@ -89,7 +89,7 @@ public class HTablePool {
 
   /**
    * Get a reference to the specified table from the pool.<p>
-   * 
+   *
    * Create a new one if one is not available.
    * @param tableName
    * @return a reference to the specified table
@@ -101,7 +101,7 @@ public class HTablePool {
 
   /**
    * Puts the specified HTable back into the pool.<p>
-   * 
+   *
    * If the pool already contains <i>maxSize</i> references to the table,
    * then nothing happens.
    * @param table

@@ -35,8 +35,8 @@ import org.apache.hadoop.io.ObjectWritable;
 
 /**
  * Implementation of RowFilterInterface that represents a set of RowFilters
- * which will be evaluated with a specified boolean operator MUST_PASS_ALL 
- * (!AND) or MUST_PASS_ONE (!OR).  Since you can use RowFilterSets as children 
+ * which will be evaluated with a specified boolean operator MUST_PASS_ALL
+ * (!AND) or MUST_PASS_ONE (!OR).  Since you can use RowFilterSets as children
  * of RowFilterSet, you can create a hierarchy of filters to be evaluated.
  *
  * It is highly likely this construct will no longer work!
@@ -65,9 +65,9 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /**
-   * Constructor that takes a set of RowFilters. The default operator 
+   * Constructor that takes a set of RowFilters. The default operator
    * MUST_PASS_ALL is assumed.
-   * 
+   *
    * @param rowFilters
    */
   public RowFilterSet(final Set<RowFilterInterface> rowFilters) {
@@ -76,7 +76,7 @@ public class RowFilterSet implements RowFilterInterface {
 
   /**
    * Constructor that takes a set of RowFilters and an operator.
-   * 
+   *
    * @param operator Operator to process filter set with.
    * @param rowFilters Set of row filters.
    */
@@ -87,29 +87,29 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /** Get the operator.
-   * 
+   *
    * @return operator
    */
   public Operator getOperator() {
     return operator;
   }
-  
+
   /** Get the filters.
-   * 
+   *
    * @return filters
    */
   public Set<RowFilterInterface> getFilters() {
     return filters;
   }
-  
+
   /** Add a filter.
-   * 
+   *
    * @param filter
    */
   public void addFilter(RowFilterInterface filter) {
     this.filters.add(filter);
   }
-  
+
   public void validate(final byte [][] columns) {
     for (RowFilterInterface filter : filters) {
       filter.validate(columns);
@@ -140,7 +140,7 @@ public class RowFilterSet implements RowFilterInterface {
     }
     return false;
   }
-  
+
   public boolean filterAllRemaining() {
     boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {
@@ -187,7 +187,7 @@ public class RowFilterSet implements RowFilterInterface {
     return result;
   }
 
-  public boolean filterColumn(final byte [] rowKey, final byte [] colKey, 
+  public boolean filterColumn(final byte [] rowKey, final byte [] colKey,
     final byte[] data) {
     return filterColumn(rowKey, 0, rowKey.length, colKey, 0, colKey.length,
         data, 0, data.length);
@@ -201,14 +201,14 @@ public class RowFilterSet implements RowFilterInterface {
     for (RowFilterInterface filter : filters) {
       if (!resultFound) {
         if (operator == Operator.MUST_PASS_ALL) {
-          if (filter.filterAllRemaining() || 
+          if (filter.filterAllRemaining() ||
             filter.filterColumn(rowKey, roffset, rlength, columnName, coffset,
                 clength, columnValue, voffset, vlength)) {
             result = true;
             resultFound = true;
           }
         } else if (operator == Operator.MUST_PASS_ONE) {
-          if (!filter.filterAllRemaining() && 
+          if (!filter.filterAllRemaining() &&
             !filter.filterColumn(rowKey, roffset, rlength, columnName, coffset,
                 clength, columnValue, voffset, vlength)) {
             result = false;

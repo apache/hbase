@@ -35,7 +35,7 @@ import org.apache.hadoop.mapred.JobConf;
  * Example table column indexing class.  Runs a mapreduce job to index
  * specified table columns.
  * <ul><li>Each row is modeled as a Lucene document: row key is indexed in
- * its untokenized form, column name-value pairs are Lucene field name-value 
+ * its untokenized form, column name-value pairs are Lucene field name-value
  * pairs.</li>
  * <li>A file passed on command line is used to populate an
  * {@link IndexConfiguration} which is used to set various Lucene parameters,

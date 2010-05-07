@@ -48,7 +48,7 @@ public class AlreadyExists extends Exception implements TBase, java.io.Serializa
   }
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(MESSAGE, new FieldMetaData("message", TFieldRequirementType.DEFAULT, 
+    put(MESSAGE, new FieldMetaData("message", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
   }});
 
@@ -174,7 +174,7 @@ public class AlreadyExists extends Exception implements TBase, java.io.Serializa
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == TType.STOP) {
         break;
       }
       switch (field.id)
@@ -182,7 +182,7 @@ public class AlreadyExists extends Exception implements TBase, java.io.Serializa
         case MESSAGE:
           if (field.type == TType.STRING) {
             this.message = iprot.readString();
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;

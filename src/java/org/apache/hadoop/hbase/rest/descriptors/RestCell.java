@@ -22,24 +22,24 @@ package org.apache.hadoop.hbase.rest.descriptors;
 import org.apache.hadoop.hbase.io.Cell;
 
 /**
- * 
+ *
  */
 public class RestCell extends Cell {
 
   byte[] name;
-  
-  
+
+
 
   /**
-   * 
+   *
    */
   public RestCell() {
     super();
     // TODO Auto-generated constructor stub
   }
-  
+
   /**
-   * @param name 
+   * @param name
    * @param cell
    */
   public RestCell(byte[] name, Cell cell) {
@@ -96,6 +96,6 @@ public class RestCell extends Cell {
   public void setName(byte[] name) {
     this.name = name;
   }
-  
-  
+
+
 }

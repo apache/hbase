@@ -53,7 +53,7 @@ public abstract class AbstractController implements RESTConstants {
 
   protected abstract AbstractModel generateModel(HBaseConfiguration conf,
       HBaseAdmin a);
-  
+
   protected byte[][] getColumnsFromQueryMap(Map<String, String[]> queryMap) {
     byte[][] columns = null;
     String[] columnArray = queryMap.get(RESTConstants.COLUMN);

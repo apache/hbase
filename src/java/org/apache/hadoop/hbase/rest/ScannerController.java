@@ -38,13 +38,13 @@ import org.apache.hadoop.hbase.rest.parser.IHBaseRestParser;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * 
+ *
  */
 public class ScannerController extends AbstractController {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.AbstractController#delete(org.apache.hadoop
    * .hbase.rest.Status, byte[][], java.util.Map)
@@ -79,7 +79,7 @@ public class ScannerController extends AbstractController {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.AbstractController#generateModel(org.apache
    * .hadoop.hbase.HBaseConfiguration,
@@ -96,7 +96,7 @@ public class ScannerController extends AbstractController {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.AbstractController#get(org.apache.hadoop.hbase
    * .rest.Status, byte[][], java.util.Map)
@@ -112,7 +112,7 @@ public class ScannerController extends AbstractController {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.AbstractController#post(org.apache.hadoop.
    * hbase.rest.Status, byte[][], java.util.Map, byte[],
@@ -163,7 +163,7 @@ public class ScannerController extends AbstractController {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.AbstractController#put(org.apache.hadoop.hbase
    * .rest.Status, byte[][], java.util.Map, byte[],
@@ -343,7 +343,7 @@ public class ScannerController extends AbstractController {
    * Given a list of filters in JSON string form, returns a RowSetFilter that
    * returns true if all input filters return true on a Row (aka an AND
    * statement).
-   * 
+   *
    * @param filters
    *          array of input filters in a JSON String
    * @return RowSetFilter with all input filters in an AND Statement

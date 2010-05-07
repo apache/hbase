@@ -26,10 +26,10 @@ import org.apache.hadoop.hbase.rest.Dispatcher.ContentType;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 
 /**
- * 
+ *
  *         Factory used to return a Rest Serializer tailored to the HTTP
  *         Requesters accept type in the header.
- * 
+ *
  */
 public class RestSerializerFactory {
 

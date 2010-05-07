@@ -100,7 +100,7 @@ public class Status {
   protected HttpServletResponse response;
   protected Object message;
   protected IRestSerializer serializer;
-  protected byte[][] pathSegments; 
+  protected byte[][] pathSegments;
 
   public int getStatusCode() {
     return statusCode;
@@ -135,7 +135,7 @@ public class Status {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * org.apache.hadoop.hbase.rest.xml.IOutputXML#toXML(org.apache.hadoop.hbase
      * .rest.serializer.IRestSerializer)
@@ -163,7 +163,7 @@ public class Status {
     this.statusCode = HttpServletResponse.SC_OK;
     this.message = message;
   }
-  
+
   public void setAccepted() {
     this.statusCode = HttpServletResponse.SC_ACCEPTED;
     this.message = new StatusMessage(HttpServletResponse.SC_ACCEPTED, false, "success");
@@ -177,7 +177,7 @@ public class Status {
   public void setCreated() {
     this.statusCode = HttpServletResponse.SC_CREATED;
     this.setOK();
-  }  
+  }
 
   public void setScannerCreated(ScannerIdentifier scannerIdentifier) {
     this.statusCode = HttpServletResponse.SC_OK;
@@ -229,17 +229,17 @@ public class Status {
     this.statusCode = HttpServletResponse.SC_BAD_REQUEST;
     this.message = new StatusMessage(statusCode, true, message);
   }
-  
+
   public void setUnsupportedMediaType(Object message) {
     this.statusCode = HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE;
     this.message = new StatusMessage(statusCode, true, message);
   }
-  
+
   public void setGone() {
     this.statusCode = HttpServletResponse.SC_GONE;
     this.message = new StatusMessage(statusCode, true, "item no longer available");
   }
-  
+
 
   // Utility
   public void respond() throws HBaseRestException {

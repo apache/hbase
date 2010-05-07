@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 
 /**
  * Factory to produce WhileMatchRowFilters from JSON
- * Expects as an arguement a valid JSON Object in 
+ * Expects as an arguement a valid JSON Object in
  * String form of another RowFilterInterface.
  */
 public class WhileMatchRowFilterFactory implements FilterFactory {

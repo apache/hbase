@@ -33,7 +33,7 @@ import org.apache.hadoop.io.Writable;
  * half of the file.  References are made at region split time.  Being lazy
  * about copying data between the parent of the split and the split daughters
  * makes splitting faster.
- * 
+ *
  * <p>References work with {@link HalfMapFileReader}.  References know how to
  * write out the reference format in the file system and are whats juggled when
  * references are mixed in with direct store files.  The
@@ -58,8 +58,8 @@ public class Reference implements Writable {
   private long fileid;
   private Range region;
   private HStoreKey midkey;
-  
-  /** 
+
+  /**
    * For split HStoreFiles, it specifies if the file covers the lower half or
    * the upper half of the key range
    */
@@ -69,7 +69,7 @@ public class Reference implements Writable {
     /** HStoreFile contains lower half of key range */
     bottom
   }
-  
+
  public Reference(final int ern, final long fid, final HStoreKey m,
       final Range fr) {
     this.encodedRegionName = ern;
@@ -77,7 +77,7 @@ public class Reference implements Writable {
     this.region = fr;
     this.midkey = m;
   }
-  
+
  public Reference() {
     this(-1, -1, null, Range.bottom);
   }
@@ -89,11 +89,11 @@ public class Reference implements Writable {
   public Range getFileRegion() {
     return region;
   }
-  
+
   public HStoreKey getMidkey() {
     return midkey;
   }
-  
+
   public int getEncodedRegionName() {
     return this.encodedRegionName;
   }
@@ -127,7 +127,7 @@ public class Reference implements Writable {
     midkey = new HStoreKey();
     midkey.readFields(in);
   }
-  
+
   public static boolean isTopFileRegion(final Range r) {
     return r.equals(Range.top);
   }

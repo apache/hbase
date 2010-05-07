@@ -99,7 +99,7 @@ below. If running the reduce step makes sense in your case, its usually better
 to have lots of reducers so load is spread across the hbase cluster.</p>
 
 <p>There is also a new hbase partitioner that will run as many reducers as
-currently existing regions.  The 
+currently existing regions.  The
 {@link org.apache.hadoop.hbase.mapred.HRegionPartitioner} is suitable
 when your table is large and your upload is not such that it will greatly
 alter the number of existing regions when done; other use the default
@@ -133,7 +133,7 @@ Read the class comment for specification of inputs, prerequisites, etc.
 <h3>Example to bulk import/load a text file into an HTable
 </h3>
 
-<p>Here's a sample program from 
+<p>Here's a sample program from
 <a href="http://www.spicylogic.com/allenday/blog/category/computing/distributed-systems/hadoop/hbase/">Allen Day</a>
 that takes an HDFS text file path and an HBase table name as inputs, and loads the contents of the text file to the table
 all up in the map phase.
@@ -180,12 +180,12 @@ public class BulkImport implements Tool {
     throws IOException {
       if ( table == null )
         throw new IOException("table is null");
-      
+
       // Split input line on tab character
       String [] splits = value.toString().split("\t");
       if ( splits.length != 4 )
         return;
-      
+
       String rowID = splits[0];
       int timestamp  = Integer.parseInt( splits[1] );
       String colID = splits[2];
@@ -198,8 +198,8 @@ public class BulkImport implements Tool {
       if ( timestamp > 0 )
         bu.setTimestamp( timestamp );
 
-      bu.put(colID, cellValue.getBytes());      
-      table.commit( bu );      
+      bu.put(colID, cellValue.getBytes());
+      table.commit( bu );
     }
 
     public void configure(JobConf job) {
@@ -212,7 +212,7 @@ public class BulkImport implements Tool {
       }
     }
   }
-  
+
   public JobConf createSubmittableJob(String[] args) {
     JobConf c = new JobConf(getConf(), BulkImport.class);
     c.setJobName(NAME);
@@ -224,7 +224,7 @@ public class BulkImport implements Tool {
     c.setOutputFormat(NullOutputFormat.class);
     return c;
   }
-  
+
   static int printUsage() {
     System.err.println("Usage: " + NAME + " &lt;input> &lt;table_name>");
     System.err.println("\twhere &lt;input> is a tab-delimited text file with 4 columns.");
@@ -233,7 +233,7 @@ public class BulkImport implements Tool {
     System.err.println("\t\tcolumn 3 = column ID");
     System.err.println("\t\tcolumn 4 = cell value");
     return -1;
-  } 
+  }
 
   public int run(@SuppressWarnings("unused") String[] args) throws Exception {
     // Make sure there are exactly 3 parameters left.
@@ -246,7 +246,7 @@ public class BulkImport implements Tool {
 
   public Configuration getConf() {
     return this.conf;
-  } 
+  }
 
   public void setConf(final Configuration c) {
     this.conf = c;

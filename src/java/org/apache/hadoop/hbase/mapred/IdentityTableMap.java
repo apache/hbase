@@ -44,7 +44,7 @@ implements TableMap<ImmutableBytesWritable, RowResult> {
   /**
    * Use this before submitting a TableMap job. It will
    * appropriately set up the JobConf.
-   * 
+   *
    * @param table table name
    * @param columns columns to scan
    * @param mapper mapper class
@@ -60,17 +60,17 @@ implements TableMap<ImmutableBytesWritable, RowResult> {
 
   /**
    * Pass the key, value to reduce
-   * @param key 
-   * @param value 
-   * @param output 
-   * @param reporter 
-   * @throws IOException 
+   * @param key
+   * @param value
+   * @param output
+   * @param reporter
+   * @throws IOException
    */
   public void map(ImmutableBytesWritable key, RowResult value,
       OutputCollector<ImmutableBytesWritable,RowResult> output,
       Reporter reporter) throws IOException {
-    
-    // convert 
+
+    // convert
     output.collect(key, value);
   }
 }

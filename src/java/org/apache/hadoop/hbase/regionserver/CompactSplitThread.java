@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils;
 
-/** 
+/**
  * Compact region on request and then run split if appropriate
  *
  * NOTE: This class extends Thread rather than Chore because the sleep time
@@ -46,18 +46,18 @@ import org.apache.hadoop.util.StringUtils;
  */
 class CompactSplitThread extends Thread implements HConstants {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
-  
+
   private HTable root = null;
   private HTable meta = null;
   private final long frequency;
   private final ReentrantLock lock = new ReentrantLock();
-  
+
   private final HRegionServer server;
   private final HBaseConfiguration conf;
-  
+
   private final BlockingQueue<HRegion> compactionQueue =
     new LinkedBlockingQueue<HRegion>();
-  
+
   private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
 
   /** @param server */
@@ -69,7 +69,7 @@ class CompactSplitThread extends Thread implements HConstants {
       conf.getLong("hbase.regionserver.thread.splitcompactcheckfrequency",
       20 * 1000);
   }
-  
+
   @Override
   public void run() {
     while (!this.server.isStopRequested() && this.server.isInSafeMode()) {
@@ -154,7 +154,7 @@ class CompactSplitThread extends Thread implements HConstants {
       }
     }
   }
-  
+
   private void split(final HRegion region, final byte [] midKey)
   throws IOException {
     final HRegionInfo oldRegionInfo = region.getRegionInfo();
@@ -164,7 +164,7 @@ class CompactSplitThread extends Thread implements HConstants {
       // Didn't need to be split
       return;
     }
-    
+
     // When a region is split, the META table needs to updated if we're
     // splitting a 'normal' region, and the ROOT table needs to be
     // updated if we are splitting a META region.
@@ -189,16 +189,16 @@ class CompactSplitThread extends Thread implements HConstants {
     oldRegionInfo.setSplit(true);
     // Inform the HRegionServer that the parent HRegion is no-longer online.
     this.server.removeFromOnlineRegions(oldRegionInfo);
-    
+
     Put put = new Put(oldRegionInfo.getRegionName());
-    put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, 
+    put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER,
         Writables.getBytes(oldRegionInfo));
     put.add(CATALOG_FAMILY, SPLITA_QUALIFIER,
         Writables.getBytes(newRegions[0].getRegionInfo()));
     put.add(CATALOG_FAMILY, SPLITB_QUALIFIER,
         Writables.getBytes(newRegions[1].getRegionInfo()));
     t.put(put);
-    
+
     // If we crash here, then the daughters will not be added and we'll have
     // and offlined parent but no daughters to take up the slack.  hbase-2244
     // adds fixup to the metascanners.
@@ -210,7 +210,7 @@ class CompactSplitThread extends Thread implements HConstants {
         newRegions[i].getRegionInfo()));
       t.put(put);
     }
-    
+
     // If we crash here, the master will not know of the new daughters and they
     // will not be assigned.  The metascanner when it runs will notice and take
     // care of assigning the new daughters.
@@ -228,7 +228,7 @@ class CompactSplitThread extends Thread implements HConstants {
 
   /**
    * Only interrupt once it's done with a run through the work loop.
-   */ 
+   */
   void interruptIfNecessary() {
     if (lock.tryLock()) {
       this.interrupt();

@@ -64,13 +64,13 @@ import org.apache.hadoop.util.ToolRunner;
  * the filesystem across versions until there's a match with current software's
  * version number.  This script will only cross a particular version divide.  You may
  * need to install earlier or later hbase to migrate earlier (or older) versions.
- * 
+ *
  * <p>This wrapper script comprises a set of migration steps.  Which steps
  * are run depends on the span between the version of the hbase data in the
  * Filesystem and the version of the current softare.
- * 
+ *
  * <p>A migration script must accompany any patch that changes data formats.
- * 
+ *
  * <p>This script has a 'check' and 'execute' mode.  Adding migration steps,
  * its important to keep this in mind.  Testing if migration needs to be run,
  * be careful not to make presumptions about the current state of the data in
@@ -80,9 +80,9 @@ import org.apache.hadoop.util.ToolRunner;
  * old formats -- or, worse, fail in ways that are hard to figure (One such is
  * edits made by previous migration steps not being apparent in later migration
  * steps).  The upshot is always verify presumptions migrating.
- * 
+ *
  * <p>This script will migrate an hbase 0.18.x only.
- * 
+ *
  * @see <a href="http://wiki.apache.org/hadoop/Hbase/HowToMigrate">How To Migration</a>
  */
 public class Migrate extends Configured implements Tool {
@@ -93,11 +93,11 @@ public class Migrate extends Configured implements Tool {
 
   // Filesystem version of hbase 0.1.x.
   private static final float HBASE_0_1_VERSION = 0.1f;
-  
+
   // Filesystem version we can migrate from
   private static final int PREVIOUS_VERSION = 6;
-  
-  private static final String MIGRATION_LINK = 
+
+  private static final String MIGRATION_LINK =
     " See http://wiki.apache.org/hadoop/Hbase/HowToMigrate for more information.";
 
   /**
@@ -149,7 +149,7 @@ public class Migrate extends Configured implements Tool {
       return false;
     }
   }
-  
+
   private boolean notRunning() {
     // Verify HBase is down
     LOG.info("Verifying that HBase is not running...." +
@@ -162,7 +162,7 @@ public class Migrate extends Configured implements Tool {
       return true;
     }
   }
-  
+
   public int run(String[] args) {
     if (parseArgs(args) != 0) {
       return -1;
@@ -215,7 +215,7 @@ public class Migrate extends Configured implements Tool {
       return -1;
     }
   }
-  
+
   // Move the fileystem version from 6 to 7.
   private void migrate6to7() throws IOException {
     if (this.check && this.migrationNeeded) {
@@ -390,14 +390,14 @@ public class Migrate extends Configured implements Tool {
         }
         byte [][] parts = KeyValue.parseColumn(key.getColumn());
         KeyValue kv = deleteBytes.equals(value)?
-            new KeyValue(key.getRow(), parts[0], parts[1], 
+            new KeyValue(key.getRow(), parts[0], parts[1],
                 key.getTimestamp(), KeyValue.Type.Delete):
-              new KeyValue(key.getRow(), parts[0], parts[1], 
+              new KeyValue(key.getRow(), parts[0], parts[1],
                 key.getTimestamp(), value.get());
          tgt.append(kv);
       }
       long seqid = hsf.loadInfo(fs);
-      StoreFile.appendMetadata(tgt, seqid, 
+      StoreFile.appendMetadata(tgt, seqid,
           hsf.isMajorCompaction());
       // Success, delete src.
       src.close();
@@ -433,7 +433,7 @@ public class Migrate extends Configured implements Tool {
       return;
     }
     Put put = new Put(oldHri.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, 
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         Writables.getBytes(oldHri));
     mr.put(put);
   }
@@ -478,7 +478,7 @@ public class Migrate extends Configured implements Tool {
       return;
     }
     Put put = new Put(oldHri.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, 
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         Writables.getBytes(oldHri));
     mr.put(put);
     LOG.info("Upped versions on " + oldHri.getRegionNameAsString());
@@ -528,7 +528,7 @@ public class Migrate extends Configured implements Tool {
     }
     return 0;
   }
-  
+
   private void usage() {
     System.err.println("Usage: bin/hbase migrate {check | upgrade} [options]");
     System.err.println();
@@ -543,7 +543,7 @@ public class Migrate extends Configured implements Tool {
 
   /**
    * Main program
-   * 
+   *
    * @param args command line arguments
    */
   public static void main(String[] args) {

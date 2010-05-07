@@ -33,7 +33,7 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
 /**
- * A job with a just a map phase to count rows. Map outputs table rows IF the 
+ * A job with a just a map phase to count rows. Map outputs table rows IF the
  * input row has columns that have content.
  */
 public class RowCounter {
@@ -45,18 +45,18 @@ public class RowCounter {
    */
   static class RowCounterMapper
   extends TableMapper<ImmutableBytesWritable, Result> {
-    
+
     /** Counter enumeration to count the actual rows. */
     private static enum Counters {ROWS}
 
     /**
      * Maps the data.
-     * 
+     *
      * @param row  The current table row key.
      * @param values  The columns.
      * @param context  The current context.
      * @throws IOException When something is broken with the data.
-     * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN, 
+     * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN,
      *   org.apache.hadoop.mapreduce.Mapper.Context)
      */
     @Override
@@ -75,13 +75,13 @@ public class RowCounter {
 
   /**
    * Sets up the actual job.
-   * 
+   *
    * @param conf  The current configuration.
    * @param args  The command line parameters.
    * @return The newly created job.
    * @throws IOException When setting up the job fails.
    */
-  public static Job createSubmittableJob(Configuration conf, String[] args) 
+  public static Job createSubmittableJob(Configuration conf, String[] args)
   throws IOException {
     String tableName = args[0];
     Job job = new Job(conf, NAME + "_" + tableName);
@@ -110,7 +110,7 @@ public class RowCounter {
 
   /**
    * Main entry point.
-   * 
+   *
    * @param args  The command line parameters.
    * @throws Exception When running the job fails.
    */

@@ -66,7 +66,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
     this.row = row;
     this.cells = m;
   }
-  
+
   /**
    * Get the row for this RowResult
    * @return the row
@@ -75,9 +75,9 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
     return row;
   }
 
-  // 
+  //
   // Map interface
-  // 
+  //
   public Cell put(byte [] key,
     Cell value) {
     throw new UnsupportedOperationException("RowResult is read-only!");
@@ -99,7 +99,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
   public boolean containsKey(Object key) {
     return cells.containsKey(key);
   }
-  
+
   /**
    * Check if the key can be found in this RowResult
    * @param key
@@ -136,10 +136,10 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
   public Set<Map.Entry<byte [], Cell>> entrySet() {
     return Collections.unmodifiableSet(this.cells.entrySet());
   }
-  
+
   /**
    * This method used solely for the REST serialization
-   * 
+   *
    * @return Cells
    */
   public RestCell[] getCells() {
@@ -159,7 +159,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
     }
     return result;
   }
-  
+
   /**
    * Get the Cell that corresponds to column
    * @param column
@@ -168,7 +168,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
   public Cell get(byte [] column) {
     return this.cells.get(column);
   }
-  
+
   /**
    * Get the Cell that corresponds to column, using a String key
    * @param key
@@ -187,7 +187,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
   public Cell get(byte [] family, byte [] columnQualifier) {
     return get(Bytes.add(family, KeyValue.COLUMN_FAMILY_DELIM_ARRAY, columnQualifier));
   }
-  
+
 
   public Comparator<? super byte[]> comparator() {
     return this.cells.comparator();
@@ -219,25 +219,25 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
   public class Entry implements Map.Entry<byte [], Cell> {
     private final byte [] column;
     private final Cell cell;
-    
+
     Entry(byte [] row, Cell cell) {
       this.column = row;
       this.cell = cell;
     }
-    
+
     public Cell setValue(Cell c) {
       throw new UnsupportedOperationException("RowResult is read-only!");
     }
-    
+
     public byte [] getKey() {
       return column;
     }
-    
+
     public Cell getValue() {
       return cell;
     }
   }
-  
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -264,20 +264,20 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
           sb.append(ioe.toString());
         }
       } else {
-        sb.append(Bytes.toStringBinary(v)); 
+        sb.append(Bytes.toStringBinary(v));
       }
       sb.append(")");
     }
     sb.append("}");
     return sb.toString();
   }
-  
+
   /* (non-Javadoc)
    * @see org.apache.hadoop.hbase.rest.xml.IOutputXML#toXML()
    */
   public void restSerialize(IRestSerializer serializer) throws HBaseRestException {
     serializer.serializeRowResult(this);
-  }  
+  }
 
   /**
    * @param l
@@ -322,7 +322,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
     Bytes.writeByteArray(out, this.row);
     this.cells.write(out);
   }
-  
+
   //
   // Comparable
   //

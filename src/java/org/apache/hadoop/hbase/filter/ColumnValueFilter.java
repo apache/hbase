@@ -34,7 +34,7 @@ import org.apache.hadoop.io.ObjectWritable;
 
 /**
  * This filter is a no-op in HBase 0.20.  Don't use it.
- * 
+ *
  * This filter is used to filter based on the value of a given column. It takes
  * an operator (equal, greater, not equal, etc) and either a byte [] value or a
  * byte [] comparator. If we have a byte [] value then we just do a
@@ -72,7 +72,7 @@ public class ColumnValueFilter implements RowFilterInterface {
 
   /**
    * Constructor.
-   * 
+   *
    * @param columnName name of column
    * @param compareOp operator
    * @param value value to compare column values against
@@ -81,14 +81,14 @@ public class ColumnValueFilter implements RowFilterInterface {
       final byte[] value) {
     this(columnName, compareOp, value, true);
   }
-  
+
   /**
    * Constructor.
-   * 
+   *
    * @param columnName name of column
    * @param compareOp operator
    * @param value value to compare column values against
-   * @param filterIfColumnMissing if true then we will filter rows that don't have the column. 
+   * @param filterIfColumnMissing if true then we will filter rows that don't have the column.
    */
   public ColumnValueFilter(final byte[] columnName, final CompareOp compareOp,
       final byte[] value, boolean filterIfColumnMissing) {
@@ -100,7 +100,7 @@ public class ColumnValueFilter implements RowFilterInterface {
 
   /**
    * Constructor.
-   * 
+   *
    * @param columnName name of column
    * @param compareOp operator
    * @param comparator Comparator to use.
@@ -109,14 +109,14 @@ public class ColumnValueFilter implements RowFilterInterface {
       final WritableByteArrayComparable comparator) {
     this(columnName, compareOp, comparator, true);
   }
-  
+
   /**
   * Constructor.
-  * 
+  *
   * @param columnName name of column
   * @param compareOp operator
   * @param comparator Comparator to use.
-  * @param filterIfColumnMissing if true then we will filter rows that don't have the column. 
+  * @param filterIfColumnMissing if true then we will filter rows that don't have the column.
   */
  public ColumnValueFilter(final byte[] columnName, final CompareOp compareOp,
      final WritableByteArrayComparable comparator, boolean filterIfColumnMissing) {
@@ -134,7 +134,7 @@ public class ColumnValueFilter implements RowFilterInterface {
     return false;
   }
 
-  
+
   public boolean filterColumn(final byte[] rowKey,
       final byte[] colKey, final byte[] data) {
     if (!filterIfColumnMissing) {
@@ -143,7 +143,7 @@ public class ColumnValueFilter implements RowFilterInterface {
     if (!Arrays.equals(colKey, columnName)) {
       return false;
     }
-    return filterColumnValue(data, 0, data.length); 
+    return filterColumnValue(data, 0, data.length);
   }
 
 
@@ -186,7 +186,7 @@ public class ColumnValueFilter implements RowFilterInterface {
       throw new RuntimeException("Unknown Compare op " + compareOp.name());
     }
   }
-  
+
   public boolean filterAllRemaining() {
     return false;
   }
@@ -196,7 +196,7 @@ public class ColumnValueFilter implements RowFilterInterface {
       return false;
     if (filterIfColumnMissing) {
       return !columns.containsKey(columnName);
-    } 
+    }
     // Otherwise we must do the filter here
     Cell colCell = columns.get(columnName);
       if (colCell == null) {

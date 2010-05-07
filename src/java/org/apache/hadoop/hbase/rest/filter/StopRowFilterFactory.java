@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * FilterFactory that construct a StopRowFilter
  * from an Argument String.
- * 
+ *
  * It expects that the whole input string consists of only
  * the rowKey that you wish to stop on.
  */

@@ -45,7 +45,7 @@ import org.apache.hadoop.io.SequenceFile;
 /**
  * A HStore data file.  HStores usually have one or more of these files.  They
  * are produced by flushing the memcache to disk.
- * 
+ *
  * <p>This one has been doctored to be used in migrations.  Private and
  * protecteds have been made public, etc.
  *
@@ -53,14 +53,14 @@ import org.apache.hadoop.io.SequenceFile;
  * mix of the parent dir, the region name, the column name, and a file
  * identifier. The name may also be a reference to a store file located
  * elsewhere. This class handles all that path-building stuff for you.
- * 
+ *
  * <p>An HStoreFile usually tracks 4 things: its parent dir, the region
  * identifier, the column family, and the file identifier.  If you know those
  * four things, you know how to obtain the right HStoreFile.  HStoreFiles may
  * also reference store files in another region serving either from
  * the top-half of the remote file or from the bottom-half.  Such references
  * are made fast splitting regions.
- * 
+ *
  * <p>Plain HStoreFiles are named for a randomly generated id as in:
  * <code>1278437856009925445</code>  A file by this name is made in both the
  * <code>mapfiles</code> and <code>info</code> subdirectories of a
@@ -70,7 +70,7 @@ import org.apache.hadoop.io.SequenceFile;
  * file named something like <code>1278437856009925445</code>, one to hold the
  * data in 'mapfiles' and one under 'info' that holds the sequence id for this
  * store file.
- * 
+ *
  * <p>References to store files located over in some other region look like
  * this:
  * <code>1278437856009925445.hbaserepository,qAReLZD-OyQORZWq_vqR1k==,959247014679548184</code>:
@@ -81,8 +81,8 @@ import org.apache.hadoop.io.SequenceFile;
  * to serve the top or bottom region of the remote store file.  Note, a region
  * is not splitable if it has instances of store file references (References
  * are cleaned up by compactions).
- * 
- * <p>When merging or splitting HRegions, we might want to modify one of the 
+ *
+ * <p>When merging or splitting HRegions, we might want to modify one of the
  * params for an HStoreFile (effectively moving it elsewhere).
  */
 public class HStoreFile implements HConstants {
@@ -92,7 +92,7 @@ public class HStoreFile implements HConstants {
   static final String HSTORE_DATFILE_DIR = "mapfiles";
   static final String HSTORE_INFO_DIR = "info";
   static final String HSTORE_FILTER_DIR = "filter";
-  
+
   private final static Random rand = new Random();
 
   private final Path basedir;
@@ -124,7 +124,7 @@ public class HStoreFile implements HConstants {
   throws IOException {
     this(conf, fs, basedir, encodedName, colFamily, fileId, ref, false);
   }
-  
+
   /**
    * Constructor that fully initializes the object
    * @param conf Configuration object
@@ -147,7 +147,7 @@ public class HStoreFile implements HConstants {
     this.colFamily = colFamily;
     // NOT PASSED IN MIGRATIONS
     this.hri = null;
-    
+
     long id = fileId;
     if (id == -1) {
       Path mapdir = HStoreFile.getMapDir(basedir, encodedRegionName, colFamily);
@@ -158,7 +158,7 @@ public class HStoreFile implements HConstants {
       } while(fs.exists(testpath));
     }
     this.fileId = id;
-    
+
     // If a reference, construction does not write the pointer files.  Thats
     // done by invocations of writeReferenceFiles(hsf, fs). Happens at split.
     this.reference = ref;
@@ -169,7 +169,7 @@ public class HStoreFile implements HConstants {
   boolean isReference() {
     return reference != null;
   }
-  
+
 
   private static final Pattern REF_NAME_PARSER =
     Pattern.compile("^(\\d+)(?:\\.(.+))?$");
@@ -210,7 +210,7 @@ public class HStoreFile implements HConstants {
   }
 
   // Build full filenames from those components
-  
+
   /** @return path for MapFile */
   Path getMapFilePath() {
     if (isReference()) {
@@ -230,10 +230,10 @@ public class HStoreFile implements HConstants {
   private Path getMapFilePath(final int encodedName, final long fid) {
     return getMapFilePath(encodedName, fid, HRegionInfo.NO_HASH);
   }
-  
+
   private Path getMapFilePath(final int encodedName, final long fid,
       final int ern) {
-    return new Path(HStoreFile.getMapDir(basedir, encodedName, colFamily), 
+    return new Path(HStoreFile.getMapDir(basedir, encodedName, colFamily),
       createHStoreFilename(fid, ern));
   }
 
@@ -242,18 +242,18 @@ public class HStoreFile implements HConstants {
     if (isReference()) {
       return getInfoFilePath(encodedRegionName, fileId,
           reference.getEncodedRegionName());
- 
+
     }
     return getInfoFilePath(encodedRegionName, fileId);
   }
-  
+
   private Path getInfoFilePath(final int encodedName, final long fid) {
     return getInfoFilePath(encodedName, fid, HRegionInfo.NO_HASH);
   }
-  
+
   private Path getInfoFilePath(final int encodedName, final long fid,
       final int ern) {
-    return new Path(HStoreFile.getInfoDir(basedir, encodedName, colFamily), 
+    return new Path(HStoreFile.getInfoDir(basedir, encodedName, colFamily),
       createHStoreFilename(fid, ern));
   }
 
@@ -282,17 +282,17 @@ public class HStoreFile implements HConstants {
     dstA.writeReferenceFiles(fs);
     dstB.writeReferenceFiles(fs);
   }
-  
+
   void writeReferenceFiles(final FileSystem fs)
   throws IOException {
     createOrFail(fs, getMapFilePath());
     writeSplitInfo(fs);
   }
-  
+
   /*
    * If reference, create and write the remote store file id, the midkey and
    * whether we're going against the top file region of the referent out to
-   * the info file. 
+   * the info file.
    * @param p Path to info file.
    * @param hsf
    * @param fs
@@ -336,7 +336,7 @@ public class HStoreFile implements HConstants {
     }
   }
 
-  /** 
+  /**
    * Reads in an info file
    *
    * @param filesystem file system
@@ -370,10 +370,10 @@ public class HStoreFile implements HConstants {
       in.close();
     }
   }
-  
+
   /**
    * Writes the file-identifier to disk
-   * 
+   *
    * @param filesystem file system
    * @param infonum file id
    * @throws IOException
@@ -382,10 +382,10 @@ public class HStoreFile implements HConstants {
   throws IOException {
     writeInfo(filesystem, infonum, false);
   }
-  
+
   /**
    * Writes the file-identifier to disk
-   * 
+   *
    * @param filesystem file system
    * @param infonum file id
    * @param mc True if this file is product of a major compaction
@@ -412,13 +412,13 @@ public class HStoreFile implements HConstants {
 
   /**
    * Delete store map files.
-   * @throws IOException 
+   * @throws IOException
    */
   public void delete() throws IOException {
     fs.delete(getMapFilePath(), true);
     fs.delete(getInfoFilePath(), true);
   }
-  
+
   /**
    * Renames the mapfiles and info directories under the passed
    * <code>hsf</code> directory.
@@ -448,7 +448,7 @@ public class HStoreFile implements HConstants {
     }
     return success;
   }
-  
+
   /**
    * Get reader for the store file map file.
    * Client is responsible for closing file when done.
@@ -463,7 +463,7 @@ public class HStoreFile implements HConstants {
   throws IOException {
     if (isReference()) {
       return new HalfMapFileReader(fs,
-          getMapFilePath(reference).toString(), conf, 
+          getMapFilePath(reference).toString(), conf,
           reference.getFileRegion(), reference.getMidkey(), bloomFilter,
           blockCacheEnabled, this.hri);
     }
@@ -522,7 +522,7 @@ public class HStoreFile implements HConstants {
     return encodedRegionName + "/" + Bytes.toString(colFamily) + "/" + fileId +
       (isReference()? "-" + reference.toString(): "");
   }
-  
+
   /**
    * @return True if this file was made by a major compaction.
    */
@@ -532,7 +532,7 @@ public class HStoreFile implements HConstants {
 
   private static String createHStoreFilename(final long fid,
       final int encodedRegionName) {
-    return Long.toString(fid) + 
+    return Long.toString(fid) +
       ((encodedRegionName != HRegionInfo.NO_HASH)?
         "." + encodedRegionName : "");
   }
@@ -569,7 +569,7 @@ public class HStoreFile implements HConstants {
       final byte [] f) {
     return getFamilySubDir(dir, encodedRegionName, f, HSTORE_FILTER_DIR);
   }
-  
+
   /*
    * @param base Base directory
    * @param encodedRegionName Encoding of region name.

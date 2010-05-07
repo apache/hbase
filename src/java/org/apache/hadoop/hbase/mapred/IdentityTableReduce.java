@@ -40,20 +40,20 @@ implements TableReduce<ImmutableBytesWritable, BatchUpdate> {
   @SuppressWarnings("unused")
   private static final Log LOG =
     LogFactory.getLog(IdentityTableReduce.class.getName());
-  
+
   /**
    * No aggregation, output pairs of (key, record)
-   * @param key 
-   * @param values 
-   * @param output 
-   * @param reporter 
-   * @throws IOException 
+   * @param key
+   * @param values
+   * @param output
+   * @param reporter
+   * @throws IOException
    */
   public void reduce(ImmutableBytesWritable key, Iterator<BatchUpdate> values,
       OutputCollector<ImmutableBytesWritable, BatchUpdate> output,
       Reporter reporter)
       throws IOException {
-    
+
     while(values.hasNext()) {
       output.collect(key, values.next());
     }

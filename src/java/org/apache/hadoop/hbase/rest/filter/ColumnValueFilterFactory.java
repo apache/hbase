@@ -26,10 +26,10 @@ import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 /**
  * FilterFactory that constructs a ColumnValueFilter from a JSON arg String.
  * Expects a Stringified JSON argument with the following form:
- * 
+ *
  * { "column_name" : "MY_COLUMN_NAME", "compare_op" : "INSERT_COMPARE_OP_HERE",
  * "value" : "MY_COMPARE_VALUE" }
- * 
+ *
  * The current valid compare ops are: equal, greater, greater_or_equal, less,
  * less_or_equal, not_equal
  */

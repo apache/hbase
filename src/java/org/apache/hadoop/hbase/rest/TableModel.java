@@ -54,7 +54,7 @@ public class TableModel extends AbstractModel {
   /**
    * Returns all cells from all rows from the given table in the given columns.
    * The output is in the order that the columns are given.
-   * 
+   *
    * @param tableName
    *          table name
    * @param columnNames
@@ -90,7 +90,7 @@ public class TableModel extends AbstractModel {
       throw new HBaseRestException(e);
     }
   }
-  
+
   protected void disableTable(byte [] tableName) throws HBaseRestException {
     try {
       this.admin.disableTable(tableName);
@@ -98,7 +98,7 @@ public class TableModel extends AbstractModel {
       throw new HBaseRestException("IOException disabling table", e);
     }
   }
-  
+
   protected void enableTable(byte [] tableName) throws HBaseRestException {
     try {
       this.admin.enableTable(tableName);
@@ -173,9 +173,9 @@ public class TableModel extends AbstractModel {
 
   /**
    * Return region offsets.
-   * @param tableName 
+   * @param tableName
    * @return Regions
-   * @throws HBaseRestException 
+   * @throws HBaseRestException
    */
   public Regions getTableRegions(final String tableName)
       throws HBaseRestException {
@@ -195,12 +195,12 @@ public class TableModel extends AbstractModel {
   // Post Methods
   /**
    * Creates table tableName described by the json in input.
-   * 
+   *
    * @param tableName
    *          table name
    * @param htd
    *          HBaseTableDescriptor for the table to be created
-   * 
+   *
    * @return true if operation does not fail due to a table with the given
    *         tableName not existing.
    * @throws org.apache.hadoop.hbase.rest.exception.HBaseRestException
@@ -220,7 +220,7 @@ public class TableModel extends AbstractModel {
 
   /**
    * Deletes table tableName
-   * 
+   *
    * @param tableName
    *          name of the table.
    * @return true if table exists and deleted, false if table does not exist.
@@ -268,7 +268,7 @@ public class TableModel extends AbstractModel {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see org.apache.hadoop.hbase.rest.xml.IOutputXML#toXML()
      */
     public void restSerialize(IRestSerializer serializer)

@@ -78,23 +78,23 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
   }
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(NAME, new FieldMetaData("name", TFieldRequirementType.DEFAULT, 
+    put(NAME, new FieldMetaData("name", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(MAXVERSIONS, new FieldMetaData("maxVersions", TFieldRequirementType.DEFAULT, 
+    put(MAXVERSIONS, new FieldMetaData("maxVersions", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.I32)));
-    put(COMPRESSION, new FieldMetaData("compression", TFieldRequirementType.DEFAULT, 
+    put(COMPRESSION, new FieldMetaData("compression", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(INMEMORY, new FieldMetaData("inMemory", TFieldRequirementType.DEFAULT, 
+    put(INMEMORY, new FieldMetaData("inMemory", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.BOOL)));
-    put(BLOOMFILTERTYPE, new FieldMetaData("bloomFilterType", TFieldRequirementType.DEFAULT, 
+    put(BLOOMFILTERTYPE, new FieldMetaData("bloomFilterType", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(BLOOMFILTERVECTORSIZE, new FieldMetaData("bloomFilterVectorSize", TFieldRequirementType.DEFAULT, 
+    put(BLOOMFILTERVECTORSIZE, new FieldMetaData("bloomFilterVectorSize", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.I32)));
-    put(BLOOMFILTERNBHASHES, new FieldMetaData("bloomFilterNbHashes", TFieldRequirementType.DEFAULT, 
+    put(BLOOMFILTERNBHASHES, new FieldMetaData("bloomFilterNbHashes", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.I32)));
-    put(BLOCKCACHEENABLED, new FieldMetaData("blockCacheEnabled", TFieldRequirementType.DEFAULT, 
+    put(BLOCKCACHEENABLED, new FieldMetaData("blockCacheEnabled", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.BOOL)));
-    put(TIMETOLIVE, new FieldMetaData("timeToLive", TFieldRequirementType.DEFAULT, 
+    put(TIMETOLIVE, new FieldMetaData("timeToLive", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.I32)));
   }});
 
@@ -630,7 +630,7 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == TType.STOP) {
         break;
       }
       switch (field.id)
@@ -638,7 +638,7 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
         case NAME:
           if (field.type == TType.STRING) {
             this.name = iprot.readBinary();
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
@@ -646,14 +646,14 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
           if (field.type == TType.I32) {
             this.maxVersions = iprot.readI32();
             this.__isset.maxVersions = true;
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
         case COMPRESSION:
           if (field.type == TType.STRING) {
             this.compression = iprot.readString();
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
@@ -661,14 +661,14 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
           if (field.type == TType.BOOL) {
             this.inMemory = iprot.readBool();
             this.__isset.inMemory = true;
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
         case BLOOMFILTERTYPE:
           if (field.type == TType.STRING) {
             this.bloomFilterType = iprot.readString();
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
@@ -676,7 +676,7 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
           if (field.type == TType.I32) {
             this.bloomFilterVectorSize = iprot.readI32();
             this.__isset.bloomFilterVectorSize = true;
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
@@ -684,7 +684,7 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
           if (field.type == TType.I32) {
             this.bloomFilterNbHashes = iprot.readI32();
             this.__isset.bloomFilterNbHashes = true;
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
@@ -692,7 +692,7 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
           if (field.type == TType.BOOL) {
             this.blockCacheEnabled = iprot.readBool();
             this.__isset.blockCacheEnabled = true;
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
@@ -700,7 +700,7 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
           if (field.type == TType.I32) {
             this.timeToLive = iprot.readI32();
             this.__isset.timeToLive = true;
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;

@@ -29,9 +29,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 class ModifyColumn extends ColumnOperation {
   private final HColumnDescriptor descriptor;
   private final byte [] columnName;
-  
-  ModifyColumn(final HMaster master, final byte [] tableName, 
-    final byte [] columnName, HColumnDescriptor descriptor) 
+
+  ModifyColumn(final HMaster master, final byte [] tableName,
+    final byte [] columnName, HColumnDescriptor descriptor)
   throws IOException {
     super(master, tableName);
     this.descriptor = descriptor;
@@ -47,7 +47,7 @@ class ModifyColumn extends ColumnOperation {
         updateRegionInfo(server, m.getRegionName(), i);
       } else { // otherwise, we have an error.
         throw new InvalidColumnNameException("Column family '" +
-          Bytes.toString(columnName) + 
+          Bytes.toString(columnName) +
           "' doesn't exist, so cannot be modified.");
       }
     }

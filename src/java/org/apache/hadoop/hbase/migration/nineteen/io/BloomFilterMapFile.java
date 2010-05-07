@@ -62,7 +62,7 @@ public class BloomFilterMapFile extends HBaseMapFile {
      * @throws IOException
      */
     public Reader(FileSystem fs, String dirName, Configuration conf,
-        final boolean filter, final boolean blockCacheEnabled, 
+        final boolean filter, final boolean blockCacheEnabled,
         HRegionInfo hri)
     throws IOException {
       super(fs, dirName, conf, blockCacheEnabled, hri);
@@ -89,7 +89,7 @@ public class BloomFilterMapFile extends HBaseMapFile {
       }
       return filter;
     }
-    
+
     @Override
     public Writable get(WritableComparable key, Writable val)
     throws IOException {
@@ -126,7 +126,7 @@ public class BloomFilterMapFile extends HBaseMapFile {
       }
       return null;
     }
-    
+
     /**
      * @return size of the bloom filter
      */
@@ -134,13 +134,13 @@ public class BloomFilterMapFile extends HBaseMapFile {
       return bloomFilter == null ? 0 : bloomFilter.getVectorSize();
     }
   }
-  
+
   public static class Writer extends HBaseWriter {
     private static final double DEFAULT_NUMBER_OF_HASH_FUNCTIONS = 4.0;
     private final BloomFilter bloomFilter;
     private final String dirName;
     private final FileSystem fs;
-    
+
     /**
      * @param conf
      * @param fs
@@ -159,25 +159,25 @@ public class BloomFilterMapFile extends HBaseMapFile {
       this.dirName = dirName;
       this.fs = fs;
       if (filter) {
-        /* 
+        /*
          * There is no way to automatically determine the vector size and the
          * number of hash functions to use. In particular, bloom filters are
          * very sensitive to the number of elements inserted into them. For
          * HBase, the number of entries depends on the size of the data stored
          * in the column. Currently the default region size is 256MB, so the
-         * number of entries is approximately 
+         * number of entries is approximately
          * 256MB / (average value size for column).
-         * 
+         *
          * If m denotes the number of bits in the Bloom filter (vectorSize),
          * n denotes the number of elements inserted into the Bloom filter and
          * k represents the number of hash functions used (nbHash), then
          * according to Broder and Mitzenmacher,
-         * 
+         *
          * ( http://www.eecs.harvard.edu/~michaelm/NEWWORK/postscripts/BloomFilterSurvey.pdf )
-         * 
+         *
          * the probability of false positives is minimized when k is
          * approximately m/n ln(2).
-         * 
+         *
          * If we fix the number of hash functions and know the number of
          * entries, then the optimal vector size m = (k * n) / ln(2)
          */
@@ -215,10 +215,10 @@ public class BloomFilterMapFile extends HBaseMapFile {
         flushBloomFilter();
       }
     }
-    
+
     /**
      * Flushes bloom filter to disk
-     * 
+     *
      * @throws IOException
      */
     private void flushBloomFilter() throws IOException {

@@ -2,30 +2,30 @@
  *
  * Copyright (c) 2005, European Commission project OneLab under contract 034819 (http://www.one-lab.org)
  * All rights reserved.
- * Redistribution and use in source and binary forms, with or 
- * without modification, are permitted provided that the following 
+ * Redistribution and use in source and binary forms, with or
+ * without modification, are permitted provided that the following
  * conditions are met:
- *  - Redistributions of source code must retain the above copyright 
+ *  - Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- *  - Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the distribution.
  *  - Neither the name of the University Catholique de Louvain - UCL
- *    nor the names of its contributors may be used to endorse or 
- *    promote products derived from this software without specific prior 
+ *    nor the names of its contributors may be used to endorse or
+ *    promote products derived from this software without specific prior
  *    written permission.
- *    
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
@@ -58,15 +58,15 @@ import org.apache.hadoop.hbase.util.Hash;
 /**
  * Implements a <i>Bloom filter</i>, as defined by Bloom in 1970.
  * <p>
- * The Bloom filter is a data structure that was introduced in 1970 and that has been adopted by 
+ * The Bloom filter is a data structure that was introduced in 1970 and that has been adopted by
  * the networking research community in the past decade thanks to the bandwidth efficiencies that it
- * offers for the transmission of set membership information between networked hosts.  A sender encodes 
- * the information into a bit vector, the Bloom filter, that is more compact than a conventional 
- * representation. Computation and space costs for construction are linear in the number of elements.  
- * The receiver uses the filter to test whether various elements are members of the set. Though the 
- * filter will occasionally return a false positive, it will never return a false negative. When creating 
- * the filter, the sender can choose its desired point in a trade-off between the false positive rate and the size. 
- * 
+ * offers for the transmission of set membership information between networked hosts.  A sender encodes
+ * the information into a bit vector, the Bloom filter, that is more compact than a conventional
+ * representation. Computation and space costs for construction are linear in the number of elements.
+ * The receiver uses the filter to test whether various elements are members of the set. Though the
+ * filter will occasionally return a false positive, it will never return a false negative. When creating
+ * the filter, the sender can choose its desired point in a trade-off between the false positive rate and the size.
+ *
  * contract <a href="http://www.one-lab.org">European Commission One-Lab Project 034819</a>.
  *
  * @version 1.0 - 2 Feb. 07
@@ -82,7 +82,7 @@ public class BloomFilter extends Filter {
     (byte)0x40,
     (byte)0x80
   };
-  
+
   /** The bit vector. */
   BitSet bits;
 
@@ -90,7 +90,7 @@ public class BloomFilter extends Filter {
   public BloomFilter() {
     super();
   }
-  
+
   /**
    * Constructor
    * @param vectorSize The vector size of <i>this</i> filter.
@@ -183,7 +183,7 @@ public class BloomFilter extends Filter {
     bf.or(this);
     return bf;
   }//end clone()
-  
+
   /**
    * @return size of the the bloomfilter
    */
@@ -228,7 +228,7 @@ public class BloomFilter extends Filter {
       }
     }
   }
-  
+
   /* @return number of bytes needed to hold bit vector */
   private int getNBytes() {
     return (vectorSize + 7) / 8;

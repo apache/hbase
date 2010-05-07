@@ -56,14 +56,14 @@ public class TimestampModel extends AbstractModel {
       throw new HBaseRestException(e);
     }
   }
-  
+
   @Deprecated
   public void delete(byte[] tableName, byte[] rowName, long timestamp)
       throws HBaseRestException {
     Delete delete = new Delete(rowName, timestamp, null);
     delete(tableName, delete);
   }
-  
+
   @Deprecated
   public void delete(byte[] tableName, byte[] rowName, byte[][] columns,
       long timestamp) throws HBaseRestException {
@@ -84,12 +84,12 @@ public class TimestampModel extends AbstractModel {
       throw new HBaseRestException(e);
     }
   }
-  
+
   @Deprecated
   public Cell get(byte[] tableName, byte[] rowName, byte[] columnName,
       long timestamp) throws HBaseRestException {
     Get get = new Get(rowName);
-    byte [][] famAndQf = KeyValue.parseColumn(columnName); 
+    byte [][] famAndQf = KeyValue.parseColumn(columnName);
     get.addColumn(famAndQf[0], famAndQf[1]);
     get.setTimeStamp(timestamp);
     return get(tableName, get).getCellValue(famAndQf[0], famAndQf[1]);
@@ -99,7 +99,7 @@ public class TimestampModel extends AbstractModel {
   public Cell[] get(byte[] tableName, byte[] rowName, byte[] columnName,
       long timestamp, int numVersions) throws IOException, HBaseRestException {
     Get get = new Get(rowName);
-    byte [][] famAndQf = KeyValue.parseColumn(columnName); 
+    byte [][] famAndQf = KeyValue.parseColumn(columnName);
     get.addColumn(famAndQf[0], famAndQf[1]);
     get.setTimeStamp(timestamp);
     get.setMaxVersions(numVersions);

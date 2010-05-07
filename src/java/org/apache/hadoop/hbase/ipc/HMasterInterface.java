@@ -31,27 +31,27 @@ import org.apache.hadoop.io.Writable;
  * Clients interact with the HMasterInterface to gain access to meta-level
  * HBase functionality, like finding an HRegionServer and creating/destroying
  * tables.
- * 
+ *
  * <p>NOTE: if you change the interface, you must change the RPC version
  * number in HBaseRPCProtocolVersion
- * 
+ *
  */
 public interface HMasterInterface extends HBaseRPCProtocolVersion {
 
   /** @return true if master is available */
   public boolean isMasterRunning();
-  
+
   // Admin tools would use these cmds
-  
+
   /**
    * Creates a new table.  If splitKeys are specified, then the table will be
    * created with an initial set of multiple regions.  If splitKeys is null,
    * the table will be created with a single region.
    * @param desc table descriptor
-   * @param splitKeys 
+   * @param splitKeys
    * @throws IOException
    */
-  public void createTable(HTableDescriptor desc, byte [][] splitKeys) 
+  public void createTable(HTableDescriptor desc, byte [][] splitKeys)
   throws IOException;
 
   /**
@@ -60,7 +60,7 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @throws IOException
    */
   public void deleteTable(final byte [] tableName) throws IOException;
-  
+
   /**
    * Adds a column to the specified table
    * @param tableName
@@ -77,8 +77,8 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @param descriptor new column descriptor
    * @throws IOException
    */
-  public void modifyColumn(final byte [] tableName, final byte [] columnName, 
-    HColumnDescriptor descriptor) 
+  public void modifyColumn(final byte [] tableName, final byte [] columnName,
+    HColumnDescriptor descriptor)
   throws IOException;
 
 
@@ -90,17 +90,17 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    */
   public void deleteColumn(final byte [] tableName, final byte [] columnName)
   throws IOException;
-  
+
   /**
    * Puts the table on-line (only needed if table has been previously taken offline)
    * @param tableName
    * @throws IOException
    */
   public void enableTable(final byte [] tableName) throws IOException;
-  
+
   /**
    * Take table offline
-   * 
+   *
    * @param tableName
    * @throws IOException
    */
@@ -108,7 +108,7 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
 
   /**
    * Modify a table's metadata
-   * 
+   *
    * @param tableName
    * @param op
    * @param args

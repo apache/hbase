@@ -48,7 +48,7 @@ public class ScanQueryMatcher extends QueryMatcher {
    * @param rowComparator
    */
   public ScanQueryMatcher(Scan scan, byte [] family,
-      NavigableSet<byte[]> columns, long ttl, 
+      NavigableSet<byte[]> columns, long ttl,
       KeyValue.KeyComparator rowComparator, int maxVersions) {
     this.tr = scan.getTimeRange();
     this.oldestStamp = System.currentTimeMillis() - ttl;
@@ -62,7 +62,7 @@ public class ScanQueryMatcher extends QueryMatcher {
     }
     this.filter = scan.getFilter();
     this.oldFilter = scan.getOldFilter();
-    
+
     // Single branch to deal with two types of reads (columns vs all in family)
     if (columns == null || columns.size() == 0) {
       // use a specialized scan for wildcard column tracker.
@@ -81,7 +81,7 @@ public class ScanQueryMatcher extends QueryMatcher {
    * - include the current KeyValue (MatchCode.INCLUDE)
    * - ignore the current KeyValue (MatchCode.SKIP)
    * - got to the next row (MatchCode.DONE)
-   * 
+   *
    * @param kv KeyValue to check
    * @return The match code instance.
    */
@@ -95,14 +95,14 @@ public class ScanQueryMatcher extends QueryMatcher {
 
     byte [] bytes = kv.getBuffer();
     int offset = kv.getOffset();
-    int initialOffset = offset; 
+    int initialOffset = offset;
 
     int keyLength = Bytes.toInt(bytes, offset, Bytes.SIZEOF_INT);
     offset += KeyValue.ROW_OFFSET;
-    
+
     short rowLength = Bytes.toShort(bytes, offset, Bytes.SIZEOF_SHORT);
     offset += Bytes.SIZEOF_SHORT;
-    
+
     int ret = this.rowComparator.compareRows(row, 0, row.length,
         bytes, offset, rowLength);
     if (ret <= -1) {
@@ -122,17 +122,17 @@ public class ScanQueryMatcher extends QueryMatcher {
       stickyNextRow = true;
       return MatchCode.SEEK_NEXT_ROW;
     }
-    
+
     //Passing rowLength
     offset += rowLength;
 
     //Skipping family
     byte familyLength = bytes [offset];
     offset += familyLength + 1;
-    
+
     int qualLength = keyLength + KeyValue.ROW_OFFSET -
       (offset - initialOffset) - KeyValue.TIMESTAMP_TYPE_SIZE;
-    
+
     long timestamp = kv.getTimestamp();
     if (isExpired(timestamp)) {
       // done, the rest of this column will also be expired as well.
@@ -145,7 +145,7 @@ public class ScanQueryMatcher extends QueryMatcher {
         this.deletes.add(bytes, offset, qualLength, timestamp, type);
         // Can't early out now, because DelFam come before any other keys
       }
-      // May be able to optimize the SKIP here, if we matched 
+      // May be able to optimize the SKIP here, if we matched
       // due to a DelFam, we can skip to next row
       // due to a DelCol, we can skip to next col
       // But it requires more info out of isDelete().

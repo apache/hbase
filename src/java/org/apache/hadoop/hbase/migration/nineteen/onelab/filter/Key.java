@@ -2,30 +2,30 @@
  *
  * Copyright (c) 2005, European Commission project OneLab under contract 034819 (http://www.one-lab.org)
  * All rights reserved.
- * Redistribution and use in source and binary forms, with or 
- * without modification, are permitted provided that the following 
+ * Redistribution and use in source and binary forms, with or
+ * without modification, are permitted provided that the following
  * conditions are met:
- *  - Redistributions of source code must retain the above copyright 
+ *  - Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- *  - Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the distribution.
  *  - Neither the name of the University Catholique de Louvain - UCL
- *    nor the names of its contributors may be used to endorse or 
- *    promote products derived from this software without specific prior 
+ *    nor the names of its contributors may be used to endorse or
+ *    promote products derived from this software without specific prior
  *    written permission.
- *    
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
@@ -59,11 +59,11 @@ import org.apache.hadoop.io.WritableComparable;
 public class Key implements WritableComparable {
   /** Byte value of key */
   byte[] bytes;
-  
+
   /**
    * The weight associated to <i>this</i> key.
    * <p>
-   * <b>Invariant</b>: if it is not specified, each instance of 
+   * <b>Invariant</b>: if it is not specified, each instance of
    * <code>Key</code> will have a default weight of 1.0
    */
   double weight;
@@ -103,7 +103,7 @@ public class Key implements WritableComparable {
     this.bytes = value;
     this.weight = weight;
   }
-  
+
   /** @return byte[] The value of <i>this</i> key. */
   public byte[] getBytes() {
     return this.bytes;
@@ -115,7 +115,7 @@ public class Key implements WritableComparable {
   }//end getWeight()
 
   /**
-   * Increments the weight of <i>this</i> key with a specified value. 
+   * Increments the weight of <i>this</i> key with a specified value.
    * @param weight The increment.
    */
   public void incrementWeight(double weight){
@@ -131,7 +131,7 @@ public class Key implements WritableComparable {
   public boolean equals(Object o) {
     return this.compareTo(o) == 0;
   }
-  
+
   @Override
   public int hashCode() {
     int result = 0;
@@ -149,15 +149,15 @@ public class Key implements WritableComparable {
     out.write(bytes);
     out.writeDouble(weight);
   }
-  
+
   public void readFields(DataInput in) throws IOException {
     this.bytes = new byte[in.readInt()];
     in.readFully(this.bytes);
     weight = in.readDouble();
   }
-  
+
   // Comparable
-  
+
   public int compareTo(Object o) {
     Key other = (Key)o;
 
@@ -165,7 +165,7 @@ public class Key implements WritableComparable {
     for(int i = 0; result == 0 && i < bytes.length; i++) {
       result = this.bytes[i] - other.bytes[i];
     }
-    
+
     if(result == 0) {
       result = Double.valueOf(this.weight - other.weight).intValue();
     }

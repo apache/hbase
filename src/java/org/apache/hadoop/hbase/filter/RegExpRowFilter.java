@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Implementation of RowFilterInterface that can filter by rowkey regular
  * expression and/or individual column values (equals comparison only). Multiple
  * column filters imply an implicit conjunction of filter criteria.
- * 
+ *
  * Note that column value filtering in this interface has been replaced by
  * {@link ColumnValueFilter}.
  * @deprecated This interface doesn't work well in new KeyValue world.
@@ -65,7 +65,7 @@ public class RegExpRowFilter implements RowFilterInterface {
 
   /**
    * Constructor that takes a row key regular expression to filter on.
-   * 
+   *
    * @param rowKeyRegExp
    */
   public RegExpRowFilter(final String rowKeyRegExp) {
@@ -75,7 +75,7 @@ public class RegExpRowFilter implements RowFilterInterface {
   /**
    * @deprecated Column filtering has been replaced by {@link ColumnValueFilter}
    * Constructor that takes a row key regular expression to filter on.
-   * 
+   *
    * @param rowKeyRegExp
    * @param columnFilter
    */
@@ -85,7 +85,7 @@ public class RegExpRowFilter implements RowFilterInterface {
     this.rowKeyRegExp = rowKeyRegExp;
     this.setColumnFilters(columnFilter);
   }
-  
+
   public void rowProcessed(boolean filtered, byte [] rowKey) {
     rowProcessed(filtered, rowKey, 0, rowKey.length);
   }
@@ -98,11 +98,11 @@ public class RegExpRowFilter implements RowFilterInterface {
   public boolean processAlways() {
     return false;
   }
-  
+
   /**
    * @deprecated Column filtering has been replaced by {@link ColumnValueFilter}
    * Specify a value that must be matched for the given column.
-   * 
+   *
    * @param colKey
    *          the column to match on
    * @param value
@@ -120,7 +120,7 @@ public class RegExpRowFilter implements RowFilterInterface {
   /**
    * @deprecated Column filtering has been replaced by {@link ColumnValueFilter}
    * Set column filters for a number of columns.
-   * 
+   *
    * @param columnFilter
    *          Map of columns with value criteria.
    */

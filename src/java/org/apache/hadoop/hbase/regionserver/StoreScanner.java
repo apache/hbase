@@ -77,7 +77,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
 
   /**
    * Used for major compactions.<p>
-   * 
+   *
    * Opens a scanner across specified StoreFiles.
    * @param store who we scan
    * @param scan the spec
@@ -108,7 +108,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     this.store = null;
     this.isGet = false;
     this.cacheBlocks = scan.getCacheBlocks();
-    this.matcher = new ScanQueryMatcher(scan, colFamily, columns, ttl, 
+    this.matcher = new ScanQueryMatcher(scan, colFamily, columns, ttl,
         comparator.getRawComparator(), scan.getMaxVersions());
 
     // Seek all scanners to the initial key
@@ -209,12 +209,12 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
         case SKIP:
           this.heap.next();
           break;
-          
+
         default:
           throw new RuntimeException("UNEXPECTED");
       }
     }
-    
+
     if (!results.isEmpty()) {
       // copy jazz
       outResult.addAll(results);

@@ -36,7 +36,7 @@ public class InclusiveStopRowFilter extends StopRowFilter {
 
   /**
    * Constructor that takes a stopRowKey on which to filter
-   * 
+   *
    * @param stopRowKey rowKey to filter on.
    */
   public InclusiveStopRowFilter(final byte [] stopRowKey) {

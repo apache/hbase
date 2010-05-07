@@ -39,7 +39,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 /**
  * A job with a map to count rows.
- * Map outputs table rows IF the input row has columns that have content.  
+ * Map outputs table rows IF the input row has columns that have content.
  * Uses an {@link IdentityReducer}
  */
 @Deprecated
@@ -108,13 +108,13 @@ public class RowCounter extends Configured implements Tool {
     FileOutputFormat.setOutputPath(c, new Path(args[0]));
     return c;
   }
-  
+
   static int printUsage() {
     System.out.println(NAME +
       " <outputdir> <tablename> <column1> [<column2>...]");
     return -1;
   }
-  
+
   public int run(final String[] args) throws Exception {
     // Make sure there are at least 3 parameters
     if (args.length < 3) {

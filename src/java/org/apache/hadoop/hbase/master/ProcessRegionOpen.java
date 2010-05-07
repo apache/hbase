@@ -28,9 +28,9 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 
-/** 
+/**
  * ProcessRegionOpen is instantiated when a region server reports that it is
- * serving a region. This applies to all meta and user regions except the 
+ * serving a region. This applies to all meta and user regions except the
  * root region which is handled specially.
  */
 class ProcessRegionOpen extends ProcessRegionStatusChange {

@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
 
-/** 
+/**
  * Used to perform Put operations for a single row.
  * <p>
  * To perform a Put, instantiate a Put object with the row to insert to and
@@ -49,18 +49,18 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   private long timestamp = HConstants.LATEST_TIMESTAMP;
   private long lockId = -1L;
   private boolean writeToWAL = true;
-  
+
   private Map<byte [], List<KeyValue>> familyMap =
     new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
-  
+
   private static final long OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + ClassSize.REFERENCE + 
-      2 * Bytes.SIZEOF_LONG + Bytes.SIZEOF_BOOLEAN + 
+      ClassSize.OBJECT + ClassSize.REFERENCE +
+      2 * Bytes.SIZEOF_LONG + Bytes.SIZEOF_BOOLEAN +
       ClassSize.REFERENCE + ClassSize.TREEMAP);
-  
+
   /** Constructor for Writable. DO NOT USE */
   public Put() {}
-  
+
   /**
    * Create a Put operation for the specified row.
    * @param row row key
@@ -92,7 +92,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
     this(putToCopy.getRow(), putToCopy.getRowLock());
     this.timestamp = putToCopy.timestamp;
     this.writeToWAL = putToCopy.writeToWAL;
-    this.familyMap = 
+    this.familyMap =
       new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
     for(Map.Entry<byte [], List<KeyValue>> entry :
       putToCopy.getFamilyMap().entrySet()) {
@@ -111,7 +111,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   }
 
   /**
-   * Add the specified column and value, with the specified timestamp as 
+   * Add the specified column and value, with the specified timestamp as
    * its version to this Put operation.
    * @param column Old style column name with family and qualifier put together
    * with a colon.
@@ -124,7 +124,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   }
 
   /**
-   * Add the specified column and value, with the specified timestamp as 
+   * Add the specified column and value, with the specified timestamp as
    * its version to this Put operation.
    * @param family family name
    * @param qualifier column qualifier
@@ -138,9 +138,9 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
     familyMap.put(kv.getFamily(), list);
     return this;
   }
-  
+
   /**
-   * Add the specified KeyValue to this Put operation.  Operation assumes that 
+   * Add the specified KeyValue to this Put operation.  Operation assumes that
    * the passed KeyValue is immutable and its backing array will not be modified
    * for the duration of this Put.
    * @param kv
@@ -149,12 +149,12 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
     byte [] family = kv.getFamily();
     List<KeyValue> list = getKeyValueList(family);
     //Checking that the row of the kv is the same as the put
-    int res = Bytes.compareTo(this.row, 0, row.length, 
+    int res = Bytes.compareTo(this.row, 0, row.length,
         kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
     if(res != 0) {
-      throw new IOException("The row in the recently added KeyValue " + 
-          Bytes.toStringBinary(kv.getBuffer(), kv.getRowOffset(), 
-        kv.getRowLength()) + " doesn't match the original one " + 
+      throw new IOException("The row in the recently added KeyValue " +
+          Bytes.toStringBinary(kv.getBuffer(), kv.getRowOffset(),
+        kv.getRowLength()) + " doesn't match the original one " +
         Bytes.toStringBinary(this.row));
     }
     list.add(kv);
@@ -164,7 +164,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
 
   /**
    * Create a KeyValue with this objects row key and the Put identifier.
-   * 
+   *
    * @param family
    * @param qualifier
    * @param ts
@@ -173,15 +173,15 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    */
   private KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts,
       byte[] value) {
-  return  new KeyValue(this.row, family, qualifier, ts, KeyValue.Type.Put, 
+  return  new KeyValue(this.row, family, qualifier, ts, KeyValue.Type.Put,
       value);
   }
-  
+
   /**
-   * A convenience method to determine if this object's familyMap contains 
+   * A convenience method to determine if this object's familyMap contains
    * a value assigned to the given family & qualifier.
    * Both given arguments must match the KeyValue object to return true.
-   * 
+   *
    * @param family
    * @param qualifier
    * @return returns true if the given family and qualifier already has an
@@ -190,12 +190,12 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   public boolean has(byte [] family, byte [] qualifier) {
   return has(family, qualifier, this.timestamp, new byte[0], true, true);
   }
-  
+
   /**
-   * A convenience method to determine if this object's familyMap contains 
+   * A convenience method to determine if this object's familyMap contains
    * a value assigned to the given family, qualifier and timestamp.
    * All 3 given arguments must match the KeyValue object to return true.
-   * 
+   *
    * @param family
    * @param qualifier
    * @param ts
@@ -205,12 +205,12 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   public boolean has(byte [] family, byte [] qualifier, long ts) {
   return has(family, qualifier, ts, new byte[0], false, true);
   }
-  
+
   /**
-   * A convenience method to determine if this object's familyMap contains 
+   * A convenience method to determine if this object's familyMap contains
    * a value assigned to the given family, qualifier and timestamp.
    * All 3 given arguments must match the KeyValue object to return true.
-   * 
+   *
    * @param family
    * @param qualifier
    * @param value
@@ -220,38 +220,38 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   public boolean has(byte [] family, byte [] qualifier, byte [] value) {
     return has(family, qualifier, this.timestamp, value, true, false);
   }
-  
+
   /**
-   * A convenience method to determine if this object's familyMap contains 
+   * A convenience method to determine if this object's familyMap contains
    * the given value assigned to the given family, qualifier and timestamp.
    * All 4 given arguments must match the KeyValue object to return true.
-   * 
+   *
    * @param family
    * @param qualifier
    * @param ts
    * @param value
-   * @return returns true if the given family, qualifier timestamp and value 
+   * @return returns true if the given family, qualifier timestamp and value
    * already has an existing KeyValue object in the family map.
    */
   public boolean has(byte [] family, byte [] qualifier, long ts, byte [] value) {
       return has(family, qualifier, ts, value, false, false);
   }
-  
+
   /**
-   * Private method to determine if this object's familyMap contains 
+   * Private method to determine if this object's familyMap contains
    * the given value assigned to the given family, qualifier and timestamp
    * respecting the 2 boolean arguments
-   * 
+   *
    * @param family
    * @param qualifier
    * @param ts
    * @param value
    * @param ignoreTS
    * @param ignoreValue
-   * @return returns true if the given family, qualifier timestamp and value 
+   * @return returns true if the given family, qualifier timestamp and value
    * already has an existing KeyValue object in the family map.
    */
-  private boolean has(byte [] family, byte [] qualifier, long ts, byte [] value, 
+  private boolean has(byte [] family, byte [] qualifier, long ts, byte [] value,
       boolean ignoreTS, boolean ignoreValue) {
     List<KeyValue> list = getKeyValueList(family);
     if (list.size() == 0 ) {
@@ -284,13 +284,13 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
     }
     return false;
   }
-  
+
   /**
    * Returns a list of all KeyValue objects with matching column family and qualifier.
-   * 
+   *
    * @param family
    * @param qualifier
-   * @return a list of KeyValue objects with the matching family and qualifier, 
+   * @return a list of KeyValue objects with the matching family and qualifier,
    * returns an empty list if one doesnt exist for the given family.
    */
   public List<KeyValue> get(byte[] family, byte[] qualifier) {
@@ -306,7 +306,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   /**
    * Creates an empty list if one doesnt exist for the given column family
    * or else it returns the associated list of KeyValue objects.
-   * 
+   *
    * @param family
    * @return a list of KeyValue objects, returns an empty list if one doesnt exist.
    */
@@ -317,7 +317,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
     }
     return list;
   }
-  
+
   /**
    * Method for retrieving the put's familyMap
    * @return familyMap
@@ -325,15 +325,15 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   public Map<byte [], List<KeyValue>> getFamilyMap() {
     return this.familyMap;
   }
-  
+
   /**
    * Method for retrieving the put's row
-   * @return row 
+   * @return row
    */
   public byte [] getRow() {
     return this.row;
   }
-  
+
   /**
    * Method for retrieving the put's RowLock
    * @return RowLock
@@ -341,7 +341,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   public RowLock getRowLock() {
     return new RowLock(this.row, this.lockId);
   }
-  
+
   /**
    * Method for retrieving the put's lockId
    * @return lockId
@@ -349,7 +349,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   public long getLockId() {
   	return this.lockId;
   }
-  
+
   /**
    * Method to check if the familyMap is empty
    * @return true if empty, false otherwise
@@ -357,14 +357,14 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   public boolean isEmpty() {
     return familyMap.isEmpty();
   }
-  
+
   /**
    * @return Timestamp
    */
   public long getTimeStamp() {
     return this.timestamp;
   }
-  
+
   /**
    * Method for setting the timestamp
    * NOTE - This does not affect the timestamp for values previously added to this Put.
@@ -375,9 +375,9 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
     this.timestamp = timestamp;
     return this;
   }
-  
+
   /**
-   * @return the number of different families included in this put 
+   * @return the number of different families included in this put
    */
   public int numFamilies() {
     return familyMap.size();
@@ -393,14 +393,14 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
     }
     return size;
   }
-  
+
   /**
    * @return true if edits should be applied to WAL, false if not
    */
   public boolean getWriteToWAL() {
     return this.writeToWAL;
   }
-  
+
   /**
    * Set whether this Put should be written to the WAL or not.
    * Not writing the WAL means you may lose edits on server crash.
@@ -409,9 +409,9 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   public void setWriteToWAL(boolean write) {
     this.writeToWAL = write;
   }
-  
+
   /**
-   * @return String 
+   * @return String
    */
   @Override
   public String toString() {
@@ -443,40 +443,40 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
     sb.append("}");
     return sb.toString();
   }
-  
+
   public int compareTo(Row p) {
     return Bytes.compareTo(this.getRow(), p.getRow());
   }
-  
+
   //HeapSize
   public long heapSize() {
     long heapsize = OVERHEAD;
     //Adding row
     heapsize += ClassSize.align(ClassSize.ARRAY + this.row.length);
-    
+
     //Adding map overhead
-    heapsize += 
+    heapsize +=
       ClassSize.align(this.familyMap.size() * ClassSize.MAP_ENTRY);
     for(Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
       //Adding key overhead
-      heapsize += 
+      heapsize +=
         ClassSize.align(ClassSize.ARRAY + entry.getKey().length);
-      
+
       //This part is kinds tricky since the JVM can reuse references if you
       //store the same value, but have a good match with SizeOf at the moment
       //Adding value overhead
       heapsize += ClassSize.align(ClassSize.ARRAYLIST);
       int size = entry.getValue().size();
-      heapsize += ClassSize.align(ClassSize.ARRAY + 
+      heapsize += ClassSize.align(ClassSize.ARRAY +
           size * ClassSize.REFERENCE);
-      
+
       for(KeyValue kv : entry.getValue()) {
         heapsize += kv.heapSize();
       }
     }
     return ClassSize.align((int)heapsize);
   }
-  
+
   //Writable
   public void readFields(final DataInput in)
   throws IOException {
@@ -502,7 +502,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
       this.familyMap.put(family, keys);
     }
   }
-  
+
   public void write(final DataOutput out)
   throws IOException {
     Bytes.writeByteArray(out, this.row);

@@ -35,19 +35,19 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * An HBase Key/Value.
- * 
+ *
  * <p>If being used client-side, the primary methods to access individual fields
- * are {@link #getRow()}, {@link #getFamily()}, {@link #getQualifier()}, 
+ * are {@link #getRow()}, {@link #getFamily()}, {@link #getQualifier()},
  * {@link #getTimestamp()}, and {@link #getValue()}.  These methods allocate new
  * byte arrays and return copies so they should be avoided server-side.
- * 
+ *
  * <p>Instances of this class are immutable.  They are not
  * comparable but Comparators are provided.  Comparators change with context,
  * whether user table or a catalog table comparison context.  Its
  * important that you use the appropriate comparator comparing rows in
  * particular.  There are Comparators for KeyValue instances and then for
  * just the Key portion of a KeyValue used mostly in {@link HFile}.
- * 
+ *
  * <p>KeyValue wraps a byte array and has offset and length for passed array
  * at where to start interpreting the content as a KeyValue blob.  The KeyValue
  * blob format inside the byte array is:
@@ -57,7 +57,7 @@ import org.apache.hadoop.io.Writable;
  * Rowlength maximum is Short.MAX_SIZE, column family length maximum is
  * Byte.MAX_SIZE, and column qualifier + key length must be < Integer.MAX_SIZE.
  * The column does not contain the family/qualifier delimiter.
- * 
+ *
  * <p>TODO: Group Key-only comparators and operations into a Key class, just
  * for neatness sake, if can figure what to call it.
  */
@@ -71,7 +71,7 @@ public class KeyValue implements Writable, HeapSize {
 
   public static final byte[] COLUMN_FAMILY_DELIM_ARRAY =
     new byte[]{COLUMN_FAMILY_DELIMITER};
-  
+
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values.
    */
@@ -109,10 +109,10 @@ public class KeyValue implements Writable, HeapSize {
 
   /**
    * Get the appropriate row comparator for the specified table.
-   * 
+   *
    * Hopefully we can get rid of this, I added this here because it's replacing
    * something in HSK.  We should move completely off of that.
-   * 
+   *
    * @param tableName  The table name.
    * @return The comparator.
    */
@@ -161,13 +161,13 @@ public class KeyValue implements Writable, HeapSize {
 
     // Maximum is used when searching; you look from maximum on down.
     Maximum((byte)255);
-    
+
     private final byte code;
-    
+
     Type(final byte c) {
       this.code = c;
     }
-    
+
     public byte getCode() {
       return this.code;
     }
@@ -193,9 +193,9 @@ public class KeyValue implements Writable, HeapSize {
    * Makes a Key with highest possible Timestamp, empty row and column.  No
    * key can be equal or lower than this one in memstore or in store file.
    */
-  public static final KeyValue LOWESTKEY = 
+  public static final KeyValue LOWESTKEY =
     new KeyValue(HConstants.EMPTY_BYTE_ARRAY, HConstants.LATEST_TIMESTAMP);
-  
+
   private byte [] bytes = null;
   private int offset = 0;
   private int length = 0;
@@ -216,7 +216,7 @@ public class KeyValue implements Writable, HeapSize {
 
   /** Dragon time over, return to normal business */
 
-  
+
   /** Writable Constructor -- DO NOT USE */
   public KeyValue() {}
 
@@ -254,23 +254,23 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /** Temporary constructors until 880/1249 is committed to remove deps */
-  
+
   /**
    * Temporary.
    */
   public KeyValue(final byte [] row, final byte [] column) {
     this(row, column, HConstants.LATEST_TIMESTAMP, null);
   }
-  
+
   public KeyValue(final byte [] row, final byte [] column, long ts) {
     this(row, column, ts, null);
   }
-  
+
   public KeyValue(final byte [] row, final byte [] column, long ts,
       byte [] value) {
     this(row, column, ts, Type.Put, value);
   }
-  
+
   public KeyValue(final byte [] row, final byte [] column, long ts, Type type,
       byte [] value) {
     int rlength = row == null ? 0 : row.length;
@@ -281,9 +281,9 @@ public class KeyValue implements Writable, HeapSize {
     this.length = this.bytes.length;
     this.offset = 0;
   }
-  
+
   /** Constructors that build a new backing byte array from fields */
-  
+
   /**
    * Constructs KeyValue structure filled with null value.
    * Sets type to {@link KeyValue.Type#Maximum}
@@ -310,7 +310,7 @@ public class KeyValue implements Writable, HeapSize {
    * @param family family name
    * @param qualifier column qualifier
    */
-  public KeyValue(final byte [] row, final byte [] family, 
+  public KeyValue(final byte [] row, final byte [] family,
       final byte [] qualifier) {
     this(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Maximum);
   }
@@ -321,7 +321,7 @@ public class KeyValue implements Writable, HeapSize {
    * @param family family name
    * @param qualifier column qualifier
    */
-  public KeyValue(final byte [] row, final byte [] family, 
+  public KeyValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final byte [] value) {
     this(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Put, value);
   }
@@ -339,7 +339,7 @@ public class KeyValue implements Writable, HeapSize {
       final byte[] qualifier, final long timestamp, Type type) {
     this(row, family, qualifier, timestamp, type, null);
   }
-  
+
   /**
    * Constructs KeyValue structure filled with specified values.
    * @param row row key
@@ -353,7 +353,7 @@ public class KeyValue implements Writable, HeapSize {
       final byte[] qualifier, final long timestamp, final byte[] value) {
     this(row, family, qualifier, timestamp, Type.Put, value);
   }
-  
+
   /**
    * Constructs KeyValue structure filled with specified values.
    * @param row row key
@@ -367,9 +367,9 @@ public class KeyValue implements Writable, HeapSize {
   public KeyValue(final byte[] row, final byte[] family,
       final byte[] qualifier, final long timestamp, Type type,
       final byte[] value) {
-    this(row, family, qualifier, 0, qualifier==null ? 0 : qualifier.length, 
+    this(row, family, qualifier, 0, qualifier==null ? 0 : qualifier.length,
         timestamp, type, value, 0, value==null ? 0 : value.length);
-  } 
+  }
 
   /**
    * Constructs KeyValue structure filled with specified values.
@@ -385,12 +385,12 @@ public class KeyValue implements Writable, HeapSize {
    * @param vlength value length
    * @throws IllegalArgumentException
    */
-  public KeyValue(byte [] row, byte [] family, 
-      byte [] qualifier, int qoffset, int qlength, long timestamp, Type type, 
+  public KeyValue(byte [] row, byte [] family,
+      byte [] qualifier, int qoffset, int qlength, long timestamp, Type type,
       byte [] value, int voffset, int vlength) {
-    this(row, 0, row==null ? 0 : row.length, 
+    this(row, 0, row==null ? 0 : row.length,
         family, 0, family==null ? 0 : family.length,
-        qualifier, qoffset, qlength, timestamp, type, 
+        qualifier, qoffset, qlength, timestamp, type,
         value, voffset, vlength);
   }
 
@@ -419,7 +419,7 @@ public class KeyValue implements Writable, HeapSize {
       final byte [] qualifier, final int qoffset, final int qlength,
       final long timestamp, final Type type,
       final byte [] value, final int voffset, final int vlength) {
-    this.bytes = createByteArray(row, roffset, rlength, 
+    this.bytes = createByteArray(row, roffset, rlength,
         family, foffset, flength, qualifier, qoffset, qlength,
         timestamp, type, value, voffset, vlength);
     this.length = bytes.length;
@@ -428,7 +428,7 @@ public class KeyValue implements Writable, HeapSize {
 
   /**
    * Write KeyValue format into a byte array.
-   * 
+   *
    * @param row row key
    * @param roffset row offset
    * @param rlength row length
@@ -443,7 +443,7 @@ public class KeyValue implements Writable, HeapSize {
    * @param value column value
    * @param voffset value offset
    * @param vlength value length
-   * @return The newly created byte array. 
+   * @return The newly created byte array.
    */
   static byte [] createByteArray(final byte [] row, final int roffset,
       final int rlength, final byte [] family, final int foffset, int flength,
@@ -476,10 +476,10 @@ public class KeyValue implements Writable, HeapSize {
     // Value length
     vlength = value == null? 0 : vlength;
     if (vlength > HConstants.MAXIMUM_VALUE_LENGTH) {
-      throw new IllegalArgumentException("Valuer > " + 
+      throw new IllegalArgumentException("Valuer > " +
           HConstants.MAXIMUM_VALUE_LENGTH);
     }
-    
+
     // Allocate right-sized byte array.
     byte [] bytes = new byte[KEYVALUE_INFRASTRUCTURE_SIZE + keylength + vlength];
     // Write key, value and key row length.
@@ -502,7 +502,7 @@ public class KeyValue implements Writable, HeapSize {
     }
     return bytes;
   }
-  
+
   /**
    * Write KeyValue format into a byte array.
    * <p>
@@ -518,7 +518,7 @@ public class KeyValue implements Writable, HeapSize {
    * @param value
    * @param voffset
    * @param vlength
-   * @return The newly created byte array. 
+   * @return The newly created byte array.
    */
   static byte [] createByteArray(final byte [] row, final int roffset,
         final int rlength,
@@ -560,7 +560,7 @@ public class KeyValue implements Writable, HeapSize {
   //  KeyValue cloning
   //
   //---------------------------------------------------------------------------
-  
+
   /**
    * Clones a KeyValue.  This creates a copy, re-allocating the buffer.
    * @return Fully copied clone of this KeyValue
@@ -576,7 +576,7 @@ public class KeyValue implements Writable, HeapSize {
   //  String representation
   //
   //---------------------------------------------------------------------------
-  
+
   public String toString() {
     if (this.bytes == null || this.bytes.length == 0) {
       return "empty";
@@ -627,7 +627,7 @@ public class KeyValue implements Writable, HeapSize {
   //  Public Member Accessors
   //
   //---------------------------------------------------------------------------
-  
+
   /**
    * @return The byte array backing this KeyValue.
    */
@@ -654,7 +654,7 @@ public class KeyValue implements Writable, HeapSize {
   //  Length and Offset Calculators
   //
   //---------------------------------------------------------------------------
-  
+
   /**
    * Determines the total length of the KeyValue stored in the specified
    * byte array and offset.  Includes all headers.
@@ -663,7 +663,7 @@ public class KeyValue implements Writable, HeapSize {
    * @return length of entire KeyValue, in bytes
    */
   private static int getLength(byte [] bytes, int offset) {
-    return (2 * Bytes.SIZEOF_INT) + 
+    return (2 * Bytes.SIZEOF_INT) +
         Bytes.toInt(bytes, offset) +
         Bytes.toInt(bytes, offset + Bytes.SIZEOF_INT);
   }
@@ -692,7 +692,7 @@ public class KeyValue implements Writable, HeapSize {
   public int getValueOffset() {
     return getKeyOffset() + getKeyLength();
   }
-  
+
   /**
    * @return Value length
    */
@@ -706,7 +706,7 @@ public class KeyValue implements Writable, HeapSize {
   public int getRowOffset() {
     return getKeyOffset() + Bytes.SIZEOF_SHORT;
   }
-  
+
   /**
    * @return Row length
    */
@@ -720,21 +720,21 @@ public class KeyValue implements Writable, HeapSize {
   public int getFamilyOffset() {
     return getFamilyOffset(getRowLength());
   }
-  
+
   /**
    * @return Family offset
    */
   public int getFamilyOffset(int rlength) {
     return this.offset + ROW_OFFSET + Bytes.SIZEOF_SHORT + rlength + Bytes.SIZEOF_BYTE;
   }
-  
+
   /**
    * @return Family length
    */
   public byte getFamilyLength() {
     return getFamilyLength(getFamilyOffset());
   }
-  
+
   /**
    * @return Family length
    */
@@ -748,29 +748,29 @@ public class KeyValue implements Writable, HeapSize {
   public int getQualifierOffset() {
     return getQualifierOffset(getFamilyOffset());
   }
-  
+
   /**
    * @return Qualifier offset
    */
   public int getQualifierOffset(int foffset) {
     return foffset + getFamilyLength(foffset);
   }
-  
+
   /**
    * @return Qualifier length
    */
   public int getQualifierLength() {
     return getQualifierLength(getRowLength(),getFamilyLength());
   }
-  
+
   /**
    * @return Qualifier length
    */
   public int getQualifierLength(int rlength, int flength) {
-    return getKeyLength() - 
+    return getKeyLength() -
       (KEY_INFRASTRUCTURE_SIZE + rlength + flength);
   }
-  
+
   /**
    * @return Column (family + qualifier) length
    */
@@ -779,7 +779,7 @@ public class KeyValue implements Writable, HeapSize {
     int foffset = getFamilyOffset(rlength);
     return getTotalColumnLength(rlength,foffset);
   }
-  
+
   /**
    * @return Column (family + qualifier) length
    */
@@ -788,14 +788,14 @@ public class KeyValue implements Writable, HeapSize {
     int qlength = getQualifierLength(rlength,flength);
     return flength + qlength;
   }
-  
+
   /**
    * @return Timestamp offset
    */
   public int getTimestampOffset() {
     return getTimestampOffset(getKeyLength());
   }
-  
+
   /**
    * @param keylength Pass if you have it to save on a int creation.
    * @return Timestamp offset
@@ -808,7 +808,7 @@ public class KeyValue implements Writable, HeapSize {
    * @return True if this KeyValue has a LATEST_TIMESTAMP timestamp.
    */
   public boolean isLatestTimestamp() {
-    return  Bytes.compareTo(getBuffer(), getTimestampOffset(), Bytes.SIZEOF_LONG, 
+    return  Bytes.compareTo(getBuffer(), getTimestampOffset(), Bytes.SIZEOF_LONG,
       HConstants.LATEST_TIMESTAMP_BYTES, 0, Bytes.SIZEOF_LONG) == 0;
   }
 
@@ -820,17 +820,17 @@ public class KeyValue implements Writable, HeapSize {
     }
     return false;
   }
-  
+
   //---------------------------------------------------------------------------
   //
   //  Methods that return copies of fields
   //
   //---------------------------------------------------------------------------
-  
+
   /**
    * Do not use unless you have to.  Used internally for compacting and testing.
-   * 
-   * Use {@link #getRow()}, {@link #getFamily()}, {@link #getQualifier()}, and 
+   *
+   * Use {@link #getRow()}, {@link #getFamily()}, {@link #getQualifier()}, and
    * {@link #getValue()} if accessing a KeyValue client-side.
    * @return Copy of the key portion only.
    */
@@ -840,7 +840,7 @@ public class KeyValue implements Writable, HeapSize {
     System.arraycopy(getBuffer(), getKeyOffset(), key, 0, keylength);
     return key;
   }
-  
+
   /**
    * Returns value in a new byte array.
    * Primarily for use client-side. If server-side, use
@@ -855,12 +855,12 @@ public class KeyValue implements Writable, HeapSize {
     System.arraycopy(getBuffer(), o, result, 0, l);
     return result;
   }
-  
+
   /**
    * Primarily for use client-side.  Returns the row of this KeyValue in a new
    * byte array.<p>
-   * 
-   * If server-side, use {@link #getBuffer()} with appropriate offsets and 
+   *
+   * If server-side, use {@link #getBuffer()} with appropriate offsets and
    * lengths instead.
    * @return Row in a new byte array.
    */
@@ -873,7 +873,7 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * 
+   *
    * @return Timestamp
    */
   public long getTimestamp() {
@@ -931,8 +931,8 @@ public class KeyValue implements Writable, HeapSize {
   /**
    * Primarily for use client-side.  Returns the column of this KeyValue in the
    * deprecated format: <i>family:qualifier</i>, and in a new byte array.<p>
-   * 
-   * If server-side, use {@link #getBuffer()} with appropriate offsets and 
+   *
+   * If server-side, use {@link #getBuffer()} with appropriate offsets and
    * lengths instead.
    * @return Returns column. Makes a copy.  Inserts delimiter.
    */
@@ -948,10 +948,10 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * Primarily for use client-side.  Returns the family of this KeyValue in a 
+   * Primarily for use client-side.  Returns the family of this KeyValue in a
    * new byte array.<p>
-   * 
-   * If server-side, use {@link #getBuffer()} with appropriate offsets and 
+   *
+   * If server-side, use {@link #getBuffer()} with appropriate offsets and
    * lengths instead.
    * @return Returns family. Makes a copy.
    */
@@ -964,10 +964,10 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * Primarily for use client-side.  Returns the column qualifier of this 
+   * Primarily for use client-side.  Returns the column qualifier of this
    * KeyValue in a new byte array.<p>
-   * 
-   * If server-side, use {@link #getBuffer()} with appropriate offsets and 
+   *
+   * If server-side, use {@link #getBuffer()} with appropriate offsets and
    * lengths instead.
    * Use {@link #getBuffer()} with appropriate offsets and lengths instead.
    * @return Returns qualifier. Makes a copy.
@@ -985,7 +985,7 @@ public class KeyValue implements Writable, HeapSize {
   //  KeyValue splitter
   //
   //---------------------------------------------------------------------------
-  
+
   /**
    * Utility class that splits a KeyValue buffer into separate byte arrays.
    * <p>
@@ -1009,7 +1009,7 @@ public class KeyValue implements Writable, HeapSize {
     public byte [] getType() { return this.split[4]; }
     public byte [] getValue() { return this.split[5]; }
   }
-  
+
   public SplitKeyValue split() {
     SplitKeyValue split = new SplitKeyValue();
     int splitOffset = this.offset;
@@ -1049,13 +1049,13 @@ public class KeyValue implements Writable, HeapSize {
     split.setValue(value);
     return split;
   }
-  
+
   //---------------------------------------------------------------------------
   //
-  //  Compare specified fields against those contained in this KeyValue 
+  //  Compare specified fields against those contained in this KeyValue
   //
   //---------------------------------------------------------------------------
-  
+
   /**
    * @param family
    * @return True if matching families.
@@ -1076,7 +1076,7 @@ public class KeyValue implements Writable, HeapSize {
   public boolean matchingQualifier(final byte [] qualifier) {
     int o = getQualifierOffset();
     int l = getQualifierLength();
-    return Bytes.compareTo(qualifier, 0, qualifier.length, 
+    return Bytes.compareTo(qualifier, 0, qualifier.length,
         this.bytes, o, l) == 0;
   }
 
@@ -1178,7 +1178,7 @@ public class KeyValue implements Writable, HeapSize {
 
   /**
    * Splits a column in family:qualifier form into separate byte arrays.
-   * 
+   *
    * @param c  The column.
    * @return The parsed column.
    */
@@ -1199,7 +1199,7 @@ public class KeyValue implements Writable, HeapSize {
       len);
     return result;
   }
-  
+
   /**
    * @param b
    * @return Index of the family-qualifier colon delimiter character in passed
@@ -1278,7 +1278,7 @@ public class KeyValue implements Writable, HeapSize {
    */
   public static class RootComparator extends MetaComparator {
     private final KeyComparator rawcomparator = new RootKeyComparator();
-    
+
     public KeyComparator getRawComparator() {
       return this.rawcomparator;
     }
@@ -1349,7 +1349,7 @@ public class KeyValue implements Writable, HeapSize {
      * @return Result comparing rows.
      */
     public int compareRows(final KeyValue left, final KeyValue right) {
-      return compareRows(left, left.getRowLength(), right, 
+      return compareRows(left, left.getRowLength(), right,
           right.getRowLength());
     }
 
@@ -1382,7 +1382,7 @@ public class KeyValue implements Writable, HeapSize {
       return getRawComparator().compareRows(left, loffset, llength,
         right, roffset, rlength);
     }
-    
+
     public int compareColumns(final KeyValue left, final byte [] right,
         final int roffset, final int rlength, final int rfamilyoffset) {
       int offset = left.getFamilyOffset();
@@ -1460,7 +1460,7 @@ public class KeyValue implements Writable, HeapSize {
     public boolean matchingRows(final byte [] left, final int loffset,
         final int llength,
         final byte [] right, final int roffset, final int rlength) {
-      int compare = compareRows(left, loffset, llength, 
+      int compare = compareRows(left, loffset, llength,
           right, roffset, rlength);
       if (compare != 0) {
         return false;
@@ -1489,7 +1489,7 @@ public class KeyValue implements Writable, HeapSize {
     protected Object clone() throws CloneNotSupportedException {
       return new KVComparator();
     }
- 
+
     /**
      * @return Comparator that ignores timestamps; useful counting versions.
      */
@@ -1534,7 +1534,7 @@ public class KeyValue implements Writable, HeapSize {
    * Create a KeyValue that is smaller than all other possible KeyValues
    * for the given row. That is any (valid) KeyValue on 'row' would sort
    * _after_ the result.
-   * 
+   *
    * @param row - row key (arbitrary byte array)
    * @return First possible KeyValue on passed <code>row</code>
    */
@@ -1593,7 +1593,7 @@ public class KeyValue implements Writable, HeapSize {
       final byte [] q, final long ts) {
     return new KeyValue(row, f, q, ts, Type.Maximum);
   }
-  
+
   /**
    * @param b
    * @param o
@@ -1622,7 +1622,7 @@ public class KeyValue implements Writable, HeapSize {
       //          "---" + Bytes.toString(right, roffset, rlength));
       final int metalength = 7; // '.META.' length
       int lmetaOffsetPlusDelimiter = loffset + metalength;
-      int leftFarDelimiter = getDelimiterInReverse(left, 
+      int leftFarDelimiter = getDelimiterInReverse(left,
           lmetaOffsetPlusDelimiter,
           llength - metalength, HRegionInfo.DELIMITER);
       int rmetaOffsetPlusDelimiter = roffset + metalength;
@@ -1756,7 +1756,7 @@ public class KeyValue implements Writable, HeapSize {
 
       // if row matches, and no column in the 'left' AND put type is 'minimum',
       // then return that left is larger than right.
-      
+
       // This supports 'last key on a row' - the magic is if there is no column in the
       // left operand, and the left operand has a type of '0' - magical value,
       // then we say the left is bigger.  This will let us seek to the last key in
@@ -1778,7 +1778,7 @@ public class KeyValue implements Writable, HeapSize {
       if (compare != 0) {
         return compare;
       }
-      
+
       if (!this.ignoreTimestamp) {
         // Get timestamps.
         long ltimestamp = Bytes.toLong(left,
@@ -1828,15 +1828,15 @@ public class KeyValue implements Writable, HeapSize {
       return 0;
     }
   }
-  
+
   // HeapSize
   public long heapSize() {
-    return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE + 
-        ClassSize.align(ClassSize.ARRAY + length) + 
+    return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE +
+        ClassSize.align(ClassSize.ARRAY + length) +
         (2 * Bytes.SIZEOF_INT) +
         Bytes.SIZEOF_LONG);
   }
-  
+
   // this overload assumes that the length bytes have already been read,
   // and it expects the length of the KeyValue to be explicitly passed
   // to it.
@@ -1846,13 +1846,13 @@ public class KeyValue implements Writable, HeapSize {
     this.bytes = new byte[this.length];
     in.readFully(this.bytes, 0, this.length);
   }
-  
+
   // Writable
   public void readFields(final DataInput in) throws IOException {
     int length = in.readInt();
     readFields(length, in);
   }
-  
+
   public void write(final DataOutput out) throws IOException {
     out.writeInt(this.length);
     out.write(this.bytes, this.offset, this.length);

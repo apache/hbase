@@ -36,7 +36,7 @@ import org.apache.hadoop.io.Writable;
 public class HBaseMapFile extends MapFile {
   // TODO not used. remove?!
   //  private static final Log LOG = LogFactory.getLog(HBaseMapFile.class);
-  
+
   /**
    * Values are instances of this class.
    */
@@ -61,7 +61,7 @@ public class HBaseMapFile extends MapFile {
     throws IOException {
       this(fs, dirName, conf, false, hri);
     }
-    
+
     /**
      * @param fs
      * @param dirName
@@ -73,11 +73,11 @@ public class HBaseMapFile extends MapFile {
     public HBaseReader(FileSystem fs, String dirName, Configuration conf,
         boolean blockCacheEnabled, HRegionInfo hri)
     throws IOException {
-      super(fs, dirName, new org.apache.hadoop.hbase.migration.nineteen.HStoreKey.HStoreKeyWritableComparator(hri), 
+      super(fs, dirName, new org.apache.hadoop.hbase.migration.nineteen.HStoreKey.HStoreKeyWritableComparator(hri),
           conf, false); // defer opening streams
       this.blockCacheEnabled = blockCacheEnabled;
       open(fs, dirName, new org.apache.hadoop.hbase.migration.nineteen.HStoreKey.HStoreKeyWritableComparator(hri), conf);
-      
+
       // Force reading of the mapfile index by calling midKey. Reading the
       // index will bring the index into memory over here on the client and
       // then close the index file freeing up socket connection and resources
@@ -85,8 +85,8 @@ public class HBaseMapFile extends MapFile {
       // load the index force the issue in HStoreFile MapFiles because an
       // access may not happen for some time; meantime we're using up datanode
       // resources (See HADOOP-2341). midKey() goes to index. Does not seek.
-      
-      
+
+
       // Disable for migration !!! midKey();
     }
   }

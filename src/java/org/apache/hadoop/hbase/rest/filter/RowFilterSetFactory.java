@@ -28,14 +28,14 @@ import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 
 /**
  * Constructs a RowFilterSet from a JSON argument String.
- * 
+ *
  * Assumes that the input is a JSONArray consisting of JSON Object version of
  * the filters that you wish to mash together in an AND statement.
- * 
+ *
  * The Syntax for the individual inner filters are defined by their respective
  * FilterFactory. If a filter factory for said Factory does not exist, a
  * MalformedFilterJSONException will be thrown.
- * 
+ *
  * Currently OR Statements are not supported even though at a later iteration
  * they could be supported easily.
  */

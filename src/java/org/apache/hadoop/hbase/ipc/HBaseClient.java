@@ -56,14 +56,14 @@ import org.apache.hadoop.util.ReflectionUtils;
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
  * a port and is defined by a parameter class and a value class.
- * 
+ *
  * <p>This is the org.apache.hadoop.ipc.Client renamed as HBaseClient and
  * moved into this package so can access package-private methods.
- * 
+ *
  * @see HBaseServer
  */
 public class HBaseClient {
-  
+
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseClient");
   protected Hashtable<ConnectionId, Connection> connections =
@@ -73,7 +73,7 @@ public class HBaseClient {
   protected int counter;                            // counter for call ids
   protected AtomicBoolean running = new AtomicBoolean(true); // if client runs
   final protected Configuration conf;
-  final protected int maxIdleTime; //connections will be culled if it was idle for 
+  final protected int maxIdleTime; //connections will be culled if it was idle for
                            //maxIdleTime msecs
   final protected int maxRetries; //the max. no. of retries for socket connections
   final protected long failureSleep; // Time to sleep before retry on failure.
@@ -83,14 +83,14 @@ public class HBaseClient {
 
   protected SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
-  
+
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
   final static int DEFAULT_PING_INTERVAL = 60000; // 1 min
   final static int PING_CALL_ID = -1;
-  
+
   /**
    * set the ping interval value in configuration
-   * 
+   *
    * @param conf Configuration
    * @param pingInterval the ping interval
    */
@@ -101,14 +101,14 @@ public class HBaseClient {
   /**
    * Get the ping interval from configuration;
    * If not set in the configuration, return the default value.
-   * 
+   *
    * @param conf Configuration
    * @return the ping interval
    */
   final static int getPingInterval(Configuration conf) {
     return conf.getInt(PING_INTERVAL_NAME, DEFAULT_PING_INTERVAL);
   }
-  
+
   /**
    * Increment this client's reference count
    *
@@ -116,7 +116,7 @@ public class HBaseClient {
   synchronized void incCount() {
     refCount++;
   }
-  
+
   /**
    * Decrement this client's reference count
    *
@@ -124,10 +124,10 @@ public class HBaseClient {
   synchronized void decCount() {
     refCount--;
   }
-  
+
   /**
    * Return if this client has no reference
-   * 
+   *
    * @return true if this client has no reference; false otherwise
    */
   synchronized boolean isZeroReference() {
@@ -158,17 +158,17 @@ public class HBaseClient {
 
     /** Set the exception when there is an error.
      * Notify the caller the call is done.
-     * 
+     *
      * @param error exception thrown by the call; either local or remote
      */
     public synchronized void setException(IOException error) {
       this.error = error;
       callComplete();
     }
-    
-    /** Set the return value when there is no error. 
+
+    /** Set the return value when there is no error.
      * Notify the caller the call is done.
-     * 
+     *
      * @param value return value of the call.
      */
     public synchronized void setValue(Writable value) {
@@ -185,7 +185,7 @@ public class HBaseClient {
     private Socket socket = null;                 // connected socket
     private DataInputStream in;
     private DataOutputStream out;
-    
+
     // currently active calls
     private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
     private AtomicLong lastActivity = new AtomicLong();// last I/O activity time
@@ -195,10 +195,10 @@ public class HBaseClient {
     public Connection(InetSocketAddress address) throws IOException {
       this(new ConnectionId(address, null));
     }
-    
+
     public Connection(ConnectionId remoteId) throws IOException {
       if (remoteId.getAddress().isUnresolved()) {
-        throw new UnknownHostException("unknown host: " + 
+        throw new UnknownHostException("unknown host: " +
                                        remoteId.getAddress().getHostName());
       }
       this.remoteId = remoteId;
@@ -249,7 +249,7 @@ public class HBaseClient {
         }
         sendPing();
       }
-      
+
       /** Read a byte from the stream.
        * Send a ping if timeout on read. Retries if no failure is detected
        * until a byte is read.
@@ -269,7 +269,7 @@ public class HBaseClient {
       /** Read bytes into a buffer starting from offset <code>off</code>
        * Send a ping if timeout on read. Retries if no failure is detected
        * until a byte is read.
-       * 
+       *
        * @return the total number of bytes read; -1 if the connection is closed.
        */
       @Override
@@ -283,7 +283,7 @@ public class HBaseClient {
         } while (true);
       }
     }
-    
+
     /** Connect to the server and set up the I/O streams. It then sends
      * a header to the server and starts
      * the connection thread that waits for responses.
@@ -292,7 +292,7 @@ public class HBaseClient {
       if (socket != null || shouldCloseConnection.get()) {
         return;
       }
-      
+
       short ioFailures = 0;
       short timeoutFailures = 0;
       try {
@@ -370,8 +370,8 @@ public class HBaseClient {
       try {
         Thread.sleep(failureSleep);
       } catch (InterruptedException ignored) {}
-      
-      LOG.info("Retrying connect to server: " + remoteId.getAddress() + 
+
+      LOG.info("Retrying connect to server: " + remoteId.getAddress() +
         " after sleeping " + failureSleep + "ms. Already tried " + curRetries +
         " time(s).");
     }
@@ -384,17 +384,17 @@ public class HBaseClient {
       out.write(HBaseServer.CURRENT_VERSION);
       //When there are more fields we can have ConnectionHeader Writable.
       DataOutputBuffer buf = new DataOutputBuffer();
-      ObjectWritable.writeObject(buf, remoteId.getTicket(), 
+      ObjectWritable.writeObject(buf, remoteId.getTicket(),
                                  UserGroupInformation.class, conf);
       int bufLen = buf.getLength();
       out.writeInt(bufLen);
       out.write(buf.getData(), 0, bufLen);
     }
-    
+
     /* wait till someone signals us to start reading RPC response or
-     * it is idle too long, it is marked as to be closed, 
+     * it is idle too long, it is marked as to be closed,
      * or the client is marked as not running.
-     * 
+     *
      * Return true if it is time to read a response; false otherwise.
      */
     private synchronized boolean waitForWork() {
@@ -407,7 +407,7 @@ public class HBaseClient {
           } catch (InterruptedException e) {}
         }
       }
-      
+
       if (!calls.isEmpty() && !shouldCloseConnection.get() && running.get()) {
         return true;
       } else if (shouldCloseConnection.get()) {
@@ -415,7 +415,7 @@ public class HBaseClient {
       } else if (calls.isEmpty()) { // idle connection closed or stopped
         markClosed(null);
         return false;
-      } else { // get stopped but there are still pending requests 
+      } else { // get stopped but there are still pending requests
         markClosed((IOException)new IOException().initCause(
             new InterruptedException()));
         return false;
@@ -426,7 +426,7 @@ public class HBaseClient {
       return remoteId.getAddress();
     }
 
-    /* Send a ping to the server if the time elapsed 
+    /* Send a ping to the server if the time elapsed
      * since last I/O activity is equal to or greater than the ping interval
      */
     protected synchronized void sendPing() throws IOException {
@@ -443,7 +443,7 @@ public class HBaseClient {
     @Override
     public void run() {
       if (LOG.isDebugEnabled())
-        LOG.debug(getName() + ": starting, having connections " 
+        LOG.debug(getName() + ": starting, having connections "
             + connections.size());
 
       try {
@@ -456,7 +456,7 @@ public class HBaseClient {
       }
 
       close();
-      
+
       if (LOG.isDebugEnabled())
         LOG.debug(getName() + ": stopped, remaining connections "
             + connections.size());
@@ -477,7 +477,7 @@ public class HBaseClient {
         synchronized (this.out) {
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + " sending #" + call.id);
-          
+
           //for serializing the
           //data to be written
           d = new DataOutputBuffer();
@@ -496,7 +496,7 @@ public class HBaseClient {
         // close early
         IOUtils.closeStream(d);
       }
-    }  
+    }
 
     /* Receive a response.
      * Because only one receiver, so no synchronization on in.
@@ -506,7 +506,7 @@ public class HBaseClient {
         return;
       }
       touch();
-      
+
       try {
         int id = in.readInt();                    // try to read an id
 
@@ -529,14 +529,14 @@ public class HBaseClient {
         markClosed(e);
       }
     }
-    
+
     private synchronized void markClosed(IOException e) {
       if (shouldCloseConnection.compareAndSet(false, true)) {
         closeException = e;
         notifyAll();
       }
     }
-    
+
     /** Close the connection. */
     private synchronized void close() {
       if (!shouldCloseConnection.get()) {
@@ -579,14 +579,14 @@ public class HBaseClient {
       if (LOG.isDebugEnabled())
         LOG.debug(getName() + ": closed");
     }
-    
+
     /* Cleanup all calls and mark them as done */
     private void cleanupCalls() {
       Iterator<Entry<Integer, Call>> itor = calls.entrySet().iterator() ;
       while (itor.hasNext()) {
-        Call c = itor.next().getValue(); 
+        Call c = itor.next().getValue();
         c.setException(closeException); // local exception
-        itor.remove();         
+        itor.remove();
       }
     }
   }
@@ -595,7 +595,7 @@ public class HBaseClient {
   private class ParallelCall extends Call {
     private ParallelResults results;
     protected int index;
-    
+
     public ParallelCall(Writable param, ParallelResults results, int index) {
       super(param);
       this.results = results;
@@ -639,10 +639,10 @@ public class HBaseClient {
    * @param conf
    * @param factory
    */
-  public HBaseClient(Class<? extends Writable> valueClass, Configuration conf, 
+  public HBaseClient(Class<? extends Writable> valueClass, Configuration conf,
       SocketFactory factory) {
     this.valueClass = valueClass;
-    this.maxIdleTime = 
+    this.maxIdleTime =
       conf.getInt("hbase.ipc.client.connection.maxidletime", 10000); //10s
     this.maxRetries = conf.getInt("hbase.ipc.client.connect.max.retries", 0);
     this.failureSleep = conf.getInt("hbase.client.pause", 2000);
@@ -664,7 +664,7 @@ public class HBaseClient {
   public HBaseClient(Class<? extends Writable> valueClass, Configuration conf) {
     this(valueClass, conf, NetUtils.getDefaultSocketFactory(conf));
   }
- 
+
   /** Return the socket factory of this client
    *
    * @return this client's socket factory
@@ -683,14 +683,14 @@ public class HBaseClient {
     if (!running.compareAndSet(true, false)) {
       return;
     }
-    
+
     // wake up all connections
     synchronized (connections) {
       for (Connection conn : connections.values()) {
         conn.interrupt();
       }
     }
-    
+
     // wait until all connections are closed
     while (!connections.isEmpty()) {
       try {
@@ -702,19 +702,19 @@ public class HBaseClient {
 
   /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code>, returning the value.  Throws exceptions if there are
-   * network problems or if the remote code threw an exception. 
-   * @param param 
-   * @param address 
-   * @return Writable 
+   * network problems or if the remote code threw an exception.
+   * @param param
+   * @param address
+   * @return Writable
    * @throws IOException
    */
   public Writable call(Writable param, InetSocketAddress address)
   throws IOException {
       return call(param, address, null);
   }
-  
-  public Writable call(Writable param, InetSocketAddress addr, 
-                       UserGroupInformation ticket)  
+
+  public Writable call(Writable param, InetSocketAddress addr,
+                       UserGroupInformation ticket)
                        throws IOException {
     Call call = new Call(param);
     Connection connection = getConnection(addr, ticket, call);
@@ -750,11 +750,11 @@ public class HBaseClient {
   /**
    * Take an IOException and the address we were trying to connect to
    * and return an IOException with the input exception as the cause.
-   * The new exception provides the stack trace of the place where 
+   * The new exception provides the stack trace of the place where
    * the exception is thrown and some extra diagnostics information.
-   * If the exception is ConnectException or SocketTimeoutException, 
+   * If the exception is ConnectException or SocketTimeoutException,
    * return a new one of the same type; Otherwise return an IOException.
-   * 
+   *
    * @param addr target address
    * @param exception the relevant exception
    * @return an exception to throw
@@ -781,9 +781,9 @@ public class HBaseClient {
   /** Makes a set of calls in parallel.  Each parameter is sent to the
    * corresponding address.  When all values are available, or have timed out
    * or errored, the collected results are returned in an array.  The array
-   * contains nulls for calls that timed out or errored.  
-   * @param params 
-   * @param addresses 
+   * contains nulls for calls that timed out or errored.
+   * @param params
+   * @param addresses
    * @return  Writable[]
    * @throws IOException
    */
@@ -800,7 +800,7 @@ public class HBaseClient {
           connection.sendParam(call);             // send each parameter
         } catch (IOException e) {
           // log errors
-          LOG.info("Calling "+addresses[i]+" caught: " + 
+          LOG.info("Calling "+addresses[i]+" caught: " +
                    e.getMessage(),e);
           results.size--;                         //  wait for one fewer result
         }
@@ -817,7 +817,7 @@ public class HBaseClient {
 
   /** Get a connection from the pool, or create a new one and add it to the
    * pool.  Connections to a given host/port are reused. */
-  private Connection getConnection(InetSocketAddress addr, 
+  private Connection getConnection(InetSocketAddress addr,
                                    UserGroupInformation ticket,
                                    Call call)
                                    throws IOException {
@@ -826,7 +826,7 @@ public class HBaseClient {
       throw new IOException("The client is stopped");
     }
     Connection connection;
-    /* we could avoid this allocation for each RPC by having a  
+    /* we could avoid this allocation for each RPC by having a
      * connectionsId object and with set() method. We need to manage the
      * refs for keys in HashMap properly. For now its ok.
      */
@@ -840,7 +840,7 @@ public class HBaseClient {
         }
       }
     } while (!connection.addCall(call));
-    
+
     //we don't invoke the method below inside "synchronized (connections)"
     //block above. The reason for that is if the server happens to be slow,
     //it will take longer to establish a connection and that will slow the
@@ -856,19 +856,19 @@ public class HBaseClient {
   private static class ConnectionId {
     InetSocketAddress address;
     UserGroupInformation ticket;
-    
+
     ConnectionId(InetSocketAddress address, UserGroupInformation ticket) {
       this.address = address;
       this.ticket = ticket;
     }
-    
+
     InetSocketAddress getAddress() {
       return address;
     }
     UserGroupInformation getTicket() {
       return ticket;
     }
-    
+
     @Override
     public boolean equals(Object obj) {
      if (obj instanceof ConnectionId) {
@@ -878,10 +878,10 @@ public class HBaseClient {
      }
      return false;
     }
-    
+
     @Override
     public int hashCode() {
       return address.hashCode() ^ System.identityHashCode(ticket);
     }
-  }  
+  }
 }

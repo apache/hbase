@@ -38,7 +38,7 @@ import org.apache.hadoop.io.WritableComparable;
 
 /**
  * A Writable object that contains a series of BatchOperations
- * 
+ *
  * There is one BatchUpdate object per server, so a series of batch operations
  * can result in multiple BatchUpdate objects if the batch contains rows that
  * are served by multiple region servers.
@@ -47,25 +47,25 @@ import org.apache.hadoop.io.WritableComparable;
 public class BatchUpdate
 implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
   private static final Log LOG = LogFactory.getLog(BatchUpdate.class);
-  
+
   /**
    * Estimated 'shallow size' of this object not counting payload.
    */
   // Shallow size is 56.  Add 32 for the arraylist below.
   public static final int ESTIMATED_HEAP_TAX = 56 + 32;
-  
+
   // the row being updated
   private byte [] row = null;
   private long size = 0;
-    
+
   // the batched operations
   private ArrayList<BatchOperation> operations =
     new ArrayList<BatchOperation>();
-  
+
   private long timestamp = HConstants.LATEST_TIMESTAMP;
-  
+
   private long rowLock = -1l;
-  
+
   /**
    * Default constructor used serializing.  Do not use directly.
    */
@@ -76,7 +76,7 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
   /**
    * Initialize a BatchUpdate operation on a row. Timestamp is assumed to be
    * now.
-   * 
+   *
    * @param row
    */
   public BatchUpdate(final String row) {
@@ -86,7 +86,7 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
   /**
    * Initialize a BatchUpdate operation on a row. Timestamp is assumed to be
    * now.
-   * 
+   *
    * @param row
    */
   public BatchUpdate(final byte [] row) {
@@ -95,14 +95,14 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
 
   /**
    * Initialize a BatchUpdate operation on a row with a specific timestamp.
-   * 
+   *
    * @param row
    * @param timestamp
    */
   public BatchUpdate(final String row, long timestamp){
     this(Bytes.toBytes(row), timestamp);
   }
-  
+
   /**
    * Recopy constructor
    * @param buToCopy BatchUpdate to copy
@@ -122,7 +122,7 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
 
   /**
    * Initialize a BatchUpdate operation on a row with a specific timestamp.
-   * 
+   *
    * @param row
    * @param timestamp
    */
@@ -132,7 +132,7 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
     this.operations = new ArrayList<BatchOperation>();
     this.size = (row == null)? 0: row.length;
   }
-  
+
   /**
    * Create a batch operation.
    * @param rr the RowResult
@@ -143,7 +143,7 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
       this.put(entry.getKey(), entry.getValue().getValue());
     }
   }
-  
+
   /**
    * Get the row lock associated with this update
    * @return the row lock
@@ -172,29 +172,29 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
   public long getTimestamp() {
     return timestamp;
   }
-  
+
   /**
    * Set this BatchUpdate's timestamp.
-   * 
+   *
    * @param timestamp
-   */  
+   */
   public void setTimestamp(long timestamp) {
     this.timestamp = timestamp;
   }
-  
+
   /**
    * Get the current value of the specified column
-   * 
+   *
    * @param column column name
    * @return byte[] the cell value, returns null if the column does not exist.
    */
   public synchronized byte[] get(final String column) {
     return get(Bytes.toBytes(column));
   }
-  
+
   /**
-   * Get the current value of the specified column 
-   * 
+   * Get the current value of the specified column
+   *
    * @param column column name
    * @return byte[] the cell value, returns null if the column does not exist.
    */
@@ -209,7 +209,7 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
 
   /**
    * Get the current columns
-   * 
+   *
    * @return byte[][] an array of byte[] columns
    */
   public synchronized byte[][] getColumns() {
@@ -222,17 +222,17 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
 
   /**
    * Check if the specified column is currently assigned a value
-   * 
+   *
    * @param column column to check for
    * @return boolean true if the given column exists
    */
   public synchronized boolean hasColumn(String column) {
     return hasColumn(Bytes.toBytes(column));
   }
-  
+
   /**
    * Check if the specified column is currently assigned a value
-   * 
+   *
    * @param column column to check for
    * @return boolean true if the given column exists
    */
@@ -243,8 +243,8 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
     }
     return true;
   }
-  
-  /** 
+
+  /**
    * Change a value for the specified column
    *
    * @param column column whose value is being set
@@ -254,7 +254,7 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
     put(Bytes.toBytes(column), val);
   }
 
-  /** 
+  /**
    * Change a value for the specified column
    *
    * @param column column whose value is being set
@@ -270,7 +270,7 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
     operations.add(bo);
   }
 
-  /** 
+  /**
    * Delete the value for a column
    * Deletes the cell whose row/column/commit-timestamp match those of the
    * delete.
@@ -280,7 +280,7 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
     delete(Bytes.toBytes(column));
   }
 
-  /** 
+  /**
    * Delete the value for a column
    * Deletes the cell whose row/column/commit-timestamp match those of the
    * delete.
@@ -293,7 +293,7 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
   //
   // Iterable
   //
-  
+
   /**
    * @return Iterator<BatchOperation>
    */
@@ -363,7 +363,7 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
     return this.row.length + Bytes.ESTIMATED_HEAP_TAX + this.size +
       ESTIMATED_HEAP_TAX;
   }
-  
+
   /**
    * Code to test sizes of BatchUpdate arrays.
    * @param args

@@ -48,7 +48,7 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
   private final Log LOG = LogFactory.getLog(TableOutputFormat.class);
 
   /**
-   * Convert Reduce output (key, value) to (HStoreKey, KeyedDataArrayWritable) 
+   * Convert Reduce output (key, value) to (HStoreKey, KeyedDataArrayWritable)
    * and write to an HBase table
    */
   protected static class TableRecordWriter
@@ -57,14 +57,14 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
 
     /**
      * Instantiate a TableRecordWriter with the HBase HClient for writing.
-     * 
+     *
      * @param table
      */
     public TableRecordWriter(HTable table) {
       m_table = table;
     }
 
-    public void close(Reporter reporter) 
+    public void close(Reporter reporter)
       throws IOException {
       m_table.flushCommits();
     }
@@ -74,14 +74,14 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
       m_table.commit(new BatchUpdate(value));
     }
   }
-  
+
   @Override
   @SuppressWarnings("unchecked")
   public RecordWriter getRecordWriter(FileSystem ignored,
       JobConf job, String name, Progressable progress) throws IOException {
-    
+
     // expecting exactly one path
-    
+
     String tableName = job.get(OUTPUT_TABLE);
     HTable table = null;
     try {
@@ -97,7 +97,7 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
   @Override
   public void checkOutputSpecs(FileSystem ignored, JobConf job)
   throws FileAlreadyExistsException, InvalidJobConfException, IOException {
-    
+
     String tableName = job.get(OUTPUT_TABLE);
     if(tableName == null) {
       throw new IOException("Must specify table name");

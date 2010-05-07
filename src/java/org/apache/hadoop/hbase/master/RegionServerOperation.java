@@ -28,14 +28,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 
 abstract class RegionServerOperation implements Delayed, HConstants {
-  protected static final Log LOG = 
+  protected static final Log LOG =
     LogFactory.getLog(RegionServerOperation.class.getName());
-  
+
   private long expire;
   protected final HMaster master;
   protected final int numRetries;
   private int expirationDuration;
-  
+
   protected RegionServerOperation(HMaster master) {
     this.master = master;
     this.numRetries = master.numRetries;
@@ -71,7 +71,7 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   int getExpirationDuration() {
     return this.expirationDuration;
   }
- 
+
   void setExpirationDuration(final int d) {
     this.expirationDuration = d;
   }
@@ -96,9 +96,9 @@ abstract class RegionServerOperation implements Delayed, HConstants {
       // in the run queue, put this request on the delay queue to give
       // other threads the opportunity to get the meta regions on-line.
       if (LOG.isDebugEnabled()) {
-        LOG.debug("numberOfMetaRegions: " + 
+        LOG.debug("numberOfMetaRegions: " +
             master.regionManager.numMetaRegions() +
-            ", onlineMetaRegions.size(): " + 
+            ", onlineMetaRegions.size(): " +
             master.regionManager.numOnlineMetaRegions());
         LOG.debug("Requeuing because not all meta regions are online");
       }

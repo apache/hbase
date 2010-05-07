@@ -38,7 +38,7 @@ import java.nio.charset.IllegalCharsetNameException;
  * regular expression matches a cell value in the column.
  * <p>
  * Only EQUAL or NOT_EQUAL {@link org.apache.hadoop.hbase.filter.CompareFilter.CompareOp}
- * comparisons are valid with this comparator. 
+ * comparisons are valid with this comparator.
  * <p>
  * For example:
  * <p>

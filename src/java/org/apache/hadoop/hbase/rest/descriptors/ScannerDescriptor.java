@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase.rest.descriptors;
 
 /**
- * 
+ *
  */
 public class ScannerDescriptor {
   byte[][] columns;
@@ -44,7 +44,7 @@ public class ScannerDescriptor {
     this.startRow = startRow;
     this.stopRow = stopRow;
     this.filters = filters;
-    
+
     if(this.startRow == null) {
       this.startRow = new byte[0];
     }

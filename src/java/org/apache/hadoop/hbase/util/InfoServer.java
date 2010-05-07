@@ -36,14 +36,14 @@ import org.mortbay.jetty.webapp.WebAppContext;
  *   "/static/" -> points to common static files (src/webapps/static)
  *   "/" -> the jsp server code from (src/webapps/<name>)
  */
-public class InfoServer extends HttpServer {  
+public class InfoServer extends HttpServer {
   /**
    * Create a status server on the given port.
    * The jsp scripts are taken from src/webapps/<code>name<code>.
    * @param name The name of the server
    * @param bindAddress
    * @param port The port to use on the server
-   * @param findPort whether the server should start at the given port and 
+   * @param findPort whether the server should start at the given port and
    * increment by 1 until it finds a free port.
    * @throws IOException
    */
@@ -84,7 +84,7 @@ public class InfoServer extends HttpServer {
     }
 
     // Now do my logs.
-    // set up the context for "/logs/" if "hadoop.log.dir" property is defined. 
+    // set up the context for "/logs/" if "hadoop.log.dir" property is defined.
     String logDir = System.getProperty("hbase.log.dir");
     if (logDir != null) {
       Context logContext = new Context(parent, "/logs");
@@ -115,8 +115,8 @@ public class InfoServer extends HttpServer {
   private static String getWebAppsPath(final String path)
   throws IOException {
     URL url = InfoServer.class.getClassLoader().getResource(path);
-    if (url == null) 
-      throw new IOException("webapps not found in CLASSPATH: " + path); 
+    if (url == null)
+      throw new IOException("webapps not found in CLASSPATH: " + path);
     return url.toString();
   }
 

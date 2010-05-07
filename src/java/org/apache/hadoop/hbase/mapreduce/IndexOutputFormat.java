@@ -38,9 +38,9 @@ import org.apache.lucene.search.Similarity;
  * Create a local index, unwrap Lucene documents created by reduce, add them to
  * the index, and copy the index to the destination.
  */
-public class IndexOutputFormat 
+public class IndexOutputFormat
 extends FileOutputFormat<ImmutableBytesWritable, LuceneDocumentWrapper> {
-  
+
   static final Log LOG = LogFactory.getLog(IndexOutputFormat.class);
 
   /** Random generator. */
@@ -48,7 +48,7 @@ extends FileOutputFormat<ImmutableBytesWritable, LuceneDocumentWrapper> {
 
   /**
    * Returns the record writer.
-   * 
+   *
    * @param context  The current task context.
    * @return The record writer.
    * @throws IOException When there is an issue with the writer.
@@ -59,7 +59,7 @@ extends FileOutputFormat<ImmutableBytesWritable, LuceneDocumentWrapper> {
     getRecordWriter(TaskAttemptContext context)
   throws IOException {
 
-    final Path perm = new Path(FileOutputFormat.getOutputPath(context), 
+    final Path perm = new Path(FileOutputFormat.getOutputPath(context),
       FileOutputFormat.getUniqueFile(context, "part", ""));
     // null for "dirsProp" means no predefined directories
     final Path temp = context.getConfiguration().getLocalPath(
@@ -109,5 +109,5 @@ extends FileOutputFormat<ImmutableBytesWritable, LuceneDocumentWrapper> {
     writer.setUseCompoundFile(indexConf.isUseCompoundFile());
     return new IndexRecordWriter(context, fs, writer, indexConf, perm, temp);
   }
-  
+
 }

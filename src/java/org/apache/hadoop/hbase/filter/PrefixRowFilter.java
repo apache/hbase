@@ -36,21 +36,21 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class PrefixRowFilter implements RowFilterInterface {
   protected byte[] prefix;
-  
+
   /**
    * Constructor that takes a row prefix to filter on
-   * @param prefix 
+   * @param prefix
    */
   public PrefixRowFilter(byte[] prefix) {
     this.prefix = prefix;
   }
-  
+
   /**
    * Default Constructor, filters nothing. Required for RPC
    * deserialization
    */
   public PrefixRowFilter() { }
-  
+
   public void reset() {
     // Nothing to reset
   }
@@ -62,15 +62,15 @@ public class PrefixRowFilter implements RowFilterInterface {
   public void rowProcessed(boolean filtered, byte[] key, int offset, int length) {
     // does not care
   }
-  
+
   public boolean processAlways() {
     return false;
   }
-  
+
   public boolean filterAllRemaining() {
     return false;
   }
-  
+
   public boolean filterRowKey(final byte [] rowKey) {
     return filterRowKey(rowKey, 0, rowKey.length);
   }
@@ -109,11 +109,11 @@ public class PrefixRowFilter implements RowFilterInterface {
   public void validate(final byte [][] columns) {
     // does not do this
   }
-  
+
   public void readFields(final DataInput in) throws IOException {
     prefix = Bytes.readByteArray(in);
   }
-  
+
   public void write(final DataOutput out) throws IOException {
     Bytes.writeByteArray(out, prefix);
   }

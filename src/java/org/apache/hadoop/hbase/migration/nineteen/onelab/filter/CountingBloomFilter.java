@@ -2,30 +2,30 @@
  *
  * Copyright (c) 2005, European Commission project OneLab under contract 034819 (http://www.one-lab.org)
  * All rights reserved.
- * Redistribution and use in source and binary forms, with or 
- * without modification, are permitted provided that the following 
+ * Redistribution and use in source and binary forms, with or
+ * without modification, are permitted provided that the following
  * conditions are met:
- *  - Redistributions of source code must retain the above copyright 
+ *  - Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- *  - Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the distribution.
  *  - Neither the name of the University Catholique de Louvain - UCL
- *    nor the names of its contributors may be used to endorse or 
- *    promote products derived from this software without specific prior 
+ *    nor the names of its contributors may be used to endorse or
+ *    promote products derived from this software without specific prior
  *    written permission.
- *    
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
@@ -58,13 +58,13 @@ import org.apache.hadoop.hbase.util.Hash;
  * 2000 paper.
  * <p>
  * A counting Bloom filter is an improvement to standard a Bloom filter as it
- * allows dynamic additions and deletions of set membership information.  This 
+ * allows dynamic additions and deletions of set membership information.  This
  * is achieved through the use of a counting vector instead of a bit vector.
- * 
+ *
  * contract <a href="http://www.one-lab.org">European Commission One-Lab Project 034819</a>.
  *
  * @version 1.1 - 19 Jan. 08
- * 
+ *
  */
 public final class CountingBloomFilter extends Filter implements Cloneable {
   /** Storage for the counting buckets */
@@ -75,7 +75,7 @@ public final class CountingBloomFilter extends Filter implements Cloneable {
 
   /** Default constructor - use with readFields */
   public CountingBloomFilter() {}
-  
+
   /**
    * Constructor
    * @param vectorSize The vector size of <i>this</i> filter.
@@ -106,10 +106,10 @@ public final class CountingBloomFilter extends Filter implements Cloneable {
       // find the bucket
       int wordNum = h[i] >> 4;          // div 16
       int bucketShift = (h[i] & 0x0f) << 2;  // (mod 16) * 4
-      
+
       long bucketMask = 15L << bucketShift;
       long bucketValue = (buckets[wordNum] & bucketMask) >>> bucketShift;
-      
+
       // only increment if the count in the bucket is less than BUCKET_MAX_VALUE
       if(bucketValue < BUCKET_MAX_VALUE) {
         // increment by 1
@@ -139,10 +139,10 @@ public final class CountingBloomFilter extends Filter implements Cloneable {
       // find the bucket
       int wordNum = h[i] >> 4;          // div 16
       int bucketShift = (h[i] & 0x0f) << 2;  // (mod 16) * 4
-      
+
       long bucketMask = 15L << bucketShift;
       long bucketValue = (buckets[wordNum] & bucketMask) >>> bucketShift;
-      
+
       // only decrement if the count in the bucket is between 0 and BUCKET_MAX_VALUE
       if(bucketValue >= 1 && bucketValue < BUCKET_MAX_VALUE) {
         // decrement by 1
@@ -160,7 +160,7 @@ public final class CountingBloomFilter extends Filter implements Cloneable {
       throw new IllegalArgumentException("filters cannot be and-ed");
     }
     CountingBloomFilter cbf = (CountingBloomFilter)filter;
-    
+
     int sizeInWords = buckets2words(vectorSize);
     for(int i = 0; i < sizeInWords; i++) {
       this.buckets[i] &= cbf.buckets[i];
@@ -217,7 +217,7 @@ public final class CountingBloomFilter extends Filter implements Cloneable {
       // find the bucket
       int wordNum = h[i] >> 4;          // div 16
       int bucketShift = (h[i] & 0x0f) << 2;  // (mod 16) * 4
-      
+
       long bucketMask = 15L << bucketShift;
       long bucketValue = (buckets[wordNum] & bucketMask) >>> bucketShift;
       if (bucketValue < res) res = (int)bucketValue;
@@ -266,13 +266,13 @@ public final class CountingBloomFilter extends Filter implements Cloneable {
       if(i > 0) {
         res.append(" ");
       }
-      
+
       int wordNum = i >> 4;          // div 16
       int bucketShift = (i & 0x0f) << 2;  // (mod 16) * 4
-      
+
       long bucketMask = 15L << bucketShift;
       long bucketValue = (buckets[wordNum] & bucketMask) >>> bucketShift;
-      
+
       res.append(bucketValue);
     }
 

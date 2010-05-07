@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.rest.descriptors.TimestampsDescriptor;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 
 /**
- * 
+ *
  *         Interface that is implemented to return serialized objects back to
  *         the output stream.
  */
@@ -39,10 +39,10 @@ public interface IRestSerializer {
   /**
    * Serializes an object into the appropriate format and writes it to the
    * output stream.
-   * 
+   *
    * This is the main point of entry when for an object to be serialized to the
    * output stream.
-   * 
+   *
    * @param o
    * @throws HBaseRestException
    */
@@ -50,10 +50,10 @@ public interface IRestSerializer {
 
   /**
    * serialize the database metadata
-   * 
+   *
    * Implementation of this method is optional, IF all the work is done in the
    * writeOutput(Object o) method
-   * 
+   *
    * @param databaseMetadata
    * @throws HBaseRestException
    */
@@ -62,10 +62,10 @@ public interface IRestSerializer {
 
   /**
    * serialize the HTableDescriptor object
-   * 
+   *
    * Implementation of this method is optional, IF all the work is done in the
    * writeOutput(Object o) method
-   * 
+   *
    * @param tableDescriptor
    * @throws HBaseRestException
    */
@@ -74,10 +74,10 @@ public interface IRestSerializer {
 
   /**
    * serialize an HColumnDescriptor to the output stream.
-   * 
+   *
    * Implementation of this method is optional, IF all the work is done in the
    * writeOutput(Object o) method
-   * 
+   *
    * @param column
    * @throws HBaseRestException
    */
@@ -86,10 +86,10 @@ public interface IRestSerializer {
 
   /**
    * serialize the region data for a table to the output stream
-   * 
+   *
    * Implementation of this method is optional, IF all the work is done in the
    * writeOutput(Object o) method
-   * 
+   *
    * @param regions
    * @throws HBaseRestException
    */
@@ -97,10 +97,10 @@ public interface IRestSerializer {
 
   /**
    * serialize the status message object to the output stream
-   * 
+   *
    * Implementation of this method is optional, IF all the work is done in the
    * writeOutput(Object o) method
-   * 
+   *
    * @param message
    * @throws HBaseRestException
    */
@@ -109,10 +109,10 @@ public interface IRestSerializer {
 
   /**
    * serialize the ScannerIdentifier object to the output stream
-   * 
+   *
    * Implementation of this method is optional, IF all the work is done in the
    * writeOutput(Object o) method
-   * 
+   *
    * @param scannerIdentifier
    * @throws HBaseRestException
    */
@@ -121,10 +121,10 @@ public interface IRestSerializer {
 
   /**
    * serialize a RowResult object to the output stream
-   * 
+   *
    * Implementation of this method is optional, IF all the work is done in the
    * writeOutput(Object o) method
-   * 
+   *
    * @param rowResult
    * @throws HBaseRestException
    */
@@ -132,10 +132,10 @@ public interface IRestSerializer {
 
   /**
    * serialize a RowResult array to the output stream
-   * 
+   *
    * Implementation of this method is optional, IF all the work is done in the
    * writeOutput(Object o) method
-   * 
+   *
    * @param rows
    * @throws HBaseRestException
    */
@@ -144,28 +144,28 @@ public interface IRestSerializer {
 
   /**
    * serialize a cell object to the output stream
-   * 
+   *
    * Implementation of this method is optional, IF all the work is done in the
    * writeOutput(Object o) method
-   * 
+   *
    * @param cell
    * @throws HBaseRestException
    */
   public void serializeCell(Cell cell) throws HBaseRestException;
-  
+
   /**
    * serialize a Cell array to the output stream
-   * 
+   *
    * @param cells
    * @throws HBaseRestException
    */
   public void serializeCellArray(Cell[] cells) throws HBaseRestException;
-  
-  
+
+
   /**
-   * serialize a description of the timestamps available for a row 
+   * serialize a description of the timestamps available for a row
    * to the output stream.
-   * 
+   *
    * @param timestampsDescriptor
    * @throws HBaseRestException
    */

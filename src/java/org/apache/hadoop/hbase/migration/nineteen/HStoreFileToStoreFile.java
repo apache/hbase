@@ -91,7 +91,7 @@ public class HStoreFileToStoreFile extends Configured implements Tool {
       if (out != null) out.close();
     }
   }
-  
+
   private static void gathermapfiles(final HBaseConfiguration conf,
       final FileSystem fs, final FSDataOutputStream out)
   throws IOException {

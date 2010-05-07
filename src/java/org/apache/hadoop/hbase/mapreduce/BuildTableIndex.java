@@ -36,7 +36,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
  * Example table column indexing class.  Runs a mapreduce job to index
  * specified table columns.
  * <ul><li>Each row is modeled as a Lucene document: row key is indexed in
- * its untokenized form, column name-value pairs are Lucene field name-value 
+ * its untokenized form, column name-value pairs are Lucene field name-value
  * pairs.</li>
  * <li>A file passed on command line is used to populate an
  * {@link IndexConfiguration} which is used to set various Lucene parameters,
@@ -60,7 +60,7 @@ public class BuildTableIndex {
 
   /**
    * Prints the usage message and exists the program.
-   * 
+   *
    * @param message  The message to print first.
    */
   private static void printUsage(String message) {
@@ -71,12 +71,12 @@ public class BuildTableIndex {
 
   /**
    * Creates a new job.
-   * @param conf 
-   * 
+   * @param conf
+   *
    * @param args  The command line arguments.
    * @throws IOException When reading the configuration fails.
    */
-  public static Job createSubmittableJob(Configuration conf, String[] args) 
+  public static Job createSubmittableJob(Configuration conf, String[] args)
   throws IOException {
     if (args.length < 6) {
       printUsage("Too few arguments");
@@ -129,7 +129,7 @@ public class BuildTableIndex {
     Scan scan = new Scan();
     scan.addColumns(columnNames.toString());
     // use identity map (a waste, but just as an example)
-    IdentityTableMapper.initJob(tableName, scan, 
+    IdentityTableMapper.initJob(tableName, scan,
       IdentityTableMapper.class, job);
     // use IndexTableReduce to build a Lucene index
     job.setReducerClass(IndexTableReducer.class);
@@ -142,7 +142,7 @@ public class BuildTableIndex {
    * Reads xml file of indexing configurations.  The xml format is similar to
    * hbase-default.xml and hadoop-default.xml. For an example configuration,
    * see the <code>createIndexConfContent</code> method in TestTableIndex.
-   * 
+   *
    * @param fileName  The file to read.
    * @return XML configuration read from file.
    * @throws IOException When the XML is broken.
@@ -177,16 +177,16 @@ public class BuildTableIndex {
 
   /**
    * The main entry point.
-   * 
+   *
    * @param args  The command line arguments.
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
     HBaseConfiguration conf = new HBaseConfiguration();
-    String[] otherArgs = 
+    String[] otherArgs =
       new GenericOptionsParser(conf, args).getRemainingArgs();
     Job job = createSubmittableJob(conf, otherArgs);
     System.exit(job.waitForCompletion(true) ? 0 : 1);
   }
-  
+
 }

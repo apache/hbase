@@ -105,7 +105,7 @@ public class ZooKeeperWrapper implements HConstants {
       "master");
     String stateZNodeName = conf.get("zookeeper.znode.state",
     "shutdown");
-    
+
     rootRegionZNode = getZNode(parentZNode, rootServerZNodeName);
     outOfSafeModeZNode = getZNode(parentZNode, outOfSafeModeZNodeName);
     rsZNode = getZNode(parentZNode, rsZNodeName);
@@ -195,31 +195,31 @@ public class ZooKeeperWrapper implements HConstants {
     }
     return sb.toString();
   }
-  
+
   /**
    * Gets the statistics from the given server. Uses a 1 minute timeout.
-   * 
+   *
    * @param server  The server to get the statistics from.
    * @return The array of response strings.
    * @throws IOException When the socket communication fails.
    */
-  public String[] getServerStats(String server) 
+  public String[] getServerStats(String server)
   throws IOException {
     return getServerStats(server, 1 * 60 * 1000);
   }
-  
+
   /**
    * Gets the statistics from the given server.
-   * 
+   *
    * @param server  The server to get the statistics from.
    * @param timeout  The socket timeout to use.
    * @return The array of response strings.
    * @throws IOException When the socket communication fails.
    */
-  public String[] getServerStats(String server, int timeout) 
+  public String[] getServerStats(String server, int timeout)
   throws IOException {
     String[] sp = server.split(":");
-    Socket socket = new Socket(sp[0], 
+    Socket socket = new Socket(sp[0],
       sp.length > 1 ? Integer.parseInt(sp[1]) : 2181);
     socket.setSoTimeout(timeout);
     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -307,7 +307,7 @@ public class ZooKeeperWrapper implements HConstants {
   public HServerAddress readMasterAddress(Watcher watcher) {
     return readAddress(masterElectionZNode, watcher);
   }
-  
+
   /**
    * Watch the state of the cluster, up or down
    * @param watcher Watcher to set on cluster state node
@@ -321,7 +321,7 @@ public class ZooKeeperWrapper implements HConstants {
       LOG.warn("Failed to check on ZNode " + clusterStateZNode, e);
     }
   }
-  
+
   /**
    * Set the cluster state, up or down
    * @param up True to write the node, false to delete it
@@ -334,7 +334,7 @@ public class ZooKeeperWrapper implements HConstants {
     try {
       if(up) {
         byte[] data = Bytes.toBytes("up");
-        zooKeeper.create(clusterStateZNode, data, 
+        zooKeeper.create(clusterStateZNode, data,
             Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         LOG.debug("State node wrote in ZooKeeper");
       } else {
@@ -575,7 +575,7 @@ public class ZooKeeperWrapper implements HConstants {
 
     return false;
   }
-  
+
   /**
    * Write in ZK this RS startCode and address.
    * Ensures that the full path exists.
@@ -622,7 +622,7 @@ public class ZooKeeperWrapper implements HConstants {
 
     return false;
   }
-  
+
   /**
    * Scans the regions servers directory
    * @return A list of server addresses
@@ -641,7 +641,7 @@ public class ZooKeeperWrapper implements HConstants {
     }
     return addresses;
   }
-  
+
   /**
    * Method used to make sure the region server directory is empty.
    *
@@ -659,7 +659,7 @@ public class ZooKeeperWrapper implements HConstants {
       LOG.warn("Failed to delete " + rsZNode + " znodes in ZooKeeper: " + e);
     }
   }
-  
+
   private boolean checkExistenceOf(String path) {
     Stat stat = null;
     try {
@@ -684,7 +684,7 @@ public class ZooKeeperWrapper implements HConstants {
       LOG.warn("Failed to close connection with ZooKeeper");
     }
   }
-  
+
   private String getZNode(String parentZNode, String znodeName) {
     return znodeName.charAt(0) == ZNODE_PATH_SEPARATOR ?
         znodeName : joinPath(parentZNode, znodeName);
@@ -701,6 +701,6 @@ public class ZooKeeperWrapper implements HConstants {
   public String getMasterElectionZNode() {
     return masterElectionZNode;
   }
-  
-  
+
+
 }

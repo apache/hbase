@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.migration.nineteen.HStoreFileToStoreFile;
 public class Driver {
   /**
    * @param args
-   * @throws Throwable 
+   * @throws Throwable
    */
   public static void main(String[] args) throws Throwable {
     ProgramDriver pgd = new ProgramDriver();

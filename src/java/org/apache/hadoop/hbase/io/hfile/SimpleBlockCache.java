@@ -6,9 +6,9 @@
  * "License"); you may not use this file except in compliance with the
  * License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -36,19 +36,19 @@ public class SimpleBlockCache implements BlockCache {
       this.blockId = blockId;
     }
   }
-  private Map<String,Ref> cache = 
+  private Map<String,Ref> cache =
     new HashMap<String,Ref>();
 
   private ReferenceQueue q = new ReferenceQueue();
   public int dumps = 0;
-  
+
   /**
    * Constructor
    */
   public SimpleBlockCache() {
     super();
   }
-  
+
   void processQueue() {
     Ref r;
     while ( (r = (Ref)q.poll()) != null) {
@@ -77,7 +77,7 @@ public class SimpleBlockCache implements BlockCache {
     cache.put(blockName, new Ref(blockName, buf, q));
   }
 
-  public synchronized void cacheBlock(String blockName, ByteBuffer buf, 
+  public synchronized void cacheBlock(String blockName, ByteBuffer buf,
       boolean inMemory) {
     cache.put(blockName, new Ref(blockName, buf, q));
   }

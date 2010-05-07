@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.master.RegionManager.RegionState;
 
-/** 
+/**
  * Instantiated when a server's lease has expired, meaning it has crashed.
  * The region server's log file needs to be split up for each region it was
  * serving, and the regions need to get reassigned.
@@ -117,19 +117,19 @@ class ProcessServerShutdown extends RegionServerOperation {
     return this.deadServerAddress;
   }
 
-  private void closeRegionsInTransition() {    
+  private void closeRegionsInTransition() {
     Map<String, RegionState> inTransition =
       master.regionManager.getRegionsInTransitionOnServer(deadServer);
     for (Map.Entry<String, RegionState> entry : inTransition.entrySet()) {
       String regionName = entry.getKey();
       RegionState state = entry.getValue();
-      
+
       LOG.info("Region " + regionName + " was in transition " +
           state + " on dead server " + deadServer + " - marking unassigned");
       master.regionManager.setUnassigned(state.getRegionInfo(), true);
     }
   }
-  
+
   @Override
   public String toString() {
     return "ProcessServerShutdown of " + this.deadServer;
@@ -225,7 +225,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     }
 
     // Scan complete. Remove any rows which had empty HRegionInfos
-    
+
     if (emptyRows.size() > 0) {
       LOG.warn("Found " + emptyRows.size() +
         " rows with empty HRegionInfo while scanning meta region " +
@@ -269,7 +269,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     ScanMetaRegions(MetaRegion m, HMaster master) {
       super(m, master);
     }
-    
+
     public Boolean call() throws IOException {
       if (LOG.isDebugEnabled()) {
         LOG.debug("process server shutdown scanning " +
@@ -289,9 +289,9 @@ class ProcessServerShutdown extends RegionServerOperation {
     LOG.info("process shutdown of server " + this.deadServer +
       ": logSplit: " +
       logSplit + ", rootRescanned: " + rootRescanned +
-      ", numberOfMetaRegions: " + 
+      ", numberOfMetaRegions: " +
       master.regionManager.numMetaRegions() +
-      ", onlineMetaRegions.size(): " + 
+      ", onlineMetaRegions.size(): " +
       master.regionManager.numOnlineMetaRegions());
     if (!logSplit) {
       // Process the old log file
@@ -345,7 +345,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("process server shutdown scanning root region on " +
-          master.getRootRegionLocation().getBindAddress() + 
+          master.getRootRegionLocation().getBindAddress() +
           " finished " + Thread.currentThread().getName());
       }
       rootRescanned = true;
@@ -368,7 +368,7 @@ class ProcessServerShutdown extends RegionServerOperation {
           Bytes.toString(r.getRegionName()) + " on " + r.getServer());
       }
     }
-    
+
     closeRegionsInTransition();
 
     // Remove this server from dead servers list.  Finished splitting logs.

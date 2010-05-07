@@ -56,7 +56,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * optimizations like using our own version of ObjectWritable.  Class has been
  * renamed to avoid confusing it w/ hadoop versions.
  * <p>
- * 
+ *
  *
  * A <i>protocol</i> is a Java interface.  All parameters and return types must
  * be one of:
@@ -170,9 +170,9 @@ public class HBaseRPC {
     protected ClientCache() {}
 
     /**
-     * Construct & cache an IPC client with the user-provided SocketFactory 
+     * Construct & cache an IPC client with the user-provided SocketFactory
      * if no cached client exists.
-     * 
+     *
      * @param conf Configuration
      * @return an IPC client
      */
@@ -195,9 +195,9 @@ public class HBaseRPC {
     }
 
     /**
-     * Construct & cache an IPC client with the default SocketFactory 
+     * Construct & cache an IPC client with the default SocketFactory
      * if no cached client exists.
-     * 
+     *
      * @param conf Configuration
      * @return an IPC client
      */
@@ -206,7 +206,7 @@ public class HBaseRPC {
     }
 
     /**
-     * Stop a RPC client connection 
+     * Stop a RPC client connection
      * A RPC client is closed only when its reference count becomes zero.
      */
     protected void stopClient(HBaseClient client) {
@@ -223,7 +223,7 @@ public class HBaseRPC {
   }
 
   protected final static ClientCache CLIENTS = new ClientCache();
-  
+
   private static class Invoker implements InvocationHandler {
     private InetSocketAddress address;
     private UserGroupInformation ticket;
@@ -236,7 +236,7 @@ public class HBaseRPC {
      * @param conf
      * @param factory
      */
-    public Invoker(InetSocketAddress address, UserGroupInformation ticket, 
+    public Invoker(InetSocketAddress address, UserGroupInformation ticket,
                    Configuration conf, SocketFactory factory) {
       this.address = address;
       this.ticket = ticket;
@@ -258,8 +258,8 @@ public class HBaseRPC {
       }
       return value.get();
     }
-    
-    /* close the IPC client that's responsible for this invoker's RPCs */ 
+
+    /* close the IPC client that's responsible for this invoker's RPCs */
     synchronized protected void close() {
       if (!isClosed) {
         isClosed = true;
@@ -276,7 +276,7 @@ public class HBaseRPC {
     private String interfaceName;
     private long clientVersion;
     private long serverVersion;
-    
+
     /**
      * Create a version mismatch exception
      * @param interfaceName the name of the protocol mismatch
@@ -291,23 +291,23 @@ public class HBaseRPC {
       this.clientVersion = clientVersion;
       this.serverVersion = serverVersion;
     }
-    
+
     /**
      * Get the interface name
-     * @return the java class name 
+     * @return the java class name
      *          (eg. org.apache.hadoop.mapred.InterTrackerProtocol)
      */
     public String getInterfaceName() {
       return interfaceName;
     }
-    
+
     /**
      * @return the client's preferred version
      */
     public long getClientVersion() {
       return clientVersion;
     }
-    
+
     /**
      * @return the server's agreed to version.
      */
@@ -315,7 +315,7 @@ public class HBaseRPC {
       return serverVersion;
     }
   }
-  
+
   /**
    * @param protocol
    * @param clientVersion
@@ -384,7 +384,7 @@ public class HBaseRPC {
       SocketFactory factory) throws IOException {
     return getProxy(protocol, clientVersion, addr, null, conf, factory);
   }
-  
+
   /**
    * Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address.
@@ -401,23 +401,23 @@ public class HBaseRPC {
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, UserGroupInformation ticket,
       Configuration conf, SocketFactory factory)
-  throws IOException {    
+  throws IOException {
     VersionedProtocol proxy =
         (VersionedProtocol) Proxy.newProxyInstance(
             protocol.getClassLoader(), new Class[] { protocol },
             new Invoker(addr, ticket, conf, factory));
-    long serverVersion = proxy.getProtocolVersion(protocol.getName(), 
+    long serverVersion = proxy.getProtocolVersion(protocol.getName(),
                                                   clientVersion);
     if (serverVersion == clientVersion) {
       return proxy;
     }
-    throw new VersionMismatch(protocol.getName(), clientVersion, 
+    throw new VersionMismatch(protocol.getName(), clientVersion,
                               serverVersion);
   }
 
   /**
    * Construct a client-side proxy object with the default SocketFactory
-   * 
+   *
    * @param protocol
    * @param clientVersion
    * @param addr
@@ -463,7 +463,7 @@ public class HBaseRPC {
     HBaseClient client = CLIENTS.getClient(conf);
     try {
     Writable[] wrappedValues = client.call(invocations, addrs);
-    
+
     if (method.getReturnType() == Void.TYPE) {
       return null;
     }
@@ -473,7 +473,7 @@ public class HBaseRPC {
     for (int i = 0; i < values.length; i++)
       if (wrappedValues[i] != null)
         values[i] = ((HbaseObjectWritable)wrappedValues[i]).get();
-    
+
     return values;
     } finally {
       CLIENTS.stopClient(client);
@@ -491,7 +491,7 @@ public class HBaseRPC {
    * @return Server
    * @throws IOException
    */
-  public static Server getServer(final Object instance, final String bindAddress, final int port, Configuration conf) 
+  public static Server getServer(final Object instance, final String bindAddress, final int port, Configuration conf)
     throws IOException {
     return getServer(instance, bindAddress, port, 1, false, conf);
   }
@@ -511,7 +511,7 @@ public class HBaseRPC {
    */
   public static Server getServer(final Object instance, final String bindAddress, final int port,
                                  final int numHandlers,
-                                 final boolean verbose, Configuration conf) 
+                                 final boolean verbose, Configuration conf)
     throws IOException {
     return new Server(instance, conf, bindAddress, port, numHandlers, verbose);
   }
@@ -530,11 +530,11 @@ public class HBaseRPC {
      * @param port the port to listen for connections on
      * @throws IOException
      */
-    public Server(Object instance, Configuration conf, String bindAddress, int port) 
+    public Server(Object instance, Configuration conf, String bindAddress, int port)
       throws IOException {
       this(instance, conf,  bindAddress, port, 1, false);
     }
-    
+
     private static String classNameBase(String className) {
       String[] names = className.split("\\.", -1);
       if (names == null || names.length == 0) {
@@ -542,7 +542,7 @@ public class HBaseRPC {
       }
       return names[names.length-1];
     }
-    
+
     /** Construct an RPC server.
      * @param instance the instance whose methods will be called
      * @param conf the configuration to use

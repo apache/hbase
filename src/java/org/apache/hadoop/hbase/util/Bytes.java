@@ -65,7 +65,7 @@ public class Bytes {
    * Size of float in bytes
    */
   public static final int SIZEOF_FLOAT = Float.SIZE/Byte.SIZE;
-  
+
   /**
    * Size of int in bytes
    */

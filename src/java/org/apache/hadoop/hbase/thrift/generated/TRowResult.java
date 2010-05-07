@@ -49,11 +49,11 @@ public class TRowResult implements TBase, java.io.Serializable, Cloneable {
   }
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+    put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
-        new MapMetaData(TType.MAP, 
-            new FieldValueMetaData(TType.STRING), 
+    put(COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT,
+        new MapMetaData(TType.MAP,
+            new FieldValueMetaData(TType.STRING),
             new StructMetaData(TType.STRUCT, TCell.class))));
   }});
 
@@ -252,7 +252,7 @@ public class TRowResult implements TBase, java.io.Serializable, Cloneable {
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == TType.STOP) {
         break;
       }
       switch (field.id)
@@ -260,7 +260,7 @@ public class TRowResult implements TBase, java.io.Serializable, Cloneable {
         case ROW:
           if (field.type == TType.STRING) {
             this.row = iprot.readBinary();
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
@@ -280,7 +280,7 @@ public class TRowResult implements TBase, java.io.Serializable, Cloneable {
               }
               iprot.readMapEnd();
             }
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;

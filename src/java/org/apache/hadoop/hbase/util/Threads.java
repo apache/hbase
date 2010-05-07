@@ -29,7 +29,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 public class Threads {
   protected static final Log LOG = LogFactory.getLog(Threads.class);
-  
+
   /**
    * Utility method that sets name, daemon status and starts passed thread.
    * @param t
@@ -40,7 +40,7 @@ public class Threads {
     final String name) {
     return setDaemonThreadRunning(t, name, null);
   }
-    
+
   /**
    * Utility method that sets name, daemon status and starts passed thread.
    * @param t

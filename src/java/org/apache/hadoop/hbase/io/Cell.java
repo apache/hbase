@@ -62,7 +62,7 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
 
   /**
    * Create a new Cell with a given value and timestamp. Used by HStore.
-   * 
+   *
    * @param value
    * @param timestamp
    */
@@ -72,7 +72,7 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
 
   /**
    * Create a new Cell with a given value and timestamp. Used by HStore.
-   * 
+   *
    * @param value
    * @param timestamp
    */
@@ -82,7 +82,7 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
 
   /**
    * Create a new Cell with a given value and timestamp. Used by HStore.
-   * 
+   *
    * @param bb
    * @param timestamp
    */
@@ -134,7 +134,7 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
   /**
    * Add a new timestamp and value to this cell provided timestamp does not
    * already exist
-   * 
+   *
    * @param val
    * @param ts
    */
@@ -264,7 +264,7 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.serializer.ISerializable#restSerialize(org
    * .apache.hadoop.hbase.rest.serializer.IRestSerializer)

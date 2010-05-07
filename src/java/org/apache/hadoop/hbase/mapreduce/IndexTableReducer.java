@@ -37,23 +37,23 @@ import org.apache.commons.logging.LogFactory;
  * Construct a Lucene document per row, which is consumed by IndexOutputFormat
  * to build a Lucene index
  */
-public class IndexTableReducer 
-extends Reducer<ImmutableBytesWritable, Result, 
+public class IndexTableReducer
+extends Reducer<ImmutableBytesWritable, Result,
     ImmutableBytesWritable, LuceneDocumentWrapper>
 implements Configurable {
-  
+
   private static final Log LOG = LogFactory.getLog(IndexTableReducer.class);
-  
+
   private IndexConfiguration indexConf;
   private Configuration conf = null;
-  
+
   /**
    * Writes each given record, consisting of the key and the given values, to
    * the index.
-   * 
+   *
    * @param key  The current row key.
    * @param values  The values for the given row.
-   * @param context  The context of the reduce. 
+   * @param context  The context of the reduce.
    * @throws IOException When writing the record fails.
    * @throws InterruptedException When the job gets interrupted.
    */
@@ -85,7 +85,7 @@ implements Configurable {
             Field.Index.NO;
 
         // UTF-8 encode value
-        Field field = new Field(column, Bytes.toString(columnValue), 
+        Field field = new Field(column, Bytes.toString(columnValue),
           store, index);
         field.setBoost(indexConf.getBoost(column));
         field.setOmitNorms(indexConf.isOmitNorms(column));
@@ -98,7 +98,7 @@ implements Configurable {
 
   /**
    * Returns the current configuration.
-   *  
+   *
    * @return The current configuration.
    * @see org.apache.hadoop.conf.Configurable#getConf()
    */
@@ -109,7 +109,7 @@ implements Configurable {
 
   /**
    * Sets the configuration. This is used to set up the index configuration.
-   * 
+   *
    * @param configuration  The configuration to set.
    * @see org.apache.hadoop.conf.Configurable#setConf(
    *   org.apache.hadoop.conf.Configuration)
@@ -126,5 +126,5 @@ implements Configurable {
       LOG.debug("Index conf: " + indexConf);
     }
   }
-  
+
 }

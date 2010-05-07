@@ -39,10 +39,10 @@ import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * 
+ *
  * Basic first pass at implementing an XML serializer for the REST interface.
  * This should probably be refactored into something better.
- * 
+ *
  */
 public class SimpleXMLSerializer extends AbstractRestSerializer {
 
@@ -72,7 +72,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.serializer.IRestSerializer#writeOutput(java
    * .lang.Object, java.io.OutputStream)
@@ -98,7 +98,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @seeorg.apache.hadoop.hbase.rest.serializer.IRestSerializer#
    * serializeDatabaseMetadata
    * (org.apache.hadoop.hbase.rest.DatabaseModel.DatabaseMetadata)
@@ -115,7 +115,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @seeorg.apache.hadoop.hbase.rest.serializer.IRestSerializer#
    * serializeTableDescriptor(org.apache.hadoop.hbase.HTableDescriptor)
    */
@@ -139,7 +139,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @seeorg.apache.hadoop.hbase.rest.serializer.IRestSerializer#
    * serializeColumnDescriptor(org.apache.hadoop.hbase.HColumnDescriptor)
    */
@@ -169,7 +169,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.serializer.IRestSerializer#serializeRegionData
    * (org.apache.hadoop.hbase.rest.TableModel.Regions)
@@ -188,7 +188,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.serializer.IRestSerializer#serializeStatusMessage
    * (org.apache.hadoop.hbase.rest.Status.StatusMessage)
@@ -213,7 +213,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @seeorg.apache.hadoop.hbase.rest.serializer.IRestSerializer#
    * serializeScannerIdentifier(org.apache.hadoop.hbase.rest.ScannerIdentifier)
    */
@@ -230,7 +230,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.serializer.IRestSerializer#serializeRowResult
    * (org.apache.hadoop.hbase.io.RowResult)
@@ -266,7 +266,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.serializer.IRestSerializer#serializeRowResultArray
    * (org.apache.hadoop.hbase.io.RowResult[])
@@ -282,7 +282,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.serializer.IRestSerializer#serializeCell(org
    * .apache.hadoop.hbase.io.Cell)
@@ -301,7 +301,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.serializer.IRestSerializer#serializeCellArray
    * (org.apache.hadoop.hbase.io.Cell[])
@@ -316,7 +316,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.serializer.IRestSerializer#serializeTimestamps
    * (org.apache.hadoop.hbase.rest.RowModel.TimestampsDescriptor)
@@ -335,8 +335,8 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
     public void print(int output);
 
     public void print(long output);
-    
-    public void print(boolean output); 
+
+    public void print(boolean output);
 
     public void flush();
   }
@@ -371,7 +371,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * org.apache.hadoop.hbase.rest.serializer.SimpleXMLSerializer.Printer#print
      * (java.io.PrintWriter, java.lang.String)
@@ -382,7 +382,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * org.apache.hadoop.hbase.rest.serializer.SimpleXMLSerializer.IPrinter#
      * print(int)
@@ -393,7 +393,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * org.apache.hadoop.hbase.rest.serializer.SimpleXMLSerializer.IPrinter#
      * print(long)
@@ -406,7 +406,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
      * @see org.apache.hadoop.hbase.rest.serializer.SimpleXMLSerializer.IPrinter#print(boolean)
      */
     public void print(boolean output) {
-      writer.print(output); 
+      writer.print(output);
     }
   }
 
@@ -418,7 +418,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * org.apache.hadoop.hbase.rest.serializer.SimpleXMLSerializer.Printer#print
      * (java.io.PrintWriter, java.lang.String)
@@ -429,7 +429,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * org.apache.hadoop.hbase.rest.serializer.SimpleXMLSerializer.IPrinter#
      * print(int)
@@ -441,7 +441,7 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * org.apache.hadoop.hbase.rest.serializer.SimpleXMLSerializer.IPrinter#
      * print(long)

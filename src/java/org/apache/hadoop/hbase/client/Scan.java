@@ -55,7 +55,7 @@ import org.apache.hadoop.io.WritableFactories;
  * <p>
  * To modify scanner caching for just this scan, use {@link #setCaching(int) setCaching}.
  * <p>
- * To further define the scope of what to get when scanning, perform additional 
+ * To further define the scope of what to get when scanning, perform additional
  * methods as outlined below.
  * <p>
  * To get all columns from specific families, execute {@link #addFamily(byte[]) addFamily}
@@ -73,12 +73,12 @@ import org.apache.hadoop.io.WritableFactories;
  * To limit the number of versions of each column to be returned, execute
  * {@link #setMaxVersions(int) setMaxVersions}.
  * <p>
- * To limit the maximum number of values returned for each call to next(), execute 
+ * To limit the maximum number of values returned for each call to next(), execute
  * {@link #setBatch(int) setBatch}.
  * <p>
  * To add a filter, execute {@link #setFilter(org.apache.hadoop.hbase.filter.Filter) setFilter}.
  * <p>
- * Expert: To explicitly disable server-side block caching for this scan, 
+ * Expert: To explicitly disable server-side block caching for this scan,
  * execute {@link #setCacheBlocks(boolean)}.
  */
 public class Scan implements Writable {
@@ -105,7 +105,7 @@ public class Scan implements Writable {
   // additional data for the scan
   protected Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
     new HashMap<ImmutableBytesWritable, ImmutableBytesWritable>();
-  
+
   /**
    * Create a Scan operation across all rows.
    */
@@ -115,7 +115,7 @@ public class Scan implements Writable {
     this(startRow);
     this.filter = filter;
   }
-  
+
   /**
    * Create a Scan operation starting at the specified row.
    * <p>
@@ -126,7 +126,7 @@ public class Scan implements Writable {
   public Scan(byte [] startRow) {
     this.startRow = startRow;
   }
-  
+
   /**
    * Create a Scan operation for the range of rows specified.
    * @param startRow row to start scanner at or after (inclusive)
@@ -136,10 +136,10 @@ public class Scan implements Writable {
     this.startRow = startRow;
     this.stopRow = stopRow;
   }
-  
+
   /**
    * Creates a new instance of this class while copying all values.
-   * 
+   *
    * @param scan  The scan instance to copy from.
    * @throws IOException When copying the values fails.
    */
@@ -197,7 +197,7 @@ public class Scan implements Writable {
     familyMap.put(family, EMPTY_NAVIGABLE_SET);
     return this;
   }
-  
+
   /**
    * Get the column from the specified family with the specified qualifier.
    * <p>
@@ -218,12 +218,12 @@ public class Scan implements Writable {
   }
 
   /**
-   * Parses a combined family and qualifier and adds either both or just the 
-   * family in case there is not qualifier. This assumes the older colon 
+   * Parses a combined family and qualifier and adds either both or just the
+   * family in case there is not qualifier. This assumes the older colon
    * divided notation, e.g. "data:contents" or "meta:".
    * <p>
    * Note: It will through an error when the colon is missing.
-   * 
+   *
    * @param familyAndQualifier
    * @return A reference to this instance.
    * @throws IllegalArgumentException When the colon is missing.
@@ -231,18 +231,18 @@ public class Scan implements Writable {
   public Scan addColumn(byte[] familyAndQualifier) {
     byte [][] fq = KeyValue.parseColumn(familyAndQualifier);
     if (fq.length > 1 && fq[1] != null && fq[1].length > 0) {
-      addColumn(fq[0], fq[1]);  
+      addColumn(fq[0], fq[1]);
     } else {
       addFamily(fq[0]);
     }
     return this;
   }
-  
+
   /**
    * Adds an array of columns specified using old format, family:qualifier.
    * <p>
    * Overrides previous calls to addFamily for any families in the input.
-   * 
+   *
    * @param columns array of columns, formatted as <pre>family:qualifier</pre>
    */
   public Scan addColumns(byte [][] columns) {
@@ -257,7 +257,7 @@ public class Scan implements Writable {
    * command line) column definitions, e.g. "data:contents mime:". The columns
    * must be space delimited and always have a colon (":") to denote family
    * and qualifier.
-   * 
+   *
    * @param columns  The columns to parse.
    * @return A reference to this instance.
    */
@@ -270,15 +270,15 @@ public class Scan implements Writable {
   }
 
   /**
-   * Helps to convert the binary column families and qualifiers to a text 
+   * Helps to convert the binary column families and qualifiers to a text
    * representation, e.g. "data:mimetype data:contents meta:". Binary values
    * are properly encoded using {@link Bytes#toBytesBinary(String)}.
-   * 
+   *
    * @return The columns in an old style string format.
    */
   public String getInputColumns() {
     StringBuilder cols = new StringBuilder();
-    for (Map.Entry<byte[], NavigableSet<byte[]>> e : 
+    for (Map.Entry<byte[], NavigableSet<byte[]>> e :
       familyMap.entrySet()) {
       byte[] fam = e.getKey();
       if (cols.length() > 0) {
@@ -297,14 +297,14 @@ public class Scan implements Writable {
           cols.append(Bytes.toStringBinary(qual));
         }
       } else {
-        // only add the family but with old style delimiter 
+        // only add the family but with old style delimiter
         cols.append(Bytes.toStringBinary(fam));
         cols.append(":");
       }
     }
     return cols.toString();
   }
-  
+
   /**
    * Get versions of columns only within the specified timestamp range,
    * [minStamp, maxStamp).  Note, default maximum versions to return is 1.  If
@@ -321,7 +321,7 @@ public class Scan implements Writable {
     tr = new TimeRange(minStamp, maxStamp);
     return this;
   }
-  
+
   /**
    * Get versions of columns with the specified timestamp. Note, default maximum
    * versions to return is 1.  If your time range spans more than one version
@@ -348,7 +348,7 @@ public class Scan implements Writable {
     this.startRow = startRow;
     return this;
   }
-  
+
   /**
    * Set the stop row.
    * @param stopRow
@@ -357,7 +357,7 @@ public class Scan implements Writable {
     this.stopRow = stopRow;
     return this;
   }
-  
+
   /**
    * Get all available versions.
    */
@@ -405,16 +405,16 @@ public class Scan implements Writable {
   /**
    * Set an old-style filter interface to use. Note: not all features of the
    * old style filters are supported.
-   * 
+   *
    * @deprecated
    * @param filter
-   * @return The scan instance. 
+   * @return The scan instance.
    */
   public Scan setOldFilter(RowFilterInterface filter) {
     oldFilter = filter;
     return this;
   }
-  
+
   /**
    * Setting the familyMap
    * @param familyMap
@@ -423,7 +423,7 @@ public class Scan implements Writable {
     this.familyMap = familyMap;
     return this;
   }
-  
+
   /**
    * Getting the familyMap
    * @return familyMap
@@ -431,7 +431,7 @@ public class Scan implements Writable {
   public Map<byte [], NavigableSet<byte []>> getFamilyMap() {
     return this.familyMap;
   }
-  
+
   /**
    * @return the number of families in familyMap
    */
@@ -448,7 +448,7 @@ public class Scan implements Writable {
   public boolean hasFamilies() {
     return !this.familyMap.isEmpty();
   }
-  
+
   /**
    * @return the keys of the familyMap
    */
@@ -458,7 +458,7 @@ public class Scan implements Writable {
     }
     return null;
   }
-  
+
   /**
    * @return the startrow
    */
@@ -472,13 +472,13 @@ public class Scan implements Writable {
   public byte [] getStopRow() {
     return this.stopRow;
   }
-  
+
   /**
    * @return the max number of versions to fetch
    */
   public int getMaxVersions() {
     return this.maxVersions;
-  } 
+  }
 
   /**
    * @return maximum number of values to return for a single call to next()
@@ -492,15 +492,15 @@ public class Scan implements Writable {
    */
   public int getCaching() {
     return this.caching;
-  } 
+  }
 
   /**
    * @return TimeRange
    */
   public TimeRange getTimeRange() {
     return this.tr;
-  } 
-  
+  }
+
   /**
    * @return RowFilter
    */
@@ -516,28 +516,28 @@ public class Scan implements Writable {
   public RowFilterInterface getOldFilter() {
     return oldFilter;
   }
-  
+
   /**
    * @return true is a filter has been specified, false if not
    */
   public boolean hasFilter() {
     return filter != null || oldFilter != null;
   }
-  
+
   /**
    * Set whether blocks should be cached for this Scan.
    * <p>
    * This is true by default.  When true, default settings of the table and
    * family are used (this will never override caching blocks if the block
    * cache is disabled for that family or entirely).
-   * 
+   *
    * @param cacheBlocks if false, default settings are overridden and blocks
    * will not be cached
    */
   public void setCacheBlocks(boolean cacheBlocks) {
     this.cacheBlocks = cacheBlocks;
   }
-  
+
   /**
    * Get whether blocks should be cached for this Scan.
    * @return true if default caching should be used, false if blocks should not
@@ -620,7 +620,7 @@ public class Scan implements Writable {
   public void remove(final byte [] key) {
     values.remove(new ImmutableBytesWritable(key));
   }
-  
+
   /**
    * @return String
    */
@@ -674,7 +674,7 @@ public class Scan implements Writable {
       }
     }
     sb.append("}");
-    
+
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
         values.entrySet()) {
       String key = Bytes.toString(e.getKey().get());
@@ -691,7 +691,7 @@ public class Scan implements Writable {
 
     return sb.toString();
   }
-  
+
   @SuppressWarnings("unchecked")
   private Writable createForName(String className) {
     try {
@@ -700,9 +700,9 @@ public class Scan implements Writable {
       return WritableFactories.newInstance(clazz, new Configuration());
     } catch (ClassNotFoundException e) {
       throw new RuntimeException("Can't find class " + className);
-    }    
+    }
   }
-  
+
   //Writable
   public void readFields(final DataInput in)
   throws IOException {
@@ -730,7 +730,7 @@ public class Scan implements Writable {
     this.tr = new TimeRange();
     tr.readFields(in);
     int numFamilies = in.readInt();
-    this.familyMap = 
+    this.familyMap =
       new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
     for(int i=0; i<numFamilies; i++) {
       byte [] family = Bytes.readByteArray(in);

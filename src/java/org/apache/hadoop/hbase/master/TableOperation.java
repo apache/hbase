@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Abstract base class for operations that need to examine all HRegionInfo 
+ * Abstract base class for operations that need to examine all HRegionInfo
  * objects in a table. (For a table, operate on each of its rows
  * in .META.).
  */
@@ -64,7 +64,7 @@ abstract class TableOperation implements HConstants {
       // assigned and scanned.
       if (master.regionManager.metaScannerThread.waitForMetaRegionsOrClose()) {
         // We're shutting down. Forget it.
-        throw new MasterNotRunningException(); 
+        throw new MasterNotRunningException();
       }
     }
     this.metaRegions = master.regionManager.getMetaRegionsForTable(tableName);
@@ -156,7 +156,7 @@ abstract class TableOperation implements HConstants {
       }
     }
   }
-  
+
   protected boolean isBeingServed(String serverName) {
     boolean result = false;
     if (serverName != null && serverName.length() > 0) {

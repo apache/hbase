@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.io.Cell;
  * Implementation of RowFilterInterface that limits results to a specific page
  * size. It terminates scanning once the number of filter-passed results is >=
  * the given page size.
- * 
+ *
  * <p>
  * Note that this filter cannot guarantee that the number of results returned
  * to a client are <= page size. This is because the filter is applied
@@ -58,7 +58,7 @@ public class PageRowFilter implements RowFilterInterface {
 
   /**
    * Constructor that takes a maximum page size.
-   * 
+   *
    * @param pageSize Maximum result size.
    */
   public PageRowFilter(final long pageSize) {

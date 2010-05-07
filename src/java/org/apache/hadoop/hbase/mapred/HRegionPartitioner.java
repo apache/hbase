@@ -35,25 +35,25 @@ import org.apache.hadoop.mapred.Partitioner;
  * This is used to partition the output keys into groups of keys.
  * Keys are grouped according to the regions that currently exist
  * so that each reducer fills a single region so load is distributed.
- * 
+ *
  * @param <K2>
  * @param <V2>
  */
 @Deprecated
-public class HRegionPartitioner<K2,V2> 
+public class HRegionPartitioner<K2,V2>
 implements Partitioner<ImmutableBytesWritable, V2> {
   private final Log LOG = LogFactory.getLog(TableInputFormat.class);
   private HTable table;
-  private byte[][] startKeys; 
-  
+  private byte[][] startKeys;
+
   public void configure(JobConf job) {
     try {
-      this.table = new HTable(new HBaseConfiguration(job), 
+      this.table = new HTable(new HBaseConfiguration(job),
         job.get(TableOutputFormat.OUTPUT_TABLE));
     } catch (IOException e) {
       LOG.error(e);
     }
-    
+
     try {
       this.startKeys = this.table.getStartKeys();
     } catch (IOException e) {
@@ -79,7 +79,7 @@ implements Partitioner<ImmutableBytesWritable, V2> {
       if (Bytes.compareTo(region, this.startKeys[i]) == 0 ){
         if (i >= numPartitions-1){
           // cover if we have less reduces then regions.
-          return (Integer.toString(i).hashCode() 
+          return (Integer.toString(i).hashCode()
               & Integer.MAX_VALUE) % numPartitions;
         }
         return i;

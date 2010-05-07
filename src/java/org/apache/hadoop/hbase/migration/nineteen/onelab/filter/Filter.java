@@ -2,32 +2,32 @@
  *
  * Copyright (c) 2005, European Commission project OneLab under contract 034819
  * (http://www.one-lab.org)
- * 
+ *
  * All rights reserved.
- * Redistribution and use in source and binary forms, with or 
- * without modification, are permitted provided that the following 
+ * Redistribution and use in source and binary forms, with or
+ * without modification, are permitted provided that the following
  * conditions are met:
- *  - Redistributions of source code must retain the above copyright 
+ *  - Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- *  - Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the distribution.
  *  - Neither the name of the University Catholique de Louvain - UCL
- *    nor the names of its contributors may be used to endorse or 
- *    promote products derived from this software without specific prior 
+ *    nor the names of its contributors may be used to endorse or
+ *    promote products derived from this software without specific prior
  *    written permission.
- *    
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
@@ -62,17 +62,17 @@ import org.apache.hadoop.io.Writable;
  * Defines the general behavior of a filter.
  * <p>
  * A filter is a data structure which aims at offering a lossy summary of a set <code>A</code>.  The
- * key idea is to map entries of <code>A</code> (also called <i>keys</i>) into several positions 
+ * key idea is to map entries of <code>A</code> (also called <i>keys</i>) into several positions
  * in a vector through the use of several hash functions.
  * <p>
  * Typically, a filter will be implemented as a Bloom filter (or a Bloom filter extension).
  * <p>
  * It must be extended in order to define the real behavior.
- * 
+ *
  * @version 1.0 - 2 Feb. 07
  */
 public abstract class Filter implements Writable {
-  private static final int VERSION = -1; // negative to accommodate for old format 
+  private static final int VERSION = -1; // negative to accommodate for old format
   /** The vector size of <i>this</i> filter. */
   protected int vectorSize;
 
@@ -81,13 +81,13 @@ public abstract class Filter implements Writable {
 
   /** The number of hash function to consider. */
   protected int nbHash;
-  
+
   /** Type of hashing function to use. */
   protected int hashType;
 
   protected Filter() {}
-  
-  /** 
+
+  /**
    * Constructor.
    * @param vectorSize The vector size of <i>this</i> filter.
    * @param nbHash The number of hash functions to consider.
@@ -184,9 +184,9 @@ public abstract class Filter implements Writable {
       add(keys[i]);
     }
   }//end add()
-  
+
   // Writable interface
-  
+
   public void write(DataOutput out) throws IOException {
     out.writeInt(VERSION);
     out.writeInt(this.nbHash);

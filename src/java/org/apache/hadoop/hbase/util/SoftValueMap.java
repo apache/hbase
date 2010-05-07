@@ -29,7 +29,7 @@ import java.util.Set;
 
 /**
  * A Map that uses Soft Reference values internally. Use as a simple cache.
- * 
+ *
  * @param <K> key class
  * @param <V> value class
  */
@@ -37,11 +37,11 @@ public class SoftValueMap<K,V> implements Map<K,V> {
   private final Map<K, SoftValue<K,V>> internalMap =
     new HashMap<K, SoftValue<K,V>>();
   private final ReferenceQueue<?> rq;
-  
+
   public SoftValueMap() {
     this(new ReferenceQueue());
   }
-  
+
   public SoftValueMap(final ReferenceQueue<?> rq) {
     this.rq = rq;
   }
@@ -66,12 +66,12 @@ public class SoftValueMap<K,V> implements Map<K,V> {
       new SoftValue<K,V>(key, value, this.rq));
     return oldValue == null ? null : oldValue.get();
   }
-  
+
   @SuppressWarnings("unchecked")
   public void putAll(Map map) {
     throw new RuntimeException("Not implemented");
   }
-  
+
   public V get(Object key) {
     checkReferences();
     SoftValue<K,V> value = this.internalMap.get(key);
@@ -92,16 +92,16 @@ public class SoftValueMap<K,V> implements Map<K,V> {
   }
 
   public boolean containsKey(Object key) {
-    checkReferences(); 
+    checkReferences();
     return this.internalMap.containsKey(key);
   }
-  
+
   public boolean containsValue(Object value) {
 /*    checkReferences();
     return internalMap.containsValue(value);*/
     throw new UnsupportedOperationException("Don't support containsValue!");
   }
-  
+
   public boolean isEmpty() {
     checkReferences();
     return this.internalMap.isEmpty();

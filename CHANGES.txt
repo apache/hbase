@@ -186,6 +186,8 @@ Release X.X.X - Unreleased
    HBASE-2496  Less ArrayList churn on the scan path
    HBASE-2414  Enhance test suite to be able to specify distributed scenarios
    HBASE-2520  Cleanup arrays vs Lists of scanners (Todd Lipcon via Stack)
+   HBASE-2518  Kill all the trailing whitespaces in the code base
+               (Benoit Sigoure via Stack)
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode

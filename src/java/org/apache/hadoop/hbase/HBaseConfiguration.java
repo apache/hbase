@@ -33,7 +33,7 @@ public class HBaseConfiguration extends Configuration {
     super();
     addHbaseResources();
   }
-  
+
   /**
    * Create a clone of passed configuration.
    * @param c Configuration to clone.
@@ -44,16 +44,16 @@ public class HBaseConfiguration extends Configuration {
       set(e.getKey(), e.getValue());
     }
   }
-  
+
   private void addHbaseResources() {
     addResource("hbase-default.xml");
     addResource("hbase-site.xml");
   }
-  
+
   /**
    * Returns the hash code value for this HBaseConfiguration. The hash code of a
    * HBaseConfiguration is defined by the xor of the hash codes of its entries.
-   * 
+   *
    * @see Configuration#iterator() How the entries are obtained.
    */
   @Override
@@ -75,7 +75,7 @@ public class HBaseConfiguration extends Configuration {
       return false;
     if (!(obj instanceof HBaseConfiguration))
       return false;
-    
+
     HBaseConfiguration otherConf = (HBaseConfiguration) obj;
     if (size() != otherConf.size()) {
       return false;
@@ -89,9 +89,9 @@ public class HBaseConfiguration extends Configuration {
         return false;
       }
     }
-    
+
     return true;
   }
-  
-  
+
+
 }

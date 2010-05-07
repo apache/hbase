@@ -30,14 +30,14 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Implementation of RowFilterInterface that filters out rows greater than or 
+ * Implementation of RowFilterInterface that filters out rows greater than or
  * equal to a specified rowKey.
  *
  * @deprecated Use filters that are rooted on @{link Filter} instead
  */
 public class StopRowFilter implements RowFilterInterface {
   private byte [] stopRowKey;
-  
+
   /**
    * Default constructor, filters nothing. Required though for RPC
    * deserialization.
@@ -48,16 +48,16 @@ public class StopRowFilter implements RowFilterInterface {
 
   /**
    * Constructor that takes a stopRowKey on which to filter
-   * 
+   *
    * @param stopRowKey rowKey to filter on.
    */
   public StopRowFilter(final byte [] stopRowKey) {
     this.stopRowKey = stopRowKey;
   }
-  
+
   /**
    * An accessor for the stopRowKey
-   * 
+   *
    * @return the filter's stopRowKey
    */
   public byte [] getStopRowKey() {
@@ -83,7 +83,7 @@ public class StopRowFilter implements RowFilterInterface {
   public boolean processAlways() {
     return false;
   }
-  
+
   public boolean filterAllRemaining() {
     return false;
   }
@@ -104,11 +104,11 @@ public class StopRowFilter implements RowFilterInterface {
   }
 
   /**
-   * Because StopRowFilter does not examine column information, this method 
+   * Because StopRowFilter does not examine column information, this method
    * defaults to calling the rowKey-only version of filter.
-   * @param rowKey 
-   * @param colKey 
-   * @param data 
+   * @param rowKey
+   * @param colKey
+   * @param data
    * @return boolean
    */
   public boolean filterColumn(final byte [] rowKey, final byte [] colKey,
@@ -123,9 +123,9 @@ public class StopRowFilter implements RowFilterInterface {
   }
 
   /**
-   * Because StopRowFilter does not examine column information, this method 
+   * Because StopRowFilter does not examine column information, this method
    * defaults to calling filterAllRemaining().
-   * @param columns 
+   * @param columns
    * @return boolean
    */
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {

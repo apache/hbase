@@ -29,12 +29,12 @@ public class RowUpdateDescriptor {
   private String tableName;
   private String rowName;
   private Map<byte[], byte[]> colvals = new HashMap<byte[], byte[]>();
-  
+
   public RowUpdateDescriptor(String tableName, String rowName) {
     this.tableName = tableName;
     this.rowName = rowName;
   }
-  
+
   public RowUpdateDescriptor() {}
 
   /**
@@ -70,5 +70,5 @@ public class RowUpdateDescriptor {
    */
   public Map<byte[], byte[]> getColVals() {
     return colvals;
-  }  
+  }
 }

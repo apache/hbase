@@ -36,11 +36,11 @@ import org.apache.hadoop.mapred.JobConf;
 @Deprecated
 @SuppressWarnings("unchecked")
 public class TableMapReduceUtil {
-  
+
   /**
    * Use this before submitting a TableMap job. It will
    * appropriately set up the JobConf.
-   * 
+   *
    * @param table  The table name to read from.
    * @param columns  The columns to scan.
    * @param mapper  The mapper class to use.
@@ -49,10 +49,10 @@ public class TableMapReduceUtil {
    * @param job  The current job configuration to adjust.
    */
   public static void initTableMapJob(String table, String columns,
-    Class<? extends TableMap> mapper, 
-    Class<? extends WritableComparable> outputKeyClass, 
+    Class<? extends TableMap> mapper,
+    Class<? extends WritableComparable> outputKeyClass,
     Class<? extends Writable> outputValueClass, JobConf job) {
-      
+
     job.setInputFormat(TableInputFormat.class);
     job.setMapOutputValueClass(outputValueClass);
     job.setMapOutputKeyClass(outputKeyClass);
@@ -60,15 +60,15 @@ public class TableMapReduceUtil {
     FileInputFormat.addInputPaths(job, table);
     job.set(TableInputFormat.COLUMN_LIST, columns);
   }
-  
+
   /**
    * Use this before submitting a TableReduce job. It will
    * appropriately set up the JobConf.
-   * 
+   *
    * @param table  The output table.
    * @param reducer  The reducer class to use.
    * @param job  The current job configuration to adjust.
-   * @throws IOException When determining the region count fails. 
+   * @throws IOException When determining the region count fails.
    */
   public static void initTableReduceJob(String table,
     Class<? extends TableReduce> reducer, JobConf job)
@@ -79,13 +79,13 @@ public class TableMapReduceUtil {
   /**
    * Use this before submitting a TableReduce job. It will
    * appropriately set up the JobConf.
-   * 
+   *
    * @param table  The output table.
    * @param reducer  The reducer class to use.
    * @param job  The current job configuration to adjust.
-   * @param partitioner  Partitioner to use. Pass <code>null</code> to use 
+   * @param partitioner  Partitioner to use. Pass <code>null</code> to use
    * default partitioner.
-   * @throws IOException When determining the region count fails. 
+   * @throws IOException When determining the region count fails.
    */
   public static void initTableReduceJob(String table,
     Class<? extends TableReduce> reducer, JobConf job, Class partitioner)
@@ -106,17 +106,17 @@ public class TableMapReduceUtil {
       job.setPartitionerClass(partitioner);
     }
   }
-  
+
   /**
-   * Ensures that the given number of reduce tasks for the given job 
-   * configuration does not exceed the number of regions for the given table. 
-   * 
+   * Ensures that the given number of reduce tasks for the given job
+   * configuration does not exceed the number of regions for the given table.
+   *
    * @param table  The table to get the region count for.
    * @param job  The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public static void limitNumReduceTasks(String table, JobConf job) 
-  throws IOException { 
+  public static void limitNumReduceTasks(String table, JobConf job)
+  throws IOException {
     HTable outputTable = new HTable(new HBaseConfiguration(job), table);
     int regions = outputTable.getRegionsInfo().size();
     if (job.getNumReduceTasks() > regions)
@@ -124,15 +124,15 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Ensures that the given number of map tasks for the given job 
-   * configuration does not exceed the number of regions for the given table. 
-   * 
+   * Ensures that the given number of map tasks for the given job
+   * configuration does not exceed the number of regions for the given table.
+   *
    * @param table  The table to get the region count for.
    * @param job  The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public static void limitNumMapTasks(String table, JobConf job) 
-  throws IOException { 
+  public static void limitNumMapTasks(String table, JobConf job)
+  throws IOException {
     HTable outputTable = new HTable(new HBaseConfiguration(job), table);
     int regions = outputTable.getRegionsInfo().size();
     if (job.getNumMapTasks() > regions)
@@ -140,30 +140,30 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Sets the number of reduce tasks for the given job configuration to the 
-   * number of regions the given table has. 
-   * 
+   * Sets the number of reduce tasks for the given job configuration to the
+   * number of regions the given table has.
+   *
    * @param table  The table to get the region count for.
    * @param job  The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public static void setNumReduceTasks(String table, JobConf job) 
-  throws IOException { 
+  public static void setNumReduceTasks(String table, JobConf job)
+  throws IOException {
     HTable outputTable = new HTable(new HBaseConfiguration(job), table);
     int regions = outputTable.getRegionsInfo().size();
     job.setNumReduceTasks(regions);
   }
-  
+
   /**
-   * Sets the number of map tasks for the given job configuration to the 
-   * number of regions the given table has. 
-   * 
+   * Sets the number of map tasks for the given job configuration to the
+   * number of regions the given table has.
+   *
    * @param table  The table to get the region count for.
    * @param job  The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public static void setNumMapTasks(String table, JobConf job) 
-  throws IOException { 
+  public static void setNumMapTasks(String table, JobConf job)
+  throws IOException {
     HTable outputTable = new HTable(new HBaseConfiguration(job), table);
     int regions = outputTable.getRegionsInfo().size();
     job.setNumMapTasks(regions);
@@ -173,7 +173,7 @@ public class TableMapReduceUtil {
    * Sets the number of rows to return and cache with each scanner iteration.
    * Higher caching values will enable faster mapreduce jobs at the expense of
    * requiring more heap to contain the cached rows.
-   * 
+   *
    * @param job The current job configuration to adjust.
    * @param batchSize The number of rows to return in batch with each scanner
    * iteration.

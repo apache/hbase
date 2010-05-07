@@ -29,12 +29,12 @@ import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
  *  "type" : "FILTER_CLASS_NAME",
  * "args" : "FILTER_ARGUMENTS"
  * }
- * 
+ *
  * For Filters like WhileMatchRowFilter,
  * nested Filters are supported. Just serialize a different
  * filter in the form (for instance if you wanted to use WhileMatchRowFilter
  * with a StopRowFilter:
- * 
+ *
  * {
  *  "type" : "WhileMatchRowFilter",
  * "args" : {
@@ -42,12 +42,12 @@ import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
  *              "args" : "ROW_KEY_TO_STOP_ON"
  *            }
  * }
- * 
+ *
  * For filters like RowSetFilter, nested Filters AND Filter arrays
  * are supported. So for instance If one wanted to do a RegExp
  * RowFilter UNIONed with a WhileMatchRowFilter(StopRowFilter),
  * you would look like this:
- * 
+ *
  * {
  *   "type" : "RowFilterSet",
  *   "args" : [

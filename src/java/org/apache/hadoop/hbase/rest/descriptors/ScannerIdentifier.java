@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
 import org.apache.hadoop.hbase.rest.serializer.ISerializable;
 
 /**
- * 
+ *
  */
 public class ScannerIdentifier implements ISerializable {
   Integer id;
@@ -80,7 +80,7 @@ public class ScannerIdentifier implements ISerializable {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.xml.IOutputXML#toXML(org.apache.hadoop.hbase
    * .rest.serializer.IRestSerializer)

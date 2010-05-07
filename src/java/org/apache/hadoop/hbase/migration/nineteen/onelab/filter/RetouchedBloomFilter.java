@@ -2,30 +2,30 @@
  *
  * Copyright (c) 2005, European Commission project OneLab under contract 034819 (http://www.one-lab.org)
  * All rights reserved.
- * Redistribution and use in source and binary forms, with or 
- * without modification, are permitted provided that the following 
+ * Redistribution and use in source and binary forms, with or
+ * without modification, are permitted provided that the following
  * conditions are met:
- *  - Redistributions of source code must retain the above copyright 
+ *  - Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- *  - Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the distribution.
  *  - Neither the name of the University Catholique de Louvain - UCL
- *    nor the names of its contributors may be used to endorse or 
- *    promote products derived from this software without specific prior 
+ *    nor the names of its contributors may be used to endorse or
+ *    promote products derived from this software without specific prior
  *    written permission.
- *    
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
@@ -64,11 +64,11 @@ import org.apache.hadoop.hbase.util.Hash;
  * It allows the removal of selected false positives at the cost of introducing
  * random false negatives, and with the benefit of eliminating some random false
  * positives at the same time.
- * 
+ *
  * contract <a href="http://www.one-lab.org">European Commission One-Lab Project 034819</a>.
  *
  * @version 1.0 - 7 Feb. 07
- * 
+ *
  */
 public final class RetouchedBloomFilter extends BloomFilter
 implements RemoveScheme {
@@ -86,12 +86,12 @@ implements RemoveScheme {
    * Ratio vector.
    */
   double[] ratio;
-  
+
   private Random rand;
 
   /** Default constructor - use with readFields */
   public RetouchedBloomFilter() {}
-  
+
   /**
    * Constructor
    * @param vectorSize The vector size of <i>this</i> filter.
@@ -147,7 +147,7 @@ implements RemoveScheme {
     if(coll == null) {
       throw new NullPointerException("Collection<Key> can not be null");
     }
-    
+
     for(Key k: coll) {
       addFalsePositive(k);
     }
@@ -203,19 +203,19 @@ implements RemoveScheme {
     case RANDOM:
       index = randomRemove();
       break;
-    
+
     case MINIMUM_FN:
       index = minimumFnRemove(h);
       break;
-    
+
     case MAXIMUM_FP:
       index = maximumFpRemove(h);
       break;
-    
+
     case RATIO:
       index = ratioRemove(h);
       break;
-    
+
     default:
       throw new AssertionError("Undefined selective clearing scheme");
 
@@ -375,7 +375,7 @@ implements RemoveScheme {
     }
     return weight;
   }
-  
+
   /**
    * Creates and initialises the various vectors.
    */
@@ -391,7 +391,7 @@ implements RemoveScheme {
       ratio[i] = 0.0;
     }//end for -i
   }//end createVector()
-  
+
   // Writable
 
   @Override

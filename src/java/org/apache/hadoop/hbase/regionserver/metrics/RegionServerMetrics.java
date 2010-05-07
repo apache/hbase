@@ -36,7 +36,7 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 
-/** 
+/**
  * This class is for maintaining the various regionserver statistics
  * and publishing them through the metrics interfaces.
  * <p>
@@ -50,10 +50,10 @@ public class RegionServerMetrics implements Updater {
   private static final int MB = 1024*1024;
   private MetricsRegistry registry = new MetricsRegistry();
   private final RegionServerStatistics statistics;
-    
+
   public final MetricsTimeVaryingRate atomicIncrementTime =
       new MetricsTimeVaryingRate("atomicIncrementTime", registry);
-  
+
   /**
    * Count of regions carried by this regionserver
    */
@@ -110,19 +110,19 @@ public class RegionServerMetrics implements Updater {
   /**
    * filesystem read latency
    */
-  public final MetricsTimeVaryingRate fsReadLatency = 
+  public final MetricsTimeVaryingRate fsReadLatency =
     new MetricsTimeVaryingRate("fsReadLatency", registry);
 
   /**
    * filesystem write latency
    */
-  public final MetricsTimeVaryingRate fsWriteLatency = 
+  public final MetricsTimeVaryingRate fsWriteLatency =
     new MetricsTimeVaryingRate("fsWriteLatency", registry);
 
   /**
    * filesystem sync latency
    */
-  public final MetricsTimeVaryingRate fsSyncLatency = 
+  public final MetricsTimeVaryingRate fsSyncLatency =
     new MetricsTimeVaryingRate("fsSyncLatency", registry);
 
   public RegionServerMetrics() {
@@ -148,7 +148,7 @@ public class RegionServerMetrics implements Updater {
   /**
    * Since this object is a registered updater, this method will be called
    * periodically, e.g. every 5 seconds.
-   * @param unused 
+   * @param unused
    */
   public void doUpdates(MetricsContext unused) {
     synchronized (this) {
@@ -163,7 +163,7 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheFree.pushMetric(this.metricsRecord);
       this.blockCacheCount.pushMetric(this.metricsRecord);
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
-      
+
       // Mix in HFile and HLog metrics
       // Be careful. Here is code for MTVR from up in hadoop:
       // public synchronized void inc(final int numOps, final long time) {
@@ -204,14 +204,14 @@ public class RegionServerMetrics implements Updater {
   public float getRequests() {
     return this.requests.getPreviousIntervalValue();
   }
-  
+
   /**
    * @param inc How much to add to requests.
    */
   public void incrementRequests(final int inc) {
     this.requests.inc(inc);
   }
-  
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();

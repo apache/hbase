@@ -95,12 +95,12 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 /**
  * HMaster is the "master server" for a HBase.
  * There is only one HMaster for a single HBase deployment.
- * 
+ *
  * NOTE: This class extends Thread rather than Chore because the sleep time
  * can be interrupted when there is something to do, rather than the Chore
  * sleep time which is invariant.
  */
-public class HMaster extends Thread implements HConstants, HMasterInterface, 
+public class HMaster extends Thread implements HConstants, HMasterInterface,
   HMasterRegionInterface, Watcher {
 
   static final Log LOG = LogFactory.getLog(HMaster.class.getName());
@@ -120,7 +120,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   private final HBaseConfiguration conf;
   final FileSystem fs;
   final Random rand;
-  final int threadWakeFrequency; 
+  final int threadWakeFrequency;
   final int numRetries;
   final long maxRegionOpenTime;
   final int leaseTimeout;
@@ -134,14 +134,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   final ServerConnection connection;
 
   final int metaRescanInterval;
-  
+
   // A Sleeper that sleeps for threadWakeFrequency
   private final Sleeper sleeper;
-  
+
   // Default access so accesible from unit tests. MASTER is name of the webapp
   // and the attribute name used stuffing this instance into web context.
   InfoServer infoServer;
-  
+
   /** Name of master server */
   public static final String MASTER = "master";
 
@@ -152,14 +152,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   ServerManager serverManager;
   RegionManager regionManager;
-  
+
   private MasterMetrics metrics;
   final Lock splitLogLock = new ReentrantLock();
 
-  /** 
+  /**
    * Build the HMaster out of a raw configuration item.
    * @param conf configuration
-   * 
+   *
    * @throws IOException
    */
   public HMaster(HBaseConfiguration conf) throws IOException {
@@ -167,7 +167,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     String addressStr = DNS.getDefaultHost(
         conf.get("hbase.master.dns.interface","default"),
         conf.get("hbase.master.dns.nameserver","default"));
-    addressStr += ":" + 
+    addressStr += ":" +
       conf.get(MASTER_PORT, Integer.toString(DEFAULT_MASTER_PORT));
     HServerAddress hsa = new HServerAddress(addressStr);
     LOG.info("My address is " + hsa);
@@ -196,7 +196,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     try {
       // Make sure the hbase root directory exists!
       if (!fs.exists(rootdir)) {
-        fs.mkdirs(rootdir); 
+        fs.mkdirs(rootdir);
         FSUtils.setVersion(fs, rootdir);
       } else {
         FSUtils.checkVersion(fs, rootdir, true);
@@ -218,7 +218,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.server = HBaseRPC.getServer(this, hsa.getBindAddress(),
       hsa.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
       false, conf);
-         
+
     //  The rpc-server port can be ephemeral... ensure we have the correct info
     this.address = new HServerAddress(server.getListenerAddress());
 
@@ -230,16 +230,16 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       conf.getInt("hbase.master.meta.thread.rescanfrequency", 60 * 1000);
 
     this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
-    
+
     zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
     zkMasterAddressWatcher = new ZKMasterAddressWatcher(this);
     serverManager = new ServerManager(this);
     regionManager = new RegionManager(this);
-    
+
     writeAddressToZooKeeper(true);
     this.regionServerOperationQueue =
       new RegionServerOperationQueue(this.conf, this.closed);
-    
+
     // We're almost open for business
     this.closed.set(false);
     LOG.info("HMaster initialized on " + this.address.toString());
@@ -330,7 +330,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public HServerAddress getMasterAddress() {
     return address;
   }
-  
+
   /**
    * @return Hbase root dir.
    */
@@ -359,18 +359,18 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public Map<String, HServerLoad> getServersToLoad() {
     return serverManager.getServersToLoad();
   }
-  
+
   /** @return The average load */
   public double getAverageLoad() {
     return serverManager.getAverageLoad();
   }
-  
+
   /** @return the number of regions on filesystem */
   public int countRegionsOnFS() {
     try {
       return regionManager.countRegionsOnFS();
     } catch (IOException e) {
-      LOG.warn("Get count of Regions on FileSystem error : " + 
+      LOG.warn("Get count of Regions on FileSystem error : " +
           StringUtils.stringifyException(e));
     }
     return -1;
@@ -386,14 +386,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
     return rootServer;
   }
-  
+
   /**
    * Wait until root region is available
    */
   public void waitForRootRegionLocation() {
     regionManager.waitForRootRegionLocation();
   }
-  
+
   /**
    * @return Read-only map of online regions.
    */
@@ -446,7 +446,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       LOG.fatal("Unhandled exception. Starting shutdown.", t);
       closed.set(true);
     }
-    
+
     // Wait for all the remaining region servers to report in.
     this.serverManager.letRegionServersShutdown();
 
@@ -473,14 +473,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /*
    * Verifies if this instance of HBase is fresh or the master was started
    * following a failover. In the second case, it inspects the region server
-   * directory and gets their regions assignment. 
+   * directory and gets their regions assignment.
    */
   private void verifyClusterState()  {
     try {
       LOG.debug("Checking cluster state...");
       HServerAddress rootLocation = zooKeeperWrapper.readRootRegionLocation();
       List<HServerAddress> addresses =  zooKeeperWrapper.scanRSDirectory();
-      
+
       // Check if this is a fresh start of the cluster
       if(addresses.size() == 0) {
         LOG.debug("This is a fresh start, proceeding with normal startup");
@@ -489,13 +489,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
       LOG.info("This is a failover, ZK inspection begins...");
       boolean isRootRegionAssigned = false;
-      Map<byte[], HRegionInfo> assignedRegions = 
+      Map<byte[], HRegionInfo> assignedRegions =
         new HashMap<byte[], HRegionInfo>();
       // This is a failover case. We must:
       // - contact every region server to add them to the regionservers list
-      // - get their current regions assignment 
+      // - get their current regions assignment
       for (HServerAddress address : addresses) {
-        HRegionInterface hri = 
+        HRegionInterface hri =
           this.connection.getHRegionConnection(address, false);
         HServerInfo info = hri.getHServerInfo();
         LOG.debug("Inspection found server " + info.getName());
@@ -519,14 +519,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           assignedRegions.put(region.getRegionName(), region);
         }
       }
-      LOG.info("Inspection found " + assignedRegions.size() + " regions, " + 
+      LOG.info("Inspection found " + assignedRegions.size() + " regions, " +
           (isRootRegionAssigned ? "with -ROOT-" : "but -ROOT- was MIA"));
       splitLogAfterStartup();
     } catch(IOException ex) {
       ex.printStackTrace();
     }
   }
-  
+
   /**
    * Inspect the log directory to recover any log file without
    * and active region server.
@@ -630,7 +630,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     // Send back some config info
     return createConfigurationSubset();
   }
-  
+
   /**
    * @return Subset of configuration to pass initializing regionservers: e.g.
    * the filesystem to use and root directory to use.
@@ -642,7 +642,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     if (rsAddress != null) {
       mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));
     }
-    
+
     return addConfig(mw, "fs.default.name");
   }
 
@@ -651,7 +651,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return mw;
   }
 
-  public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[], 
+  public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[],
     HRegionInfo[] mostLoadedRegions)
   throws IOException {
     return adornRegionServerAnswer(serverInfo,
@@ -661,7 +661,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /**
    * Override if you'd add messages to return to regionserver <code>hsi</code>
    * @param messages Messages to add to
-   * @return Messages to return to 
+   * @return Messages to return to
    */
   protected HMsg [] adornRegionServerAnswer(final HServerInfo hsi,
       final HMsg [] msgs) {
@@ -683,7 +683,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)
-  throws IOException {    
+  throws IOException {
     if (!isMasterRunning()) {
       throw new MasterNotRunningException();
     }
@@ -725,7 +725,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
   }
 
-  private synchronized void createTable(final HRegionInfo [] newRegions) 
+  private synchronized void createTable(final HRegionInfo [] newRegions)
   throws IOException {
     String tableName = newRegions[0].getTableDesc().getNameAsString();
     // 1. Check to see if table already exists. Get meta region where
@@ -733,7 +733,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     // for the table we want to create already exists, then table already
     // created. Throw already-exists exception.
     MetaRegion m = regionManager.getFirstMetaRegionForRegion(newRegions[0]);
-        
+
     byte [] metaRegionName = m.getRegionName();
     HRegionInterface srvr = connection.getHRegionConnection(m.getServer());
     byte[] firstRowInTable = Bytes.toBytes(tableName + ",,");
@@ -767,11 +767,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   public void addColumn(byte [] tableName, HColumnDescriptor column)
-  throws IOException {    
+  throws IOException {
     new AddColumn(this, tableName, column).process();
   }
 
-  public void modifyColumn(byte [] tableName, byte [] columnName, 
+  public void modifyColumn(byte [] tableName, byte [] columnName,
     HColumnDescriptor descriptor)
   throws IOException {
     new ModifyColumn(this, tableName, columnName, descriptor).process();
@@ -898,7 +898,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
     return null;
   }
-  
+
   /**
    * Get row from meta table.
    * @param row
@@ -914,7 +914,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     get.addFamily(family);
     return srvr.get(meta.getRegionName(), get);
   }
-  
+
   /*
    * @param meta
    * @return Server connection to <code>meta</code> .META. region.
@@ -925,12 +925,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return this.connection.getHRegionConnection(meta.getServer());
   }
 
-  public void modifyTable(final byte[] tableName, HConstants.Modify op, 
+  public void modifyTable(final byte[] tableName, HConstants.Modify op,
       Writable[] args)
     throws IOException {
     switch (op) {
     case TABLE_SET_HTD:
-      if (args == null || args.length < 1 || 
+      if (args == null || args.length < 1 ||
           !(args[0] instanceof HTableDescriptor))
         throw new IOException("SET_HTD request requires an HTableDescriptor");
       HTableDescriptor htd = (HTableDescriptor) args[0];
@@ -977,12 +977,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       if (args.length == 2) {
         servername = Bytes.toString(((ImmutableBytesWritable)args[1]).get());
       }
-      // Need hri 
+      // Need hri
       Result rr = getFromMETA(regionname, HConstants.CATALOG_FAMILY);
       HRegionInfo hri = getHRegionInfo(rr.getRow(), rr);
       if (servername == null) {
         // Get server from the .META. if it wasn't passed as argument
-        servername = 
+        servername =
           Bytes.toString(rr.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
       }
       // Take region out of the intransistions in case it got stuck there doing
@@ -1035,7 +1035,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public HBaseConfiguration getConfiguration() {
     return this.conf;
   }
-  
+
   // TODO ryan rework this function
   /*
    * Get HRegionInfo from passed META map of row values.
@@ -1069,12 +1069,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /*
    * When we find rows in a meta region that has an empty HRegionInfo, we
    * clean them up here.
-   * 
+   *
    * @param s connection to server serving meta region
    * @param metaRegionName name of the meta region we scanned
    * @param emptyRows the row keys that had empty HRegionInfos
    */
-  protected void deleteEmptyMetaRows(HRegionInterface s, 
+  protected void deleteEmptyMetaRows(HRegionInterface s,
       byte [] metaRegionName,
       List<byte []> emptyRows) {
     for (byte [] regionName: emptyRows) {
@@ -1089,7 +1089,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
     }
   }
-  
+
   /**
    * Get the ZK wrapper object
    * @return the zookeeper wrapper
@@ -1097,20 +1097,20 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public ZooKeeperWrapper getZooKeeperWrapper() {
     return zooKeeperWrapper;
   }
-  
+
   /**
    * @see org.apache.zookeeper.Watcher#process(org.apache.zookeeper.WatchedEvent)
    */
   @Override
   public void process(WatchedEvent event) {
-    LOG.debug(("Got event " + event.getType() + 
+    LOG.debug(("Got event " + event.getType() +
         " with path " + event.getPath()));
-    // Master should kill itself if its session expired or if its 
+    // Master should kill itself if its session expired or if its
     // znode was deleted manually (usually for testing purposes)
-    if(event.getState() == KeeperState.Expired || 
-        (event.getType().equals(EventType.NodeDeleted) && 
+    if(event.getState() == KeeperState.Expired ||
+        (event.getType().equals(EventType.NodeDeleted) &&
             event.getPath().equals(
-                this.zooKeeperWrapper.getMasterElectionZNode())) 
+                this.zooKeeperWrapper.getMasterElectionZNode()))
                 && !shutdownRequested.get()) {
 
       LOG.info("Master lost its znode, trying to get a new one");
@@ -1133,7 +1133,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
     }
   }
-   
+
   /*
    * Main program
    */
@@ -1251,7 +1251,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       printUsageAndExit();
     }
   }
-  
+
   /**
    * Main program
    * @param args

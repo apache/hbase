@@ -61,7 +61,7 @@ public class RowModel extends AbstractModel {
       throw new HBaseRestException(e);
     }
   }
-  
+
   @Deprecated
   public RowResult get(byte[] tableName, byte[] rowName, byte[][] columns)
       throws HBaseRestException {
@@ -84,7 +84,7 @@ public class RowModel extends AbstractModel {
     get.setTimeStamp(timestamp);
     return get(tableName, get).getRowResult();
   }
-  
+
   @Deprecated
   public RowResult get(byte[] tableName, byte[] rowName, long timestamp)
       throws HBaseRestException {
@@ -128,7 +128,7 @@ public class RowModel extends AbstractModel {
       throw new HBaseRestException(e);
     }
   }
-  
+
   @Deprecated
   public void delete(byte[] tableName, byte[] rowName)
       throws HBaseRestException {
@@ -146,7 +146,7 @@ public class RowModel extends AbstractModel {
     }
     delete(tableName, delete);
   }
-  
+
   public void delete(byte[] tableName, Delete delete)
   throws HBaseRestException {
     try {

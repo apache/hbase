@@ -29,10 +29,10 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.Cell;
 
 /**
- * WhileMatchRowFilter is a wrapper filter that filters everything after the 
- * first filtered row.  Once the nested filter returns true for either of it's 
- * filter(..) methods or filterNotNull(SortedMap<Text, byte[]>), this wrapper's 
- * filterAllRemaining() will return true.  All filtering methods will 
+ * WhileMatchRowFilter is a wrapper filter that filters everything after the
+ * first filtered row.  Once the nested filter returns true for either of it's
+ * filter(..) methods or filterNotNull(SortedMap<Text, byte[]>), this wrapper's
+ * filterAllRemaining() will return true.  All filtering methods will
  * thereafter defer to the result of filterAllRemaining().
  *
  * @deprecated Use filters that are rooted on @{link Filter} instead
@@ -48,7 +48,7 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   public WhileMatchRowFilter() {
     super();
   }
-  
+
   /**
    * Constructor
    * @param filter
@@ -56,16 +56,16 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   public WhileMatchRowFilter(RowFilterInterface filter) {
     this.filter = filter;
   }
-  
+
   /**
    * Returns the internal filter being wrapped
-   * 
+   *
    * @return the internal filter
    */
   public RowFilterInterface getInternalFilter() {
     return this.filter;
   }
-  
+
   public void reset() {
     this.filterAllRemaining = false;
     this.filter.reset();
@@ -74,18 +74,18 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   public boolean processAlways() {
     return true;
   }
-  
+
   /**
-   * Returns true once the nested filter has filtered out a row (returned true 
+   * Returns true once the nested filter has filtered out a row (returned true
    * on a call to one of it's filtering methods).  Until then it returns false.
-   * 
-   * @return true/false whether the nested filter has returned true on a filter 
+   *
+   * @return true/false whether the nested filter has returned true on a filter
    * call.
    */
   public boolean filterAllRemaining() {
     return this.filterAllRemaining || this.filter.filterAllRemaining();
   }
-  
+
   public boolean filterRowKey(final byte [] rowKey) {
     changeFAR(this.filter.filterRowKey(rowKey, 0, rowKey.length));
     return filterAllRemaining();
@@ -101,7 +101,7 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     changeFAR(this.filter.filterColumn(rowKey, colKey, data));
     return filterAllRemaining();
   }
-  
+
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {
     changeFAR(this.filter.filterRow(columns));
     return filterAllRemaining();
@@ -113,9 +113,9 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   }
 
   /**
-   * Change filterAllRemaining from false to true if value is true, otherwise 
+   * Change filterAllRemaining from false to true if value is true, otherwise
    * leave as is.
-   * 
+   *
    * @param value
    */
   private void changeFAR(boolean value) {
@@ -129,14 +129,14 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   public void rowProcessed(boolean filtered, byte[] key, int offset, int length) {
     this.filter.rowProcessed(filtered, key, offset, length);
   }
-  
+
   public void validate(final byte [][] columns) {
     this.filter.validate(columns);
   }
-  
+
   public void readFields(DataInput in) throws IOException {
     String className = in.readUTF();
-    
+
     try {
       this.filter = (RowFilterInterface)(Class.forName(className).
         newInstance());
@@ -152,7 +152,7 @@ public class WhileMatchRowFilter implements RowFilterInterface {
           e);
     }
   }
-  
+
   public void write(DataOutput out) throws IOException {
     out.writeUTF(this.filter.getClass().getName());
     this.filter.write(out);

@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.rest.serializer.ISerializable;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * 
+ *
  */
 public class TimestampsDescriptor implements ISerializable {
   Map<Long, String> timestamps = new HashMap<Long, String>();
@@ -54,7 +54,7 @@ public class TimestampsDescriptor implements ISerializable {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.serializer.ISerializable#restSerialize(org
    * .apache.hadoop.hbase.rest.serializer.IRestSerializer)

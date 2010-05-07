@@ -190,7 +190,7 @@ public class MemStore implements HeapSize {
     return s;
   }
 
-  /** 
+  /**
    * Write a delete
    * @param delete
    * @return approximate size of the passed key and value.
@@ -207,7 +207,7 @@ public class MemStore implements HeapSize {
     this.size.addAndGet(s);
     return s;
   }
-  
+
   /**
    * @param kv Find the row that comes after this one.  If null, we return the
    * first.
@@ -455,7 +455,7 @@ public class MemStore implements HeapSize {
   void readLockUnlock() {
     this.lock.readLock().unlock();
   }
-  
+
   /**
    *
    * @param set memstore or snapshot
@@ -486,7 +486,7 @@ public class MemStore implements HeapSize {
     }
     return false;
   }
-  
+
 
   /*
    * MemStoreScanner implements the KeyValueScanner.
@@ -520,7 +520,7 @@ public class MemStore implements HeapSize {
       StoreScanner level with coordination with MemStoreScanner.
 
     */
-    
+
     MemStoreScanner() {
       super();
 
@@ -531,7 +531,7 @@ public class MemStore implements HeapSize {
       KeyValue ret = null;
       long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
       //DebugPrint.println( " MS@" + hashCode() + ": threadpoint = " + readPoint);
-      
+
       while (ret == null && it.hasNext()) {
         KeyValue v = it.next();
         if (v.getMemstoreTS() <= readPoint) {
@@ -566,7 +566,7 @@ public class MemStore implements HeapSize {
       //DebugPrint.println( " MS@" + hashCode() + " snapshot seek: " + snapshotNextRow + " with size = " +
       //    snapshot.size() + " threadread = " + readPoint);
 
-      
+
       KeyValue lowest = getLowest();
 
       // has data := (lowest != null)
@@ -631,7 +631,7 @@ public class MemStore implements HeapSize {
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (7 * ClassSize.REFERENCE));
-  
+
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
       ClassSize.COPYONWRITE_ARRAYSET + ClassSize.COPYONWRITE_ARRAYLIST +
@@ -645,11 +645,11 @@ public class MemStore implements HeapSize {
    * @return Size
    */
   long heapSizeChange(final KeyValue kv, final boolean notpresent) {
-    return notpresent ? 
+    return notpresent ?
         ClassSize.align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + kv.heapSize()):
         0;
   }
-  
+
   /**
    * Get the entire heap usage for this MemStore not including keys in the
    * snapshot.
@@ -658,7 +658,7 @@ public class MemStore implements HeapSize {
   public long heapSize() {
     return size.get();
   }
-  
+
   /**
    * Get the heap usage of KVs in this MemStore.
    */

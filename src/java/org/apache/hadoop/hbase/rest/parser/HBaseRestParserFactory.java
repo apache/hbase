@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.rest.Dispatcher.ContentType;
 
 public class HBaseRestParserFactory {
 
-  private static final Map<ContentType, Class<?>> parserMap = 
+  private static final Map<ContentType, Class<?>> parserMap =
     new HashMap<ContentType, Class<?>>();
 
   static {

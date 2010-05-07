@@ -41,10 +41,10 @@ import org.apache.hadoop.io.WritableComparable;
  * of the file with keys that sort greater than those of the bottom half.
  * The top includes the split files midkey, of the key that follows if it does
  * not exist in the file.
- * 
+ *
  * <p>This type works in tandem with the {@link Reference} type.  This class
  * is used reading while Reference is used writing.
- * 
+ *
  * <p>This file is not splitable.  Calls to {@link #midKey()} return null.
  */
 //TODO should be fixed generic warnings from MapFile methods
@@ -54,7 +54,7 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
   private final boolean top;
   private final HStoreKey midkey;
   private boolean firstNextCall = true;
-  
+
   /**
    * @param fs
    * @param dirName
@@ -64,14 +64,14 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
    * @param hri
    * @throws IOException
    */
-  public HalfMapFileReader(final FileSystem fs, final String dirName, 
+  public HalfMapFileReader(final FileSystem fs, final String dirName,
       final Configuration conf, final Range r,
       final WritableComparable<HStoreKey> mk,
       final HRegionInfo hri)
   throws IOException {
     this(fs, dirName, conf, r, mk, false, false, hri);
   }
-  
+
   /**
    * @param fs
    * @param dirName
@@ -83,7 +83,7 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
    * @param hri
    * @throws IOException
    */
-  public HalfMapFileReader(final FileSystem fs, final String dirName, 
+  public HalfMapFileReader(final FileSystem fs, final String dirName,
       final Configuration conf, final Range r,
       final WritableComparable<HStoreKey> mk, final boolean filter,
       final boolean blockCacheEnabled,
@@ -100,7 +100,7 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
     // Is it top or bottom half?
     this.top = Reference.isTopFileRegion(r);
   }
-  
+
   /*
    * Check key is not bleeding into wrong half of the file.
    * @param key
@@ -124,7 +124,7 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
   public synchronized void finalKey(WritableComparable key)
   throws IOException {
     if (top) {
-      super.finalKey(key); 
+      super.finalKey(key);
     } else {
       Writable value = new ImmutableBytesWritable();
       WritableComparable found = super.getClosest(midkey, value, true);
@@ -194,7 +194,7 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
           Writables.copyWritable(nearest, key);
           return true;
         }
-        return false; 
+        return false;
       }
     }
     boolean result = super.next(key, val);
@@ -208,7 +208,7 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
     }
     return result;
   }
-  
+
   @Override
   public synchronized void reset() throws IOException {
     if (top) {

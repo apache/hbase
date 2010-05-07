@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.rest.serializer;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 
 /**
- * 
+ *
  *         Interface for objects that wish to write back to the REST based
  *         interface output stream. Objects should implement this interface,
  *         then use the IRestSerializer passed to it to call the appropriate
@@ -33,7 +33,7 @@ public interface ISerializable {
    * visitor pattern method where the object implementing this interface will
    * call back on the IRestSerializer with the correct method to run to
    * serialize the output of the object to the stream.
-   * 
+   *
    * @param serializer
    * @throws HBaseRestException
    */

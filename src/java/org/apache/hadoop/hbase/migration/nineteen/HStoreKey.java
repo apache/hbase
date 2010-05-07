@@ -40,7 +40,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * Colon character in UTF-8
    */
   public static final char COLUMN_FAMILY_DELIMITER = ':';
-  
+
   private byte [] row = HConstants.EMPTY_BYTE_ARRAY;
   private byte [] column = HConstants.EMPTY_BYTE_ARRAY;
   private long timestamp = Long.MAX_VALUE;
@@ -50,7 +50,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * It is not serialized.  See https://issues.apache.org/jira/browse/HBASE-832
    */
   private HRegionInfo regionInfo = null;
-  
+
   /**
    * Estimated size tax paid for each instance of HSK.  Estimate based on
    * study of jhat and jprofiler numbers.
@@ -63,12 +63,12 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   public HStoreKey() {
     super();
   }
-  
+
   /**
    * Create an HStoreKey specifying only the row
    * The column defaults to the empty string, the time stamp defaults to
    * Long.MAX_VALUE and the table defaults to empty string
-   * 
+   *
    * @param row - row key
    */
   public HStoreKey(final byte [] row) {
@@ -79,7 +79,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * Create an HStoreKey specifying only the row
    * The column defaults to the empty string, the time stamp defaults to
    * Long.MAX_VALUE and the table defaults to empty string
-   * 
+   *
    * @param row - row key
    */
   public HStoreKey(final String row) {
@@ -89,18 +89,18 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   /**
    * Create an HStoreKey specifying the row and timestamp
    * The column and table names default to the empty string
-   * 
+   *
    * @param row row key
    * @param hri
    */
   public HStoreKey(final byte [] row, final HRegionInfo hri) {
     this(row, HConstants.EMPTY_BYTE_ARRAY, hri);
   }
- 
+
   /**
    * Create an HStoreKey specifying the row and timestamp
    * The column and table names default to the empty string
-   * 
+   *
    * @param row row key
    * @param timestamp timestamp value
    * @param hri HRegionInfo
@@ -112,7 +112,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   /**
    * Create an HStoreKey specifying the row and timestamp
    * The column and table names default to the empty string
-   * 
+   *
    * @param row row key
    * @param timestamp timestamp value
    */
@@ -123,7 +123,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   /**
    * Create an HStoreKey specifying the row and timestamp
    * The column and table names default to the empty string
-   * 
+   *
    * @param row row key
    * @param timestamp timestamp value
    */
@@ -135,7 +135,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * Create an HStoreKey specifying the row and column names
    * The timestamp defaults to LATEST_TIMESTAMP
    * and table name defaults to the empty string
-   * 
+   *
    * @param row row key
    * @param column column key
    */
@@ -147,45 +147,45 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * Create an HStoreKey specifying the row and column names
    * The timestamp defaults to LATEST_TIMESTAMP
    * and table name defaults to the empty string
-   * 
+   *
    * @param row row key
    * @param column column key
    */
   public HStoreKey(final byte [] row, final byte [] column) {
     this(row, column, HConstants.LATEST_TIMESTAMP);
   }
-  
+
   /**
    * Create an HStoreKey specifying the row, column names and table name
    * The timestamp defaults to LATEST_TIMESTAMP
-   * 
+   *
    * @param row row key
    * @param column column key
    * @param regionInfo region info
    */
-  public HStoreKey(final byte [] row, 
+  public HStoreKey(final byte [] row,
       final byte [] column, final HRegionInfo regionInfo) {
     this(row, column, HConstants.LATEST_TIMESTAMP, regionInfo);
   }
 
   /**
    * Create an HStoreKey specifying all the fields
-   * Does not make copies of the passed byte arrays. Presumes the passed 
+   * Does not make copies of the passed byte arrays. Presumes the passed
    * arrays immutable.
    * @param row row key
    * @param column column key
    * @param timestamp timestamp value
    * @param regionInfo region info
    */
-  public HStoreKey(final String row, 
+  public HStoreKey(final String row,
       final String column, long timestamp, final HRegionInfo regionInfo) {
-    this (Bytes.toBytes(row), Bytes.toBytes(column), 
+    this (Bytes.toBytes(row), Bytes.toBytes(column),
         timestamp, regionInfo);
   }
 
   /**
    * Create an HStoreKey specifying all the fields with unspecified table
-   * Does not make copies of the passed byte arrays. Presumes the passed 
+   * Does not make copies of the passed byte arrays. Presumes the passed
    * arrays immutable.
    * @param row row key
    * @param column column key
@@ -194,17 +194,17 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   public HStoreKey(final byte [] row, final byte [] column, long timestamp) {
     this(row, column, timestamp, null);
   }
-  
+
   /**
    * Create an HStoreKey specifying all the fields with specified table
-   * Does not make copies of the passed byte arrays. Presumes the passed 
+   * Does not make copies of the passed byte arrays. Presumes the passed
    * arrays immutable.
    * @param row row key
    * @param column column key
    * @param timestamp timestamp value
    * @param regionInfo region info
    */
-  public HStoreKey(final byte [] row, 
+  public HStoreKey(final byte [] row,
       final byte [] column, long timestamp, final HRegionInfo regionInfo) {
     // Make copies
     this.row = row;
@@ -215,26 +215,26 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
 
   /**
    * Constructs a new HStoreKey from another
-   * 
+   *
    * @param other the source key
    */
   public HStoreKey(HStoreKey other) {
     this(other.getRow(), other.getColumn(), other.getTimestamp(),
       other.getHRegionInfo());
   }
-  
+
   /**
    * Change the value of the row key
-   * 
+   *
    * @param newrow new row key value
    */
   public void setRow(byte [] newrow) {
     this.row = newrow;
   }
-  
+
   /**
    * Change the value of the column in this key
-   * 
+   *
    * @param c new column family value
    */
   public void setColumn(byte [] c) {
@@ -243,16 +243,16 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
 
   /**
    * Change the value of the timestamp field
-   * 
+   *
    * @param timestamp new timestamp value
    */
   public void setVersion(long timestamp) {
     this.timestamp = timestamp;
   }
-  
+
   /**
    * Set the value of this HStoreKey from the supplied key
-   * 
+   *
    * @param k key value to copy
    */
   public void set(HStoreKey k) {
@@ -260,12 +260,12 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     this.column = k.getColumn();
     this.timestamp = k.getTimestamp();
   }
-  
+
   /** @return value of row key */
   public byte [] getRow() {
     return row;
   }
-  
+
   /** @return value of column */
   public byte [] getColumn() {
     return this.column;
@@ -275,36 +275,36 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   public long getTimestamp() {
     return this.timestamp;
   }
-  
+
   /** @return value of regioninfo */
   public HRegionInfo getHRegionInfo() {
     return this.regionInfo;
   }
-  
+
   /**
    * @param hri
    */
   public void setHRegionInfo(final HRegionInfo hri) {
     this.regionInfo = hri;
   }
-  
+
   /**
    * Compares the row and column of two keys
    * @param other Key to compare against. Compares row and column.
    * @return True if same row and column.
    * @see #matchesWithoutColumn(HStoreKey)
    * @see #matchesRowFamily(HStoreKey)
-   */ 
+   */
   public boolean matchesRowCol(HStoreKey other) {
     return HStoreKey.equalsTwoRowKeys(getHRegionInfo(), getRow(), other.getRow()) &&
       Bytes.equals(getColumn(), other.getColumn());
   }
-  
+
   /**
    * Compares the row and timestamp of two keys
-   * 
+   *
    * @param other Key to copmare against. Compares row and timestamp.
-   * 
+   *
    * @return True if same row and timestamp is greater than <code>other</code>
    * @see #matchesRowCol(HStoreKey)
    * @see #matchesRowFamily(HStoreKey)
@@ -313,12 +313,12 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     return equalsTwoRowKeys(getHRegionInfo(), getRow(), other.getRow()) &&
       getTimestamp() >= other.getTimestamp();
   }
-  
+
   /**
    * Compares the row and column family of two keys
-   * 
+   *
    * @param that Key to compare against. Compares row and column family
-   * 
+   *
    * @return true if same row and column family
    * @see #matchesRowCol(HStoreKey)
    * @see #matchesWithoutColumn(HStoreKey)
@@ -329,13 +329,13 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
       Bytes.compareTo(getColumn(), 0, delimiterIndex, that.getColumn(), 0,
         delimiterIndex) == 0;
   }
-  
+
   @Override
   public String toString() {
     return Bytes.toString(this.row) + "/" + Bytes.toString(this.column) + "/" +
       timestamp;
   }
-  
+
   @Override
   public boolean equals(Object obj) {
     if (!(obj instanceof HStoreKey)) {
@@ -350,7 +350,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     }
     return compareTo(other) == 0;
   }
-  
+
   @Override
   public int hashCode() {
     int result = Bytes.hashCode(getRow());
@@ -364,14 +364,14 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   public int compareTo(final HStoreKey o) {
     return compareTo(this.regionInfo, this, o);
   }
-  
+
   static int compareTo(final HRegionInfo hri, final HStoreKey left,
       final HStoreKey right) {
     // We can be passed null
     if (left == null && right == null) return 0;
     if (left == null) return -1;
     if (right == null) return 1;
-    
+
     int result = compareTwoRowKeys(hri, left.getRow(), right.getRow());
     if (result != 0) {
       return result;
@@ -403,7 +403,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * @param column
    * @return New byte array that holds <code>column</code> family prefix only
    * (Does not include the colon DELIMITER).
-   * @throws ColumnNameParseException 
+   * @throws ColumnNameParseException
    * @see #parseColumn(byte[])
    */
   public static byte [] getFamily(final byte [] column)
@@ -418,7 +418,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     System.arraycopy(column, 0, result, 0, index);
     return result;
   }
-  
+
   /**
    * @param column
    * @return Return hash of family portion of passed column.
@@ -429,7 +429,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     // delimiter
     return Bytes.mapKey(column, index > 0? index: column.length);
   }
-  
+
   /**
    * @param family
    * @param column
@@ -444,7 +444,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     }
     return Bytes.compareTo(family, 0, index, column, 0, index) == 0;
   }
-  
+
   /**
    * @param family
    * @return Return <code>family</code> plus the family delimiter.
@@ -475,14 +475,14 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * @return Return array of size two whose first element has the family
    * prefix of passed column <code>c</code> and whose second element is the
    * column qualifier.
-   * @throws ColumnNameParseException 
+   * @throws ColumnNameParseException
    */
   public static byte [][] parseColumn(final byte [] c)
   throws ColumnNameParseException {
     byte [][] result = new byte [2][];
     int index = getFamilyDelimiterIndex(c);
     if (index == -1) {
-      throw new ColumnNameParseException("Impossible column name: " + 
+      throw new ColumnNameParseException("Impossible column name: " +
         Bytes.toStringBinary(c));
     }
     result[0] = new byte [index];
@@ -493,7 +493,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
       len);
     return result;
   }
-  
+
   /**
    * @param b
    * @return Index of the family-qualifier colon delimiter character in passed
@@ -521,7 +521,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   public static byte[] getBytes(final HStoreKey hsk) {
     return Bytes.add(hsk.getRow(), hsk.getColumn());
   }
-  
+
   /**
    * Utility method to compare two row keys.
    * This is required because of the meta delimiters.
@@ -531,7 +531,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * @param rowB
    * @return value of the comparison
    */
-  public static int compareTwoRowKeys(HRegionInfo regionInfo, 
+  public static int compareTwoRowKeys(HRegionInfo regionInfo,
       byte[] rowA, byte[] rowB) {
     if (regionInfo != null && regionInfo.isMetaRegion()) {
       byte[][] keysA = stripStartKeyMeta(rowA);
@@ -543,7 +543,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     }
     return Bytes.compareTo(rowA, rowB);
   }
-  
+
   /**
    * Utility method to check if two row keys are equal.
    * This is required because of the meta delimiters
@@ -553,13 +553,13 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * @param rowB
    * @return if it's equal
    */
-  public static boolean equalsTwoRowKeys(HRegionInfo regionInfo, 
+  public static boolean equalsTwoRowKeys(HRegionInfo regionInfo,
       byte[] rowA, byte[] rowB) {
     return ((rowA == null) && (rowB == null)) ? true:
       (rowA == null) || (rowB == null) || (rowA.length != rowB.length) ? false:
         compareTwoRowKeys(regionInfo,rowA,rowB) == 0;
   }
-  
+
   private static byte[][] stripStartKeyMeta(byte[] rowKey) {
     int offset = -1;
     for (int i = rowKey.length - 1; i > 0; i--) {
@@ -581,7 +581,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     elements[1] = timestamp;
     return elements;
   }
-  
+
   // Writable
 
   public void write(DataOutput out) throws IOException {
@@ -607,13 +607,13 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    */
   public static class HStoreKeyWritableComparator extends WritableComparator {
     private final HRegionInfo hri;
-    
+
     /** @param hri */
     public HStoreKeyWritableComparator(final HRegionInfo hri) {
       super(HStoreKey.class);
       this.hri = hri;
     }
-    
+
     @SuppressWarnings("unchecked")
     @Override
     public int compare(final WritableComparable left,
@@ -621,7 +621,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
       return compareTo(this.hri, (HStoreKey)left, (HStoreKey)right);
     }
   }
-  
+
   /**
    * Pass this class into {@link org.apache.hadoop.io.MapFile}.getClosest when
    * searching for the key that comes BEFORE this one but NOT this one.  This
@@ -636,19 +636,19 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     private final HStoreKey beforeThisKey;
 
     /**
-     * @param beforeThisKey 
+     * @param beforeThisKey
      */
     public BeforeThisStoreKey(final HStoreKey beforeThisKey) {
       super();
       this.beforeThisKey = beforeThisKey;
     }
-    
+
     @Override
     public int compareTo(final HStoreKey o) {
       int result = this.beforeThisKey.compareTo(o);
       return result == 0? -1: result;
     }
-    
+
     @Override
     public boolean equals(Object obj) {
       if (obj == null || !(obj instanceof HStoreKey)) {
@@ -731,12 +731,12 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     public void write(DataOutput out) throws IOException {
       this.beforeThisKey.write(out);
     }
-    
+
     @Override
     public HRegionInfo getHRegionInfo() {
       return this.beforeThisKey.getHRegionInfo();
     }
-    
+
     @Override
     public void setHRegionInfo(final HRegionInfo hri) {
       this.beforeThisKey.setHRegionInfo(hri);

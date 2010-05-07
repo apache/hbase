@@ -38,13 +38,13 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 /**
- * 
+ *
  */
 public class XMLRestParser implements IHBaseRestParser {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.parser.IHBaseRestParser#getTableDescriptor
    * (byte[])
@@ -178,7 +178,7 @@ public class XMLRestParser implements IHBaseRestParser {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.parser.IHBaseRestParser#getColumnDescriptors
    * (byte[])
@@ -212,7 +212,7 @@ public class XMLRestParser implements IHBaseRestParser {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.parser.IHBaseRestParser#getScannerDescriptor
    * (byte[])
@@ -225,7 +225,7 @@ public class XMLRestParser implements IHBaseRestParser {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.parser.IHBaseRestParser#getRowUpdateDescriptor
    * (byte[], byte[][])

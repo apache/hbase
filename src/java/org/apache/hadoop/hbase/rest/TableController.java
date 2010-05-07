@@ -69,7 +69,7 @@ public class TableController extends AbstractController {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @param input column descriptor JSON. Should be of the form: <pre>
    * {"column_families":[ { "name":STRING, "bloomfilter":BOOLEAN,
    * "max_versions":INTEGER, "compression_type":STRING, "in_memory":BOOLEAN,
@@ -79,7 +79,7 @@ public class TableController extends AbstractController {
    * default values are: <pre> bloomfilter => false max_versions => 3
    * compression_type => NONE in_memory => false block_cache_enabled => false
    * max_value_length => 2147483647 time_to_live => Integer.MAX_VALUE </pre>
-   * 
+   *
    * @see
    * org.apache.hadoop.hbase.rest.AbstractController#post(org.apache.hadoop.
    * hbase.rest.Status, byte[][], java.util.Map, byte[],

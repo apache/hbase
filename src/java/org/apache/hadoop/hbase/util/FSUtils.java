@@ -68,7 +68,7 @@ public class FSUtils {
 
   /**
    * Check if directory exists.  If it does not, create it.
-   * @param fs 
+   * @param fs
    * @param dir
    * @return Path
    * @throws IOException
@@ -100,11 +100,11 @@ public class FSUtils {
 
   /**
    * Checks to see if the specified file system is available
-   * 
+   *
    * @param fs
    * @throws IOException
    */
-  public static void checkFileSystemAvailable(final FileSystem fs) 
+  public static void checkFileSystemAvailable(final FileSystem fs)
   throws IOException {
     if (!(fs instanceof DistributedFileSystem)) {
       return;
@@ -127,7 +127,7 @@ public class FSUtils {
     io.initCause(exception);
     throw io;
   }
-  
+
   /**
    * If DFS, check safe mode and if so, wait until we clear it.
    * @param conf
@@ -169,7 +169,7 @@ public class FSUtils {
 
   /**
    * Verifies current version of file system
-   * 
+   *
    * @param fs
    * @param rootdir
    * @return null if no version file exists, version string otherwise.
@@ -190,20 +190,20 @@ public class FSUtils {
     }
     return version;
   }
-  
+
   /**
    * Verifies current version of file system
-   * 
+   *
    * @param fs file system
    * @param rootdir root directory of HBase installation
-   * @param message if true, issues a message on System.out 
-   * 
+   * @param message if true, issues a message on System.out
+   *
    * @throws IOException
    */
-  public static void checkVersion(FileSystem fs, Path rootdir, 
+  public static void checkVersion(FileSystem fs, Path rootdir,
       boolean message) throws IOException {
     String version = getVersion(fs, rootdir);
-    
+
     if (version == null) {
       if (!rootRegionExists(fs, rootdir)) {
         // rootDir is empty (no version file and no root region)
@@ -213,7 +213,7 @@ public class FSUtils {
       }
     } else if (version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0)
         return;
-    
+
     // version is deprecated require migration
     // Output on stdout so user sees it in terminal.
     String msg = "File system needs to be upgraded."
@@ -225,28 +225,28 @@ public class FSUtils {
     }
     throw new FileSystemVersionException(msg);
   }
-  
+
   /**
    * Sets version of file system
-   * 
+   *
    * @param fs
    * @param rootdir
    * @throws IOException
    */
-  public static void setVersion(FileSystem fs, Path rootdir) 
+  public static void setVersion(FileSystem fs, Path rootdir)
   throws IOException {
     setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION);
   }
 
   /**
    * Sets version of file system
-   * 
+   *
    * @param fs
    * @param rootdir
    * @param version
    * @throws IOException
    */
-  public static void setVersion(FileSystem fs, Path rootdir, String version) 
+  public static void setVersion(FileSystem fs, Path rootdir, String version)
   throws IOException {
     FSDataOutputStream s =
       fs.create(new Path(rootdir, HConstants.VERSION_FILE_NAME));
@@ -257,7 +257,7 @@ public class FSUtils {
 
   /**
    * Verifies root directory path is a valid URI with a scheme
-   * 
+   *
    * @param root root directory path
    * @throws IOException if not a valid URI with a scheme
    */
@@ -274,7 +274,7 @@ public class FSUtils {
       throw io;
     }
   }
-  
+
   /**
    * Return the 'path' component of a Path.  In Hadoop, Path is an URI.  This
    * method returns the 'path' component of a Path's URI: e.g. If a Path is
@@ -283,7 +283,7 @@ public class FSUtils {
    * This method is useful if you want to print out a Path without qualifying
    * Filesystem instance.
    * @param p Filesystem Path whose 'path' component we are to return.
-   * @return Path portion of the Filesystem 
+   * @return Path portion of the Filesystem
    */
   public static String getPath(Path p) {
     return p.toUri().getPath();
@@ -293,7 +293,7 @@ public class FSUtils {
    * @param c
    * @return Path to hbase root directory: i.e. <code>hbase.rootdir</code> as a
    * Path.
-   * @throws IOException 
+   * @throws IOException
    */
   public static Path getRootDir(final HBaseConfiguration c) throws IOException {
     FileSystem fs = FileSystem.get(c);
@@ -307,10 +307,10 @@ public class FSUtils {
     }
     return rootdir;
   }
-  
+
   /**
    * Checks if root region exists
-   * 
+   *
    * @param fs file system
    * @param rootdir root directory of HBase installation
    * @return true if exists

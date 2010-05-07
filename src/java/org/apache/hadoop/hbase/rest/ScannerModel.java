@@ -37,14 +37,14 @@ import org.apache.hadoop.hbase.rest.descriptors.ScannerIdentifier;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 
 /**
- * 
+ *
  */
 public class ScannerModel extends AbstractModel {
 
   public ScannerModel(HBaseConfiguration config, HBaseAdmin admin) {
     super.initialize(config, admin);
   }
-  
+
   //
   // Normal Scanner
   //
@@ -83,7 +83,7 @@ public class ScannerModel extends AbstractModel {
    * returns the next numResults Results from the Scaner mapped to Integer
    * id. If the end of the table is reached, the scanner is closed and all
    * succesfully retrieved rows are returned.
-   * 
+   *
    * @param id
    *          id target scanner is mapped to.
    * @param numRows
@@ -124,7 +124,7 @@ public class ScannerModel extends AbstractModel {
   /**
    * Returns all rows inbetween the scanners current position and the end of the
    * table.
-   * 
+   *
    * @param id
    *          id of scanner to use
    * @return all rows till end of table
@@ -288,5 +288,5 @@ public class ScannerModel extends AbstractModel {
     return scannerOpen(tableName, columns, startRow,
         HConstants.LATEST_TIMESTAMP, filter);
   }
-  
+
 }

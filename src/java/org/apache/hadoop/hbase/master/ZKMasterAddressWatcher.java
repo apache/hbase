@@ -67,7 +67,7 @@ public class ZKMasterAddressWatcher implements Watcher {
         notifyAll();
       }
     }
-    else if(type.equals(EventType.NodeCreated) && 
+    else if(type.equals(EventType.NodeCreated) &&
         event.getPath().equals(this.zooKeeper.clusterStateZNode)) {
       LOG.debug("Resetting the watch on the cluster state node.");
       this.zooKeeper.setClusterStateWatch(this);

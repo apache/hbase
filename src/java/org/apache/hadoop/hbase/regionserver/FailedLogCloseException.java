@@ -29,7 +29,7 @@ class FailedLogCloseException extends IOException {
   private static final long serialVersionUID = 1759152841462990925L;
 
   /**
-   * 
+   *
    */
   public FailedLogCloseException() {
     super();

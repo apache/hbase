@@ -53,9 +53,9 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
   }
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT, 
+    put(VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+    put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.I64)));
   }});
 
@@ -230,7 +230,7 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == TType.STOP) {
         break;
       }
       switch (field.id)
@@ -238,7 +238,7 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
         case VALUE:
           if (field.type == TType.STRING) {
             this.value = iprot.readBinary();
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
@@ -246,7 +246,7 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
           if (field.type == TType.I64) {
             this.timestamp = iprot.readI64();
             this.__isset.timestamp = true;
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;

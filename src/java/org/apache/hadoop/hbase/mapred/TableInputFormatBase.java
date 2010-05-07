@@ -221,7 +221,7 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
       try {
         result = this.scanner.next();
       } catch (UnknownScannerException e) {
-        LOG.debug("recovered from " + StringUtils.stringifyException(e));  
+        LOG.debug("recovered from " + StringUtils.stringifyException(e));
         restart(lastRow);
         this.scanner.next();    // skip presumed already mapped row
         result = this.scanner.next();
@@ -299,7 +299,7 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
       int lastPos = startPos + middle;
       lastPos = startKeys.length % realNumSplits > i ? lastPos + 1 : lastPos;
       String regionLocation = table.getRegionLocation(startKeys[startPos]).
-        getServerAddress().getHostname(); 
+        getServerAddress().getHostname();
       splits[i] = new TableSplit(this.table.getTableName(),
         startKeys[startPos], ((i + 1) < realNumSplits) ? startKeys[lastPos]:
           HConstants.EMPTY_START_ROW, regionLocation);

@@ -53,11 +53,11 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
   }
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(ISDELETE, new FieldMetaData("isDelete", TFieldRequirementType.DEFAULT, 
+    put(ISDELETE, new FieldMetaData("isDelete", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.BOOL)));
-    put(COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+    put(COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT, 
+    put(VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
   }});
 
@@ -284,7 +284,7 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == TType.STOP) {
         break;
       }
       switch (field.id)
@@ -293,21 +293,21 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
           if (field.type == TType.BOOL) {
             this.isDelete = iprot.readBool();
             this.__isset.isDelete = true;
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
         case COLUMN:
           if (field.type == TType.STRING) {
             this.column = iprot.readBinary();
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
         case VALUE:
           if (field.type == TType.STRING) {
             this.value = iprot.readBinary();
-          } else { 
+          } else {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;

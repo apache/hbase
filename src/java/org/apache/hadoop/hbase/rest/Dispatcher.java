@@ -51,7 +51,7 @@ import java.util.Map;
  * <p>
  * This servlet has explicit dependency on Jetty server; it uses the jetty
  * implementation of MultipartResponse.
- * 
+ *
  * <p>
  * TODO:
  * <ul>
@@ -65,7 +65,7 @@ import java.util.Map;
  * <li>Minor items are we are decoding URLs in places where probably already
  * done and how to timeout scanners that are in the scanner list.</li>
  * </ul>
- * 
+ *
  * @see <a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseRest">Hbase
  *      REST Specification</a>
  * @deprecated Use the {@link org.apache.hadoop.hbase.stargate}  hbase contrib instead.
@@ -73,7 +73,7 @@ import java.util.Map;
 public class Dispatcher extends javax.servlet.http.HttpServlet {
 
   /**
-   * 
+   *
    */
   private static final long serialVersionUID = -8075335435797071569L;
   private static final Log LOG = LogFactory.getLog(Dispatcher.class);
@@ -101,7 +101,7 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
 
     /**
      * Utility method used looking at Accept header content.
-     * 
+     *
      * @param t
      *          The content type to examine.
      * @return The enum that matches the prefix of <code>t</code> or the default
@@ -294,7 +294,7 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
       Status s = createStatus(request, response);
       byte[][] pathSegments = getPathSegments(request);
       Map<String, String[]> queryMap = request.getParameterMap();
-      
+
       if(pathSegments.length == 0) {
         throw new HBaseRestException("method not supported");
       } else if (pathSegments.length == 1 && pathSegments[0].length > 0) {
@@ -332,17 +332,17 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
 
   /**
    * This method will get the path segments from the HttpServletRequest.  Please
-   * note that if the first segment of the path is /api this is removed from the 
+   * note that if the first segment of the path is /api this is removed from the
    * returning byte array.
-   * 
+   *
    * @param request
-   * 
+   *
    * @return request pathinfo split on the '/' ignoring the first '/' so first
    * element in pathSegment is not the empty string.
    */
   protected byte[][] getPathSegments(final HttpServletRequest request) {
     int context_len = request.getContextPath().length() + 1;
-    
+
     byte[][] pathSegments = Bytes.toByteArrays(request.getRequestURI().substring(context_len)
         .split("/"));
     byte[] apiAsBytes = "api".getBytes();
@@ -377,7 +377,7 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
       }
       char [] c;// 40 characters * sizeof(UTF16)
       while (true) {
-    	c = new char[bufferLength]; 
+    	c = new char[bufferLength];
         int n = r.read(c, 0, bufferLength);
         if (n == -1) break;
         resultant += new String(c, 0, n);
@@ -431,7 +431,7 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
 
   /*
    * Start up the REST servlet in standalone mode.
-   * 
+   *
    * @param args
    */
   protected static void doMain(final String[] args) throws Exception {

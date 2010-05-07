@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.rest.serializer;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * 
+ *
  *         Abstract object that is used as the base of all serializers in the
  *         REST based interface.
  */
@@ -45,9 +45,9 @@ public abstract class AbstractRestSerializer implements IRestSerializer {
   /**
    * Public constructor for AbstractRestSerializer. This is the constructor that
    * should be called whenever creating a RestSerializer object.
-   * 
+   *
    * @param response
-   * @param prettyPrint 
+   * @param prettyPrint
    */
   public AbstractRestSerializer(HttpServletResponse response,
       boolean prettyPrint) {

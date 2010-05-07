@@ -36,7 +36,7 @@ import org.apache.hadoop.io.WritableUtils;
 public class Writables {
   /**
    * @param w
-   * @return The bytes of <code>w</code> gotten by running its 
+   * @return The bytes of <code>w</code> gotten by running its
    * {@link Writable#write(java.io.DataOutput)} method.
    * @throws IOException
    * @see #getWritable(byte[], Writable)
@@ -119,7 +119,7 @@ public class Writables {
   throws IOException {
     return (HRegionInfo)getWritable(bytes, new HRegionInfo());
   }
- 
+
   /**
    * @param bytes
    * @return A HRegionInfo instance built out of passed <code>bytes</code>
@@ -184,7 +184,7 @@ public class Writables {
     }
     return Bytes.toString(c.getValue());
   }
-  
+
   /**
    * @param c
    * @return Cell as a long.

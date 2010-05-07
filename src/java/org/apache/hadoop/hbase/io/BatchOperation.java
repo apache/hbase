@@ -28,7 +28,7 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * Batch update operation.
- * 
+ *
  * If value is null, its a DELETE operation.  If its non-null, its a PUT.
  * This object is purposely bare-bones because many instances are created
  * during bulk uploads.  We have one class for DELETEs and PUTs rather than
@@ -42,12 +42,12 @@ public class BatchOperation implements Writable, HeapSize {
    */
   // JHat says this is 32 bytes.
   public final int ESTIMATED_HEAP_TAX = 36;
-  
+
   private byte [] column = null;
-  
+
   // A null value defines DELETE operations.
   private byte [] value = null;
-  
+
   /**
    * Default constructor
    */
@@ -118,7 +118,7 @@ public class BatchOperation implements Writable, HeapSize {
   public String toString() {
     return "column => " + Bytes.toString(this.column) + ", value => '...'";
   }
-  
+
   // Writable methods
 
   // This is a hotspot when updating deserializing incoming client submissions.
@@ -142,7 +142,7 @@ public class BatchOperation implements Writable, HeapSize {
       out.write(value);
     }
   }
-  
+
   public long heapSize() {
     return Bytes.ESTIMATED_HEAP_TAX * 2 + this.column.length +
       this.value.length + ESTIMATED_HEAP_TAX;

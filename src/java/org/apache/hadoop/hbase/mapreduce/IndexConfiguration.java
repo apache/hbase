@@ -47,7 +47,7 @@ import org.w3c.dom.Text;
  * Configuration parameters for building a Lucene index.
  */
 public class IndexConfiguration extends Configuration {
-  
+
   private static final Log LOG = LogFactory.getLog(IndexConfiguration.class);
 
   static final String HBASE_COLUMN_NAME = "hbase.column.name";

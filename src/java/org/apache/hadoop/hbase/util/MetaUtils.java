@@ -63,14 +63,14 @@ public class MetaUtils {
   private HRegion rootRegion;
   private Map<byte [], HRegion> metaRegions = Collections.synchronizedSortedMap(
     new TreeMap<byte [], HRegion>(Bytes.BYTES_COMPARATOR));
-  
-  /** Default constructor 
+
+  /** Default constructor
    * @throws IOException */
   public MetaUtils() throws IOException {
     this(new HBaseConfiguration());
   }
-  
-  /** @param conf HBaseConfiguration 
+
+  /** @param conf HBaseConfiguration
    * @throws IOException */
   public MetaUtils(HBaseConfiguration conf) throws IOException {
     this.conf = conf;
@@ -89,7 +89,7 @@ public class MetaUtils {
     this.rootdir = FSUtils.getRootDir(this.conf);
   }
 
-  /** @return the HLog 
+  /** @return the HLog
    * @throws IOException */
   public synchronized HLog getLog() throws IOException {
     if (this.log == null) {
@@ -99,7 +99,7 @@ public class MetaUtils {
     }
     return this.log;
   }
-  
+
   /**
    * @return HRegion for root region
    * @throws IOException
@@ -110,10 +110,10 @@ public class MetaUtils {
     }
     return this.rootRegion;
   }
-  
+
   /**
    * Open or return cached opened meta region
-   * 
+   *
    * @param metaInfo HRegionInfo for meta region
    * @return meta HRegion
    * @throws IOException
@@ -127,7 +127,7 @@ public class MetaUtils {
     }
     return meta;
   }
-  
+
   /**
    * Closes catalog regions if open. Also closes and deletes the HLog. You
    * must call this method if you want to persist changes made during a
@@ -172,18 +172,18 @@ public class MetaUtils {
   public interface ScannerListener {
     /**
      * Callback so client of scanner can process row contents
-     * 
+     *
      * @param info HRegionInfo for row
      * @return false to terminate the scan
      * @throws IOException
      */
     public boolean processRow(HRegionInfo info) throws IOException;
   }
-  
+
   /**
    * Scans the root region. For every meta region found, calls the listener with
    * the HRegionInfo of the meta region.
-   * 
+   *
    * @param listener method to be called for each meta region found
    * @throws IOException
    */
@@ -241,7 +241,7 @@ public class MetaUtils {
    * <p>Use for reading meta only.  Does not close region when done.
    * Use {@link #getMetaRegion(HRegionInfo)} instead if writing.  Adds
    * meta region to list that will get a close on {@link #shutdown()}.
-   * 
+   *
    * @param metaRegionInfo HRegionInfo for meta region
    * @param listener method to be called for each meta region found
    * @throws IOException
@@ -270,7 +270,7 @@ public class MetaUtils {
     meta.compactStores();
     return meta;
   }
- 
+
   /**
    * Set a single region on/offline.
    * This is a tool to repair tables that have offlined tables in their midst.
@@ -302,24 +302,24 @@ public class MetaUtils {
     HRegionInfo info = Writables.getHRegionInfo(value);
     Put put = new Put(row);
     info.setOffline(onlineOffline);
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, 
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         Writables.getBytes(info));
     t.put(put);
-    
+
     Delete delete = new Delete(row);
     delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
     delete.deleteColumns(HConstants.CATALOG_FAMILY,
         HConstants.STARTCODE_QUALIFIER);
-    
+
     t.delete(delete);
   }
-  
+
   /**
    * Offline version of the online TableOperation,
    * org.apache.hadoop.hbase.master.AddColumn.
    * @param tableName
    * @param hcd Add this column to <code>tableName</code>
-   * @throws IOException 
+   * @throws IOException
    */
   public void addColumn(final byte [] tableName,
       final HColumnDescriptor hcd)
@@ -329,7 +329,7 @@ public class MetaUtils {
       final HRegion m = getMetaRegion(hri);
       scanMetaRegion(m, new ScannerListener() {
         private boolean inTable = true;
-        
+
         @SuppressWarnings("synthetic-access")
         public boolean processRow(HRegionInfo info) throws IOException {
           LOG.debug("Testing " + Bytes.toString(tableName) + " against " +
@@ -347,7 +347,7 @@ public class MetaUtils {
         }});
     }
   }
-  
+
   /**
    * Offline version of the online TableOperation,
    * org.apache.hadoop.hbase.master.DeleteColumn.
@@ -362,7 +362,7 @@ public class MetaUtils {
       final HRegion m = getMetaRegion(hri);
       scanMetaRegion(m, new ScannerListener() {
         private boolean inTable = true;
-        
+
         @SuppressWarnings("synthetic-access")
         public boolean processRow(HRegionInfo info) throws IOException {
           if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
@@ -385,15 +385,15 @@ public class MetaUtils {
         }});
     }
   }
-  
+
   /**
    * Update COL_REGIONINFO in meta region r with HRegionInfo hri
-   * 
+   *
    * @param r
    * @param hri
    * @throws IOException
    */
-  public void updateMETARegionInfo(HRegion r, final HRegionInfo hri) 
+  public void updateMETARegionInfo(HRegion r, final HRegionInfo hri)
   throws IOException {
     if (LOG.isDebugEnabled()) {
       Get get = new Get(hri.getRegionName());
@@ -408,14 +408,14 @@ public class MetaUtils {
         return;
       }
       HRegionInfo h = Writables.getHRegionInfoOrNull(value);
-      
-      LOG.debug("Old " + Bytes.toString(HConstants.CATALOG_FAMILY) + ":" + 
+
+      LOG.debug("Old " + Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
           Bytes.toString(HConstants.REGIONINFO_QUALIFIER) + " for " +
           hri.toString() + " in " + r.toString() + " is: " + h.toString());
     }
-    
+
     Put put = new Put(hri.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, 
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         Writables.getBytes(hri));
     r.put(put);
 
@@ -432,8 +432,8 @@ public class MetaUtils {
         return;
       }
       HRegionInfo h = Writables.getHRegionInfoOrNull(value);
-        LOG.debug("New " + Bytes.toString(HConstants.CATALOG_FAMILY) + ":" + 
-            Bytes.toString(HConstants.REGIONINFO_QUALIFIER) + " for " + 
+        LOG.debug("New " + Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
+            Bytes.toString(HConstants.REGIONINFO_QUALIFIER) + " for " +
             hri.toString() + " in " + r.toString() + " is: " +  h.toString());
     }
   }
@@ -456,7 +456,7 @@ public class MetaUtils {
     // Return all meta regions that contain the passed tablename.
     scanRootRegion(new ScannerListener() {
       private final Log SL_LOG = LogFactory.getLog(this.getClass());
-      
+
       public boolean processRow(HRegionInfo info) throws IOException {
         SL_LOG.debug("Testing " + info);
         if (Bytes.equals(info.getTableDesc().getName(),
@@ -468,7 +468,7 @@ public class MetaUtils {
       }});
     return result;
   }
-  
+
   /**
    * @param n Table name.
    * @return True if a catalog table, -ROOT- or .META.

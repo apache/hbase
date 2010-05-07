@@ -39,7 +39,7 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * An HColumnDescriptor contains information about a column family such as the
  * number of versions, compression settings, etc.
- * 
+ *
  * It is used as input when creating a table or adding a column. Once set, the
  * parameters that specify a column cannot be changed without deleting the
  * column and recreating it. If there is data stored in the column, it will be
@@ -55,7 +55,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   // Version 7 -- add new compression and hfile blocksize to HColumnDescriptor (HBASE-1217)
   private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)7;
 
-  /** 
+  /**
    * The type of compression.
    * @see org.apache.hadoop.io.SequenceFile.Writer
    * @deprecated Compression now means which compression library
@@ -64,7 +64,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   @Deprecated
   public static enum CompressionType {
     /** Do not compress records. */
-    NONE, 
+    NONE,
     /** Compress values only, each separately. */
     RECORD,
     /** Compress sequences of records together in blocks. */
@@ -118,7 +118,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * Default setting for whether or not to use bloomfilters.
    */
   public static final boolean DEFAULT_BLOOMFILTER = false;
-  
+
   /**
    * Default time to live of cell contents.
    */
@@ -144,20 +144,20 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   }
 
   /**
-   * Construct a column descriptor specifying only the family name 
+   * Construct a column descriptor specifying only the family name
    * The other attributes are defaulted.
-   * 
+   *
    * @param familyName Column family name. Must be 'printable' -- digit or
    * letter -- and end in a <code>:<code>
    */
   public HColumnDescriptor(final String familyName) {
     this(Bytes.toBytes(familyName));
   }
-  
+
   /**
-   * Construct a column descriptor specifying only the family name 
+   * Construct a column descriptor specifying only the family name
    * The other attributes are defaulted.
-   * 
+   *
    * @param familyName Column family name. Must be 'printable' -- digit or
    * letter -- and end in a <code>:<code>
    */
@@ -170,7 +170,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
 
   /**
    * Constructor.
-   * Makes a deep copy of the supplied descriptor. 
+   * Makes a deep copy of the supplied descriptor.
    * Can make a modifiable descriptor from an UnmodifyableHColumnDescriptor.
    * @param desc The descriptor.
    */
@@ -195,8 +195,8 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * @param timeToLive Time-to-live of cell contents, in seconds
    * (use HConstants.FOREVER for unlimited TTL)
    * @param bloomFilter Enable the specified bloom filter for this column
-   * 
-   * @throws IllegalArgumentException if passed a family name that is made of 
+   *
+   * @throws IllegalArgumentException if passed a family name that is made of
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> and does not
    * end in a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
@@ -212,7 +212,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /**
    * Backwards compatible Constructor.  Maximum value length is no longer
    * configurable.
-   * 
+   *
    * @param familyName Column family name. Must be 'printable' -- digit or
    * letter -- and end in a <code>:<code>
    * @param maxVersions Maximum number of versions to keep
@@ -225,8 +225,8 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * @param timeToLive Time-to-live of cell contents, in seconds
    * (use HConstants.FOREVER for unlimited TTL)
    * @param bloomFilter Enable the specified bloom filter for this column
-   * 
-   * @throws IllegalArgumentException if passed a family name that is made of 
+   *
+   * @throws IllegalArgumentException if passed a family name that is made of
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> and does not
    * end in a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
@@ -235,12 +235,12 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
 //  public HColumnDescriptor(final byte [] familyName, final int maxVersions,
 //      final String compression, final boolean inMemory,
 //      final boolean blockCacheEnabled, final int blocksize,
-//      final int maxValueLength, 
+//      final int maxValueLength,
 //      final int timeToLive, final boolean bloomFilter) {
 //    this(familyName, maxVersions, compression, inMemory, blockCacheEnabled,
 //        blocksize, timeToLive, bloomFilter);
 //  }
-  
+
   /**
    * Constructor
    * @param familyName Column family name. Must be 'printable' -- digit or
@@ -254,8 +254,8 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * @param timeToLive Time-to-live of cell contents, in seconds
    * (use HConstants.FOREVER for unlimited TTL)
    * @param bloomFilter Enable the specified bloom filter for this column
-   * 
-   * @throws IllegalArgumentException if passed a family name that is made of 
+   *
+   * @throws IllegalArgumentException if passed a family name that is made of
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> and does not
    * end in a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
@@ -398,7 +398,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
     String n = getValue(COMPRESSION);
     return Compression.Algorithm.valueOf(n.toUpperCase());
   }
-  
+
   /** @return maximum number of versions */
   public synchronized int getMaxVersions() {
     if (this.cachedMaxVersions == -1) {
@@ -469,7 +469,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
       return Boolean.valueOf(value).booleanValue();
     return DEFAULT_IN_MEMORY;
   }
-  
+
   /**
    * @param inMemory True if we are to keep all values in the HRegionServer
    * cache
@@ -591,7 +591,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
     result ^= values.hashCode();
     return result;
   }
-  
+
   // Writable
 
   public void readFields(DataInput in) throws IOException {
@@ -678,6 +678,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * @see org.apache.hadoop.hbase.rest.xml.IOutputXML#toXML()
    */
   public void restSerialize(IRestSerializer serializer) throws HBaseRestException {
-    serializer.serializeColumnDescriptor(this);    
+    serializer.serializeColumnDescriptor(this);
   }
 }

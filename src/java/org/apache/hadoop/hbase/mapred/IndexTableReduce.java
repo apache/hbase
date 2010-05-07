@@ -98,7 +98,7 @@ public class IndexTableReduce extends MapReduceBase implements
             Field.Index.NO;
 
         // UTF-8 encode value
-        Field field = new Field(column, Bytes.toString(columnValue), 
+        Field field = new Field(column, Bytes.toString(columnValue),
           store, index);
         field.setBoost(indexConf.getBoost(column));
         field.setOmitNorms(indexConf.isOmitNorms(column));

@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.util.Writables;
 
 abstract class ColumnOperation extends TableOperation {
   private final Log LOG = LogFactory.getLog(this.getClass());
-  
-  protected ColumnOperation(final HMaster master, final byte [] tableName) 
+
+  protected ColumnOperation(final HMaster master, final byte [] tableName)
   throws IOException {
     super(master, tableName);
   }

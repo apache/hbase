@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.rest.exception;
 public class HBaseRestException extends Exception {
 
   /**
-   * 
+   *
    */
   private static final long serialVersionUID = 8481585437124298646L;
   private Exception innerException;

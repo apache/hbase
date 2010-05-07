@@ -61,7 +61,7 @@ public class RowController extends AbstractController {
     tableName = pathSegments[0];
     rowName = pathSegments[2];
     RowResult row = null;
-    
+
     if (queryMap.size() == 0 && pathSegments.length <= 3) {
       row = innerModel.get(tableName, rowName);
     } else if (pathSegments.length == 4

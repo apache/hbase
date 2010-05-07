@@ -44,15 +44,15 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
   protected final Sleeper sleeper;
   protected final MetaRegion m;
   protected final HMaster master;
-  
+
   protected HRegionInterface server;
-  
+
   protected RetryableMetaOperation(MetaRegion m, HMaster master) {
     this.m = m;
     this.master = master;
     this.sleeper = new Sleeper(master.threadWakeFrequency, master.closed);
   }
-  
+
   protected T doWithRetries()
   throws IOException, RuntimeException {
     List<IOException> exceptions = new ArrayList<IOException>();
@@ -76,7 +76,7 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
         if (tries == master.numRetries - 1) {
           if (LOG.isDebugEnabled()) {
             StringBuilder message = new StringBuilder(
-                "Trying to contact region server for regionName '" + 
+                "Trying to contact region server for regionName '" +
                 Bytes.toString(m.getRegionName()) + "', but failed after " +
                 (tries + 1) + " attempts.\n");
             int i = 1;
@@ -97,6 +97,6 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
       }
       this.sleeper.sleep();
     }
-    return null;    
+    return null;
   }
 }
