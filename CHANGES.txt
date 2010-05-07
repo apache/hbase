@@ -120,6 +120,7 @@ Release X.X.X - Unreleased
                (Ryan Rawson via Stack)
    HBASE-2513  hbase-2414 added bug where we'd tight-loop if no root
                available
+   HBASE-2503  PriorityQueue isn't thread safe, KeyValueHeap uses it that way
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
