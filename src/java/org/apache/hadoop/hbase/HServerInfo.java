@@ -76,7 +76,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.startCode = other.getStartCode();
     this.load = other.getLoad();
     this.infoPort = other.getInfoPort();
-    this.hostname = other.getHostName();
+    this.hostname = other.hostname;
   }
 
   public HServerLoad getLoad() {
@@ -111,10 +111,6 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   public synchronized void setStartCode(long startCode) {
     this.startCode = startCode;
     this.serverName = null;
-  }
-
-  public String getHostName() {
-    return hostname;
   }
 
   /**

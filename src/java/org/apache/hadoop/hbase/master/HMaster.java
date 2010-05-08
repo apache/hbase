@@ -498,7 +498,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         HRegionInterface hri =
           this.connection.getHRegionConnection(address, false);
         HServerInfo info = hri.getHServerInfo();
-        LOG.debug("Inspection found server " + info.getHostName());
+        LOG.debug("Inspection found server " + info.getServerName());
         serverManager.recordNewServer(info, true);
         HRegionInfo[] regions = hri.getRegionsAssignment();
         for (HRegionInfo region : regions) {
