@@ -54,7 +54,6 @@ class ProcessServerShutdown extends RegionServerOperation {
   private boolean rootRescanned;
   private HServerAddress deadServerAddress;
 
-
   private static class ToDoEntry {
     boolean regionOffline;
     final HRegionInfo info;
@@ -85,26 +84,24 @@ class ProcessServerShutdown extends RegionServerOperation {
   }
 
   private void closeMetaRegions() {
-    isRootServer = master.regionManager.isRootServer(deadServerAddress);
-    if (isRootServer) {
-      master.regionManager.unsetRootRegion();
-    }  else {
-      //HBASE-1928: Check whether this server has been transitioning the ROOT table
-      isRootServer = master.regionManager.isRootServerCandidate (deadServer);
-      if (isRootServer) {
-        master.regionManager.unsetRootRegion();
-      }
+    this.isRootServer =
+      this.master.regionManager.isRootServer(this.deadServerAddress) ||
+      this.master.regionManager.isRootServerCandidate (deadServer);
+    if (this.isRootServer) {
+      this.master.regionManager.unsetRootRegion();
     }
-    List<byte[]> metaStarts = master.regionManager.listMetaRegionsForServer(deadServerAddress);
+    List<byte[]> metaStarts =
+      this.master.regionManager.listMetaRegionsForServer(deadServerAddress);
 
-    metaRegions = new ArrayList<MetaRegion>();
-    for (byte [] region : metaStarts) {
-      MetaRegion r = master.regionManager.offlineMetaRegion(region);
-      metaRegions.add(r);
+    this.metaRegions = new ArrayList<MetaRegion>();
+    for (byte [] startKey: metaStarts) {
+      MetaRegion r = master.regionManager.offlineMetaRegionWithStartKey(startKey);
+      this.metaRegions.add(r);
     }
 
     //HBASE-1928: Check whether this server has been transitioning the META table
-    HRegionInfo metaServerRegionInfo = master.regionManager.getMetaServerRegionInfo (deadServer);
+    HRegionInfo metaServerRegionInfo =
+      master.regionManager.getMetaServerRegionInfo (deadServer);
     if (metaServerRegionInfo != null) {
       metaRegions.add (new MetaRegion (deadServerAddress, metaServerRegionInfo));
     }
@@ -192,7 +189,7 @@ class ProcessServerShutdown extends RegionServerOperation {
                   Bytes.toString(info.getRegionName()) +
               " from online meta regions");
             }
-            master.regionManager.offlineMetaRegion(info.getStartKey());
+            master.regionManager.offlineMetaRegionWithStartKey(info.getStartKey());
           }
 
           ToDoEntry todo = new ToDoEntry(info);

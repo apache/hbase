@@ -34,12 +34,17 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   private long expire;
   protected final HMaster master;
   protected final int numRetries;
+  /* How long we stay on queue.
+   */
   private int expirationDuration;
 
   protected RegionServerOperation(HMaster master) {
     this.master = master;
     this.numRetries = master.numRetries;
-    this.expirationDuration = this.master.leaseTimeout/2;
+    // this.master.leaseTimeout is 120 by default.  120/2, which is what it
+    // used to be, is a long time to wait on something coming around again.
+    // Set a max of 10 seconds to wait.
+    this.expirationDuration = Math.min(this.master.leaseTimeout/10, 10);
     resetExpiration();
   }
 

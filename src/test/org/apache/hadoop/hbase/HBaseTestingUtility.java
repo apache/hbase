@@ -600,7 +600,6 @@ public class HBaseTestingUtility {
     final boolean hdfsShutdown)
   throws Exception {
     HRegionServer rs = hbaseCluster.getRegionServer(index);
-    if (!hdfsShutdown) rs.setHDFSShutdownThreadOnExit(null);
     expireSession(rs.getZooKeeperWrapper());
   }
 

@@ -135,6 +135,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
   // debugging and unit tests.
   protected volatile boolean abortRequested;
 
+  private volatile boolean killed = false;
+
   // If false, the file system has become unavailable
   protected volatile boolean fsOk;
 
@@ -630,7 +632,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     hlogRoller.interruptIfNecessary();
     this.majorCompactionChecker.interrupt();
 
-    if (abortRequested) {
+    if (killed) {
+      // Just skip out w/o closing regions.
+    } else if (abortRequested) {
       if (this.fsOk) {
         // Only try to clean up if the file system is available
         try {
@@ -683,14 +687,24 @@ public class HRegionServer implements HConstants, HRegionInterface,
       this.hbaseMaster = null;
     }
 
-    join();
-    this.zooKeeperWrapper.close();
-    if (this.shutdownHDFS.get()) {
-      runThread(this.hdfsShutdownThread,
-          this.conf.getLong("hbase.dfs.shutdown.wait", 30000));
+    if (!killed) {
+      join();
+      this.zooKeeperWrapper.close();
     }
-
+    runHDFSShutdownHook(this.shutdownHDFS.get(), this.hdfsShutdownThread,
+      this.conf.getLong("hbase.dfs.shutdown.wait", 30000));
     LOG.info(Thread.currentThread().getName() + " exiting");
+  }
+
+  /**
+   * @param runit Run the passed thread?
+   * @param t Thread to run, if not null.
+   * @param waittime Time to wait on thread completion.
+   */
+  protected void runHDFSShutdownHook(final boolean runit, final Thread t,
+      final long waittime) {
+    if (!runit || t == null) return;
+    runThread(t, waittime);
   }
 
   /*
@@ -742,12 +756,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   /**
    * Set the hdfs shutdown thread to run on exit.  Pass null to disable
-   * running of the shutdown test.  Needed by tests.
+   * running of the shutdown test.
    * @param t Thread to run.  Pass null to disable tests.
-   * @return Previous occupant of the shutdown thread position.
+   * @return Previous occupant of the shutdown thread.
    */
-  public Thread setHDFSShutdownThreadOnExit(final Thread t) {
+  protected Thread setHDFSShutdownThreadOnExit(final Thread t) {
     if (t == null) this.shutdownHDFS.set(false);
+    this.shutdownHDFS.set(true);
     Thread old = this.hdfsShutdownThread;
     this.hdfsShutdownThread = t;
     return old;
@@ -794,7 +809,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
       // Register shutdown hook for HRegionServer, runs an orderly shutdown
       // when a kill signal is recieved
       Runtime.getRuntime().addShutdownHook(new ShutdownThread(this,
-          Thread.currentThread()));
+        Thread.currentThread()));
+      // Suppress the hdfs shutdown hook and run it ourselves below.
       this.hdfsShutdownThread = suppressHdfsShutdownHook();
 
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
@@ -1000,21 +1016,25 @@ public class HRegionServer implements HConstants, HRegionInterface,
   }
 
   /**
-   * So, HDFS caches FileSystems so when you call FileSystem.get it's fast. In
-   * order to make sure things are cleaned up, it also creates a shutdown hook
-   * so that all filesystems can be closed when the process is terminated. This
-   * conveniently runs concurrently with our own shutdown handler, and
-   * therefore causes all the filesystems to be closed before the server can do
-   * all its necessary cleanup.
+   * So, when you call {@ink FileSystem#get(Configuration)}, a new instance
+   * is created if none exists for this user currently and it is added to 
+   * a static Cache. In order to make sure things are cleaned up on the way out,
+   * it also adds a shutdown hook so that ALL filesystem instances in a JVM
+   * are closed when the process is terminated (The hook, if it runs,
+   * calls FileSystem.closeAll() which will call close on all FileSystems in the
+   * cache). This inconveniently runs concurrently with our own shutdown handler,
+   * and therefore causes all the filesystems to be closed before the server can
+   * do all its necessary cleanup.
    *
-   * The crazy dirty reflection in this method sneaks into the FileSystem cache
+   * <p>The crazy dirty reflection in this method sneaks into the FileSystem cache
    * and grabs the shutdown hook, removes it from the list of active shutdown
    * hooks, and hangs onto it until later. Then, after we're properly done with
    * our graceful shutdown, we can execute the hdfs hook manually to make sure
    * loose ends are tied up.
    *
-   * This seems quite fragile and susceptible to breaking if Hadoop changes
+   * <p>This seems quite fragile and susceptible to breaking if Hadoop changes
    * anything about the way this cleanup is managed. Keep an eye on things.
+   * @return Thread The hook registered by FileSystem to run at shutdown time.
    */
   private Thread suppressHdfsShutdownHook() {
     try {
@@ -1274,6 +1294,16 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.reservedSpace.clear();
     LOG.info("Dump of metrics: " + this.metrics.toString());
     stop();
+  }
+
+  /*
+   * Simulate a kill -9 of this server.
+   * Exits w/o closing regions or cleaninup logs but it does close socket in
+   * case want to bring up server on old hostname+port immediately.
+   */
+  protected void kill() {
+    this.killed = true;
+    abort();
   }
 
   /**
