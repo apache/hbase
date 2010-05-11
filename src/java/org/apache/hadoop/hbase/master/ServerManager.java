@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.RegionManager.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
@@ -147,7 +148,9 @@ class ServerManager implements HConstants {
     this.minimumServerCount = c.getInt("hbase.regions.server.count.min", 0);
     this.serverMonitorThread = new ServerMonitor(master.metaRescanInterval,
       master.shutdownRequested);
-    this.serverMonitorThread.start();
+    String n = Thread.currentThread().getName();
+    Threads.setDaemonThreadRunning(this.serverMonitorThread,
+      n + ".serverMonitor");
   }
 
   /**

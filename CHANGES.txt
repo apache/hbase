@@ -124,6 +124,7 @@ Release X.X.X - Unreleased
    HBASE-2521  no license headers in 5 files
    HBASE-2413  Master does not respect generation stamps, may result in meta
                getting permanently offlined
+   HBASE-2515  ChangeTableState considers split&&offline regions as being served
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
@@ -192,6 +193,7 @@ Release X.X.X - Unreleased
    HBASE-2520  Cleanup arrays vs Lists of scanners (Todd Lipcon via Stack)
    HBASE-2518  Kill all the trailing whitespaces in the code base
                (Benoit Sigoure via Stack)
+   HBASE-2528  ServerManager.ServerMonitor isn't daemonized
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
