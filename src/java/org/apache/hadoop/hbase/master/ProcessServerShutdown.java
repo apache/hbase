@@ -45,6 +45,8 @@ import org.apache.hadoop.hbase.master.RegionManager.RegionState;
  * serving, and the regions need to get reassigned.
  */
 class ProcessServerShutdown extends RegionServerOperation {
+  // Server name made of the concatenation of hostname, port and startcode
+  // formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
   private final String deadServer;
   private boolean isRootServer;
   private List<MetaRegion> metaRegions;
@@ -86,7 +88,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   private void closeMetaRegions() {
     this.isRootServer =
       this.master.regionManager.isRootServer(this.deadServerAddress) ||
-      this.master.regionManager.isRootServerCandidate (deadServer);
+      this.master.regionManager.isRootInTransitionOnThisServer(deadServer);
     if (this.isRootServer) {
       this.master.regionManager.unsetRootRegion();
     }
@@ -157,7 +159,7 @@ class ProcessServerShutdown extends RegionServerOperation {
         // Check server name.  If null, skip (We used to consider it was on
         // shutdown server but that would mean that we'd reassign regions that
         // were already out being assigned, ones that were product of a split
-        // that happened while the shutdown was being processed.
+        // that happened while the shutdown was being processed).
         String serverAddress = BaseScanner.getServerAddress(values);
         long startCode = BaseScanner.getStartCode(values);
 
@@ -175,7 +177,6 @@ class ProcessServerShutdown extends RegionServerOperation {
             Bytes.toString(row));
         }
 
-//        HRegionInfo info = master.getHRegionInfo(row, values.rowResult());
         HRegionInfo info = master.getHRegionInfo(row, values);
         if (info == null) {
           emptyRows.add(row);

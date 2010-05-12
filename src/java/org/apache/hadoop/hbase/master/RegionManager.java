@@ -874,7 +874,7 @@ class RegionManager implements HConstants {
    * @param server Server
    * @return true if server is transitioning the ROOT table
    */
-  public boolean isRootServerCandidate(final String server) {
+  public boolean isRootInTransitionOnThisServer(final String server) {
     synchronized (this.regionsInTransition) {
       for (RegionState s : regionsInTransition.values()) {
         if (s.getRegionInfo().isRootRegion()

@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -39,6 +41,8 @@ import org.apache.zookeeper.ZooKeeper;
  *
  */
 public class TestZooKeeper extends HBaseClusterTestCase {
+  private static final Log LOG = LogFactory.getLog(TestZooKeeper.class);
+  
   private static class EmptyWatcher implements Watcher {
     public static EmptyWatcher instance = new EmptyWatcher();
     private EmptyWatcher() {}
@@ -116,13 +120,15 @@ public class TestZooKeeper extends HBaseClusterTestCase {
   }
 
   public void testRegionServerSessionExpired() throws Exception{
-    this.conf.setBoolean("hbase.regionserver.restart.on.zk.expire", true);
+    LOG.info("Starting " + getName());
     new HTable(conf, HConstants.META_TABLE_NAME);
     HRegionServer rs = cluster.getRegionServer(0);
+    rs.getConfiguration().setBoolean("hbase.regionserver.restart.on.zk.expire", true);
     sessionExpirationHelper(rs.getZooKeeperWrapper());
   }
 
   public void testMasterSessionExpired() throws Exception {
+    LOG.info("Starting " + getName());
     new HTable(conf, HConstants.META_TABLE_NAME);
     HMaster master = cluster.getMaster();
     sessionExpirationHelper(master.getZooKeeperWrapper());
