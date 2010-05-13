@@ -128,25 +128,6 @@ public class TestTransactions extends HBaseClusterTestCase {
     Assert.assertEquals(newValue, Bytes.toInt(row1_A.value()));
   }
 
-  public void testGetAfterPutPut() throws IOException {
-    TransactionState transactionState = transactionManager.beginTransaction();
-
-    int originalValue = Bytes.toInt(table.get(transactionState,
-        new Get(ROW1).addColumn(COL_A)).value());
-    int newValue = originalValue + 1;
-
-    table.put(transactionState, new Put(ROW1).add(FAMILY, QUAL_A, Bytes
-        .toBytes(newValue)));
-    
-    newValue = newValue + 1;
-    
-    table.put(transactionState, new Put(ROW1).add(FAMILY, QUAL_A, Bytes
-        .toBytes(newValue)));
-
-    Result row1_A = table.get(transactionState, new Get(ROW1).addColumn(COL_A));
-    Assert.assertEquals(newValue, Bytes.toInt(row1_A.value()));
-  }
-  
   public void testScanAfterUpdatePut() throws IOException {
     TransactionState transactionState = transactionManager.beginTransaction();
 
@@ -193,10 +174,14 @@ public class TestTransactions extends HBaseClusterTestCase {
   public void testPutPutScan() throws IOException {
     TransactionState transactionState = transactionManager.beginTransaction();
 
-
     int row2Value = 199;
     table.put(transactionState, new Put(ROW2).add(FAMILY, QUAL_A, Bytes
         .toBytes(row2Value)));
+    try {
+      Thread.sleep(500);
+    } catch (InterruptedException ex) {
+      // just ignore
+    }
     
     row2Value = 299;
     table.put(transactionState, new Put(ROW2).add(FAMILY, QUAL_A, Bytes
@@ -213,17 +198,7 @@ public class TestTransactions extends HBaseClusterTestCase {
     Assert.assertNotNull(result);
     Assert.assertEquals(Bytes.toString(ROW2), Bytes.toString(result.getRow()));
     Assert.assertEquals(row2Value, Bytes.toInt(result.value()));
-    
-    // TODO commit and verifty that we see second put.
   }
-  
-  public void testPutPutScanOverAndOver() throws IOException {
-    // Do this test many times to try and hit two puts in the same millisecond
-    for (int i=0 ; i < 100; i++) {
-      testPutPutScan();
-    }
-  }
-
 
   // Read from ROW1,COL_A and put it in ROW2_COLA and ROW3_COLA
   private TransactionState makeTransaction1() throws IOException {

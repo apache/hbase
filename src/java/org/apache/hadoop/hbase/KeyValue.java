@@ -1837,20 +1837,12 @@ public class KeyValue implements Writable, HeapSize {
         Bytes.SIZEOF_LONG);
   }
   
-  // this overload assumes that the length bytes have already been read,
-  // and it expects the length of the KeyValue to be explicitly passed
-  // to it.
-  public void readFields(int length, final DataInput in) throws IOException {
-    this.length = length;
+  // Writable
+  public void readFields(final DataInput in) throws IOException {
+    this.length = in.readInt();
     this.offset = 0;
     this.bytes = new byte[this.length];
     in.readFully(this.bytes, 0, this.length);
-  }
-  
-  // Writable
-  public void readFields(final DataInput in) throws IOException {
-    int length = in.readInt();
-    readFields(length, in);
   }
   
   public void write(final DataOutput out) throws IOException {

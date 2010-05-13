@@ -169,16 +169,16 @@
   </property>
   <property>
     <name>hbase.regionserver.flushlogentries</name>
-    <value>1</value>
+    <value>100</value>
     <description>Sync the HLog to the HDFS when it has accumulated this many
-    entries. Default 1. Value is checked on every HLog.sync
+    entries. Default 100. Value is checked on every HLog.sync
     </description>
   </property>
   <property>
     <name>hbase.regionserver.optionallogflushinterval</name>
-    <value>1000</value>
+    <value>10000</value>
     <description>Sync the HLog to the HDFS after this interval if it has not
-    accumulated enough entries to trigger a sync. Default 1 seconds. Units:
+    accumulated enough entries to trigger a sync. Default 10 seconds. Units:
     milliseconds.
     </description>
   </property>
@@ -414,7 +414,10 @@
       HBase passes this to the zk quorum as suggested maximum time for a
       session.  See http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions
       "The client sends a requested timeout, the server responds with the
-      timeout that it can give the client."
+      timeout that it can give the client. The current implementation
+      requires that the timeout be a minimum of 2 times the tickTime
+      (as set in the server configuration) and a maximum of 20 times
+      the tickTime." Set the zk ticktime with hbase.zookeeper.property.tickTime.
       In milliseconds.
     </description>
   </property>
@@ -507,6 +510,14 @@
       <value>10</value>
     </property>
   -->
+  <property>
+    <name>hbase.zookeeper.property.tickTime</name>
+    <value>3000</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The number of milliseconds of each tick.  See
+    zookeeper.session.timeout description.
+    </description>
+  </property>
   <property>
     <name>hbase.zookeeper.property.initLimit</name>
     <value>10</value>

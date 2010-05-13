@@ -34,48 +34,30 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   private long expire;
   protected final HMaster master;
   protected final int numRetries;
-  private int expirationDuration;
   
   protected RegionServerOperation(HMaster master) {
     this.master = master;
     this.numRetries = master.numRetries;
-    this.expirationDuration = this.master.leaseTimeout/2;
-    resetExpiration();
+    // Set the future time at which we expect to be released from the
+    // DelayQueue we're inserted in on lease expiration.
+    this.expire = System.currentTimeMillis() + this.master.leaseTimeout / 2;
   }
 
   public long getDelay(TimeUnit unit) {
     return unit.convert(this.expire - System.currentTimeMillis(),
       TimeUnit.MILLISECONDS);
   }
-
+  
   public int compareTo(Delayed o) {
-    return Long.valueOf(getDelay(TimeUnit.MILLISECONDS) -
-      o.getDelay(TimeUnit.MILLISECONDS)).intValue();
+    return Long.valueOf(getDelay(TimeUnit.MILLISECONDS)
+        - o.getDelay(TimeUnit.MILLISECONDS)).intValue();
   }
-
+  
   protected void requeue() {
-    this.master.getRegionServerOperationQueue().putOnDelayQueue(this);
+    this.expire = System.currentTimeMillis() + this.master.leaseTimeout / 2;
+    master.delayedToDoQueue.put(this);
   }
-
-  /**
-   * Call before putting this back on the delay queue.
-   * @return When we will expire next.
-   */
-  long resetExpiration() {
-    // Set the future time at which we expect to be released from the
-    // DelayQueue we're inserted in on lease expiration.
-    this.expire = System.currentTimeMillis() + getExpirationDuration();
-    return this.expire;
-  }
-
-  int getExpirationDuration() {
-    return this.expirationDuration;
-  }
- 
-  void setExpirationDuration(final int d) {
-    this.expirationDuration = d;
-  }
-
+  
   protected boolean rootAvailable() {
     boolean available = true;
     if (master.getRootRegionLocation() == null) {
@@ -116,6 +98,5 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   protected int getPriority() {
     return Integer.MAX_VALUE;
   }
-
   protected abstract boolean process() throws IOException;
 }

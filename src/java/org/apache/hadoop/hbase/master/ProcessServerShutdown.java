@@ -55,10 +55,12 @@ class ProcessServerShutdown extends RegionServerOperation {
 
   private static class ToDoEntry {
     boolean regionOffline;
+    final byte [] row;
     final HRegionInfo info;
 
-    ToDoEntry(final HRegionInfo info) {
+    ToDoEntry(final byte [] row, final HRegionInfo info) {
       this.regionOffline = false;
+      this.row = row;
       this.info = info;
     }
   }
@@ -105,13 +107,6 @@ class ProcessServerShutdown extends RegionServerOperation {
     if (metaServerRegionInfo != null) {
       metaRegions.add (new MetaRegion (deadServerAddress, metaServerRegionInfo));
     }
-  }
-
-  /**
-   * @return Name of server we are processing.
-   */
-  public HServerAddress getDeadServerAddress() {
-    return this.deadServerAddress;
   }
 
   @Override
@@ -179,7 +174,7 @@ class ProcessServerShutdown extends RegionServerOperation {
             master.regionManager.offlineMetaRegion(info.getStartKey());
           }
 
-          ToDoEntry todo = new ToDoEntry(info);
+          ToDoEntry todo = new ToDoEntry(row, info);
           toDoList.add(todo);
 
           if (master.regionManager.isOfflined(info.getRegionNameAsString()) ||

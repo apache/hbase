@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 
 /**
  * Test whether region rebalancing works. (HBASE-71)
@@ -196,7 +195,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
   
   private List<HRegionServer> getOnlineRegionServers() {
     List<HRegionServer> list = new ArrayList<HRegionServer>();
-    for (JVMClusterUtil.RegionServerThread rst : cluster.getRegionServerThreads()) {
+    for (LocalHBaseCluster.RegionServerThread rst : cluster.getRegionThreads()) {
       if (rst.getRegionServer().isOnline()) {
         list.add(rst.getRegionServer());
       }

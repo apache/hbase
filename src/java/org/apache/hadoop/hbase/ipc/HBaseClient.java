@@ -446,15 +446,10 @@ public class HBaseClient {
         LOG.debug(getName() + ": starting, having connections " 
             + connections.size());
 
-      try {
-        while (waitForWork()) {//wait here for work - read or close connection
-          receiveResponse();
-        }
-      } catch (Throwable t) {
-        LOG.warn("Unexpected exception receiving call responses", t);
-        markClosed(new IOException("Unexpected exception receiving call responses", t));
+      while (waitForWork()) {//wait here for work - read or close connection
+        receiveResponse();
       }
-
+      
       close();
       
       if (LOG.isDebugEnabled())

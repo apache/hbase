@@ -25,9 +25,9 @@ package org.apache.hadoop.hbase.regionserver;
  * NOT thread-safe because it is not used in a multi-threaded context, yet.
  */
 public class ColumnCount {
-  private final byte [] bytes;
-  private final int offset;
-  private final int length;
+  private byte [] bytes;
+  private int offset;
+  private int length;
   private int count;
   
   /**
@@ -96,14 +96,6 @@ public class ColumnCount {
    */
   public int increment() {
     return ++count;
-  }
-
-  /**
-   * Set the current count to a new count
-   * @param count new count to set
-   */
-  public void setCount(int count) {
-    this.count = count;
   }
   
   /**

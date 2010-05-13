@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -41,12 +40,8 @@ implements Configurable {
   
   /** Job parameter that specifies the input table. */
   public static final String INPUT_TABLE = "hbase.mapreduce.inputtable";
-  /** Base-64 encoded scanner. All other SCAN_ confs are ignored if this is specified.
-   * See {@link TableMapReduceUtil#convertScanToString(Scan)} for more details.
-   */
+  /** Base-64 encoded scanner. All other SCAN_ confs are ignored if this is specified. */
   public static final String SCAN = "hbase.mapreduce.scan";
-  /** Column Family to Scan */
-  public static final String SCAN_COLUMN_FAMILY = "hbase.mapreduce.scan.column.family";
   /** Space delimited list of columns to scan. */
   public static final String SCAN_COLUMNS = "hbase.mapreduce.scan.columns";
   /** The timestamp used to filter columns with a specific timestamp. */
@@ -110,10 +105,6 @@ implements Configurable {
           scan.addColumns(conf.get(SCAN_COLUMNS));
         }
         
-        if (conf.get(SCAN_COLUMN_FAMILY) != null) { 
-          scan.addFamily(Bytes.toBytes(conf.get(SCAN_COLUMN_FAMILY)));
-        }
-        
         if (conf.get(SCAN_TIMESTAMP) != null) {
           scan.setTimeStamp(Long.parseLong(conf.get(SCAN_TIMESTAMP)));
         }
@@ -127,7 +118,7 @@ implements Configurable {
         if (conf.get(SCAN_MAXVERSIONS) != null) {
           scan.setMaxVersions(Integer.parseInt(conf.get(SCAN_MAXVERSIONS)));
         }
-
+        
         if (conf.get(SCAN_CACHEDROWS) != null) {
           scan.setCaching(Integer.parseInt(conf.get(SCAN_CACHEDROWS)));
         }

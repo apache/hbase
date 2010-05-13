@@ -1,19 +1,13 @@
 HBase Change Log
+Release X.X.X - UNRELEASED
+  BUG FIXES
+   HBASE-2521  no license headers in 5 files
 
-Release 0.20.4 - Unreleased
+Release 0.20.4 - Mon May  3 16:16:02 PDT 2010
   INCOMPATIBLE CHANGES
-   HBASE-2219  Stop using code mapping for method names in the RPC
-               (Ryan Rawson via Stack)
-   HBASE-2066  Perf: parallelize puts
-   HBASE-2378  Bulk insert with multiple reducers broken due to improper
-               ImmutableBytesWritable comparator (Todd Lipcon via Stack)
-   HBASE-2392  Upgrade to ZooKeeper 3.3.0
-   HBASE-2165  Improve fragmentation display and implementation
-   HBASE-2448  Remove 'indexed' contrib
-   HBASE-2248  Provide new non-copy mechanism to assure atomic reads in 
-   	           get and scan
-   HBASE-2294  Enumerate ACID properties of HBase in a well defined spec
-               (Todd Lipcon via Stack)
+   HBASE-2248  Provide new non-copy mechanism to assure atomic reads in get
+               and scan (Ryan Rawson via Stack)
+   HBASE-2446  Remove 'indexed' contrib
 
   BUG FIXES
    HBASE-2173  New idx javadoc not included with the rest
@@ -40,76 +34,42 @@ Release 0.20.4 - Unreleased
                half-written hfile (Ruslan Salyakhov via Stack)
    HBASE-2288  Shell fails on alter
    HBASE-2293  CME in RegionManager#isMetaServer
-   HBASE-2261  The javadoc in WhileMatchFilter and it's tests in TestFilter are
-               not accurate/wrong
-   HBASE-2299  [EC2] mapreduce fixups for PE
-   HBASE-2295  Row locks may deadlock with themselves
-               (dhruba borthakur via Stack)
-   HBASE-2308  Fix the bin/rename_table.rb script, make it work again
-   HBASE-2307  hbase-2295 changed hregion size, testheapsize broke... fix it
-   HBASE-2269  PerformanceEvaluation "--nomapred" may assign duplicate random
-               seed over multiple testing threads (Tatsuya Kawano via Stack)
-   HBASE-2287  TypeError in shell (Alexey Kovyrin via Stack)
-   HBASE-2311  Not having assertions enabled causes index contrib tests to fail
    HBASE-2023  Client sync block can cause 1 thread of a multi-threaded client
                to block all others (Karthik Ranganathan via Stack)
-   HBASE-2305  Client port for ZK has no default (Suraj Varma via Stack)
-   HBASE-2323  filter.RegexStringComparator does not work with certain bytes
-               (Benoit Sigoure via Stack)
-   HBASE-2283  row level atomicity (Kannan Muthukkaruppan via Stack)
-   HBASE-2344  InfoServer and hence HBase Master doesn't fully start if you
-               have HADOOP-6151 patch (Kannan Muthukkaruppan via Stack)
    HBASE-2355  Unsynchronized logWriters map is mutated from several threads in
                HLog splitting (Todd Lipcon via Andrew Purtell)
    HBASE-2358  Store doReconstructionLog will fail if oldlogfile.log is
                empty and won't load region (Cosmin Lehene via Stack)
-   HBASE-2338  log recovery: deleted items may be resurrected
-               (Aravind Menon via Stack)
-   HBASE-2359  WALEdit doesn't implement HeapSize
-               (Kannan Muthukkaruppan via Stack)
-   HBASE-2382  Don't rely on fs.getDefaultReplication() to roll HLogs
-               (Nicolas Spiegelberg via Stack)
-   HBASE-2373  Remove confusing log message of how "BaseScanner GET got
-               different address/startcode than SCAN"
-   HBASE-2337  log recovery: splitLog deletes old logs prematurely
-               (Nicolas Spiegelberg via Stack)
    HBASE-2365  Double-assignment around split
-   HBASE-2398  NPE in HLog.append when calling writer.getLength
-               (Kannan Muthukkaruppan via Stack)
-   HBASE-2410  spurious warnings from util.Sleeper
-   HBASE-2419  Remove from RS logs the fat NotServingRegionException stack
    HBASE-2335  mapred package docs don't say zookeeper jar is a dependent
    HBASE-2417  HCM.locateRootRegion fails hard on "Connection refused"
    HBASE-2346  Usage of FilterList slows down scans
-   HBASE-2341  ZK settings for initLimit/syncLimit should not have been removed
-               from hbase-default.xml
+   HBASE-2402  [stargate] set maxVersions on gets
    HBASE-2383  Replace JSON-licensed json dependencies
    HBASE-2439  HBase can get stuck if updates to META are blocked
                (Kannan Muthukkaruppan via Stack)
-   HBASE-2451   .META. by-passes cache; BLOCKCACHE=>'false'
-   HBASE-2456   deleteChangedReaderObserver spitting warnings after HBASE-2248
+   HBASE-2451  .META. by-passes cache; BLOCKCACHE=>'false'
+   HBASE-2453  Revisit compaction policies after HBASE-2248 commit
+               (Jonathan Gray via Stack)
+   HBASE-2456  deleteChangedReaderObserver spitting warnings after HBASE-2248 
+   HBASE-2458  Client stuck in TreeMap,remove (Todd Lipcon via Stack)
+   HBASE-2460  add_table.rb deletes any tables for which the target table
+               name is a prefix (Todd Lipcon via Stack)
    HBASE-2457  RS gets stuck compacting region ad infinitum
    HBASE-2448  Scanner threads are interrupted without acquiring lock properly
                (Todd Lipcon via Stack)
    HBASE-2443  IPC client can throw NPE if socket creation fails
                (Todd Lipcon via Stack)
-   HBASE-2474  Bug in 2248 - mixed version reads (not allowed by spec)
-   HBASE-2447  LogSyncer.addToSyncQueue doesn't check if syncer is still
-               running before waiting (Todd Lipcon via Stack)
-   HBASE-2481  Client is not getting UnknownScannerExceptions; they are
-               being eaten (Jean-Daniel Cryans via Stack)
+   HBASE-2481  Client is not getting UnknownScannerExceptions; they are being
+               eaten (Jean-Daniel Cryans via Stack)
+   HBASE-2378  Bulk insert with multiple reducers broken due to improper
+               ImmutableBytesWritable comparator
    HBASE-2381  missing copyright headers (Andrew Purtell via Stack)
-   HBASE-2487  Uncaught exceptions in receiving IPC responses orphan clients
-               (Todd Lipcon via Stack)
-   HBASE-2476  HLog sequence number is obtained outside updateLock
-               (Todd Lipcon via Stack)
-   HBASE-2442  Log lease recovery catches IOException too widely
-               (Todd Lipcon via Stack)
    HBASE-2497  ProcessServerShutdown throws NullPointerException for offline
-               regions (Miklos Kurucz via Stack)
+               regions
    HBASE-2499  Race condition when disabling a table leaves regions in transition
-   HBASE-2421  Put hangs for 10 retries on failed region servers
-               (Todd Lipcon via Stack)
+   HBASE-2509  NPEs in various places, HRegion.get, HRS.close
+               (Ryan Rawson via Stack)
 
   IMPROVEMENTS
    HBASE-2180  Bad read performance from synchronizing hfile.fddatainputstream
@@ -124,73 +84,33 @@ Release 0.20.4 - Unreleased
                of the supplied byte array (Bruno Dumon via Stack)
    HBASE-2241  Change balancer sloppyness from 0.1 to 0.3
    HBASE-2262  ZKW.ensureExists should check for existence
-   HBASE-2249  The PerformanceEvaluation read tests don't take the MemStore
-               into account
-   HBASE-2249  The PerformanceEvaluation read tests don't take the MemStore
-               into account
-   HBASE-2277  Update branch to hadoop 0.20.2
-   HBASE-2234  Roll Hlog if any datanode in the write pipeline dies
-               (Nicolas Spiegelberg via Stack)
-   HBASE-2174  Stop from resolving HRegionServer addresses to names using DNS
-               on every heartbeat (Karthik Ranganathan via Stack)
-   HBASE-2327  [EC2] Allocate elastic IP addresses for ZK and master nodes
-   HBASE-2147  run zookeeper in the same jvm as master during non-distributed
-               mode
-   HBASE-2340  Add end-to-end test of sync/flush
-   HBASE-2389  HTable - delete / put unnecessary sync (Kay Kay via Stack)
-   HBASE-2385  Debug Message "Received report from unknown server" should be
-               INFO or WARN
-   HBASE-2374  TableInputFormat - Configurable parameter to add column families
-               (Kay Kay via Stack)
-   HBASE-2388  Give a very explicit message when we figure a big GC pause
-   HBASE-2270  Improve how we handle recursive calls in ExplicitColumnTracker 
-               and WildcardColumnTracker
-   HBASE-1537  Intra-row scanning (Backported by Andrey Stepachev via Stack)
-   HBASE-2402  [stargate] set maxVersions on gets
+   HBASE-2174  Stop from resolving HRegionServer addresses to names using DNS on
+               every heartbeat (Karthik Ranganathan via Stack)
    HBASE-2087  The wait on compaction because "Too many store files" 
                holds up all flushing
    HBASE-2252  Mapping a very big table kills region servers
-   HBASE-2411  Findbugs target
-   HBASE-2412  [stargate] PerformanceEvaluation
-   HBASE-2286  [Transactional Contrib] Correctly handle or avoid cases where 
-               writes occur in same millisecond (Clint Morgan via J-D)
+   HBASE-2277  Update branch to hadoop 0.20.2
+   HBASE-2419  Remove from RS logs the fat NotServingRegionException stack
    HBASE-2415  Disable META splitting in 0.20 (Todd Lipcon via Stack)
    HBASE-2360  Make sure we have all the hadoop fixes in our our copy of its rpc
                (Todd Lipcon via Stack)
    HBASE-2423  Update 'Getting Started' for 0.20.4 including making 
                "important configurations more visiable"
+   HBASE-2412  [stargate] PerformanceEvaluation
    HBASE-2440  Master UI should check against known bad JDK versions and warn
-               the user (Todd Lipcon via Stack)
+               the use (Todd Lipcon via Stack)
    HBASE-1892  [performance] make hbase splits run faster
-   HBASE-2453  Revisit compaction policies after HBASE-2248 commit
-               (Jonathan Gray via Stack)
-   HBASE-2458  Client stuck in TreeMap,remove (Todd Lipcon via Stack)
-   HBASE-2460  add_table.rb deletes any tables for which the target table name
-               is a prefix (Todd Lipcon via Stack)
-   HBASE-2488  Master should warn more loudly about unexpected events
-               (Todd Lipcon via Stack)
-   HBASE-2393  ThriftServer instantiates a new HTable per request
-               (Bogdan DRAGU via Stack)
+   HBASE-2474  Bug in 2248 - mixed version reads (not allowed by spec)
    HBASE-2490  Improve the javadoc of the client API for HTable
                (Benoit Sigoure via Stack)
-   HBASE-2496  Less ArrayList churn on the scan path
-   HBASE-2414  Enhance test suite to be able to specify distributed scenarios
 
   NEW FEATURES
    HBASE-2257  [stargate] multiuser mode
    HBASE-2263  [stargate] multiuser mode: authenticator for zookeeper
    HBASE-2273  [stargate] export metrics via Hadoop metrics, JMX, and zookeeper
    HBASE-2274  [stargate] filter support: JSON descriptors
-   HBASE-2298  Backport of "HLog Group Commit" to 0.20 branch
-               (Nicolas Spiegelberg via Stack)
-   HBASE-2302  Optimize M-R by bulk excluding regions - less InputSplit-s to
-               avoid traffic on region servers when performing M-R on a subset
-               of the table (Kay Kay via Stack)
    HBASE-2319  [stargate] multiuser mode: request shaping
-   HBASE-2349  Backport HBaseTestingUtility to branch (will include adding
-               support for junit4 to branch)
    HBASE-2403  [stargate] client HTable interface to REST connector
-   HBASE-2438  Addition of a Column Pagination Filter (Paul Kist via Stack)
 
 Release 0.20.3 - January 25th, 2010
   INCOMPATIBLE CHANGES

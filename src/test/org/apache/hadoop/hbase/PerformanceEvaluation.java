@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.MurmurHash;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -76,6 +75,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.LineReader;
+
 
 /**
  * Script used evaluating HBase performance and scalability.  Runs a HBase
@@ -117,20 +117,14 @@ public class PerformanceEvaluation implements HConstants {
   private boolean nomapred = false;
   private int N = 1;
   private int R = ROWS_PER_GB;
-  private boolean flushCommits = false;
-  private boolean writeToWAL = true;
-
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
+  
   /**
    * Regex to parse lines in input file passed to mapreduce task.
    */
   public static final Pattern LINE_PATTERN =
     Pattern.compile("startRow=(\\d+),\\s+" +
-        "perClientRunRows=(\\d+),\\s+" +
-        "totalRows=(\\d+),\\s+" + 
-        "clients=(\\d+),\\s+" + 
-        "flushCommits=(\\w+),\\s+" + 
-        "writeToWAL=(\\w+)");
+    "perClientRunRows=(\\d+),\\s+totalRows=(\\d+),\\s+clients=(\\d+)");
 
   /**
    * Enum for map metrics.  Keep it out here rather than inside in the Map
@@ -150,34 +144,17 @@ public class PerformanceEvaluation implements HConstants {
   public PerformanceEvaluation(final HBaseConfiguration c) {
     this.conf = c;
 
-    addCommandDescriptor(RandomReadTest.class, "randomRead",
-        "Run random read test");
-    addCommandDescriptor(RandomSeekScanTest.class, "randomSeekScan",
-        "Run random seek and scan 100 test");
-    addCommandDescriptor(RandomScanWithRange10Test.class, "scanRange10",
-        "Run random seek scan with both start and stop row (max 10 rows)");
-    addCommandDescriptor(RandomScanWithRange100Test.class, "scanRange100",
-        "Run random seek scan with both start and stop row (max 100 rows)");
-    addCommandDescriptor(RandomScanWithRange1000Test.class, "scanRange1000",
-        "Run random seek scan with both start and stop row (max 1000 rows)");
-    addCommandDescriptor(RandomScanWithRange10000Test.class, "scanRange10000",
-        "Run random seek scan with both start and stop row (max 10000 rows)");
-    addCommandDescriptor(RandomWriteTest.class, "randomWrite",
-        "Run random write test");
-    addCommandDescriptor(SequentialReadTest.class, "sequentialRead",
-        "Run sequential read test");
-    addCommandDescriptor(SequentialWriteTest.class, "sequentialWrite",
-        "Run sequential write test");
-    addCommandDescriptor(ScanTest.class, "scan",
-        "Run scan test (read every row)");
-    addCommandDescriptor(FilteredScanTest.class, "filterScan",
-        "Run scan test using a filter to find a specific row based on it's value (make sure to use --rows=20)");
+    addCommandDescriptor(RandomReadTest.class, "randomRead", "Run random read test");
+    addCommandDescriptor(RandomSeekScanTest.class, "randomSeekScan", "Run random seek and scan 100 test");
+    addCommandDescriptor(RandomWriteTest.class, "randomWrite", "Run random write test");
+    addCommandDescriptor(SequentialReadTest.class, "sequentialRead", "Run sequential read test");
+    addCommandDescriptor(SequentialWriteTest.class, "sequentialWrite", "Run sequential write test");
+    addCommandDescriptor(ScanTest.class, "scan", "Run scan test (read every row)");
+    addCommandDescriptor(FilteredScanTest.class, "filterScan", "Run scan test using a filter to find a specific row based on it's value");
   }
 
-  protected void addCommandDescriptor(Class<? extends Test> cmdClass, 
-      String name, String description) {
-    CmdDescriptor cmdDescriptor = 
-      new CmdDescriptor(cmdClass, name, description);
+  protected void addCommandDescriptor(Class<? extends Test> cmdClass, String name, String description) {
+    CmdDescriptor cmdDescriptor = new CmdDescriptor(cmdClass, name, description);
     commands.put(name, cmdDescriptor);
   }
   
@@ -204,26 +181,19 @@ public class PerformanceEvaluation implements HConstants {
     private int rows = 0;
     private int totalRows = 0;
     private int clients = 0;
-    private boolean flushCommits = false;
-    private boolean writeToWAL = true;
       
     public PeInputSplit() {
       this.startRow = 0;
       this.rows = 0;
       this.totalRows = 0;
       this.clients = 0;
-      this.flushCommits = false;
-      this.writeToWAL = true;
     }
     
-    public PeInputSplit(int startRow, int rows, int totalRows, int clients,
-        boolean flushCommits, boolean writeToWAL) {
+    public PeInputSplit(int startRow, int rows, int totalRows, int clients) {
       this.startRow = startRow;
       this.rows = rows;
       this.totalRows = totalRows;
       this.clients = clients;
-      this.flushCommits = flushCommits;
-      this.writeToWAL = writeToWAL;
     }
     
     @Override
@@ -231,9 +201,7 @@ public class PerformanceEvaluation implements HConstants {
       this.startRow = in.readInt();
       this.rows = in.readInt();
       this.totalRows = in.readInt();
-      this.clients = in.readInt();      
-      this.flushCommits = in.readBoolean();
-      this.writeToWAL = in.readBoolean();
+      this.clients = in.readInt();
     }
 
     @Override
@@ -242,8 +210,6 @@ public class PerformanceEvaluation implements HConstants {
       out.writeInt(rows);
       out.writeInt(totalRows);
       out.writeInt(clients);
-      out.writeBoolean(flushCommits);
-      out.writeBoolean(writeToWAL);
     }
     
     @Override
@@ -270,14 +236,6 @@ public class PerformanceEvaluation implements HConstants {
     
     public int getClients() {
       return clients;
-    }
-
-    public boolean isFlushCommits() {
-      return flushCommits;
-    }
-
-    public boolean isWriteToWAL() {
-      return writeToWAL;
     }
   }
   
@@ -310,20 +268,14 @@ public class PerformanceEvaluation implements HConstants {
             int rows = Integer.parseInt(m.group(2));
             int totalRows = Integer.parseInt(m.group(3));
             int clients = Integer.parseInt(m.group(4));
-            boolean flushCommits = Boolean.parseBoolean(m.group(5));
-            boolean writeToWAL = Boolean.parseBoolean(m.group(6));
-
+            
             LOG.debug("split["+ splitList.size() + "] " + 
                      " startRow=" + startRow +
                      " rows=" + rows +
                      " totalRows=" + totalRows +
-                     " clients=" + clients +
-                     " flushCommits=" + flushCommits +
-                     " writeToWAL=" + writeToWAL);
-
-            PeInputSplit newSplit =
-              new PeInputSplit(startRow, rows, totalRows, clients, 
-                flushCommits, writeToWAL);
+                     " clients=" + clients);
+					  
+            PeInputSplit newSplit = new PeInputSplit(startRow, rows, totalRows, clients);
             splitList.add(newSplit);
           }
         }
@@ -400,38 +352,20 @@ public class PerformanceEvaluation implements HConstants {
 
     /** configuration parameter name that contains the command */
     public final static String CMD_KEY = "EvaluationMapTask.command";
-    /** configuration parameter name that contains the PE impl */
-    public static final String PE_KEY = "EvaluationMapTask.performanceEvalImpl";
-
     private Class<? extends Test> cmd;
     private PerformanceEvaluation pe;
-
+    
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
-      this.cmd = forName(context.getConfiguration().get(CMD_KEY), Test.class);
-
-      // this is required so that extensions of PE are instantiated within the
-      // map reduce task...
-      Class<? extends PerformanceEvaluation> peClass =
-          forName(context.getConfiguration().get(PE_KEY), PerformanceEvaluation.class);
+      String cmdClassName = context.getConfiguration().get(CMD_KEY);
       try {
-        this.pe = peClass.getConstructor(HBaseConfiguration.class)
-            .newInstance(new HBaseConfiguration(context.getConfiguration()));
-      } catch (Exception e) {
-        throw new IllegalStateException("Could not instantiate PE instance", e);
-      }
-    }
-
-    private <Type> Class<? extends Type> forName(String className, Class<Type> type) {
-      Class<? extends Type> clazz = null;
-      try {
-        clazz = Class.forName(className).asSubclass(type);
+        this.cmd = Class.forName(cmdClassName).asSubclass(Test.class);
       } catch (ClassNotFoundException e) {
-        throw new IllegalStateException("Could not find class for name: " + className, e);
+        throw new IllegalStateException("Could not find class for name: " + cmdClassName, e);
       }
-      return clazz;
+      this.pe = new PerformanceEvaluation(new HBaseConfiguration(context.getConfiguration()));
     }
-
+    
     protected void map(NullWritable key, PeInputSplit value, final Context context) 
            throws IOException, InterruptedException {
       
@@ -442,10 +376,8 @@ public class PerformanceEvaluation implements HConstants {
       };
       
       // Evaluation task
-      long elapsedTime = this.pe.runOneClient(this.cmd, value.getStartRow(),
-    		                          value.getRows(), value.getTotalRows(), 
-    		                          value.isFlushCommits(), value.isWriteToWAL(),
-    		                          status);
+      long elapsedTime = this.pe.runOneClient(this.cmd, value.getStartRow(), 
+    		                          value.getRows(), value.getTotalRows(), status);
       // Collect how much time the thing took. Report as map output and
       // to the ELAPSED_TIME counter.
       context.getCounter(Counter.ELAPSED_TIME).increment(elapsedTime);
@@ -496,6 +428,7 @@ public class PerformanceEvaluation implements HConstants {
    * @param cmd Command to run.
    * @throws IOException
    */
+  @SuppressWarnings("unused")
   private void doMultipleClients(final Class<? extends Test> cmd) throws IOException {
     final List<Thread> threads = new ArrayList<Thread>(this.N);
     final int perClientRows = R/N;
@@ -509,7 +442,7 @@ public class PerformanceEvaluation implements HConstants {
           try {
             long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
                perClientRows, R,
-                flushCommits, writeToWAL, new Status() {
+               new Status() {
                   public void setStatus(final String msg) throws IOException {
                     LOG.info("client-" + getName() + " " + msg);
                   }
@@ -548,7 +481,6 @@ public class PerformanceEvaluation implements HConstants {
   			InterruptedException, ClassNotFoundException {
     Path inputDir = writeInputFile(this.conf);
     this.conf.set(EvaluationMapTask.CMD_KEY, cmd.getName());
-    this.conf.set(EvaluationMapTask.PE_KEY, getClass().getName());
     Job job = new Job(this.conf);
     job.setJarByClass(PerformanceEvaluation.class);
     job.setJobName("HBase Performance Evaluation");
@@ -596,9 +528,7 @@ public class PerformanceEvaluation implements HConstants {
           String s = "startRow=" + ((j * perClientRows) + (i * (perClientRows/10))) +
           ", perClientRunRows=" + (perClientRows / 10) +
           ", totalRows=" + this.R +
-          ", clients=" + this.N +
-          ", flushCommits=" + this.flushCommits +
-          ", writeToWAL=" + this.writeToWAL;
+          ", clients=" + this.N;
           int hash = h.hash(Bytes.toBytes(s));
           m.put(hash, s);
         }
@@ -639,69 +569,12 @@ public class PerformanceEvaluation implements HConstants {
     }
   }
 
-  /**
-   * Wraps up options passed to {@link org.apache.hadoop.hbase.PerformanceEvaluation.Test
-   * tests}.  This makes the reflection logic a little easier to understand...
-   */
-  static class TestOptions {
-    private int startRow;
-    private int perClientRunRows;
-    private int totalRows;
-    private byte[] tableName;
-    private boolean flushCommits;
-    private boolean writeToWAL = true;
-
-    TestOptions() {
-    }
-
-    TestOptions(int startRow, int perClientRunRows, int totalRows, byte[] tableName, boolean flushCommits, boolean writeToWAL) {
-      this.startRow = startRow;
-      this.perClientRunRows = perClientRunRows;
-      this.totalRows = totalRows;
-      this.tableName = tableName;
-      this.flushCommits = flushCommits;
-      this.writeToWAL = writeToWAL;
-    }
-
-    public int getStartRow() {
-      return startRow;
-    }
-
-    public int getPerClientRunRows() {
-      return perClientRunRows;
-    }
-
-    public int getTotalRows() {
-      return totalRows;
-    }
-
-    public byte[] getTableName() {
-      return tableName;
-    }
-
-    public boolean isFlushCommits() {
-      return flushCommits;
-    }
-
-    public boolean isWriteToWAL() {
-      return writeToWAL;
-    }
-  }
-
   /*
    * A test.
    * Subclass to particularize what happens per row.
    */
   static abstract class Test {
-    // Below is make it so when Tests are all running in the one
-    // jvm, that they each have a differently seeded Random. 
-    private static final Random randomSeed =
-      new Random(System.currentTimeMillis());
-    private static long nextRandomSeed() {
-      return randomSeed.nextLong();
-    }
-    protected final Random rand = new Random(nextRandomSeed());
-
+    protected final Random rand = new Random(System.currentTimeMillis());
     protected final int startRow;
     protected final int perClientRunRows;
     protected final int totalRows;
@@ -710,24 +583,21 @@ public class PerformanceEvaluation implements HConstants {
     protected HBaseAdmin admin;
     protected HTable table;
     protected volatile HBaseConfiguration conf;
-    protected boolean flushCommits;
-    protected boolean writeToWAL;
 
     /**
      * Note that all subclasses of this class must provide a public contructor
      * that has the exact same list of arguments.
      */
-    Test(final HBaseConfiguration conf, final TestOptions options, final Status status) {
+    Test(final HBaseConfiguration conf, final int startRow,
+         final int perClientRunRows, final int totalRows, final Status status, byte[] tableName) {
       super();
-      this.startRow = options.getStartRow();
-      this.perClientRunRows = options.getPerClientRunRows();
-      this.totalRows = options.getTotalRows();
+      this.startRow = startRow;
+      this.perClientRunRows = perClientRunRows;
+      this.totalRows = totalRows;
       this.status = status;
-      this.tableName = options.getTableName();
+      this.tableName = tableName;
       this.table = null;
       this.conf = conf;
-      this.flushCommits = options.isFlushCommits();
-      this.writeToWAL = options.isWriteToWAL();
     }
     
     private String generateStatus(final int sr, final int i, final int lr) {
@@ -748,9 +618,7 @@ public class PerformanceEvaluation implements HConstants {
     }
 
     void testTakedown()  throws IOException {
-      if (flushCommits) {
-        this.table.flushCommits();
-      }
+      this.table.flushCommits();
     }
     
     /*
@@ -793,12 +661,12 @@ public class PerformanceEvaluation implements HConstants {
     }
   }
 
-  @SuppressWarnings("unused")
   static class RandomSeekScanTest extends Test {
-    RandomSeekScanTest(HBaseConfiguration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    RandomSeekScanTest(final HBaseConfiguration conf, final int startRow,
+                       final int perClientRunRows, final int totalRows, final Status status, byte[] tableName) {
+      super(conf, startRow, perClientRunRows, totalRows, status, tableName);
     }
-
+    
     @Override
     void testRow(final int i) throws IOException {
       Scan scan = new Scan(getRandomRow(this.rand, this.totalRows));
@@ -820,96 +688,12 @@ public class PerformanceEvaluation implements HConstants {
 
   }
 
-  @SuppressWarnings("unused")
-  static abstract class RandomScanWithRangeTest extends Test {
-    RandomScanWithRangeTest(HBaseConfiguration conf, TestOptions options, Status status) {
-      super(conf, options, status);
-    }
-
-    @Override
-    void testRow(final int i) throws IOException {
-      Pair<byte[], byte[]> startAndStopRow = getStartAndStopRow();
-      Scan scan = new Scan(startAndStopRow.getFirst(), startAndStopRow.getSecond());
-      scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-      ResultScanner s = this.table.getScanner(scan);
-      int count = 0;
-      for (Result rr = null; (rr = s.next()) != null;) {
-        count++;
-      }
-
-      if (i % 100 == 0) {
-        LOG.info(String.format("Scan for key range %s - %s returned %s rows",
-            Bytes.toString(startAndStopRow.getFirst()),
-            Bytes.toString(startAndStopRow.getSecond()), count));
-      }
-
-      s.close();
-    }
-
-    protected abstract Pair<byte[],byte[]> getStartAndStopRow();
-
-    protected Pair<byte[], byte[]> generateStartAndStopRows(int maxRange) {
-      int start = this.rand.nextInt(Integer.MAX_VALUE) % totalRows;
-      int stop = start + maxRange;
-      return Pair.of(format(start), format(stop));
-    }
-
-    @Override
-    protected int getReportingPeriod() {
-      int period = this.perClientRunRows / 100;
-      return period == 0? this.perClientRunRows: period;
-    }
-  }
-
-  static class RandomScanWithRange10Test extends RandomScanWithRangeTest {
-    RandomScanWithRange10Test(HBaseConfiguration conf, TestOptions options, Status status) {
-      super(conf, options, status);
-    }
-
-    @Override
-    protected Pair<byte[], byte[]> getStartAndStopRow() {
-      return generateStartAndStopRows(10);
-    }
-  }
-
-  static class RandomScanWithRange100Test extends RandomScanWithRangeTest {
-    RandomScanWithRange100Test(HBaseConfiguration conf, TestOptions options, Status status) {
-      super(conf, options, status);
-    }
-
-    @Override
-    protected Pair<byte[], byte[]> getStartAndStopRow() {
-      return generateStartAndStopRows(100);
-    }
-  }
-
-  static class RandomScanWithRange1000Test extends RandomScanWithRangeTest {
-    RandomScanWithRange1000Test(HBaseConfiguration conf, TestOptions options, Status status) {
-      super(conf, options, status);
-    }
-
-    @Override
-    protected Pair<byte[], byte[]> getStartAndStopRow() {
-      return generateStartAndStopRows(1000);
-    }
-  }
-
-  static class RandomScanWithRange10000Test extends RandomScanWithRangeTest {
-    RandomScanWithRange10000Test(HBaseConfiguration conf, TestOptions options, Status status) {
-      super(conf, options, status);
-    }
-
-    @Override
-    protected Pair<byte[], byte[]> getStartAndStopRow() {
-      return generateStartAndStopRows(10000);
-    }
-  }
-
   static class RandomReadTest extends Test {
-    RandomReadTest(HBaseConfiguration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    public RandomReadTest(final HBaseConfiguration conf, final int startRow,
+                   final int perClientRunRows, final int totalRows, final Status status, byte[] tableName) {
+      super(conf, startRow, perClientRunRows, totalRows, status, tableName);
     }
-
+    
     @Override
     void testRow(final int i) throws IOException {
       Get get = new Get(getRandomRow(this.rand, this.totalRows));
@@ -926,8 +710,9 @@ public class PerformanceEvaluation implements HConstants {
   }
   
   static class RandomWriteTest extends Test {
-    RandomWriteTest(HBaseConfiguration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    RandomWriteTest(final HBaseConfiguration conf, final int startRow,
+        final int perClientRunRows, final int totalRows, final Status status, byte[] tableName) {
+      super(conf, startRow, perClientRunRows, totalRows, status, tableName);
     }
     
     @Override
@@ -936,21 +721,24 @@ public class PerformanceEvaluation implements HConstants {
       Put put = new Put(row);
       byte[] value = generateValue(this.rand);
       put.add(FAMILY_NAME, QUALIFIER_NAME, value);
-      put.setWriteToWAL(writeToWAL);
       table.put(put);
     }
   }
   
   static class ScanTest extends Test {
     private ResultScanner testScanner;
-
-    ScanTest(HBaseConfiguration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    
+    ScanTest(final HBaseConfiguration conf, final int startRow,
+        final int perClientRunRows, final int totalRows, final Status status, byte[] tableName) {
+      super(conf, startRow, perClientRunRows, totalRows, status, tableName);
     }
     
     @Override
     void testSetup() throws IOException {
       super.testSetup();
+      Scan scan = new Scan(format(this.startRow));
+      scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      this.testScanner = table.getScanner(scan);
     }
     
     @Override
@@ -964,19 +752,15 @@ public class PerformanceEvaluation implements HConstants {
     
     @Override
     void testRow(final int i) throws IOException {
-      if (this.testScanner == null) {
-        Scan scan = new Scan(format(this.startRow));
-        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-        this.testScanner = table.getScanner(scan);
-      }
       testScanner.next();
     }
 
   }
   
   static class SequentialReadTest extends Test {
-    SequentialReadTest(HBaseConfiguration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    SequentialReadTest(final HBaseConfiguration conf, final int startRow,
+        final int perClientRunRows, final int totalRows, final Status status, byte[] tableName) {
+      super(conf, startRow, perClientRunRows, totalRows, status, tableName);
     }
     
     @Override
@@ -989,8 +773,9 @@ public class PerformanceEvaluation implements HConstants {
   }
   
   static class SequentialWriteTest extends Test {
-    SequentialWriteTest(HBaseConfiguration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    SequentialWriteTest(final HBaseConfiguration conf, final int startRow,
+        final int perClientRunRows, final int totalRows, final Status status, byte[] tableName) {
+      super(conf, startRow, perClientRunRows, totalRows, status, tableName);
     }
     
     @Override
@@ -998,7 +783,6 @@ public class PerformanceEvaluation implements HConstants {
       Put put = new Put(format(i));
       byte[] value = generateValue(this.rand);
       put.add(FAMILY_NAME, QUALIFIER_NAME, value);
-      put.setWriteToWAL(writeToWAL);
       table.put(put);
     }
 
@@ -1007,21 +791,28 @@ public class PerformanceEvaluation implements HConstants {
   static class FilteredScanTest extends Test {
     protected static final Log LOG = LogFactory.getLog(FilteredScanTest.class.getName());
 
-    FilteredScanTest(HBaseConfiguration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    private static final int COUNT = 20;
+
+    FilteredScanTest(final HBaseConfiguration conf, final int startRow,
+                     final int perClientRunRows, final int totalRows,
+                     final Status status, byte[] tableName) {
+      super(conf, startRow, perClientRunRows, totalRows, status, tableName);
     }
 
     @Override
-    void testRow(int i) throws IOException {
-      byte[] value = generateValue(this.rand);
-      Scan scan = constructScan(value);
-      ResultScanner scanner = null;
-      try {
-        scanner = this.table.getScanner(scan);
-        while (scanner.next() != null) {
+    void testTimed() throws IOException {
+      for (int i = 0; i < COUNT; i++) {
+        byte[] value = generateValue(this.rand);
+        Scan scan = constructScan(value);
+        ResultScanner scanner = null;
+        try {
+          scanner = this.table.getScanner(scan);
+          while (scanner.next() != null) {
+          }
+        } finally {
+          LOG.info("Completed scan " + i + " of " + COUNT);
+          if (scanner != null) scanner.close();
         }
-      } finally {
-        if (scanner != null) scanner.close();
       }
     }
 
@@ -1070,29 +861,28 @@ public class PerformanceEvaluation implements HConstants {
   }
   
   long runOneClient(final Class<? extends Test> cmd, final int startRow,
-                    final int perClientRunRows, final int totalRows, 
-                    boolean flushCommits, boolean writeToWAL, 
-                    final Status status)
+    final int perClientRunRows, final int totalRows, final Status status)
   throws IOException {
     status.setStatus("Start " + cmd + " at offset " + startRow + " for " +
       perClientRunRows + " rows");
     long totalElapsedTime = 0;
 
     Test t = null;
-    TestOptions options = new TestOptions(startRow, perClientRunRows,
-        totalRows, getTableDescriptor().getName(), flushCommits, writeToWAL);
     try {
       Constructor<? extends Test> constructor = cmd.getDeclaredConstructor(
           HBaseConfiguration.class,
-          TestOptions.class,
-          Status.class
+          int.class,
+          int.class,
+          int.class,
+          Status.class,
+          byte[].class
       );
-      t = constructor.newInstance(this.conf, options, status);
+      t = constructor.newInstance(this.conf, startRow, perClientRunRows,
+          totalRows, status, getTableDescriptor().getName());
     } catch (NoSuchMethodException e) {
       throw new IllegalArgumentException("Invalid command class: " +
           cmd.getName() + ".  It does not provide a constructor as described by" +
-          "the javadoc comment.  Available constructors are: " +
-          Arrays.toString(cmd.getConstructors()));
+          "the javadoc comment.  Available consctructors are: " + Arrays.toString(cmd.getConstructors()));
     } catch (Exception e) {
       throw new IllegalStateException("Failed to construct command class", e);
     }
@@ -1114,8 +904,7 @@ public class PerformanceEvaluation implements HConstants {
     try {
       admin = new HBaseAdmin(this.conf);
       checkTable(admin);
-      runOneClient(cmd, 0, this.R, this.R, this.flushCommits, this.writeToWAL,
-        status);
+      runOneClient(cmd, 0, this.R, this.R, status);
     } catch (Exception e) {
       LOG.error("Failed", e);
     } 
@@ -1177,8 +966,6 @@ public class PerformanceEvaluation implements HConstants {
     System.err.println(" nomapred        Run multiple clients using threads " +
       "(rather than use mapreduce)");
     System.err.println(" rows            Rows each client runs. Default: One million");
-    System.err.println(" flushCommits    Used to determine if the test should flush the table.  Default: false");
-    System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
     System.err.println();
     System.err.println("Command:");
     for (CmdDescriptor command : commands.values()) {
@@ -1240,18 +1027,6 @@ public class PerformanceEvaluation implements HConstants {
         final String rows = "--rows=";
         if (cmd.startsWith(rows)) {
           this.R = Integer.parseInt(cmd.substring(rows.length()));
-          continue;
-        }
-
-        final String flushCommits = "--flushCommits=";
-        if (cmd.startsWith(flushCommits)) {
-          this.flushCommits = Boolean.parseBoolean(cmd.substring(flushCommits.length()));
-          continue;
-        }
-
-        final String writeToWAL = "--writeToWAL=";
-        if (cmd.startsWith(writeToWAL)) {
-          this.flushCommits = Boolean.parseBoolean(cmd.substring(writeToWAL.length()));
           continue;
         }
 

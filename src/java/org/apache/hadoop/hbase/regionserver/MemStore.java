@@ -79,7 +79,6 @@ public class MemStore implements HeapSize {
 
   // Used to track own heapSize
   final AtomicLong size;
-
   /**
    * Default constructor. Used for tests.
    */
@@ -520,7 +519,8 @@ public class MemStore implements HeapSize {
       StoreScanner level with coordination with MemStoreScanner.
 
     */
-    
+
+
     MemStoreScanner() {
       super();
 
@@ -531,11 +531,10 @@ public class MemStore implements HeapSize {
       KeyValue ret = null;
       long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
       //DebugPrint.println( " MS@" + hashCode() + ": threadpoint = " + readPoint);
-      
+
       while (ret == null && it.hasNext()) {
         KeyValue v = it.next();
         if (v.getMemstoreTS() <= readPoint) {
-          // keep it.
           ret = v;
         }
       }
@@ -558,15 +557,13 @@ public class MemStore implements HeapSize {
 
       kvsetNextRow = getNext(kvsetIt);
       snapshotNextRow = getNext(snapshotIt);
+      long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
 
-
-      //long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
       //DebugPrint.println( " MS@" + hashCode() + " kvset seek: " + kvsetNextRow + " with size = " +
       //    kvset.size() + " threadread = " + readPoint);
       //DebugPrint.println( " MS@" + hashCode() + " snapshot seek: " + snapshotNextRow + " with size = " +
       //    snapshot.size() + " threadread = " + readPoint);
 
-      
       KeyValue lowest = getLowest();
 
       // has data := (lowest != null)
@@ -592,10 +589,10 @@ public class MemStore implements HeapSize {
       } else {
         snapshotNextRow = getNext(snapshotIt);
       }
-
       //long readpoint = ReadWriteConsistencyControl.getThreadReadPoint();
       //DebugPrint.println(" MS@" + hashCode() + " next: " + theNext + " next_next: " +
       //    getLowest() + " threadpoint=" + readpoint);
+
       return theNext;
     }
 
@@ -621,11 +618,12 @@ public class MemStore implements HeapSize {
     }
 
     public synchronized void close() {
-      this.kvsetNextRow = null;
-      this.snapshotNextRow = null;
-
+      // Accelerate the GC a bit perhaps?
       this.kvsetIt = null;
       this.snapshotIt = null;
+
+      this.kvsetNextRow = null;
+      this.snapshotNextRow = null;
     }
   }
 

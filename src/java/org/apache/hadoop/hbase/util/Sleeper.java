@@ -34,11 +34,9 @@ public class Sleeper {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private final int period;
   private AtomicBoolean stop;
-  private static final long MINIMAL_DELTA_FOR_LOGGING = 10000;
- 
   private final Object sleepLock = new Object();
   private boolean triggerWake = false;
-
+  
   /**
    * @param sleep
    * @param stop
@@ -92,11 +90,9 @@ public class Sleeper {
         }
         woke = System.currentTimeMillis();
         long slept = woke - now;
-        if (slept - this.period > MINIMAL_DELTA_FOR_LOGGING) {
-          LOG.warn("We slept " + slept + "ms instead of " + this.period +
-              "ms, this is likely due to a long " +
-              "garbage collecting pause and it's usually bad, " +
-              "see http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A9");
+        if (slept > (10 * this.period)) {
+          LOG.warn("We slept " + slept + "ms, ten times longer than scheduled: " +
+            this.period);
         }
       } catch(InterruptedException iex) {
         // We we interrupted because we're meant to stop?  If not, just

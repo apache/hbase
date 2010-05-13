@@ -26,12 +26,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -82,8 +76,6 @@ public class HTable {
   private boolean autoFlush;
   private long currentWriteBufferSize;
   protected int scannerCaching;
-  private int maxKeyValueSize;
-
   private long maxScannerResultSize;
   
   /**
@@ -144,39 +136,10 @@ public class HTable {
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
     this.scannerCaching = conf.getInt("hbase.client.scanner.caching", 1);
-    
     this.maxScannerResultSize = conf.getLong(
       HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, 
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
-    this.maxKeyValueSize = conf.getInt("hbase.client.keyvalue.maxsize", -1);
-
-    int nrHRS = getCurrentNrHRS();
-    int nrThreads = conf.getInt("hbase.htable.threads.max", nrHRS);
-    if (nrThreads == 0) {
-      nrThreads = 1; // this sucks but there it is.
-    }
-
-    // Unfortunately Executors.newCachedThreadPool does not allow us to
-    // set the maximum size of the pool, so we have to do it ourselves.
-    this.pool = new ThreadPoolExecutor(0, nrThreads,
-        60, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<Runnable>(),
-        new DaemonThreadFactory());
   }
-
-  /**
-   * TODO Might want to change this to public, would be nice if the number
-   * of threads would automatically change when servers were added and removed
-   * @return the number of region servers that are currently running
-   * @throws IOException
-   */
-  private int getCurrentNrHRS() throws IOException {
-    HBaseAdmin admin = new HBaseAdmin(this.configuration);
-    return admin.getClusterStatus().getServers();
-  }
-
-  // For multiput
-  private ExecutorService pool;
 
   /**
    * Tells whether or not a table is enabled or not.
@@ -520,7 +483,7 @@ public class HTable {
    * that have not be successfully applied.
    * @since 0.20.1
    */
-  public void delete(final ArrayList<Delete> deletes)
+  public synchronized void delete(final ArrayList<Delete> deletes)
   throws IOException {
     int last = 0;
     try {
@@ -539,7 +502,7 @@ public class HTable {
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
    */
-  public void put(final Put put) throws IOException {
+  public synchronized void put(final Put put) throws IOException {
     validatePut(put);
     writeBuffer.add(put);
     currentWriteBufferSize += put.heapSize();
@@ -562,7 +525,7 @@ public class HTable {
    * have not be successfully applied.
    * @since 0.20.0
    */
-  public void put(final List<Put> puts) throws IOException {
+  public synchronized void put(final List<Put> puts) throws IOException {
     for (Put put : puts) {
       validatePut(put);
       writeBuffer.add(put);
@@ -653,7 +616,7 @@ public class HTable {
    * @throws IOException
    * @return true if the new put was execute, false otherwise
    */
-  public boolean checkAndPut(final byte [] row, 
+  public synchronized boolean checkAndPut(final byte [] row, 
       final byte [] family, final byte [] qualifier, final byte [] value, 
       final Put put)
   throws IOException {
@@ -698,14 +661,14 @@ public class HTable {
    * @throws IOException if a remote or network exception occurs.
    */
   public void flushCommits() throws IOException {
+    int last = 0;
     try {
-      connection.processBatchOfPuts(writeBuffer,
-          tableName, pool);
+      last = connection.processBatchOfRows(writeBuffer, tableName);
     } finally {
-      // the write buffer was adjusted by processBatchOfPuts
+      writeBuffer.subList(0, last).clear();
       currentWriteBufferSize = 0;
-      for (Put aPut : writeBuffer) {
-        currentWriteBufferSize += aPut.heapSize();
+      for (int i = 0; i < writeBuffer.size(); i++) {
+        currentWriteBufferSize += writeBuffer.get(i).heapSize();
       }
     }
   }
@@ -717,7 +680,6 @@ public class HTable {
   */
   public void close() throws IOException{
     flushCommits();
-    this.pool.shutdownNow();
   }
   
   /**
@@ -2305,32 +2267,5 @@ public class HTable {
       return res;
     }
     return n;
-  }
-
-  static class DaemonThreadFactory implements ThreadFactory {
-    static final AtomicInteger poolNumber = new AtomicInteger(1);
-        final ThreadGroup group;
-        final AtomicInteger threadNumber = new AtomicInteger(1);
-        final String namePrefix;
-
-        DaemonThreadFactory() {
-            SecurityManager s = System.getSecurityManager();
-            group = (s != null)? s.getThreadGroup() :
-                                 Thread.currentThread().getThreadGroup();
-            namePrefix = "pool-" +
-                          poolNumber.getAndIncrement() +
-                         "-thread-";
-        }
-
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(group, r,
-                                  namePrefix + threadNumber.getAndIncrement(),
-                                  0);
-            if (!t.isDaemon())
-                t.setDaemon(true);
-            if (t.getPriority() != Thread.NORM_PRIORITY)
-                t.setPriority(Thread.NORM_PRIORITY);
-            return t;
-        }
   }
 }

@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
@@ -31,6 +30,10 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -52,7 +55,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.Get;
@@ -76,8 +78,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
-import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -124,7 +126,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   final int leaseTimeout;
   private ZooKeeperWrapper zooKeeperWrapper;
   private final ZKMasterAddressWatcher zkMasterAddressWatcher;
-  private final RegionServerOperationQueue regionServerOperationQueue;
+
+  volatile DelayQueue<RegionServerOperation> delayedToDoQueue =
+    new DelayQueue<RegionServerOperation>();
+  volatile BlockingQueue<RegionServerOperation> toDoQueue =
+    new PriorityBlockingQueue<RegionServerOperation>();
 
   private final HBaseServer server;
   private final HServerAddress address;
@@ -166,8 +172,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         conf.get("hbase.master.dns.nameserver","default"));
     addressStr += ":" + 
       conf.get(MASTER_PORT, Integer.toString(DEFAULT_MASTER_PORT));
-    HServerAddress hsa = new HServerAddress(addressStr);
-    LOG.info("My address is " + hsa);
+    HServerAddress address = new HServerAddress(addressStr);
+    LOG.info("My address is " + address);
 
     this.conf = conf;
     this.rootdir = new Path(conf.get(HBASE_DIR));
@@ -212,9 +218,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.maxRegionOpenTime =
       conf.getLong("hbase.hbasemaster.maxregionopen", 120 * 1000);
     this.leaseTimeout = conf.getInt("hbase.master.lease.period", 120 * 1000);
-    this.server = HBaseRPC.getServer(this, hsa.getBindAddress(),
-      hsa.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
-      false, conf);
+    this.server = HBaseRPC.getServer(this, address.getBindAddress(),
+        address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
+        false, conf);
          
     //  The rpc-server port can be ephemeral... ensure we have the correct info
     this.address = new HServerAddress(server.getListenerAddress());
@@ -234,8 +240,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     regionManager = new RegionManager(this);
     
     writeAddressToZooKeeper(true);
-    this.regionServerOperationQueue =
-      new RegionServerOperationQueue(this.conf, this.closed);
     
     // We're almost open for business
     this.closed.set(false);
@@ -342,10 +346,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return serverManager.getServersToServerInfo();
   }
 
-  RegionServerOperationQueue getRegionServerOperationQueue () {
-    return this.regionServerOperationQueue;
-  }
-
   public Map<HServerAddress, HServerInfo> getServerAddressToServerInfo() {
     return serverManager.getServerAddressToServerInfo();
   }
@@ -414,7 +414,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     startServiceThreads();
     /* Main processing loop */
     try {
-      FINISHED: while (!closed.get()) {
+      while (!closed.get()) {
         // check if we should be shutting down
         if (shutdownRequested.get()) {
           // The region servers won't all exit until we stop scanning the
@@ -425,15 +425,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             break;
           }
         }
-        if (this.regionManager.getRootRegionLocation() != null) {
-          switch(this.regionServerOperationQueue.process()) {
-          case FAILED:
-            break FINISHED;
-          case REQUEUED_BUT_PROBLEM:
-            if (!checkFileSystem()) break FINISHED;
-          default: // PROCESSED, NOOP, REQUEUED:
-            break;
-          }
+        // work on the TodoQueue. If that fails, we should shut down.
+        if (!processToDoQueue()) {
+          break;
         }
       }
     } catch (Throwable t) {
@@ -442,7 +436,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
     
     // Wait for all the remaining region servers to report in.
-    this.serverManager.letRegionServersShutdown();
+    serverManager.letRegionServersShutdown();
 
     /*
      * Clean up and close up shop
@@ -463,7 +457,82 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     // Join up with all threads
     LOG.info("HMaster main thread exiting");
   }
+  
+  /**
+   * Try to get an operation off of the todo queue and perform it.
+   */ 
+  private boolean processToDoQueue() {
+    RegionServerOperation op = null;
 
+    // block until the root region is online
+    if (regionManager.getRootRegionLocation() != null) {
+      // We can't process server shutdowns unless the root region is online
+      op = delayedToDoQueue.poll();
+    }
+    
+    // if there aren't any todo items in the queue, sleep for a bit.
+    if (op == null ) {
+      try {
+        op = toDoQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
+      } catch (InterruptedException e) {
+        // continue
+      }
+    }
+    
+    // at this point, if there's still no todo operation, or we're supposed to
+    // be closed, return.
+    if (op == null || closed.get()) {
+      return true;
+    }
+    
+    try {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Processing todo: " + op.toString());
+      }
+      
+      // perform the operation. 
+      if (!op.process()) {
+        // Operation would have blocked because not all meta regions are
+        // online. This could cause a deadlock, because this thread is waiting
+        // for the missing meta region(s) to come back online, but since it
+        // is waiting, it cannot process the meta region online operation it
+        // is waiting for. So put this operation back on the queue for now.
+        if (toDoQueue.size() == 0) {
+          // The queue is currently empty so wait for a while to see if what
+          // we need comes in first
+          sleeper.sleep();
+        }
+        try {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Put " + op.toString() + " back on queue");
+          }
+          toDoQueue.put(op);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(
+            "Putting into toDoQueue was interrupted.", e);
+        }
+      }
+    } catch (Exception ex) {
+      // There was an exception performing the operation.
+      if (ex instanceof RemoteException) {
+        try {
+          ex = RemoteExceptionHandler.decodeRemoteException(
+            (RemoteException)ex);
+        } catch (IOException e) {
+          ex = e;
+          LOG.warn("main processing loop: " + op.toString(), e);
+        }
+      }
+      // make sure the filesystem is still ok. otherwise, we're toast.
+      if (!checkFileSystem()) {
+        return false;
+      }
+      LOG.warn("Processing pending operations: " + op.toString(), ex);
+      delayedToDoQueue.put(op);
+    }
+    return true;
+  }
+  
   /*
    * Verifies if this instance of HBase is fresh or the master was started
    * following a failover. In the second case, it inspects the region server
@@ -601,7 +670,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   void startShutdown() {
     closed.set(true);
     regionManager.stopScanners();
-    this.regionServerOperationQueue.shutdown();
+    synchronized(toDoQueue) {
+      toDoQueue.clear();                         // Empty the queue
+      delayedToDoQueue.clear();                  // Empty shut down queue
+      toDoQueue.notifyAll();                     // Wake main thread
+    }
     serverManager.notifyServers();
   }
 
@@ -648,18 +721,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[], 
     HRegionInfo[] mostLoadedRegions)
   throws IOException {
-    return adornRegionServerAnswer(serverInfo,
-      this.serverManager.regionServerReport(serverInfo, msgs, mostLoadedRegions));
-  }
-
-  /**
-   * Override if you'd add messages to return to regionserver <code>hsi</code>
-   * @param messages Messages to add to
-   * @return Messages to return to 
-   */
-  protected HMsg [] adornRegionServerAnswer(final HServerInfo hsi,
-      final HMsg [] msgs) {
-    return msgs;
+    return serverManager.regionServerReport(serverInfo, msgs,
+      mostLoadedRegions);
   }
 
   /*
@@ -1009,6 +1072,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return this.metrics;
   }
 
+  /*
+   * Managing leases
+   */
+
   /**
    * @return Return configuration being used by this server.
    */
@@ -1127,24 +1194,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     System.exit(0);
   }
 
-  /**
-   * Utility for constructing an instance of the passed HMaster class.
-   * @param masterClass
-   * @param conf
-   * @return HMaster instance.
-   */
-  public static HMaster constructMaster(Class<? extends HMaster> masterClass,
-      final HBaseConfiguration conf)  {
-    try {
-      Constructor<? extends HMaster> c =
-        masterClass.getConstructor(HBaseConfiguration.class);
-      return c.newInstance(conf);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed construction of " +
-        "Master: " + masterClass.toString(), e);
-    }
-  }
-
   protected static void doMain(String [] args,
       Class<? extends HMaster> masterClass) {
 
@@ -1174,29 +1223,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           }
           // If 'local', defer to LocalHBaseCluster instance.
           if (LocalHBaseCluster.isLocal(conf)) {
-            // TODO make zookeepercluster a field and do an orderly shutdown
-            MiniZooKeeperCluster zooKeeperCluster = new MiniZooKeeperCluster();
-            File zkDataPath = new File(conf.get("hbase.zookeeper.property.dataDir"));
-            int zkClientPort = conf.getInt("hbase.zookeeper.property.clientPort", 0);
-            if (zkClientPort == 0) {
-              throw new IOException("No config value for hbase.zookeeper.property.clientPort");
-            }
-
-            zooKeeperCluster.setTickTime(conf.getInt("hbase.zookeeper.property.tickTime", 3000));
-            zooKeeperCluster.setClientPort(zkClientPort);
-            int clientPort = zooKeeperCluster.startup(zkDataPath);
-            if (clientPort != zkClientPort) {
-              String errorMsg = "Couldnt start ZK at requested address of " +
-                  zkClientPort + ", instead got: " + clientPort + ". Aborting. Why? " +
-                  "Because clients (eg shell) wont be able to find this ZK quorum";
-              System.err.println(errorMsg);
-              throw new IOException(errorMsg);
-            }
-            conf.set("hbase.zookeeper.property.clientPort", Integer.toString(clientPort));
             (new LocalHBaseCluster(conf)).startup();
           } else {
-            HMaster master = constructMaster(masterClass, conf);
-            if (master.shutdownRequested.get()) {
+            Constructor<? extends HMaster> c =
+              masterClass.getConstructor(HBaseConfiguration.class);
+            HMaster master = c.newInstance(conf);
+            if(master.shutdownRequested.get()) {
               LOG.info("Won't bring the Master up as a shutdown is requested");
               return;
             }
@@ -1238,4 +1270,5 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public static void main(String [] args) {
     doMain(args, HMaster.class);
   }
+
 }

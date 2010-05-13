@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -105,12 +103,7 @@ public interface HConnection {
    */
   public HTableDescriptor getHTableDescriptor(byte[] tableName)
   throws IOException;
-
-  /**
-   * Allows flushing the region cache.
-   */
-  public void clearRegionCache(); 
-
+  
   /**
    * Find the location of the region of <i>tableName</i> that <i>row</i>
    * lives in.
@@ -192,7 +185,7 @@ public interface HConnection {
    * @throws IOException
    * @throws RuntimeException
    */
-  public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
+  public <T> T getRegionServerForWithoutRetries(ServerCallable<T> callable) 
   throws IOException, RuntimeException;
   
     
@@ -213,11 +206,6 @@ public interface HConnection {
    * @param tableName The name of the table
    * @throws IOException
    */
-  public int processBatchOfDeletes(List<Delete> list, byte[] tableName)
+  public int processBatchOfDeletes(ArrayList<Delete> list, byte[] tableName)
   throws IOException;
-  
-  public void processBatchOfPuts(List<Put> list,
-                                 final byte[] tableName, ExecutorService pool) throws IOException;
-
-
 }

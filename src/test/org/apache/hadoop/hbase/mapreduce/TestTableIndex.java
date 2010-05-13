@@ -192,7 +192,7 @@ public class TestTableIndex extends MultiRegionTable {
   private void verify() throws IOException {
     // Force a cache flush for every online region to ensure that when the
     // scanner takes its snapshot, all the updates have made it into the cache.
-    for (HRegion r : cluster.getRegionServerThreads().get(0).getRegionServer().
+    for (HRegion r : cluster.getRegionThreads().get(0).getRegionServer().
         getOnlineRegions()) {
       HRegionIncommon region = new HRegionIncommon(r);
       region.flushcache();

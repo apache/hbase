@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
@@ -136,8 +135,8 @@ public class MiniClusterTestCase extends TestCase {
   
   private static void stopHBase() {
     if (hbaseCluster != null) try {
-      for (JVMClusterUtil.RegionServerThread regionThread:
-        hbaseCluster.getRegionServerThreads()) {
+      for (LocalHBaseCluster.RegionServerThread regionThread:
+        hbaseCluster.getRegionThreads()) {
         regionThread.getRegionServer().abort();
       }
       hbaseCluster.shutdown();

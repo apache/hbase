@@ -18,7 +18,7 @@
 -->
 
 <project name="hbase" default="jar">
-  <property name="version" value="0.20.4-dev"/>
+  <property name="version" value="0.20.5-dev"/>
   <property name="Name" value="HBase"/>
   <property name="final.name" value="hbase-${version}"/>
   <property name="year" value="2010"/>
@@ -540,47 +540,4 @@
     <delete dir="${build.dir}"/>
     <delete dir="${docs.src}/build"/>
   </target>
-
- <property name="findbugs.home" value=""/>
-  <target name="findbugs" depends="check-for-findbugs, tar" if="findbugs.present" description="Run findbugs if present">
-    <property name="findbugs.out.dir" value="${test.build.dir}/findbugs"/>
-    <property name="findbugs.exclude.file" value="${test.src.dir}/findbugsExcludeFile.xml"/>
-    <property name="findbugs.report.htmlfile" value="${findbugs.out.dir}/hbase-findbugs-report.html"/>
-    <property name="findbugs.report.xmlfile" value="${findbugs.out.dir}/hbase-findbugs-report.xml"/>
-    <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask"
-        classpath="${findbugs.home}/lib/findbugs-ant.jar" />
-
-        <mkdir dir="${findbugs.out.dir}"/>
-
-    <findbugs home="${findbugs.home}" output="xml:withMessages"
-        outputFile="${findbugs.report.xmlfile}" effort="max"
-        excludeFilter="${findbugs.exclude.file}" jvmargs="-Xmx512M">
-     <auxClasspath>
-        <fileset refid="lib.jars"/>
-        <fileset dir="${lib.dir}/jsp-2.1/">
-          <include name="*jar" />
-        </fileset>
-        <fileset dir="${basedir}/src/contrib/stargate/lib">
-          <include name="*jar" />
-        </fileset>
-        <pathelement location="${build.classes}"/>
-      </auxClasspath>
-      <sourcePath path="${src.dir}"/>
-      <class location="${basedir}/build/${final.name}.jar" />
-      <sourcePath path="${basedir}/src/contrib/stargate/src/java" />
-      <class location="${basedir}/build/contrib/stargate/hbase-${version}-stargate.jar" />
-      <sourcePath path="${basedir}/src/contrib/transactional/src/java" />
-      <class location="${basedir}/build/contrib/transactional/hbase-${version}-transactional.jar" />
-    </findbugs>
-
-        <xslt style="${findbugs.home}/src/xsl/default.xsl"
-        in="${findbugs.report.xmlfile}"
-        out="${findbugs.report.htmlfile}"/>
-  </target>
-	
-  <target name="check-for-findbugs">
-    <available property="findbugs.present"
-        file="${findbugs.home}/lib/findbugs.jar" />
-  </target>
-
 </project>

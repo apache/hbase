@@ -263,7 +263,7 @@ public class TestHeapSize extends TestCase {
       assertEquals(expected, actual);
     }
     
-    // MemStore Overhead
+    // MemStore Overhead 
     cl = MemStore.class;
     actual = MemStore.FIXED_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);

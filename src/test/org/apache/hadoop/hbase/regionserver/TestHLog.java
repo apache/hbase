@@ -102,12 +102,13 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       for (int ii = 0; ii < howmany; ii++) {
         for (int i = 0; i < howmany; i++) {
           for (int j = 0; j < howmany; j++) {
-            WALEdit edits = new WALEdit();
+            List<KeyValue> edit = new ArrayList<KeyValue>();
             byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
-            edits.add(new KeyValue(rowName, column, System.currentTimeMillis(),
+            edit.add(new KeyValue(rowName, column, System.currentTimeMillis(),
               column));
-            System.out.println("Region " + i + ": " + edits);
-            log.append(Bytes.toBytes("" + i), tableName, edits, System.currentTimeMillis(), false);
+            System.out.println("Region " + i + ": " + edit);
+            log.append(Bytes.toBytes("" + i), tableName, edit,
+              false, System.currentTimeMillis());
           }
         }
         log.rollWriter();
@@ -131,11 +132,11 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         new SequenceFile.Reader(this.fs, splits.get(i), this.conf);
       try {
         HLogKey key = new HLogKey();
-        WALEdit kvs = new WALEdit();
+        KeyValue kv = new KeyValue();
         int count = 0;
         String previousRegion = null;
         long seqno = -1;
-        while(r.next(key, kvs)) {
+        while(r.next(key, kv)) {
           String region = Bytes.toString(key.getRegionName());
           // Assert that all edits are for same region.
           if (previousRegion != null) {
@@ -144,10 +145,8 @@ public class TestHLog extends HBaseTestCase implements HConstants {
           assertTrue(seqno < key.getLogSeqNum());
           seqno = key.getLogSeqNum();
           previousRegion = region;
-          System.out.println(key + " " + kvs);
+          System.out.println(key + " " + kv);
           count++;
-          key = new HLogKey();
-          kvs = new WALEdit();
         }
         assertEquals(howmany * howmany, count);
       } finally {
@@ -170,39 +169,31 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...
       long timestamp = System.currentTimeMillis();
-      WALEdit cols = new WALEdit();
+      List<KeyValue> cols = new ArrayList<KeyValue>();
       for (int i = 0; i < COL_COUNT; i++) {
         cols.add(new KeyValue(row, Bytes.toBytes("column:" + Integer.toString(i)),
           timestamp, new byte[] { (byte)(i + '0') }));
       }
-      log.append(regionName, tableName, cols, System.currentTimeMillis(), false);
+      log.append(regionName, tableName, cols, false, System.currentTimeMillis());
       long logSeqId = log.startCacheFlush();
-      log.completeCacheFlush(regionName, tableName, logSeqId, false);
+      log.completeCacheFlush(regionName, tableName, logSeqId);
       log.close();
       Path filename = log.computeFilename(log.getFilenum());
       log = null;
       // Now open a reader on the log and assert append worked.
       reader = new SequenceFile.Reader(fs, filename, conf);
       HLogKey key = new HLogKey();
-      WALEdit vals = new WALEdit();
-      reader.next(key, vals);
-      assertEquals(COL_COUNT, vals.size());
-      int idx = 0;
-      for (KeyValue val : vals.getKeyValues()) {
+      KeyValue val = new KeyValue();
+      for (int i = 0; i < COL_COUNT; i++) {
+        reader.next(key, val);
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
         assertTrue(Bytes.equals(row, val.getRow()));
-        assertEquals((byte)(idx + '0'), val.getValue()[0]);
+        assertEquals((byte)(i + '0'), val.getValue()[0]);
         System.out.println(key + " " + val);
-        idx++;
       }
-
-      // Get next row... the meta flushed row.
-      key = new HLogKey();
-      vals = new WALEdit();
-      reader.next(key, vals);
-      assertEquals(1, vals.size());
-      for (KeyValue val : vals.getKeyValues()) {
+      while (reader.next(key, val)) {
+        // Assert only one more row... the meta flushed row.
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
         assertTrue(Bytes.equals(HLog.METAROW, val.getRow()));

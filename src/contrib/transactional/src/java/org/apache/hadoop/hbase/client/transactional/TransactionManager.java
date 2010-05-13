@@ -36,6 +36,10 @@ import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
  * 
  */
 public class TransactionManager {
+  static {
+    TransactionalRPC.initialize();
+  }
+
   static final Log LOG = LogFactory.getLog(TransactionManager.class);
 
   private final HConnection connection;

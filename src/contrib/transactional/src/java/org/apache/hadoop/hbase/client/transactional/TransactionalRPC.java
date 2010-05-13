@@ -1,6 +1,4 @@
-/*
- * Copyright 2010 The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,18 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.client.transactional;
 
-package org.apache.hadoop.hbase;
+import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
 
-import org.apache.hadoop.conf.Configuration;
+/** Simple class for registering the transactional RPC codes. 
+ *  
+ */
+public final class TransactionalRPC {
+  
+  private static final byte RPC_CODE = 100;
 
-public class HBaseConfTool {
-
-  public static void main(String args[]) {
-    if (args.length < 1)
+  private static boolean initialized = false;
+  
+  public synchronized static void initialize() {
+    if (initialized) {
       return;
-
-    Configuration conf = new HBaseConfiguration();
-    System.out.println(conf.get(args[0]));
+    }
+    HBaseRPC.addToMap(TransactionalRegionInterface.class, RPC_CODE);
+    initialized = true;
   }
+  
+  private TransactionalRPC() {
+    // Static helper class;
+  }
+
 }

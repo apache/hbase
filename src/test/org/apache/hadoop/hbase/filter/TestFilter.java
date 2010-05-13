@@ -279,7 +279,7 @@ public class TestFilter extends HBaseTestCase {
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a
    * {@link Filter} that uses the
-   * {@link Filter#filterRow()} method.
+   * {@link PageFilter#filterRow()} method.
    *
    * See HBASE-2258.
    *
@@ -311,7 +311,7 @@ public class TestFilter extends HBaseTestCase {
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a
    * {@link Filter} that uses the
-   * {@link Filter#filterRowKey(byte[], int, int)} method.
+   * {@link PageFilter#filterRowKey(byte[], int, int)} method.
    *
    * See HBASE-2258.
    *
@@ -339,7 +339,7 @@ public class TestFilter extends HBaseTestCase {
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a
    * {@link Filter} that uses the
-   * {@link Filter#filterKeyValue(org.apache.hadoop.hbase.KeyValue)} method.
+   * {@link PageFilter#filterKeyValue(org.apache.hadoop.hbase.KeyValue)} method.
    *
    * See HBASE-2258.
    *
@@ -1103,97 +1103,4 @@ public class TestFilter extends HBaseTestCase {
     assertEquals("Expected " + kvs.length + " total keys but scanned " + idx,
         kvs.length, idx);
   }
-  
-  
-  public void testColumnPaginationFilter() throws Exception {
-      
-     // Set of KVs (page: 1; pageSize: 1) - the first set of 1 column per row
-      KeyValue [] expectedKVs = {
-        // testRowOne-0
-        new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
-        // testRowOne-2
-        new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
-        // testRowOne-3
-        new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
-        // testRowTwo-0
-        new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
-        // testRowTwo-2
-        new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
-        // testRowTwo-3
-        new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1])
-      };
-      
-
-      // Set of KVs (page: 3; pageSize: 1)  - the third set of 1 column per row
-      KeyValue [] expectedKVs2 = {
-        // testRowOne-0
-        new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
-        // testRowOne-2
-        new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
-        // testRowOne-3
-        new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
-        // testRowTwo-0
-        new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
-        // testRowTwo-2
-        new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
-        // testRowTwo-3
-        new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
-      };
-      
-      // Set of KVs (page: 2; pageSize 2)  - the 2nd set of 2 columns per row
-      KeyValue [] expectedKVs3 = {
-        // testRowOne-0
-        new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
-        new KeyValue(ROWS_ONE[0], FAMILIES[1], QUALIFIERS_ONE[0], VALUES[0]),
-        // testRowOne-2
-        new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
-        new KeyValue(ROWS_ONE[2], FAMILIES[1], QUALIFIERS_ONE[0], VALUES[0]),
-        // testRowOne-3
-        new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
-        new KeyValue(ROWS_ONE[3], FAMILIES[1], QUALIFIERS_ONE[0], VALUES[0]),
-        // testRowTwo-0
-        new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
-        new KeyValue(ROWS_TWO[0], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1]),
-        // testRowTwo-2
-        new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
-        new KeyValue(ROWS_TWO[2], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1]),
-        // testRowTwo-3
-        new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
-        new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1]),
-      };
-      
-      
-      // Set of KVs (page: 2; pageSize 2)  - the 2nd set of 2 columns per row
-      KeyValue [] expectedKVs4 = {
-
-      };
-
-      long expectedRows = this.numRows;
-      long expectedKeys = 1;
-      Scan s = new Scan();
-      
-      
-      // Page 1; 1 Column per page  (Limit 1, Offset 0)
-      s.setFilter(new ColumnPaginationFilter(1,0));
-      verifyScan(s, expectedRows, expectedKeys);
-      this.verifyScanFull(s, expectedKVs);
-
-      // Page 3; 1 Result per page  (Limit 1, Offset 2)
-      s.setFilter(new ColumnPaginationFilter(1,2));
-      verifyScan(s, expectedRows, expectedKeys);
-      this.verifyScanFull(s, expectedKVs2);
-      
-      // Page 2; 2 Results per page (Limit 2, Offset 2)
-      s.setFilter(new ColumnPaginationFilter(2,2));
-      expectedKeys = 2;
-      verifyScan(s, expectedRows, expectedKeys);
-      this.verifyScanFull(s, expectedKVs3);
-
-      // Page 8; 20 Results per page (no results) (Limit 20, Offset 140)
-      s.setFilter(new ColumnPaginationFilter(20,140));
-      expectedKeys = 0;
-      expectedRows = 0;
-      verifyScan(s, expectedRows, 0);
-      this.verifyScanFull(s, expectedKVs4);     
-    }
 }

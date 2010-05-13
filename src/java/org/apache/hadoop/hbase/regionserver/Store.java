@@ -291,7 +291,7 @@ public class Store implements HConstants, HeapSize {
    *
    * We can ignore any log message that has a sequence ID that's equal to or 
    * lower than maxSeqID.  (Because we know such log messages are already 
-   * reflected in the HFiles.)
+   * reflected in the MapFiles.)
    *
    * @return the new max sequence id as per the log, or -1 if no log recovered
    */
@@ -306,10 +306,9 @@ public class Store implements HConstants, HeapSize {
     if (stat.getLen() <= 0) {
       LOG.warn("Passed reconstruction log " + reconstructionLog +
         " is zero-length. Deleting existing file");
-       fs.delete(reconstructionLog, false);
+      fs.delete(reconstructionLog, false);
       return -1;
     }
-
     // TODO: This could grow large and blow heap out.  Need to get it into
     // general memory usage accounting.
     long maxSeqIdInLog = -1;
@@ -321,22 +320,13 @@ public class Store implements HConstants, HeapSize {
       reconstructionLog, this.conf);
     try {
       HLogKey key = HLog.newKey(conf);
-      WALEdit edits = new WALEdit();
+      KeyValue val = new KeyValue();
       long skippedEdits = 0;
       long editsCount = 0;
       // How many edits to apply before we send a progress report.
       int reportInterval =
         this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
-
-      // TBD: Need to add an exception handler around logReader.next.
-      //
-      // A transaction now appears as a single edit. If logReader.next()
-      // returns an exception, then it must be a incomplete/partial
-      // transaction at the end of the file. Rather than bubble up
-      // the exception, we should catch it and simply ignore the
-      // partial transaction during this recovery phase.
-      //
-      while (logReader.next(key, edits)) {
+      while (logReader.next(key, val)) {
         if (firstSeqIdInLog == -1) {
           firstSeqIdInLog = key.getLogSeqNum();
         }
@@ -345,19 +335,15 @@ public class Store implements HConstants, HeapSize {
           skippedEdits++;
           continue;
         }
-        for (KeyValue kv : edits.getKeyValues())
-        {
-          // Check this edit is for me. Also, guard against writing the special
-          // METACOLUMN info such as HBASE::CACHEFLUSH entries
-          if (kv.matchingFamily(HLog.METAFAMILY) ||
-              !Bytes.equals(key.getRegionName(), region.regionInfo.getRegionName()) ||
-              !kv.matchingFamily(family.getName())) {
-              continue;
-            }
-          // Add anything as value as long as we use same instance each time.
-          reconstructedCache.add(kv);
+        // Check this edit is for me. Also, guard against writing the special
+        // METACOLUMN info such as HBASE::CACHEFLUSH entries
+        if (val.matchingFamily(HLog.METAFAMILY) ||
+          !Bytes.equals(key.getRegionName(), region.regionInfo.getRegionName()) ||
+          !val.matchingFamily(family.getName())) {
+          continue;
         }
-
+        // Add anything as value as long as we use same instance each time.
+        reconstructedCache.add(val);
         editsCount++;
         // Every 2k edits, tell the reporter we're making progress.
         // Have seen 60k edits taking 3minutes to complete.
@@ -365,7 +351,7 @@ public class Store implements HConstants, HeapSize {
           reporter.progress();
         }
         // Instantiate a new KeyValue to perform Writable on
-        edits = new WALEdit();
+        val = new KeyValue();
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Applied " + editsCount + ", skipped " + skippedEdits +
@@ -376,7 +362,7 @@ public class Store implements HConstants, HeapSize {
     } finally {
       logReader.close();
     }
-
+    
     if (reconstructedCache.size() > 0) {
       // We create a "virtual flush" at maxSeqIdInLog+1.
       if (LOG.isDebugEnabled()) {
@@ -743,9 +729,9 @@ public class Store implements HConstants, HeapSize {
         // A problem with the above heuristic is that we could go through all of
         // filesToCompact and the above condition could hold for all files and
         // we'd end up with nothing to compact.  To protect against this, we'll
-        // compact the tail -- up to the last 4 files -- of filesToCompact
+        // compact the tail -- up to the last 3 files -- of filesToCompact
         // regardless.
-        int tail = Math.min(countOfFiles, 4);
+        int tail = Math.min(countOfFiles, 3);
         for (point = 0; point < (countOfFiles - tail); point++) {
           if (((fileSizes[point] < fileSizes[point + 1] * 2) &&
                (countOfFiles - point) <= maxFilesToCompact)) {
@@ -1009,7 +995,7 @@ public class Store implements HConstants, HeapSize {
 
         // WARN ugly hack here, but necessary sadly.
         ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
-        
+
         // Tell observers that list of StoreFiles has changed.
         notifyChangedReadersObservers();
         // Finally, delete old store files.

@@ -46,11 +46,11 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class ExplicitColumnTracker implements ColumnTracker {
 
-  private final int maxVersions;
-  private final List<ColumnCount> columns;
-  private final List<ColumnCount> columnsToReuse;
+  private int maxVersions;
+  private List<ColumnCount> columns;
   private int index;
   private ColumnCount column;
+  private NavigableSet<byte[]> origColumns;
   
   /**
    * Default constructor.
@@ -59,11 +59,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
    */
   public ExplicitColumnTracker(NavigableSet<byte[]> columns, int maxVersions) {
     this.maxVersions = maxVersions;
-    this.columns = new ArrayList<ColumnCount>(columns.size());
-    this.columnsToReuse = new ArrayList<ColumnCount>(columns.size());
-    for(byte [] column : columns) {
-      this.columnsToReuse.add(new ColumnCount(column,maxVersions));
-    }
+    this.origColumns = columns;
     reset();
   }
   
@@ -87,6 +83,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
    * @return MatchCode telling QueryMatcher what action to take
    */
   public MatchCode checkColumn(byte [] bytes, int offset, int length) {
+    boolean recursive = false;
     do {
       // No more columns left, we are done with this query
       if(this.columns.size() == 0) {
@@ -117,12 +114,6 @@ public class ExplicitColumnTracker implements ColumnTracker {
         return MatchCode.INCLUDE;
       }
 
-
-      if (ret > 0) {
-         // Specified column is smaller than the current, skip to next column.
-        return MatchCode.SKIP;
-      }
-
       // Specified column is bigger than current column
       // Move down current column and check again
       if(ret <= -1) {
@@ -130,10 +121,14 @@ public class ExplicitColumnTracker implements ColumnTracker {
           // No more to match, do not include, done with storefile
           return MatchCode.NEXT; // done_row
         }
-        // This is the recursive case.
         this.column = this.columns.get(this.index);
+        recursive = true;
+        continue;
       }
-    } while(true);
+    } while (recursive);
+    // Specified column is smaller than current column
+    // Skip
+    return MatchCode.SKIP; // skip to next column, with hint?
   }
   
   /**
@@ -151,16 +146,15 @@ public class ExplicitColumnTracker implements ColumnTracker {
 
   // Called between every row.
   public void reset() {
-    buildColumnList();
+    buildColumnList(this.origColumns);
     this.index = 0;
     this.column = this.columns.get(this.index);
   }
 
-  private void buildColumnList() {
-    this.columns.clear();
-    this.columns.addAll(this.columnsToReuse);
-    for(ColumnCount col : this.columns) {
-      col.setCount(this.maxVersions);
+  private void buildColumnList(NavigableSet<byte[]> columns) {
+    this.columns = new ArrayList<ColumnCount>(columns.size());
+    for(byte [] column : columns) {
+      this.columns.add(new ColumnCount(column,maxVersions));
     }
   }
 }

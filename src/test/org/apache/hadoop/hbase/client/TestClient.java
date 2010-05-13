@@ -1490,7 +1490,7 @@ public class TestClient extends HBaseClusterTestCase {
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
     
-    // The Scanner returns the previous values, the expected-naive-unexpected  behavior
+    // The Scanner returns the previous values, the expected-unexpected behavior
     
     scan = new Scan(ROW);
     scan.addFamily(FAMILIES[0]);
@@ -1523,15 +1523,6 @@ public class TestClient extends HBaseClusterTestCase {
     put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
     put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
     ht.put(put);
-
-    // Assert that above went in.
-    get = new Get(ROWS[2]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 4 key but received " + result.size() + ": " + result,
-        result.size() == 4);
     
     delete = new Delete(ROWS[0]);
     delete.deleteFamily(FAMILIES[2]);
@@ -1592,6 +1583,7 @@ public class TestClient extends HBaseClusterTestCase {
     get.addFamily(FAMILIES[2]);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
+    System.out.println(result);
     assertEquals(1, result.size());
     assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
         new long [] {ts[2]},

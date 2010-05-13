@@ -444,13 +444,7 @@ abstract class BaseScanner extends Chore implements HConstants {
   private HRegionInfo getDaughterRegionInfo(final Result rowContent,
     final byte [] which)
   throws IOException {
-    return getRegionInfo(rowContent, CATALOG_FAMILY, which);
-  }
-
-  private HRegionInfo getRegionInfo(final Result r, final byte [] f,
-    final byte [] q)
-  throws IOException {
-    return Writables.getHRegionInfoOrNull(r.getValue(f, q));
+    return Writables.getHRegionInfoOrNull(rowContent.getValue(CATALOG_FAMILY, which));
   }
 
   /*
@@ -536,9 +530,9 @@ abstract class BaseScanner extends Chore implements HConstants {
     final MetaRegion meta, final HRegionInfo info,
     final String serverAddress, final long startCode) 
   throws IOException {
+    String serverName = null;
     String sa = serverAddress;
     long sc = startCode;
-    HRegionInfo ri = info;
     // Scans are sloppy. They don't respect row locks and they get and
     // cache a row internally so may have data that is stale. Make sure that for
     // sure we have the right server and servercode. We are trying to avoid
@@ -548,13 +542,18 @@ abstract class BaseScanner extends Chore implements HConstants {
     g.addFamily(HConstants.CATALOG_FAMILY);
     Result r = regionServer.get(meta.getRegionName(), g);
     if (r != null && !r.isEmpty()) {
-      // Result may not have serveraddress or startcode so below may be null.
       sa = getServerAddress(r);
+      if (sa != null && sa.length() > 0 && !sa.equalsIgnoreCase(serverAddress)) {
+        LOG.debug("GET on " + info.getRegionNameAsString() + " got different " +
+          "address than SCAN: sa=" + sa + ", serverAddress=" + serverAddress);
+      }
+      // Reget startcode in case its changed in the meantime too.
       sc = getStartCode(r);
-      ri = getRegionInfo(r, HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+      if (sc != startCode) {
+        LOG.debug("GET on " + info.getRegionNameAsString() + " got different " +
+          "startcode than SCAN: sc=" + sc + ", serverAddress=" + startCode);
+      }
     }
-    // If serverName remains null after below machinations, region is not assigned.
-    String serverName = null;
     if (sa != null && sa.length() > 0) {
       serverName = HServerInfo.getServerName(sa, sc);
     }
@@ -564,8 +563,8 @@ abstract class BaseScanner extends Chore implements HConstants {
        * a dead server. Regions that were on a dead server will get reassigned
        * by ProcessServerShutdown
        */
-      if (ri.isOffline() ||
-        this.master.regionManager.regionIsInTransition(ri.getRegionNameAsString()) ||
+      if (info.isOffline() ||
+        this.master.regionManager.regionIsInTransition(info.getRegionNameAsString()) ||
           (serverName != null && this.master.serverManager.isDead(serverName))) {
         return;
       }
@@ -578,12 +577,12 @@ abstract class BaseScanner extends Chore implements HConstants {
       if (storedInfo == null) {
         // The current assignment is invalid
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Current assignment of " + ri.getRegionNameAsString() +
+          LOG.debug("Current assignment of " + info.getRegionNameAsString() +
             " is not valid; " + " serverAddress=" + sa +
             ", startCode=" + sc + " unknown.");
         }
         // Now get the region assigned
-        this.master.regionManager.setUnassigned(ri, true);
+        this.master.regionManager.setUnassigned(info, true);
       }
     }
   }

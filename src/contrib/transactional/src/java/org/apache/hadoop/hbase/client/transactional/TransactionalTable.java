@@ -42,6 +42,10 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class TransactionalTable extends HTable {
   
+  static {
+    TransactionalRPC.initialize();
+  }
+  
   /**
    * @param conf
    * @param tableName

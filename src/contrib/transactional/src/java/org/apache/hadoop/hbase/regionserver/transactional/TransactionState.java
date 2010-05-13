@@ -21,9 +21,7 @@ package org.apache.hadoop.hbase.regionserver.transactional;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -140,24 +138,16 @@ class TransactionState {
   }
 
   void addWrite(final Put write) {
-    updateLatestTimestamp(write.getFamilyMap().values());
-    puts.add(write);
-  }
-  
-  
-  // FIXME REVIEW not sure about this. Needed for log recovery? but broke other tests.
-  private void updateLatestTimestamp(Collection<List<KeyValue>> kvsCollection) {
     byte [] now = Bytes.toBytes(System.currentTimeMillis());
-    // HAVE to manually set the KV timestamps
-    for (List<KeyValue> kvs : kvsCollection) {
-        for (KeyValue kv : kvs) {
-          if (kv.isLatestTimestamp()) {
+      // HAVE to manually set the KV timestamps
+      for (List<KeyValue> kvs : write.getFamilyMap().values()) {
+          for (KeyValue kv : kvs) {
             kv.updateLatestStamp(now);
           }
-        }
-    }
+      }
+
+    puts.add(write);
   }
-  
   
   boolean hasWrite() {
     return puts.size() > 0 || deletes.size() > 0;
@@ -168,7 +158,6 @@ class TransactionState {
   }
   
   void addDelete(final Delete delete) {
-    //updateLatestTimestamp(delete.getFamilyMap().values());
     deletes.add(delete);
   }
 
@@ -382,6 +371,13 @@ class TransactionState {
     return deletes;
   }
 
+  /** Set deleteSet.
+   * @param deleteSet the deleteSet to set
+   */
+   void setDeleteSet(List<Delete> deleteSet) {
+    this.deletes = deleteSet;
+  }
+
    /** Get a scanner to go through the puts from this transaction. Used to weave together the local trx puts with the global state.
     * 
     * @return scanner
@@ -397,56 +393,20 @@ class TransactionState {
     */
    private class PutScanner implements KeyValueScanner, InternalScanner {
 
-     private List<KeyValue> kvList;
+     private NavigableSet<KeyValue> kvSet;
      private Iterator<KeyValue> iterator;
      private boolean didHasNext = false;
      private KeyValue next = null;
      
      
      PutScanner() {
-       kvList = new ArrayList<KeyValue>();
-         
+       kvSet = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
        for (Put put : puts) {
          for (List<KeyValue> putKVs : put.getFamilyMap().values()) {
-           kvList.addAll(putKVs);
+           kvSet.addAll(putKVs);
          }
        }
-       
-       Collections.sort(kvList, new Comparator<KeyValue>() {
-         
-        /** We want to honor the order of the puts in the case where multiple have the same timestamp.
-         * 
-         * @param o1
-         * @param o2
-         * @return
-         */
-        public int compare(KeyValue o1, KeyValue o2) {
-          int result = KeyValue.COMPARATOR.compare(o1, o2);
-          if (result != 0) {
-            return result;
-          }
-          if (o1 == o2) {
-            return 0;
-          }
-          int put1Number = getPutNumber(o1);
-          int put2Number = getPutNumber(o2);
-          return put2Number - put1Number;
-        }
-      });
-       
-       iterator = kvList.iterator();
-     }
-     
-     private int getPutNumber(KeyValue kv) {
-       for (int i=0; i < puts.size(); i++) {
-         for (List<KeyValue> putKVs : puts.get(i).getFamilyMap().values()) {
-           for (KeyValue putKV : putKVs)
-           if (putKV == kv) {
-             return i;
-           }
-         }
-       }
-       throw new IllegalStateException("Can not fine put KV in puts");
+       iterator = kvSet.iterator();
      }
      
     public void close() {
@@ -464,18 +424,8 @@ class TransactionState {
       return next;
     }
 
-    private void iteratorFrom(KeyValue key) {
-      iterator = kvList.iterator();
-      while (iterator.hasNext()) {
-        KeyValue next = iterator.next();
-        if (KeyValue.COMPARATOR.compare(next, key) >= 0) {
-          break;
-        }
-      }
-    }
-    
     public boolean seek(KeyValue key) {
-      iteratorFrom(key);
+      iterator = kvSet.headSet(key).iterator();
 
       getNext();
       return next != null;
@@ -494,16 +444,13 @@ class TransactionState {
       return next;
     }
 
-    public boolean next(List<KeyValue> results, int limit) throws IOException {
+    public boolean next(List<KeyValue> results) throws IOException {
         KeyValue peek = this.peek();
         if (peek == null) {
           return false;
         }
         byte [] row = peek.getRow();
         results.add(peek);
-        if (limit > 0 && (results.size() == limit)) {
-          return true;
-        }
         while (true){
           if (this.peek() == null) {
             break;
@@ -512,16 +459,10 @@ class TransactionState {
             break;
           }
           results.add(this.next());
-          if (limit > 0 && (results.size() == limit)) {
-            break;
-          }
         }
-        return true;        
+        return true;
+        
     }
-
-    public boolean next(List<KeyValue> results) throws IOException {
-      return next(results, -1);
-    }
-
+    
    }
 }

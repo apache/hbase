@@ -81,8 +81,6 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   }
 
   /**
-   * Subclass hook.
-   * 
    * Run after dfs is ready but before hbase cluster is started up.
    */
   protected void preHBaseClusterSetup() throws Exception {
@@ -199,8 +197,8 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
    * regionservers and master threads are no long alive.
    */
   public void threadDumpingJoin() {
-    if (this.cluster.getRegionServerThreads() != null) {
-      for(Thread t: this.cluster.getRegionServerThreads()) {
+    if (this.cluster.getRegionThreads() != null) {
+      for(Thread t: this.cluster.getRegionThreads()) {
         threadDumpingJoin(t);
       }
     }

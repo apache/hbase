@@ -25,7 +25,6 @@
 
 MASTER_HOST="%MASTER_HOST%"
 ZOOKEEPER_QUORUM="%ZOOKEEPER_QUORUM%"
-NUM_SLAVES="%NUM_SLAVES%"
 EXTRA_PACKAGES="%EXTRA_PACKAGES%"
 SECURITY_GROUPS=`wget -q -O - http://169.254.169.254/latest/meta-data/security-groups`
 IS_MASTER=`echo $SECURITY_GROUPS | awk '{ a = match ($0, "-master$"); if (a) print "true"; else print "false"; }'`
@@ -49,9 +48,6 @@ echo "root hard nofile 32768" >> /etc/security/limits.conf
 # up epoll limits; ok if this fails, only valid for kernels 2.6.27+
 sysctl -w fs.epoll.max_user_instances=32768 > /dev/null 2>&1
 
-# up conntrack_max
-sysctl -w net.ipv4.netfilter.ip_conntrack_max=65536 > /dev/null 2>&1
-
 [ ! -f /etc/hosts ] &&  echo "127.0.0.1 localhost" > /etc/hosts
 
 # Extra packages
@@ -68,10 +64,10 @@ fi
 
 if [ "$IS_MASTER" = "true" ]; then
   sed -i -e "s|\( *mcast_join *=.*\)|#\1|" \
-      -e "s|\( *bind *=.*\)|#\1|" \
-      -e "s|\( *mute *=.*\)|  mute = yes|" \
-      -e "s|\( *location *=.*\)|  location = \"master-node\"|" \
-      /etc/gmond.conf
+         -e "s|\( *bind *=.*\)|#\1|" \
+         -e "s|\( *mute *=.*\)|  mute = yes|" \
+         -e "s|\( *location *=.*\)|  location = \"master-node\"|" \
+         /etc/gmond.conf
   mkdir -p /mnt/ganglia/rrds
   chown -R ganglia:ganglia /mnt/ganglia/rrds
   rm -rf /var/lib/ganglia; cd /var/lib; ln -s /mnt/ganglia ganglia; cd
@@ -80,9 +76,9 @@ if [ "$IS_MASTER" = "true" ]; then
   apachectl start
 else
   sed -i -e "s|\( *mcast_join *=.*\)|#\1|" \
-      -e "s|\( *bind *=.*\)|#\1|" \
-      -e "s|\(udp_send_channel {\)|\1\n  host=$MASTER_HOST|" \
-      /etc/gmond.conf
+         -e "s|\( *bind *=.*\)|#\1|" \
+         -e "s|\(udp_send_channel {\)|\1\n  host=$MASTER_HOST|" \
+         /etc/gmond.conf
   service gmond start
 fi
 
@@ -113,7 +109,6 @@ done
 
 # Hadoop configuration
 
-( cd /usr/local && ln -s $HADOOP_HOME hadoop ) || true
 cat > $HADOOP_HOME/conf/core-site.xml <<EOF
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
@@ -145,10 +140,6 @@ cat > $HADOOP_HOME/conf/hdfs-site.xml <<EOF
   <value>$DFS_DATA_DIR</value>
 </property>
 <property>
-  <name>dfs.replication</name>
-  <value>2</value>
-</property>
-<property>
   <name>dfs.datanode.handler.count</name>
   <value>10</value>
 </property>
@@ -167,6 +158,14 @@ cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
   <value>$MASTER_HOST:8021</value>
 </property>
 <property>
+  <name>mapred.output.compress</name>
+  <value>true</value>
+</property>
+<property>
+  <name>mapred.output.compression.type</name>
+  <value>BLOCK</value>
+</property>
+<property>
   <name>io.compression.codecs</name>
   <value>org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.BZip2Codec,com.hadoop.compression.lzo.LzoCodec,com.hadoop.compression.lzo.LzopCodec</value>
 </property>
@@ -175,26 +174,14 @@ cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
   <value>com.hadoop.compression.lzo.LzoCodec</value>
 </property>
 <property>
-  <name>mapred.map.tasks</name>
-  <value>4</value>
-</property>
-<property>
-  <name>mapred.map.tasks.speculative.execution</name>
-  <value>false</value>
-</property>
-<property>
-  <name>mapred.child.java.opts</name>
-  <value>-Xmx512m -XX:+UseCompressedOops</value>
+  <name>mapred.map.output.compression.codec</name>
+  <value>com.hadoop.compression.lzo.LzoCodec</value>
 </property>
 </configuration>
 EOF
-# Add JVM options
-cat >> $HADOOP_HOME/conf/hadoop-env.sh <<EOF
-export HADOOP_OPTS="$HADOOP_OPTS -XX:+UseCompressedOops"
-EOF
 # Update classpath to include HBase jars and config
 cat >> $HADOOP_HOME/conf/hadoop-env.sh <<EOF
-export HADOOP_CLASSPATH="$HBASE_HOME/hbase-${HBASE_VERSION}.jar:$HBASE_HOME/lib/zookeeper-3.3.0.jar:$HBASE_HOME/conf"
+HADOOP_CLASSPATH="$HBASE_HOME/hbase-${HBASE_VERSION}.jar:$HBASE_HOME/lib/AgileJSON-2009-03-30.jar:$HBASE_HOME/lib/json.jar:$HBASE_HOME/lib/zookeeper-3.2.1.jar:$HBASE_HOME/conf"
 EOF
 # Configure Hadoop for Ganglia
 cat > $HADOOP_HOME/conf/hadoop-metrics.properties <<EOF
@@ -211,7 +198,6 @@ EOF
 
 # HBase configuration
 
-( cd /usr/local && ln -s $HBASE_HOME hbase ) || true
 cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
@@ -223,10 +209,6 @@ cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 <property>
   <name>hbase.cluster.distributed</name>
   <value>true</value>
-</property>
-<property>
-  <name>hbase.regions.server.count.min</name>
-  <value>$NUM_SLAVES</value>
 </property>
 <property>
   <name>hbase.zookeeper.quorum</name>
@@ -246,15 +228,11 @@ cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 </property>
 <property>
   <name>dfs.replication</name>
-  <value>2</value>
+  <value>3</value>
 </property>
 <property>
   <name>dfs.client.block.write.retries</name>
   <value>100</value>
-</property>
-<property>
-  <name>dfs.datanode.socket.write.timeout</name>
-  <value>0</value>
 </property>
 <property>
   <name>zookeeper.session.timeout</name>
@@ -266,16 +244,11 @@ cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 </property>
 </configuration>
 EOF
-# Copy over mapred configuration for jobs started with 'hbase ...'
-cp $HADOOP_HOME/conf/mapred-site.xml $HBASE_HOME/conf/mapred-site.xml
 # Override JVM options
 cat >> $HBASE_HOME/conf/hbase-env.sh <<EOF
-export HBASE_MASTER_OPTS="-Xmx1000m -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:/mnt/hbase/logs/hbase-master-gc.log"
-export HBASE_REGIONSERVER_OPTS="-Xmx2000m -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=88 -XX:NewSize=128m -XX:MaxNewSize=128m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:/mnt/hbase/logs/hbase-regionserver-gc.log"
+export HBASE_MASTER_OPTS="-Xmx1000m -XX:+UseConcMarkSweepGC -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/mnt/hbase/logs/hbase-master-gc.log"
+export HBASE_REGIONSERVER_OPTS="-Xmx2000m -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=88 -XX:NewSize=64m -XX:MaxNewSize=64m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/mnt/hbase/logs/hbase-regionserver-gc.log"
 EOF
-# Configure log4j
-sed -i -e 's/hadoop.hbase=DEBUG/hadoop.hbase=INFO/g' $HBASE_HOME/conf/log4j.properties
-#sed -i -e 's/#log4j.logger.org.apache.hadoop.dfs=DEBUG/log4j.logger.org.apache.hadoop.dfs=DEBUG/g' $HBASE_HOME/conf/log4j.properties
 # Configure HBase for Ganglia
 cat > $HBASE_HOME/conf/hadoop-metrics.properties <<EOF
 dfs.class=org.apache.hadoop.metrics.ganglia.GangliaContext

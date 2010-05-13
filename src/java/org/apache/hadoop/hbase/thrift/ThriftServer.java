@@ -87,14 +87,6 @@ public class ThriftServer {
     protected int nextScannerId = 0;
     protected HashMap<Integer, ResultScanner> scannerMap = null;
     
-    private static ThreadLocal<Map<String, HTable>> threadLocalTables = new ThreadLocal<Map<String, HTable>>() {
-      @Override
-      protected Map<String, HTable> initialValue() {
-        return new TreeMap<String, HTable>();
-      }
-
-    };
-    
     /**
      * Returns a list of all the column families for a given htable.
      * 
@@ -122,12 +114,7 @@ public class ThriftServer {
      */
     protected HTable getTable(final byte[] tableName) throws IOError,
         IOException {
-      String table = new String(tableName);
-      Map<String, HTable> tables = threadLocalTables.get();
-      if (!tables.containsKey(table)) {
-        tables.put(table, new HTable(conf, tableName));
-      }
-      return tables.get(table);
+      return new HTable(this.conf, tableName);
     }
     
     /**

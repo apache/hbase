@@ -4,3 +4,5 @@ Foundation (http://www.apache.org/).
 In addition, this product includes software developed by:
 
 Facebook, Inc. (http://developers.facebook.com/thrift/ -- Page includes the Thrift Software License)
+
+JUnit (http://www.junit.org/)

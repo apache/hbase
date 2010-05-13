@@ -33,7 +33,7 @@ import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
 /**
  * Test for HQuorumPeer.
  */
-public class TestHQuorumPeer extends HBaseTestCase {
+public class HQuorumPeerTest extends HBaseTestCase {
   private Path dataDir;
 
   @Override
@@ -63,6 +63,9 @@ public class TestHQuorumPeer extends HBaseTestCase {
   /** */
   public void testMakeZKProps() {
     Properties properties = HQuorumPeer.makeZKProps(conf);
+    assertEquals(2000, Integer.parseInt(properties.getProperty("tickTime")));
+    assertEquals(Integer.valueOf(10), Integer.valueOf(properties.getProperty("initLimit")));
+    assertEquals(Integer.valueOf(5), Integer.valueOf(properties.getProperty("syncLimit")));
     assertEquals(dataDir.toString(), properties.get("dataDir"));
     assertEquals(Integer.valueOf(21810), Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("localhost:2888:3888", properties.get("server.0"));
@@ -71,6 +74,9 @@ public class TestHQuorumPeer extends HBaseTestCase {
     String oldValue = conf.get(HConstants.ZOOKEEPER_QUORUM);
     conf.set(HConstants.ZOOKEEPER_QUORUM, "a.foo.bar,b.foo.bar,c.foo.bar");
     properties = HQuorumPeer.makeZKProps(conf);
+    assertEquals(2000, Integer.parseInt(properties.getProperty("tickTime")));
+    assertEquals(Integer.valueOf(10), Integer.valueOf(properties.getProperty("initLimit")));
+    assertEquals(Integer.valueOf(5), Integer.valueOf(properties.getProperty("syncLimit")));
     assertEquals(dataDir.toString(), properties.get("dataDir"));
     assertEquals(Integer.valueOf(21810), Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("a.foo.bar:2888:3888", properties.get("server.0"));
@@ -83,6 +89,9 @@ public class TestHQuorumPeer extends HBaseTestCase {
   /** @throws Exception */
   public void testConfigInjection() throws Exception {
     String s =
+      "tickTime=2000\n" +
+      "initLimit=10\n" +
+      "syncLimit=5\n" +
       "dataDir=${hbase.tmp.dir}/zookeeper\n" +
       "clientPort=2181\n" +
       "server.0=${hbase.master.hostname}:2888:3888\n";
@@ -91,6 +100,9 @@ public class TestHQuorumPeer extends HBaseTestCase {
     InputStream is = new ByteArrayInputStream(s.getBytes());
     Properties properties = HQuorumPeer.parseZooCfg(conf, is);
 
+    assertEquals(Integer.valueOf(2000), Integer.valueOf(properties.getProperty("tickTime")));
+    assertEquals(Integer.valueOf(10), Integer.valueOf(properties.getProperty("initLimit")));
+    assertEquals(Integer.valueOf(5), Integer.valueOf(properties.getProperty("syncLimit")));
     assertEquals(dataDir.toString(), properties.get("dataDir"));
     assertEquals(Integer.valueOf(2181), Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("localhost:2888:3888", properties.get("server.0"));
@@ -98,8 +110,14 @@ public class TestHQuorumPeer extends HBaseTestCase {
     QuorumPeerConfig config = new QuorumPeerConfig();
     config.parseProperties(properties);
 
+    int tickTime = config.getTickTime();
+    assertEquals(2000, tickTime);
+    int initLimit = config.getInitLimit();
+    assertEquals(10, initLimit);
+    int syncLimit = config.getSyncLimit();
+    assertEquals(5, syncLimit);
     assertEquals(dataDir.toString(), config.getDataDir());
-    assertEquals(2181, config.getClientPortAddress().getPort());
+    assertEquals(2181, config.getClientPort());
     Map<Long,QuorumServer> servers = config.getServers();
     assertEquals(1, servers.size());
     assertTrue(servers.containsKey(Long.valueOf(0)));

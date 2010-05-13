@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Utility class to build a table of multiple regions.
  */
 public class MultiRegionTable extends HBaseClusterTestCase {
-  protected static final byte [][] KEYS = {
+  private static final byte [][] KEYS = {
     HConstants.EMPTY_BYTE_ARRAY,
     Bytes.toBytes("bbb"),
     Bytes.toBytes("ccc"),
@@ -62,14 +62,9 @@ public class MultiRegionTable extends HBaseClusterTestCase {
   /**
    * @param columnName the column to populate.
    */
-  public MultiRegionTable(final String familyName) {
-    this(1, familyName);
-  }
-
-  public MultiRegionTable(int nServers, final String familyName) {
-    super(nServers);
-    
-     this.columnFamily = Bytes.toBytes(familyName);
+  public MultiRegionTable(final String columnName) {
+    super();
+    this.columnFamily = Bytes.toBytes(columnName);
     // These are needed for the new and improved Map/Reduce framework
     System.setProperty("hadoop.log.dir", conf.get("hadoop.log.dir"));
     conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));

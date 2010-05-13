@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HLogKey;
 import org.apache.hadoop.hbase.regionserver.LogRollListener;
-import org.apache.hadoop.hbase.regionserver.WALEdit;
 import org.apache.hadoop.io.SequenceFile;
 
 /**
@@ -50,7 +49,7 @@ class THLog extends HLog {
 
   @Override
   protected SequenceFile.Writer createWriter(Path path) throws IOException {
-    return super.createWriter(path, THLogKey.class, WALEdit.class);
+    return super.createWriter(path, THLogKey.class, KeyValue.class);
   }
 
   @Override
@@ -91,17 +90,16 @@ class THLog extends HLog {
    */
   public void append(HRegionInfo regionInfo, long now, THLogKey.TrxOp txOp,
       long transactionId) throws IOException {
-    THLogKey key = new THLogKey(regionInfo.getRegionName(),
-      regionInfo.getTableDesc().getName(), -1, now, txOp, transactionId);
-    WALEdit e = new WALEdit();
-    e.add(new KeyValue(new byte [0], 0, 0)); // Empty KeyValue
-    super.append(regionInfo, key, e, regionInfo.isMetaRegion());
+    THLogKey key = new THLogKey(regionInfo.getRegionName(), regionInfo
+        .getTableDesc().getName(), -1, now, txOp, transactionId);
+    super.append(regionInfo, key, new KeyValue(new byte [0], 0, 0)); // Empty KeyValue 
   }
 
   /**
    * Write a transactional update to the log.
    * 
    * @param regionInfo
+   * @param now
    * @param update
    * @param transactionId
    * @throws IOException
@@ -116,9 +114,7 @@ class THLog extends HLog {
         transactionId);
 
     for (KeyValue value : convertToKeyValues(update)) {
-      WALEdit e = new WALEdit();
-      e.add(value);
-      super.append(regionInfo, key, e, regionInfo.isMetaRegion());
+      super.append(regionInfo, key, value);
     }
   }
 
@@ -126,7 +122,8 @@ class THLog extends HLog {
    * Write a transactional delete to the log.
    * 
    * @param regionInfo
-   * @param delete
+   * @param now
+   * @param update
    * @param transactionId
    * @throws IOException
    */
@@ -140,9 +137,7 @@ class THLog extends HLog {
         transactionId);
 
     for (KeyValue value : convertToKeyValues(delete)) {
-      WALEdit e = new WALEdit();
-      e.add(value);
-      super.append(regionInfo, key, e, regionInfo.isMetaRegion());
+      super.append(regionInfo, key, value);
     }
   }
 
