@@ -83,8 +83,10 @@ public class ExplicitColumnTracker implements ColumnTracker {
    * @return MatchCode telling QueryMatcher what action to take
    */
   public MatchCode checkColumn(byte [] bytes, int offset, int length) {
-    boolean recursive = false;
+    boolean recursive;
     do {
+      recursive = false;
+
       // No more columns left, we are done with this query
       if(this.columns.size() == 0) {
         return MatchCode.DONE; // done_row
