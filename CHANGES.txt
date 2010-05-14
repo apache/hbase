@@ -4,6 +4,7 @@ Release 0.20.5
    HBASE-2545  Unresponsive region server, potential deadlock
                (Todd Lipcon via Stack)
    HBASE-2521  no license headers in 5 files
+   HBASE-2503  PriorityQueue isn't thread safe, KeyValueHeap uses it that way
 
 Release 0.20.4 - Mon May  3 16:16:02 PDT 2010
   INCOMPATIBLE CHANGES

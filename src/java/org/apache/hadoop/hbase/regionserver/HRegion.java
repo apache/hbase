@@ -33,6 +33,7 @@ package org.apache.hadoop.hbase.regionserver;
  import org.apache.hadoop.hbase.HTableDescriptor;
  import org.apache.hadoop.hbase.KeyValue;
  import org.apache.hadoop.hbase.NotServingRegionException;
+ import org.apache.hadoop.hbase.UnknownScannerException;
  import org.apache.hadoop.hbase.client.Delete;
  import org.apache.hadoop.hbase.client.Get;
  import org.apache.hadoop.hbase.client.Put;
@@ -1818,11 +1819,13 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     private Scan theScan = null;
     private int isScan;
     private List<KeyValueScanner> extraScanners = null;
+    private boolean filterClosed = false;
 
     RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) {
       //DebugPrint.println("HRegionScanner.<init>");
 
       this.filter = scan.getFilter();
+      // Doesn't need to be volatile, always accessed under a sync'ed method
       this.oldFilter = scan.getOldFilter();
       if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
         this.stopRow = null;
@@ -1869,7 +1872,13 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
     }
 
-    public boolean next(List<KeyValue> outResults) throws IOException {
+    public synchronized boolean next(List<KeyValue> outResults)
+        throws IOException {
+      if (this.filterClosed) {
+        throw new UnknownScannerException("Scanner was closed (timed out?) " +
+            "after we renewed it. Could be caused by a very slow scanner " +
+            "or a lengthy garbage collection");
+      }
       if (closing.get() || closed.get()) {
         close();
         throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
@@ -1899,7 +1908,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     /*
      * @return True if a filter rules the scanner is over, done.
      */
-    boolean isFilterDone() {
+    synchronized boolean isFilterDone() {
       return
         (this.filter != null && this.filter.filterAllRemaining()) ||
         (this.oldFilter != null && oldFilter.filterAllRemaining());
@@ -1974,10 +1983,11 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         (oldFilter != null && this.oldFilter.filterRowKey(row, 0, row.length));
     }
 
-    public void close() {
+    public synchronized void close() {
       if (storeHeap != null) {
         storeHeap.close();
         storeHeap = null;
+        this.filterClosed = true;
       }
     }
 
@@ -1985,7 +1995,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
      * 
      * @param scanner to be closed
      */
-    public void close(KeyValueScanner scanner) {
+    public synchronized void close(KeyValueScanner scanner) {
       try {
         scanner.close();
       } catch(NullPointerException npe) {}
