@@ -5,6 +5,8 @@ Release 0.20.5
                (Todd Lipcon via Stack)
    HBASE-2521  no license headers in 5 files
    HBASE-2503  PriorityQueue isn't thread safe, KeyValueHeap uses it that way
+   HBASE-2482  Regions in transition do not get reassigned by master when RS
+               crashes (Todd Lipcon via Stack)
 
 Release 0.20.4 - Mon May  3 16:16:02 PDT 2010
   INCOMPATIBLE CHANGES
