@@ -1,5 +1,7 @@
 HBase Change Log
-Release 0.20.5
+
+Release 0.20.5 - Mon May 17 10:14:58 PDT 2010
+
   BUG FIXES
    HBASE-2545  Unresponsive region server, potential deadlock
                (Todd Lipcon via Stack)
