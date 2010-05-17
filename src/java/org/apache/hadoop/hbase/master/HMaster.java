@@ -531,7 +531,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         return false;
       }
       LOG.warn("Processing pending operations: " + op.toString(), ex);
-      delayedToDoQueue.put(op);
+      op.requeue();
     }
     return true;
   }

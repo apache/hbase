@@ -7,6 +7,8 @@ Release 0.20.5
    HBASE-2503  PriorityQueue isn't thread safe, KeyValueHeap uses it that way
    HBASE-2482  Regions in transition do not get reassigned by master when RS
                crashes (Todd Lipcon via Stack)
+   HBASE-2428  NPE in ProcessRegionClose because meta is offline kills master
+               and thus the cluster
 
 Release 0.20.4 - Mon May  3 16:16:02 PDT 2010
   INCOMPATIBLE CHANGES
