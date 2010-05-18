@@ -186,6 +186,17 @@
       </releases>
     </repository>
     <repository>
+      <id>todd</id>
+      <name>Todd Lipcon's repo for CDH snapshots</name>
+      <url>http://people.apache.org/~todd/repo/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+    <repository>
       <id>temp-hadoop</id>
       <name>Hadoop 0.20.1/2 packaging, thrift, zk</name>
       <url>http://people.apache.org/~rawson/repo/</url>
@@ -202,6 +213,17 @@
       <url>http://mirrors.ibiblio.org/pub/mirrors/maven2/</url>
       <snapshots>
         <enabled>false</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+    <repository>
+      <id>cloudera</id>
+      <name>Repository for finding CDH3</name>
+      <url> https://repository.cloudera.com/content/repositories/releases/</url>
+      <snapshots>
+        <enabled>true</enabled>
       </snapshots>
       <releases>
         <enabled>true</enabled>
@@ -477,8 +499,7 @@
     <compileSource>1.6</compileSource>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hbase.version>0.89.20100924</hbase.version>
-    <hadoop.version>0.20.3-append-r964955-1240</hadoop.version>
-
+    <hadoop.version>0.20.3-CDH3-SNAPSHOT</hadoop.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-logging.version>1.1.1</commons-logging.version>
     <jetty.version>6.1.24</jetty.version>
@@ -541,7 +562,7 @@
       </dependency>
 
       <dependency>
-        <groupId>org.apache.hadoop</groupId>
+        <groupId>com.cloudera.hadoop</groupId>
         <artifactId>hadoop-core</artifactId>
         <version>${hadoop.version}</version>
       </dependency>
@@ -571,7 +592,7 @@
 
       <!-- Test dependencies -->
       <dependency>
-        <groupId>org.apache.hadoop</groupId>
+        <groupId>com.cloudera.hadoop</groupId>
         <artifactId>hadoop-test</artifactId>
         <version>${hadoop.version}</version>
         <scope>test</scope>
@@ -643,7 +664,7 @@
     </dependency>
 
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>com.cloudera.hadoop</groupId>
       <artifactId>hadoop-core</artifactId>
     </dependency>
 
@@ -779,7 +800,7 @@
       <scope>test</scope>
     </dependency>
      <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>com.cloudera.hadoop</groupId>
       <artifactId>hadoop-test</artifactId>
     </dependency>
      <dependency>
