@@ -40,38 +40,35 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.stargate.model.CellModel;
 import org.apache.hadoop.hbase.stargate.model.CellSetModel;
 import org.apache.hadoop.hbase.stargate.model.RowModel;
+import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.sun.jersey.core.util.Base64;
-
-public class ScannerInstanceResource implements Constants {
+public class ScannerInstanceResource extends ResourceBase {
   private static final Log LOG =
     LogFactory.getLog(ScannerInstanceResource.class);
 
-  User user;
-  ResultGenerator generator;
-  String id;
-  int batch = 1;
-  RESTServlet servlet;
-  CacheControl cacheControl;
-
-  public ScannerInstanceResource(User user, String table, String id, 
-      ResultGenerator generator, int batch) throws IOException {
-    this.user = user;
-    this.id = id;
-    this.generator = generator;
-    this.batch = batch;
-    servlet = RESTServlet.getInstance();
+  static CacheControl cacheControl;
+  static {
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
   }
 
+  ResultGenerator generator;
+  String id;
+  int batch = 1;
+
+  public ScannerInstanceResource(String table, String id, 
+      ResultGenerator generator, int batch) throws IOException {
+    this.id = id;
+    this.generator = generator;
+    this.batch = batch;
+  }
+
   @GET
   @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response get(final @Context UriInfo uriInfo, 
-      @QueryParam("n") int maxRows, final @QueryParam("c") int maxValues)
-      throws IOException {
+      @QueryParam("n") int maxRows, final @QueryParam("c") int maxValues) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
@@ -106,12 +103,6 @@ public class ScannerInstanceResource implements Constants {
         rowModel = new RowModel(rowKey);
       }
       if (!Bytes.equals(value.getRow(), rowKey)) {
-        // the user request limit is a transaction limit, so we need to
-        // account for scanner.next()
-        if (user != null && !servlet.userRequestLimit(user, 1)) {
-          generator.putBack(value);
-          break;
-        }
         // if maxRows was given as a query param, stop if we would exceed the
         // specified number of rows
         if (maxRows > 0) { 
@@ -125,8 +116,8 @@ public class ScannerInstanceResource implements Constants {
         rowModel = new RowModel(rowKey);
       }
       rowModel.addCell(
-        new CellModel(value.getColumn(), value.getTimestamp(),
-              value.getValue()));
+        new CellModel(value.getFamily(), value.getQualifier(), 
+          value.getTimestamp(), value.getValue()));
     } while (--count > 0);
     model.addRow(rowModel);
     ResponseBuilder response = Response.ok(model);
@@ -150,8 +141,8 @@ public class ScannerInstanceResource implements Constants {
       }
       ResponseBuilder response = Response.ok(value.getValue());
       response.cacheControl(cacheControl);
-      response.header("X-Row", Base64.encode(value.getRow()));
-      response.header("X-Column", Base64.encode(value.getColumn()));
+      response.header("X-Row", Base64.encodeBytes(value.getRow()));
+      response.header("X-Column", Base64.encodeBytes(value.getColumn()));
       response.header("X-Timestamp", value.getTimestamp());
       return response.build();
     } catch (IllegalStateException e) {

@@ -40,30 +40,30 @@ import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.stargate.model.StorageClusterStatusModel;
 
-public class StorageClusterStatusResource implements Constants {
+public class StorageClusterStatusResource extends ResourceBase {
   private static final Log LOG =
     LogFactory.getLog(StorageClusterStatusResource.class);
 
-  private User user;
-  private CacheControl cacheControl;
-  private RESTServlet servlet;
+  static CacheControl cacheControl;
+  static {
+    cacheControl = new CacheControl();
+    cacheControl.setNoCache(true);
+    cacheControl.setNoTransform(false);
+  }
 
-  public StorageClusterStatusResource(User user) throws IOException {
-    this.user = user;
-    this.servlet = RESTServlet.getInstance();
-    this.cacheControl = new CacheControl();
-    this.cacheControl.setNoCache(true);
-    this.cacheControl.setNoTransform(false);
+  /**
+   * Constructor
+   * @throws IOException
+   */
+  public StorageClusterStatusResource() throws IOException {
+    super();
   }
 
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response get(final @Context UriInfo uriInfo) throws IOException {
+  public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
-    }
-    if (!servlet.userRequestLimit(user, 1)) {
-      Response.status(509).build();
     }
     servlet.getMetrics().incrementRequests(1);
     try {

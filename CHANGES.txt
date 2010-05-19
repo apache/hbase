@@ -12,6 +12,9 @@ Release 0.20.5 - Mon May 17 10:14:58 PDT 2010
    HBASE-2428  NPE in ProcessRegionClose because meta is offline kills master
                and thus the cluster
 
+  IMPROVEMENTS
+   HBASE-2567  [stargate] minimize differences between 0.20 branch and trunk
+
 Release 0.20.4 - Mon May  3 16:16:02 PDT 2010
   INCOMPATIBLE CHANGES
    HBASE-2248  Provide new non-copy mechanism to assure atomic reads in get

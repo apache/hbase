@@ -33,39 +33,34 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 
-public class ExistsResource implements Constants {
+public class ExistsResource extends ResourceBase {
 
-  User user;
-  String tableName;
-  String actualTableName;
-  CacheControl cacheControl;
-  RESTServlet servlet;
-
-  public ExistsResource(User user, String table) throws IOException {
-    if (user != null) {
-      this.user = user;
-      this.actualTableName = 
-        !user.isAdmin() ? (user.getName() + "." + table) : table;
-    } else {
-      this.actualTableName = table;
-    }
-    this.tableName = table;
-    servlet = RESTServlet.getInstance();
+  static CacheControl cacheControl;
+  static {
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
   }
 
+  String tableName;
+
+  /**
+   * Constructor
+   * @param table
+   * @throws IOException
+   */
+  public ExistsResource(String table) throws IOException {
+    super();
+    this.tableName = table;
+  }
+
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
     MIMETYPE_BINARY})
-  public Response get(final @Context UriInfo uriInfo) throws IOException {
-    if (!servlet.userRequestLimit(user, 1)) {
-      Response.status(509).build();
-    }
+  public Response get(final @Context UriInfo uriInfo) {
     try {
       HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
-      if (!admin.tableExists(actualTableName)) {
+      if (!admin.tableExists(tableName)) {
         throw new WebApplicationException(Response.Status.NOT_FOUND);
       }
     } catch (IOException e) {
@@ -75,5 +70,4 @@ public class ExistsResource implements Constants {
     response.cacheControl(cacheControl);
     return response.build();
   }
-
 }

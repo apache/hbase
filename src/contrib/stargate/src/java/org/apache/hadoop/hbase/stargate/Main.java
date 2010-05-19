@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,12 +20,11 @@
 
 package org.apache.hadoop.hbase.stargate;
 
-import java.net.InetAddress;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
@@ -33,8 +32,7 @@ import org.mortbay.jetty.servlet.ServletHolder;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 /**
- * Main class for launching Stargate as a servlet hosted by an embedded Jetty
- * servlet container.
+ * Main class for launching REST gateway as a servlet hosted by Jetty.
  * <p> 
  * The following options are supported:
  * <ul>
@@ -48,7 +46,6 @@ public class Main implements Constants {
 
     Options options = new Options();
     options.addOption("p", "port", true, "service port");
-    options.addOption("m", "multiuser", false, "enable multiuser mode");
     CommandLineParser parser = new PosixParser();
     CommandLine cmd = parser.parse(options, args);
     int port = 8080;
@@ -65,19 +62,10 @@ public class Main implements Constants {
     sh.setInitParameter("com.sun.jersey.config.property.packages",
       "jetty");
 
-    // configure the Stargate singleton
+    // set up Jetty and run the embedded server
 
     RESTServlet servlet = RESTServlet.getInstance();
-    port = servlet.getConfiguration().getInt("stargate.port", port);
-    if (!servlet.isMultiUser()) {
-      servlet.setMultiUser(cmd.hasOption("m"));
-    }
-    servlet.addConnectorAddress(
-      servlet.getConfiguration().get("stargate.hostname",
-        InetAddress.getLocalHost().getCanonicalHostName()),
-      port);
-
-    // set up Jetty and run the embedded server
+    port = servlet.getConfiguration().getInt("hbase.rest.port", port);
 
     Server server = new Server(port);
     server.setSendServerVersion(false);

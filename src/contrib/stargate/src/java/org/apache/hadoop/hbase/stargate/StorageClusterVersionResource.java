@@ -33,22 +33,27 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.stargate.model.StorageClusterVersionModel;
 
-public class StorageClusterVersionResource implements Constants {
+public class StorageClusterVersionResource extends ResourceBase {
   private static final Log LOG =
     LogFactory.getLog(StorageClusterVersionResource.class);
 
-  private CacheControl cacheControl;
-  private RESTServlet servlet;
-
-  public StorageClusterVersionResource() throws IOException {
-    servlet = RESTServlet.getInstance();
+  static CacheControl cacheControl;
+  static {
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
+  }
+
+  /**
+   * Constructor
+   * @throws IOException
+   */
+  public StorageClusterVersionResource() throws IOException {
+    super();
   }
 
   @GET
@@ -58,9 +63,8 @@ public class StorageClusterVersionResource implements Constants {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
-    HBaseConfiguration conf = servlet.getConfiguration();
     try {
-      HBaseAdmin admin = new HBaseAdmin(conf);
+      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
       StorageClusterVersionModel model = new StorageClusterVersionModel();
       model.setVersion(admin.getClusterStatus().getHBaseVersion());
       ResponseBuilder response = Response.ok(model);

@@ -41,38 +41,30 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTablePool;
-import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.stargate.model.TableInfoModel;
 import org.apache.hadoop.hbase.stargate.model.TableRegionModel;
 
-public class RegionsResource implements Constants {
+public class RegionsResource extends ResourceBase {
   private static final Log LOG = LogFactory.getLog(RegionsResource.class);
 
-  User user;
-  String tableName;
-  String actualTableName;
-  CacheControl cacheControl;
-  RESTServlet servlet;
-
-  public RegionsResource(User user, String table) throws IOException {
-    if (user != null) {
-      this.user = user;
-      this.actualTableName = 
-        !user.isAdmin() ? (user.getName() + "." + table) : table;
-    } else {
-      this.actualTableName = table;
-    }
-    this.tableName = table;
+  static CacheControl cacheControl;
+  static {
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
-    servlet = RESTServlet.getInstance();
+  }
+
+  String tableName;
+
+  public RegionsResource(String table) throws IOException {
+    super();
+    this.tableName = table;
   }
 
   private Map<HRegionInfo,HServerAddress> getTableRegions()
       throws IOException {
     HTablePool pool = servlet.getTablePool();
-    HTable table = pool.getTable(actualTableName);
+    HTable table = pool.getTable(tableName);
     try {
       return table.getRegionsInfo();
     } finally {
@@ -82,32 +74,22 @@ public class RegionsResource implements Constants {
 
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response get(final @Context UriInfo uriInfo) throws IOException {
+  public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
-    if (!servlet.userRequestLimit(user, 1)) {
-      Response.status(509).build();
-    }
     servlet.getMetrics().incrementRequests(1);
     try {
-      String name = user.isAdmin() ? actualTableName : tableName;
-      TableInfoModel model = new TableInfoModel(name);
+      TableInfoModel model = new TableInfoModel(tableName);
       Map<HRegionInfo,HServerAddress> regions = getTableRegions();
       for (Map.Entry<HRegionInfo,HServerAddress> e: regions.entrySet()) {
         HRegionInfo hri = e.getKey();
-        if (user.isAdmin()) {
-          HServerAddress addr = e.getValue();
-          InetSocketAddress sa = addr.getInetSocketAddress();
-          model.add(
-            new TableRegionModel(name, hri.getRegionId(), hri.getStartKey(),
-              hri.getEndKey(),
-              sa.getHostName() + ":" + Integer.valueOf(sa.getPort())));
-        } else {
-          model.add(
-            new TableRegionModel(name, hri.getRegionId(), hri.getStartKey(),
-              hri.getEndKey()));
-        }
+        HServerAddress addr = e.getValue();
+        InetSocketAddress sa = addr.getInetSocketAddress();
+        model.add(
+          new TableRegionModel(tableName, hri.getRegionId(),
+            hri.getStartKey(), hri.getEndKey(),
+            sa.getHostName() + ":" + Integer.valueOf(sa.getPort())));
       }
       ResponseBuilder response = Response.ok(model);
       response.cacheControl(cacheControl);
@@ -119,5 +101,4 @@ public class RegionsResource implements Constants {
                   Response.Status.SERVICE_UNAVAILABLE);
     }
   }
-
 }

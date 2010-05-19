@@ -48,39 +48,36 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTablePool;
-import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.stargate.model.ColumnSchemaModel;
 import org.apache.hadoop.hbase.stargate.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class SchemaResource implements Constants {
+public class SchemaResource extends ResourceBase {
   private static final Log LOG = LogFactory.getLog(SchemaResource.class);
 
-  User user;
-  String tableName;
-  String actualTableName;
-  CacheControl cacheControl;
-  RESTServlet servlet;
-
-  public SchemaResource(User user, String table) throws IOException {
-    if (user != null) {
-      this.user = user;
-      this.actualTableName = 
-        !user.isAdmin() ? (user.getName() + "." + table) : table;
-    } else {
-      this.actualTableName = table;
-    }
-    this.tableName = table;
-    servlet = RESTServlet.getInstance();
+  static CacheControl cacheControl;
+  static {
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
   }
 
+  String tableName;
+
+  /**
+   * Constructor
+   * @param table
+   * @throws IOException
+   */
+  public SchemaResource(String table) throws IOException {
+    super();
+    this.tableName = table;
+  }
+
   private HTableDescriptor getTableSchema() throws IOException,
       TableNotFoundException {
     HTablePool pool = servlet.getTablePool();
-    HTable table = pool.getTable(actualTableName);
+    HTable table = pool.getTable(tableName);
     try {
       return table.getTableDescriptor();
     } finally {
@@ -90,12 +87,9 @@ public class SchemaResource implements Constants {
 
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response get(final @Context UriInfo uriInfo) throws IOException {
+  public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
-    }
-    if (!servlet.userRequestLimit(user, 1)) {
-      return Response.status(509).build();
     }
     servlet.getMetrics().incrementRequests(1);
     try {
@@ -111,11 +105,10 @@ public class SchemaResource implements Constants {
     }
   }
 
-  private Response replace(final byte[] tableName, 
-      final TableSchemaModel model, final UriInfo uriInfo,
-      final HBaseAdmin admin) {
+  private Response replace(final byte[] name, final TableSchemaModel model,
+      final UriInfo uriInfo, final HBaseAdmin admin) {
     try {
-      HTableDescriptor htd = new HTableDescriptor(tableName);
+      HTableDescriptor htd = new HTableDescriptor(name);
       for (Map.Entry<QName,Object> e: model.getAny().entrySet()) {
         htd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
       }
@@ -126,10 +119,10 @@ public class SchemaResource implements Constants {
         }
         htd.addFamily(hcd);
       }
-      if (admin.tableExists(tableName)) {
-        admin.disableTable(tableName);
-        admin.modifyTable(tableName, htd);
-        admin.enableTable(tableName);
+      if (admin.tableExists(name)) {
+        admin.disableTable(name);
+        admin.modifyTable(name, htd);
+        admin.enableTable(name);
       } else try {
         admin.createTable(htd);
       } catch (TableExistsException e) {
@@ -143,11 +136,11 @@ public class SchemaResource implements Constants {
     }      
   } 
 
-  private Response update(final byte[] tableName,final TableSchemaModel model,
+  private Response update(final byte[] name, final TableSchemaModel model,
       final UriInfo uriInfo, final HBaseAdmin admin) {
     try {
-      HTableDescriptor htd = admin.getTableDescriptor(tableName);
-      admin.disableTable(tableName);
+      HTableDescriptor htd = admin.getTableDescriptor(name);
+      admin.disableTable(name);
       try {
         for (ColumnSchemaModel family: model.getColumns()) {
           HColumnDescriptor hcd = new HColumnDescriptor(family.getName());
@@ -155,7 +148,7 @@ public class SchemaResource implements Constants {
             hcd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
           }
           if (htd.hasFamily(hcd.getName())) {
-            admin.modifyColumn(tableName, hcd.getName(), hcd);
+            admin.modifyColumn(name, hcd.getName(), hcd);
           } else {
             admin.addColumn(model.getName(), hcd);            
           }
@@ -177,12 +170,12 @@ public class SchemaResource implements Constants {
       final UriInfo uriInfo) {
     try {
       servlet.invalidateMaxAge(tableName);
-      byte[] tableName = Bytes.toBytes(actualTableName);
+      byte[] name = Bytes.toBytes(tableName);
       HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
-      if (replace || !admin.tableExists(tableName)) {
-        return replace(tableName, model, uriInfo, admin);
+      if (replace || !admin.tableExists(name)) {
+        return replace(name, model, uriInfo, admin);
       } else {
-        return update(tableName, model, uriInfo, admin);
+        return update(name, model, uriInfo, admin);
       }
     } catch (IOException e) {
       throw new WebApplicationException(e, 
@@ -193,12 +186,9 @@ public class SchemaResource implements Constants {
   @PUT
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response put(final TableSchemaModel model, 
-      final @Context UriInfo uriInfo) throws IOException {
+      final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
-    }
-    if (!servlet.userRequestLimit(user, 1)) {
-      return Response.status(509).build();
     }
     servlet.getMetrics().incrementRequests(1);
     return update(model, true, uriInfo);
@@ -207,31 +197,25 @@ public class SchemaResource implements Constants {
   @POST
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response post(final TableSchemaModel model, 
-      final @Context UriInfo uriInfo) throws IOException {
+      final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
-    }
-    if (!servlet.userRequestLimit(user, 1)) {
-      return Response.status(509).build();
     }
     servlet.getMetrics().incrementRequests(1);
     return update(model, false, uriInfo);
   }
 
   @DELETE
-  public Response delete(final @Context UriInfo uriInfo) throws IOException {
+  public Response delete(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
-    }
-    if (!servlet.userRequestLimit(user, 1)) {
-      return Response.status(509).build();
     }
     servlet.getMetrics().incrementRequests(1);
     try {
       HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
       boolean success = false;
       for (int i = 0; i < 10; i++) try {
-        admin.disableTable(actualTableName);
+        admin.disableTable(tableName);
         success = true;
         break;
       } catch (IOException e) {
@@ -239,7 +223,7 @@ public class SchemaResource implements Constants {
       if (!success) {
         throw new IOException("could not disable table");
       }
-      admin.deleteTable(actualTableName);
+      admin.deleteTable(tableName);
       return Response.ok().build();
     } catch (TableNotFoundException e) {
       throw new WebApplicationException(Response.Status.NOT_FOUND);
@@ -248,5 +232,4 @@ public class SchemaResource implements Constants {
             Response.Status.SERVICE_UNAVAILABLE);
     }
   }
-
 }

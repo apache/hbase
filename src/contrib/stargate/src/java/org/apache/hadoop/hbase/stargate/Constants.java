@@ -21,20 +21,10 @@
 package org.apache.hadoop.hbase.stargate;
 
 /**
- * Common constants for org.apache.hadoop.hbase.stargate
+ * Common constants
  */
 public interface Constants {
-  public static final String VERSION_STRING = "0.0.2";
-
-  public static final String AUTHENTICATOR_KEY = "stargate.authenticator";
-  public static final String MULTIUSER_KEY = "stargate.multiuser";
-  public static final String STATUS_REPORT_PERIOD_KEY =
-    "stargate.status.period";
-
-  public static final String USERS_TABLE = "users";
-
-  public static final String INSTANCE_ZNODE_ROOT = "/stargate/instance";
-  public static final String USERS_ZNODE_ROOT = "/stargate/users";
+  public static final String VERSION_STRING = "1.0";
 
   public static final int DEFAULT_MAX_AGE = 60 * 60 * 4;  // 4 hours
 

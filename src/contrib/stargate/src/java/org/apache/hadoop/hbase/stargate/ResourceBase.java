@@ -18,34 +18,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.stargate.util;
+package org.apache.hadoop.hbase.stargate;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.IOException;
 
-/**
- * Generic storage for per user information.
- */
-public class UserData {
+public class ResourceBase implements Constants {
 
-  public static final int TOKENBUCKET = 1;
+  RESTServlet servlet;
 
-  Map<Integer,Object> data = new HashMap<Integer,Object>(1);
-
-  public synchronized boolean has(final int sel) {
-    return data.get(sel) != null;
+  public ResourceBase() throws IOException {
+    servlet = RESTServlet.getInstance();
   }
-
-  public synchronized Object get(final int sel) {
-    return data.get(sel);
-  }
-
-  public synchronized Object put(final int sel, final Object o) {
-    return data.put(sel, o);
-  }
-
-  public synchronized Object remove(int sel) {
-    return remove(sel);
-  }
-
 }

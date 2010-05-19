@@ -25,51 +25,45 @@ import java.io.IOException;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
 
-import org.apache.hadoop.hbase.stargate.User;
+public class TableResource extends ResourceBase {
 
-public class TableResource implements Constants {
-
-  User user;
   String table;
 
-  public TableResource(User user, String table) {
-    this.user = user;
+  /**
+   * Constructor
+   * @param table
+   * @throws IOException
+   */
+  public TableResource(String table) throws IOException {
+    super();
     this.table = table;
   }
 
   @Path("exists")
   public ExistsResource getExistsResource() throws IOException {
-    return new ExistsResource(user, table);
+    return new ExistsResource(table);
   }
 
   @Path("regions")
   public RegionsResource getRegionsResource() throws IOException {
-    return new RegionsResource(user, table);
+    return new RegionsResource(table);
   }
 
   @Path("scanner")
   public ScannerResource getScannerResource() throws IOException {
-    return new ScannerResource(user, table);
+    return new ScannerResource(table);
   }
 
   @Path("schema")
   public SchemaResource getSchemaResource() throws IOException {
-    return new SchemaResource(user, table);
+    return new SchemaResource(table);
   }
 
   @Path("{rowspec: .+}")
   public RowResource getRowResource(
       final @PathParam("rowspec") String rowspec,
-      final @QueryParam("v") String versions) {
-    try {
-      return new RowResource(user, table, rowspec, versions);
-    } catch (IOException e) {
-      throw new WebApplicationException(e, 
-                  Response.Status.INTERNAL_SERVER_ERROR);
-    }
+      final @QueryParam("v") String versions) throws IOException {
+    return new RowResource(table, rowspec, versions);
   }
-
 }

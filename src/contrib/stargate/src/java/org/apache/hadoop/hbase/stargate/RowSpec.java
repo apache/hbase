@@ -377,5 +377,4 @@ public class RowSpec {
     result.append("}");
     return result.toString();
   }
-
 }

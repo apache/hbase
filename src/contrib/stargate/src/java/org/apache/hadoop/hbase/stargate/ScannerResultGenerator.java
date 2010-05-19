@@ -175,5 +175,4 @@ public class ScannerResultGenerator extends ResultGenerator {
   public void remove() {
     throw new UnsupportedOperationException("remove not supported");
   }
-
 }

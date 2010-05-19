@@ -45,5 +45,4 @@ public abstract class ResultGenerator implements Iterator<KeyValue> {
   public abstract void putBack(KeyValue kv);
 
   public abstract void close();
-
 }

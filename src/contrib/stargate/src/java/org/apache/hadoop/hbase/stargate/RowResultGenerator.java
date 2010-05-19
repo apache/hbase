@@ -43,7 +43,14 @@ public class RowResultGenerator extends ResultGenerator {
     try {
       Get get = new Get(rowspec.getRow());
       if (rowspec.hasColumns()) {
-        get.addColumns(rowspec.getColumns());
+        for (byte[] col: rowspec.getColumns()) {
+          byte[][] split = KeyValue.parseColumn(col);
+          if (split.length == 2 && split[1].length != 0) {
+            get.addColumn(split[0], split[1]);
+          } else {
+            get.addFamily(split[0]);
+          }
+        }
       } else {
         // rowspec does not explicitly specify columns, return them all
         for (HColumnDescriptor family: 
@@ -101,5 +108,4 @@ public class RowResultGenerator extends ResultGenerator {
   public void remove() {
     throw new UnsupportedOperationException("remove not supported");
   }
-
 }
