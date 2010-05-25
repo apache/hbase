@@ -11,6 +11,8 @@ Release 0.20.5 - Mon May 17 10:14:58 PDT 2010
                crashes (Todd Lipcon via Stack)
    HBASE-2428  NPE in ProcessRegionClose because meta is offline kills master
                and thus the cluster
+   HBASE-1880  DeleteColumns are not recovered properly from the write-ahead-log
+   	       (via HBASE-2606)
 
   IMPROVEMENTS
    HBASE-2567  [stargate] minimize differences between 0.20 branch and trunk
