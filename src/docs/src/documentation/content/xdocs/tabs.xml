@@ -29,7 +29,7 @@
     directory (ends in '/'), in which case /index.html will be added
   -->
 
-  <tab label="Project" href="http://hadoop.apache.org/hbase/" />
+  <tab label="Project" href="http://hbase.apache.org/" />
   <tab label="Wiki" href="http://wiki.apache.org/hadoop/Hbase" />
   <tab label="HBase Documentation" dir="" />  
 </tabs>
