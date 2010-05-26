@@ -53,9 +53,6 @@ public class HMsg implements Writable {
 
     /** Compact the specified region */
     MSG_REGION_COMPACT,
-
-    /** Region server is unknown to master. Restart */
-    MSG_CALL_SERVER_STARTUP,
     
     /** Master tells region server to stop */
     MSG_REGIONSERVER_STOP,

@@ -65,8 +65,6 @@ class ServerManager implements HConstants {
     new HMsg(Type.MSG_REGIONSERVER_QUIESCE);
   private static final HMsg REGIONSERVER_STOP =
     new HMsg(Type.MSG_REGIONSERVER_STOP);
-  private static final HMsg CALL_SERVER_STARTUP =
-    new HMsg(Type.MSG_CALL_SERVER_STARTUP);
   private static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
   
   private final AtomicInteger quiescedServers = new AtomicInteger(0);
@@ -293,12 +291,12 @@ class ServerManager implements HConstants {
     if (storedInfo == null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Received report from unknown server -- telling it " +
-          "to " + CALL_SERVER_STARTUP + ": " + info.getServerName());
+          "to " + REGIONSERVER_STOP + ": " + info.getServerName());
       }
 
       // The HBaseMaster may have been restarted.
-      // Tell the RegionServer to start over and call regionServerStartup()
-      return new HMsg[] {CALL_SERVER_STARTUP};
+      // Tell the RegionServer to abort!
+      return new HMsg[] {REGIONSERVER_STOP};
     } else if (storedInfo.getStartCode() != info.getStartCode()) {
       // This state is reachable if:
       //

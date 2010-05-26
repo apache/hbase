@@ -20,6 +20,7 @@ Release 0.20.5 - Wed May 26 00:15:56 PDT 2010
   IMPROVEMENTS
    HBASE-2567  [stargate] minimize differences between 0.20 branch and trunk
    HBASE-2568  Add new svn, ml, and website locations into branches/0.20/src/doc
+   HBASE-2613  Remove the code around MSG_CALL_SERVER_STARTUP
 
 Release 0.20.4 - Mon May  3 16:16:02 PDT 2010
   INCOMPATIBLE CHANGES
