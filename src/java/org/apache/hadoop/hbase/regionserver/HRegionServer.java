@@ -1106,7 +1106,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.metrics.storefiles.set(storefiles);
     this.metrics.memstoreSizeMB.set((int)(memstoreSize/(1024*1024)));
     this.metrics.storefileIndexSizeMB.set((int)(storefileIndexSize/(1024*1024)));
-
+    this.metrics.compactionQueueSize.set(compactSplitThread.
+    	      getCompactionQueueSize());
+    
     LruBlockCache lruBlockCache = (LruBlockCache)StoreFile.getBlockCache(conf);
     if (lruBlockCache != null) {
       this.metrics.blockCacheCount.set(lruBlockCache.size());

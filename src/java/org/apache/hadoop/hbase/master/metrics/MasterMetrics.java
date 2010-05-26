@@ -40,6 +40,7 @@ public class MasterMetrics implements Updater {
   private final MetricsRecord metricsRecord;
   private final MetricsRegistry registry = new MetricsRegistry();
   private final MasterStatistics masterStatistics;
+  
   /*
    * Count of requests to the cluster since last call to metrics update
    */
