@@ -349,6 +349,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return serverManager.getServersToServerInfo();
   }
 
+  public Map<HServerAddress, HServerInfo> getServerAddressToServerInfo() {
+    return serverManager.getServerAddressToServerInfo();
+  }
+
   /**
    * @return Read-only map of servers to load.
    */
@@ -560,7 +564,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         HRegionInterface hri = 
           this.connection.getHRegionConnection(address, false);
         HServerInfo info = hri.getHServerInfo();
-        LOG.debug("Inspection found server " + info.getServerName());
+        LOG.debug("Inspection found server " + info.getName());
         serverManager.recordNewServer(info, true);
         HRegionInfo[] regions = hri.getRegionsAssignment();
         for (HRegionInfo region : regions) {
@@ -682,18 +686,19 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   public MapWritable regionServerStartup(final HServerInfo serverInfo)
   throws IOException {
-    // Set the ip into the passed in serverInfo.  Its ip is more than likely
-    // not the ip that the master sees here.  See at end of this method where
-    // we pass it back to the regionserver by setting "hbase.regionserver.address"
-    String rsAddress = HBaseServer.getRemoteAddress();
-    serverInfo.setServerAddress(new HServerAddress(rsAddress,
-      serverInfo.getServerAddress().getPort()));
+    // Set the address for now even tho it will not be persisted on HRS side
+    // If the address given is not the default one,
+    // use the IP given by the user.
+    if (serverInfo.getServerAddress().getBindAddress().equals(
+        DEFAULT_HOST)) {
+      String rsAddress = HBaseServer.getRemoteAddress();
+      serverInfo.setServerAddress(new HServerAddress(rsAddress,
+        serverInfo.getServerAddress().getPort()));
+    }
     // Register with server manager
     this.serverManager.regionServerStartup(serverInfo);
     // Send back some config info
-    MapWritable mw = createConfigurationSubset();
-     mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));
-    return mw;
+    return createConfigurationSubset();
   }
   
   /**
@@ -702,6 +707,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   protected MapWritable createConfigurationSubset() {
     MapWritable mw = addConfig(new MapWritable(), HConstants.HBASE_DIR);
+    // Get the real address of the HRS.
+    String rsAddress = HBaseServer.getRemoteAddress();
+    if (rsAddress != null) {
+      mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));
+    }
+    
     return addConfig(mw, "fs.default.name");
   }
 
@@ -1008,26 +1019,29 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // Arguments are regionname and an optional server name.
       byte [] regionname = ((ImmutableBytesWritable)args[0]).get();
       LOG.debug("Attempting to close region: " + Bytes.toStringBinary(regionname));
-      String hostnameAndPort = null;
+      String servername = null;
       if (args.length == 2) {
-        hostnameAndPort = Bytes.toString(((ImmutableBytesWritable)args[1]).get());
+        servername = Bytes.toString(((ImmutableBytesWritable)args[1]).get());
       }
       // Need hri 
       Result rr = getFromMETA(regionname, HConstants.CATALOG_FAMILY);
       HRegionInfo hri = getHRegionInfo(rr.getRow(), rr);
-      if (hostnameAndPort == null) {
+      if (servername == null) {
         // Get server from the .META. if it wasn't passed as argument
-        hostnameAndPort = 
+        servername = 
           Bytes.toString(rr.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
       }
       // Take region out of the intransistions in case it got stuck there doing
       // an open or whatever.
       this.regionManager.clearFromInTransition(regionname);
-      // If hostnameAndPort is still null, then none, exit.
-      if (hostnameAndPort == null) break;
+      // If servername is still null, then none, exit.
+      if (servername == null) break;
+      // Need to make up a HServerInfo 'servername' for that is how
+      // items are keyed in regionmanager Maps.
+      HServerAddress addr = new HServerAddress(servername);
       long startCode =
         Bytes.toLong(rr.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER));
-      String name = HServerInfo.getServerName(hostnameAndPort, startCode);
+      String name = HServerInfo.getServerName(addr, startCode);
       LOG.info("Marking " + hri.getRegionNameAsString() +
         " as closing on " + name + "; cleaning SERVER + STARTCODE; " +
           "master will tell regionserver to close region on next heartbeat");

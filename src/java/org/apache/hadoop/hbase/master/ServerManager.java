@@ -58,7 +58,7 @@ import org.apache.zookeeper.Watcher.Event.EventType;
  * The ServerManager class manages info about region servers - HServerInfo, 
  * load numbers, dying servers, etc.
  */
-public class ServerManager implements HConstants {
+class ServerManager implements HConstants {
   static final Log LOG =
     LogFactory.getLog(ServerManager.class.getName());
   private static final HMsg REGIONSERVER_QUIESCE =
@@ -75,6 +75,9 @@ public class ServerManager implements HConstants {
   final Map<String, HServerInfo> serversToServerInfo =
     new ConcurrentHashMap<String, HServerInfo>();
 
+  final Map<HServerAddress, HServerInfo> serverAddressToServerInfo =
+      new ConcurrentHashMap<HServerAddress, HServerInfo>();
+  
   /**
    * Set of known dead servers.  On znode expiration, servers are added here.
    * This is needed in case of a network partitioning where the server's lease
@@ -107,7 +110,7 @@ public class ServerManager implements HConstants {
     }
 
     protected void chore() {
-      int numServers = serversToServerInfo.size();
+      int numServers = serverAddressToServerInfo.size();
       int numDeadServers = deadServers.size();
       double averageLoad = getAverageLoad();
       String deadServersList = null;
@@ -217,6 +220,7 @@ public class ServerManager implements HConstants {
     Watcher watcher = new ServerExpirer(serverName, info.getServerAddress());
     master.getZooKeeperWrapper().updateRSLocationGetWatch(info, watcher);
     serversToServerInfo.put(serverName, info);
+    serverAddressToServerInfo.put(info.getServerAddress(), info);
     serversToLoad.put(serverName, load);
     synchronized (loadToServers) {
       Set<String> servers = loadToServers.get(load);
@@ -311,7 +315,7 @@ public class ServerManager implements HConstants {
       }
 
       synchronized (serversToServerInfo) {
-        removeServerInfo(info.getServerName());
+        removeServerInfo(info.getServerName(), info.getServerAddress());
         serversToServerInfo.notifyAll();
       }
       
@@ -334,7 +338,8 @@ public class ServerManager implements HConstants {
       try {
         // This method removes ROOT/META from the list and marks them to be reassigned
         // in addition to other housework.
-        if (removeServerInfo(serverInfo.getServerName())) {
+        if (removeServerInfo(serverInfo.getServerName(),
+            serverInfo.getServerAddress())) {
           // Only process the exit message if the server still has registered info.
           // Otherwise we could end up processing the server exit twice.
           LOG.info("Region server " + serverInfo.getServerName() +
@@ -393,6 +398,7 @@ public class ServerManager implements HConstants {
       final HRegionInfo[] mostLoadedRegions, HMsg[] msgs)
   throws IOException {
     // Refresh the info object and the load information
+    serverAddressToServerInfo.put(serverInfo.getServerAddress(), serverInfo);
     serversToServerInfo.put(serverInfo.getServerName(), serverInfo);
     HServerLoad load = serversToLoad.get(serverInfo.getServerName());
     if (load != null) {
@@ -599,7 +605,7 @@ public class ServerManager implements HConstants {
     
       if (duplicateAssignment) {
         if (LOG.isDebugEnabled()) {
-          LOG.warn("region server " + serverInfo.getServerName()
+          LOG.debug("region server " + serverInfo.getServerAddress().toString()
               + " should not have opened region " + Bytes.toString(region.getRegionName()));
         }
 
@@ -688,8 +694,10 @@ public class ServerManager implements HConstants {
   }
   
   /** Update a server load information because it's shutting down*/
-  private boolean removeServerInfo(final String serverName) {
+  private boolean removeServerInfo(final String serverName,
+                                   final HServerAddress serverAddress) {
     boolean infoUpdated = false;
+    serverAddressToServerInfo.remove(serverAddress);
     HServerInfo info = serversToServerInfo.remove(serverName);
     // Only update load information once.
     // This method can be called a couple of times during shutdown.
@@ -771,19 +779,11 @@ public class ServerManager implements HConstants {
     }
   }
 
-  /**
-   * @param hsa
-   * @return The HServerInfo whose HServerAddress is <code>hsa</code> or null
-   * if nothing found.
-   */
-  public HServerInfo getHServerInfo(final HServerAddress hsa) {
-    synchronized(this.serversToServerInfo) {
-      // TODO: This is primitive.  Do a better search.
-      for (Map.Entry<String, HServerInfo> e: this.serversToServerInfo.entrySet()) {
-        if (e.getValue().getServerAddress().equals(hsa)) return e.getValue();
-      }
+  public Map<HServerAddress, HServerInfo> getServerAddressToServerInfo() {
+    // we use this one because all the puts to this map are parallel/synced with the other map.
+    synchronized (serversToServerInfo) {
+      return Collections.unmodifiableMap(serverAddressToServerInfo);
     }
-    return null;
   }
 
   /**
@@ -841,15 +841,18 @@ public class ServerManager implements HConstants {
   /** Watcher triggered when a RS znode is deleted */
   private class ServerExpirer implements Watcher {
     private String server;
+    private HServerAddress serverAddress;
 
     ServerExpirer(String server, HServerAddress serverAddress) {
       this.server = server;
+      this.serverAddress = serverAddress;
     }
 
     public void process(WatchedEvent event) {
       if(event.getType().equals(EventType.NodeDeleted)) {
         LOG.info(server + " znode expired");
         // Remove the server from the known servers list and update load info
+        serverAddressToServerInfo.remove(serverAddress);
         HServerInfo info = serversToServerInfo.remove(server);
         if (info != null) {
           String serverName = info.getServerName();
@@ -905,4 +908,5 @@ public class ServerManager implements HConstants {
   public void setMinimumServerCount(int minimumServerCount) {
     this.minimumServerCount = minimumServerCount;
   }
+
 }

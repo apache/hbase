@@ -522,16 +522,16 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @param regionServer
    * @param meta
    * @param info
-   * @param hostnameAndPort hostname ':' port as it comes out of .META.
+   * @param serverAddress
    * @param startCode
    * @throws IOException
    */
   protected void checkAssigned(final HRegionInterface regionServer,
     final MetaRegion meta, final HRegionInfo info,
-    final String hostnameAndPort, final long startCode)
+    final String serverAddress, final long startCode) 
   throws IOException {
     String serverName = null;
-    String sa = hostnameAndPort;
+    String sa = serverAddress;
     long sc = startCode;
     // Scans are sloppy. They don't respect row locks and they get and
     // cache a row internally so may have data that is stale. Make sure that for
@@ -543,9 +543,9 @@ abstract class BaseScanner extends Chore implements HConstants {
     Result r = regionServer.get(meta.getRegionName(), g);
     if (r != null && !r.isEmpty()) {
       sa = getServerAddress(r);
-      if (sa != null && sa.length() > 0 && !sa.equalsIgnoreCase(hostnameAndPort)) {
+      if (sa != null && sa.length() > 0 && !sa.equalsIgnoreCase(serverAddress)) {
         LOG.debug("GET on " + info.getRegionNameAsString() + " got different " +
-          "address than SCAN: sa=" + sa + ", serverAddress=" + hostnameAndPort);
+          "address than SCAN: sa=" + sa + ", serverAddress=" + serverAddress);
       }
       // Reget startcode in case its changed in the meantime too.
       sc = getStartCode(r);
