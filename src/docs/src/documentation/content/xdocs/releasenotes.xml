@@ -22,34 +22,11 @@
 <document> 
 <header> 
     <title>
-   Release Notes - Hadoop HBase - Version 0.20.5
+   Release Notes - Hadoop HBase
     </title>
 </header> 
 <body>
-<section>
-    <section><title>        Bug
-    </title>
-            <ul>
-                <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2428'>HBASE-2428</a>] -         NPE in ProcessRegionClose because meta is offline kills master and thus the cluster
-                </li>
-                <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2482'>HBASE-2482</a>] -         regions in transition do not get reassigned by master when RS crashes
-                </li>
-                <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2503'>HBASE-2503</a>] -         PriorityQueue isn't thread safe, KeyValueHeap uses it that way
-                </li>
-                <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2545'>HBASE-2545</a>] -         Unresponsive region server, potential deadlock
-                </li>
-            </ul>
-        </section>
-                                        
-        <section><title>        Task
-            </title>
-            <ul>
-                <li>[<a href='https://issues.apache.org/jira/browse/HBASE-2521'>HBASE-2521</a>] -         no license headers in 5 files
-                </li>
-            </ul>
-
-</section>
-                
-</section>
+<p><a href="https://issues.apache.org/jira/secure/ReleaseNote.jspa?projectId=12310753&amp;styleName=Html&amp;version=12314800">0.20.5 Release Notes</a>
+</p>
 </body>
 </document>

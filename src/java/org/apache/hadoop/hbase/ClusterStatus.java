@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -68,7 +67,7 @@ public class ClusterStatus extends VersionedWritable {
   public Collection<String> getServerNames() {
     ArrayList<String> names = new ArrayList<String>(liveServerInfo.size());
     for (HServerInfo server: liveServerInfo) {
-      names.add(server.getName());
+      names.add(server.getHostnamePort());
     }
     return names;
   }

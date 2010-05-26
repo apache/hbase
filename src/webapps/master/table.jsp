@@ -42,8 +42,6 @@
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
   String tableName = request.getParameter("name");
   HTable table = new HTable(conf, tableName);
-  Map<HServerAddress, HServerInfo> serverAddressToServerInfos =
-      master.getServerAddressToServerInfo();
   String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th></tr>";
   HServerAddress rootLocation = master.getRootRegionLocation();
 %>
@@ -105,7 +103,7 @@
 %>
 <%= tableHeader %>
 <%
-  int infoPort = serverAddressToServerInfos.get(rootLocation).getInfoPort();
+  int infoPort = master.getServerManager().getHServerInfo(rootLocation).getInfoPort();
   String url = "http://" + rootLocation.getHostname() + ":" + infoPort + "/";
 %>
 <tr>
@@ -123,7 +121,7 @@
 <%
   Map<byte [], MetaRegion> onlineRegions = master.getOnlineMetaRegions();
   for (MetaRegion meta: onlineRegions.values()) {
-    int infoPort = serverAddressToServerInfos.get(meta.getServer()).getInfoPort();
+    int infoPort = master.getServerManager().getHServerInfo(meta.getServer()).getInfoPort();
     String url = "http://" + meta.getServer().getHostname() + ":" + infoPort + "/";
 %>
 <tr>
@@ -146,10 +144,7 @@
 <%=     tableHeader %>
 <%
   for(Map.Entry<HRegionInfo, HServerAddress> hriEntry : regions.entrySet()) {
-    
-    int infoPort = serverAddressToServerInfos.get(
-        hriEntry.getValue()).getInfoPort();
-    
+    int infoPort = master.getServerManager().getHServerInfo(hriEntry.getValue()).getInfoPort();
     String urlRegionServer =
         "http://" + hriEntry.getValue().getHostname().toString() + ":" + infoPort + "/";
 %>

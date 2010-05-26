@@ -34,7 +34,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
   <docs label="Documentation"> 
     <overview  label="Overview"           href="index.html" />
     <started   label="Getting Started"    href="ext:api/started" />
-    <api       label="0.20.4 Release Notes"   href="releasenotes.html" />
+    <api       label="Release Notes"   href="releasenotes.html" />
     <api       label="API Docs"           href="ext:api/index" />
     <api       label="HBase Metrics"      href="metrics.html" />
     <api       label="HBase  Default Configuration" href="hbase-conf.html" />
@@ -45,12 +45,12 @@ See http://forrest.apache.org/docs/linking.html for more info.
   </docs>
 
   <external-refs>
-    <site      href="http://hadoop.apache.org/hbase/"/>
-    <lists     href="http://hadoop.apache.org/hbase/mailing_lists.html"/>
-    <releases  href="http://hadoop.apache.org/hbase/releases.html">
+    <site      href="http://hbase.apache.org/"/>
+    <lists     href="http://hbase.apache.org/mailing_lists.html"/>
+    <releases  href="http://hbase.apache.org/releases.html">
       <download href="#Download" />
     </releases>
-    <jira      href="http://hadoop.apache.org/hbase/issue_tracking.html"/>
+    <jira      href="http://hbase.apache.org/issue_tracking.html"/>
     <wiki      href="http://wiki.apache.org/hadoop/Hbase" />
     <faq       href="http://wiki.apache.org/hadoop/Hbase/FAQ" />
     <zlib      href="http://www.zlib.net/" />
