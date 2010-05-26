@@ -15,6 +15,7 @@ Release 0.20.5 - Wed May 26 00:15:56 PDT 2010
    	           (via HBASE-2606)
    HBASE-2530  HBASE-2165 removed compactionQueueSize metric
                (Ruifang Ge via Stack)
+   HBASE-2610  ValueFilter copy pasted javadoc from QualifierFilter
 
   IMPROVEMENTS
    HBASE-2567  [stargate] minimize differences between 0.20 branch and trunk
