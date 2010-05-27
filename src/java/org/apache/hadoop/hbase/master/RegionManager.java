@@ -234,51 +234,44 @@ class RegionManager implements HConstants {
         isMetaAssign = true;
     }
     int nRegionsToAssign = regionsToAssign.size();
-    // Now many regions to assign this server.
-    int nregions = regionsPerServer(nRegionsToAssign, thisServersLoad);
-    LOG.debug("Assigning for " + info + ": total nregions to assign=" +
-      nRegionsToAssign + ", nregions to reach balance=" + nregions +
-      ", isMetaAssign=" + isMetaAssign);
-    if (nRegionsToAssign <= nregions) {
-      // I do not know whats supposed to happen in this case.  Assign one.
-      LOG.debug("Assigning one region only (playing it safe..)");
-      assignRegions(regionsToAssign, 1, info, returnMsgs);
-    } else {
-      nRegionsToAssign -= nregions;
-      if (nRegionsToAssign > 0 || isMetaAssign) {
-        // We still have more regions to assign. See how many we can assign
-        // before this server becomes more heavily loaded than the next
-        // most heavily loaded server.
-        HServerLoad heavierLoad = new HServerLoad();
-        int nservers = computeNextHeaviestLoad(thisServersLoad, heavierLoad);
-        nregions = 0;
-        // Advance past any less-loaded servers
-        for (HServerLoad load = new HServerLoad(thisServersLoad);
-        load.compareTo(heavierLoad) <= 0 && nregions < nRegionsToAssign;
-        load.setNumberOfRegions(load.getNumberOfRegions() + 1), nregions++) {
-          // continue;
-        }
-        LOG.debug("Doing for " + info + " nregions: " + nregions +
-            " and nRegionsToAssign: " + nRegionsToAssign);
-        if (nregions < nRegionsToAssign) {
-          // There are some more heavily loaded servers
-          // but we can't assign all the regions to this server.
-          if (nservers > 0) {
-            // There are other servers that can share the load.
-            // Split regions that need assignment across the servers.
-            nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/(1.0 * nservers));
-          } else {
-            // No other servers with same load.
-            // Split regions over all available servers
-            nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/
-                (1.0 * master.serverManager.numServers()));
-          }
-        } else {
-          // Assign all regions to this server
-          nregions = nRegionsToAssign;
-        }
-        assignRegions(regionsToAssign, nregions, info, returnMsgs);
+    int otherServersRegionsCount =
+      regionsToGiveOtherServers(nRegionsToAssign, thisServersLoad);
+    nRegionsToAssign -= otherServersRegionsCount;
+    if (nRegionsToAssign > 0 || isMetaAssign) {
+      LOG.debug("Assigning for " + info + ": total nregions to assign=" +
+        nRegionsToAssign + ", regions to give other servers than this=" +
+        otherServersRegionsCount + ", isMetaAssign=" + isMetaAssign);
+
+      // See how many we can assign before this server becomes more heavily
+      // loaded than the next most heavily loaded server.
+      HServerLoad heavierLoad = new HServerLoad();
+      int nservers = computeNextHeaviestLoad(thisServersLoad, heavierLoad);
+      int nregions = 0;
+      // Advance past any less-loaded servers
+      for (HServerLoad load = new HServerLoad(thisServersLoad);
+      load.compareTo(heavierLoad) <= 0 && nregions < nRegionsToAssign;
+      load.setNumberOfRegions(load.getNumberOfRegions() + 1), nregions++) {
+        // continue;
       }
+      if (nregions < nRegionsToAssign) {
+        // There are some more heavily loaded servers
+        // but we can't assign all the regions to this server.
+        if (nservers > 0) {
+          // There are other servers that can share the load.
+          // Split regions that need assignment across the servers.
+          nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/(1.0 * nservers));
+        } else {
+          // No other servers with same load.
+          // Split regions over all available servers
+          nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/
+              (1.0 * master.serverManager.numServers()));
+        }
+      } else {
+        // Assign all regions to this server
+        nregions = nRegionsToAssign;
+      }
+      LOG.debug("Assigning " + info + " " + nregions + " regions");
+      assignRegions(regionsToAssign, nregions, info, returnMsgs);
     }
   }
 
@@ -344,9 +337,10 @@ class RegionManager implements HConstants {
   /*
    * @param nRegionsToAssign
    * @param thisServersLoad
-   * @return How many regions we can assign to more lightly loaded servers
+   * @return How many regions should go to servers other than this one; i.e.
+   * more lightly loaded servers
    */
-  private int regionsPerServer(final int numUnassignedRegions,
+  private int regionsToGiveOtherServers(final int numUnassignedRegions,
     final HServerLoad thisServersLoad) {
     SortedMap<HServerLoad, Set<String>> lightServers =
       new TreeMap<HServerLoad, Set<String>>();
@@ -485,9 +479,8 @@ class RegionManager implements HConstants {
   void unassignSomeRegions(final HServerInfo info, 
       int numRegionsToClose, final HRegionInfo[] mostLoadedRegions,
       ArrayList<HMsg> returnMsgs) {
-    LOG.debug("Choosing to reassign " + numRegionsToClose 
-      + " regions. mostLoadedRegions has " + mostLoadedRegions.length 
-      + " regions in it.");
+    LOG.debug("Unassigning " + numRegionsToClose + " regions from " +
+      info.getServerName());
     int regionIdx = 0;
     int regionsClosed = 0;
     int skipped = 0;
@@ -516,7 +509,8 @@ class RegionManager implements HConstants {
       // increment the count of regions we've marked
       regionsClosed++;
     }
-    LOG.info("Skipped " + skipped + " region(s) that are in transition states");
+    LOG.info("Skipped assigning " + skipped + " region(s) to " +
+      info.getServerName() + "because already in transition");
   }
 
   /*
@@ -1434,7 +1428,8 @@ class RegionManager implements HConstants {
       }
       
       // check if current server is overloaded
-      int numRegionsToClose = balanceFromOverloaded(servLoad, avg);
+      int numRegionsToClose = balanceFromOverloaded(info.getServerName(),
+        servLoad, avg);
       
       // check if we can unload server by low loaded servers
       if(numRegionsToClose <= 0) {
@@ -1456,13 +1451,14 @@ class RegionManager implements HConstants {
      * Check if server load is not overloaded (with load > avgLoadPlusSlop).
      * @return number of regions to unassign.
      */
-    private int balanceFromOverloaded(HServerLoad srvLoad, double avgLoad) {
+    private int balanceFromOverloaded(final String serverName,
+        HServerLoad srvLoad, double avgLoad) {
       int avgLoadPlusSlop = (int)Math.ceil(avgLoad * (1 + this.slop));
       int numSrvRegs = srvLoad.getNumberOfRegions();
       if (numSrvRegs > avgLoadPlusSlop) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Server is overloaded: load=" + numSrvRegs +
-              ", avg=" + avgLoad + ", slop=" + this.slop);
+          LOG.debug("Server " + serverName + " is overloaded: " +
+            "load=" + numSrvRegs + ", avg=" + avgLoad + ", slop=" + this.slop);
         }
         return numSrvRegs - (int)Math.ceil(avgLoad);
       }
@@ -1499,10 +1495,10 @@ class RegionManager implements HConstants {
       numRegionsToClose = numSrvRegs - (int)Math.ceil(avgLoad);
       numRegionsToClose = Math.min(numRegionsToClose, numMoveToLowLoaded);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Server " + srvName + " will be unloaded for " +
-            "balance. Server load: " + numSrvRegs + " avg: " +
-            avgLoad + ", regions can be moved: " + numMoveToLowLoaded +
-            ". Regions to close: " + numRegionsToClose);
+        LOG.debug("Server(s) are carrying only " + lowestLoad + " regions. " +
+          "Server " + srvName + " is most loaded (" + numSrvRegs +
+          "). Shedding " + numRegionsToClose + " regions to pass to " +
+          " least loaded (numMoveToLowLoaded=" + numMoveToLowLoaded +")");
       }
       return numRegionsToClose;
     }
