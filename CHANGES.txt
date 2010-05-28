@@ -18,6 +18,7 @@ Release 0.20.5 - Wed May 26 00:15:56 PDT 2010
    HBASE-2610  ValueFilter copy pasted javadoc from QualifierFilter
    HBASE-2167  Load balancer falls into pathological state if one server under
                average - slop; endless churn
+   HBASE-2589  TestHRegion.testWritesWhileScanning flaky
 
   IMPROVEMENTS
    HBASE-2567  [stargate] minimize differences between 0.20 branch and trunk
