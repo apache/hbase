@@ -404,7 +404,7 @@ public class TestHLogSplit {
       // hadoop 0.21 throws FNFE whereas hadoop 0.20 returns null
     }
   }
-/* DISABLED for now.  TODO: HBASE-2645 
+
   @Test
   public void testLogCannotBeWrittenOnceParsed() throws IOException {
     AtomicLong counter = new AtomicLong(0);
@@ -433,7 +433,7 @@ public class TestHLogSplit {
       stop.set(true);
     }
   }
-*/
+
 
   @Test
   public void testSplitWillNotTouchLogsIfNewHLogGetsCreatedAfterSplitStarted()
