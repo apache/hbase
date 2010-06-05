@@ -2269,6 +2269,8 @@ public class TestHRegion extends HBaseTestCase {
 
     putThread.done();
 
+    region.flushcache();
+
     putThread.join();
     putThread.checkNoError();
 
