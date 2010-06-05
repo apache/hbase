@@ -20,6 +20,8 @@ Release 0.20.5 - Wed May 26 00:15:56 PDT 2010
                average - slop; endless churn
    HBASE-2589  TestHRegion.testWritesWhileScanning flaky
    HBASE-2635  ImmutableBytesWritable ignores offset in several cases
+   HBASE-2616  TestHRegion.testWritesWhileGetting flaky on trunk
+               (Ryan Rawson via Stack)
 
   IMPROVEMENTS
    HBASE-2567  [stargate] minimize differences between 0.20 branch and trunk
