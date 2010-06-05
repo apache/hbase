@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.20.5 - Wed May 26 00:15:56 PDT 2010
+Release 0.20.5 - Sat Jun  5 09:15:06 PDT 2010
 
   BUG FIXES
    HBASE-2545  Unresponsive region server, potential deadlock
@@ -22,6 +22,7 @@ Release 0.20.5 - Wed May 26 00:15:56 PDT 2010
    HBASE-2635  ImmutableBytesWritable ignores offset in several cases
    HBASE-2616  TestHRegion.testWritesWhileGetting flaky on trunk
                (Ryan Rawson via Stack)
+   HBASE-2615  M/R on bulk imported tables
 
   IMPROVEMENTS
    HBASE-2567  [stargate] minimize differences between 0.20 branch and trunk
