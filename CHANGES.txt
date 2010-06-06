@@ -1,5 +1,10 @@
 HBase Change Log
 
+Release 0.20.6 - Unreleased
+
+  INCOMPATIBLE CHANGES
+   HBASE-2397  Bytes.toStringBinary escapes printable chars
+
 Release 0.20.5 - Sat Jun  5 23:46:01 PDT 2010
 
   BUG FIXES
