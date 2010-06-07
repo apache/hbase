@@ -51,7 +51,7 @@ private static final AtomicBoolean enabled = new AtomicBoolean(false);
 
   public static void println(String m) {
     if (!enabled.get()) {
-      System.out.println(m);
+      //System.out.println(m);
       return;
     }
     

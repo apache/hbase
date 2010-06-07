@@ -1825,7 +1825,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     private long readPt;
 
     RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) {
-      //DebugPrint.println("HRegionScanner.<init>");
+      DebugPrint.println("HRegionScanner.<init>");
 
       this.filter = scan.getFilter();
       // Doesn't need to be volatile, always accessed under a sync'ed method
@@ -1838,6 +1838,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       this.isScan = scan.isGetScan() ? -1 : 0;
 
       this.readPt = ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+      DebugPrint.println("HRegionScanner.<init>, this.readPt: " + this.readPt);
 
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
       if (additionalScanners != null) {
@@ -1887,6 +1888,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
       // This could be a new thread from the last time we called next().
       ReadWriteConsistencyControl.setThreadReadPoint(this.readPt);
+      DebugPrint.println("HRegionScanner.next(): this.readPt:" + this.readPt);
 
       results.clear();
       boolean returnResult = nextInternal();
