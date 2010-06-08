@@ -977,13 +977,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         storeFlushers.add(s.getStoreFlusher(completeSequenceId));
       }
 
-      // This thread is going to cause a whole bunch of scanners to reseek.
-      // They are depending
-      // on a thread-local to know where to read from.
-      // The reason why we set it up high is so that each HRegionScanner only
-      // has a single read point for all its sub-StoreScanners.
-      ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-
       // prepare flush (take a snapshot)
       for (StoreFlusher flusher: storeFlushers) {
          flusher.prepare();
@@ -1018,9 +1011,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         newScannerLock.writeLock().lock();
       }
       try {
-        // update this again to make sure we are 'fresh'
-        ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-
         if (atomicWork != null)
           atomicWork.call();
 

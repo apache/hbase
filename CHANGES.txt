@@ -30,6 +30,7 @@ Release 0.20.5 - Sat Jun  5 23:46:01 PDT 2010
    HBASE-2615  M/R on bulk imported tables
    HBASE-2483  Tests should use an ephemeral port for the master
                (Jonathan Gray via Todd Lipcon)
+   HBASE-2616  TestHRegion.testWritesWhileGetting flaky on trunk
 
   IMPROVEMENTS
    HBASE-2567  [stargate] minimize differences between 0.20 branch and trunk

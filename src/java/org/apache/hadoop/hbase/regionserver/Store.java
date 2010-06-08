@@ -66,7 +66,7 @@ import org.apache.hadoop.util.StringUtils;
   * A Store holds a column family in a Region.  Its a memstore and a set of zero
   * or more StoreFiles, which stretch backwards over time.
   *
-  * <p>There's no reason to consider append-logging at this level; all logging 
+  * <p>There's no reason to consider append-logging at this level; all logging
   * and locking is handled at the HRegion level.  Store just provides
   * services to manage sets of StoreFiles.  One of the most important of those
   * services is compaction services where files are aggregated once they pass
@@ -139,7 +139,7 @@ public class Store implements HConstants, HeapSize {
   private final int blocksize;
   private final boolean blockcache;
   private final Compression.Algorithm compression;
-  
+
   // Comparing KeyValues
   final KeyValue.KVComparator comparator;
   final KeyValue.KVComparator comparatorIgnoringType;
@@ -186,7 +186,7 @@ public class Store implements HConstants, HeapSize {
       this.ttl *= 1000;
     }
     this.memstore = new MemStore(this.comparator);
-    this.regionCompactionDir = new Path(HRegion.getCompactionDir(basedir), 
+    this.regionCompactionDir = new Path(HRegion.getCompactionDir(basedir),
         Integer.toString(info.getEncodedName()));
     this.storeName = this.family.getName();
     this.storeNameStr = Bytes.toString(this.storeName);
@@ -195,10 +195,10 @@ public class Store implements HConstants, HeapSize {
     // MIN_COMMITS_FOR_COMPACTION map files
     this.compactionThreshold =
       conf.getInt("hbase.hstore.compactionThreshold", 3);
-    
+
     // Check if this is in-memory store
     this.inMemory = family.isInMemory();
-    
+
     // By default we split region if a file > DEFAULT_MAX_FILE_SIZE.
     long maxFileSize = info.getTableDesc().getMaxFileSize();
     if (maxFileSize == HConstants.DEFAULT_MAX_FILE_SIZE) {
@@ -228,7 +228,7 @@ public class Store implements HConstants, HeapSize {
       this.maxSeqId = newId; // start with the log id we just recovered.
     }
   }
-    
+
   HColumnDescriptor getFamily() {
     return this.family;
   }
@@ -236,7 +236,7 @@ public class Store implements HConstants, HeapSize {
   long getMaxSequenceId() {
     return this.maxSeqId;
   }
-  
+
   long getMaxSeqIdBeforeLogRecovery() {
     return maxSeqIdBeforeLogRecovery;
   }
@@ -286,11 +286,11 @@ public class Store implements HConstants, HeapSize {
   }
 
   /*
-   * Read the reconstructionLog to see whether we need to build a brand-new 
-   * file out of non-flushed log entries.  
+   * Read the reconstructionLog to see whether we need to build a brand-new
+   * file out of non-flushed log entries.
    *
-   * We can ignore any log message that has a sequence ID that's equal to or 
-   * lower than maxSeqID.  (Because we know such log messages are already 
+   * We can ignore any log message that has a sequence ID that's equal to or
+   * lower than maxSeqID.  (Because we know such log messages are already
    * reflected in the MapFiles.)
    *
    * @return the new max sequence id as per the log, or -1 if no log recovered
@@ -362,7 +362,7 @@ public class Store implements HConstants, HeapSize {
     } finally {
       logReader.close();
     }
-    
+
     if (reconstructedCache.size() > 0) {
       // We create a "virtual flush" at maxSeqIdInLog+1.
       if (LOG.isDebugEnabled()) {
@@ -433,7 +433,7 @@ public class Store implements HConstants, HeapSize {
 
   /**
    * Adds a value to the memstore
-   * 
+   *
    * @param kv
    * @return memstore size delta
    */
@@ -448,7 +448,7 @@ public class Store implements HConstants, HeapSize {
 
   /**
    * Adds a value to the memstore
-   * 
+   *
    * @param kv
    * @return memstore size delta
    */
@@ -470,10 +470,10 @@ public class Store implements HConstants, HeapSize {
 
   /**
    * Close all the readers
-   * 
+   *
    * We don't need to worry about subsequent requests because the HRegion holds
    * a write lock that will prevent any more reads or writes.
-   * 
+   *
    * @throws IOException
    */
   List<StoreFile> close() throws IOException {
@@ -554,7 +554,7 @@ public class Store implements HConstants, HeapSize {
         writer.close();
       }
     }
-    StoreFile sf = new StoreFile(this.fs, writer.getPath(), blockcache, 
+    StoreFile sf = new StoreFile(this.fs, writer.getPath(), blockcache,
       this.conf, this.inMemory);
     Reader r = sf.getReader();
     this.storeSize += r.length();
@@ -643,21 +643,21 @@ public class Store implements HConstants, HeapSize {
   //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Compact the StoreFiles.  This method may take some time, so the calling 
+   * Compact the StoreFiles.  This method may take some time, so the calling
    * thread must be able to block for long periods.
-   * 
+   *
    * <p>During this time, the Store can work as usual, getting values from
    * StoreFiles and writing new StoreFiles from the memstore.
-   * 
-   * Existing StoreFiles are not destroyed until the new compacted StoreFile is 
+   *
+   * Existing StoreFiles are not destroyed until the new compacted StoreFile is
    * completely written-out to disk.
    *
    * <p>The compactLock prevents multiple simultaneous compactions.
    * The structureLock prevents us from interfering with other write operations.
-   * 
-   * <p>We don't want to hold the structureLock for the whole time, as a compact() 
+   *
+   * <p>We don't want to hold the structureLock for the whole time, as a compact()
    * can be lengthy and we want to allow cache-flushes during this period.
-   * 
+   *
    * @param mc True to force a major compaction regardless of thresholds
    * @return row to split around if a split is needed, null otherwise
    * @throws IOException
@@ -685,7 +685,7 @@ public class Store implements HConstants, HeapSize {
       }
 
       boolean references = hasReferences(filesToCompact);
-      if (!majorcompaction && !references && 
+      if (!majorcompaction && !references &&
           (forceSplit || (filesToCompact.size() < compactionThreshold))) {
         return checkSplit(forceSplit);
       }
@@ -719,10 +719,10 @@ public class Store implements HConstants, HeapSize {
         fileSizes[i] = len;
         totalSize += len;
       }
- 
+
       if (!majorcompaction && !references) {
-        // Here we select files for incremental compaction.  
-        // The rule is: if the largest(oldest) one is more than twice the 
+        // Here we select files for incremental compaction.
+        // The rule is: if the largest(oldest) one is more than twice the
         // size of the second, skip the largest, and continue to next...,
         // until we meet the compactionThreshold limit.
 
@@ -756,7 +756,7 @@ public class Store implements HConstants, HeapSize {
             " file(s), size: " + skipped);
         }
       }
- 
+
       // Ready to go.  Have list of files to compact.
       LOG.debug("Started compaction of " + filesToCompact.size() + " file(s)" +
         (references? ", hasReferences=true,": " ") + " into " +
@@ -791,7 +791,7 @@ public class Store implements HConstants, HeapSize {
 
   /*
    * Gets lowest timestamp from files in a dir
-   * 
+   *
    * @param fs
    * @param dir
    * @throws IOException
@@ -859,7 +859,7 @@ public class Store implements HConstants, HeapSize {
 
   /**
    * Do a minor/major compaction.  Uses the scan infrastructure to make it easy.
-   * 
+   *
    * @param filesToCompact which files to compact
    * @param majorCompaction true to major compact (prune all deletes, max versions, etc)
    * @param maxId Readers maximum sequence id.
@@ -935,14 +935,14 @@ public class Store implements HConstants, HeapSize {
   }
 
   /*
-   * It's assumed that the compactLock  will be acquired prior to calling this 
+   * It's assumed that the compactLock  will be acquired prior to calling this
    * method!  Otherwise, it is not thread-safe!
    *
    * <p>It works by processing a compaction that's been written to disk.
-   * 
+   *
    * <p>It is usually invoked at the end of a compaction, but might also be
    * invoked at HStore startup, if the prior execution died midway through.
-   * 
+   *
    * <p>Moving the compacted TreeMap into place means:
    * <pre>
    * 1) Moving the new compacted StoreFile into place
@@ -950,7 +950,7 @@ public class Store implements HConstants, HeapSize {
    * 3) Loading the new TreeMap.
    * 4) Compute new store size
    * </pre>
-   * 
+   *
    * @param compactedFiles list of files that were compacted
    * @param compactedFile StoreFile that is the result of the compaction
    * @return StoreFile created. May be null.
@@ -992,10 +992,6 @@ public class Store implements HConstants, HeapSize {
           Long orderVal = Long.valueOf(result.getMaxSequenceId());
           this.storefiles.put(orderVal, result);
         }
-
-        // WARN ugly hack here, but necessary sadly.
-        ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
-
         // Tell observers that list of StoreFiles has changed.
         notifyChangedReadersObservers();
         // Finally, delete old store files.
@@ -1035,7 +1031,7 @@ public class Store implements HConstants, HeapSize {
   public int getNumberOfstorefiles() {
     return this.storefiles.size();
   }
-  
+
 
   /*
    * @param wantedVersions How many versions were asked for.
@@ -1063,8 +1059,8 @@ public class Store implements HConstants, HeapSize {
 
   /**
    * Find the key that matches <i>row</i> exactly, or the one that immediately
-   * preceeds it. WARNING: Only use this method on a table where writes occur 
-   * with strictly increasing timestamps. This method assumes this pattern of 
+   * preceeds it. WARNING: Only use this method on a table where writes occur
+   * with strictly increasing timestamps. This method assumes this pattern of
    * writes in order to make it reasonably performant.  Also our search is
    * dependent on the axiom that deletes are for cells that are in the container
    * that follows whether a memstore snapshot or a storefile, not for the
@@ -1266,8 +1262,8 @@ public class Store implements HConstants, HeapSize {
         byte [] lk = r.getLastKey();
         KeyValue lastKey = KeyValue.createKeyValueFromKey(lk, 0, lk.length);
         // if the midkey is the same as the first and last keys, then we cannot
-        // (ever) split this region. 
-        if (this.comparator.compareRows(mk, firstKey) == 0 && 
+        // (ever) split this region.
+        if (this.comparator.compareRows(mk, firstKey) == 0 &&
             this.comparator.compareRows(mk, lastKey) == 0) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("cannot split because midkey is the same as first or " +
@@ -1284,12 +1280,12 @@ public class Store implements HConstants, HeapSize {
     }
     return null;
   }
-  
+
   /** @return aggregate size of HStore */
   public long getSize() {
     return storeSize;
   }
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // File administration
   //////////////////////////////////////////////////////////////////////////////
@@ -1389,7 +1385,7 @@ public class Store implements HConstants, HeapSize {
    * @param kv Key to find.
    * @return True if we were able to seek the scanner to <code>b</code> or to
    * the key just after.
-   * @throws IOException 
+   * @throws IOException
    */
   static boolean getClosest(final HFileScanner s, final KeyValue kv)
   throws IOException {
@@ -1431,19 +1427,19 @@ public class Store implements HConstants, HeapSize {
     }
     return false;
   }
-  
+
   //
   // HBASE-880/1249/1304
   //
-  
+
   /**
    * Retrieve results from this store given the specified Get parameters.
    * @param get Get operation
    * @param columns List of columns to match, can be empty (not null)
-   * @param result List to add results to 
+   * @param result List to add results to
    * @throws IOException
    */
-  public void get(Get get, NavigableSet<byte[]> columns, List<KeyValue> result) 
+  public void get(Get get, NavigableSet<byte[]> columns, List<KeyValue> result)
   throws IOException {
     KeyComparator keyComparator = this.comparator.getRawComparator();
 
@@ -1457,12 +1453,12 @@ public class Store implements HConstants, HeapSize {
         // Received early-out from memstore
         return;
       }
-    
+
       // Check if we even have storefiles
       if (this.storefiles.isEmpty()) {
         return;
       }
-    
+
       // Get storefiles for this store
       List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
       for (StoreFile sf : this.storefiles.descendingMap().values()) {
@@ -1474,11 +1470,11 @@ public class Store implements HConstants, HeapSize {
         // Get a scanner that caches the block and uses pread
         storefileScanners.add(r.getScanner(true, true));
       }
-    
+
       // StoreFileGetScan will handle reading this store's storefiles
       StoreFileGetScan scanner = new StoreFileGetScan(storefileScanners, matcher);
-    
-      // Run a GET scan and put results into the specified list 
+
+      // Run a GET scan and put results into the specified list
       scanner.get(result);
     } finally {
       this.lock.readLock().unlock();
@@ -1491,7 +1487,7 @@ public class Store implements HConstants, HeapSize {
    * This function will always be seen as atomic by other readers
    * because it only puts a single KV to memstore. Thus no
    * read/write control necessary.
-   * 
+   *
    * @param row
    * @param f
    * @param qualifier
@@ -1557,17 +1553,17 @@ public class Store implements HConstants, HeapSize {
   public boolean hasTooManyStoreFiles() {
     return this.storefiles.size() > this.compactionThreshold;
   }
-  
+
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (17 * ClassSize.REFERENCE) +
       (6 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
       ClassSize.align(ClassSize.ARRAY));
-  
+
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
-      ClassSize.OBJECT + ClassSize.REENTRANT_LOCK + 
-      ClassSize.CONCURRENT_SKIPLISTMAP + 
+      ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +
+      ClassSize.CONCURRENT_SKIPLISTMAP +
       ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + ClassSize.OBJECT);
-      
+
   @Override
   public long heapSize() {
     return DEEP_OVERHEAD + this.memstore.heapSize();
