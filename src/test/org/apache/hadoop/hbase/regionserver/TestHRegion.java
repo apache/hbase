@@ -2114,7 +2114,7 @@ public class TestHRegion extends HBaseTestCase {
     putThread.done();
 
     region.flushcache();
-
+    
     putThread.join();
     putThread.checkNoError();
 
@@ -2221,8 +2221,6 @@ public class TestHRegion extends HBaseTestCase {
       qualifiers[i] = Bytes.toBytes("qual" + i);
     }
 
-    DebugPrint.enable();
-
     String method = "testWritesWhileScanning";
     initHRegion(tableName, method, families);
     PutThread putThread = new PutThread(numRows, families, qualifiers);
@@ -2262,17 +2260,11 @@ public class TestHRegion extends HBaseTestCase {
         for (KeyValue kv : result.raw()) {
           byte [] thisValue = kv.getValue();
           if (gotValue != null) {
-            // did this fail?
-            if (!Bytes.equals(gotValue, thisValue)) {
-              System.out.println(DebugPrint.out.toString());
-            }
             assertEquals(gotValue, thisValue);
           }
           gotValue = thisValue;
         }
       }
-      
-      DebugPrint.reset();
     }
 
     putThread.done();
