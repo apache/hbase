@@ -1857,9 +1857,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       if (oldFilter != null) {
         oldFilter.reset();
       }
-
-      // Start the next row read and reset the thread point
-      this.readPt = ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
     }
 
     public synchronized boolean next(List<KeyValue> outResults)
