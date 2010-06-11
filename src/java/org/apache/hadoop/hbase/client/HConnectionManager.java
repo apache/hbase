@@ -237,7 +237,7 @@ public class HConnectionManager implements HConstants {
   }
 
   /* Encapsulates finding the servers for an HBase instance */
-  private static class TableServers implements ServerConnection, HConstants {
+  static class TableServers implements ServerConnection, HConstants {
     static final Log LOG = LogFactory.getLog(TableServers.class);
     private final Class<? extends HRegionInterface> serverInterfaceClass;
     private final long pause;
@@ -777,7 +777,7 @@ public class HConnectionManager implements HConstants {
      * @param row
      * @return Null or region location found in cache.
      */
-    private HRegionLocation getCachedLocation(final byte [] tableName,
+    HRegionLocation getCachedLocation(final byte [] tableName,
         final byte [] row) {
       SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
@@ -839,7 +839,7 @@ public class HConnectionManager implements HConstants {
      * Delete a cached location, if it satisfies the table name and row
      * requirements.
      */
-    private void deleteCachedLocation(final byte [] tableName,
+    void deleteCachedLocation(final byte [] tableName,
         final byte [] row) {
       SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
@@ -847,31 +847,13 @@ public class HConnectionManager implements HConstants {
       // start to examine the cache. we can only do cache actions
       // if there's something in the cache for this table.
       if (!tableLocations.isEmpty()) {
-        // cut the cache so that we only get the part that could contain
-        // regions that match our key
-        SoftValueSortedMap<byte [], HRegionLocation> matchingRegions =
-          tableLocations.headMap(row);
-
-        // if that portion of the map is empty, then we're done. otherwise,
-        // we need to examine the cached location to verify that it is 
-        // a match by end key as well.
-        if (!matchingRegions.isEmpty()) {
-          HRegionLocation possibleRegion =
-            matchingRegions.get(matchingRegions.lastKey());
-          byte [] endKey = possibleRegion.getRegionInfo().getEndKey();
-
-          // by nature of the map, we know that the start key has to be < 
-          // otherwise it wouldn't be in the headMap. 
-          if (KeyValue.getRowComparator(tableName).compareRows(endKey, 0, endKey.length,
-              row, 0, row.length) <= 0) {
-            // delete any matching entry
-            HRegionLocation rl =
-              tableLocations.remove(matchingRegions.lastKey());
-            if (rl != null && LOG.isDebugEnabled()) {
-              LOG.debug("Removed " + rl.getRegionInfo().getRegionNameAsString() +
+        HRegionLocation rl = getCachedLocation(tableName, row);
+        if (rl != null) {
+          tableLocations.remove(rl.getRegionInfo().getStartKey());
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Removed " + rl.getRegionInfo().getRegionNameAsString() +
                 " for tableName=" + Bytes.toString(tableName) + " from cache " +
                 "because of " + Bytes.toStringBinary(row));
-            }
           }
         }
       }
