@@ -233,6 +233,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
   // doing a restart() to prevent closing of HDFS.
   private final AtomicBoolean shutdownHDFS = new AtomicBoolean(true);
 
+  // Since HADOOP-4829, we can just disable auto closing
+  private boolean hdfsSupportsAutoCloseDisabling = false;
+
   private final String machineName;
 
   /**
@@ -653,6 +656,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
     zooKeeperWrapper.close();
 
     if (shutdownHDFS.get()) {
+      if(hdfsSupportsAutoCloseDisabling) {
+        try {
+          fs.close();
+        } catch (IOException ioe) {
+          LOG.error("Error when closing fs on our way out", ioe);
+        }
+      }
       runThread(this.hdfsShutdownThread,
           this.conf.getLong("hbase.dfs.shutdown.wait", 30000));
     }
@@ -718,6 +728,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
   public Thread setHDFSShutdownThreadOnExit(final Thread t) {
     Thread old = this.hdfsShutdownThread;
     this.hdfsShutdownThread = t;
+    if (t == null) {
+      shutdownHDFS.set(false);
+    }
     return old;
   }
 
@@ -751,6 +764,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       // accessors will be going against wrong filesystem (unless all is set
       // to defaults).
       this.conf.set("fs.default.name", this.conf.get("hbase.rootdir"));
+      this.conf.setBoolean("fs.automatic.close", false);
       this.fs = FileSystem.get(this.conf);
 
       // Register shutdown hook for HRegionServer, runs an orderly shutdown
@@ -987,7 +1001,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
       if (hdfsClientFinalizer == null) {
         throw new RuntimeException("client finalizer is null, can't suppress!");
       }
-      Runtime.getRuntime().removeShutdownHook(hdfsClientFinalizer);
+      boolean registered =
+          Runtime.getRuntime().removeShutdownHook(hdfsClientFinalizer);
+      if (!registered) {
+        LOG.info("The HDFS shutdown hook is present but not registered, " +
+            "this is a symptom that this HDFS's patched with HADOOP-4829. " +
+            "We will close the filesystem handle ourselves.");
+        hdfsSupportsAutoCloseDisabling = true;
+      }
       return hdfsClientFinalizer;
       
     } catch (NoSuchFieldException nsfe) {

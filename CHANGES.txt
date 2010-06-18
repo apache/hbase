@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.20.5 - Sat Jun  11 17:13:00 PDT 2010
+Release 0.20.5 - Unreleased
 
   BUG FIXES
    HBASE-2545  Unresponsive region server, potential deadlock
@@ -31,6 +31,7 @@ Release 0.20.5 - Sat Jun  11 17:13:00 PDT 2010
    HBASE-2712  Cached region location that went stale won't recover if 
                asking for first row
    HBASE-2740  NPE in ReadWriteConsistencyControl
+   HBASE-2728  Support for HADOOP-4829
 
   IMPROVEMENTS
    HBASE-2567  [stargate] minimize differences between 0.20 branch and trunk
