@@ -37,6 +37,8 @@ Release 0.20.5 - Unreleased
    HBASE-2567  [stargate] minimize differences between 0.20 branch and trunk
    HBASE-2568  Add new svn, ml, and website locations into branches/0.20/src/doc
    HBASE-2613  Remove the code around MSG_CALL_SERVER_STARTUP
+   HBASE-2683  Make it obvious in the documentation that ZooKeeper needs 
+               permanent storage
 
   INCOMPATIBLE CHANGES
    HBASE-2397  Bytes.toStringBinary escapes printable chars
