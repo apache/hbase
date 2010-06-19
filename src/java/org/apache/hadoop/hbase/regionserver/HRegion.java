@@ -1062,7 +1062,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
     if (LOG.isDebugEnabled()) {
       long now = System.currentTimeMillis();
-      LOG.debug("Finished memstore flush of ~" +
+      LOG.info("Finished memstore flush of ~" +
         StringUtils.humanReadableInt(currentMemStoreSize) + " for region " +
         this + " in " + (now - startTime) + "ms, sequence id=" + sequenceId +
         ", compaction requested=" + compactionRequested);

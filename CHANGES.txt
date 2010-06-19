@@ -32,6 +32,7 @@ Release 0.20.5 - Unreleased
                asking for first row
    HBASE-2740  NPE in ReadWriteConsistencyControl
    HBASE-2728  Support for HADOOP-4829
+   HBASE-2752  Don't retry forever when waiting on too many store files
 
   IMPROVEMENTS
    HBASE-2567  [stargate] minimize differences between 0.20 branch and trunk
