@@ -40,7 +40,6 @@ Release 0.20.5 - Unreleased
    HBASE-2613  Remove the code around MSG_CALL_SERVER_STARTUP
    HBASE-2683  Make it obvious in the documentation that ZooKeeper needs 
                permanent storage
-   HBASE-1537  Intra-row scanning
 
   INCOMPATIBLE CHANGES
    HBASE-2397  Bytes.toStringBinary escapes printable chars

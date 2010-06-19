@@ -119,12 +119,6 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
     return false;
   }
 
-  @Override
-  public boolean next(List<KeyValue> results, int limit) throws IOException {
-    // should not use limits with minor compacting store scanner
-    return next(results);
-  }
-
   public void close() {
     heap.close();
   }

@@ -99,13 +99,11 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
    * <p>
    * This can ONLY be called when you are using Scanners that implement
    * InternalScanner as well as KeyValueScanner (a {@link StoreScanner}).
-   * @param result
-   * @param limit
    * @return true if there are more keys, false if all scanners are done 
    */
-  public boolean next(List<KeyValue> result, int limit) throws IOException {
+  public boolean next(List<KeyValue> result) throws IOException {
     InternalScanner currentAsInternal = (InternalScanner)this.current;
-    currentAsInternal.next(result, limit);
+    currentAsInternal.next(result);
     KeyValue pee = this.current.peek();
     if (pee == null) {
       this.current.close();
@@ -115,21 +113,7 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
     this.current = this.heap.poll();
     return (this.current != null);
   }
-
-  /**
-   * Gets the next row of keys from the top-most scanner.
-   * <p>
-   * This method takes care of updating the heap.
-   * <p>
-   * This can ONLY be called when you are using Scanners that implement
-   * InternalScanner as well as KeyValueScanner (a {@link StoreScanner}).
-   * @param result
-   * @return true if there are more keys, false if all scanners are done 
-   */
-  public boolean next(List<KeyValue> result) throws IOException {
-    return next(result, -1);
-  }
-
+  
   private class KVScannerComparator implements Comparator<KeyValueScanner> {
     private KVComparator kvComparator;
     /**
