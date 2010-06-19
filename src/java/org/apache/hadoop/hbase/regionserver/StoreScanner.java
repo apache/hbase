@@ -180,9 +180,10 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   /**
    * Get the next row of values from this Store.
    * @param outResult
+   * @param limit
    * @return true if there are more rows, false if scanner is done
    */
-  public synchronized boolean next(List<KeyValue> outResult) throws IOException {
+  public synchronized boolean next(List<KeyValue> outResult, int limit) throws IOException {
     //DebugPrint.println("SS.next");
 
     checkReseek();
@@ -203,13 +204,16 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     matcher.setRow(peeked.getRow());
     KeyValue kv;
     List<KeyValue> results = new ArrayList<KeyValue>();
-    while((kv = this.heap.peek()) != null) {
+    LOOP: while((kv = this.heap.peek()) != null) {
       QueryMatcher.MatchCode qcode = matcher.match(kv);
       //DebugPrint.println("SS peek kv = " + kv + " with qcode = " + qcode);
       switch(qcode) {
         case INCLUDE:
           KeyValue next = this.heap.next();
           results.add(next);
+          if (limit > 0 && (results.size() == limit)) {
+            break LOOP;
+          }
           continue;
 
         case DONE:
@@ -254,6 +258,10 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     // No more keys
     close();
     return false;
+  }
+
+  public synchronized boolean next(List<KeyValue> outResult) throws IOException {
+    return next(outResult, -1);
   }
 
   private List<KeyValueScanner> getStoreFileScanners() {
