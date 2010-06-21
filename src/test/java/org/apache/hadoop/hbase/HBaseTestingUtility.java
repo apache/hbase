@@ -662,8 +662,10 @@ public class HBaseTestingUtility {
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
-      HRegionInfo info = Writables.getHRegionInfo(
-          result.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
+      byte[] value = result.getValue(
+          HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+      if (value == null) continue;
+      HRegionInfo info = Writables.getHRegionInfo(value);
       HTableDescriptor desc = info.getTableDesc();
       if (Bytes.compareTo(desc.getName(), tableName) == 0) {
         LOG.info("getMetaTableRows: row -> " +
