@@ -514,6 +514,7 @@ public class HBaseClient {
         if (isError) {
           call.setException(new RemoteException( WritableUtils.readString(in),
               WritableUtils.readString(in)));
+          calls.remove(id);
         } else {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value

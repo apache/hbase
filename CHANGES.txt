@@ -1,4 +1,7 @@
 HBase Change Log
+Release 0.20.6 - Unreleased
+  BUG FiXES
+   HBASE-2763  Cross-port HADOOP-6833 IPC parameter leak bug
 
 Release 0.20.5 - Unreleased
 
