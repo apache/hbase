@@ -91,8 +91,7 @@ public class TestZooKeeper {
       throws IOException, InterruptedException {
     new HTable(conf, HConstants.META_TABLE_NAME);
 
-    ZooKeeperWrapper zkw =
-        ZooKeeperWrapper.createInstance(conf, TestZooKeeper.class.getName());
+    ZooKeeperWrapper zkw = ZooKeeperWrapper.createInstance(conf, TestZooKeeper.class.getName());
     zkw.registerListener(EmptyWatcher.instance);
     String quorumServers = zkw.getQuorumServers();
     int sessionTimeout = 5 * 1000; // 5 seconds
@@ -179,8 +178,7 @@ public class TestZooKeeper {
    */
   @Test
   public void testZNodeDeletes() throws Exception {
-    ZooKeeperWrapper zkw =
-        ZooKeeperWrapper.createInstance(conf, TestZooKeeper.class.getName());
+    ZooKeeperWrapper zkw = ZooKeeperWrapper.createInstance(conf, TestZooKeeper.class.getName());
     zkw.registerListener(EmptyWatcher.instance);
     zkw.ensureExists("/l1/l2/l3/l4");
     try {

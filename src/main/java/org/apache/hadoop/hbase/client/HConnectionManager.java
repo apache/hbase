@@ -228,8 +228,9 @@ public class HConnectionManager {
      */
     public synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
       if(zooKeeperWrapper == null) {
-        zooKeeperWrapper =
-            ZooKeeperWrapper.createInstance(conf, HConnectionManager.class.getName());
+        String zkWrapperName = HConnectionManager.class.getName() + "-" + 
+                               ZooKeeperWrapper.getZookeeperClusterKey(conf);
+        zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, zkWrapperName);
         zooKeeperWrapper.registerListener(this);
       }
       return zooKeeperWrapper;

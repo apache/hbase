@@ -321,8 +321,7 @@ public class HRegionServer implements HRegionInterface,
   }
 
   private void reinitializeZooKeeper() throws IOException {
-    zooKeeperWrapper =
-        ZooKeeperWrapper.createInstance(conf, serverInfo.getServerName());
+    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, serverInfo.getServerName());
     zooKeeperWrapper.registerListener(this);
     watchMasterAddress();
   }
@@ -1406,8 +1405,7 @@ public class HRegionServer implements HRegionInterface,
     Integer mapKey = Bytes.mapKey(regionInfo.getRegionName());
     HRegion region = this.onlineRegions.get(mapKey);
     RSZookeeperUpdater zkUpdater = 
-      new RSZookeeperUpdater(conf, serverInfo.getServerName(),
-          regionInfo.getEncodedName());
+      new RSZookeeperUpdater(serverInfo.getServerName(), regionInfo.getEncodedName());
     if (region == null) {
       try {
         zkUpdater.startRegionOpenEvent(null, true);
@@ -1491,8 +1489,7 @@ public class HRegionServer implements HRegionInterface,
   throws IOException {
     RSZookeeperUpdater zkUpdater = null;
     if(reportWhenCompleted) {
-      zkUpdater = new RSZookeeperUpdater(conf,
-          serverInfo.getServerName(), hri.getEncodedName());
+      zkUpdater = new RSZookeeperUpdater(serverInfo.getServerName(), hri.getEncodedName());
       zkUpdater.startRegionCloseEvent(null, false);
     }
     HRegion region = this.removeFromOnlineRegions(hri);

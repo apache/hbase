@@ -1,4 +1,9 @@
 HBase Change Log
+
+Development Release 0.89.20100621
+  All of 0.21.0 below, plus the following patches for stabilization:
+
+
 Release 0.21.0 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-1822  Remove the deprecated APIs
@@ -716,7 +721,6 @@ Release 0.21.0 - Unreleased
    HBASE-2726  Region Server should never abort without an informative log
                message
    HBASE-2724  Update to new release of Guava library
-   HBASE-2735  Make HBASE-2694 replication-friendly
    HBASE-2683  Make it obvious in the documentation that ZooKeeper needs 
                permanent storage
 
