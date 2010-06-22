@@ -1,0 +1,21 @@
+#!/bin/bash
+# Copyright (c) 2009 Cloudera, inc
+#
+# Performs a release build
+
+set -ex
+
+# Do the build
+BIN_DIR=$(readlink -f $(dirname $0))
+RELEASE_DIR=$BIN_DIR/..
+
+cd $RELEASE_DIR
+
+mvn -DskipTests clean
+mvn -DskipTests -Dhbase.version=${FULL_VERSION} install assembly:assembly 
+mkdir -p build
+for x in target/*.tar.gz ; do
+  tar -C build -xzf $x
+done
+
+(cd build && tar -czf hbase-${FULL_VERSION}.tar.gz hbase-${FULL_VERSION})
