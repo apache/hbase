@@ -3,6 +3,7 @@ HBase Change Log
 Development Release 0.89.20100621
   All of 0.21.0 below, plus the following patches for stabilization:
 
+   HBASE-2768  Fix teardown order in TestFilter
 
 Release 0.21.0 - Unreleased
   INCOMPATIBLE CHANGES
