@@ -222,16 +222,13 @@ public class HConnectionManager {
     }
 
     /**
-     * Get this watcher's ZKW, instantiate it if necessary.
+     * Get this watcher's ZKW, instanciate it if necessary.
      * @return ZKW
      * @throws java.io.IOException if a remote or network exception occurs
      */
     public synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
       if(zooKeeperWrapper == null) {
-        String zkWrapperName = HConnectionManager.class.getName() + "-" + 
-                               ZooKeeperWrapper.getZookeeperClusterKey(conf);
-        zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, zkWrapperName);
-        zooKeeperWrapper.registerListener(this);
+        zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
       }
       return zooKeeperWrapper;
     }

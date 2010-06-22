@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
 import java.io.IOException;
 
@@ -35,7 +34,7 @@ import java.io.IOException;
  * serving a region. This applies to all meta and user regions except the
  * root region which is handled specially.
  */
-public class ProcessRegionOpen extends ProcessRegionStatusChange {
+class ProcessRegionOpen extends ProcessRegionStatusChange {
   protected final HServerInfo serverInfo;
 
   /**
@@ -115,8 +114,6 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
       } else {
         master.getRegionManager().removeRegion(regionInfo);
       }
-      ZooKeeperWrapper zkWrapper = ZooKeeperWrapper.getInstance(HMaster.class.getName());
-      zkWrapper.deleteUnassignedRegion(regionInfo.getEncodedName());
       return true;
     }
   }

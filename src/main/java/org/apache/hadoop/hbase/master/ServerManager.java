@@ -564,7 +564,7 @@ public class ServerManager {
    * @param region
    * @param returnMsgs
    */
-  public void processRegionOpen(HServerInfo serverInfo,
+  private void processRegionOpen(HServerInfo serverInfo,
       HRegionInfo region, ArrayList<HMsg> returnMsgs) {
     boolean duplicateAssignment = false;
     synchronized (master.getRegionManager()) {
@@ -633,7 +633,7 @@ public class ServerManager {
    * @param region
    * @throws Exception
    */
-  public void processRegionClose(HRegionInfo region) {
+  private void processRegionClose(HRegionInfo region) {
     synchronized (this.master.getRegionManager()) {
       if (region.isRootRegion()) {
         // Root region

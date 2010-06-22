@@ -78,8 +78,4 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
     }
     return this.metaRegion;
   }
-  
-  public HRegionInfo getRegionInfo() {
-    return regionInfo;
-  }
 }

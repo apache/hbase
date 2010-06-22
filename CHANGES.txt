@@ -710,7 +710,6 @@ Release 0.21.0 - Unreleased
    HBASE-2618  Don't inherit from HConstants (Benoit Sigoure via Stack)
    HBASE-2208  TableServers # processBatchOfRows - converts from List to [ ]
                - Expensive copy 
-   HBASE-2694  Move RS to Master region open/close messaging into ZooKeeper
    HBASE-2716  Make HBase's maven artifacts configurable with -D
                (Alex Newman via Stack)
    HBASE-2718  Update .gitignore for trunk after removal of contribs

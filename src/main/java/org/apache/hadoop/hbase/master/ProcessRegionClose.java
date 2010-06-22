@@ -32,7 +32,7 @@ import java.io.IOException;
  * or deleted doesn't actually require post processing, it's no longer
  * necessary.
  */
-public class ProcessRegionClose extends ProcessRegionStatusChange {
+class ProcessRegionClose extends ProcessRegionStatusChange {
   protected final boolean offlineRegion;
   protected final boolean reassignRegion;
 
