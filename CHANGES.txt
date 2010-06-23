@@ -7,6 +7,8 @@ Development Release 0.89.20100621
    HBASE-2771  Update our hadoop jar to be latest from 0.20-append branch
    HBASE-2763  Cross-port HADOOP-6833 IPC parameter leak bug
    HBASE-2767  Fix reflection in tests that was made incompatible by HDFS-1209
+   HBASE-2729  Interrupted or failed memstore flushes should not corrupt
+               the region
 
 Release 0.21.0 - Unreleased
   INCOMPATIBLE CHANGES
