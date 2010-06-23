@@ -4,6 +4,8 @@ Development Release 0.89.20100621
   All of 0.21.0 below, plus the following patches for stabilization:
 
    HBASE-2768  Fix teardown order in TestFilter
+   HBASE-2771  Update our hadoop jar to be latest from 0.20-append branch
+   HBASE-2763  Cross-port HADOOP-6833 IPC parameter leak bug
    HBASE-2767  Fix reflection in tests that was made incompatible by HDFS-1209
 
 Release 0.21.0 - Unreleased
@@ -31,7 +33,6 @@ Release 0.21.0 - Unreleased
    HBASE-2542  Fold stargate contrib into core
    HBASE-2565  Remove contrib module from hbase
    HBASE-2397  Bytes.toStringBinary escapes printable chars
-   HBASE-2771  Update our hadoop jar to be latest from 0.20-append branch
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
@@ -412,7 +413,6 @@ Release 0.21.0 - Unreleased
                the first row in a table.
    HBASE-1025  Reconstruction log playback has no bounds on memory used
    HBASE-2757  Fix flaky TestFromClientSide test by forcing region assignment
-   HBASE-2763  Cross-port HADOOP-6833 IPC parameter leak bug
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
