@@ -1,0 +1,37 @@
+This HBase release is a development release in the 0.89 series.
+
+The development release series is meant to provide the HBase user community
+with early access to the new features in HBase trunk, so they can begin
+testing their workloads and providing feedback to the developers prior
+to the official release of 0.90.0.
+
+As a development release, there are many known bugs that have not been
+addressed. This list is not comprehensive, but just serves as a short overview
+of some known issues that may be encountered.
+
+If you are encountering one of these issues, or encounter an issue that does
+not appear to be previously known, please email user@hbase.apache.org with
+a description, relevant logs, etc.
+
+- Performance may drop to unacceptibly low levels with threads hung in
+  completeMemstoreInsert
+
+Reported on some clusters, write performance drops inexplicably to very low
+throughput, then is restored upon flush.
+
+- HBASE-2670 Gets and scans may see inconsistent views of rows being written
+
+Under heavy load to a single row, a reader may see a view of the row that
+contains a partially-applied edit made by a concurrent writer.
+
+- HBASE-2238 Not all transitions are crash-proof
+
+If a region server crashes while in the middle of certain transition actions
+(eg splits, log rolling, etc) there are some situations in which the region
+may become inconsistent, doubly assigned, or unassigned.
+
+- HBASE-2727 Crashes that occur during region recovery may lose edits
+
+If a region server crashes, its logs will be split and other region servers
+will start to recover the data. If the recovering region servers crash
+while performing recovery, some edits may be lost.
