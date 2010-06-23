@@ -11,6 +11,7 @@ Development Release 0.89.20100621
                the region
    HBASE-2617  Load balancer falls into pathological state if one server
                under average - slop; endless churn
+   HBASE-2772  Scan doesn't recover from region server failure
 
 Release 0.21.0 - Unreleased
   INCOMPATIBLE CHANGES
