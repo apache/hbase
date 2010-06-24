@@ -422,6 +422,7 @@ Release 0.21.0 - Unreleased
    HBASE-2757  Fix flaky TestFromClientSide test by forcing region assignment
    HBASE-2774  Spin in ReadWriteConsistencyControl eating CPU (load > 40) and
                no progress running YCSB on clean cluster start
+   HBASE-2783  Quick edit of 'Getting Started' for development release 0.89.x
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
