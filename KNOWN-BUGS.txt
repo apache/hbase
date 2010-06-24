@@ -13,12 +13,6 @@ If you are encountering one of these issues, or encounter an issue that does
 not appear to be previously known, please email user@hbase.apache.org with
 a description, relevant logs, etc.
 
-- HBASE-2774 Performance may drop to unacceptibly low levels with threads
-  hung in completeMemstoreInsert
-
-Reported on some clusters, write performance drops inexplicably to very low
-throughput, then is restored upon flush.
-
 - HBASE-2670 Gets and scans may see inconsistent views of rows being written
 
 Under heavy load to a single row, a reader may see a view of the row that
