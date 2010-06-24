@@ -10,11 +10,7 @@
     <fileSet>
       <includes>
         <include>${basedir}/.gitignore</include>
-        <include>${basedir}/CHANGES*</include>
-        <include>${basedir}/README*</include>
-        <include>${basedir}/KNOWN-BUGS*</include>
-        <include>${basedir}/LICENSE*</include>
-        <include>${basedir}/NOTICE*</include>
+        <include>${basedir}/*.txt</include>
       </includes>
     </fileSet>
     <fileSet>
