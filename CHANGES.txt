@@ -420,6 +420,8 @@ Release 0.21.0 - Unreleased
                the first row in a table.
    HBASE-1025  Reconstruction log playback has no bounds on memory used
    HBASE-2757  Fix flaky TestFromClientSide test by forcing region assignment
+   HBASE-2774  Spin in ReadWriteConsistencyControl eating CPU (load > 40) and
+               no progress running YCSB on clean cluster start
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
