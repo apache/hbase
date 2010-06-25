@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -113,8 +114,12 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         }
         log.rollWriter();
       }
+      // We disable appends here because the last file is still being
+      // considered as under construction by the same DFSClient.
+      HBaseConfiguration newConf = new HBaseConfiguration(this.conf);
+      newConf.setBoolean("dfs.support.append", false);
       List<Path> splits =
-        HLog.splitLog(this.testDir, this.dir, this.fs, this.conf);
+        HLog.splitLog(this.testDir, this.dir, this.fs, newConf);
       verifySplits(splits, howmany);
       log = null;
     } finally {

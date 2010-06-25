@@ -3,6 +3,7 @@ Release 0.20.6 - Unreleased
   BUG FiXES
    HBASE-2763  Cross-port HADOOP-6833 IPC parameter leak bug
    HBASE-2772  Scan doesn't recover from region server failure
+   HBASE-2786  TestHLog.testSplit hangs
 
 Release 0.20.5 - Unreleased
 
