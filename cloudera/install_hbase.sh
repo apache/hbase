@@ -93,10 +93,7 @@ install -d -m 0755 $PREFIX/$DOC_DIR
 install -d -m 0755 $PREFIX/$BIN_DIR
 install -d -m 0755 $PREFIX/$ETC_DIR
 
-for i in `find lib/*.jar -type f `
-        do echo "Copying $i"
-        cp $i ${PREFIX}/${LIB_DIR}/lib #don't copy directories by default
-done
+cp -ra lib/* ${PREFIX}/${LIB_DIR}/lib/
 cp hbase*.jar $PREFIX/$LIB_DIR
 cp -a docs/* $PREFIX/$DOC_DIR
 cp *.txt $PREFIX/$DOC_DIR/
