@@ -71,6 +71,8 @@ done
  
 # Allow alternate hbase conf dir location.
 HBASE_CONF_DIR="${HBASE_CONF_DIR:-$HBASE_HOME/conf}"
+
+HBASE_PID_DIR="${HBASE_PID_DIR:-/tmp}"
 # List of hbase regions servers.
 HBASE_REGIONSERVERS="${HBASE_REGIONSERVERS:-$HBASE_CONF_DIR/regionservers}"
 # List of hbase secondary masters.
