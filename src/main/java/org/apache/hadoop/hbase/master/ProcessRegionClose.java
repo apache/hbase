@@ -37,15 +37,15 @@ public class ProcessRegionClose extends ProcessRegionStatusChange {
   protected final boolean reassignRegion;
 
   /**
-  * @param master
+  * @param masterStatus
   * @param regionInfo Region to operate on
   * @param offlineRegion if true, set the region to offline in meta
   * @param reassignRegion if true, region is to be reassigned
   */
-  public ProcessRegionClose(HMaster master, HRegionInfo regionInfo,
+  public ProcessRegionClose(MasterStatus masterStatus, HRegionInfo regionInfo,
       boolean offlineRegion, boolean reassignRegion) {
 
-   super(master, regionInfo);
+   super(masterStatus, regionInfo);
    this.offlineRegion = offlineRegion;
    this.reassignRegion = reassignRegion;
   }
@@ -68,7 +68,7 @@ public class ProcessRegionClose extends ProcessRegionStatusChange {
     Boolean result = null;
     if (offlineRegion || reassignRegion) {
       result =
-        new RetryableMetaOperation<Boolean>(getMetaRegion(), this.master) {
+        new RetryableMetaOperation<Boolean>(getMetaRegion(), this.masterStatus) {
           public Boolean call() throws IOException {
 
 
@@ -83,14 +83,14 @@ public class ProcessRegionClose extends ProcessRegionStatusChange {
                 // set of regions in transition
                 HRegion.offlineRegionInMETA(server, metaRegionName,
                     regionInfo);
-                master.getRegionManager().removeRegion(regionInfo);
+                masterStatus.getRegionManager().removeRegion(regionInfo);
                 LOG.info("region closed: " + regionInfo.getRegionNameAsString());
               } else {
                 // we are reassigning the region eventually, so set it unassigned
                 // and remove the server info
                 HRegion.cleanRegionInMETA(server, metaRegionName,
                     regionInfo);
-                master.getRegionManager().setUnassigned(regionInfo, false);
+                masterStatus.getRegionManager().setUnassigned(regionInfo, false);
                 LOG.info("region set as unassigned: " + regionInfo.getRegionNameAsString());
               }
             }

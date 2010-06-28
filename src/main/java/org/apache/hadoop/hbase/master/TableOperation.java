@@ -84,7 +84,7 @@ abstract class TableOperation {
       final Scan scan = new Scan(tableNameMetaStart)
         .addFamily(HConstants.CATALOG_FAMILY);
       long scannerId = this.server.openScanner(m.getRegionName(), scan);
-      int rows = this.master.getConfiguration().
+      int rows = this.masterStatus.getConfiguration().
         getInt("hbase.meta.scanner.caching", 100);
       scan.setCaching(rows);
       List<byte []> emptyRows = new ArrayList<byte []>();
@@ -94,7 +94,7 @@ abstract class TableOperation {
           if (values == null || values.isEmpty()) {
             break;
           }
-          HRegionInfo info = this.master.getHRegionInfo(values.getRow(), values);
+          HRegionInfo info = this.masterStatus.getHRegionInfo(values.getRow(), values);
           if (info == null) {
             emptyRows.add(values.getRow());
             LOG.error(Bytes.toString(HConstants.CATALOG_FAMILY) + ":"
@@ -137,7 +137,7 @@ abstract class TableOperation {
         LOG.warn("Found " + emptyRows.size() +
             " rows with empty HRegionInfo while scanning meta region " +
             Bytes.toString(m.getRegionName()));
-        master.deleteEmptyMetaRows(server, m.getRegionName(), emptyRows);
+        masterStatus.deleteEmptyMetaRows(server, m.getRegionName(), emptyRows);
       }
 
       if (!tableExists) {

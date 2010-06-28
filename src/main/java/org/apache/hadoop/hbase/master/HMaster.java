@@ -62,13 +62,12 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.executor.HBaseExecutorService;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -113,7 +112,7 @@ import com.google.common.collect.Lists;
  * @see Watcher
  */
 public class HMaster extends Thread implements HMasterInterface,
-    HMasterRegionInterface, Watcher {
+    HMasterRegionInterface, Watcher, MasterStatus {
   // MASTER is name of the webapp and the attribute name used stuffing this
   //instance into web context.
   public static final String MASTER = "master";
@@ -354,7 +353,7 @@ public class HMaster extends Thread implements HMasterInterface,
    * If not, sets closed
    * @return false if file system is not available
    */
-  protected boolean checkFileSystem() {
+  public boolean checkFileSystem() {
     if (this.fsOk) {
       try {
         FSUtils.checkFileSystemAvailable(this.fs);
@@ -415,27 +414,27 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.regionManager;
   }
 
-  int getThreadWakeFrequency() {
+  public int getThreadWakeFrequency() {
     return this.threadWakeFrequency;
   }
 
-  FileSystem getFileSystem() {
+  public FileSystem getFileSystem() {
     return this.fs;
   }
 
-  AtomicBoolean getShutdownRequested() {
+  public AtomicBoolean getShutdownRequested() {
     return this.shutdownRequested;
   }
 
-  AtomicBoolean getClosed() {
+  public AtomicBoolean getClosed() {
     return this.closed;
   }
 
-  boolean isClosed() {
+  public boolean isClosed() {
     return this.closed.get();
   }
 
-  ServerConnection getServerConnection() {
+  public ServerConnection getServerConnection() {
     return this.connection;
   }
 
@@ -448,11 +447,11 @@ public class HMaster extends Thread implements HMasterInterface,
   }
 
   // These methods are so don't have to pollute RegionManager with ServerManager.
-  SortedMap<HServerLoad, Set<String>> getLoadToServers() {
+  public SortedMap<HServerLoad, Set<String>> getLoadToServers() {
     return this.serverManager.getLoadToServers();
   }
 
-  int numServers() {
+  public int numServers() {
     return this.serverManager.numServers();
   }
 
@@ -460,7 +459,7 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.serverManager.getAverageLoad();
   }
 
-  public RegionServerOperationQueue getRegionServerOperationQueue () {
+  public RegionServerOperationQueue getRegionServerOperationQueue() {
     return this.regionServerOperationQueue;
   }
 
@@ -478,7 +477,7 @@ public class HMaster extends Thread implements HMasterInterface,
    * @param l
    * @param m
    */
-  void getLightServers(final HServerLoad l,
+  public void getLightServers(final HServerLoad l,
       SortedMap<HServerLoad, Set<String>> m) {
     this.serverManager.getLightServers(l, m);
   }
@@ -643,6 +642,10 @@ public class HMaster extends Thread implements HMasterInterface,
       }
     }
   }
+  
+  public Lock getSplitLogLock() {
+    return splitLogLock;
+  }
 
   /*
    * Start up all services. If any of these threads gets an unhandled exception
@@ -685,7 +688,7 @@ public class HMaster extends Thread implements HMasterInterface,
   /*
    * Start shutting down the master
    */
-  void startShutdown() {
+  public void startShutdown() {
     this.closed.set(true);
     this.regionManager.stopScanners();
     this.regionServerOperationQueue.shutdown();
@@ -1102,7 +1105,7 @@ public class HMaster extends Thread implements HMasterInterface,
    * @return Null or found HRegionInfo.
    * @throws IOException
    */
-  HRegionInfo getHRegionInfo(final byte [] row, final Result res)
+  public HRegionInfo getHRegionInfo(final byte [] row, final Result res)
   throws IOException {
     byte[] regioninfo = res.getValue(HConstants.CATALOG_FAMILY,
         HConstants.REGIONINFO_QUALIFIER);
@@ -1134,7 +1137,7 @@ public class HMaster extends Thread implements HMasterInterface,
    * @param metaRegionName name of the meta region we scanned
    * @param emptyRows the row keys that had empty HRegionInfos
    */
-  protected void deleteEmptyMetaRows(HRegionInterface s,
+  public void deleteEmptyMetaRows(HRegionInterface s,
       byte [] metaRegionName,
       List<byte []> emptyRows) {
     for (byte [] regionName: emptyRows) {

@@ -39,13 +39,13 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
   protected final HServerInfo serverInfo;
 
   /**
-   * @param master
+   * @param masterStatus
    * @param info
    * @param regionInfo
    */
-  public ProcessRegionOpen(HMaster master, HServerInfo info,
+  public ProcessRegionOpen(MasterStatus masterStatus, HServerInfo info,
       HRegionInfo regionInfo) {
-    super(master, regionInfo);
+    super(masterStatus, regionInfo);
     if (info == null) {
       throw new NullPointerException("HServerInfo cannot be null; " +
         "hbase-958 debugging");
@@ -69,7 +69,7 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
       return true;
     }
     HRegionInterface server =
-        master.getServerConnection().getHRegionConnection(getMetaRegion().getServer());
+        masterStatus.getServerConnection().getHRegionConnection(getMetaRegion().getServer());
     LOG.info(regionInfo.getRegionNameAsString() + " open on " +
       serverInfo.getServerName());
 
@@ -83,40 +83,40 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
       " in region " + Bytes.toString(metaRegionName) + " with startcode=" +
       serverInfo.getStartCode() + ", server=" + serverInfo.getHostnamePort());
-    synchronized (master.getRegionManager()) {
+    synchronized (masterStatus.getRegionManager()) {
       if (isMetaTable) {
         // It's a meta region.
         MetaRegion m =
             new MetaRegion(new HServerAddress(serverInfo.getServerAddress()),
                 regionInfo);
-        if (!master.getRegionManager().isInitialMetaScanComplete()) {
+        if (!masterStatus.getRegionManager().isInitialMetaScanComplete()) {
           // Put it on the queue to be scanned for the first time.
           if (LOG.isDebugEnabled()) {
             LOG.debug("Adding " + m.toString() + " to regions to scan");
           }
-          master.getRegionManager().addMetaRegionToScan(m);
+          masterStatus.getRegionManager().addMetaRegionToScan(m);
         } else {
           // Add it to the online meta regions
           if (LOG.isDebugEnabled()) {
             LOG.debug("Adding to onlineMetaRegions: " + m.toString());
           }
-          master.getRegionManager().putMetaRegionOnline(m);
+          masterStatus.getRegionManager().putMetaRegionOnline(m);
           // Interrupting the Meta Scanner sleep so that it can
           // process regions right away
-          master.getRegionManager().metaScannerThread.triggerNow();
+          masterStatus.getRegionManager().metaScannerThread.triggerNow();
         }
       }
       // If updated successfully, remove from pending list if the state
       // is consistent. For example, a disable could be called before the
       // synchronization.
-      if(master.getRegionManager().
+      if(masterStatus.getRegionManager().
           isOfflined(regionInfo.getRegionNameAsString())) {
         LOG.warn("We opened a region while it was asked to be closed.");
       } else {
-        master.getRegionManager().removeRegion(regionInfo);
+        masterStatus.getRegionManager().removeRegion(regionInfo);
       }
       ZooKeeperWrapper zkWrapper =
-          ZooKeeperWrapper.getInstance(master.getConfiguration(),
+          ZooKeeperWrapper.getInstance(masterStatus.getConfiguration(),
               HMaster.class.getName());
       zkWrapper.deleteUnassignedRegion(regionInfo.getEncodedName());
       return true;

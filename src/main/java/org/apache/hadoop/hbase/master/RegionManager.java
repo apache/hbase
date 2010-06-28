@@ -103,7 +103,7 @@ public class RegionManager {
   // How many regions to assign a server at a time.
   private final int maxAssignInOneGo;
 
-  final HMaster master;
+  final MasterStatus masterStatus;
   private final LoadBalancer loadBalancer;
 
   /** Set of regions to split. */
@@ -129,20 +129,20 @@ public class RegionManager {
   private final int zooKeeperNumRetries;
   private final int zooKeeperPause;
 
-  RegionManager(HMaster master) throws IOException {
-    Configuration conf = master.getConfiguration();
+  RegionManager(MasterStatus masterStatus) throws IOException {
+    Configuration conf = masterStatus.getConfiguration();
 
-    this.master = master;
+    this.masterStatus = masterStatus;
     this.zkWrapper =
         ZooKeeperWrapper.getInstance(conf, HMaster.class.getName());
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
     this.loadBalancer = new LoadBalancer(conf);
 
     // The root region
-    rootScannerThread = new RootScanner(master);
+    rootScannerThread = new RootScanner(masterStatus);
 
     // Scans the meta table
-    metaScannerThread = new MetaScanner(master);
+    metaScannerThread = new MetaScanner(masterStatus);
 
     zooKeeperNumRetries = conf.getInt(HConstants.ZOOKEEPER_RETRIES,
         HConstants.DEFAULT_ZOOKEEPER_RETRIES);
@@ -170,7 +170,7 @@ public class RegionManager {
 
   void reassignRootRegion() {
     unsetRootRegion();
-    if (!master.getShutdownRequested().get()) {
+    if (!masterStatus.getShutdownRequested().get()) {
       synchronized (regionsInTransition) {
         String regionName = HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString();
         byte[] data = null;
@@ -200,7 +200,7 @@ public class RegionManager {
   void assignRegions(HServerInfo info, HRegionInfo[] mostLoadedRegions,
       ArrayList<HMsg> returnMsgs) {
     HServerLoad thisServersLoad = info.getLoad();
-    boolean isSingleServer = this.master.numServers() == 1;
+    boolean isSingleServer = this.masterStatus.numServers() == 1;
 
     // figure out what regions need to be assigned and aren't currently being
     // worked on elsewhere.
@@ -274,7 +274,7 @@ public class RegionManager {
           // No other servers with same load.
           // Split regions over all available servers
           nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/
-              (1.0 * master.getServerManager().numServers()));
+              (1.0 * masterStatus.getServerManager().numServers()));
         }
       } else {
         // Assign all regions to this server
@@ -361,7 +361,7 @@ public class RegionManager {
     final HServerLoad thisServersLoad) {
     SortedMap<HServerLoad, Set<String>> lightServers =
       new TreeMap<HServerLoad, Set<String>>();
-    this.master.getLightServers(thisServersLoad, lightServers);
+    this.masterStatus.getLightServers(thisServersLoad, lightServers);
     // Examine the list of servers that are more lightly loaded than this one.
     // Pretend that we will assign regions to these more lightly loaded servers
     // until they reach load equal with ours. Then, see how many regions are left
@@ -432,7 +432,7 @@ public class RegionManager {
           continue;
         }
         if (!i.isMetaRegion() &&
-            !master.getServerManager().canAssignUserRegions()) {
+            !masterStatus.getServerManager().canAssignUserRegions()) {
           LOG.debug("user region " + i.getRegionNameAsString() +
             " is in transition but not enough servers yet");
           continue;
@@ -454,9 +454,9 @@ public class RegionManager {
 
     SortedMap<HServerLoad, Set<String>> heavyServers =
       new TreeMap<HServerLoad, Set<String>>();
-    synchronized (master.getLoadToServers()) {
+    synchronized (masterStatus.getLoadToServers()) {
       heavyServers.putAll(
-        master.getLoadToServers().tailMap(referenceLoad));
+        masterStatus.getLoadToServers().tailMap(referenceLoad));
     }
     int nservers = 0;
     for (Map.Entry<HServerLoad, Set<String>> e : heavyServers.entrySet()) {
@@ -555,12 +555,12 @@ public class RegionManager {
   public int countRegionsOnFS() throws IOException {
     int regions = 0;
     FileStatus [] tableDirs =
-      this.master.getFileSystem().listStatus(this.master.getRootDir(), new TableDirFilter());
+      this.masterStatus.getFileSystem().listStatus(this.masterStatus.getRootDir(), new TableDirFilter());
     FileStatus[] regionDirs;
     RegionDirFilter rdf = new RegionDirFilter();
     for(FileStatus tabledir : tableDirs) {
       if(tabledir.isDir()) {
-        regionDirs = this.master.getFileSystem().listStatus(tabledir.getPath(), rdf);
+        regionDirs = this.masterStatus.getFileSystem().listStatus(tabledir.getPath(), rdf);
         regions += regionDirs.length;
       }
     }
@@ -630,8 +630,8 @@ public class RegionManager {
     } catch(Exception iex) {
       LOG.warn("meta scanner", iex);
     }
-    master.getZooKeeperWrapper().clearRSDirectory();
-    master.getZooKeeperWrapper().close();
+    masterStatus.getZooKeeperWrapper().clearRSDirectory();
+    masterStatus.getZooKeeperWrapper().close();
   }
 
   /**
@@ -717,7 +717,7 @@ public class RegionManager {
     int prefixlen = META_REGION_PREFIX.length;
     if (row.length > prefixlen &&
      Bytes.compareTo(META_REGION_PREFIX, 0, prefixlen, row, 0, prefixlen) == 0) {
-    	return new MetaRegion(this.master.getRegionManager().getRootRegionLocation(),
+    	return new MetaRegion(this.masterStatus.getRegionManager().getRootRegionLocation(),
     	  HRegionInfo.ROOT_REGIONINFO);
     }
     return this.onlineMetaRegions.floorEntry(row).getValue();
@@ -737,8 +737,8 @@ public class RegionManager {
       byte [] metaRegionName)
   throws IOException {
     // 2. Create the HRegion
-    HRegion region = HRegion.createHRegion(newRegion, this.master.getRootDir(),
-      master.getConfiguration());
+    HRegion region = HRegion.createHRegion(newRegion, this.masterStatus.getRootDir(),
+      masterStatus.getConfiguration());
 
     // 3. Insert into meta
     HRegionInfo info = region.getRegionInfo();
@@ -806,8 +806,8 @@ public class RegionManager {
   }
 
   public boolean isRootServer(HServerAddress server) {
-    return this.master.getRegionManager().getRootRegionLocation() != null &&
-      server.equals(master.getRegionManager().getRootRegionLocation());
+    return this.masterStatus.getRegionManager().getRootRegionLocation() != null &&
+      server.equals(masterStatus.getRegionManager().getRootRegionLocation());
   }
 
   /**
@@ -921,8 +921,8 @@ public class RegionManager {
 
     // check to see if ROOT and/or .META. are on this server, reassign them.
     // use master.getRootRegionLocation.
-    if (master.getRegionManager().getRootRegionLocation() != null &&
-        server.equals(master.getRegionManager().getRootRegionLocation())) {
+    if (masterStatus.getRegionManager().getRootRegionLocation() != null &&
+        server.equals(masterStatus.getRegionManager().getRootRegionLocation())) {
       LOG.info("Offlined ROOT server: " + server);
       reassignRootRegion();
       hasMeta = true;
@@ -1172,14 +1172,14 @@ public class RegionManager {
    */
   public void waitForRootRegionLocation() {
     synchronized (rootRegionLocation) {
-      while (!master.getShutdownRequested().get() &&
-          !master.isClosed() && rootRegionLocation.get() == null) {
+      while (!masterStatus.getShutdownRequested().get() &&
+          !masterStatus.isClosed() && rootRegionLocation.get() == null) {
         // rootRegionLocation will be filled in when we get an 'open region'
         // regionServerReport message from the HRegionServer that has been
         // allocated the ROOT region below.
         try {
           // Cycle rather than hold here in case master is closed meantime.
-          rootRegionLocation.wait(this.master.getThreadWakeFrequency());
+          rootRegionLocation.wait(this.masterStatus.getThreadWakeFrequency());
         } catch (InterruptedException e) {
           // continue
         }
@@ -1220,7 +1220,7 @@ public class RegionManager {
 
   private void writeRootRegionLocationToZooKeeper(HServerAddress address) {
     for (int attempt = 0; attempt < zooKeeperNumRetries; ++attempt) {
-      if (master.getZooKeeperWrapper().writeRootRegionLocation(address)) {
+      if (masterStatus.getZooKeeperWrapper().writeRootRegionLocation(address)) {
         return;
       }
 
@@ -1230,7 +1230,7 @@ public class RegionManager {
     LOG.error("Failed to write root region location to ZooKeeper after " +
               zooKeeperNumRetries + " retries, shutting down");
 
-    this.master.shutdown();
+    this.masterStatus.shutdown();
   }
 
   /**
@@ -1394,7 +1394,7 @@ public class RegionManager {
     void loadBalancing(HServerInfo info, HRegionInfo[] mostLoadedRegions,
         ArrayList<HMsg> returnMsgs) {
       HServerLoad servLoad = info.getLoad();
-      double avg = master.getAverageLoad();
+      double avg = masterStatus.getAverageLoad();
 
       // nothing to balance if server load not more then average load
       if(servLoad.getLoad() <= Math.ceil(avg) || avg <= 2.0) {
@@ -1449,7 +1449,7 @@ public class RegionManager {
         double avgLoad) {
 
       SortedMap<HServerLoad, Set<String>> loadToServers =
-        master.getLoadToServers();
+        masterStatus.getLoadToServers();
       // check if server most loaded
       if (!loadToServers.get(loadToServers.lastKey()).contains(srvName))
         return 0;

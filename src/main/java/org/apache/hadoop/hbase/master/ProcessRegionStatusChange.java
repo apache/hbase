@@ -33,11 +33,11 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
   protected volatile byte[] metaRegionName = null;
 
   /**
-   * @param master the master
+   * @param masterStatus the master
    * @param regionInfo region info
    */
-  public ProcessRegionStatusChange(HMaster master, HRegionInfo regionInfo) {
-    super(master);
+  public ProcessRegionStatusChange(MasterStatus masterStatus, HRegionInfo regionInfo) {
+    super(masterStatus);
     this.regionInfo = regionInfo;
     this.isMetaTable = regionInfo.isMetaTable();
   }
@@ -52,7 +52,7 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
         available = false;
       }
     } else {
-      if (!master.getRegionManager().isInitialRootScanComplete() ||
+      if (!masterStatus.getRegionManager().isInitialRootScanComplete() ||
           !metaTableAvailable()) {
         // The root region has not been scanned or the meta table is not
         // available so we can't proceed.
@@ -67,11 +67,11 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
   protected MetaRegion getMetaRegion() {
     if (isMetaTable) {
       this.metaRegionName = HRegionInfo.ROOT_REGIONINFO.getRegionName();
-      this.metaRegion = new MetaRegion(master.getRegionManager().getRootRegionLocation(),
+      this.metaRegion = new MetaRegion(masterStatus.getRegionManager().getRootRegionLocation(),
           HRegionInfo.ROOT_REGIONINFO);
     } else {
       this.metaRegion =
-        master.getRegionManager().getFirstMetaRegionForRegion(regionInfo);
+        masterStatus.getRegionManager().getFirstMetaRegionForRegion(regionInfo);
       if (this.metaRegion != null) {
         this.metaRegionName = this.metaRegion.getRegionName();
       }

@@ -28,10 +28,10 @@ import java.io.IOException;
 class RootScanner extends BaseScanner {
   /**
    * Constructor
-   * @param master
+   * @param masterStatus
    */
-  public RootScanner(HMaster master) {
-    super(master, true, master.getShutdownRequested());
+  public RootScanner(MasterStatus masterStatus) {
+    super(masterStatus, true, masterStatus.getShutdownRequested());
   }
 
   /**
@@ -42,16 +42,16 @@ class RootScanner extends BaseScanner {
    * @return True if successfully scanned.
    */
   private boolean scanRoot() {
-    master.getRegionManager().waitForRootRegionLocation();
-    if (master.isClosed()) {
+    masterStatus.getRegionManager().waitForRootRegionLocation();
+    if (masterStatus.isClosed()) {
       return false;
     }
 
     try {
       // Don't interrupt us while we're working
       synchronized(scannerLock) {
-        if (master.getRegionManager().getRootRegionLocation() != null) {
-          scanRegion(new MetaRegion(master.getRegionManager().getRootRegionLocation(),
+        if (masterStatus.getRegionManager().getRootRegionLocation() != null) {
+          scanRegion(new MetaRegion(masterStatus.getRegionManager().getRootRegionLocation(),
             HRegionInfo.ROOT_REGIONINFO));
         }
       }
@@ -59,7 +59,7 @@ class RootScanner extends BaseScanner {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.warn("Scan ROOT region", e);
       // Make sure the file system is still available
-      master.checkFileSystem();
+      masterStatus.checkFileSystem();
     } catch (Exception e) {
       // If for some reason we get some other kind of exception,
       // at least log it rather than go out silently.

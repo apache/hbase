@@ -1,0 +1,13 @@
+HBase Change Log
+Branch 0.90.0 - Master Rewrite Branch
+  INCOMPATIBLE CHANGES
+
+  BUG FIXES
+
+  IMPROVEMENTS
+    HBASE-2692  [MasterStatus] HMaster cleanup and refactor
+                (jgray via Karthik R)
+
+  NEW FEATURES
+
+  OPTIMIZATIONS

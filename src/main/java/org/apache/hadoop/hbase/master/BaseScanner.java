@@ -119,7 +119,7 @@ abstract class BaseScanner extends Chore {
     }
   }
   private final boolean rootRegion;
-  protected final HMaster master;
+  protected final MasterStatus masterStatus;
 
   protected boolean initialScanComplete;
 
@@ -130,13 +130,13 @@ abstract class BaseScanner extends Chore {
   // mid-scan
   final Object scannerLock = new Object();
 
-  BaseScanner(final HMaster master, final boolean rootRegion,
+  BaseScanner(final MasterStatus masterStatus, final boolean rootRegion,
       final AtomicBoolean stop) {
     super("Scanner for " + (rootRegion ? "-ROOT-":".META.") + " table",
-        master.getConfiguration().
+        masterStatus.getConfiguration().
         getInt("hbase.master.meta.thread.rescanfrequency", 60 * 1000), stop);
     this.rootRegion = rootRegion;
-    this.master = master;
+    this.masterStatus = masterStatus;
     this.initialScanComplete = false;
   }
 
@@ -173,7 +173,7 @@ abstract class BaseScanner extends Chore {
     int rows = 0;
     try {
       regionServer =
-        this.master.getServerConnection().getHRegionConnection(region.getServer());
+        this.masterStatus.getServerConnection().getHRegionConnection(region.getServer());
       Scan s = new Scan().addFamily(HConstants.CATALOG_FAMILY);
       // Make this scan do a row at a time otherwise, data can be stale.
       s.setCaching(1);
@@ -183,7 +183,7 @@ abstract class BaseScanner extends Chore {
         if (values == null || values.size() == 0) {
           break;
         }
-        HRegionInfo info = master.getHRegionInfo(values.getRow(), values);
+        HRegionInfo info = masterStatus.getHRegionInfo(values.getRow(), values);
         if (info == null) {
           emptyRows.add(values.getRow());
           continue;
@@ -199,7 +199,7 @@ abstract class BaseScanner extends Chore {
         rows += 1;
       }
       if (rootRegion) {
-        this.master.getRegionManager().setNumMetaRegions(rows);
+        this.masterStatus.getRegionManager().setNumMetaRegions(rows);
       }
     } catch (IOException e) {
       if (e instanceof RemoteException) {
@@ -229,7 +229,7 @@ abstract class BaseScanner extends Chore {
     if (emptyRows.size() > 0) {
       LOG.warn("Found " + emptyRows.size() + " rows with empty HRegionInfo " +
         "while scanning meta region " + Bytes.toString(region.getRegionName()));
-      this.master.deleteEmptyMetaRows(regionServer, region.getRegionName(),
+      this.masterStatus.deleteEmptyMetaRows(regionServer, region.getRegionName(),
           emptyRows);
     }
 
@@ -309,8 +309,8 @@ abstract class BaseScanner extends Chore {
       LOG.info("Deleting region " + parent.getRegionNameAsString() +
         " (encoded=" + parent.getEncodedName() +
         ") because daughter splits no longer hold references");
-      HRegion.deleteRegion(this.master.getFileSystem(),
-        this.master.getRootDir(), parent);
+      HRegion.deleteRegion(this.masterStatus.getFileSystem(),
+        this.masterStatus.getRootDir(), parent);
       HRegion.removeRegionFromMETA(srvr, metaRegionName,
         parent.getRegionName());
       result = true;
@@ -499,15 +499,15 @@ abstract class BaseScanner extends Chore {
       return result;
     }
     Path tabledir =
-      new Path(this.master.getRootDir(), split.getTableDesc().getNameAsString());
+      new Path(this.masterStatus.getRootDir(), split.getTableDesc().getNameAsString());
     for (HColumnDescriptor family: split.getTableDesc().getFamilies()) {
       Path p = Store.getStoreHomedir(tabledir, split.getEncodedName(),
         family.getName());
-      if (!this.master.getFileSystem().exists(p)) continue;
+      if (!this.masterStatus.getFileSystem().exists(p)) continue;
       // Look for reference files.  Call listStatus with an anonymous
       // instance of PathFilter.
       FileStatus [] ps =
-        this.master.getFileSystem().listStatus(p, new PathFilter () {
+        this.masterStatus.getFileSystem().listStatus(p, new PathFilter () {
             public boolean accept(Path path) {
               return StoreFile.isReference(path);
             }
@@ -557,18 +557,18 @@ abstract class BaseScanner extends Chore {
       serverName = HServerInfo.getServerName(sa, sc);
     }
     HServerInfo storedInfo = null;
-    synchronized (this.master.getRegionManager()) {
+    synchronized (this.masterStatus.getRegionManager()) {
       /* We don't assign regions that are offline, in transition or were on
        * a dead server. Regions that were on a dead server will get reassigned
        * by ProcessServerShutdown
        */
       if (info.isOffline() ||
-        this.master.getRegionManager().regionIsInTransition(info.getRegionNameAsString()) ||
-          (serverName != null && this.master.getServerManager().isDead(serverName))) {
+        this.masterStatus.getRegionManager().regionIsInTransition(info.getRegionNameAsString()) ||
+          (serverName != null && this.masterStatus.getServerManager().isDead(serverName))) {
         return;
       }
       if (serverName != null) {
-        storedInfo = this.master.getServerManager().getServerInfo(serverName);
+        storedInfo = this.masterStatus.getServerManager().getServerInfo(serverName);
       }
 
       // If we can't find the HServerInfo, then add it to the list of
@@ -581,7 +581,7 @@ abstract class BaseScanner extends Chore {
             ", startCode=" + sc + " unknown.");
         }
         // Now get the region assigned
-        this.master.getRegionManager().setUnassigned(info, true);
+        this.masterStatus.getRegionManager().setUnassigned(info, true);
       }
     }
   }

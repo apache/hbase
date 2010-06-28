@@ -43,27 +43,27 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
   protected final Log LOG = LogFactory.getLog(this.getClass());
   protected final Sleeper sleeper;
   protected final MetaRegion m;
-  protected final HMaster master;
+  protected final MasterStatus masterStatus;
 
   protected HRegionInterface server;
 
-  protected RetryableMetaOperation(MetaRegion m, HMaster master) {
+  protected RetryableMetaOperation(MetaRegion m, MasterStatus masterStatus) {
     this.m = m;
-    this.master = master;
-    this.sleeper = new Sleeper(this.master.getThreadWakeFrequency(),
-      this.master.getClosed());
+    this.masterStatus = masterStatus;
+    this.sleeper = new Sleeper(this.masterStatus.getThreadWakeFrequency(),
+      this.masterStatus.getClosed());
   }
 
   protected T doWithRetries()
   throws IOException, RuntimeException {
     List<IOException> exceptions = new ArrayList<IOException>();
-    for (int tries = 0; tries < this.master.getNumRetries(); tries++) {
-      if (this.master.isClosed()) {
+    for (int tries = 0; tries < this.masterStatus.getNumRetries(); tries++) {
+      if (this.masterStatus.isClosed()) {
         return null;
       }
       try {
         this.server =
-          this.master.getServerConnection().getHRegionConnection(m.getServer());
+          this.masterStatus.getServerConnection().getHRegionConnection(m.getServer());
         return this.call();
       } catch (IOException e) {
         if (e instanceof TableNotFoundException ||
@@ -74,7 +74,7 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
         if (e instanceof RemoteException) {
           e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
         }
-        if (tries == this.master.getNumRetries() - 1) {
+        if (tries == this.masterStatus.getNumRetries() - 1) {
           if (LOG.isDebugEnabled()) {
             StringBuilder message = new StringBuilder(
                 "Trying to contact region server for regionName '" +
@@ -86,7 +86,7 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
             }
             LOG.debug(message);
           }
-          this.master.checkFileSystem();
+          this.masterStatus.checkFileSystem();
           throw e;
         }
         if (LOG.isDebugEnabled()) {

@@ -46,22 +46,22 @@ public class ZKUnassignedWatcher implements Watcher {
   String serverName;
   ServerManager serverManager;
 
-  public static void start(Configuration conf, HMaster master) 
+  public static void start(Configuration conf, MasterStatus masterStatus) 
   throws IOException {
-    new ZKUnassignedWatcher(conf, master);
+    new ZKUnassignedWatcher(conf, masterStatus);
     LOG.debug("Started ZKUnassigned watcher");
   }
 
-  public ZKUnassignedWatcher(Configuration conf, HMaster master) 
+  public ZKUnassignedWatcher(Configuration conf, MasterStatus masterStatus) 
   throws IOException {
-    this.serverName = master.getHServerAddress().toString();
-    this.serverManager = master.getServerManager();
+    this.serverName = masterStatus.getHServerAddress().toString();
+    this.serverManager = masterStatus.getServerManager();
     zkWrapper = ZooKeeperWrapper.getInstance(conf, HMaster.class.getName());
     String unassignedZNode = zkWrapper.getRegionInTransitionZNode();
     
     // If the UNASSIGNED ZNode exists and this is a fresh cluster start, then 
     // delete it.
-    if(master.isClusterStartup() && zkWrapper.exists(unassignedZNode, false)) {
+    if(masterStatus.isClusterStartup() && zkWrapper.exists(unassignedZNode, false)) {
       LOG.info("Cluster start, but found " + unassignedZNode + ", deleting it.");
       try {
         zkWrapper.deleteZNode(unassignedZNode, true);
