@@ -71,7 +71,7 @@ abstract class RegionServerOperation implements Delayed {
   }
 
   protected void requeue() {
-    this.masterStatus.getRegionServerOperationQueue().putOnDelayQueue(this);
+    masterStatus.getServerManager().getRegionServerOperationQueue().putOnDelayQueue(this);
   }
 
   private long whenToExpire() {

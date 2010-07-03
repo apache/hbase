@@ -126,6 +126,15 @@ public final class HConstants {
   /** Parameter name for how often threads should wake up */
   public static final String THREAD_WAKE_FREQUENCY = "hbase.server.thread.wakefrequency";
 
+  /** Default value for thread wake frequency */
+  public static final int DEFAULT_THREAD_WAKE_FREQUENCY = 10 * 1000;
+  
+  /** Number of retries for the client */
+  public static final String NUM_CLIENT_RETRIES = "hbase.client.retries.number";
+
+  /** Default number of retries for the client */
+  public static final int DEFAULT_NUM_CLIENT_RETRIES = 2;
+
   /** Parameter name for how often a region should should perform a major compaction */
   public static final String MAJOR_COMPACTION_PERIOD = "hbase.hregion.majorcompaction";
 

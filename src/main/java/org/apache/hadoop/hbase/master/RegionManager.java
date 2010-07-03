@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -80,6 +81,8 @@ public class RegionManager {
   private static final byte[] OVERLOADED = Bytes.toBytes("Overloaded");
 
   private static final byte [] META_REGION_PREFIX = Bytes.toBytes(".META.,");
+  
+  private static int threadWakeFrequency;
 
   /**
    * Map of region name to RegionState for regions that are in transition such as
@@ -133,8 +136,12 @@ public class RegionManager {
     Configuration conf = masterStatus.getConfiguration();
 
     this.masterStatus = masterStatus;
+    threadWakeFrequency = 
+      masterStatus.getConfiguration().getInt(
+          HConstants.THREAD_WAKE_FREQUENCY, 
+          HConstants.DEFAULT_THREAD_WAKE_FREQUENCY);
     this.zkWrapper =
-        ZooKeeperWrapper.getInstance(conf, HMaster.class.getName());
+        ZooKeeperWrapper.getInstance(conf, masterStatus.getHServerAddress().toString());
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
     this.loadBalancer = new LoadBalancer(conf);
 
@@ -200,7 +207,7 @@ public class RegionManager {
   void assignRegions(HServerInfo info, HRegionInfo[] mostLoadedRegions,
       ArrayList<HMsg> returnMsgs) {
     HServerLoad thisServersLoad = info.getLoad();
-    boolean isSingleServer = this.masterStatus.numServers() == 1;
+    boolean isSingleServer = this.masterStatus.getServerManager().numServers() == 1;
 
     // figure out what regions need to be assigned and aren't currently being
     // worked on elsewhere.
@@ -361,7 +368,7 @@ public class RegionManager {
     final HServerLoad thisServersLoad) {
     SortedMap<HServerLoad, Set<String>> lightServers =
       new TreeMap<HServerLoad, Set<String>>();
-    this.masterStatus.getLightServers(thisServersLoad, lightServers);
+    this.masterStatus.getServerManager().getLightServers(thisServersLoad, lightServers);
     // Examine the list of servers that are more lightly loaded than this one.
     // Pretend that we will assign regions to these more lightly loaded servers
     // until they reach load equal with ours. Then, see how many regions are left
@@ -454,9 +461,9 @@ public class RegionManager {
 
     SortedMap<HServerLoad, Set<String>> heavyServers =
       new TreeMap<HServerLoad, Set<String>>();
-    synchronized (masterStatus.getLoadToServers()) {
+    synchronized (masterStatus.getServerManager().getLoadToServers()) {
       heavyServers.putAll(
-        masterStatus.getLoadToServers().tailMap(referenceLoad));
+        masterStatus.getServerManager().getLoadToServers().tailMap(referenceLoad));
     }
     int nservers = 0;
     for (Map.Entry<HServerLoad, Set<String>> e : heavyServers.entrySet()) {
@@ -555,12 +562,15 @@ public class RegionManager {
   public int countRegionsOnFS() throws IOException {
     int regions = 0;
     FileStatus [] tableDirs =
-      this.masterStatus.getFileSystem().listStatus(this.masterStatus.getRootDir(), new TableDirFilter());
+      masterStatus.getFileSystemManager().getFileSystem().listStatus(
+          this.masterStatus.getFileSystemManager().getRootDir(), new TableDirFilter());
     FileStatus[] regionDirs;
     RegionDirFilter rdf = new RegionDirFilter();
     for(FileStatus tabledir : tableDirs) {
       if(tabledir.isDir()) {
-        regionDirs = this.masterStatus.getFileSystem().listStatus(tabledir.getPath(), rdf);
+        regionDirs = 
+          masterStatus.getFileSystemManager().getFileSystem().listStatus(
+              tabledir.getPath(), rdf);
         regions += regionDirs.length;
       }
     }
@@ -630,8 +640,11 @@ public class RegionManager {
     } catch(Exception iex) {
       LOG.warn("meta scanner", iex);
     }
-    masterStatus.getZooKeeperWrapper().clearRSDirectory();
-    masterStatus.getZooKeeperWrapper().close();
+    ZooKeeperWrapper zkw = ZooKeeperWrapper.getInstance(
+                             masterStatus.getConfiguration(), 
+                             masterStatus.getHServerAddress().toString());
+    zkw.clearRSDirectory();
+    zkw.close();
   }
 
   /**
@@ -737,7 +750,7 @@ public class RegionManager {
       byte [] metaRegionName)
   throws IOException {
     // 2. Create the HRegion
-    HRegion region = HRegion.createHRegion(newRegion, this.masterStatus.getRootDir(),
+    HRegion region = HRegion.createHRegion(newRegion, this.masterStatus.getFileSystemManager().getRootDir(),
       masterStatus.getConfiguration());
 
     // 3. Insert into meta
@@ -1179,7 +1192,7 @@ public class RegionManager {
         // allocated the ROOT region below.
         try {
           // Cycle rather than hold here in case master is closed meantime.
-          rootRegionLocation.wait(this.masterStatus.getThreadWakeFrequency());
+          rootRegionLocation.wait(threadWakeFrequency);
         } catch (InterruptedException e) {
           // continue
         }
@@ -1220,7 +1233,10 @@ public class RegionManager {
 
   private void writeRootRegionLocationToZooKeeper(HServerAddress address) {
     for (int attempt = 0; attempt < zooKeeperNumRetries; ++attempt) {
-      if (masterStatus.getZooKeeperWrapper().writeRootRegionLocation(address)) {
+      ZooKeeperWrapper zkw = ZooKeeperWrapper.getInstance(
+                               masterStatus.getConfiguration(), 
+                               masterStatus.getHServerAddress().toString());
+      if (zkw.writeRootRegionLocation(address)) {
         return;
       }
 
@@ -1394,7 +1410,7 @@ public class RegionManager {
     void loadBalancing(HServerInfo info, HRegionInfo[] mostLoadedRegions,
         ArrayList<HMsg> returnMsgs) {
       HServerLoad servLoad = info.getLoad();
-      double avg = masterStatus.getAverageLoad();
+      double avg = masterStatus.getServerManager().getAverageLoad();
 
       // nothing to balance if server load not more then average load
       if(servLoad.getLoad() <= Math.ceil(avg) || avg <= 2.0) {
@@ -1449,7 +1465,7 @@ public class RegionManager {
         double avgLoad) {
 
       SortedMap<HServerLoad, Set<String>> loadToServers =
-        masterStatus.getLoadToServers();
+        masterStatus.getServerManager().getLoadToServers();
       // check if server most loaded
       if (!loadToServers.get(loadToServers.lastKey()).contains(srvName))
         return 0;
@@ -1683,5 +1699,63 @@ public class RegionManager {
       }
       return Bytes.compareTo(getRegionName(), o.getRegionName());
     }
+  }
+  
+  /*
+   * When we find rows in a meta region that has an empty HRegionInfo, we
+   * clean them up here.
+   *
+   * @param s connection to server serving meta region
+   * @param metaRegionName name of the meta region we scanned
+   * @param emptyRows the row keys that had empty HRegionInfos
+   */
+  public static void deleteEmptyMetaRows(HRegionInterface s,
+      byte [] metaRegionName,
+      List<byte []> emptyRows) {
+    for (byte [] regionName: emptyRows) {
+      try {
+        HRegion.removeRegionFromMETA(s, metaRegionName, regionName);
+        LOG.warn("Removed region: " + Bytes.toString(regionName) +
+          " from meta region: " +
+          Bytes.toString(metaRegionName) + " because HRegionInfo was empty");
+      } catch (IOException e) {
+        LOG.error("deleting region: " + Bytes.toString(regionName) +
+            " from meta region: " + Bytes.toString(metaRegionName), e);
+      }
+    }
+  }
+  
+  // TODO ryan rework this function
+  /*
+   * Get HRegionInfo from passed META map of row values.
+   * Returns null if none found (and logs fact that expected COL_REGIONINFO
+   * was missing).  Utility method used by scanners of META tables.
+   * @param row name of the row
+   * @param map Map to do lookup in.
+   * @return Null or found HRegionInfo.
+   * @throws IOException
+   */
+  public static HRegionInfo getHRegionInfo(final byte [] row, final Result res)
+  throws IOException {
+    byte[] regioninfo = res.getValue(HConstants.CATALOG_FAMILY,
+        HConstants.REGIONINFO_QUALIFIER);
+    if (regioninfo == null) {
+      StringBuilder sb =  new StringBuilder();
+      NavigableMap<byte[], byte[]> infoMap =
+        res.getFamilyMap(HConstants.CATALOG_FAMILY);
+      for (byte [] e: infoMap.keySet()) {
+        if (sb.length() > 0) {
+          sb.append(", ");
+        }
+        sb.append(Bytes.toString(HConstants.CATALOG_FAMILY) + ":"
+            + Bytes.toString(e));
+      }
+      LOG.warn(Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
+          Bytes.toString(HConstants.REGIONINFO_QUALIFIER)
+          + " is empty for row: " + Bytes.toString(row) + "; has keys: "
+          + sb.toString());
+      return null;
+    }
+    return Writables.getHRegionInfo(regioninfo);
   }
 }

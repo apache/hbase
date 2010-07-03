@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -44,20 +45,29 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
   protected final Sleeper sleeper;
   protected final MetaRegion m;
   protected final MasterStatus masterStatus;
+  protected static int numRetries;
+  protected static int threadWakeFrequency;
 
   protected HRegionInterface server;
 
   protected RetryableMetaOperation(MetaRegion m, MasterStatus masterStatus) {
     this.m = m;
     this.masterStatus = masterStatus;
-    this.sleeper = new Sleeper(this.masterStatus.getThreadWakeFrequency(),
-      this.masterStatus.getClosed());
+    threadWakeFrequency = 
+      masterStatus.getConfiguration().getInt(
+          HConstants.THREAD_WAKE_FREQUENCY, 
+          HConstants.DEFAULT_THREAD_WAKE_FREQUENCY);
+    this.sleeper = new Sleeper(threadWakeFrequency, this.masterStatus.getClosed());
+    numRetries = 
+      masterStatus.getConfiguration().getInt(
+          HConstants.NUM_CLIENT_RETRIES, 
+          HConstants.DEFAULT_NUM_CLIENT_RETRIES);
   }
 
   protected T doWithRetries()
   throws IOException, RuntimeException {
     List<IOException> exceptions = new ArrayList<IOException>();
-    for (int tries = 0; tries < this.masterStatus.getNumRetries(); tries++) {
+    for (int tries = 0; tries < numRetries; tries++) {
       if (this.masterStatus.isClosed()) {
         return null;
       }
@@ -74,7 +84,7 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
         if (e instanceof RemoteException) {
           e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
         }
-        if (tries == this.masterStatus.getNumRetries() - 1) {
+        if (tries == numRetries - 1) {
           if (LOG.isDebugEnabled()) {
             StringBuilder message = new StringBuilder(
                 "Trying to contact region server for regionName '" +
@@ -86,7 +96,7 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
             }
             LOG.debug(message);
           }
-          this.masterStatus.checkFileSystem();
+          this.masterStatus.getFileSystemManager().checkFileSystem();
           throw e;
         }
         if (LOG.isDebugEnabled()) {

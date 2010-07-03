@@ -157,7 +157,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
 
       int regionCount = getRegionCount();
       List<HRegionServer> servers = getOnlineRegionServers();
-      double avg = cluster.getMaster().getAverageLoad();
+      double avg = cluster.getMaster().getServerManager().getAverageLoad();
       int avgLoadPlusSlop = (int)Math.ceil(avg * (1 + slop));
       int avgLoadMinusSlop = (int)Math.floor(avg * (1 - slop)) - 1;
       LOG.debug("There are " + servers.size() + " servers and " + regionCount

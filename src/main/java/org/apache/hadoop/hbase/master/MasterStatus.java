@@ -19,22 +19,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.ServerStatus;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ServerConnection;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
 /**
  * These are the set of functions implemented by the HMaster and accessed by 
@@ -45,48 +33,45 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
  */
 public interface MasterStatus extends ServerStatus {
 
+  /**
+   * Return the server manager for region server related info
+   */
   public ServerManager getServerManager();
 
+  /**
+   * Return the region manager for region related info
+   */
   public RegionManager getRegionManager();
+  
+  /**
+   * Return the file system manager for dealing with FS related stuff
+   */
+  public FileSystemManager getFileSystemManager();
 
+  /**
+   * Is this the master that is starting the cluster up? If true, yes. 
+   * Otherwise this is a failed over master.
+   */
   public boolean isClusterStartup();
-  
-  public FileSystem getFileSystem();
-  
-  public Path getOldLogDir();
-  
-  public ZooKeeperWrapper getZooKeeperWrapper();
-  
-  public void startShutdown();
-  
-  public MasterMetrics getMetrics();
-  
-  public RegionServerOperationQueue getRegionServerOperationQueue();
-  
+
+  /**
+   * Return the server RPC connection
+   */
   public ServerConnection getServerConnection();
   
-  public boolean checkFileSystem();
+  // TODO: the semantics of the following methods should be defined. Once that 
+  // is clear, most of these should move to server status
   
-  public int getThreadWakeFrequency();
-  
-  public int getNumRetries();
-  
-  public void deleteEmptyMetaRows(HRegionInterface s,
-      byte [] metaRegionName,
-      List<byte []> emptyRows);
-  
-  public HRegionInfo getHRegionInfo(final byte [] row, final Result res) throws IOException;
-  
-  public Path getRootDir();
-  
-  public Lock getSplitLogLock();
-  
-  public int numServers();
-  
-  public void getLightServers(final HServerLoad l,
-      SortedMap<HServerLoad, Set<String>> m);
-  
-  public SortedMap<HServerLoad, Set<String>> getLoadToServers();
-  
-  public double getAverageLoad();
+  // start shutting down the server
+  public void startShutdown();
+  // is a shutdown requested
+  public AtomicBoolean getShutdownRequested();
+  // sets the closed variable in the master to true
+  public void setClosed();
+  // returns the closed atomic boolean
+  public AtomicBoolean getClosed();
+  // returns the boolean value of the closed atomic boolean
+  public boolean isClosed();
+  // is the server shutdown
+  public void shutdown();
 }

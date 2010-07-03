@@ -94,7 +94,7 @@ abstract class TableOperation {
           if (values == null || values.isEmpty()) {
             break;
           }
-          HRegionInfo info = this.masterStatus.getHRegionInfo(values.getRow(), values);
+          HRegionInfo info = RegionManager.getHRegionInfo(values.getRow(), values);
           if (info == null) {
             emptyRows.add(values.getRow());
             LOG.error(Bytes.toString(HConstants.CATALOG_FAMILY) + ":"
@@ -137,7 +137,7 @@ abstract class TableOperation {
         LOG.warn("Found " + emptyRows.size() +
             " rows with empty HRegionInfo while scanning meta region " +
             Bytes.toString(m.getRegionName()));
-        masterStatus.deleteEmptyMetaRows(server, m.getRegionName(), emptyRows);
+        RegionManager.deleteEmptyMetaRows(server, m.getRegionName(), emptyRows);
       }
 
       if (!tableExists) {

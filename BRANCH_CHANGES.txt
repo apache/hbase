@@ -5,8 +5,10 @@ Branch 0.90.0 - Master Rewrite Branch
   BUG FIXES
 
   IMPROVEMENTS
-    HBASE-2692  [MasterStatus] HMaster cleanup and refactor
-                (jgray via Karthik R)
+    HBASE-2695  [MasterStatus] HMaster cleanup and refactor
+                (Karthik R via jgray)
+    HBASE-2695  [MasterStatus-part2.1] HMaster clean and refactor
+                (Karthik R via jgray)
 
   NEW FEATURES
 

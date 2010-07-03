@@ -693,7 +693,9 @@ public class HBaseTestingUtility {
    */
   public void expireMasterSession() throws Exception {
     HMaster master = hbaseCluster.getMaster();
-    expireSession(master.getZooKeeperWrapper());
+    ZooKeeperWrapper zkw = 
+      ZooKeeperWrapper.getInstance(conf, master.getHServerAddress().toString());
+    expireSession(zkw);
   }
 
   /**

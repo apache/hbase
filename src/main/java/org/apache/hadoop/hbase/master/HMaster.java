@@ -127,15 +127,11 @@ public class HMaster extends Thread implements HMasterInterface,
   private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
 
   private final Configuration conf;
-  private final Path rootdir;
   private InfoServer infoServer;
-  private final int threadWakeFrequency;
   private final int numRetries;
 
   // Metrics is set when we call run.
   private final MasterMetrics metrics;
-
-  final Lock splitLogLock = new ReentrantLock();
 
   // Our zk client.
   private ZooKeeperWrapper zooKeeperWrapper;
@@ -143,15 +139,12 @@ public class HMaster extends Thread implements HMasterInterface,
   private final ZKMasterAddressWatcher zkMasterAddressWatcher;
   // A Sleeper that sleeps for threadWakeFrequency; sleep if nothing todo.
   private final Sleeper sleeper;
-  // Keep around for convenience.
-  private final FileSystem fs;
-  // Is the fileystem ok?
-  private volatile boolean fsOk = true;
-  // The Path to the old logs dir
-  private final Path oldLogDir;
 
   private final HBaseServer rpcServer;
   private final HServerAddress address;
+  
+  // file system manager for the master FS operations
+  private final FileSystemManager fileSystemManager;
 
   private final ServerConnection connection;
   private final ServerManager serverManager;
@@ -172,31 +165,6 @@ public class HMaster extends Thread implements HMasterInterface,
   public HMaster(Configuration conf) throws IOException {
     this.conf = conf;
     
-    // Figure out if this is a fresh cluster start. This is done by checking the 
-    // number of RS ephemeral nodes. RS ephemeral nodes are created only after 
-    // the primary master has written the address to ZK. So this has to be done 
-    // before we race to write our address to zookeeper.
-    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
-    isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
-    
-    // Set filesystem to be that of this.rootdir else we get complaints about
-    // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
-    // default localfs.  Presumption is that rootdir is fully-qualified before
-    // we get to here with appropriate fs scheme.
-    this.rootdir = FSUtils.getRootDir(this.conf);
-    // Cover both bases, the old way of setting default fs and the new.
-    // We're supposed to run on 0.20 and 0.21 anyways.
-    this.conf.set("fs.default.name", this.rootdir.toString());
-    this.conf.set("fs.defaultFS", this.rootdir.toString());
-    this.fs = FileSystem.get(this.conf);
-    checkRootDir(this.rootdir, this.conf, this.fs);
-
-    // Make sure the region servers can archive their old logs
-    this.oldLogDir = new Path(this.rootdir, HConstants.HREGION_OLDLOGDIR_NAME);
-    if(!this.fs.exists(this.oldLogDir)) {
-      this.fs.mkdirs(this.oldLogDir);
-    }
-
     // Get my address and create an rpc server instance.  The rpc-server port
     // can be ephemeral...ensure we have the correct info
     HServerAddress a = new HServerAddress(getMyAddress(this.conf));
@@ -206,12 +174,23 @@ public class HMaster extends Thread implements HMasterInterface,
     this.address = new HServerAddress(this.rpcServer.getListenerAddress());
 
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
-    this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-        10 * 1000);
-
-    this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
+    int threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
+    this.sleeper = new Sleeper(threadWakeFrequency, this.closed);
     this.connection = ServerConnectionManager.getConnection(conf);
 
+    // Figure out if this is a fresh cluster start. This is done by checking the 
+    // number of RS ephemeral nodes. RS ephemeral nodes are created only after 
+    // the primary master has written the address to ZK. So this has to be done 
+    // before we race to write our address to zookeeper.
+    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, getHServerAddress().toString());
+    isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
+    
+    // Create the filesystem manager, which in turn does the following:
+    //   - Creates the root hbase directory in the FS
+    //   - Checks the FS to make sure the root directory is readable
+    //   - Creates the archive directory for logs
+    fileSystemManager = new FileSystemManager(conf, this);
+    
     // Get our zookeeper wrapper and then try to write our address to zookeeper.
     // We'll succeed if we are only  master or if we win the race when many
     // masters.  Otherwise we park here inside in writeAddressToZooKeeper.
@@ -224,7 +203,12 @@ public class HMaster extends Thread implements HMasterInterface,
     this.regionServerOperationQueue =
       new RegionServerOperationQueue(this.conf, this.closed);
 
-    serverManager = new ServerManager(this);
+    // set the thread name
+    setName(MASTER);
+    // create the master metrics object
+    this.metrics = new MasterMetrics(MASTER);
+
+    serverManager = new ServerManager(this, metrics, regionServerOperationQueue);
 
     
     // Start the unassigned watcher - which will create the unassigned region 
@@ -240,8 +224,6 @@ public class HMaster extends Thread implements HMasterInterface,
     // start the region manager
     regionManager = new RegionManager(this);
 
-    setName(MASTER);
-    this.metrics = new MasterMetrics(MASTER);
     // We're almost open for business
     this.closed.set(false);
     LOG.info("HMaster initialized on " + this.address.toString());
@@ -264,77 +246,6 @@ public class HMaster extends Thread implements HMasterInterface,
   }
 
   /*
-   * Get the rootdir.  Make sure its wholesome and exists before returning.
-   * @param rd
-   * @param conf
-   * @param fs
-   * @return hbase.rootdir (after checks for existence and bootstrapping if
-   * needed populating the directory with necessary bootup files).
-   * @throws IOException
-   */
-  private static Path checkRootDir(final Path rd, final Configuration c,
-    final FileSystem fs)
-  throws IOException {
-    // If FS is in safe mode wait till out of it.
-    FSUtils.waitOnSafeMode(c, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-        10 * 1000));
-    // Filesystem is good. Go ahead and check for hbase.rootdir.
-    if (!fs.exists(rd)) {
-      fs.mkdirs(rd);
-      FSUtils.setVersion(fs, rd);
-    } else {
-      FSUtils.checkVersion(fs, rd, true);
-    }
-    // Make sure the root region directory exists!
-    if (!FSUtils.rootRegionExists(fs, rd)) {
-      bootstrap(rd, c);
-    }
-    return rd;
-  }
-
-  private static void bootstrap(final Path rd, final Configuration c)
-  throws IOException {
-    LOG.info("BOOTSTRAP: creating ROOT and first META regions");
-    try {
-      // Bootstrapping, make sure blockcache is off.  Else, one will be
-      // created here in bootstap and it'll need to be cleaned up.  Better to
-      // not make it in first place.  Turn off block caching for bootstrap.
-      // Enable after.
-      HRegionInfo rootHRI = new HRegionInfo(HRegionInfo.ROOT_REGIONINFO);
-      setInfoFamilyCaching(rootHRI, false);
-      HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
-      setInfoFamilyCaching(metaHRI, false);
-      HRegion root = HRegion.createHRegion(rootHRI, rd, c);
-      HRegion meta = HRegion.createHRegion(metaHRI, rd, c);
-      setInfoFamilyCaching(rootHRI, true);
-      setInfoFamilyCaching(metaHRI, true);
-      // Add first region from the META table to the ROOT region.
-      HRegion.addRegionToMETA(root, meta);
-      root.close();
-      root.getLog().closeAndDelete();
-      meta.close();
-      meta.getLog().closeAndDelete();
-    } catch (IOException e) {
-      e = RemoteExceptionHandler.checkIOException(e);
-      LOG.error("bootstrap", e);
-      throw e;
-    }
-  }
-
-  /*
-   * @param hri Set all family block caching to <code>b</code>
-   * @param b
-   */
-  private static void setInfoFamilyCaching(final HRegionInfo hri, final boolean b) {
-    for (HColumnDescriptor hcd: hri.getTableDesc().families.values()) {
-      if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
-        hcd.setBlockCacheEnabled(b);
-        hcd.setInMemory(b);
-      }
-    }
-  }
-
-  /*
    * @return This masters' address.
    * @throws UnknownHostException
    */
@@ -346,24 +257,6 @@ public class HMaster extends Thread implements HMasterInterface,
     s += ":" + c.get(HConstants.MASTER_PORT,
         Integer.toString(HConstants.DEFAULT_MASTER_PORT));
     return s;
-  }
-
-  /**
-   * Checks to see if the file system is still accessible.
-   * If not, sets closed
-   * @return false if file system is not available
-   */
-  public boolean checkFileSystem() {
-    if (this.fsOk) {
-      try {
-        FSUtils.checkFileSystemAvailable(this.fs);
-      } catch (IOException e) {
-        LOG.fatal("Shutting down HBase cluster: file system not available", e);
-        this.closed.set(true);
-        this.fsOk = false;
-      }
-    }
-    return this.fsOk;
   }
 
   /** @return HServerAddress of the master server */
@@ -379,24 +272,12 @@ public class HMaster extends Thread implements HMasterInterface,
   public InfoServer getInfoServer() {
     return this.infoServer;
   }
-
+  
   /**
-   * @return HBase root dir.
-   * @throws IOException
+   * Return the file systen manager instance
    */
-  public Path getRootDir() {
-    return this.rootdir;
-  }
-
-  public int getNumRetries() {
-    return this.numRetries;
-  }
-
-  /**
-   * @return Server metrics
-   */
-  public MasterMetrics getMetrics() {
-    return this.metrics;
+  public FileSystemManager getFileSystemManager() {
+    return fileSystemManager;
   }
 
   /**
@@ -414,18 +295,14 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.regionManager;
   }
 
-  public int getThreadWakeFrequency() {
-    return this.threadWakeFrequency;
-  }
-
-  public FileSystem getFileSystem() {
-    return this.fs;
-  }
-
   public AtomicBoolean getShutdownRequested() {
     return this.shutdownRequested;
   }
 
+  public void setClosed() {
+    this.closed.set(true);
+  }
+  
   public AtomicBoolean getClosed() {
     return this.closed;
   }
@@ -439,47 +316,21 @@ public class HMaster extends Thread implements HMasterInterface,
   }
 
   /**
-   * Get the ZK wrapper object
+   * Get the ZK wrapper object - needed by master_jsp.java
    * @return the zookeeper wrapper
    */
   public ZooKeeperWrapper getZooKeeperWrapper() {
     return this.zooKeeperWrapper;
   }
-
-  // These methods are so don't have to pollute RegionManager with ServerManager.
-  public SortedMap<HServerLoad, Set<String>> getLoadToServers() {
-    return this.serverManager.getLoadToServers();
+  /**
+   * Get the HBase root dir - needed by master_jsp.java
+   */
+  public Path getRootDir() {
+    return fileSystemManager.getRootDir();
   }
-
-  public int numServers() {
-    return this.serverManager.numServers();
-  }
-
-  public double getAverageLoad() {
-    return this.serverManager.getAverageLoad();
-  }
-
+  
   public RegionServerOperationQueue getRegionServerOperationQueue() {
     return this.regionServerOperationQueue;
-  }
-
-  /**
-   * Get the directory where old logs go
-   * @return the dir
-   */
-  public Path getOldLogDir() {
-    return this.oldLogDir;
-  }
-
-  /**
-   * Add to the passed <code>m</code> servers that are loaded less than
-   * <code>l</code>.
-   * @param l
-   * @param m
-   */
-  public void getLightServers(final HServerLoad l,
-      SortedMap<HServerLoad, Set<String>> m) {
-    this.serverManager.getLightServers(l, m);
   }
 
   /** Main processing loop */
@@ -508,7 +359,7 @@ public class HMaster extends Thread implements HMasterInterface,
             // If FAILED op processing, bad. Exit.
           break FINISHED;
         case REQUEUED_BUT_PROBLEM:
-          if (!checkFileSystem())
+          if (!fileSystemManager.checkFileSystem())
               // If bad filesystem, exit.
             break FINISHED;
           default:
@@ -518,7 +369,7 @@ public class HMaster extends Thread implements HMasterInterface,
       }
     } catch (Throwable t) {
       LOG.fatal("Unhandled exception. Starting shutdown.", t);
-      this.closed.set(true);
+      setClosed();
     }
 
     // Wait for all the remaining region servers to report in.
@@ -555,7 +406,7 @@ public class HMaster extends Thread implements HMasterInterface,
       // Check if this is a fresh start of the cluster
       if (addresses.isEmpty()) {
         LOG.debug("Master fresh start, proceeding with normal startup");
-        splitLogAfterStartup();
+        fileSystemManager.splitLogAfterStartup();
         return;
       }
       // Failover case.
@@ -596,55 +447,7 @@ public class HMaster extends Thread implements HMasterInterface,
       }
       LOG.info("Inspection found " + assignedRegions.size() + " regions, " +
         (isRootRegionAssigned ? "with -ROOT-" : "but -ROOT- was MIA"));
-      splitLogAfterStartup();
-  }
-
-  /*
-   * Inspect the log directory to recover any log file without
-   * ad active region server.
-   */
-  private void splitLogAfterStartup() {
-    Path logsDirPath =
-      new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
-    try {
-      if (!this.fs.exists(logsDirPath)) return;
-    } catch (IOException e) {
-      throw new RuntimeException("Could exists for " + logsDirPath, e);
-    }
-    FileStatus[] logFolders;
-    try {
-      logFolders = this.fs.listStatus(logsDirPath);
-    } catch (IOException e) {
-      throw new RuntimeException("Failed listing " + logsDirPath.toString(), e);
-    }
-    if (logFolders == null || logFolders.length == 0) {
-      LOG.debug("No log files to split, proceeding...");
-      return;
-    }
-    for (FileStatus status : logFolders) {
-      String serverName = status.getPath().getName();
-      LOG.info("Found log folder : " + serverName);
-      if(this.serverManager.getServerInfo(serverName) == null) {
-        LOG.info("Log folder doesn't belong " +
-          "to a known region server, splitting");
-        this.splitLogLock.lock();
-        Path logDir =
-          new Path(this.rootdir, HLog.getHLogDirectoryName(serverName));
-        try {
-          HLog.splitLog(this.rootdir, logDir, oldLogDir, this.fs, getConfiguration());
-        } catch (IOException e) {
-          LOG.error("Failed splitting " + logDir.toString(), e);
-        } finally {
-          this.splitLogLock.unlock();
-        }
-      } else {
-        LOG.info("Log folder belongs to an existing region server");
-      }
-    }
-  }
-  
-  public Lock getSplitLogLock() {
-    return splitLogLock;
+      fileSystemManager.splitLogAfterStartup();
   }
 
   /*
@@ -680,7 +483,7 @@ public class HMaster extends Thread implements HMasterInterface,
         }
       }
       // Something happened during startup. Shut things down.
-      this.closed.set(true);
+      setClosed();
       LOG.error("Failed startup", e);
     }
   }
@@ -689,7 +492,7 @@ public class HMaster extends Thread implements HMasterInterface,
    * Start shutting down the master
    */
   public void startShutdown() {
-    this.closed.set(true);
+    setClosed();
     this.regionManager.stopScanners();
     this.regionServerOperationQueue.shutdown();
     this.serverManager.notifyServers();
@@ -1053,7 +856,7 @@ public class HMaster extends Thread implements HMasterInterface,
       }
       // Need hri
       Result rr = getFromMETA(regionname, HConstants.CATALOG_FAMILY);
-      HRegionInfo hri = getHRegionInfo(rr.getRow(), rr);
+      HRegionInfo hri = RegionManager.getHRegionInfo(rr.getRow(), rr);
       if (hostnameAndPort == null) {
         // Get server from the .META. if it wasn't passed as argument
         hostnameAndPort =
@@ -1093,64 +896,6 @@ public class HMaster extends Thread implements HMasterInterface,
     status.setDeadServers(serverManager.getDeadServers());
     status.setRegionsInTransition(this.regionManager.getRegionsInTransition());
     return status;
-  }
-
-  // TODO ryan rework this function
-  /*
-   * Get HRegionInfo from passed META map of row values.
-   * Returns null if none found (and logs fact that expected COL_REGIONINFO
-   * was missing).  Utility method used by scanners of META tables.
-   * @param row name of the row
-   * @param map Map to do lookup in.
-   * @return Null or found HRegionInfo.
-   * @throws IOException
-   */
-  public HRegionInfo getHRegionInfo(final byte [] row, final Result res)
-  throws IOException {
-    byte[] regioninfo = res.getValue(HConstants.CATALOG_FAMILY,
-        HConstants.REGIONINFO_QUALIFIER);
-    if (regioninfo == null) {
-      StringBuilder sb =  new StringBuilder();
-      NavigableMap<byte[], byte[]> infoMap =
-        res.getFamilyMap(HConstants.CATALOG_FAMILY);
-      for (byte [] e: infoMap.keySet()) {
-        if (sb.length() > 0) {
-          sb.append(", ");
-        }
-        sb.append(Bytes.toString(HConstants.CATALOG_FAMILY) + ":"
-            + Bytes.toString(e));
-      }
-      LOG.warn(Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
-          Bytes.toString(HConstants.REGIONINFO_QUALIFIER)
-          + " is empty for row: " + Bytes.toString(row) + "; has keys: "
-          + sb.toString());
-      return null;
-    }
-    return Writables.getHRegionInfo(regioninfo);
-  }
-
-  /*
-   * When we find rows in a meta region that has an empty HRegionInfo, we
-   * clean them up here.
-   *
-   * @param s connection to server serving meta region
-   * @param metaRegionName name of the meta region we scanned
-   * @param emptyRows the row keys that had empty HRegionInfos
-   */
-  public void deleteEmptyMetaRows(HRegionInterface s,
-      byte [] metaRegionName,
-      List<byte []> emptyRows) {
-    for (byte [] regionName: emptyRows) {
-      try {
-        HRegion.removeRegionFromMETA(s, metaRegionName, regionName);
-        LOG.warn("Removed region: " + Bytes.toString(regionName) +
-          " from meta region: " +
-          Bytes.toString(metaRegionName) + " because HRegionInfo was empty");
-      } catch (IOException e) {
-        LOG.error("deleting region: " + Bytes.toString(regionName) +
-            " from meta region: " + Bytes.toString(metaRegionName), e);
-      }
-    }
   }
 
   /**

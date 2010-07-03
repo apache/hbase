@@ -45,8 +45,8 @@ class DeleteColumn extends ColumnOperation {
       updateRegionInfo(server, m.getRegionName(), i);
       // Delete the directories used by the column
       Path tabledir =
-        new Path(this.master.getRootDir(), i.getTableDesc().getNameAsString());
-      this.master.getFileSystem().
+        new Path(this.master.getFileSystemManager().getRootDir(), i.getTableDesc().getNameAsString());
+      this.master.getFileSystemManager().getFileSystem().
         delete(Store.getStoreHomedir(tabledir, i.getEncodedName(),
         this.columnName), true);
     }

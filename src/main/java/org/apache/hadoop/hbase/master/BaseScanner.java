@@ -183,7 +183,7 @@ abstract class BaseScanner extends Chore {
         if (values == null || values.size() == 0) {
           break;
         }
-        HRegionInfo info = masterStatus.getHRegionInfo(values.getRow(), values);
+        HRegionInfo info = RegionManager.getHRegionInfo(values.getRow(), values);
         if (info == null) {
           emptyRows.add(values.getRow());
           continue;
@@ -229,7 +229,7 @@ abstract class BaseScanner extends Chore {
     if (emptyRows.size() > 0) {
       LOG.warn("Found " + emptyRows.size() + " rows with empty HRegionInfo " +
         "while scanning meta region " + Bytes.toString(region.getRegionName()));
-      this.masterStatus.deleteEmptyMetaRows(regionServer, region.getRegionName(),
+      RegionManager.deleteEmptyMetaRows(regionServer, region.getRegionName(),
           emptyRows);
     }
 
@@ -309,8 +309,8 @@ abstract class BaseScanner extends Chore {
       LOG.info("Deleting region " + parent.getRegionNameAsString() +
         " (encoded=" + parent.getEncodedName() +
         ") because daughter splits no longer hold references");
-      HRegion.deleteRegion(this.masterStatus.getFileSystem(),
-        this.masterStatus.getRootDir(), parent);
+      HRegion.deleteRegion(masterStatus.getFileSystemManager().getFileSystem(),
+        this.masterStatus.getFileSystemManager().getRootDir(), parent);
       HRegion.removeRegionFromMETA(srvr, metaRegionName,
         parent.getRegionName());
       result = true;
@@ -499,15 +499,15 @@ abstract class BaseScanner extends Chore {
       return result;
     }
     Path tabledir =
-      new Path(this.masterStatus.getRootDir(), split.getTableDesc().getNameAsString());
+      new Path(this.masterStatus.getFileSystemManager().getRootDir(), split.getTableDesc().getNameAsString());
     for (HColumnDescriptor family: split.getTableDesc().getFamilies()) {
       Path p = Store.getStoreHomedir(tabledir, split.getEncodedName(),
         family.getName());
-      if (!this.masterStatus.getFileSystem().exists(p)) continue;
+      if (!masterStatus.getFileSystemManager().getFileSystem().exists(p)) continue;
       // Look for reference files.  Call listStatus with an anonymous
       // instance of PathFilter.
       FileStatus [] ps =
-        this.masterStatus.getFileSystem().listStatus(p, new PathFilter () {
+        masterStatus.getFileSystemManager().getFileSystem().listStatus(p, new PathFilter () {
             public boolean accept(Path path) {
               return StoreFile.isReference(path);
             }

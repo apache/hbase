@@ -37,14 +37,4 @@ public interface ServerStatus {
    * Get the configuration object for this server.
    */
   public Configuration getConfiguration();
-
-  // TODO: make sure the functions below work on the region server also, or get 
-  // moved to the MasterStatus interface
-  public AtomicBoolean getShutdownRequested();
-
-  public AtomicBoolean getClosed();
-
-  public boolean isClosed();
-  
-  public void shutdown();
 }

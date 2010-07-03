@@ -117,7 +117,7 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
       }
       ZooKeeperWrapper zkWrapper =
           ZooKeeperWrapper.getInstance(masterStatus.getConfiguration(),
-              HMaster.class.getName());
+              masterStatus.getHServerAddress().toString());
       zkWrapper.deleteUnassignedRegion(regionInfo.getEncodedName());
       return true;
     }

@@ -59,7 +59,7 @@ class RootScanner extends BaseScanner {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.warn("Scan ROOT region", e);
       // Make sure the file system is still available
-      masterStatus.checkFileSystem();
+      masterStatus.getFileSystemManager().checkFileSystem();
     } catch (Exception e) {
       // If for some reason we get some other kind of exception,
       // at least log it rather than go out silently.

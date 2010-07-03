@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 import java.io.IOException;
@@ -44,6 +45,8 @@ class MetaScanner extends BaseScanner {
 
   private final List<MetaRegion> metaRegionsToRescan =
     new ArrayList<MetaRegion>();
+  
+  protected static int threadWakeFrequency;
 
   /**
    * Constructor
@@ -52,6 +55,7 @@ class MetaScanner extends BaseScanner {
    */
   public MetaScanner(MasterStatus masterStatus) {
     super(masterStatus, false, masterStatus.getShutdownRequested());
+    threadWakeFrequency = masterStatus.getConfiguration().getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
   }
 
   // Don't retry if we get an error while scanning. Errors are most often
@@ -86,7 +90,7 @@ class MetaScanner extends BaseScanner {
         return false;
       }
       // Make sure the file system is still available
-      this.masterStatus.checkFileSystem();
+      this.masterStatus.getFileSystemManager().checkFileSystem();
     } catch (Exception e) {
       // If for some reason we get some other kind of exception,
       // at least log it rather than go out silently.
@@ -102,7 +106,7 @@ class MetaScanner extends BaseScanner {
         (region == null && metaRegionsToScan.size() > 0) &&
           !metaRegionsScanned()) {
       try {
-        region = metaRegionsToScan.poll(this.masterStatus.getThreadWakeFrequency(),
+        region = metaRegionsToScan.poll(this.threadWakeFrequency,
           TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
         // continue
@@ -164,7 +168,7 @@ class MetaScanner extends BaseScanner {
         }
       }
       try {
-        wait(this.masterStatus.getThreadWakeFrequency());
+        wait(this.threadWakeFrequency);
       } catch (InterruptedException e) {
         // continue
       }

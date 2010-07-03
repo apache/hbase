@@ -36,8 +36,10 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.RegionManager.RegionState;
+import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
@@ -86,6 +88,8 @@ public class ServerManager {
     new ConcurrentHashMap<String, HServerLoad>();
 
   private MasterStatus masterStatus;
+  private RegionServerOperationQueue regionServerOperationQueue;
+  private MasterMetrics masterMetrics;
 
   /* The regionserver will not be assigned or asked close regions if it
    * is currently opening >= this many regions.
@@ -138,8 +142,11 @@ public class ServerManager {
    * Constructor.
    * @param masterStatus
    */
-  public ServerManager(MasterStatus masterStatus) {
+  public ServerManager(MasterStatus masterStatus, MasterMetrics masterMetrics, 
+                       RegionServerOperationQueue regionServerOperationQueue) {
     this.masterStatus = masterStatus;
+    this.masterMetrics = masterMetrics;
+    this.regionServerOperationQueue = regionServerOperationQueue;
     Configuration c = masterStatus.getConfiguration();
     this.nobalancingCount = c.getInt("hbase.regions.nobalancing.count", 4);
     int metaRescanInterval = c.getInt("hbase.master.meta.thread.rescanfrequency",
@@ -153,7 +160,8 @@ public class ServerManager {
     this.oldLogCleaner = new OldLogsCleaner(
       c.getInt("hbase.master.meta.thread.rescanfrequency",60 * 1000),
         this.masterStatus.getShutdownRequested(), c,
-        masterStatus.getFileSystem(), masterStatus.getOldLogDir());
+        masterStatus.getFileSystemManager().getFileSystem(), 
+        masterStatus.getFileSystemManager().getOldLogDir());
     Threads.setDaemonThreadRunning(oldLogCleaner,
       n + ".oldLogCleaner");
 
@@ -238,7 +246,10 @@ public class ServerManager {
     // We must set this watcher here because it can be set on a fresh start
     // or on a failover
     Watcher watcher = new ServerExpirer(new HServerInfo(info));
-    this.masterStatus.getZooKeeperWrapper().updateRSLocationGetWatch(info, watcher);
+    ZooKeeperWrapper zkw = ZooKeeperWrapper.getInstance(
+        masterStatus.getConfiguration(), 
+        masterStatus.getHServerAddress().toString());
+    zkw.updateRSLocationGetWatch(info, watcher);
     this.serversToServerInfo.put(serverName, info);
     this.serversToLoad.put(serverName, load);
     synchronized (this.loadToServers) {
@@ -403,7 +414,7 @@ public class ServerManager {
     this.serversToServerInfo.put(serverInfo.getServerName(), serverInfo);
     HServerLoad load = this.serversToLoad.get(serverInfo.getServerName());
     if (load != null) {
-      this.masterStatus.getMetrics().incrementRequests(load.getNumberOfRequests());
+      masterMetrics.incrementRequests(load.getNumberOfRequests());
       if (!load.equals(serverInfo.getLoad())) {
         updateLoadToServers(serverInfo.getServerName(), load);
       }
@@ -450,8 +461,7 @@ public class ServerManager {
       LOG.info("Processing " + incomingMsgs[i] + " from " +
         serverInfo.getServerName() + "; " + (i + 1) + " of " +
         incomingMsgs.length);
-      if (!this.masterStatus.getRegionServerOperationQueue().
-          process(serverInfo, incomingMsgs[i])) {
+      if (!regionServerOperationQueue.process(serverInfo, incomingMsgs[i])) {
         continue;
       }
       switch (incomingMsgs[i].getType()) {
@@ -623,7 +633,7 @@ public class ServerManager {
           this.masterStatus.getRegionManager().setOpen(region.getRegionNameAsString());
           RegionServerOperation op =
             new ProcessRegionOpen(masterStatus, serverInfo, region);
-          this.masterStatus.getRegionServerOperationQueue().put(op);
+          regionServerOperationQueue.put(op);
         }
       }
     }
@@ -662,7 +672,7 @@ public class ServerManager {
       this.masterStatus.getRegionManager().setClosed(region.getRegionNameAsString());
       RegionServerOperation op =
         new ProcessRegionClose(masterStatus, region, offlineRegion, reassignRegion);
-      this.masterStatus.getRegionServerOperationQueue().put(op);
+      regionServerOperationQueue.put(op);
     }
   }
 
@@ -801,7 +811,7 @@ public class ServerManager {
    * a MSG_REGIONSERVER_STOP.
    */
   void letRegionServersShutdown() {
-    if (!masterStatus.checkFileSystem()) {
+    if (!masterStatus.getFileSystemManager().checkFileSystem()) {
       // Forget waiting for the region servers if the file system has gone
       // away. Just exit as quickly as possible.
       return;
@@ -870,8 +880,7 @@ public class ServerManager {
     LOG.debug("Added=" + serverName +
       " to dead servers, added shutdown processing operation");
     this.deadServers.add(serverName);
-    this.masterStatus.getRegionServerOperationQueue().
-      put(new ProcessServerShutdown(masterStatus, info));
+    regionServerOperationQueue.put(new ProcessServerShutdown(masterStatus, info));
   }
 
   /**
@@ -932,5 +941,9 @@ public class ServerManager {
 
   public void setMinimumServerCount(int minimumServerCount) {
     this.minimumServerCount = minimumServerCount;
+  }
+  
+  public RegionServerOperationQueue getRegionServerOperationQueue() {
+    return this.regionServerOperationQueue;
   }
 }

@@ -78,7 +78,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     this.logSplit = false;
     this.rootRescanned = false;
     this.rsLogDir =
-      new Path(masterStatus.getRootDir(), HLog.getHLogDirectoryName(serverInfo));
+      new Path(masterStatus.getFileSystemManager().getRootDir(), HLog.getHLogDirectoryName(serverInfo));
 
     // check to see if I am responsible for either ROOT or any of the META tables.
 
@@ -177,7 +177,7 @@ class ProcessServerShutdown extends RegionServerOperation {
             Bytes.toString(row));
         }
 
-        HRegionInfo info = masterStatus.getHRegionInfo(row, values);
+        HRegionInfo info = RegionManager.getHRegionInfo(row, values);
         if (info == null) {
           emptyRows.add(row);
           continue;
@@ -228,7 +228,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       LOG.warn("Found " + emptyRows.size() +
         " rows with empty HRegionInfo while scanning meta region " +
         Bytes.toString(regionName));
-      masterStatus.deleteEmptyMetaRows(server, regionName, emptyRows);
+      RegionManager.deleteEmptyMetaRows(server, regionName, emptyRows);
     }
     // Update server in root/meta entries
     for (ToDoEntry e: toDoList) {
@@ -291,16 +291,17 @@ class ProcessServerShutdown extends RegionServerOperation {
       masterStatus.getRegionManager().numOnlineMetaRegions());
     if (!logSplit) {
       // Process the old log file
-      if (this.masterStatus.getFileSystem().exists(rsLogDir)) {
-        if (!masterStatus.getSplitLogLock().tryLock()) {
+      if (this.masterStatus.getFileSystemManager().getFileSystem().exists(rsLogDir)) {
+        if (!masterStatus.getFileSystemManager().getSplitLogLock().tryLock()) {
           return false;
         }
         try {
-          HLog.splitLog(masterStatus.getRootDir(), rsLogDir,
-              this.masterStatus.getOldLogDir(), this.masterStatus.getFileSystem(),
-            this.masterStatus.getConfiguration());
+          HLog.splitLog(masterStatus.getFileSystemManager().getRootDir(), rsLogDir,
+              this.masterStatus.getFileSystemManager().getOldLogDir(), 
+              this.masterStatus.getFileSystemManager().getFileSystem(),
+              this.masterStatus.getConfiguration());
         } finally {
-          masterStatus.getSplitLogLock().unlock();
+          masterStatus.getFileSystemManager().getSplitLogLock().unlock();
         }
       }
       logSplit = true;
