@@ -85,15 +85,13 @@ import org.apache.zookeeper.data.Stat;
  *                         in transition. The first byte of the data for each 
  *                         of these nodes is the event type. This is used to 
  *                         deserialize the rest of the data.
+ *                         
+ * TODO: Eventually this class will be removed and everything put into ZKUtil
+ *       and ZooKeeperWatcher.  Can rename stuff once it's done.
  */
 public class ZooKeeperWrapper implements Watcher {
   protected static final Log LOG = LogFactory.getLog(ZooKeeperWrapper.class);
 
-  // instances of the watcher
-  private static Map<String,ZooKeeperWrapper> INSTANCES = 
-    new HashMap<String,ZooKeeperWrapper>();
-  // lock for ensuring a singleton per instance type
-  private static Lock createLock = new ReentrantLock();
   // name of this instance
   private String instanceName;
 
@@ -136,35 +134,6 @@ public class ZooKeeperWrapper implements Watcher {
 
   private List<Watcher> listeners = Collections.synchronizedList(new ArrayList<Watcher>());
 
-  // return the singleton given the name of the instance
-  public static ZooKeeperWrapper getInstance(Configuration conf, String name) {
-    name = getZookeeperClusterKey(conf, name);
-    return INSTANCES.get(name);
-  }
-  // creates only one instance
-  public static ZooKeeperWrapper createInstance(Configuration conf, String name) {
-    if (getInstance(conf, name) != null) {
-      return getInstance(conf, name);
-    }
-    ZooKeeperWrapper.createLock.lock();
-    try {
-      if (getInstance(conf, name) == null) {
-        try {
-          String fullname = getZookeeperClusterKey(conf, name);
-          ZooKeeperWrapper instance = new ZooKeeperWrapper(conf, fullname);
-          INSTANCES.put(fullname, instance);
-        }
-        catch (Exception e) {
-          LOG.error("<" + name + ">" + "Error creating a ZooKeeperWrapper " + e);
-        }
-      }
-    }
-    finally {
-      createLock.unlock();
-    }
-    return getInstance(conf, name);
-  }
-
   /**
    * Create a ZooKeeperWrapper. The Zookeeper wrapper listens to all messages
    * from Zookeeper, and notifies all the listeners about all the messages. Any
@@ -172,13 +141,14 @@ public class ZooKeeperWrapper implements Watcher {
    * and remove itself from being a listener.
    *
    * @param conf HBaseConfiguration to read settings from.
+   * @param instanceName name of this zk instance, used for debugging
    * @throws IOException If a connection error occurs.
    */
-  private ZooKeeperWrapper(Configuration conf, String instanceName)
+  protected ZooKeeperWrapper(Configuration conf, String instanceName)
   throws IOException {
     this.instanceName = instanceName;
-    Properties properties = HQuorumPeer.makeZKProps(conf);
-    quorumServers = HQuorumPeer.getZKQuorumServersString(properties);
+    Properties properties = ZKConfig.makeZKProps(conf);
+    quorumServers = ZKConfig.getZKQuorumServersString(properties);
     if (quorumServers == null) {
       throw new IOException("Could not read quorum servers from " +
                             HConstants.ZOOKEEPER_CONFIG_NAME);
@@ -192,7 +162,7 @@ public class ZooKeeperWrapper implements Watcher {
     String rsZNodeName         = conf.get("zookeeper.znode.rs", "rs");
     String masterAddressZNodeName = conf.get("zookeeper.znode.master", "master");
     String stateZNodeName      = conf.get("zookeeper.znode.state", "shutdown");
-    String regionsInTransitZNodeName = conf.get("zookeeper.znode.regionInTransition", "UNASSIGNED");
+    String regionsInTransitZNodeName = conf.get("zookeeper.znode.regionInTransition", "unassigned");
 
     rootRegionZNode     = getZNode(parentZNode, rootServerZNodeName);
     rsZNode             = getZNode(parentZNode, rsZNodeName);
@@ -243,7 +213,6 @@ public class ZooKeeperWrapper implements Watcher {
   }
 
   /** @return String dump of everything in ZooKeeper. */
-  @SuppressWarnings({"ConstantConditions"})
   public String dump() {
     StringBuilder sb = new StringBuilder();
     sb.append("\nHBase tree in ZooKeeper is rooted at ").append(parentZNode);
@@ -767,7 +736,6 @@ public class ZooKeeperWrapper implements Watcher {
   public void close() {
     try {
       zooKeeper.close();
-      INSTANCES.remove(instanceName);
       LOG.debug("<" + instanceName + ">" + "Closed connection with ZooKeeper; " + this.rootRegionZNode);
     } catch (InterruptedException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to close connection with ZooKeeper");

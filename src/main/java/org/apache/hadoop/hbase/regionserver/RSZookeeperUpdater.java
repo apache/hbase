@@ -1,19 +1,14 @@
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 
@@ -33,22 +28,22 @@ public class RSZookeeperUpdater {
   private final String regionServerName;
   private String regionName = null;
   private String regionZNode = null;
-  private ZooKeeperWrapper zkWrapper = null;
+  private ZooKeeperWatcher zooKeeper = null;
   private int zkVersion = 0;
   HBaseEventType lastUpdatedState;
 
-  public RSZookeeperUpdater(Configuration conf,
-                            String regionServerName, String regionName) {
-    this(conf, regionServerName, regionName, 0);
+  public RSZookeeperUpdater(ZooKeeperWatcher zooKeeper, String regionServerName,
+      String regionName) {
+    this(zooKeeper, regionServerName, regionName, 0);
   }
   
-  public RSZookeeperUpdater(Configuration conf, String regionServerName,
-                            String regionName, int zkVersion) {
-    this.zkWrapper = ZooKeeperWrapper.getInstance(conf, regionServerName);
+  public RSZookeeperUpdater(ZooKeeperWatcher zooKeeper, String regionServerName,
+      String regionName, int zkVersion) {
+    this.zooKeeper = zooKeeper;
     this.regionServerName = regionServerName;
     this.regionName = regionName;
     // get the region ZNode we have to create
-    this.regionZNode = zkWrapper.getZNode(zkWrapper.getRegionInTransitionZNode(), regionName);
+    this.regionZNode = zooKeeper.getZNode(zooKeeper.assignmentZNode, regionName);
     this.zkVersion = zkVersion;
   }
   
@@ -59,14 +54,14 @@ public class RSZookeeperUpdater {
    */
   public void startRegionCloseEvent(HMsg hmsg, boolean updatePeriodically) throws IOException {
     // if this ZNode already exists, something is wrong
-    if(zkWrapper.exists(regionZNode, true)) {
+    if(zooKeeper.exists(regionZNode, true)) {
       String msg = "ZNode " + regionZNode + " already exists in ZooKeeper, will NOT close region.";
       LOG.error(msg);
       throw new IOException(msg);
     }
     
     // create the region node in the unassigned directory first
-    zkWrapper.createZNodeIfNotExists(regionZNode, null, CreateMode.PERSISTENT, true);
+    zooKeeper.createZNodeIfNotExists(regionZNode, null, CreateMode.PERSISTENT, true);
 
     // update the data for "regionName" ZNode in unassigned to CLOSING
     updateZKWithEventData(HBaseEventType.RS2ZK_REGION_CLOSING, hmsg);
@@ -93,7 +88,7 @@ public class RSZookeeperUpdater {
    */
   public void startRegionOpenEvent(HMsg hmsg, boolean updatePeriodically) throws IOException {
     Stat stat = new Stat();
-    byte[] data = zkWrapper.readZNode(regionZNode, stat);
+    byte[] data = zooKeeper.readZNode(regionZNode, stat);
     // if there is no ZNode for this region, something is wrong
     if(data == null) {
       String msg = "ZNode " + regionZNode + " does not exist in ZooKeeper, will NOT open region.";
@@ -158,7 +153,7 @@ public class RSZookeeperUpdater {
               " with [" + hbEventType + "]" +
               " expected version = " + zkVersion);
     lastUpdatedState = hbEventType;
-    zkWrapper.writeZNode(regionZNode, data, zkVersion, true);
+    zooKeeper.writeZNode(regionZNode, data, zkVersion, true);
     zkVersion++;
   }
 }

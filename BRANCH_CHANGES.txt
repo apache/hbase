@@ -9,6 +9,8 @@ Branch 0.90.0 - Master Rewrite Branch
                 (Karthik R via jgray)
     HBASE-2695  [MasterStatus-part2.1] HMaster clean and refactor
                 (Karthik R via jgray)
+    HBASE-2696  [part1-v5-NewClasses_RS_Tested] ZooKeeper cleanup
+                and refactor
 
   NEW FEATURES
 

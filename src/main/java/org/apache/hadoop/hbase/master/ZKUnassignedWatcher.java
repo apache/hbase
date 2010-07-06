@@ -56,7 +56,7 @@ public class ZKUnassignedWatcher implements Watcher {
   throws IOException {
     this.serverName = masterStatus.getHServerAddress().toString();
     this.serverManager = masterStatus.getServerManager();
-    zkWrapper = ZooKeeperWrapper.getInstance(conf, masterStatus.getHServerAddress().toString());
+    zkWrapper = masterStatus.getZooKeeper();
     String unassignedZNode = zkWrapper.getRegionInTransitionZNode();
     
     // If the UNASSIGNED ZNode exists and this is a fresh cluster start, then 

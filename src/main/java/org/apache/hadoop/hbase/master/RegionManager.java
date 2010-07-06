@@ -140,8 +140,7 @@ public class RegionManager {
       masterStatus.getConfiguration().getInt(
           HConstants.THREAD_WAKE_FREQUENCY, 
           HConstants.DEFAULT_THREAD_WAKE_FREQUENCY);
-    this.zkWrapper =
-        ZooKeeperWrapper.getInstance(conf, masterStatus.getHServerAddress().toString());
+    this.zkWrapper = masterStatus.getZooKeeper();
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
     this.loadBalancer = new LoadBalancer(conf);
 
@@ -640,11 +639,12 @@ public class RegionManager {
     } catch(Exception iex) {
       LOG.warn("meta scanner", iex);
     }
-    ZooKeeperWrapper zkw = ZooKeeperWrapper.getInstance(
-                             masterStatus.getConfiguration(), 
-                             masterStatus.getHServerAddress().toString());
-    zkw.clearRSDirectory();
-    zkw.close();
+    // TODO: Why did we getInstance again?  We should have it local?
+//    ZooKeeperWrapper zkw = ZooKeeperWrapper.getInstance(
+//                             masterStatus.getConfiguration(), 
+//                             masterStatus.getHServerAddress().toString());
+    zkWrapper.clearRSDirectory();
+    zkWrapper.close();
   }
 
   /**
@@ -1233,10 +1233,7 @@ public class RegionManager {
 
   private void writeRootRegionLocationToZooKeeper(HServerAddress address) {
     for (int attempt = 0; attempt < zooKeeperNumRetries; ++attempt) {
-      ZooKeeperWrapper zkw = ZooKeeperWrapper.getInstance(
-                               masterStatus.getConfiguration(), 
-                               masterStatus.getHServerAddress().toString());
-      if (zkw.writeRootRegionLocation(address)) {
+      if (zkWrapper.writeRootRegionLocation(address)) {
         return;
       }
 

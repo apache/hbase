@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.ServerStatus;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
@@ -101,23 +102,20 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.zookeeper.Watcher.Event.KeeperState;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
 public class HRegionServer implements HRegionInterface,
-    HBaseRPCErrorHandler, Runnable, Watcher, Stoppable {
+    HBaseRPCErrorHandler, Runnable, Stoppable, ServerStatus {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
@@ -219,7 +217,11 @@ public class HRegionServer implements HRegionInterface,
   final Map<String, InternalScanner> scanners =
     new ConcurrentHashMap<String, InternalScanner>();
 
-  private ZooKeeperWrapper zooKeeperWrapper;
+  // zookeeper connection and watcher
+  private ZooKeeperWatcher zooKeeper;
+  
+  // master address manager and watecher
+  private MasterAddressManager masterAddressManager;
 
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
@@ -284,7 +286,7 @@ public class HRegionServer implements HRegionInterface,
       conf.getLong(HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
           HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
 
-    reinitialize();
+    initialize();
   }
 
   /**
@@ -293,7 +295,7 @@ public class HRegionServer implements HRegionInterface,
    * Both call it.
    * @throws IOException
    */
-  private void reinitialize() throws IOException {
+  private void initialize() throws IOException {
     this.abortRequested = false;
     this.stopRequested.set(false);
 
@@ -312,22 +314,25 @@ public class HRegionServer implements HRegionInterface,
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");
     }
-    reinitializeThreads();
-    reinitializeZooKeeper();
+    initializeThreads();
+    initializeZooKeeper();
     int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
     for(int i = 0; i < nbBlocks; i++)  {
       reservedSpace.add(new byte[HConstants.DEFAULT_SIZE_RESERVATION_BLOCK]);
     }
   }
 
-  private void reinitializeZooKeeper() throws IOException {
-    zooKeeperWrapper =
-        ZooKeeperWrapper.createInstance(conf, serverInfo.getServerName());
-    zooKeeperWrapper.registerListener(this);
-    watchMasterAddress();
+  private void initializeZooKeeper() throws IOException {
+    // open connection to zookeeper and set primary watcher
+    zooKeeper = new ZooKeeperWatcher(conf, serverInfo.getServerName(), this);
+    
+    // create the master address manager, register with zk, and start it
+    masterAddressManager = new MasterAddressManager(zooKeeper);
+    zooKeeper.registerListener(masterAddressManager);
+    masterAddressManager.monitorMaster();
   }
 
-  private void reinitializeThreads() {
+  private void initializeThreads() {
     this.workerThread = new Thread(worker);
 
     // Cache flushing thread.
@@ -350,74 +355,6 @@ public class HRegionServer implements HRegionInterface,
         (int) conf.getLong(HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
             HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD),
         this.threadWakeFrequency);
-  }
-
-  /**
-   * We register ourselves as a watcher on the master address ZNode. This is
-   * called by ZooKeeper when we get an event on that ZNode. When this method
-   * is called it means either our master has died, or a new one has come up.
-   * Either way we need to update our knowledge of the master.
-   * @param event WatchedEvent from ZooKeeper.
-   */
-  public void process(WatchedEvent event) {
-    EventType type = event.getType();
-    KeeperState state = event.getState();
-    LOG.info("Got ZooKeeper event, state: " + state + ", type: " +
-      type + ", path: " + event.getPath());
-
-    // Ignore events if we're shutting down.
-    if (this.stopRequested.get()) {
-      LOG.debug("Ignoring ZooKeeper event while shutting down");
-      return;
-    }
-
-    if (state == KeeperState.Expired) {
-      LOG.error("ZooKeeper session expired");
-      boolean restart =
-        this.conf.getBoolean("hbase.regionserver.restart.on.zk.expire", false);
-      if (restart) {
-        restart();
-      } else {
-        abort("ZooKeeper session expired");
-      }
-    } else if (type == EventType.NodeDeleted) {
-      watchMasterAddress();
-    } else if (type == EventType.NodeCreated) {
-      getMaster();
-
-      // ZooKeeper watches are one time only, so we need to re-register our watch.
-      watchMasterAddress();
-    }
-  }
-
-  private void watchMasterAddress() {
-    while (!stopRequested.get() && !zooKeeperWrapper.watchMasterAddress(this)) {
-      LOG.warn("Unable to set watcher on ZooKeeper master address. Retrying.");
-      sleeper.sleep();
-    }
-  }
-
-  private void restart() {
-    abort("Restarting region server");
-    Threads.shutdown(regionServerThread);
-    boolean done = false;
-    while (!done) {
-      try {
-        reinitialize();
-        done = true;
-      } catch (IOException e) {
-        LOG.debug("Error trying to reinitialize ZooKeeper", e);
-      }
-    }
-    Thread t = new Thread(this);
-    String name = regionServerThread.getName();
-    t.setName(name);
-    t.start();
-  }
-
-  /** @return ZooKeeperWrapper used by RegionServer. */
-  public ZooKeeperWrapper getZooKeeperWrapper() {
-    return zooKeeperWrapper;
   }
 
   /**
@@ -446,7 +383,8 @@ public class HRegionServer implements HRegionInterface,
       for (int tries = 0; !stopRequested.get() && isHealthy();) {
         // Try to get the root region location from the master.
         if (!haveRootRegion.get()) {
-          HServerAddress rootServer = zooKeeperWrapper.readRootRegionLocation();
+          HServerAddress rootServer = 
+            ZKUtil.getDataAsAddress(zooKeeper, zooKeeper.rootServerZNode);
           if (rootServer != null) {
             // By setting the root region location, we bypass the wait imposed on
             // HTable for all regions being assigned.
@@ -646,8 +584,9 @@ public class HRegionServer implements HRegionInterface,
       this.hbaseMaster = null;
     }
 
+    this.zooKeeper.close();
+    
     if (!killed) {
-      this.zooKeeperWrapper.close();
       join();
     }
     LOG.info(Thread.currentThread().getName() + " exiting");
@@ -1174,21 +1113,23 @@ public class HRegionServer implements HRegionInterface,
     Threads.shutdown(this.hlogRoller);
   }
 
+  /**
+   * Get the current master from ZooKeeper and open the RPC connection to it.
+   * 
+   * Method will block until a master is available.  You can break from this
+   * block by requesting the server stop.
+   * 
+   * @return
+   */
   private boolean getMaster() {
     HServerAddress masterAddress = null;
-    while (masterAddress == null) {
-      if (stopRequested.get()) {
+    while((masterAddress = masterAddressManager.getMasterAddress()) == null) {
+      if(stopRequested.get()) {
         return false;
       }
-      try {
-        masterAddress = zooKeeperWrapper.readMasterAddressOrThrow();
-      } catch (IOException e) {
-        LOG.warn("Unable to read master address from ZooKeeper. Retrying." +
-                 " Error was:", e);
-        sleeper.sleep();
-      }
+      LOG.debug("No master found, will retry");
+      sleeper.sleep();
     }
-
     LOG.info("Telling master at " + masterAddress + " that we are up");
     HMasterRegionInterface master = null;
     while (!stopRequested.get() && master == null) {
@@ -1230,7 +1171,7 @@ public class HRegionServer implements HRegionInterface,
         if (LOG.isDebugEnabled())
           LOG.debug("sending initial server load: " + hsl);
         lastMsg = System.currentTimeMillis();
-        zooKeeperWrapper.writeRSLocation(this.serverInfo);
+        zooKeeper.writeRSLocation(this.serverInfo);
         result = this.hbaseMaster.regionServerStartup(this.serverInfo);
         break;
       } catch (IOException e) {
@@ -1406,7 +1347,7 @@ public class HRegionServer implements HRegionInterface,
     Integer mapKey = Bytes.mapKey(regionInfo.getRegionName());
     HRegion region = this.onlineRegions.get(mapKey);
     RSZookeeperUpdater zkUpdater = 
-      new RSZookeeperUpdater(conf, serverInfo.getServerName(),
+      new RSZookeeperUpdater(zooKeeper, serverInfo.getServerName(),
           regionInfo.getEncodedName());
     if (region == null) {
       try {
@@ -1491,7 +1432,7 @@ public class HRegionServer implements HRegionInterface,
   throws IOException {
     RSZookeeperUpdater zkUpdater = null;
     if(reportWhenCompleted) {
-      zkUpdater = new RSZookeeperUpdater(conf,
+      zkUpdater = new RSZookeeperUpdater(zooKeeper,
           serverInfo.getServerName(), hri.getEncodedName());
       zkUpdater.startRegionCloseEvent(null, false);
     }
@@ -2380,6 +2321,23 @@ public class HRegionServer implements HRegionInterface,
     return threadWakeFrequency;
   }
 
+  // ServerStatus
+  
+  @Override
+  public void abortServer() {
+    this.abort("Received abortServer call");
+  }
+
+  @Override
+  public HServerAddress getHServerAddress() {
+    return this.address;
+  }
+
+  @Override
+  public ZooKeeperWatcher getZooKeeper() {
+    return zooKeeper;
+  }
+  
   //
   // Main program and support routines
   //

@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -133,8 +134,8 @@ public class HMaster extends Thread implements HMasterInterface,
   // Metrics is set when we call run.
   private final MasterMetrics metrics;
 
-  // Our zk client.
-  private ZooKeeperWrapper zooKeeperWrapper;
+  // Our zk client. TODO: rename variable once we settle on naming
+  private ZooKeeperWatcher zooKeeperWrapper;
   // Watcher for master address and for cluster shutdown.
   private final ZKMasterAddressWatcher zkMasterAddressWatcher;
   // A Sleeper that sleeps for threadWakeFrequency; sleep if nothing todo.
@@ -182,7 +183,8 @@ public class HMaster extends Thread implements HMasterInterface,
     // number of RS ephemeral nodes. RS ephemeral nodes are created only after 
     // the primary master has written the address to ZK. So this has to be done 
     // before we race to write our address to zookeeper.
-    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, getHServerAddress().toString());
+    zooKeeperWrapper = 
+      new ZooKeeperWatcher(conf, getHServerAddress().toString(), this);
     isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
     
     // Create the filesystem manager, which in turn does the following:
@@ -919,8 +921,9 @@ public class HMaster extends Thread implements HMasterInterface,
 
       zooKeeperWrapper.close();
       try {
+        // TODO: this is broken, we should just shutdown now not restart
         zooKeeperWrapper =
-            ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
+          new ZooKeeperWatcher(conf, HMaster.class.getName(), this);
         zooKeeperWrapper.registerListener(this);
         this.zkMasterAddressWatcher.setZookeeper(zooKeeperWrapper);
         if(!this.zkMasterAddressWatcher.
@@ -1101,5 +1104,15 @@ public class HMaster extends Thread implements HMasterInterface,
    */
   public static void main(String [] args) {
     doMain(args, HMaster.class);
+  }
+
+  @Override
+  public void abortServer() {
+    this.startShutdown();
+  }
+
+  @Override
+  public ZooKeeperWatcher getZooKeeper() {
+    return zooKeeperWrapper;
   }
 }

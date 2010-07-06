@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -26,9 +28,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-
-import java.io.IOException;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
  * ProcessRegionOpen is instantiated when a region server reports that it is
@@ -115,10 +115,8 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
       } else {
         masterStatus.getRegionManager().removeRegion(regionInfo);
       }
-      ZooKeeperWrapper zkWrapper =
-          ZooKeeperWrapper.getInstance(masterStatus.getConfiguration(),
-              masterStatus.getHServerAddress().toString());
-      zkWrapper.deleteUnassignedRegion(regionInfo.getEncodedName());
+      masterStatus.getZooKeeper().deleteUnassignedRegion(
+          regionInfo.getEncodedName());
       return true;
     }
   }

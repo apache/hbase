@@ -246,10 +246,7 @@ public class ServerManager {
     // We must set this watcher here because it can be set on a fresh start
     // or on a failover
     Watcher watcher = new ServerExpirer(new HServerInfo(info));
-    ZooKeeperWrapper zkw = ZooKeeperWrapper.getInstance(
-        masterStatus.getConfiguration(), 
-        masterStatus.getHServerAddress().toString());
-    zkw.updateRSLocationGetWatch(info, watcher);
+    masterStatus.getZooKeeper().updateRSLocationGetWatch(info, watcher);
     this.serversToServerInfo.put(serverName, info);
     this.serversToLoad.put(serverName, load);
     synchronized (this.loadToServers) {

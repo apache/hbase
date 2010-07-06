@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -91,8 +92,8 @@ public class TestZooKeeper {
       throws IOException, InterruptedException {
     new HTable(conf, HConstants.META_TABLE_NAME);
 
-    ZooKeeperWrapper zkw =
-        ZooKeeperWrapper.createInstance(conf, TestZooKeeper.class.getName());
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, 
+        TestZooKeeper.class.getName(), null);
     zkw.registerListener(EmptyWatcher.instance);
     String quorumServers = zkw.getQuorumServers();
     int sessionTimeout = 5 * 1000; // 5 seconds
@@ -110,15 +111,17 @@ public class TestZooKeeper {
     System.err.println("ZooKeeper should have timed out");
     connection.relocateRegion(HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_BYTE_ARRAY);
   }
-  @Test
-  public void testRegionServerSessionExpired() throws Exception{
+  
+//  @Test Disabled, we don't expect these to restart anymore
+  public void disabledTestRegionServerSessionExpired() throws Exception{
     LOG.info("Starting testRegionServerSessionExpired");
     new HTable(conf, HConstants.META_TABLE_NAME);
     TEST_UTIL.expireRegionServerSession(0);
     testSanity();
   }
-  @Test
-  public void testMasterSessionExpired() throws Exception {
+
+//@Test Disabled, we don't expect these to restart anymore
+  public void disabledTestMasterSessionExpired() throws Exception {
     LOG.info("Starting testMasterSessionExpired");
     new HTable(conf, HConstants.META_TABLE_NAME);
     TEST_UTIL.expireMasterSession();
@@ -179,8 +182,8 @@ public class TestZooKeeper {
    */
   @Test
   public void testZNodeDeletes() throws Exception {
-    ZooKeeperWrapper zkw =
-        ZooKeeperWrapper.createInstance(conf, TestZooKeeper.class.getName());
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, 
+        TestZooKeeper.class.getName(), null);
     zkw.registerListener(EmptyWatcher.instance);
     zkw.ensureExists("/l1/l2/l3/l4");
     try {

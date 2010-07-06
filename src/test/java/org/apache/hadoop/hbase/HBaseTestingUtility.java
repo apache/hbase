@@ -52,15 +52,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.zookeeper.ZooKeeper;
 
 import com.google.common.base.Preconditions;
 
@@ -693,9 +695,7 @@ public class HBaseTestingUtility {
    */
   public void expireMasterSession() throws Exception {
     HMaster master = hbaseCluster.getMaster();
-    ZooKeeperWrapper zkw = 
-      ZooKeeperWrapper.getInstance(conf, master.getHServerAddress().toString());
-    expireSession(zkw);
+    expireSession(master.getZooKeeper(), master);
   }
 
   /**
@@ -705,15 +705,15 @@ public class HBaseTestingUtility {
    */
   public void expireRegionServerSession(int index) throws Exception {
     HRegionServer rs = hbaseCluster.getRegionServer(index);
-    expireSession(rs.getZooKeeperWrapper());
+    expireSession(rs.getZooKeeper(), rs);
   }
 
-  public void expireSession(ZooKeeperWrapper nodeZK) throws Exception{
-    ZooKeeperWrapper zkw =
-        ZooKeeperWrapper.createInstance(conf,
-            ZooKeeperWrapper.class.getName());
+  public void expireSession(ZooKeeperWatcher nodeZK, ServerStatus server)
+  throws Exception {
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, 
+        ZooKeeperWatcher.class.getName(), server);
     zkw.registerListener(EmptyWatcher.instance);
-    String quorumServers = zkw.getQuorumServers();
+    String quorumServers = ZKConfig.getZKQuorumServersString(conf);
     int sessionTimeout = 5 * 1000; // 5 seconds
 
     byte[] password = nodeZK.getSessionPassword();

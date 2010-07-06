@@ -19,9 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
  * Set of functions that are exposed by any HBase server (implemented by the 
@@ -37,4 +36,14 @@ public interface ServerStatus {
    * Get the configuration object for this server.
    */
   public Configuration getConfiguration();
+  
+  /**
+   * Get the ZooKeeper instance for this server.
+   */
+  public ZooKeeperWatcher getZooKeeper();
+  
+  /**
+   * Stub method into ServerStatus to move forward with ZK cleanup.
+   */
+  public void abortServer();
 }

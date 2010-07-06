@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -41,7 +41,7 @@ public class TestRestartCluster {
   private static final Log LOG = LogFactory.getLog(TestRestartCluster.class);
   private static Configuration conf;
   private static HBaseTestingUtility utility;
-  private static ZooKeeperWrapper zkWrapper;
+  private static ZooKeeperWatcher zooKeeper;
   private static final byte[] TABLENAME = Bytes.toBytes("master_transitions");
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a")};
   
@@ -59,11 +59,11 @@ public class TestRestartCluster {
 
   @Test (timeout=300000) public void testRestartClusterAfterKill()throws Exception {
     utility.startMiniZKCluster();
-    zkWrapper = ZooKeeperWrapper.createInstance(conf, "cluster1");
+    zooKeeper = new ZooKeeperWatcher(conf, "cluster1", null);
 
     // create the unassigned region, throw up a region opened state for META
-    String unassignedZNode = zkWrapper.getRegionInTransitionZNode();
-    zkWrapper.createZNodeIfNotExists(unassignedZNode);
+    String unassignedZNode = zooKeeper.getRegionInTransitionZNode();
+    zooKeeper.createZNodeIfNotExists(unassignedZNode);
     byte[] data = null;
     HBaseEventType hbEventType = HBaseEventType.RS2ZK_REGION_OPENED;
     try {
@@ -71,8 +71,8 @@ public class TestRestartCluster {
     } catch (IOException e) {
       LOG.error("Error creating event data for " + hbEventType, e);
     }
-    zkWrapper.createUnassignedRegion(HRegionInfo.ROOT_REGIONINFO.getEncodedName(), data);
-    zkWrapper.createUnassignedRegion(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(), data);
+    zooKeeper.createUnassignedRegion(HRegionInfo.ROOT_REGIONINFO.getEncodedName(), data);
+    zooKeeper.createUnassignedRegion(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(), data);
     LOG.debug("Created UNASSIGNED zNode for ROOT and META regions in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
     
     // start the HB cluster

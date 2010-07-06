@@ -104,7 +104,7 @@ public class MiniZooKeeperCluster {
         standaloneServerFactory =
           new NIOServerCnxn.Factory(new InetSocketAddress(clientPort));
       } catch (BindException e) {
-        LOG.info("Faild binding ZK Server to client port: " + clientPort);
+        LOG.info("Failed binding ZK Server to client port: " + clientPort);
         //this port is already in use. try to use another
         clientPort++;
         continue;
@@ -118,7 +118,7 @@ public class MiniZooKeeperCluster {
     }
 
     started = true;
-
+    LOG.info("Started MiniZK Server on client port: " + clientPort);
     return clientPort;
   }
 

@@ -64,7 +64,7 @@ public class TestHQuorumPeer extends HBaseTestCase {
 
   /** */
   public void testMakeZKProps() {
-    Properties properties = HQuorumPeer.makeZKProps(conf);
+    Properties properties = ZKConfig.makeZKProps(conf);
     assertEquals(dataDir.toString(), properties.get("dataDir"));
     assertEquals(Integer.valueOf(21810), Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("localhost:2888:3888", properties.get("server.0"));
@@ -72,7 +72,7 @@ public class TestHQuorumPeer extends HBaseTestCase {
 
     String oldValue = conf.get(HConstants.ZOOKEEPER_QUORUM);
     conf.set(HConstants.ZOOKEEPER_QUORUM, "a.foo.bar,b.foo.bar,c.foo.bar");
-    properties = HQuorumPeer.makeZKProps(conf);
+    properties = ZKConfig.makeZKProps(conf);
     assertEquals(dataDir.toString(), properties.get("dataDir"));
     assertEquals(Integer.valueOf(21810), Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("a.foo.bar:2888:3888", properties.get("server.0"));
@@ -91,7 +91,7 @@ public class TestHQuorumPeer extends HBaseTestCase {
 
     System.setProperty("hbase.master.hostname", "localhost");
     InputStream is = new ByteArrayInputStream(s.getBytes());
-    Properties properties = HQuorumPeer.parseZooCfg(conf, is);
+    Properties properties = ZKConfig.parseZooCfg(conf, is);
 
     assertEquals(dataDir.toString(), properties.get("dataDir"));
     assertEquals(Integer.valueOf(2181), Integer.valueOf(properties.getProperty("clientPort")));
@@ -111,7 +111,7 @@ public class TestHQuorumPeer extends HBaseTestCase {
     // Override with system property.
     System.setProperty("hbase.master.hostname", "foo.bar");
     is = new ByteArrayInputStream(s.getBytes());
-    properties = HQuorumPeer.parseZooCfg(conf, is);
+    properties = ZKConfig.parseZooCfg(conf, is);
     assertEquals("foo.bar:2888:3888", properties.get("server.0"));
 
     config.parseProperties(properties);
@@ -127,7 +127,7 @@ public class TestHQuorumPeer extends HBaseTestCase {
   public void testShouldAssignDefaultZookeeperClientPort() {
     Configuration config = HBaseConfiguration.create();
     config.clear();
-    Properties p = HQuorumPeer.makeZKProps(config);
+    Properties p = ZKConfig.makeZKProps(config);
     assertNotNull(p);
     assertEquals(2181, p.get("hbase.zookeeper.property.clientPort"));
   }
