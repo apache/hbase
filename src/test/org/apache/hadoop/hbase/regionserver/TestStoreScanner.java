@@ -467,5 +467,7 @@ public class TestStoreScanner extends TestCase {
     scan.updateReaders();
 
     scan.updateReaders();
+
+    scan.peek();
   }
 }

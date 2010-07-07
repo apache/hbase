@@ -140,9 +140,9 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   }
 
   public synchronized KeyValue peek() {
-    checkReseek();
+    // return the last heap instead of reseeking (so we can close).
     if (this.heap == null) {
-      return null;
+      return this.lastTop;
     }
 
     return this.heap.peek();
