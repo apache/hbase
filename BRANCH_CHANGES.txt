@@ -11,6 +11,7 @@ Branch 0.90.0 - Master Rewrite Branch
                 (Karthik R via jgray)
     HBASE-2696  [part1-v5-NewClasses_RS_Tested] ZooKeeper cleanup
                 and refactor
+    HBASE-2696  Re-enabled TestZooKeeper.testRegionServerSessionExpired
 
   NEW FEATURES
 

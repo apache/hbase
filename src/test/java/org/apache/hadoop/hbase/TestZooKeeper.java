@@ -112,15 +112,15 @@ public class TestZooKeeper {
     connection.relocateRegion(HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_BYTE_ARRAY);
   }
   
-//  @Test Disabled, we don't expect these to restart anymore
-  public void disabledTestRegionServerSessionExpired() throws Exception{
+  @Test
+  public void testRegionServerSessionExpired() throws Exception {
     LOG.info("Starting testRegionServerSessionExpired");
     new HTable(conf, HConstants.META_TABLE_NAME);
     TEST_UTIL.expireRegionServerSession(0);
     testSanity();
   }
 
-//@Test Disabled, we don't expect these to restart anymore
+  //@Test
   public void disabledTestMasterSessionExpired() throws Exception {
     LOG.info("Starting testMasterSessionExpired");
     new HTable(conf, HConstants.META_TABLE_NAME);
