@@ -12,6 +12,8 @@ Branch 0.90.0 - Master Rewrite Branch
     HBASE-2696  [part1-v5-NewClasses_RS_Tested] ZooKeeper cleanup
                 and refactor
     HBASE-2696  Re-enabled TestZooKeeper.testRegionServerSessionExpired
+    HBASE-2699  [LoadBalancer-v5] Reimplement load balancing to be a
+                background process and to not use heartbeats
 
   NEW FEATURES
 
