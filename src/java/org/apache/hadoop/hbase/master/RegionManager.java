@@ -28,9 +28,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -190,7 +192,7 @@ class RegionManager implements HConstants {
 
     // figure out what regions need to be assigned and aren't currently being
     // worked on elsewhere.
-    Set<RegionState> regionsToAssign =
+    NavigableSet<RegionState> regionsToAssign =
       regionsAwaitingAssignment(info.getServerAddress(), isSingleServer);
     if (regionsToAssign.size() == 0) {
       // There are no regions waiting to be assigned.
@@ -226,7 +228,7 @@ class RegionManager implements HConstants {
    * @param returnMsgs
    */
   private void assignRegionsToMultipleServers(final HServerLoad thisServersLoad,
-    final Set<RegionState> regionsToAssign, final HServerInfo info, 
+    final NavigableSet<RegionState> regionsToAssign, final HServerInfo info, 
     final ArrayList<HMsg> returnMsgs) {
     boolean isMetaAssign = false;
     for (RegionState s : regionsToAssign) {
@@ -289,7 +291,19 @@ class RegionManager implements HConstants {
     if (count > this.maxAssignInOneGo) {
       count = this.maxAssignInOneGo;
     }
+    HRegionInfo previous = null;
     for (RegionState s: regionsToAssign) {
+      if (previous != null && previous.getEndKey() != null &&
+            Bytes.equals(previous.getEndKey(), s.getRegionInfo().getStartKey())) {
+        // If contiguous regions, do not assign adjacent regions in this
+        // one assignment session.  We do this to break daughters of splits so
+        // its more likely they endup on different clusters on the cluster.
+        LOG.info("Passing on " + s.getRegionInfo().getRegionNameAsString() +
+         " because contiguous with " + previous.getRegionNameAsString() +
+         " (will assign next server that checks in)");
+        continue;
+      }
+      previous = s.getRegionInfo();
       doRegionAssignment(s, info, returnMsgs);
       if (--count <= 0) {
         break;
@@ -308,7 +322,7 @@ class RegionManager implements HConstants {
    * @param serverName
    * @param returnMsgs
    */
-  private void assignRegionsToOneServer(final Set<RegionState> regionsToAssign,
+  private void assignRegionsToOneServer(final NavigableSet<RegionState> regionsToAssign,
       final HServerInfo info, final ArrayList<HMsg> returnMsgs) {
     for (RegionState s: regionsToAssign) {
       doRegionAssignment(s, info, returnMsgs);
@@ -377,10 +391,10 @@ class RegionManager implements HConstants {
    * only caller (assignRegions, whose caller is ServerManager.processMsgs) owns
    * the monitor for RegionManager
    */ 
-  private Set<RegionState> regionsAwaitingAssignment(HServerAddress addr,
+  private NavigableSet<RegionState> regionsAwaitingAssignment(HServerAddress addr,
                                                      boolean isSingleServer) {
     // set of regions we want to assign to this server
-    Set<RegionState> regionsToAssign = new HashSet<RegionState>();
+    NavigableSet<RegionState> regionsToAssign = new TreeSet<RegionState>();
     boolean isMetaServer = isMetaServer(addr);
     RegionState rootState = null;
     synchronized (this.regionsInTransition) {

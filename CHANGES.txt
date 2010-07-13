@@ -6,6 +6,7 @@ Release 0.20.6 - Unreleased
    HBASE-2786  TestHLog.testSplit hangs
    HBASE-2797  Another NPE in ReadWriteConsistencyControl
    HBASE-2796  Backport of 2707 to 0.20 branch
+   HBASE-2802  Stop daughter regions both being assigned same server
 
 Release 0.20.5 - Jun 24, 2010
 
