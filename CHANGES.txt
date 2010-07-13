@@ -5,8 +5,9 @@ Release 0.20.6 - Unreleased
    HBASE-2772  Scan doesn't recover from region server failure
    HBASE-2786  TestHLog.testSplit hangs
    HBASE-2797  Another NPE in ReadWriteConsistencyControl
+   HBASE-2796  Backport of 2707 to 0.20 branch
 
-Release 0.20.5 - Unreleased
+Release 0.20.5 - Jun 24, 2010
 
   BUG FIXES
    HBASE-2545  Unresponsive region server, potential deadlock
