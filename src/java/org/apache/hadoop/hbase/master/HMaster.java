@@ -467,11 +467,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   private boolean processToDoQueue() {
     RegionServerOperation op = null;
 
-    // If nothing on the todoQueue, go to the delay queue.
-    if (toDoQueue.isEmpty()) {
+    // block until the root region is online
+    if (regionManager.getRootRegionLocation() != null) {
+      // We can't process server shutdowns unless the root region is online
       op = delayedToDoQueue.poll();
     }
-    // if there aren't any todo items in the queue, we'll sleep for a bit.
+    
+    // if there aren't any todo items in the queue, sleep for a bit.
     if (op == null ) {
       try {
         op = toDoQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
@@ -479,9 +481,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         // continue
       }
     }
-    if (closed.get()) return true;
-    // If nothing to do, return.
-    if (op == null) return false;
+    
+    // at this point, if there's still no todo operation, or we're supposed to
+    // be closed, return.
+    if (op == null || closed.get()) {
+      return true;
+    }
+    
     try {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Processing todo: " + op.toString());
