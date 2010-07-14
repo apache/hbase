@@ -835,6 +835,14 @@ public class HConnectionManager implements HConstants {
       return null;
     }
 
+
+    /**
+     * Allows flushing the region cache.
+     */
+    public void clearRegionCache() {
+     this.cachedRegionLocations.clear();  
+    }
+
     /*
      * Delete a cached location, if it satisfies the table name and row
      * requirements.
