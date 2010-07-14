@@ -327,7 +327,7 @@ public class HRegionServer implements HRegionInterface,
     zooKeeper = new ZooKeeperWatcher(conf, serverInfo.getServerName(), this);
     
     // create the master address manager, register with zk, and start it
-    masterAddressManager = new MasterAddressManager(zooKeeper);
+    masterAddressManager = new MasterAddressManager(zooKeeper, this);
     zooKeeper.registerListener(masterAddressManager);
     masterAddressManager.monitorMaster();
   }

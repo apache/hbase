@@ -29,19 +29,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -52,7 +46,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -77,10 +70,10 @@ import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.master.RegionServerOperationQueue.ProcessingResultCode;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -127,122 +120,231 @@ public class HMaster extends Thread implements HMasterInterface,
   // TODO: Is this separate flag necessary?
   private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
 
+  // The configuration for the Master
   private final Configuration conf;
+  // server for the web ui
   private InfoServer infoServer;
-  private final int numRetries;
-
-  // Metrics is set when we call run.
+  // Reporting to track master metrics.
   private final MasterMetrics metrics;
 
   // Our zk client. TODO: rename variable once we settle on naming
   private ZooKeeperWatcher zooKeeperWrapper;
-  // Watcher for master address and for cluster shutdown.
-  private final ZKMasterAddressWatcher zkMasterAddressWatcher;
+  // Manager and zk listener for master election
+  private ActiveMasterManager activeMasterManager;
   // A Sleeper that sleeps for threadWakeFrequency; sleep if nothing todo.
   private final Sleeper sleeper;
-
+  // RPC server for the HMaster
   private final HBaseServer rpcServer;
+  // Address of the HMaster
   private final HServerAddress address;
-  
   // file system manager for the master FS operations
   private final FileSystemManager fileSystemManager;
 
   private final ServerConnection connection;
+  // server manager to deal with region server info
   private final ServerManager serverManager;
+  // region manager to deal with region specific stuff
   private final RegionManager regionManager;
 
-  private long lastFragmentationQuery = -1L;
-  private Map<String, Integer> fragmentation = null;
-  private final RegionServerOperationQueue regionServerOperationQueue;
-  
   // True if this is the master that started the cluster.
   boolean isClusterStartup;
 
+  // TODO: the following should eventually be removed from here
+  private final RegionServerOperationQueue regionServerOperationQueue;
+  private long lastFragmentationQuery = -1L;
+  private Map<String, Integer> fragmentation = null;
+
   /**
-   * Constructor
-   * @param conf configuration
-   * @throws IOException
+   * Initializes the HMaster. The steps are as follows:
+   *
+   * <ol>
+   * <li>Initialize HMaster RPC and address
+   * <li>Connect to ZooKeeper and figure out if this is a fresh cluster start or
+   *     a failed over master
+   * <li>Initialize master components - server manager, region manager, metrics,
+   *     region server queue, file system manager, etc
+   * <li>Block until becoming active master
+   * </ol>
    */
   public HMaster(Configuration conf) throws IOException {
+    // initialize some variables
     this.conf = conf;
-    
-    // Get my address and create an rpc server instance.  The rpc-server port
-    // can be ephemeral...ensure we have the correct info
+    // set the thread name
+    setName(MASTER + "-" + this.address);
+
+    /*
+     * 1. Determine address and initialize RPC server (but do not start)
+     *
+     *    Get the master address and create an RPC server instance.  The RPC
+     *    server ports can be ephemeral.
+     */
     HServerAddress a = new HServerAddress(getMyAddress(this.conf));
-    this.rpcServer = HBaseRPC.getServer(this, a.getBindAddress(),
-      a.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
-      false, conf);
-    this.address = new HServerAddress(this.rpcServer.getListenerAddress());
+    int numHandlers = conf.getInt("hbase.regionserver.handler.count", 10);
+    this.rpcServer = HBaseRPC.getServer(this, a.getBindAddress(), a.getPort(),
+                                        numHandlers, false, conf);
+    this.address = new HServerAddress(rpcServer.getListenerAddress());
 
-    this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
-    int threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
-    this.sleeper = new Sleeper(threadWakeFrequency, this.closed);
-    this.connection = ServerConnectionManager.getConnection(conf);
-
-    // Figure out if this is a fresh cluster start. This is done by checking the 
-    // number of RS ephemeral nodes. RS ephemeral nodes are created only after 
-    // the primary master has written the address to ZK. So this has to be done 
-    // before we race to write our address to zookeeper.
-    zooKeeperWrapper = 
+    /*
+     * 2. Determine if this is a fresh cluster startup or failed over master
+     *
+     *    This is done by checking for the existence of any ephemeral
+     *    RegionServer nodes in ZooKeeper.  These nodes are created by RSs on
+     *    their initialization but only after they find the primary master.  As
+     *    long as this check is done before we write our address into ZK, this
+     *    will work.  Note that multiple masters could find this to be true on
+     *    startup (none have become active master yet), which is why there is
+     *    an additional check if this master does not become primary on its
+     *    first attempt.
+     */
+    zooKeeperWrapper =
       new ZooKeeperWatcher(conf, getHServerAddress().toString(), this);
     isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
-    
-    // Create the filesystem manager, which in turn does the following:
-    //   - Creates the root hbase directory in the FS
-    //   - Checks the FS to make sure the root directory is readable
-    //   - Creates the archive directory for logs
+
+    /*
+     * 3. Initialize master components.
+     *
+     *    This includes the filesystem manager, server manager, region manager,
+     *    metrics, queues, sleeper, etc...
+     */
+    this.connection = ServerConnectionManager.getConnection(conf);
+    this.regionServerOperationQueue = new RegionServerOperationQueue(conf, closed);
+    this.metrics = new MasterMetrics(this.getName());
     fileSystemManager = new FileSystemManager(conf, this);
-    
-    // Get our zookeeper wrapper and then try to write our address to zookeeper.
-    // We'll succeed if we are only  master or if we win the race when many
-    // masters.  Otherwise we park here inside in writeAddressToZooKeeper.
-    // TODO: Bring up the UI to redirect to active Master.
-    zooKeeperWrapper.registerListener(this);
-    this.zkMasterAddressWatcher =
-      new ZKMasterAddressWatcher(this.zooKeeperWrapper, this.shutdownRequested);
-    zooKeeperWrapper.registerListener(zkMasterAddressWatcher);
-    this.zkMasterAddressWatcher.writeAddressToZooKeeper(this.address, true);
-    this.regionServerOperationQueue =
-      new RegionServerOperationQueue(this.conf, this.closed);
-
-    // set the thread name
-    setName(MASTER);
-    // create the master metrics object
-    this.metrics = new MasterMetrics(MASTER);
-
     serverManager = new ServerManager(this, metrics, regionServerOperationQueue);
-
-    
-    // Start the unassigned watcher - which will create the unassigned region 
-    // in ZK. This is needed before RegionManager() constructor tries to assign 
-    // the root region.
-    ZKUnassignedWatcher.start(this.conf, this);
-    // start the "close region" executor service
-    HBaseEventType.RS2ZK_REGION_CLOSED.startMasterExecutorService(address.toString());
-    // start the "open region" executor service
-    HBaseEventType.RS2ZK_REGION_OPENED.startMasterExecutorService(address.toString());
-
-    
-    // start the region manager
     regionManager = new RegionManager(this);
+    // create a sleeper to sleep for a configured wait frequency
+    int threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
+    this.sleeper = new Sleeper(threadWakeFrequency, this.closed);
 
-    // We're almost open for business
-    this.closed.set(false);
-    LOG.info("HMaster initialized on " + this.address.toString());
+    /*
+     * 4. Block on becoming the active master.
+     *
+     *    We race with other masters to write our address into ZooKeeper.  If we
+     *    succeed, we are the primary/active master and finish initialization.
+     *
+     *    If we do not succeed, there is another active master and we should
+     *    now wait until it dies to try and become the next active master.  If
+     *    we do not succeed on our first attempt, this is no longer a cluster
+     *    startup.
+     */
+    activeMasterManager = new ActiveMasterManager(zooKeeperWrapper, address,
+        this);
+    zooKeeperWrapper.registerListener(activeMasterManager);
+    // Wait here until we are the active master
+    activeMasterManager.blockUntilBecomingActiveMaster();
+
+    // We are the active master now.
+
+    LOG.info("Server has become the active/primary master.  Address is " +
+        this.address.toString());
+
+    // run() is executed next
   }
-  
+
   /**
-   * Returns true if this master process was responsible for starting the 
-   * cluster.
+   * Main processing loop for the HMaster.
+   * 1. Handle both fresh cluster start as well as failed over initialization of
+   *    the HMaster.
+   * 2. Start the necessary services
+   * 3. Reassign the root region
+   * 4. The master is no longer closed - set "closed" to false
+   */
+  @Override
+  public void run() {
+    try {
+      // If this is a fresh cluster start, make sure the root region exists.
+      if(isClusterStartup()) {
+        // Initialize the filesystem, which does the following:
+        //   - Creates the root hbase directory in the FS
+        //   - Checks the FS to make sure the root directory is readable
+        //   - Creates the archive directory for logs
+        fileSystemManager.initialize();
+        // Do any log splitting necessary
+        // TODO: Should do this in background rather than block master startup
+        fileSystemManager.splitLogAfterStartup();
+      }
+      // TODO: fix the logic and naming for joinCluster()
+      joinCluster();
+      // start up all service threads.
+      startServiceThreads();
+      // assign the root region
+      regionManager.reassignRootRegion();
+      // set the master as opened
+      this.closed.set(false);
+      LOG.info("HMaster started on " + this.address.toString());
+
+      while (!this.closed.get()) {
+        // check if we should be shutting down
+        if (this.shutdownRequested.get()) {
+          // The region servers won't all exit until we stop scanning the
+          // meta regions
+          this.regionManager.stopScanners();
+          if (this.serverManager.numServers() == 0) {
+            startShutdown();
+            break;
+          }
+          else {
+            LOG.debug("Waiting on " +
+             this.serverManager.getServersToServerInfo().keySet().toString());
+          }
+        }
+
+        // process the operation, handle the result
+        ProcessingResultCode resultCode = regionServerOperationQueue.process();
+        // If FAILED op processing, bad. Will exit.
+        if(resultCode == ProcessingResultCode.FAILED) {
+          break;
+        }
+        // If bad filesystem, exit
+        else if(resultCode == ProcessingResultCode.REQUEUED_BUT_PROBLEM) {
+          if (!fileSystemManager.checkFileSystem()) {
+            break;
+          }
+        }
+        // Continue run loop if conditions are PROCESSED, NOOP, REQUEUED
+      }
+    } catch (Throwable t) {
+      LOG.fatal("Unhandled exception. Starting shutdown.", t);
+      setClosed();
+    }
+
+    // Wait for all the remaining region servers to report in.
+    this.serverManager.letRegionServersShutdown();
+
+    // Clean up and close up shop
+    if (this.infoServer != null) {
+      LOG.info("Stopping infoServer");
+      try {
+        this.infoServer.stop();
+      } catch (Exception ex) {
+        ex.printStackTrace();
+      }
+    }
+    this.rpcServer.stop();
+    this.regionManager.stop();
+    this.zooKeeperWrapper.close();
+    HBaseExecutorService.shutdown();
+    LOG.info("HMaster main thread exiting");
+  }
+
+  /**
+   * Returns true if this master process was responsible for starting the
+   * cluster, false if not.
    */
   public boolean isClusterStartup() {
     return isClusterStartup;
   }
-  
-  public void resetClusterStartup() {
-    isClusterStartup = false;
+
+  /**
+   * Sets whether this is a cluster startup or not.  Used by the
+   * {@link ActiveMasterManager} to set to false if we determine another master
+   * has become the primary.
+   * @param isClusterStartup false if another master became active before us
+   */
+  public void setClusterStartup(boolean isClusterStartup) {
+    this.isClusterStartup = isClusterStartup;
   }
-  
+
   public HServerAddress getHServerAddress() {
     return address;
   }
@@ -274,7 +376,7 @@ public class HMaster extends Thread implements HMasterInterface,
   public InfoServer getInfoServer() {
     return this.infoServer;
   }
-  
+
   /**
    * Return the file systen manager instance
    */
@@ -304,7 +406,7 @@ public class HMaster extends Thread implements HMasterInterface,
   public void setClosed() {
     this.closed.set(true);
   }
-  
+
   public AtomicBoolean getClosed() {
     return this.closed;
   }
@@ -330,69 +432,9 @@ public class HMaster extends Thread implements HMasterInterface,
   public Path getRootDir() {
     return fileSystemManager.getRootDir();
   }
-  
+
   public RegionServerOperationQueue getRegionServerOperationQueue() {
     return this.regionServerOperationQueue;
-  }
-
-  /** Main processing loop */
-  @Override
-  public void run() {
-    joinCluster();
-    startServiceThreads();
-    /* Main processing loop */
-    try {
-      FINISHED: while (!this.closed.get()) {
-        // check if we should be shutting down
-        if (this.shutdownRequested.get()) {
-          // The region servers won't all exit until we stop scanning the
-          // meta regions
-          this.regionManager.stopScanners();
-          if (this.serverManager.numServers() == 0) {
-            startShutdown();
-            break;
-          } else {
-            LOG.debug("Waiting on " +
-              this.serverManager.getServersToServerInfo().keySet().toString());
-          }
-        }
-        switch (this.regionServerOperationQueue.process()) {
-        case FAILED:
-            // If FAILED op processing, bad. Exit.
-          break FINISHED;
-        case REQUEUED_BUT_PROBLEM:
-          if (!fileSystemManager.checkFileSystem())
-              // If bad filesystem, exit.
-            break FINISHED;
-          default:
-            // Continue run loop if conditions are PROCESSED, NOOP, REQUEUED
-          break;
-        }
-      }
-    } catch (Throwable t) {
-      LOG.fatal("Unhandled exception. Starting shutdown.", t);
-      setClosed();
-    }
-
-    // Wait for all the remaining region servers to report in.
-    this.serverManager.letRegionServersShutdown();
-
-    /*
-     * Clean up and close up shop
-     */
-    if (this.infoServer != null) {
-      LOG.info("Stopping infoServer");
-      try {
-        this.infoServer.stop();
-      } catch (Exception ex) {
-        ex.printStackTrace();
-      }
-    }
-    this.rpcServer.stop();
-    this.regionManager.stop();
-    this.zooKeeperWrapper.close();
-    HBaseExecutorService.shutdown();
-    LOG.info("HMaster main thread exiting");
   }
 
   /*
@@ -461,6 +503,15 @@ public class HMaster extends Thread implements HMasterInterface,
    */
   private void startServiceThreads() {
     try {
+      // Start the unassigned watcher - which will create the unassigned region
+      // in ZK. This is needed before RegionManager() constructor tries to assign
+      // the root region.
+      ZKUnassignedWatcher.start(this.conf, this);
+      // start the "close region" executor service
+      HBaseEventType.RS2ZK_REGION_CLOSED.startMasterExecutorService(address.toString());
+      // start the "open region" executor service
+      HBaseEventType.RS2ZK_REGION_OPENED.startMasterExecutorService(address.toString());
+      // start the region manager
       this.regionManager.start();
       // Put up info server.
       int port = this.conf.getInt("hbase.master.info.port", 60010);
@@ -578,7 +629,8 @@ public class HMaster extends Thread implements HMasterInterface,
         startKey = endKey;
       }
     }
-    for (int tries = 0; tries < this.numRetries; tries++) {
+    int numRetries =  conf.getInt("hbase.client.retries.number", 2);
+    for (int tries = 0; tries < numRetries; tries++) {
       try {
         // We can not create a table unless meta regions have already been
         // assigned and scanned.
@@ -594,7 +646,7 @@ public class HMaster extends Thread implements HMasterInterface,
       } catch (TableExistsException e) {
         throw e;
       } catch (IOException e) {
-        if (tries == this.numRetries - 1) {
+        if (tries == numRetries - 1) {
           throw RemoteExceptionHandler.checkIOException(e);
         }
         this.sleeper.sleep();
@@ -688,11 +740,14 @@ public class HMaster extends Thread implements HMasterInterface,
       new MetaScannerVisitor() {
         @Override
         public boolean processRow(Result data) throws IOException {
-          if (data == null || data.size() <= 0)
+          if (data == null || data.size() <= 0) {
             return true;
+          }
           Pair<HRegionInfo, HServerAddress> pair =
             metaRowToRegionPair(data);
-          if (pair == null) return false;
+          if (pair == null) {
+            return false;
+          }
           if (!Bytes.equals(pair.getFirst().getTableDesc().getName(),
                 tableName)) {
             return false;
@@ -702,10 +757,10 @@ public class HMaster extends Thread implements HMasterInterface,
         }
     };
 
-    MetaScanner.metaScan(conf, visitor, tableName); 
+    MetaScanner.metaScan(conf, visitor, tableName);
     return result;
   }
-  
+
   private Pair<HRegionInfo, HServerAddress> metaRowToRegionPair(
       Result data) throws IOException {
     HRegionInfo info = Writables.getHRegionInfo(
@@ -719,7 +774,7 @@ public class HMaster extends Thread implements HMasterInterface,
     } else {
       //undeployed
       return new Pair<HRegionInfo, HServerAddress>(info, null);
-    }    
+    }
   }
 
   /**
@@ -733,16 +788,19 @@ public class HMaster extends Thread implements HMasterInterface,
   throws IOException {
     final AtomicReference<Pair<HRegionInfo, HServerAddress>> result =
       new AtomicReference<Pair<HRegionInfo, HServerAddress>>(null);
-    
+
     MetaScannerVisitor visitor =
       new MetaScannerVisitor() {
         @Override
         public boolean processRow(Result data) throws IOException {
-          if (data == null || data.size() <= 0)
+          if (data == null || data.size() <= 0) {
             return true;
+          }
           Pair<HRegionInfo, HServerAddress> pair =
             metaRowToRegionPair(data);
-          if (pair == null) return false;
+          if (pair == null) {
+            return false;
+          }
           if (!Bytes.equals(pair.getFirst().getTableDesc().getName(),
                 tableName)) {
             return false;
@@ -755,12 +813,12 @@ public class HMaster extends Thread implements HMasterInterface,
     MetaScanner.metaScan(conf, visitor, tableName, rowKey, 1);
     return result.get();
   }
-  
+
   Pair<HRegionInfo,HServerAddress> getTableRegionFromName(
       final byte [] regionName)
   throws IOException {
     byte [] tableName = HRegionInfo.parseRegionName(regionName)[0];
-    
+
     Set<MetaRegion> regions = regionManager.getMetaRegionsForTable(tableName);
     for (MetaRegion m: regions) {
       byte [] metaRegionName = m.getRegionName();
@@ -770,7 +828,9 @@ public class HMaster extends Thread implements HMasterInterface,
           HConstants.REGIONINFO_QUALIFIER);
       get.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
       Result data = srvr.get(metaRegionName, get);
-      if(data == null || data.size() <= 0) continue;
+      if(data == null || data.size() <= 0) {
+        continue;
+      }
       return metaRowToRegionPair(data);
     }
     return null;
@@ -808,8 +868,9 @@ public class HMaster extends Thread implements HMasterInterface,
     switch (op) {
     case TABLE_SET_HTD:
       if (args == null || args.length < 1 ||
-          !(args[0] instanceof HTableDescriptor))
+          !(args[0] instanceof HTableDescriptor)) {
         throw new IOException("SET_HTD request requires an HTableDescriptor");
+      }
       HTableDescriptor htd = (HTableDescriptor) args[0];
       LOG.info("modifyTable(SET_HTD): " + htd);
       new ModifyTableMeta(this, tableName, htd).process();
@@ -820,9 +881,10 @@ public class HMaster extends Thread implements HMasterInterface,
     case TABLE_MAJOR_COMPACT:
     case TABLE_FLUSH:
       if (args != null && args.length > 0) {
-        if (!(args[0] instanceof ImmutableBytesWritable))
+        if (!(args[0] instanceof ImmutableBytesWritable)) {
           throw new IOException(
             "request argument must be ImmutableBytesWritable");
+        }
         Pair<HRegionInfo,HServerAddress> pair = null;
         if(tableName == null) {
           byte [] regionName = ((ImmutableBytesWritable)args[0]).get();
@@ -837,7 +899,9 @@ public class HMaster extends Thread implements HMasterInterface,
         }
       } else {
         for (Pair<HRegionInfo,HServerAddress> pair: getTableRegions(tableName)) {
-          if (pair.getSecond() == null) continue; // undeployed
+          if (pair.getSecond() == null) {
+            continue; // undeployed
+          }
           this.regionManager.startAction(pair.getFirst().getRegionName(),
             pair.getFirst(), pair.getSecond(), op);
         }
@@ -869,7 +933,9 @@ public class HMaster extends Thread implements HMasterInterface,
       // an open or whatever.
       this.regionManager.clearFromInTransition(regionname);
       // If hostnameAndPort is still null, then none, exit.
-      if (hostnameAndPort == null) break;
+      if (hostnameAndPort == null) {
+        break;
+      }
       long startCode =
         Bytes.toLong(rr.getValue(HConstants.CATALOG_FAMILY,
             HConstants.STARTCODE_QUALIFIER));
@@ -905,8 +971,8 @@ public class HMaster extends Thread implements HMasterInterface,
    */
   @Override
   public void process(WatchedEvent event) {
-    LOG.debug("Event " + event.getType() + 
-              " with state " + event.getState() +  
+    LOG.debug("Event " + event.getType() +
+              " with state " + event.getState() +
               " with path " + event.getPath());
     // Master should kill itself if its session expired or if its
     // znode was deleted manually (usually for testing purposes)
@@ -925,15 +991,13 @@ public class HMaster extends Thread implements HMasterInterface,
         zooKeeperWrapper =
           new ZooKeeperWatcher(conf, HMaster.class.getName(), this);
         zooKeeperWrapper.registerListener(this);
-        this.zkMasterAddressWatcher.setZookeeper(zooKeeperWrapper);
-        if(!this.zkMasterAddressWatcher.
-            writeAddressToZooKeeper(this.address,false)) {
-          throw new Exception("Another Master is currently active");
-        }
+        activeMasterManager = new ActiveMasterManager(zooKeeperWrapper,
+            this.address, this);
+        activeMasterManager.blockUntilBecomingActiveMaster();
 
-        // we are a failed over master, reset the fact that we started the 
+        // we are a failed over master, reset the fact that we started the
         // cluster
-        resetClusterStartup();
+        setClusterStartup(false);
         // Verify the cluster to see if anything happened while we were away
         joinCluster();
       } catch (Exception e) {

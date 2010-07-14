@@ -22,21 +22,23 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.ServerStatus;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Manages the location of the current active Master for this RegionServer.
- * 
- * Listens for ZooKeeper events related to the master address. The node /master 
- * will contain the address of the current master. This listener is interested 
+ *
+ * Listens for ZooKeeper events related to the master address. The node /master
+ * will contain the address of the current master. This listener is interested
  * in NodeDeleted and NodeCreated events on /master.
- * 
+ *
  * This class is thread-safe and takes care of re-setting all watchers to
  * ensure it always knows the up-to-date master.  To kick it off, instantiate
  * the class and run the {@link #monitorMaster()} method.
- * 
+ *
  * You can get the current master via {@link #getMasterAddress()} or the
  * blocking method {@link #waitMasterAddress()}.
  */
@@ -45,25 +47,29 @@ public class MasterAddressManager extends ZooKeeperListener {
 
   // Address of the current primary master, null if no primary master
   private HServerAddress masterAddress;
-  
+
+  // Status and controller for the regionserver
+  private ServerStatus status;
+
   /**
    * Construct a master address listener with the specified zookeeper reference.
-   * 
+   *
    * This constructor does not trigger any actions, you must call methods
    * explicitly.  Normally you will just want to execute {@link #monitorMaster()}
-   * and you will ensure to 
-   * 
+   * and you will ensure to
+   *
    * @param watcher zk reference and watcher
    */
-  public MasterAddressManager(ZooKeeperWatcher watcher) {
+  public MasterAddressManager(ZooKeeperWatcher watcher, ServerStatus status) {
     super(watcher);
-    masterAddress = null;
+    this.status = status;
+    this.masterAddress = null;
   }
-  
+
   /**
    * Get the address of the current master if one is available.  Returns null
    * if no current master.
-   * 
+   *
    * Use {@link #waitMasterAddress} if you want to block until the master is
    * available.
    * @return server address of current active master, or null if none available
@@ -71,7 +77,7 @@ public class MasterAddressManager extends ZooKeeperListener {
   public synchronized HServerAddress getMasterAddress() {
     return masterAddress;
   }
-  
+
   /**
    * Check if there is a master available.
    * @return true if there is a master set, false if not.
@@ -79,14 +85,14 @@ public class MasterAddressManager extends ZooKeeperListener {
   public synchronized boolean hasMaster() {
     return masterAddress != null;
   }
-  
+
   /**
    * Get the address of the current master.  If no master is available, method
    * will block until one is available, the thread is interrupted, or timeout
    * has passed.
-   * 
+   *
    * TODO: Make this work, currently unused, kept with existing retry semantics.
-   *       
+   *
    * @return server address of current active master, null if timed out
    * @throws InterruptedException if the thread is interrupted while waiting
    */
@@ -94,22 +100,28 @@ public class MasterAddressManager extends ZooKeeperListener {
   throws InterruptedException {
     return masterAddress;
   }
-  
+
   /**
    * Setup to watch for the primary master of the cluster.
-   * 
+   *
    * If the master is already available in ZooKeeper, this method will ensure
    * it gets set and that any further changes are also watched for.
-   * 
+   *
    * If no master is available, this method ensures we become aware of it and
    * will take care of setting it.
    */
   public void monitorMaster() {
-    if(ZKUtil.watchAndCheckExists(watcher, watcher.masterAddressZNode)) {
-      handleNewMaster();
+    try {
+      if(ZKUtil.watchAndCheckExists(watcher, watcher.masterAddressZNode)) {
+        handleNewMaster();
+      }
+    } catch(KeeperException ke) {
+      // If we have a ZK exception trying to find the master we must abort
+      LOG.fatal("Unexpected ZooKeeper exception", ke);
+      status.abortServer();
     }
   }
-  
+
   @Override
   public void nodeCreated(String path) {
     LOG.info("nodeCreated(" + path + ")");
@@ -118,7 +130,7 @@ public class MasterAddressManager extends ZooKeeperListener {
     }
     monitorMaster();
   }
-  
+
   @Override
   public void nodeDeleted(String path) {
     if(path.equals(watcher.masterAddressZNode)) {
@@ -126,7 +138,7 @@ public class MasterAddressManager extends ZooKeeperListener {
     }
     monitorMaster();
   }
-  
+
   /**
    * Set the master address to the specified address.  This operation is
    * idempotent, a master will only be set if there is currently no master set.
@@ -137,7 +149,7 @@ public class MasterAddressManager extends ZooKeeperListener {
       masterAddress = address;
     }
   }
-  
+
   /**
    * Unsets the master address.  Used when the master goes offline so none is
    * available.
@@ -148,34 +160,40 @@ public class MasterAddressManager extends ZooKeeperListener {
       masterAddress = null;
     }
   }
-  
+
   /**
    * Handle a new master being set.
-   * 
+   *
    * This method should be called to check if there is a new master.  If there
    * is already a master set, this method returns immediately.  If none is set,
    * this will attempt to grab the master location from ZooKeeper and will set
    * it.
-   * 
-   * This method uses an atomic operation to ensure a new master is only set 
+   *
+   * This method uses an atomic operation to ensure a new master is only set
    * once.
    */
   private void handleNewMaster() {
     if(hasMaster()) {
       return;
     }
-    HServerAddress address = 
-      ZKUtil.getDataAsAddress(watcher, watcher.masterAddressZNode);
+    HServerAddress address = null;
+    try {
+      address = ZKUtil.getDataAsAddress(watcher, watcher.masterAddressZNode);
+    } catch (KeeperException ke) {
+      // If we have a ZK exception trying to find the master we must abort
+      LOG.fatal("Unexpected ZooKeeper exception", ke);
+      status.abortServer();
+    }
     if(address != null) {
       setMasterAddress(address);
     }
   }
-  
+
   /**
    * Handle a master failure.
-   * 
+   *
    * Triggered when a master node is deleted.
-   * 
+   *
    * TODO: Other ways we figure master is "dead"?  What do we do if set in ZK
    *       but we can't communicate with TCP?
    */

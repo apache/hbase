@@ -72,12 +72,23 @@ public class FileSystemManager {
     // We're supposed to run on 0.20 and 0.21 anyways.
     conf.set("fs.default.name", this.rootdir.toString());
     conf.set("fs.defaultFS", this.rootdir.toString());
+    // setup the filesystem variable
     this.fs = FileSystem.get(conf);
-    
+    // set up the archived logs path
+    this.oldLogDir = new Path(this.rootdir, HConstants.HREGION_OLDLOGDIR_NAME);
+  }
+
+  /**
+   * <ol>
+   * <li>Check if the root region exists and is readable, if not create it</li>
+   * <li>Create a log archive directory for RS to put archived logs</li>
+   * </ol>
+   */
+  public void initialize() throws IOException {
+    // check if the root directory exists
     checkRootDir(this.rootdir, conf, this.fs);
 
     // Make sure the region servers can archive their old logs
-    this.oldLogDir = new Path(this.rootdir, HConstants.HREGION_OLDLOGDIR_NAME);
     if(!this.fs.exists(this.oldLogDir)) {
       this.fs.mkdirs(this.oldLogDir);
     }

@@ -40,12 +40,12 @@ public class TestMasterAddressManager {
   private static final Log LOG = LogFactory.getLog(TestMasterAddressManager.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniZKCluster();
   }
-  
+
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
@@ -57,29 +57,29 @@ public class TestMasterAddressManager {
    */
   @Test
   public void testMasterAddressManagerFromZK() throws Exception {
-    
-    ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(), 
+
+    ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
         "testMasterAddressManagerFromZK", null);
     zk.createZNodeIfNotExists(zk.baseZNode);
-    
+
     // Should not have a master yet
-    MasterAddressManager addressManager = new MasterAddressManager(zk);
+    MasterAddressManager addressManager = new MasterAddressManager(zk, null);
     addressManager.monitorMaster();
     assertFalse(addressManager.hasMaster());
     zk.registerListener(addressManager);
-    
+
     // Use a listener to capture when the node is actually created
     NodeCreationListener listener = new NodeCreationListener(zk, zk.masterAddressZNode);
     zk.registerListener(listener);
-    
+
     // Create the master node with a dummy address
     String host = "hostname";
     int port = 1234;
     HServerAddress dummyAddress = new HServerAddress(host, port);
     LOG.info("Creating master node");
-    zk.createZNodeIfNotExists(zk.masterAddressZNode, 
+    zk.createZNodeIfNotExists(zk.masterAddressZNode,
         Bytes.toBytes(dummyAddress.toString()), CreateMode.EPHEMERAL, false);
-    
+
     // Wait for the node to be created
     LOG.info("Waiting for master address manager to be notified");
     listener.waitForCreation();
@@ -87,21 +87,21 @@ public class TestMasterAddressManager {
     assertTrue(addressManager.hasMaster());
     HServerAddress pulledAddress = addressManager.getMasterAddress();
     assertTrue(pulledAddress.equals(dummyAddress));
-    
+
   }
-  
+
   public static class NodeCreationListener extends ZooKeeperListener {
     private static final Log LOG = LogFactory.getLog(NodeCreationListener.class);
-    
+
     private Semaphore lock;
     private String node;
-    
+
     public NodeCreationListener(ZooKeeperWatcher watcher, String node) {
       super(watcher);
       lock = new Semaphore(0);
       this.node = node;
     }
-    
+
     @Override
     public void nodeCreated(String path) {
       if(path.equals(node)) {
@@ -109,7 +109,7 @@ public class TestMasterAddressManager {
         lock.release();
       }
     }
-    
+
     public void waitForCreation() throws InterruptedException {
       lock.acquire();
     }

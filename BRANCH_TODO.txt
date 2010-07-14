@@ -1,0 +1,38 @@
+List of things todo for branch, including comments from reviews not yet
+implemented.
+
+
+Now:
+
+* synchronize all access to the boolean in ActiveMasterManager
+
+
+Think about:
+
+* renaming master file manager?  MasterFS/MasterFileSystem
+
+
+Later:
+
+* ServerStatus/MasterStatus
+
+  - These need new names to be more descriptive (ServerControl?)
+  - They should have a very clear purpose that adds value beyond passing
+    HMaster directly
+  - Current idea is these things would just have accessors/setters to
+    the server status booleans and abort() methods (like closed, closing,
+    abortRequested)
+
+* HBaseEventHandler/HBaseEventType/HBaseExecutorService
+
+  - After ZK changes, renamed to EventHandler/EventType
+  - Currently multiple types map to a single handler, we may want 1-to-1
+  - Need to do a full review of the semantics of these once bulk of
+    master rewrite is done
+
+* LoadBalancer
+
+  - Need to finish or back out code related to block locations
+    (if finish, need to use files not directory, and use right location)
+  - Put notes from reviewboard/jira into LB javadoc or hbase "book"
+

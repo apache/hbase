@@ -25,10 +25,10 @@ import org.apache.hadoop.hbase.ServerStatus;
 import org.apache.hadoop.hbase.client.ServerConnection;
 
 /**
- * These are the set of functions implemented by the HMaster and accessed by 
+ * These are the set of functions implemented by the HMaster and accessed by
  * the other packages in the master.
- * 
- * TODO: this list has to be cleaned up, this is a re-factor only change that 
+ *
+ * TODO: this list has to be cleaned up, this is a re-factor only change that
  * preserves the functions in the interface.
  */
 public interface MasterStatus extends ServerStatus {
@@ -42,26 +42,32 @@ public interface MasterStatus extends ServerStatus {
    * Return the region manager for region related info
    */
   public RegionManager getRegionManager();
-  
+
   /**
    * Return the file system manager for dealing with FS related stuff
    */
   public FileSystemManager getFileSystemManager();
 
   /**
-   * Is this the master that is starting the cluster up? If true, yes. 
+   * Is this the master that is starting the cluster up? If true, yes.
    * Otherwise this is a failed over master.
    */
   public boolean isClusterStartup();
 
   /**
+   * Set whether this is a cluster starting up.
+   * @param isClusterStartup whether this is a cluster startup or failover
+   */
+  public void setClusterStartup(boolean isClusterStartup);
+
+  /**
    * Return the server RPC connection
    */
   public ServerConnection getServerConnection();
-  
-  // TODO: the semantics of the following methods should be defined. Once that 
+
+  // TODO: the semantics of the following methods should be defined. Once that
   // is clear, most of these should move to server status
-  
+
   // start shutting down the server
   public void startShutdown();
   // is a shutdown requested

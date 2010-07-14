@@ -14,6 +14,9 @@ Branch 0.90.0 - Master Rewrite Branch
     HBASE-2696  Re-enabled TestZooKeeper.testRegionServerSessionExpired
     HBASE-2699  [LoadBalancer-v5] Reimplement load balancing to be a
                 background process and to not use heartbeats
+    HBASE-2695  [MasterStartupCleanup-v4] Cleans up the master startup, adds
+                new ZK tool ActiveMasterManager for master-side (part of
+                master cleanup and refactor)
 
   NEW FEATURES
 

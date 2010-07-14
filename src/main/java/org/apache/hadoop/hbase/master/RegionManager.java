@@ -154,8 +154,6 @@ public class RegionManager {
         HConstants.DEFAULT_ZOOKEEPER_RETRIES);
     zooKeeperPause = conf.getInt(HConstants.ZOOKEEPER_PAUSE,
         HConstants.DEFAULT_ZOOKEEPER_PAUSE);
-
-    reassignRootRegion();
   }
 
   void start() {
@@ -174,7 +172,7 @@ public class RegionManager {
     }
   }
 
-  void reassignRootRegion() {
+  public void reassignRootRegion() {
     unsetRootRegion();
     if (!masterStatus.getShutdownRequested().get()) {
       synchronized (regionsInTransition) {

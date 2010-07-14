@@ -88,6 +88,12 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
     this.server = server;
     info("Connected to ZooKeeper");
     setNodeNames(conf);
+    try {
+      ZKUtil.createIfNotExists(this, baseZNode);
+    } catch (KeeperException e) {
+      error("Unexpected KeeperException creating base node", e);
+      throw new IOException(e);
+    }
   }
   
   /**
@@ -198,9 +204,10 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
       // Abort the server if Disconnected or Expired
       // TODO: Åny reason to handle these two differently?
       case Disconnected:
+        info("Received Disconnected from ZooKeeper, ignoring");
+        break;
       case Expired:
-        error("Received Disconnected/Expired [" + event.getState() + "] " +
-              "from ZooKeeper, aborting server");
+        error("Received Expired from ZooKeeper, aborting server");
         if(server != null) {
           server.abortServer();
         }
@@ -213,13 +220,15 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
    * 
    * This may be temporary but for now this gives one place to deal with these.
    * 
-   * TODO: Currently this method aborts the server.
+   * TODO: Currently this method rethrows the exception to let the caller handle
    * 
    * @param ke
+   * @throws KeeperException 
    */
-  public void keeperException(KeeperException ke) {
-    error("Received unexpected KeeperException, aborting server", ke);
-    server.abortServer();
+  public void keeperException(KeeperException ke)
+  throws KeeperException {
+    error("Received unexpected KeeperException, re-throwing exception", ke);
+    throw ke;
   }
   
   /**
@@ -229,6 +238,7 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
    * 
    * TODO: Currently, this method does nothing.
    *       Is this ever expected to happen?  Do we abort or can we let it run?
+   *       Maybe this should be logged as WARN?  It shouldn't happen?
    * 
    * @param ie
    */
