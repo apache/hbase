@@ -53,6 +53,9 @@ public class HMsg implements Writable {
 
     /** Compact the specified region */
     MSG_REGION_COMPACT,
+
+    /** UNUSED, it's kept in 0.20 only for rolling upgrades */
+    MSG_CALL_SERVER_STARTUP,
     
     /** Master tells region server to stop */
     MSG_REGIONSERVER_STOP,

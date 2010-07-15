@@ -1,11 +1,12 @@
 HBase Change Log
 Release 0.20.6 - Unreleased
-  BUG FiXES
+  BUG FIXES
    HBASE-2763  Cross-port HADOOP-6833 IPC parameter leak bug
    HBASE-2772  Scan doesn't recover from region server failure
    HBASE-2786  TestHLog.testSplit hangs
    HBASE-2797  Another NPE in ReadWriteConsistencyControl
    HBASE-2802  Stop daughter regions both being assigned same server
+   HBASE-2837  HBASE-2613 broke rolling upgrades
 
   IMPROVEMENTS
    HBASE-2349  Backport HBaseTestingUtility to branch (will include adding
