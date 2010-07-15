@@ -17,31 +17,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
- * Used by server processes to expose HServerConnection method
- * so can call HConnectionManager#setRootRegionLocation
+ * Set of functions that are exposed by any HBase process (implemented by the
+ * master, region server, and client).
  */
-public class ServerConnectionManager extends HConnectionManager {
-  /*
-   * Not instantiable
+public interface ServerController {
+  /**
+   * Return the address of the current server.
    */
-  private ServerConnectionManager() {}
+  public HServerAddress getHServerAddress();
 
   /**
-   * Get the connection object for the instance specified by the configuration
-   * If no current connection exists, create a new connection for that instance
-   * @param conf configuration
-   * @return HConnection object for the instance specified by the configuration
-   * @throws ZooKeeperConnectionException
+   * Get the configuration object for this server.
    */
-  public static ServerConnection getConnection(Configuration conf) throws ZooKeeperConnectionException {
-    return (ServerConnection) HConnectionManager.getConnection(conf);
-  }
+  public Configuration getConfiguration();
+
+  /**
+   * Get the ZooKeeper instance for this server.
+   */
+  public ZooKeeperWatcher getZooKeeper();
+
+  /**
+   * Stub method into ServerStatus to move forward with ZK cleanup.
+   */
+  public void abortServer();
 }

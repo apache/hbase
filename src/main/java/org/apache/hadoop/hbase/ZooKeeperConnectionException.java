@@ -19,31 +19,31 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import java.io.IOException;
 
 /**
- * Set of functions that are exposed by any HBase server (implemented by the 
- * master and region server).
+ * Thrown if the client can't connect to zookeeper
  */
-public interface ServerStatus {
+public class ZooKeeperConnectionException extends IOException {
+  private static final long serialVersionUID = 1L << 23 - 1L;
+  /** default constructor */
+  public ZooKeeperConnectionException() {
+    super();
+  }
+
   /**
-   * Return the address of the current server.
+   * Constructor
+   * @param s message
    */
-  public HServerAddress getHServerAddress();
-  
+  public ZooKeeperConnectionException(String s) {
+    super(s);
+  }
+
   /**
-   * Get the configuration object for this server.
+   * Constructor taking another exception.
+   * @param e Exception to grab data from.
    */
-  public Configuration getConfiguration();
-  
-  /**
-   * Get the ZooKeeper instance for this server.
-   */
-  public ZooKeeperWatcher getZooKeeper();
-  
-  /**
-   * Stub method into ServerStatus to move forward with ZK cleanup.
-   */
-  public void abortServer();
+  public ZooKeeperConnectionException(Exception e) {
+    super(e);
+  }
 }

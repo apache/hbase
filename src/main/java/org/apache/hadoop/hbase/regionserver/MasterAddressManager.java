@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.ServerStatus;
+import org.apache.hadoop.hbase.ServerController;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -49,7 +49,7 @@ public class MasterAddressManager extends ZooKeeperListener {
   private HServerAddress masterAddress;
 
   // Status and controller for the regionserver
-  private ServerStatus status;
+  private ServerController status;
 
   /**
    * Construct a master address listener with the specified zookeeper reference.
@@ -60,7 +60,7 @@ public class MasterAddressManager extends ZooKeeperListener {
    *
    * @param watcher zk reference and watcher
    */
-  public MasterAddressManager(ZooKeeperWatcher watcher, ServerStatus status) {
+  public MasterAddressManager(ZooKeeperWatcher watcher, ServerController status) {
     super(watcher);
     this.status = status;
     this.masterAddress = null;

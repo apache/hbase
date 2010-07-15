@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.KeeperException;
@@ -92,15 +94,12 @@ public class TestZooKeeper {
       throws IOException, InterruptedException {
     new HTable(conf, HConstants.META_TABLE_NAME);
 
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, 
-        TestZooKeeper.class.getName(), null);
-    zkw.registerListener(EmptyWatcher.instance);
-    String quorumServers = zkw.getQuorumServers();
+    String quorumServers = ZKConfig.getZKQuorumServersString(conf);
     int sessionTimeout = 5 * 1000; // 5 seconds
     HConnection connection = HConnectionManager.getConnection(conf);
-    ZooKeeperWrapper connectionZK = connection.getZooKeeperWrapper();
-    long sessionID = connectionZK.getSessionID();
-    byte[] password = connectionZK.getSessionPassword();
+    ZooKeeperWatcher connectionZK = connection.getZooKeeperWatcher();
+    long sessionID = connectionZK.getZooKeeper().getSessionId();
+    byte[] password = connectionZK.getZooKeeper().getSessionPasswd();
 
     ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout,
         EmptyWatcher.instance, sessionID, password);
@@ -163,12 +162,11 @@ public class TestZooKeeper {
       ipMeta.exists(new Get(HConstants.LAST_ROW));
 
       // make sure they aren't the same
-      assertFalse(HConnectionManager.getClientZooKeeperWatcher(conf)
-          .getZooKeeperWrapper() == HConnectionManager.getClientZooKeeperWatcher(
-          otherConf).getZooKeeperWrapper());
+      assertFalse(HConnectionManager.getConnection(conf).getZooKeeperWatcher()
+          == HConnectionManager.getConnection(otherConf).getZooKeeperWatcher());
       assertFalse(HConnectionManager.getConnection(conf)
-          .getZooKeeperWrapper().getQuorumServers().equals(HConnectionManager
-          .getConnection(otherConf).getZooKeeperWrapper().getQuorumServers()));
+          .getZooKeeperWatcher().getQuorum().equals(HConnectionManager
+              .getConnection(otherConf).getZooKeeperWatcher().getQuorum()));
     } catch (Exception e) {
       e.printStackTrace();
       fail();
@@ -184,17 +182,16 @@ public class TestZooKeeper {
   public void testZNodeDeletes() throws Exception {
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, 
         TestZooKeeper.class.getName(), null);
-    zkw.registerListener(EmptyWatcher.instance);
-    zkw.ensureExists("/l1/l2/l3/l4");
+    ZKUtil.createWithParents(zkw, "/l1/l2/l3/l4");
     try {
-      zkw.deleteZNode("/l1/l2");
+      ZKUtil.deleteNode(zkw, "/l1/l2");
       fail("We should not be able to delete if znode has childs");
     } catch (KeeperException ex) {
-      assertNotNull(zkw.getData("/l1/l2/l3", "l4"));
+      assertNotNull(ZKUtil.getDataNoWatch(zkw, "/l1/l2/l3/l4", null));
     }
-    zkw.deleteZNode("/l1/l2", true);
-    assertNull(zkw.getData("/l1/l2/l3", "l4"));
-    zkw.deleteZNode("/l1");
-    assertNull(zkw.getData("/l1", "l2"));
+    ZKUtil.deleteNodeRecursively(zkw, "/l1/l2");
+    assertNull(ZKUtil.getDataNoWatch(zkw, "/l1/l2/l3/l4", null));
+    ZKUtil.deleteNode(zkw, "/l1");
+    assertNull(ZKUtil.getDataNoWatch(zkw, "/l1/l2", null));
   }
 }

@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.hbase.ServerStatus;
+import org.apache.hadoop.hbase.ServerController;
 import org.apache.hadoop.hbase.client.ServerConnection;
 
 /**
@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.client.ServerConnection;
  * TODO: this list has to be cleaned up, this is a re-factor only change that
  * preserves the functions in the interface.
  */
-public interface MasterStatus extends ServerStatus {
+public interface MasterStatus extends ServerController {
 
   /**
    * Return the server manager for region server related info

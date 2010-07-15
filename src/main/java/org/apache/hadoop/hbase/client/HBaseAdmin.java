@@ -19,6 +19,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.NavigableMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +38,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -42,11 +48,6 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.NavigableMap;
 
 /**
  * Provides administrative functions for HBase
@@ -58,20 +59,22 @@ public class HBaseAdmin {
   private volatile Configuration conf;
   private final long pause;
   private final int numRetries;
-  private volatile HMasterInterface master;
 
   /**
    * Constructor
    *
    * @param conf Configuration object
    * @throws MasterNotRunningException if the master is not running
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
-  public HBaseAdmin(Configuration conf) throws MasterNotRunningException {
+  public HBaseAdmin(Configuration conf)
+  throws MasterNotRunningException, ZooKeeperConnectionException {
     this.connection = HConnectionManager.getConnection(conf);
     this.conf = conf;
     this.pause = conf.getLong("hbase.client.pause", 30 * 1000);
     this.numRetries = conf.getInt("hbase.client.retries.number", 5);
-    this.master = connection.getMaster();
+    // make sure we can get to the master
+    connection.getMaster();
   }
 
   /** @return HConnection used by this object. */
@@ -80,15 +83,21 @@ public class HBaseAdmin {
   }
 
   /**
+   * Get a connection to the currently set master.
    * @return proxy connection to master server for this instance
    * @throws MasterNotRunningException if the master is not running
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
-  public HMasterInterface getMaster() throws MasterNotRunningException{
+  public HMasterInterface getMaster()
+  throws MasterNotRunningException, ZooKeeperConnectionException {
     return this.connection.getMaster();
   }
 
-  /** @return - true if the master server is running */
-  public boolean isMasterRunning() {
+  /** @return - true if the master server is running
+   * @throws ZooKeeperConnectionException
+   * @throws MasterNotRunningException */
+  public boolean isMasterRunning()
+  throws MasterNotRunningException, ZooKeeperConnectionException {
     return this.connection.isMasterRunning();
   }
 
@@ -96,9 +105,10 @@ public class HBaseAdmin {
    * @param tableName Table to check.
    * @return True if table exists already.
    * @throws MasterNotRunningException if the master is not running
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
   public boolean tableExists(final String tableName)
-  throws MasterNotRunningException {
+  throws MasterNotRunningException, ZooKeeperConnectionException {
     return tableExists(Bytes.toBytes(tableName));
   }
 
@@ -106,12 +116,11 @@ public class HBaseAdmin {
    * @param tableName Table to check.
    * @return True if table exists already.
    * @throws MasterNotRunningException if the master is not running
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
   public boolean tableExists(final byte [] tableName)
-  throws MasterNotRunningException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
+  throws MasterNotRunningException, ZooKeeperConnectionException {
+    connection.isMasterRunning();
     return connection.tableExists(tableName);
   }
 
@@ -143,8 +152,9 @@ public class HBaseAdmin {
 
   private long getPauseTime(int tries) {
     int triesCount = tries;
-    if (triesCount >= HConstants.RETRY_BACKOFF.length)
+    if (triesCount >= HConstants.RETRY_BACKOFF.length) {
       triesCount = HConstants.RETRY_BACKOFF.length - 1;
+    }
     return this.pause * HConstants.RETRY_BACKOFF[triesCount];
   }
 
@@ -273,12 +283,9 @@ public class HBaseAdmin {
    */
   public void createTableAsync(HTableDescriptor desc, byte [][] splitKeys)
   throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
     HTableDescriptor.isLegalTableName(desc.getName());
     try {
-      this.master.createTable(desc, splitKeys);
+      getMaster().createTable(desc, splitKeys);
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
@@ -303,13 +310,11 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void deleteTable(final byte [] tableName) throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
+    isMasterRunning();
     HTableDescriptor.isLegalTableName(tableName);
     HRegionLocation firstMetaServer = getFirstMetaServerForTable(tableName);
     try {
-      this.master.deleteTable(tableName);
+      getMaster().deleteTable(tableName);
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
@@ -397,21 +402,21 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void enableTable(final byte [] tableName) throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
+    isMasterRunning();
 
     // Wait until all regions are enabled
     boolean enabled = false;
     for (int tries = 0; tries < this.numRetries; tries++) {
 
       try {
-        this.master.enableTable(tableName);
+        getMaster().enableTable(tableName);
       } catch (RemoteException e) {
         throw RemoteExceptionHandler.decodeRemoteException(e);
       }
       enabled = isTableEnabled(tableName);
-      if (enabled) break;
+      if (enabled) {
+        break;
+      }
       long sleep = getPauseTime(tries);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleeping= " + sleep + "ms, waiting for all regions to be " +
@@ -427,9 +432,10 @@ public class HBaseAdmin {
           Bytes.toString(tableName));
       }
     }
-    if (!enabled)
+    if (!enabled) {
       throw new IOException("Unable to enable table " +
         Bytes.toString(tableName));
+    }
     LOG.info("Enabled table " + Bytes.toString(tableName));
   }
 
@@ -454,20 +460,20 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void disableTable(final byte [] tableName) throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
+    isMasterRunning();
 
     // Wait until all regions are disabled
     boolean disabled = false;
     for (int tries = 0; tries < this.numRetries; tries++) {
       try {
-        this.master.disableTable(tableName);
+        getMaster().disableTable(tableName);
       } catch (RemoteException e) {
         throw RemoteExceptionHandler.decodeRemoteException(e);
       }
       disabled = isTableDisabled(tableName);
-      if (disabled) break;
+      if (disabled) {
+        break;
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleep. Waiting for all regions to be disabled from " +
           Bytes.toString(tableName));
@@ -556,12 +562,9 @@ public class HBaseAdmin {
    */
   public void addColumn(final byte [] tableName, HColumnDescriptor column)
   throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
     HTableDescriptor.isLegalTableName(tableName);
     try {
-      this.master.addColumn(tableName, column);
+      getMaster().addColumn(tableName, column);
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
@@ -590,12 +593,9 @@ public class HBaseAdmin {
    */
   public void deleteColumn(final byte [] tableName, final byte [] columnName)
   throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
     HTableDescriptor.isLegalTableName(tableName);
     try {
-      this.master.deleteColumn(tableName, columnName);
+      getMaster().deleteColumn(tableName, columnName);
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
@@ -629,12 +629,9 @@ public class HBaseAdmin {
   public void modifyColumn(final byte [] tableName, final byte [] columnName,
     HColumnDescriptor descriptor)
   throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
     HTableDescriptor.isLegalTableName(tableName);
     try {
-      this.master.modifyColumn(tableName, columnName, descriptor);
+      getMaster().modifyColumn(tableName, columnName, descriptor);
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
@@ -813,9 +810,6 @@ public class HBaseAdmin {
   public void modifyTable(final byte [] tableName, HConstants.Modify op,
       Object... args)
       throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
     // Let pass if its a catalog table.  Used by admins.
     if (tableName != null && !MetaUtils.isMetaTableName(tableName)) {
       // This will throw exception
@@ -831,7 +825,7 @@ public class HBaseAdmin {
         }
         arr = new Writable[1];
         arr[0] = (HTableDescriptor)args[0];
-        this.master.modifyTable(tableName, op, arr);
+        getMaster().modifyTable(tableName, op, arr);
         break;
 
       case TABLE_COMPACT:
@@ -851,7 +845,7 @@ public class HBaseAdmin {
               "ImmutableBytesWritable");
           }
         }
-        this.master.modifyTable(tableName, op, arr);
+        getMaster().modifyTable(tableName, op, arr);
         break;
 
       case CLOSE_REGION:
@@ -873,7 +867,7 @@ public class HBaseAdmin {
               "ImmutableBytesWritable, not " + args[i]);
           }
         }
-        this.master.modifyTable(tableName, op, arr);
+        getMaster().modifyTable(tableName, op, arr);
         break;
 
       default:
@@ -889,15 +883,11 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public synchronized void shutdown() throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
+    isMasterRunning();
     try {
-      this.master.shutdown();
+      getMaster().shutdown();
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
-    } finally {
-      this.master = null;
     }
   }
 
@@ -906,10 +896,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public ClusterStatus getClusterStatus() throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
-    return this.master.getClusterStatus();
+    return getMaster().getClusterStatus();
   }
 
   private HRegionLocation getFirstMetaServerForTable(final byte [] tableName)
@@ -923,9 +910,10 @@ public class HBaseAdmin {
    *
    * @param conf system configuration
    * @throws MasterNotRunningException if a remote or network exception occurs
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
   public static void checkHBaseAvailable(Configuration conf)
-  throws MasterNotRunningException {
+  throws MasterNotRunningException, ZooKeeperConnectionException {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
     copyOfConf.setInt("hbase.client.retries.number", 1);
     new HBaseAdmin(copyOfConf);

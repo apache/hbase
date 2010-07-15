@@ -19,20 +19,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
  * Cluster connection.
@@ -40,29 +41,33 @@ import java.util.concurrent.ExecutorService;
  */
 public interface HConnection {
   /**
-   * Retrieve ZooKeeperWrapper used by the connection.
-   * @return ZooKeeperWrapper handle being used by the connection.
+   * Retrieve ZooKeeperWatcher used by the connection.
+   * @return ZooKeeperWatcher handle being used by the connection.
    * @throws IOException if a remote or network exception occurs
    */
-  public ZooKeeperWrapper getZooKeeperWrapper() throws IOException;
+  public ZooKeeperWatcher getZooKeeperWatcher() throws IOException;
 
   /**
    * @return proxy connection to master server for this instance
    * @throws MasterNotRunningException if the master is not running
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
-  public HMasterInterface getMaster() throws MasterNotRunningException;
+  public HMasterInterface getMaster()
+  throws MasterNotRunningException, ZooKeeperConnectionException;
 
   /** @return - true if the master server is running */
-  public boolean isMasterRunning();
+  public boolean isMasterRunning()
+  throws MasterNotRunningException, ZooKeeperConnectionException;
 
   /**
    * Checks if <code>tableName</code> exists.
    * @param tableName Table to check.
    * @return True if table exists already.
    * @throws MasterNotRunningException if the master is not running
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
   public boolean tableExists(final byte [] tableName)
-  throws MasterNotRunningException;
+  throws MasterNotRunningException, ZooKeeperConnectionException;
 
   /**
    * A table that isTableEnabled == false and isTableDisabled == false

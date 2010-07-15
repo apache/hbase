@@ -8,21 +8,24 @@ import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
 /**
- * This is a helper class for region servers to update various states in 
- * Zookeeper. The various updates are abstracted out here. 
- * 
- * The "startRegionXXX" methods are to be called first, followed by the 
- * "finishRegionXXX" methods. Supports updating zookeeper periodically as a 
+ * This is a helper class for region servers to update various states in
+ * Zookeeper. The various updates are abstracted out here.
+ *
+ * The "startRegionXXX" methods are to be called first, followed by the
+ * "finishRegionXXX" methods. Supports updating zookeeper periodically as a
  * part of the "startRegionXXX". Currently handles the following state updates:
  *   - Close region
  *   - Open region
  */
 // TODO: make this thread local, in which case it is re-usable per thread
+// TODO: After open/close is direct RPC, move this logic into Handlers
 public class RSZookeeperUpdater {
   private static final Log LOG = LogFactory.getLog(RSZookeeperUpdater.class);
   private final String regionServerName;
@@ -36,59 +39,67 @@ public class RSZookeeperUpdater {
       String regionName) {
     this(zooKeeper, regionServerName, regionName, 0);
   }
-  
+
   public RSZookeeperUpdater(ZooKeeperWatcher zooKeeper, String regionServerName,
       String regionName, int zkVersion) {
     this.zooKeeper = zooKeeper;
     this.regionServerName = regionServerName;
     this.regionName = regionName;
     // get the region ZNode we have to create
-    this.regionZNode = zooKeeper.getZNode(zooKeeper.assignmentZNode, regionName);
+    this.regionZNode = ZKUtil.joinZNode(zooKeeper.assignmentZNode, regionName);
     this.zkVersion = zkVersion;
   }
-  
+
   /**
-   * This method updates the various states in ZK to inform the master that the 
+   * This method updates the various states in ZK to inform the master that the
    * region server has started closing the region.
    * @param updatePeriodically - if true, periodically updates the state in ZK
    */
   public void startRegionCloseEvent(HMsg hmsg, boolean updatePeriodically) throws IOException {
-    // if this ZNode already exists, something is wrong
-    if(zooKeeper.exists(regionZNode, true)) {
-      String msg = "ZNode " + regionZNode + " already exists in ZooKeeper, will NOT close region.";
-      LOG.error(msg);
-      throw new IOException(msg);
+    // Try to create the node with a CLOSING state, if already exists,
+    // something is wrong
+    try {
+      if(ZKUtil.createPersistentNodeIfNotExists(zooKeeper, regionZNode,
+          makeZKEventData(HBaseEventType.RS2ZK_REGION_CLOSING, hmsg))) {
+        String msg = "ZNode " + regionZNode + " already exists in ZooKeeper, will NOT close region.";
+        LOG.error(msg);
+        throw new IOException(msg);
+      }
+    } catch (KeeperException e) {
+      zooKeeper.error("Unexpected exception trying to create unassigned node", e);
+      throw new IOException(e);
     }
-    
-    // create the region node in the unassigned directory first
-    zooKeeper.createZNodeIfNotExists(regionZNode, null, CreateMode.PERSISTENT, true);
 
-    // update the data for "regionName" ZNode in unassigned to CLOSING
-    updateZKWithEventData(HBaseEventType.RS2ZK_REGION_CLOSING, hmsg);
-    
     // TODO: implement the updatePeriodically logic here
   }
 
   /**
-   * This method updates the states in ZK to signal that the region has been 
+   * This method updates the states in ZK to signal that the region has been
    * closed. This will stop the periodic updater thread if one was started.
    * @throws IOException
    */
-  public void finishRegionCloseEvent(HMsg hmsg) throws IOException {    
+  public void finishRegionCloseEvent(HMsg hmsg) throws IOException {
     // TODO: stop the updatePeriodically here
 
     // update the data for "regionName" ZNode in unassigned to CLOSED
     updateZKWithEventData(HBaseEventType.RS2ZK_REGION_CLOSED, hmsg);
   }
-  
+
   /**
-   * This method updates the various states in ZK to inform the master that the 
+   * This method updates the various states in ZK to inform the master that the
    * region server has started opening the region.
    * @param updatePeriodically - if true, periodically updates the state in ZK
    */
-  public void startRegionOpenEvent(HMsg hmsg, boolean updatePeriodically) throws IOException {
+  public void startRegionOpenEvent(HMsg hmsg, boolean updatePeriodically)
+  throws IOException {
     Stat stat = new Stat();
-    byte[] data = zooKeeper.readZNode(regionZNode, stat);
+    byte[] data = null;
+    try {
+      data = ZKUtil.getDataNoWatch(zooKeeper, regionZNode, stat);
+    } catch (KeeperException e) {
+      zooKeeper.error("ZooKeeper error", e);
+      throw new IOException(e);
+    }
     // if there is no ZNode for this region, something is wrong
     if(data == null) {
       String msg = "ZNode " + regionZNode + " does not exist in ZooKeeper, will NOT open region.";
@@ -108,12 +119,12 @@ public class RSZookeeperUpdater {
 
     // update the data for "regionName" ZNode in unassigned to CLOSING
     updateZKWithEventData(HBaseEventType.RS2ZK_REGION_OPENING, hmsg);
-    
+
     // TODO: implement the updatePeriodically logic here
   }
-  
+
   /**
-   * This method updates the states in ZK to signal that the region has been 
+   * This method updates the states in ZK to signal that the region has been
    * opened. This will stop the periodic updater thread if one was started.
    * @throws IOException
    */
@@ -123,7 +134,7 @@ public class RSZookeeperUpdater {
     // update the data for "regionName" ZNode in unassigned to CLOSED
     updateZKWithEventData(HBaseEventType.RS2ZK_REGION_OPENED, hmsg);
   }
-  
+
   public boolean isClosingRegion() {
     return (lastUpdatedState == HBaseEventType.RS2ZK_REGION_CLOSING);
   }
@@ -141,19 +152,42 @@ public class RSZookeeperUpdater {
     updateZKWithEventData(HBaseEventType.RS2ZK_REGION_CLOSED, hmsg);
   }
 
-  private void updateZKWithEventData(HBaseEventType hbEventType, HMsg hmsg) throws IOException {
-    // update the data for "regionName" ZNode in unassigned to "hbEventType"
-    byte[] data = null;
-    try {
-      data = Writables.getBytes(new RegionTransitionEventData(hbEventType, regionServerName, hmsg));
-    } catch (IOException e) {
-      LOG.error("Error creating event data for " + hbEventType, e);
-    }
-    LOG.debug("Updating ZNode " + regionZNode + 
-              " with [" + hbEventType + "]" +
+  /**
+   * Make the serialized data to put into unassigned znodes for the specified
+   * event type and message.
+   * @param eventType
+   * @param hmsg
+   * @return serialized data
+   */
+  private byte [] makeZKEventData(HBaseEventType eventType, HMsg hmsg)
+  throws IOException {
+    return Writables.getBytes(new RegionTransitionEventData(eventType,
+        regionServerName, hmsg));
+  }
+
+  /**
+   * Update the data for this region to the serialized form of the specified
+   * event type and message.
+   * @param hbEventType
+   * @param hmsg
+   * @throws IOException
+   */
+  private void updateZKWithEventData(HBaseEventType eventType, HMsg hmsg)
+  throws IOException {
+    byte[] data = makeZKEventData(eventType, hmsg);
+    LOG.debug("Updating ZNode " + regionZNode +
+              " with [" + eventType + "]" +
               " expected version = " + zkVersion);
-    lastUpdatedState = hbEventType;
-    zooKeeper.writeZNode(regionZNode, data, zkVersion, true);
+    try {
+      ZKUtil.updateExistingNodeData(zooKeeper, regionZNode, data, zkVersion);
+    } catch(KeeperException.BadVersionException e) {
+      zooKeeper.error("Version mismatch on unassigned znode when updating", e);
+      throw new IOException(e);
+    } catch(KeeperException e) {
+      zooKeeper.error("Unexpected exception trying to update unassigned node", e);
+      throw new IOException(e);
+    }
+    lastUpdatedState = eventType;
     zkVersion++;
   }
 }

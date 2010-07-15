@@ -27,7 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerStatus;
+import org.apache.hadoop.hbase.ServerController;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -36,32 +36,35 @@ import org.apache.zookeeper.ZooKeeper;
 /**
  * Acts as the single ZooKeeper Watcher.  One instance of this is instantiated
  * for each Master, RegionServer, and client process.
- * 
+ *
  * This is the only class that implements {@link Watcher}.  Other internal
  * classes which need to be notified of ZooKeeper events must register with
  * the local instance of this watcher via {@link #registerListener}.
- * 
+ *
  * This class also holds and manages the connection to ZooKeeper.  Code to deal
  * with connection related events and exceptions are handled here.
  */
 public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
   private static final Log LOG = LogFactory.getLog(ZooKeeperWatcher.class);
-  
+
   // name of this watcher (for logging only)
   private String name;
-  
+
+  // zookeeper quorum
+  private String quorum;
+
   // zookeeper connection
   private ZooKeeper zooKeeper;
-  
+
   // server controller
-  private ServerStatus server;
-  
+  private ServerController server;
+
   // listeners to be notified
   private final Set<ZooKeeperListener> listeners =
     new CopyOnWriteArraySet<ZooKeeperListener>();
 
   // node names
-  
+
   // base znode for this cluster
   public String baseZNode;
   // znode containing location of server hosting root region
@@ -74,33 +77,39 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
   public String clusterStateZNode;
   // znode used for region transitioning and assignment
   public String assignmentZNode;
-  
+
   /**
    * Instantiate a ZooKeeper connection and watcher.
    * @param name name of this watcher, for logging/debug purposes only
-   * @throws IOException 
+   * @throws IOException
    */
-  public ZooKeeperWatcher(Configuration conf, String name, ServerStatus server)
+  public ZooKeeperWatcher(Configuration conf, String name,
+      ServerController server)
   throws IOException {
     super(conf, name);
     this.name = name;
-    this.zooKeeper = ZKUtil.connect(conf, this);
+    this.quorum = ZKConfig.getZKQuorumServersString(conf);
+    this.zooKeeper = ZKUtil.connect(conf, quorum, this);
     this.server = server;
     info("Connected to ZooKeeper");
     setNodeNames(conf);
     try {
+      // Create all the necessary "directories" of znodes
+      // TODO: Move this to an init method somewhere so not everyone calls it?
       ZKUtil.createIfNotExists(this, baseZNode);
+      ZKUtil.createIfNotExists(this, assignmentZNode);
+      ZKUtil.createIfNotExists(this, rsZNode);
     } catch (KeeperException e) {
       error("Unexpected KeeperException creating base node", e);
       throw new IOException(e);
     }
   }
-  
+
   /**
    * Set the local variable node names using the specified configuration.
    */
   private void setNodeNames(Configuration conf) {
-    baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, 
+    baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
     rootServerZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.rootserver", "root-region-server"));
@@ -113,7 +122,7 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
     assignmentZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.regionInTransition", "unassigned"));
   }
-  
+
   /**
    * Register the specified listener to receive ZooKeeper events.
    * @param listener
@@ -121,18 +130,27 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
   public void registerListener(ZooKeeperListener listener) {
     listeners.add(listener);
   }
-  
+
   /**
    * Get the connection to ZooKeeper.
    * @return connection reference to zookeeper
    */
+  @Override
   public ZooKeeper getZooKeeper() {
     return zooKeeper;
   }
-  
+
+  /**
+   * Get the quorum address of this instance.
+   * @returns quorum string of this zookeeper connection instance
+   */
+  public String getQuorum() {
+    return quorum;
+  }
+
   /**
    * Method called from ZooKeeper for events and connection status.
-   * 
+   *
    * Valid events are passed along to listeners.  Connection status changes
    * are dealt with locally.
    */
@@ -142,10 +160,10 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
         "type: " + event.getType() + ", " +
         "state:" + event.getState() + ", " +
         "path: " + event.getPath());
-    
+
     // While we are still using both ZKWs, need to call parent process()
     super.process(event);
-    
+
     switch(event.getType()) {
 
       // If event type is NONE, this is a connection status change
@@ -153,30 +171,30 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
         connectionEvent(event);
         break;
       }
-      
+
       // Otherwise pass along to the listeners
-      
+
       case NodeCreated: {
         for(ZooKeeperListener listener : listeners) {
           listener.nodeCreated(event.getPath());
         }
         break;
       }
-      
+
       case NodeDeleted: {
         for(ZooKeeperListener listener : listeners) {
           listener.nodeDeleted(event.getPath());
         }
         break;
       }
-      
+
       case NodeDataChanged: {
         for(ZooKeeperListener listener : listeners) {
           listener.nodeDataChanged(event.getPath());
         }
         break;
       }
-      
+
       case NodeChildrenChanged: {
         for(ZooKeeperListener listener : listeners) {
           listener.nodeChildrenChanged(event.getPath());
@@ -187,12 +205,12 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
   }
 
   // Connection management
-  
+
   /**
    * Called when there is a connection-related event via the Watcher callback.
-   * 
+   *
    * If Disconnected or Expired, this should shutdown the cluster.
-   * 
+   *
    * @param event
    */
   private void connectionEvent(WatchedEvent event) {
@@ -200,7 +218,7 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
       // SyncConnected is normal, ignore
       case SyncConnected:
         break;
-        
+
       // Abort the server if Disconnected or Expired
       // TODO: Åny reason to handle these two differently?
       case Disconnected:
@@ -214,32 +232,32 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
         break;
     }
   }
-  
+
   /**
    * Handles KeeperExceptions in client calls.
-   * 
+   *
    * This may be temporary but for now this gives one place to deal with these.
-   * 
+   *
    * TODO: Currently this method rethrows the exception to let the caller handle
-   * 
+   *
    * @param ke
-   * @throws KeeperException 
+   * @throws KeeperException
    */
   public void keeperException(KeeperException ke)
   throws KeeperException {
     error("Received unexpected KeeperException, re-throwing exception", ke);
     throw ke;
   }
-  
+
   /**
    * Handles InterruptedExceptions in client calls.
-   * 
+   *
    * This may be temporary but for now this gives one place to deal with these.
-   * 
+   *
    * TODO: Currently, this method does nothing.
    *       Is this ever expected to happen?  Do we abort or can we let it run?
    *       Maybe this should be logged as WARN?  It shouldn't happen?
-   * 
+   *
    * @param ie
    */
   public void interruptedException(InterruptedException ie) {
@@ -248,7 +266,7 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
   }
 
   // Logging methods
-  
+
   /**
    * Exposed info logging method so our zookeeper output is named.
    * @param string log line
@@ -309,8 +327,9 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
 
   /**
    * Close the connection to ZooKeeper.
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
+  @Override
   public void close() {
     try {
       if(zooKeeper != null) {

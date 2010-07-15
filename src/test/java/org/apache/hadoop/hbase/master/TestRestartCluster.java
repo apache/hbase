@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -62,8 +63,8 @@ public class TestRestartCluster {
     zooKeeper = new ZooKeeperWatcher(conf, "cluster1", null);
 
     // create the unassigned region, throw up a region opened state for META
-    String unassignedZNode = zooKeeper.getRegionInTransitionZNode();
-    zooKeeper.createZNodeIfNotExists(unassignedZNode);
+    String unassignedZNode = zooKeeper.assignmentZNode;
+    ZKUtil.createIfNotExists(zooKeeper, unassignedZNode);
     byte[] data = null;
     HBaseEventType hbEventType = HBaseEventType.RS2ZK_REGION_OPENED;
     try {

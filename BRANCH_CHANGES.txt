@@ -17,6 +17,7 @@ Branch 0.90.0 - Master Rewrite Branch
     HBASE-2695  [MasterStartupCleanup-v4] Cleans up the master startup, adds
                 new ZK tool ActiveMasterManager for master-side (part of
                 master cleanup and refactor)
+    HBASE-2696  [part2-v2-FinishRS_FixClient] ZooKeeper cleanup and refactor
 
   NEW FEATURES
 

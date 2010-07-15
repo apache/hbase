@@ -64,9 +64,9 @@ public class TestActiveMasterManager {
 
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
         "testActiveMasterManagerFromZK", null);
-    zk.createZNodeIfNotExists(zk.baseZNode);
+    ZKUtil.createIfNotExists(zk, zk.baseZNode);
     try {
-      zk.deleteZNode(zk.masterAddressZNode);
+      ZKUtil.deleteNode(zk, zk.masterAddressZNode);
     } catch(KeeperException.NoNodeException nne) {}
 
     // Create the master node with a dummy address
@@ -111,7 +111,7 @@ public class TestActiveMasterManager {
     zk.registerListener(listener);
 
     LOG.info("Deleting master node");
-    zk.deleteZNode(zk.masterAddressZNode);
+    ZKUtil.deleteNode(zk, zk.masterAddressZNode);
 
     // Wait for the node to be deleted
     LOG.info("Waiting for active master manager to be notified");

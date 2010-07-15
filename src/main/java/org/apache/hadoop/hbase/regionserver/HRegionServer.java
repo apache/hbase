@@ -71,7 +71,7 @@ import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.ServerStatus;
+import org.apache.hadoop.hbase.ServerController;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
@@ -109,13 +109,14 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
 public class HRegionServer implements HRegionInterface,
-    HBaseRPCErrorHandler, Runnable, Stoppable, ServerStatus {
+    HBaseRPCErrorHandler, Runnable, Stoppable, ServerController {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
@@ -1171,11 +1172,15 @@ public class HRegionServer implements HRegionInterface,
         if (LOG.isDebugEnabled())
           LOG.debug("sending initial server load: " + hsl);
         lastMsg = System.currentTimeMillis();
-        zooKeeper.writeRSLocation(this.serverInfo);
+        ZKUtil.setAddressAndWatch(zooKeeper,
+            ZKUtil.joinZNode(zooKeeper.rsZNode, ZKUtil.getNodeName(serverInfo)),
+            address);
         result = this.hbaseMaster.regionServerStartup(this.serverInfo);
         break;
       } catch (IOException e) {
         LOG.warn("error telling master we are up", e);
+      } catch (KeeperException e) {
+        LOG.warn("error putting up ephemeral node in zookeeper", e);
       }
       sleeper.sleep(lastMsg);
     }

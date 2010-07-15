@@ -39,7 +39,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class ZKConfig {
   private static final Log LOG = LogFactory.getLog(ZKConfig.class);
-  
+
   private static final String VARIABLE_START = "${";
   private static final int VARIABLE_START_LENGTH = VARIABLE_START.length();
   private static final String VARIABLE_END = "}";
@@ -49,7 +49,7 @@ public class ZKConfig {
   private static final int ZK_CFG_PROPERTY_SIZE = ZK_CFG_PROPERTY.length();
   private static final String ZK_CLIENT_PORT_KEY = ZK_CFG_PROPERTY
       + "clientPort";
-  
+
   /**
    * Make a Properties object holding ZooKeeper config equivalent to zoo.cfg.
    * If there is a zoo.cfg in the classpath, simply read it in. Otherwise parse
@@ -178,9 +178,9 @@ public class ZKConfig {
     }
     return properties;
   }
-  
+
   /**
-   * Return the ZK Quorum servers string given zk properties returned by 
+   * Return the ZK Quorum servers string given zk properties returned by
    * makeZKProps
    * @param properties
    * @return
@@ -240,7 +240,7 @@ public class ZKConfig {
 
     return hostPortBuilder.toString();
   }
-  
+
   /**
    * Return the ZK Quorum servers string given the specified configuration.
    * @param properties

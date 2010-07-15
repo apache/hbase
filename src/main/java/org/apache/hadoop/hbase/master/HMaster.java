@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.MetaScanner;
@@ -1135,6 +1136,9 @@ public class HMaster extends Thread implements HMasterInterface,
           adm = new HBaseAdmin(conf);
         } catch (MasterNotRunningException e) {
           LOG.error("Master not running");
+          System.exit(0);
+        } catch (ZooKeeperConnectionException e) {
+          LOG.error("ZooKeeper not available");
           System.exit(0);
         }
         try {

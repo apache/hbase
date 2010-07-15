@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.CreateMode;
@@ -60,7 +61,7 @@ public class TestMasterAddressManager {
 
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
         "testMasterAddressManagerFromZK", null);
-    zk.createZNodeIfNotExists(zk.baseZNode);
+    ZKUtil.createIfNotExists(zk, zk.baseZNode);
 
     // Should not have a master yet
     MasterAddressManager addressManager = new MasterAddressManager(zk, null);
@@ -77,8 +78,7 @@ public class TestMasterAddressManager {
     int port = 1234;
     HServerAddress dummyAddress = new HServerAddress(host, port);
     LOG.info("Creating master node");
-    zk.createZNodeIfNotExists(zk.masterAddressZNode,
-        Bytes.toBytes(dummyAddress.toString()), CreateMode.EPHEMERAL, false);
+    ZKUtil.setAddressAndWatch(zk, zk.masterAddressZNode, dummyAddress);
 
     // Wait for the node to be created
     LOG.info("Waiting for master address manager to be notified");

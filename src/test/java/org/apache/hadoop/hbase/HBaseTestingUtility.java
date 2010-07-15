@@ -708,16 +708,13 @@ public class HBaseTestingUtility {
     expireSession(rs.getZooKeeper(), rs);
   }
 
-  public void expireSession(ZooKeeperWatcher nodeZK, ServerStatus server)
+  public void expireSession(ZooKeeperWatcher nodeZK, ServerController server)
   throws Exception {
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, 
-        ZooKeeperWatcher.class.getName(), server);
-    zkw.registerListener(EmptyWatcher.instance);
     String quorumServers = ZKConfig.getZKQuorumServersString(conf);
     int sessionTimeout = 5 * 1000; // 5 seconds
 
-    byte[] password = nodeZK.getSessionPassword();
-    long sessionID = nodeZK.getSessionID();
+    byte[] password = nodeZK.getZooKeeper().getSessionPasswd();
+    long sessionID = nodeZK.getZooKeeper().getSessionId();
 
     ZooKeeper zk = new ZooKeeper(quorumServers,
         sessionTimeout, EmptyWatcher.instance, sessionID, password);
@@ -744,8 +741,10 @@ public class HBaseTestingUtility {
    *
    * @return The HBaseAdmin instance.
    * @throws MasterNotRunningException
+   * @throws ZooKeeperConnectionException
    */
-  public HBaseAdmin getHBaseAdmin() throws MasterNotRunningException {
+  public HBaseAdmin getHBaseAdmin()
+  throws MasterNotRunningException, ZooKeeperConnectionException {
     if (hbaseAdmin == null) {
       hbaseAdmin = new HBaseAdmin(getConfiguration());
     }
