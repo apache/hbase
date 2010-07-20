@@ -1,0 +1,132 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<project name="stargate" default="package" basedir=".">
+  <import file="../build-contrib.xml"/>
+
+  <import file="../build-contrib.xml"/>
+  
+  <property name="build.war.classes" location="${build.dir}/warClasses"/>
+  
+  <property name="war.file" value="hbase-${version}-${name}.war"/>
+  <property name="web.xml.file" value="${basedir}/conf/web.xml"/>
+  <property name="lib.dir" value="${basedir}/lib"/>  
+  <property name="jar.file" value="hbase-${version}-${name}.jar"/>
+  <property name="test.jar.file" value="hbase-${version}-${name}-test.jar"/>
+  
+  <property name="javac.debug" value="on"/>
+  <property name="javac.source" value="1.6"/>
+  
+  <target name="init-contrib">
+    <tstamp/>
+    <mkdir dir="${build.war.classes}"/>
+  </target>
+  
+  <target name="javadoc">
+    <javadoc access="public" destdir="${docs.dir}" source="${javac.source}" sourcepath="${src.dir}" splitindex="true" use="true" version="true">
+      <classpath refid="classpath"/>
+    </javadoc>
+  </target>
+  
+  <target name="compile" depends="compile-jar, compile-war">
+    <echo message="contrib: ${name}"/>
+  </target>
+
+  <target name="compile-jar" depends="init">
+    <javac srcdir="${src.dir}" destdir="${build.classes}" debug="${javac.debug}" source="${javac.source}">
+      <classpath refid="classpath"/>
+    </javac>
+  </target>
+  
+  <target name="compile-war" depends="init">
+    <javac srcdir="${src.dir}" destdir="${build.war.classes}" debug="${javac.debug}" source="${javac.source}">
+      <classpath refid="classpath"/>
+      <exclude name="**/Main.java"/>
+    </javac>
+  </target>
+  
+  <target name="compile-test" depends="compile-jar,compile-war">
+    <javac srcdir="${src.test}" includes="**/*.java" destdir="${build.test}" debug="${javac.debug}" source="1.6">
+      <classpath refid="test.classpath"/>
+    </javac>
+    <jar jarfile="${build.dir}/${test.jar.file}" >
+      <fileset dir="${build.test}" includes="org/**" />
+      <fileset dir="${build.classes}" />
+      <fileset dir="${src.test}" includes="**/*.properties" />
+      <manifest>
+        <attribute name="Main-Class"
+          value="org/apache/hadoop/hbase/stargate/PerformanceEvaluation"/>
+      </manifest>
+    </jar>
+  </target>
+  
+  <target name="test" depends="compile-test" description="Build test jar and run tests">
+    <junit printsummary="yes" showoutput="${test.output}" haltonfailure="no" fork="yes" forkmode="once" maxmemory="1000m" errorProperty="tests.failed" failureProperty="tests.failed" >
+      <sysproperty key="test.build.data" value="${build.test}/data"/>
+      <sysproperty key="build.test" value="${build.test}"/>
+      <sysproperty key="user.dir" value="${build.test}/data"/>
+      <sysproperty key="test.log.dir" value="${hadoop.log.dir}"/>
+      <classpath refid="test.classpath"/>
+      <formatter type="${test.junit.output.format}"/>
+      <batchtest todir="${build.test}" unless="testcase">
+        <fileset dir="${src.test}" includes="**/Test*.java"/>
+      </batchtest>
+      <batchtest todir="${build.test}" if="testcase">
+        <fileset dir="${src.test}" includes="**/${testcase}.java"/>
+      </batchtest>
+    </junit>
+    <fail if="tests.failed">
+      Tests failed!
+    </fail>
+  </target>
+ 
+  <target name="war" depends="compile-war">
+    <copy todir="${build.dir}/lib" overwrite="true">
+      <fileset dir="${lib.dir}"/>
+      <mapper type="flatten"/>
+    </copy>
+    
+    <war destfile="${build.dir}/${war.file}" webxml="${web.xml.file}">
+      <lib dir="${build.dir}/lib"/>
+      <classes dir="${build.war.classes}"/>
+    </war>
+  </target>
+  
+  <!--Override ../build-contrib.xml package-->
+  <target name="package" depends="jar, war" unless="skip.contrib">
+    <mkdir dir="${dist.dir}/contrib/${name}"/>
+    <copy todir="${dist.dir}/contrib/${name}" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${build.dir}">
+        <include name="hbase-${version}-${name}.jar" />
+      </fileset>
+    </copy>
+    <copy todir="${dist.dir}/contrib/${name}" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${build.dir}">
+        <include name="hbase-${version}-${name}.war" />
+      </fileset>
+    </copy>
+    <mkdir dir="${dist.dir}/contrib/${name}/lib"/>
+    <copy todir="${dist.dir}/contrib/${name}/lib" overwrite="true">
+      <fileset dir="${lib.dir}"/>
+    </copy>
+  </target>
+  
+  <target name="clean-contrib">
+    <delete dir="dist"/>
+  </target>
+
+</project>
