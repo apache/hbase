@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Scanner scans both the memstore and the HStore. Coalesce KeyValue stream
@@ -200,7 +201,14 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       return false;
     }
 
-    matcher.setRow(peeked.getRow());
+    // only call setRow if the row changes; avoids confusing the query matcher
+    // if scanning intra-row
+    if ((matcher.row == null) || 
+        Bytes.compareTo(peeked.getBuffer(), peeked.getRowOffset(),
+          peeked.getRowLength(), matcher.row, 0, matcher.row.length) != 0) {
+      matcher.setRow(peeked.getRow());
+    }
+
     KeyValue kv;
     List<KeyValue> results = new ArrayList<KeyValue>();
     while((kv = this.heap.peek()) != null) {
