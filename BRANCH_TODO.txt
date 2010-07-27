@@ -6,8 +6,7 @@ Now:
 
 * synchronize all access to the boolean in ActiveMasterManager
 
-* Abortable interface as superclass to all the Status/Controller stuff
-
+* Remove TODO in HCM about Abortable interface
 
 Think about:
 
