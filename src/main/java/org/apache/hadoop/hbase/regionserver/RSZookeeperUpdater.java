@@ -5,12 +5,11 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HMsg;
-import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
+import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
@@ -59,8 +58,9 @@ public class RSZookeeperUpdater {
     // Try to create the node with a CLOSING state, if already exists,
     // something is wrong
     try {
-      if(ZKUtil.createPersistentNodeIfNotExists(zooKeeper, regionZNode,
-          makeZKEventData(HBaseEventType.RS2ZK_REGION_CLOSING, hmsg))) {
+      if(ZKUtil.createNodeIfNotExistsAndWatch(zooKeeper, regionZNode,
+          makeZKEventData(HBaseEventType.RS2ZK_REGION_CLOSING,
+              regionName, hmsg))) {
         String msg = "ZNode " + regionZNode + " already exists in ZooKeeper, will NOT close region.";
         LOG.error(msg);
         throw new IOException(msg);
@@ -159,9 +159,10 @@ public class RSZookeeperUpdater {
    * @param hmsg
    * @return serialized data
    */
-  private byte [] makeZKEventData(HBaseEventType eventType, HMsg hmsg)
+  private byte [] makeZKEventData(HBaseEventType eventType, String regionName,
+      HMsg hmsg)
   throws IOException {
-    return Writables.getBytes(new RegionTransitionEventData(eventType,
+    return Writables.getBytes(new RegionTransitionData(eventType, regionName,
         regionServerName, hmsg));
   }
 
@@ -174,7 +175,7 @@ public class RSZookeeperUpdater {
    */
   private void updateZKWithEventData(HBaseEventType eventType, HMsg hmsg)
   throws IOException {
-    byte[] data = makeZKEventData(eventType, hmsg);
+    byte[] data = makeZKEventData(eventType, regionName, hmsg);
     LOG.debug("Updating ZNode " + regionZNode +
               " with [" + eventType + "]" +
               " expected version = " + zkVersion);

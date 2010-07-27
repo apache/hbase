@@ -243,10 +243,8 @@ public class ServerManager {
     HServerLoad load = useInfoLoad ? info.getLoad() : new HServerLoad();
     String serverName = info.getServerName();
     info.setLoad(load);
-    // We must set this watcher here because it can be set on a fresh start
-    // or on a failover
-    Watcher watcher = new ServerExpirer(new HServerInfo(info));
-    masterStatus.getZooKeeper().updateRSLocationGetWatch(info, watcher);
+    // TODO: Why did we update the RS location ourself?  Shouldn't RS do this?
+//    masterStatus.getZooKeeper().updateRSLocationGetWatch(info, watcher);
     this.serversToServerInfo.put(serverName, info);
     this.serversToLoad.put(serverName, load);
     synchronized (this.loadToServers) {
@@ -848,7 +846,7 @@ public class ServerManager {
    * Expire the passed server.  Add it to list of deadservers and queue a
    * shutdown processing.
    */
-  private synchronized void expireServer(final HServerInfo hsi) {
+  public synchronized void expireServer(final HServerInfo hsi) {
     // First check a server to expire.  ServerName is of the form:
     // <hostname> , <port> , <startcode>
     String serverName = hsi.getServerName();

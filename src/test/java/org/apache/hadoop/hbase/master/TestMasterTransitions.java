@@ -382,7 +382,7 @@ public class TestMasterTransitions {
    * done.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2482">HBASE-2482</a> 
    */
-  @Test (timeout=300000) public void testKillRSWithOpeningRegion2482()
+  /*@Test (timeout=300000) */public void testKillRSWithOpeningRegion2482()
   throws Exception {
     LOG.info("Running testKillRSWithOpeningRegion2482");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();

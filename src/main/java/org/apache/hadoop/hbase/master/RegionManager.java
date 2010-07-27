@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -57,13 +56,19 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
  */
 public class RegionManager {
   protected static final Log LOG = LogFactory.getLog(RegionManager.class);
+
+  private static final boolean ABORT_ON_ZK_ERROR = false;
 
   private AtomicReference<HServerAddress> rootRegionLocation =
     new AtomicReference<HServerAddress>(null);
@@ -81,7 +86,7 @@ public class RegionManager {
   private static final byte[] OVERLOADED = Bytes.toBytes("Overloaded");
 
   private static final byte [] META_REGION_PREFIX = Bytes.toBytes(".META.,");
-  
+
   private static int threadWakeFrequency;
 
   /**
@@ -99,15 +104,16 @@ public class RegionManager {
    */
    final SortedMap<String, RegionState> regionsInTransition =
     Collections.synchronizedSortedMap(new TreeMap<String, RegionState>());
-   
-   // regions in transition are also recorded in ZK using the zk wrapper
-   final ZooKeeperWrapper zkWrapper;
+
+   // regions in transition are also recorded in ZK using the zk watcher
+   final ZooKeeperWatcher zooKeeper;
 
   // How many regions to assign a server at a time.
   private final int maxAssignInOneGo;
 
   final MasterStatus masterStatus;
   private final LoadBalancer loadBalancer;
+  final RootRegionTracker rootRegionTracker;
 
   /** Set of regions to split. */
   private final SortedMap<byte[], Pair<HRegionInfo,HServerAddress>>
@@ -132,15 +138,17 @@ public class RegionManager {
   private final int zooKeeperNumRetries;
   private final int zooKeeperPause;
 
-  RegionManager(MasterStatus masterStatus) throws IOException {
+  RegionManager(MasterStatus masterStatus, RootRegionTracker rootRegionTracker)
+  throws IOException {
     Configuration conf = masterStatus.getConfiguration();
 
     this.masterStatus = masterStatus;
-    threadWakeFrequency = 
+    this.rootRegionTracker = rootRegionTracker;
+    threadWakeFrequency =
       masterStatus.getConfiguration().getInt(
-          HConstants.THREAD_WAKE_FREQUENCY, 
+          HConstants.THREAD_WAKE_FREQUENCY,
           HConstants.DEFAULT_THREAD_WAKE_FREQUENCY);
-    this.zkWrapper = masterStatus.getZooKeeper();
+    this.zooKeeper = masterStatus.getZooKeeper();
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
     this.loadBalancer = new LoadBalancer(conf);
 
@@ -177,13 +185,14 @@ public class RegionManager {
     if (!masterStatus.getShutdownRequested().get()) {
       synchronized (regionsInTransition) {
         String regionName = HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString();
-        byte[] data = null;
         try {
-          data = Writables.getBytes(new RegionTransitionEventData(HBaseEventType.M2ZK_REGION_OFFLINE, HMaster.MASTER));
-        } catch (IOException e) {
-          LOG.error("Error creating event data for " + HBaseEventType.M2ZK_REGION_OFFLINE, e);
+          ZKAssign.createNodeOffline(zooKeeper,
+              HRegionInfo.ROOT_REGIONINFO.getEncodedName(), HMaster.MASTER);
+        } catch (KeeperException e) {
+          LOG.error("Unexpected ZK exception creating offline node when " +
+              "trying to reassign root region", e);
+          if(ABORT_ON_ZK_ERROR) masterStatus.abort();
         }
-        zkWrapper.createUnassignedRegion(HRegionInfo.ROOT_REGIONINFO.getEncodedName(), data);
         LOG.debug("Created UNASSIGNED zNode " + regionName + " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
         RegionState s = new RegionState(HRegionInfo.ROOT_REGIONINFO, RegionState.State.UNASSIGNED);
         regionsInTransition.put(regionName, s);
@@ -244,8 +253,9 @@ public class RegionManager {
     final ArrayList<HMsg> returnMsgs) {
     boolean isMetaAssign = false;
     for (RegionState s : regionsToAssign) {
-      if (s.getRegionInfo().isMetaRegion())
+      if (s.getRegionInfo().isMetaRegion()) {
         isMetaAssign = true;
+      }
     }
     int nRegionsToAssign = regionsToAssign.size();
     int otherServersRegionsCount =
@@ -341,13 +351,14 @@ public class RegionManager {
     LOG.info("Assigning region " + regionName + " to " + sinfo.getServerName());
     rs.setPendingOpen(sinfo.getServerName());
     synchronized (this.regionsInTransition) {
-      byte[] data = null;
       try {
-        data = Writables.getBytes(new RegionTransitionEventData(HBaseEventType.M2ZK_REGION_OFFLINE, HMaster.MASTER));
-      } catch (IOException e) {
-        LOG.error("Error creating event data for " + HBaseEventType.M2ZK_REGION_OFFLINE, e);
+        ZKAssign.createNodeOffline(zooKeeper,
+            rs.getRegionInfo().getEncodedName(), HMaster.MASTER);
+      } catch (KeeperException e) {
+        LOG.error("Unexpected ZK exception creating offline node when " +
+            "trying to create offline node for region", e);
+        if(ABORT_ON_ZK_ERROR) masterStatus.abort();
       }
-      zkWrapper.createUnassignedRegion(rs.getRegionInfo().getEncodedName(), data);
       LOG.debug("Created UNASSIGNED zNode " + regionName + " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
       this.regionsInTransition.put(regionName, rs);
     }
@@ -565,7 +576,7 @@ public class RegionManager {
     RegionDirFilter rdf = new RegionDirFilter();
     for(FileStatus tabledir : tableDirs) {
       if(tabledir.isDir()) {
-        regionDirs = 
+        regionDirs =
           masterStatus.getFileSystemManager().getFileSystem().listStatus(
               tabledir.getPath(), rdf);
         regions += regionDirs.length;
@@ -637,12 +648,11 @@ public class RegionManager {
     } catch(Exception iex) {
       LOG.warn("meta scanner", iex);
     }
-    // TODO: Why did we getInstance again?  We should have it local?
-//    ZooKeeperWrapper zkw = ZooKeeperWrapper.getInstance(
-//                             masterStatus.getConfiguration(), 
-//                             masterStatus.getHServerAddress().toString());
-    zkWrapper.clearRSDirectory();
-    zkWrapper.close();
+    try {
+      ZKUtil.deleteChildrenRecursively(zooKeeper, zooKeeper.rsZNode);
+    } catch (KeeperException e) {
+      LOG.error("Unable to delete RS nodes during shutdown", e);
+    }
   }
 
   /**
@@ -996,15 +1006,14 @@ public class RegionManager {
     synchronized(this.regionsInTransition) {
       s = regionsInTransition.get(info.getRegionNameAsString());
       if (s == null) {
-        byte[] data = null;
         try {
-          data = Writables.getBytes(new RegionTransitionEventData(HBaseEventType.M2ZK_REGION_OFFLINE, HMaster.MASTER));
-        } catch (IOException e) {
-          // TODO: Review what we should do here.  If Writables work this
-          //       should never happen
-          LOG.error("Error creating event data for " + HBaseEventType.M2ZK_REGION_OFFLINE, e);
+          ZKAssign.createNodeOffline(zooKeeper,
+              info.getEncodedName(), HMaster.MASTER);
+        } catch (KeeperException e) {
+          LOG.error("Unexpected ZK exception creating offline node when " +
+              "trying to reassign root region", e);
+          if(ABORT_ON_ZK_ERROR) masterStatus.abort();
         }
-        zkWrapper.createUnassignedRegion(info.getEncodedName(), data);
         LOG.debug("Created UNASSIGNED zNode " + info.getRegionNameAsString() + " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
         s = new RegionState(info, RegionState.State.UNASSIGNED);
         regionsInTransition.put(info.getRegionNameAsString(), s);
@@ -1231,11 +1240,13 @@ public class RegionManager {
 
   private void writeRootRegionLocationToZooKeeper(HServerAddress address) {
     for (int attempt = 0; attempt < zooKeeperNumRetries; ++attempt) {
-      if (zkWrapper.writeRootRegionLocation(address)) {
+      try {
+        rootRegionTracker.setRootRegionLocation(address);
         return;
+      } catch (KeeperException e) {
+        LOG.info("ZK exception writing root region location", e);
+        sleep(attempt);
       }
-
-      sleep(attempt);
     }
 
     LOG.error("Failed to write root region location to ZooKeeper after " +
@@ -1252,7 +1263,13 @@ public class RegionManager {
     writeRootRegionLocationToZooKeeper(address);
     synchronized (rootRegionLocation) {
       // the root region has been assigned, remove it from transition in ZK
-      zkWrapper.deleteUnassignedRegion(HRegionInfo.ROOT_REGIONINFO.getEncodedName());
+      try {
+        ZKAssign.deleteOpenedNode(zooKeeper,
+            HRegionInfo.ROOT_REGIONINFO.getEncodedName());
+      } catch (KeeperException e) {
+        LOG.error("Exception deleting root region unassigned node", e);
+        if(ABORT_ON_ZK_ERROR) masterStatus.abort();
+      }
       rootRegionLocation.set(new HServerAddress(address));
       rootRegionLocation.notifyAll();
     }
@@ -1388,7 +1405,9 @@ public class RegionManager {
 
     LoadBalancer(Configuration conf) {
       this.slop = conf.getFloat("hbase.regions.slop", (float)0.3);
-      if (this.slop <= 0) this.slop = 1;
+      if (this.slop <= 0) {
+        this.slop = 1;
+      }
       //maxRegToClose to constrain balance closing per one iteration
       // -1 to turn off
       // TODO: change default in HBASE-862, need a suggestion
@@ -1462,16 +1481,18 @@ public class RegionManager {
       SortedMap<HServerLoad, Set<String>> loadToServers =
         masterStatus.getServerManager().getLoadToServers();
       // check if server most loaded
-      if (!loadToServers.get(loadToServers.lastKey()).contains(srvName))
+      if (!loadToServers.get(loadToServers.lastKey()).contains(srvName)) {
         return 0;
+      }
 
       // this server is most loaded, we will try to unload it by lowest
       // loaded servers
       int avgLoadMinusSlop = (int)Math.floor(avgLoad * (1 - this.slop)) - 1;
       int lowestLoad = loadToServers.firstKey().getNumberOfRegions();
 
-      if(lowestLoad >= avgLoadMinusSlop)
+      if(lowestLoad >= avgLoadMinusSlop) {
         return 0; // there is no low loaded servers
+      }
 
       int lowSrvCount = loadToServers.get(loadToServers.firstKey()).size();
       int numRegionsToClose = 0;
@@ -1496,7 +1517,9 @@ public class RegionManager {
   NavigableMap<String, String> getRegionsInTransition() {
     NavigableMap<String, String> result = new TreeMap<String, String>();
     synchronized (this.regionsInTransition) {
-      if (this.regionsInTransition.isEmpty()) return result;
+      if (this.regionsInTransition.isEmpty()) {
+        return result;
+      }
       for (Map.Entry<String, RegionState> e: this.regionsInTransition.entrySet()) {
         result.put(e.getKey(), e.getValue().toString());
       }
@@ -1511,7 +1534,9 @@ public class RegionManager {
   boolean clearFromInTransition(final byte [] regionname) {
     boolean result = false;
     synchronized (this.regionsInTransition) {
-      if (this.regionsInTransition.isEmpty()) return result;
+      if (this.regionsInTransition.isEmpty()) {
+        return result;
+      }
       for (Map.Entry<String, RegionState> e: this.regionsInTransition.entrySet()) {
         if (Bytes.equals(regionname, e.getValue().getRegionName())) {
           this.regionsInTransition.remove(e.getKey());
@@ -1695,7 +1720,7 @@ public class RegionManager {
       return Bytes.compareTo(getRegionName(), o.getRegionName());
     }
   }
-  
+
   /*
    * When we find rows in a meta region that has an empty HRegionInfo, we
    * clean them up here.
@@ -1719,7 +1744,7 @@ public class RegionManager {
       }
     }
   }
-  
+
   // TODO ryan rework this function
   /*
    * Get HRegionInfo from passed META map of row values.

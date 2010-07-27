@@ -23,9 +23,8 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
+import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Writables;
 
@@ -38,16 +37,16 @@ import org.apache.hadoop.hbase.util.Writables;
 public class MasterCloseRegionHandler extends HBaseEventHandler
 {
   private static final Log LOG = LogFactory.getLog(MasterCloseRegionHandler.class);
-  
+
   private String regionName;
   protected byte[] serializedData;
-  RegionTransitionEventData hbEventData;
+  RegionTransitionData hbEventData;
   ServerManager serverManager;
-  
-  public MasterCloseRegionHandler(HBaseEventType eventType, 
-                                  ServerManager serverManager, 
-                                  String serverName, 
-                                  String regionName, 
+
+  public MasterCloseRegionHandler(HBaseEventType eventType,
+                                  ServerManager serverManager,
+                                  String serverName,
+                                  String regionName,
                                   byte[] serializedData) {
     super(false, serverName, eventType);
     this.regionName = regionName;
@@ -56,13 +55,13 @@ public class MasterCloseRegionHandler extends HBaseEventHandler
   }
 
   /**
-   * Handle the various events relating to closing regions. We can get the 
+   * Handle the various events relating to closing regions. We can get the
    * following events here:
    *   - RS_REGION_CLOSING : No-op
-   *   - RS_REGION_CLOSED  : The region is closed. If we are not in a shutdown 
-   *                         state, find the RS to open this region. This could 
-   *                         be a part of a region move, or just that the RS has 
-   *                         died. Should result in a M_REQUEST_OPENREGION event 
+   *   - RS_REGION_CLOSED  : The region is closed. If we are not in a shutdown
+   *                         state, find the RS to open this region. This could
+   *                         be a part of a region move, or just that the RS has
+   *                         died. Should result in a M_REQUEST_OPENREGION event
    *                         getting created.
    */
   @Override
@@ -72,22 +71,22 @@ public class MasterCloseRegionHandler extends HBaseEventHandler
     // handle RS_REGION_CLOSED events
     handleRegionClosedEvent();
   }
-  
+
   private void handleRegionClosedEvent() {
     try {
       if(hbEventData == null) {
-        hbEventData = new RegionTransitionEventData();
+        hbEventData = new RegionTransitionData();
         Writables.getWritable(serializedData, hbEventData);
       }
     } catch (IOException e) {
       LOG.error("Could not deserialize additional args for Close region", e);
     }
-    // process the region close - this will cause the reopening of the 
+    // process the region close - this will cause the reopening of the
     // region as a part of the heartbeat of some RS
     serverManager.processRegionClose(hbEventData.getHmsg().getRegionInfo());
     LOG.info("Processed close of region " + hbEventData.getHmsg().getRegionInfo().getRegionNameAsString());
   }
-  
+
   public String getRegionName() {
     return regionName;
   }

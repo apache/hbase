@@ -28,7 +28,8 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * ProcessRegionOpen is instantiated when a region server reports that it is
@@ -115,8 +116,13 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
       } else {
         masterStatus.getRegionManager().removeRegion(regionInfo);
       }
-      masterStatus.getZooKeeper().deleteUnassignedRegion(
-          regionInfo.getEncodedName());
+      try {
+        ZKAssign.deleteOpenedNode(masterStatus.getZooKeeper(),
+            regionInfo.getEncodedName());
+      } catch (KeeperException e) {
+        LOG.error("ZK error deleting opened node", e);
+        throw new IOException(e);
+      }
       return true;
     }
   }

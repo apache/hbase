@@ -1587,7 +1587,7 @@ public class HConnectionManager {
     //       The only method that really makes no sense here is get address
 
     @Override
-    public void abortServer() {
+    public void abort() {
       if(zooKeeper != null) {
         zooKeeper.close();
         zooKeeper = null;

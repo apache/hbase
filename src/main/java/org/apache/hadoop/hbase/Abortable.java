@@ -19,26 +19,17 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-
 /**
- * Set of functions that are exposed by any HBase process (implemented by the
- * master, region server, and client).
+ * Interface to support the aborting of a given server or client.
+ *
+ * <p>This is used primarily for ZooKeeper usage when we could get an unexpected
+ * and fatal exception, requiring an abort.
+ *
+ * <p>Implemented by the Master, RegionServer, and TableServers (client).
  */
-public interface ServerController extends Abortable {
+public interface Abortable {
   /**
-   * Return the address of the current server.
+   * Abort the server or client.
    */
-  public HServerAddress getHServerAddress();
-
-  /**
-   * Get the configuration object for this server.
-   */
-  public Configuration getConfiguration();
-
-  /**
-   * Get the ZooKeeper instance for this server.
-   */
-  public ZooKeeperWatcher getZooKeeper();
+  public void abort();
 }

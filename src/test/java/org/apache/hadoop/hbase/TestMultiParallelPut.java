@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -70,6 +71,9 @@ public class TestMultiParallelPut extends MultiRegionTable {
   }
 
   public void doATest(boolean doAbort) throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(HConstants.ZOOKEEPER_QUORUM, "localhost:" +
+        super.zooKeeperCluster.getClientPort());
     HTable table = new HTable(TEST_TABLE);
     table.setAutoFlush(false);
     table.setWriteBufferSize(10 * 1024 * 1024);

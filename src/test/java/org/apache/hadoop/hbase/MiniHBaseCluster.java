@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * This class creates a single process HBase cluster.
@@ -82,7 +83,7 @@ public class MiniHBaseCluster {
       new ConcurrentHashMap<HServerInfo, IOException>();
 
     public MiniHBaseClusterMaster(final Configuration conf)
-    throws IOException {
+    throws IOException, KeeperException {
       super(conf);
     }
 

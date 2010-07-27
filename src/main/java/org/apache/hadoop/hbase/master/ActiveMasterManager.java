@@ -102,7 +102,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
       }
     } catch (KeeperException ke) {
       LOG.fatal("Received an unexpected KeeperException, aborting", ke);
-      status.abortServer();
+      status.abort();
     }
   }
 
@@ -126,7 +126,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
       }
     } catch (KeeperException ke) {
       LOG.fatal("Received an unexpected KeeperException, aborting", ke);
-      status.abortServer();
+      status.abort();
       return;
     }
     // There is another active master, this is not a cluster startup
@@ -149,6 +149,21 @@ public class ActiveMasterManager extends ZooKeeperListener {
       }
       // Try to become active master again now that there is no active master
       blockUntilBecomingActiveMaster();
+    }
+  }
+
+  public void stop() {
+    try {
+      // If our address is in ZK, delete it on our way out
+      HServerAddress zkAddress =
+        ZKUtil.getDataAsAddress(watcher, watcher.masterAddressZNode);
+      // TODO: redo this to make it atomic (only added for tests)
+      if(zkAddress != null &&
+          zkAddress.equals(address)) {
+        ZKUtil.deleteNode(watcher, watcher.masterAddressZNode);
+      }
+    } catch (KeeperException e) {
+      watcher.error("Error deleting our own master address node", e);
     }
   }
 }

@@ -34,11 +34,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
@@ -120,13 +122,20 @@ public class ZKUtil {
    * Used when a server puts up an ephemeral node for itself and needs to use
    * a unique name.
    *
-   * Returns the fully-qualified znode path.
-   *
    * @param serverInfo server information
    * @return unique, zookeeper-safe znode path for the server instance
    */
   public static String getNodeName(HServerInfo serverInfo) {
     return serverInfo.getServerName();
+  }
+
+  /**
+   * Get the name of the current node from the specified fully-qualified path.
+   * @param path fully-qualified path
+   * @return name of the current node
+   */
+  public static String getNodeName(String path) {
+    return path.substring(path.lastIndexOf("/")+1);
   }
 
   /**
@@ -322,6 +331,51 @@ public class ZKUtil {
   }
 
   /**
+   * Atomically add watches and read data from all unwatched unassigned nodes.
+   *
+   * <p>This works because master is the only person deleting nodes.
+   */
+  public static List<NodeAndData> watchAndGetNewChildren(ZooKeeperWatcher zkw,
+      String baseNode)
+  throws KeeperException {
+    List<NodeAndData> newNodes = new ArrayList<NodeAndData>();
+    synchronized(zkw.getNodes()) {
+      List<String> nodes =
+        ZKUtil.listChildrenAndWatchForNewChildren(zkw, baseNode);
+      for(String node : nodes) {
+        String nodePath = ZKUtil.joinZNode(baseNode, node);
+        if(!zkw.getNodes().contains(nodePath)) {
+          byte [] data = ZKUtil.getDataAndWatch(zkw, nodePath);
+          newNodes.add(new NodeAndData(nodePath, data));
+          zkw.getNodes().add(nodePath);
+        }
+      }
+    }
+    return newNodes;
+  }
+
+  /**
+   * Simple class to hold a node path and node data.
+   */
+  public static class NodeAndData {
+    private String node;
+    private byte [] data;
+    public NodeAndData(String node, byte [] data) {
+      this.node = node;
+      this.data = data;
+    }
+    public String getNode() {
+      return node;
+    }
+    public byte [] getData() {
+      return data;
+    }
+    public String toString() {
+      return node + " (" + RegionTransitionData.fromBytes(data) + ")";
+    }
+  }
+
+  /**
    * Checks if the specified znode has any children.  Sets no watches.
    *
    * Returns true if the node exists and has children.  Returns false if the
@@ -354,6 +408,33 @@ public class ZKUtil {
       zkw.interruptedException(e);
       return false;
     }
+  }
+
+  /**
+   * Get the number of children of the specified node.
+   *
+   * If the node does not exist or has no children, returns 0.
+   *
+   * Sets no watches at all.
+   *
+   * @param zkw zk reference
+   * @param znode path of node to count children of
+   * @return number of children of specified node, 0 if none or parent does not
+   *         exist
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static int getNumberOfChildren(ZooKeeperWatcher zkw, String znode)
+  throws KeeperException {
+    try {
+      Stat stat = zkw.getZooKeeper().exists(znode, null);
+      return stat == null ? 0 : stat.getNumChildren();
+    } catch(KeeperException e) {
+      zkw.warn("Unable to get children of node " + znode);
+      zkw.keeperException(e);
+    } catch(InterruptedException e) {
+      zkw.interruptedException(e);
+    }
+    return 0;
   }
 
   //
@@ -510,6 +591,59 @@ public class ZKUtil {
         Bytes.toBytes(address.toString()));
   }
 
+  /**
+   * Sets the data of the existing znode to be the specified data.  Ensures that
+   * the current data has the specified expected version.
+   *
+   * <p>If the node does not exist, a {@link NoNodeException} will be thrown.
+   *
+   * <p>If their is a version mismatch, method returns null.
+   *
+   * <p>No watches are set but setting data will trigger other watchers of this
+   * node.
+   *
+   * <p>If there is another problem, a KeeperException will be thrown.
+   *
+   * @param zkw zk reference
+   * @param znode path of node
+   * @param data data to set for node
+   * @param expectedVersion version expected when setting data
+   * @return true if data set, false if version mismatch
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static boolean setData(ZooKeeperWatcher zkw, String znode,
+      byte [] data, int expectedVersion)
+  throws KeeperException, KeeperException.NoNodeException {
+    try {
+      return zkw.getZooKeeper().setData(znode, data, expectedVersion) != null;
+    } catch (InterruptedException e) {
+      zkw.interruptedException(e);
+      return false;
+    }
+  }
+
+  /**
+   * Sets the data of the existing znode to be the specified data.  The node
+   * must exist but no checks are done on the existing data or version.
+   *
+   * <p>If the node does not exist, a {@link NoNodeException} will be thrown.
+   *
+   * <p>No watches are set but setting data will trigger other watchers of this
+   * node.
+   *
+   * <p>If there is another problem, a KeeperException will be thrown.
+   *
+   * @param zkw zk reference
+   * @param znode path of node
+   * @param data data to set for node
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static void setData(ZooKeeperWatcher zkw, String znode,
+      byte [] data)
+  throws KeeperException, KeeperException.NoNodeException {
+    setData(zkw, znode, data, -1);
+  }
+
   //
   // Node creation
   //
@@ -551,8 +685,7 @@ public class ZKUtil {
   }
 
   /**
-   *
-   * Set the specified znode to be a persistent node carrying the specified
+   * Creates the specified znode to be a persistent node carrying the specified
    * data.
    *
    * Returns true if the node was successfully created, false if the node
@@ -561,7 +694,7 @@ public class ZKUtil {
    * If the node is created successfully, a watcher is also set on the node.
    *
    * If the node is not created successfully because it already exists, this
-   * method will also set a watcher on the node.
+   * method will also set a watcher on the node but return false.
    *
    * If there is another problem, a KeeperException will be thrown.
    *
@@ -571,19 +704,50 @@ public class ZKUtil {
    * @return true if node created, false if not, watch set in both cases
    * @throws KeeperException if unexpected zookeeper exception
    */
-  public static boolean createPersistentNodeIfNotExists(
+  public static boolean createNodeIfNotExistsAndWatch(
       ZooKeeperWatcher zkw, String znode, byte [] data)
   throws KeeperException {
     try {
       zkw.getZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
-          CreateMode.EPHEMERAL);
+          CreateMode.PERSISTENT);
     } catch (KeeperException.NodeExistsException nee) {
+      try {
+        zkw.getZooKeeper().exists(znode, zkw);
+      } catch (InterruptedException e) {
+        zkw.interruptedException(e);
+        return false;
+      }
       return false;
     } catch (InterruptedException e) {
       zkw.interruptedException(e);
       return false;
     }
     return true;
+  }
+
+  /**
+   * Creates the specified node with the specified data and watches it.
+   *
+   * <p>Throws an exception if the node already exists.
+   *
+   * <p>The node created is persistent and open access.
+   *
+   * @param zkw zk reference
+   * @param znode path of node to create
+   * @param data data of node to create
+   * @throws KeeperException if unexpected zookeeper exception
+   * @throws KeeperException.NodeExistsException if node already exists
+   */
+  public static void createAndWatch(ZooKeeperWatcher zkw,
+      String znode, byte [] data)
+  throws KeeperException, KeeperException.NodeExistsException {
+    try {
+      zkw.getZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
+          CreateMode.PERSISTENT);
+      zkw.getZooKeeper().exists(znode, zkw);
+    } catch (InterruptedException e) {
+      zkw.interruptedException(e);
+    }
   }
 
   /**
@@ -596,7 +760,7 @@ public class ZKUtil {
    * @param znode path of node
    * @throws KeeperException if unexpected zookeeper exception
    */
-  public static void createIfNotExists(ZooKeeperWatcher zkw,
+  public static void createAndFailSilent(ZooKeeperWatcher zkw,
       String znode)
   throws KeeperException {
     try {
@@ -647,15 +811,30 @@ public class ZKUtil {
    */
   public static void deleteNode(ZooKeeperWatcher zkw, String node)
   throws KeeperException {
+    deleteNode(zkw, node, -1);
+  }
+
+  /**
+   * Delete the specified node with the specified version.  Sets no watches.
+   * Throws all exceptions.
+   */
+  public static boolean deleteNode(ZooKeeperWatcher zkw, String node,
+      int version)
+  throws KeeperException {
     try {
-      zkw.getZooKeeper().delete(node, -1);
+      zkw.getZooKeeper().delete(node, version);
+      return true;
+    } catch(KeeperException.BadVersionException bve) {
+      return false;
     } catch(InterruptedException ie) {
+      zkw.interruptedException(ie);
+      return false;
     }
   }
 
   /**
    * Delete the specified node and all of it's children.
-   * 
+   *
    * Sets no watches.  Throws all exceptions besides dealing with deletion of
    * children.
    */
@@ -670,8 +849,26 @@ public class ZKUtil {
       }
       zkw.getZooKeeper().delete(node, -1);
     } catch(InterruptedException ie) {
+      zkw.interruptedException(ie);
     }
   }
+
+  /**
+   * Delete all the children of the specified node but not the node itself.
+   *
+   * Sets no watches.  Throws all exceptions besides dealing with deletion of
+   * children.
+   */
+  public static void deleteChildrenRecursively(ZooKeeperWatcher zkw, String node)
+  throws KeeperException {
+    List<String> children = ZKUtil.listChildrenNoWatch(zkw, node);
+    if(!children.isEmpty()) {
+      for(String child : children) {
+        deleteNodeRecursively(zkw, joinZNode(node, child));
+      }
+    }
+  }
+
   //
   // ZooKeeper cluster information
   //
@@ -754,5 +951,4 @@ public class ZKUtil {
     socket.close();
     return res.toArray(new String[res.size()]);
   }
-
 }

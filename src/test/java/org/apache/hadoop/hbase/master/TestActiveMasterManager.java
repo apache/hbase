@@ -64,7 +64,7 @@ public class TestActiveMasterManager {
 
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
         "testActiveMasterManagerFromZK", null);
-    ZKUtil.createIfNotExists(zk, zk.baseZNode);
+    ZKUtil.createAndFailSilent(zk, zk.baseZNode);
     try {
       ZKUtil.deleteNode(zk, zk.masterAddressZNode);
     } catch(KeeperException.NoNodeException nne) {}
@@ -248,7 +248,7 @@ public class TestActiveMasterManager {
     public void startShutdown() {}
 
     @Override
-    public void abortServer() {}
+    public void abort() {}
 
     @Override
     public Configuration getConfiguration() {

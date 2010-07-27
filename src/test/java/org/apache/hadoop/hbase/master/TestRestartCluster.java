@@ -27,10 +27,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
@@ -45,7 +44,7 @@ public class TestRestartCluster {
   private static ZooKeeperWatcher zooKeeper;
   private static final byte[] TABLENAME = Bytes.toBytes("master_transitions");
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a")};
-  
+
   @BeforeClass public static void beforeAllTests() throws Exception {
     conf = HBaseConfiguration.create();
     utility = new HBaseTestingUtility(conf);
@@ -64,22 +63,21 @@ public class TestRestartCluster {
 
     // create the unassigned region, throw up a region opened state for META
     String unassignedZNode = zooKeeper.assignmentZNode;
-    ZKUtil.createIfNotExists(zooKeeper, unassignedZNode);
-    byte[] data = null;
-    HBaseEventType hbEventType = HBaseEventType.RS2ZK_REGION_OPENED;
-    try {
-      data = Writables.getBytes(new RegionTransitionEventData(hbEventType, HMaster.MASTER));
-    } catch (IOException e) {
-      LOG.error("Error creating event data for " + hbEventType, e);
-    }
-    zooKeeper.createUnassignedRegion(HRegionInfo.ROOT_REGIONINFO.getEncodedName(), data);
-    zooKeeper.createUnassignedRegion(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(), data);
-    LOG.debug("Created UNASSIGNED zNode for ROOT and META regions in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
-    
+    ZKUtil.createAndFailSilent(zooKeeper, unassignedZNode);
+
+    ZKAssign.createNodeOffline(zooKeeper,
+        HRegionInfo.ROOT_REGIONINFO.getEncodedName(), HMaster.MASTER);
+
+    ZKAssign.createNodeOffline(zooKeeper,
+        HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(), HMaster.MASTER);
+
+    LOG.debug("Created UNASSIGNED zNode for ROOT and META regions in state " +
+        HBaseEventType.M2ZK_REGION_OFFLINE);
+
     // start the HB cluster
     LOG.info("Starting HBase cluster...");
-    utility.startMiniCluster(2);  
-    
+    utility.startMiniCluster(2);
+
     utility.createTable(TABLENAME, FAMILIES);
     LOG.info("Created a table, waiting for table to be available...");
     utility.waitTableAvailable(TABLENAME, 60*1000);

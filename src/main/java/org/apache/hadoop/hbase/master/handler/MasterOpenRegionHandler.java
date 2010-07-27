@@ -26,9 +26,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
+import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Writables;
 
@@ -46,13 +45,13 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
   // other args passed in a byte array form
   protected byte[] serializedData;
   private String regionName;
-  private RegionTransitionEventData hbEventData;
+  private RegionTransitionData hbEventData;
   ServerManager serverManager;
 
-  public MasterOpenRegionHandler(HBaseEventType eventType, 
-                                 ServerManager serverManager, 
-                                 String serverName, 
-                                 String regionName, 
+  public MasterOpenRegionHandler(HBaseEventType eventType,
+                                 ServerManager serverManager,
+                                 String serverName,
+                                 String regionName,
                                  byte[] serData) {
     super(false, serverName, eventType);
     this.regionName = regionName;
@@ -61,14 +60,14 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
   }
 
   /**
-   * Handle the various events relating to opening regions. We can get the 
+   * Handle the various events relating to opening regions. We can get the
    * following events here:
-   *   - RS_REGION_OPENING : Keep track to see how long the region open takes. 
-   *                         If the RS is taking too long, then revert the 
-   *                         region back to closed state so that it can be 
+   *   - RS_REGION_OPENING : Keep track to see how long the region open takes.
+   *                         If the RS is taking too long, then revert the
+   *                         region back to closed state so that it can be
    *                         re-assigned.
-   *   - RS_REGION_OPENED  : The region is opened. Add an entry into META for  
-   *                         the RS having opened this region. Then delete this 
+   *   - RS_REGION_OPENED  : The region is opened. Add an entry into META for
+   *                         the RS having opened this region. Then delete this
    *                         entry in ZK.
    */
   @Override
@@ -82,30 +81,30 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
       handleRegionOpenedEvent();
     }
   }
-  
+
   private void handleRegionOpeningEvent() {
-    // TODO: not implemented. 
+    // TODO: not implemented.
     LOG.debug("NO-OP call to handling region opening event");
-    // Keep track to see how long the region open takes. If the RS is taking too 
-    // long, then revert the region back to closed state so that it can be 
+    // Keep track to see how long the region open takes. If the RS is taking too
+    // long, then revert the region back to closed state so that it can be
     // re-assigned.
   }
 
   private void handleRegionOpenedEvent() {
     try {
       if(hbEventData == null) {
-        hbEventData = new RegionTransitionEventData();
+        hbEventData = new RegionTransitionData();
         Writables.getWritable(serializedData, hbEventData);
       }
     } catch (IOException e) {
       LOG.error("Could not deserialize additional args for Open region", e);
     }
-    LOG.debug("RS " + hbEventData.getRsName() + " has opened region " + regionName);
-    HServerInfo serverInfo = serverManager.getServerInfo(hbEventData.getRsName());
+    LOG.debug("RS " + hbEventData.getServerName() + " has opened region " + regionName);
+    HServerInfo serverInfo = serverManager.getServerInfo(hbEventData.getServerName());
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
     serverManager.processRegionOpen(serverInfo, hbEventData.getHmsg().getRegionInfo(), returnMsgs);
     if(returnMsgs.size() > 0) {
-      LOG.error("Open region tried to send message: " + returnMsgs.get(0).getType() + 
+      LOG.error("Open region tried to send message: " + returnMsgs.get(0).getType() +
                 " about " + returnMsgs.get(0).getRegionInfo().getRegionNameAsString());
     }
   }

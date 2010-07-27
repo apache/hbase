@@ -118,7 +118,7 @@ public class MasterAddressManager extends ZooKeeperListener {
     } catch(KeeperException ke) {
       // If we have a ZK exception trying to find the master we must abort
       LOG.fatal("Unexpected ZooKeeper exception", ke);
-      status.abortServer();
+      status.abort();
     }
   }
 
@@ -182,7 +182,7 @@ public class MasterAddressManager extends ZooKeeperListener {
     } catch (KeeperException ke) {
       // If we have a ZK exception trying to find the master we must abort
       LOG.fatal("Unexpected ZooKeeper exception", ke);
-      status.abortServer();
+      status.abort();
     }
     if(address != null) {
       setMasterAddress(address);

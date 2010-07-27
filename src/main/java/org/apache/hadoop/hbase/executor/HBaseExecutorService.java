@@ -88,6 +88,7 @@ public class HBaseExecutorService
         LOG.debug("Executor service " + toString() + " already running on " + serverName);
         return;
       }
+      LOG.debug("Starting executor service [" + name + "]");
       HBaseExecutorService.startExecutorService(name);
     }
     

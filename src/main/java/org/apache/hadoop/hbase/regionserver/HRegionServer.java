@@ -2329,8 +2329,8 @@ public class HRegionServer implements HRegionInterface,
   // ServerStatus
   
   @Override
-  public void abortServer() {
-    this.abort("Received abortServer call");
+  public void abort() {
+    this.abort("Received abort call");
   }
 
   @Override

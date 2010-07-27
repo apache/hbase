@@ -82,17 +82,18 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
+import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
+import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
-import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.zookeeper.Watcher.Event.KeeperState;
 
 import com.google.common.collect.Lists;
 
@@ -106,8 +107,8 @@ import com.google.common.collect.Lists;
  * @see HMasterRegionInterface
  * @see Watcher
  */
-public class HMaster extends Thread implements HMasterInterface,
-    HMasterRegionInterface, Watcher, MasterStatus {
+public class HMaster extends Thread
+implements HMasterInterface, HMasterRegionInterface, MasterStatus {
   // MASTER is name of the webapp and the attribute name used stuffing this
   //instance into web context.
   public static final String MASTER = "master";
@@ -132,6 +133,13 @@ public class HMaster extends Thread implements HMasterInterface,
   private ZooKeeperWatcher zooKeeperWrapper;
   // Manager and zk listener for master election
   private ActiveMasterManager activeMasterManager;
+  // Cluster status zk tracker and local setter
+  private ClusterStatusTracker clusterStatusTracker;
+  // Root region location tracker
+  private RootRegionTracker rootRegionTracker;
+  // Region server tracker
+  private RegionServerTracker regionServerTracker;
+
   // A Sleeper that sleeps for threadWakeFrequency; sleep if nothing todo.
   private final Sleeper sleeper;
   // RPC server for the HMaster
@@ -146,6 +154,9 @@ public class HMaster extends Thread implements HMasterInterface,
   private final ServerManager serverManager;
   // region manager to deal with region specific stuff
   private final RegionManager regionManager;
+
+  // manager of assignment nodes in zookeeper
+  private final AssignmentManager assignmentManager;
 
   // True if this is the master that started the cluster.
   boolean isClusterStartup;
@@ -167,7 +178,7 @@ public class HMaster extends Thread implements HMasterInterface,
    * <li>Block until becoming active master
    * </ol>
    */
-  public HMaster(Configuration conf) throws IOException {
+  public HMaster(Configuration conf) throws IOException, KeeperException {
     // initialize some variables
     this.conf = conf;
     // set the thread name
@@ -199,7 +210,8 @@ public class HMaster extends Thread implements HMasterInterface,
      */
     zooKeeperWrapper =
       new ZooKeeperWatcher(conf, getHServerAddress().toString(), this);
-    isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
+    isClusterStartup = 0 ==
+      ZKUtil.getNumberOfChildren(zooKeeperWrapper, zooKeeperWrapper.rsZNode);
 
     /*
      * 3. Initialize master components.
@@ -210,9 +222,15 @@ public class HMaster extends Thread implements HMasterInterface,
     this.connection = ServerConnectionManager.getConnection(conf);
     this.regionServerOperationQueue = new RegionServerOperationQueue(conf, closed);
     this.metrics = new MasterMetrics(this.getName());
+    clusterStatusTracker = new ClusterStatusTracker(zooKeeperWrapper, this);
+    rootRegionTracker = new RootRegionTracker(zooKeeperWrapper, this);
     fileSystemManager = new FileSystemManager(conf, this);
     serverManager = new ServerManager(this, metrics, regionServerOperationQueue);
-    regionManager = new RegionManager(this);
+    regionManager = new RegionManager(this, rootRegionTracker);
+    assignmentManager = new AssignmentManager(zooKeeperWrapper, this,
+        serverManager, regionManager);
+    regionServerTracker = new RegionServerTracker(zooKeeperWrapper, this,
+        serverManager);
     // create a sleeper to sleep for a configured wait frequency
     int threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.sleeper = new Sleeper(threadWakeFrequency, this.closed);
@@ -235,6 +253,7 @@ public class HMaster extends Thread implements HMasterInterface,
     activeMasterManager.blockUntilBecomingActiveMaster();
 
     // We are the active master now.
+    clusterStatusTracker.setClusterUp();
 
     LOG.info("Server has become the active/primary master.  Address is " +
         this.address.toString());
@@ -323,6 +342,7 @@ public class HMaster extends Thread implements HMasterInterface,
     }
     this.rpcServer.stop();
     this.regionManager.stop();
+    this.activeMasterManager.stop();
     this.zooKeeperWrapper.close();
     HBaseExecutorService.shutdown();
     LOG.info("HMaster main thread exiting");
@@ -424,7 +444,7 @@ public class HMaster extends Thread implements HMasterInterface,
    * Get the ZK wrapper object - needed by master_jsp.java
    * @return the zookeeper wrapper
    */
-  public ZooKeeperWrapper getZooKeeperWrapper() {
+  public ZooKeeperWatcher getZooKeeperWatcher() {
     return this.zooKeeperWrapper;
   }
   /**
@@ -445,11 +465,21 @@ public class HMaster extends Thread implements HMasterInterface,
    */
   private void joinCluster()  {
       LOG.debug("Checking cluster state...");
-      HServerAddress rootLocation =
-        this.zooKeeperWrapper.readRootRegionLocation();
-      List<HServerAddress> addresses = this.zooKeeperWrapper.scanRSDirectory();
+      HServerAddress rootLocation = null;
+      List<HServerAddress> addresses = null;
+      try {
+        clusterStatusTracker.start();
+        rootRegionTracker.start();
+        regionServerTracker.start();
+        rootLocation = rootRegionTracker.getRootRegionLocation();
+        addresses = regionServerTracker.getOnlineServers();
+      } catch(KeeperException e) {
+        LOG.fatal("Unexpected ZK exception initializing trackers", e);
+        abort();
+        return;
+      }
       // Check if this is a fresh start of the cluster
-      if (addresses.isEmpty()) {
+      if (isClusterStartup) {
         LOG.debug("Master fresh start, proceeding with normal startup");
         fileSystemManager.splitLogAfterStartup();
         return;
@@ -504,14 +534,20 @@ public class HMaster extends Thread implements HMasterInterface,
    */
   private void startServiceThreads() {
     try {
-      // Start the unassigned watcher - which will create the unassigned region
-      // in ZK. This is needed before RegionManager() constructor tries to assign
-      // the root region.
-      ZKUnassignedWatcher.start(this.conf, this);
       // start the "close region" executor service
-      HBaseEventType.RS2ZK_REGION_CLOSED.startMasterExecutorService(address.toString());
+      HBaseEventType.RS2ZK_REGION_CLOSED.startMasterExecutorService(
+          address.toString());
       // start the "open region" executor service
       HBaseEventType.RS2ZK_REGION_OPENED.startMasterExecutorService(address.toString());
+      // Start the assignment manager.  Creates the unassigned node in ZK
+      // if it does not exist and handles regions in transition if a failed-over
+      // master.  This is needed before RegionManager() constructor tries to
+      // assign the root region.
+      try {
+        assignmentManager.start();
+      } catch (KeeperException e) {
+        throw new IOException(e);
+      }
       // start the region manager
       this.regionManager.start();
       // Put up info server.
@@ -608,7 +644,11 @@ public class HMaster extends Thread implements HMasterInterface,
   public void shutdown() {
     LOG.info("Cluster shutdown requested. Starting to quiesce servers");
     this.shutdownRequested.set(true);
-    this.zooKeeperWrapper.setClusterState(false);
+    try {
+      clusterStatusTracker.setClusterDown();
+    } catch (KeeperException e) {
+      LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
+    }
   }
 
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)
@@ -967,47 +1007,6 @@ public class HMaster extends Thread implements HMasterInterface,
     return status;
   }
 
-  /**
-   * @see org.apache.zookeeper.Watcher#process(org.apache.zookeeper.WatchedEvent)
-   */
-  @Override
-  public void process(WatchedEvent event) {
-    LOG.debug("Event " + event.getType() +
-              " with state " + event.getState() +
-              " with path " + event.getPath());
-    // Master should kill itself if its session expired or if its
-    // znode was deleted manually (usually for testing purposes)
-    if(event.getState() == KeeperState.Expired ||
-      (event.getType().equals(EventType.NodeDeleted) &&
-        event.getPath().equals(this.zooKeeperWrapper.getMasterElectionZNode())) &&
-        !shutdownRequested.get()) {
-
-      LOG.info("Master lost its znode, trying to get a new one");
-
-      // Can we still be the master? If not, goodbye
-
-      zooKeeperWrapper.close();
-      try {
-        // TODO: this is broken, we should just shutdown now not restart
-        zooKeeperWrapper =
-          new ZooKeeperWatcher(conf, HMaster.class.getName(), this);
-        zooKeeperWrapper.registerListener(this);
-        activeMasterManager = new ActiveMasterManager(zooKeeperWrapper,
-            this.address, this);
-        activeMasterManager.blockUntilBecomingActiveMaster();
-
-        // we are a failed over master, reset the fact that we started the
-        // cluster
-        setClusterStartup(false);
-        // Verify the cluster to see if anything happened while we were away
-        joinCluster();
-      } catch (Exception e) {
-        LOG.error("Killing master because of", e);
-        System.exit(1);
-      }
-    }
-  }
-
   private static void printUsageAndExit() {
     System.err.println("Usage: Master [opts] start|stop");
     System.err.println(" start  Start Master. If local mode, start Master and RegionServer in same JVM");
@@ -1042,7 +1041,8 @@ public class HMaster extends Thread implements HMasterInterface,
   static class LocalHMaster extends HMaster {
     private MiniZooKeeperCluster zkcluster = null;
 
-    public LocalHMaster(Configuration conf) throws IOException {
+    public LocalHMaster(Configuration conf)
+    throws IOException, KeeperException {
       super(conf);
     }
 
@@ -1175,7 +1175,7 @@ public class HMaster extends Thread implements HMasterInterface,
   }
 
   @Override
-  public void abortServer() {
+  public void abort() {
     this.startShutdown();
   }
 

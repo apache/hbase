@@ -62,6 +62,10 @@ public class MiniZooKeeperCluster {
     this.clientPort = clientPort;
   }
 
+  public int getClientPort() {
+    return clientPort;
+  }
+
   public void setTickTime(int tickTime) {
     this.tickTime = tickTime;
   }

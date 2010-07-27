@@ -20,14 +20,15 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerController;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -44,7 +45,7 @@ import org.apache.zookeeper.ZooKeeper;
  * This class also holds and manages the connection to ZooKeeper.  Code to deal
  * with connection related events and exceptions are handled here.
  */
-public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
+public class ZooKeeperWatcher implements Watcher {
   private static final Log LOG = LogFactory.getLog(ZooKeeperWatcher.class);
 
   // name of this watcher (for logging only)
@@ -56,12 +57,15 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
   // zookeeper connection
   private ZooKeeper zooKeeper;
 
-  // server controller
-  private ServerController server;
+  // abortable in case of zk failure
+  private Abortable abortable;
 
   // listeners to be notified
   private final Set<ZooKeeperListener> listeners =
     new CopyOnWriteArraySet<ZooKeeperListener>();
+
+  // set of unassigned nodes watched
+  private Set<String> unassignedNodes = new HashSet<String>();
 
   // node names
 
@@ -84,23 +88,24 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
    * @throws IOException
    */
   public ZooKeeperWatcher(Configuration conf, String name,
-      ServerController server)
+      Abortable abortable)
   throws IOException {
-    super(conf, name);
+//    super(conf, name);
     this.name = name;
     this.quorum = ZKConfig.getZKQuorumServersString(conf);
     this.zooKeeper = ZKUtil.connect(conf, quorum, this);
-    this.server = server;
+    this.abortable = abortable;
     info("Connected to ZooKeeper");
     setNodeNames(conf);
     try {
       // Create all the necessary "directories" of znodes
       // TODO: Move this to an init method somewhere so not everyone calls it?
-      ZKUtil.createIfNotExists(this, baseZNode);
-      ZKUtil.createIfNotExists(this, assignmentZNode);
-      ZKUtil.createIfNotExists(this, rsZNode);
+      ZKUtil.createAndFailSilent(this, baseZNode);
+      ZKUtil.createAndFailSilent(this, assignmentZNode);
+      ZKUtil.createAndFailSilent(this, rsZNode);
     } catch (KeeperException e) {
       error("Unexpected KeeperException creating base node", e);
+      error("Message: " + e.getMessage());
       throw new IOException(e);
     }
   }
@@ -135,7 +140,6 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
    * Get the connection to ZooKeeper.
    * @return connection reference to zookeeper
    */
-  @Override
   public ZooKeeper getZooKeeper() {
     return zooKeeper;
   }
@@ -162,7 +166,7 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
         "path: " + event.getPath());
 
     // While we are still using both ZKWs, need to call parent process()
-    super.process(event);
+//    super.process(event);
 
     switch(event.getType()) {
 
@@ -226,11 +230,19 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
         break;
       case Expired:
         error("Received Expired from ZooKeeper, aborting server");
-        if(server != null) {
-          server.abortServer();
+        if(abortable != null) {
+          abortable.abort();
         }
         break;
     }
+  }
+
+  /**
+   * Get the set of already watched unassigned nodes.
+   * @return
+   */
+  public Set<String> getNodes() {
+    return unassignedNodes;
   }
 
   /**
@@ -325,16 +337,19 @@ public class ZooKeeperWatcher extends ZooKeeperWrapper implements Watcher {
     LOG.error("<" + name + "> " + string, t);
   }
 
+  public boolean isDebugEnabled() {
+    return LOG.isDebugEnabled();
+  }
+
   /**
    * Close the connection to ZooKeeper.
    * @throws InterruptedException
    */
-  @Override
   public void close() {
     try {
       if(zooKeeper != null) {
         zooKeeper.close();
-        super.close();
+//        super.close();
       }
     } catch (InterruptedException e) {
     }
