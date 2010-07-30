@@ -1204,6 +1204,7 @@ Release 0.20.0 - Tue Sep  8 12:53:05 PDT 2009
                (Alexey Kovyrin via Stack)
    HBASE-2531  32-bit encoding of regionnames waaaaaaayyyyy too susceptible to
                hash clashes (Kannan Muthukkaruppan via Stack)
+   HBASE-2892  Replication metrics aren't updated
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
