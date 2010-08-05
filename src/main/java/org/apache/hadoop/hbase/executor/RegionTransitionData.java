@@ -23,8 +23,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HMsg;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 
@@ -36,19 +36,16 @@ public class RegionTransitionData implements Writable {
    * Type of transition event (offline, opening, opened, closing, closed).
    * Required.
    */
-  private HBaseEventType eventType;
+  private EventType eventType;
 
   /** Region being transitioned.  Required. */
-  private String regionName;
+  private byte [] regionName;
 
   /** Server event originated from.  Optional. */
   private String serverName;
 
   /** Time the event was created.  Required but automatically set. */
-  private long timeStamp;
-
-  /** Temporary.  Holds payload used doing transitions via heartbeats. */
-  private HMsg hmsg; // to be removed shortly once we stop using heartbeats
+  private long stamp;
 
   /**
    * Writable constructor.  Do not use directly.
@@ -68,12 +65,12 @@ public class RegionTransitionData implements Writable {
    * assignment.
    *
    * <p>Since only the master uses this constructor, the type should always be
-   * {@link HBaseEventType#M2ZK_REGION_OFFLINE}.
+   * {@link EventType#M2ZK_REGION_OFFLINE}.
    *
    * @param eventType type of event
    * @param regionName name of region
    */
-  public RegionTransitionData(HBaseEventType eventType, String regionName) {
+  public RegionTransitionData(EventType eventType, byte [] regionName) {
     this(eventType, regionName, null);
   }
 
@@ -83,37 +80,20 @@ public class RegionTransitionData implements Writable {
    *
    * <p>Used when the server name is known (a regionserver is setting it).
    *
-   * <p>Valid types for this constructor are {@link HBaseEventType#RS2ZK_REGION_CLOSING},
-   * {@link HBaseEventType#RS2ZK_REGION_CLOSED}, {@link HBaseEventType#RS2ZK_REGION_OPENING},
-   * and {@link HBaseEventType#RS2ZK_REGION_OPENED}.
+   * <p>Valid types for this constructor are {@link EventType#RS2ZK_REGION_CLOSING},
+   * {@link EventType#RS2ZK_REGION_CLOSED}, {@link EventType#RS2ZK_REGION_OPENING},
+   * and {@link EventType#RS2ZK_REGION_OPENED}.
    *
    * @param eventType type of event
    * @param regionName name of region
    * @param serverName name of server setting data
    */
-  public RegionTransitionData(HBaseEventType eventType, String regionName,
+  public RegionTransitionData(EventType eventType, byte [] regionName,
       String serverName) {
-    this(eventType, regionName, serverName, null);
-  }
-
-  /**
-   * Construct data for a fully-specified, old-format region transition event
-   * which uses HMsg/heartbeats.
-   *
-   * TODO: Remove this constructor once we stop using heartbeats.
-   *
-   * @param eventType
-   * @param regionName
-   * @param serverName
-   * @param hmsg
-   */
-  public RegionTransitionData(HBaseEventType eventType, String regionName,
-      String serverName, HMsg hmsg) {
     this.eventType = eventType;
-    this.timeStamp = System.currentTimeMillis();
+    this.stamp = System.currentTimeMillis();
     this.regionName = regionName;
     this.serverName = serverName;
-    this.hmsg = hmsg;
   }
 
   /**
@@ -121,25 +101,25 @@ public class RegionTransitionData implements Writable {
    *
    * <p>One of:
    * <ul>
-   * <li>{@link HBaseEventType#M2ZK_REGION_OFFLINE}
-   * <li>{@link HBaseEventType#RS2ZK_REGION_CLOSING}
-   * <li>{@link HBaseEventType#RS2ZK_REGION_CLOSED}
-   * <li>{@link HBaseEventType#RS2ZK_REGION_OPENING}
-   * <li>{@link HBaseEventType#RS2ZK_REGION_OPENED}
+   * <li>{@link EventType#M2ZK_REGION_OFFLINE}
+   * <li>{@link EventType#RS2ZK_REGION_CLOSING}
+   * <li>{@link EventType#RS2ZK_REGION_CLOSED}
+   * <li>{@link EventType#RS2ZK_REGION_OPENING}
+   * <li>{@link EventType#RS2ZK_REGION_OPENED}
    * </ul>
    * @return type of region transition event
    */
-  public HBaseEventType getEventType() {
+  public EventType getEventType() {
     return eventType;
   }
 
   /**
-   * Gets the encoded name of the region being transitioned.
+   * Gets the name of the region being transitioned.
    *
    * <p>Region name is required so this never returns null.
    * @return region name
    */
-  public String getRegionName() {
+  public byte [] getRegionName() {
     return regionName;
   }
 
@@ -156,53 +136,38 @@ public class RegionTransitionData implements Writable {
   /**
    * Gets the timestamp when this event was created.
    *
-   * @return time event was created
+   * @return stamp event was created
    */
-  public long getTimeStamp() {
-    return timeStamp;
-  }
-
-  /**
-   * Gets the {@link HMsg} payload of this region transition event.
-   * @return heartbeat payload
-   */
-  public HMsg getHmsg() {
-    return hmsg;
+  public long getStamp() {
+    return stamp;
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
     // the event type byte
-    eventType = HBaseEventType.fromByte(in.readByte());
+    eventType = EventType.values()[in.readShort()];
     // the timestamp
-    timeStamp = in.readLong();
+    stamp = in.readLong();
     // the encoded name of the region being transitioned
-    regionName = in.readUTF();
+    regionName = Bytes.readByteArray(in);
     // remaining fields are optional so prefixed with boolean
     // the name of the regionserver sending the data
     if(in.readBoolean()) {
       serverName = in.readUTF();
-    }
-    // hmsg
-    if(in.readBoolean()) {
-      hmsg = new HMsg();
-      hmsg.readFields(in);
+    } else {
+      serverName = null;
     }
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-    out.writeByte(eventType.getByteValue());
+    out.writeShort(eventType.ordinal());
     out.writeLong(System.currentTimeMillis());
-    out.writeUTF(regionName);
+    Bytes.writeByteArray(out, regionName);
     // remaining fields are optional so prefixed with boolean
     out.writeBoolean(serverName != null);
     if(serverName != null) {
       out.writeUTF(serverName);
-    }
-    out.writeBoolean(hmsg != null);
-    if(hmsg != null) {
-      hmsg.write(out);
     }
   }
 

@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -30,9 +33,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Clients interact with HRegionServers using a handle to the HRegionInterface.
@@ -279,10 +279,64 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * @throws IOException e
    */
   public MultiPutResponse multiPut(MultiPut puts) throws IOException;
-  
+
   /**
    * Bulk load an HFile into an open region
    */
   public void bulkLoadHFile(String hfilePath,
       byte[] regionName, byte[] familyName) throws IOException;
+
+  // Master methods
+
+  /**
+   * Opens the specified region.
+   * @param region region to open
+   */
+  public void openRegion(final HRegionInfo region);
+
+  /**
+   * Closes the specified region.
+   * @param region region to close
+   * @return true if closing region, false if not
+   */
+  public boolean closeRegion(final HRegionInfo region)
+  throws NotServingRegionException;
+
+  // Region administrative methods
+
+  /**
+   * Flushes the MemStore of the specified region.
+   * <p>
+   * This method is synchronous.
+   * @param regionInfo region to flush
+   * @throws NotServingRegionException
+   * @throws IOException
+   */
+  void flushRegion(HRegionInfo regionInfo)
+  throws NotServingRegionException, IOException;
+
+  /**
+   * Splits the specified region.
+   * <p>
+   * This method currently flushes the region and then forces a compaction which
+   * will then trigger a split.  The flush is done synchronously but the
+   * compaction is asynchronous.
+   * @param regionInfo region to split
+   * @throws NotServingRegionException
+   * @throws IOException
+   */
+  void splitRegion(HRegionInfo regionInfo)
+  throws NotServingRegionException, IOException;
+
+  /**
+   * Compacts the specified region.  Performs a major compaction if specified.
+   * <p>
+   * This method is asynchronous.
+   * @param regionInfo region to compact
+   * @param major true to force major compaction
+   * @throws NotServingRegionException
+   * @throws IOException
+   */
+  void compactRegion(HRegionInfo regionInfo, boolean major)
+  throws NotServingRegionException, IOException;
 }

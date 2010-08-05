@@ -40,7 +40,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Compact region on request and then run split if appropriate
  */
-class CompactSplitThread extends Thread {
+public class CompactSplitThread extends Thread {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
 
   private HTable root = null;

@@ -19,13 +19,11 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.io.Writable;
-
-import java.io.IOException;
 
 /**
  * Clients interact with the HMasterInterface to gain access to meta-level
@@ -110,11 +108,10 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * Modify a table's metadata
    *
    * @param tableName table to modify
-   * @param op the operation to do
-   * @param args arguments for operation
+   * @param htd new descriptor for table
    * @throws IOException e
    */
-  public void modifyTable(byte[] tableName, HConstants.Modify op, Writable[] args)
+  public void modifyTable(byte[] tableName, HTableDescriptor htd)
     throws IOException;
 
   /**

@@ -19,41 +19,91 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
-import org.apache.hadoop.hbase.master.handler.MasterCloseRegionHandler;
-import org.apache.hadoop.hbase.master.handler.MasterOpenRegionHandler;
+import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
+import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
+import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.NodeAndData;
+import org.apache.hadoop.io.Writable;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Manages region assignment.
- *
- * <p>Monitors ZooKeeper for events related to regions in transition.
- *
- * <p>Handles existing regions in transition during master failover.
+ * Manages and performs region assignment.
+ * <p>
+ * Monitors ZooKeeper for events related to regions in transition.
+ * <p>
+ * Handles existing regions in transition during master failover.
  */
 public class AssignmentManager extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(AssignmentManager.class);
 
-  private MasterStatus status;
+  protected MasterController master;
 
   private ServerManager serverManager;
 
-  private RegionManager regionManager;
+  private CatalogTracker catalogTracker;
 
-  private String serverName;
+  private TimeoutMonitor timeoutMonitor;
 
-//  TODO: Eventually RIT will move here?
-//  private final Map<String,RegionState> regionsInTransition =
-//    new TreeMap<String,RegionState>();
+  /** Regions currently in transition. */
+  private final Map<String,RegionState> regionsInTransition =
+    new TreeMap<String,RegionState>();
+
+  /** Plans for region movement. */
+  private final Map<String,RegionPlan> regionPlans =
+    new TreeMap<String,RegionPlan>();
+
+  /** Set of tables that have been disabled. */
+  private final Set<String> disabledTables =
+    Collections.synchronizedSet(new HashSet<String>());
+
+  /**
+   * Server to regions assignment map.
+   * Contains the set of regions currently assigned to a given server.
+   */
+  private final SortedMap<HServerInfo,Set<HRegionInfo>> servers =
+        new TreeMap<HServerInfo,Set<HRegionInfo>>();
+
+  /**
+   * Region to server assignment map.
+   * Contains the server a given region is currently assigned to.
+   * This object should be used for all synchronization around servers/regions.
+   */
+  private final SortedMap<HRegionInfo,HServerInfo> regions =
+    new TreeMap<HRegionInfo,HServerInfo>();
 
   /**
    * Constructs a new assignment manager.
@@ -63,85 +113,211 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param watcher zookeeper watcher
    * @param status master status
    */
-  public AssignmentManager(ZooKeeperWatcher watcher, MasterStatus status,
-      ServerManager serverManager, RegionManager regionManager) {
+  public AssignmentManager(ZooKeeperWatcher watcher, MasterController master,
+      ServerManager serverManager, CatalogTracker catalogTracker) {
     super(watcher);
-    this.status = status;
+    this.master = master;
     this.serverManager = serverManager;
-    this.regionManager = regionManager;
-    serverName = status.getHServerAddress().toString();
+    this.catalogTracker = catalogTracker;
+    Configuration conf = master.getConfiguration();
+    this.timeoutMonitor = new TimeoutMonitor(
+        conf.getInt("hbase.master.assignment.timeoutmonitor.period", 30000),
+        master.getClosed(),
+        conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 15000));
+    Threads.setDaemonThreadRunning(timeoutMonitor,
+        master.getServerName() + ".timeoutMonitor");
   }
 
   /**
-   * Starts the assignment manager.
-   *
-   * <p>This includes registering itself with ZooKeeper and handling
-   * the initial state of whatever unassigned nodes already exist.
+   * Cluster startup.  Reset all unassigned nodes and assign all user regions.
+   * @throws IOException
    * @throws KeeperException
    */
-  public void start() throws KeeperException {
-    watcher.registerListener(this);
-    if(status.isClusterStartup()) {
-      processStartup();
-    } else {
-      processFailover();
-    }
-  }
-
-  public synchronized void processStartup() throws KeeperException {
+  void processStartup() throws IOException, KeeperException {
+    // Cleanup any existing ZK nodes and start watching
     ZKAssign.deleteAllNodes(watcher);
-    ZKUtil.listChildrenAndWatchForNewChildren(watcher, watcher.assignmentZNode);
+    ZKUtil.listChildrenAndWatchForNewChildren(watcher,
+        watcher.assignmentZNode);
+    // Assign all existing user regions out
+    assignAllUserRegions();
   }
 
   /**
-   * Handle failover.
+   * Handle failover.  Restore state from META and ZK.  Handle any regions in
+   * transition.
    * @throws KeeperException
+   * @throws IOException
    */
-  public synchronized void processFailover() throws KeeperException {
+  void processFailover() throws KeeperException, IOException {
+    // Scan META to build list of existing regions, servers, and assignment
+    rebuildUserRegions();
+    // Pickup any disabled tables
+    rebuildDisabledTables();
+    // Check existing regions in transition
     List<String> nodes = ZKUtil.listChildrenAndWatchForNewChildren(watcher,
         watcher.assignmentZNode);
     if(nodes.isEmpty()) {
-      LOG.info("No regions in transition in ZK, nothing to do for failover");
+      LOG.info("No regions in transition in ZK to process on failover");
       return;
     }
     LOG.info("Failed-over master needs to process " + nodes.size() +
         " regions in transition");
     for(String regionName : nodes) {
       RegionTransitionData data = ZKAssign.getData(watcher, regionName);
+      HRegionInfo regionInfo =
+        MetaReader.getRegion(catalogTracker, data.getRegionName()).getFirst();
+      String encodedName = regionInfo.getEncodedName();
       switch(data.getEventType()) {
-        case M2ZK_REGION_OFFLINE:
-          // TODO: Generate new assignment and send OPEN RPC
-          break;
         case RS2ZK_REGION_CLOSING:
-          // TODO: Only need to deal with timeouts.
+          // Just insert region into RIT
+          // If this never updates the timeout will trigger new assignment
+          regionsInTransition.put(encodedName,
+              new RegionState(regionInfo, RegionState.State.CLOSING,
+                  data.getStamp()));
           break;
+
         case RS2ZK_REGION_CLOSED:
-          // TODO: Generate new assignment and send OPEN RPC
+          // Region is closed, insert into RIT and handle it
+          regionsInTransition.put(encodedName,
+              new RegionState(regionInfo, RegionState.State.CLOSED,
+                  data.getStamp()));
+          new ClosedRegionHandler(master, this, data, regionInfo).execute();
           break;
+
         case RS2ZK_REGION_OPENING:
-          // TODO: Only need to deal with timeouts.
+          // Just insert region into RIT
+          // If this never updates the timeout will trigger new assignment
+          regionsInTransition.put(encodedName,
+              new RegionState(regionInfo, RegionState.State.OPENING,
+                  data.getStamp()));
           break;
+
         case RS2ZK_REGION_OPENED:
-          // TODO: Delete the node from ZK.  Region successfully opened but not
-          //       acknowledged.
+          // Region is opened, insert into RIT and handle it
+          regionsInTransition.put(encodedName,
+              new RegionState(regionInfo, RegionState.State.OPENING,
+                  data.getStamp()));
+          new OpenedRegionHandler(master, this, data, regionInfo,
+              serverManager.getServerInfo(data.getServerName())).execute();
           break;
       }
     }
   }
 
-  private synchronized void handleRegion(RegionTransitionData data) {
-    switch(data.getEventType()) {
-      case RS2ZK_REGION_CLOSED:
-        new MasterCloseRegionHandler(data.getEventType(), serverManager,
-            serverName, data.getRegionName(), data.getBytes())
-        .submit();
-        break;
-      case RS2ZK_REGION_OPENED:
-      case RS2ZK_REGION_OPENING:
-        new MasterOpenRegionHandler(data.getEventType(), serverManager,
-            serverName, data.getRegionName(), data.getBytes())
-        .submit();
-        break;
+  /**
+   * Gets the region info for the region with the specified encoded name.
+   * <p>
+   * Currently this does a full scan of the regions map looking for a region
+   * with the specified encoded name.
+   * <p>
+   * Returns null if none found.
+   * @param regionName
+   * @return
+   * @deprecated should be able to remove this now?
+   */
+  @Deprecated
+  private HRegionInfo getRegionInfoFromEncoded(String encodedName) {
+    for(HRegionInfo regionInfo : regions.keySet()) {
+      if(regionInfo.getEncodedName().equals(encodedName)) {
+        return regionInfo;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Handles various states an unassigned node can be in.
+   * <p>
+   * Method is called when a state change is suspected for an unassigned node.
+   * <p>
+   * This deals with skipped transitions (we got a CLOSED but didn't see CLOSING
+   * yet).
+   * @param data
+   */
+  private void handleRegion(RegionTransitionData data) {
+    synchronized(regionsInTransition) {
+      // Verify this is a known server
+      if(!serverManager.isServerOnline(data.getServerName())) {
+        LOG.warn("Attempted to handle region transition for server " +
+            data.getServerName() + " but server is not online");
+        return;
+      }
+      String encodedName = HRegionInfo.encodeRegionName(data.getRegionName());
+      LOG.debug("Attempting to handle region transition for server " +
+          data.getServerName() + " and region " + encodedName);
+      RegionState regionState = regionsInTransition.get(encodedName);
+      switch(data.getEventType()) {
+
+        case RS2ZK_REGION_CLOSING:
+          // Should see CLOSING after we have asked it to CLOSE or additional
+          // times after already being in state of CLOSING
+          if(regionState == null ||
+              (!regionState.isPendingClose() && !regionState.isClosing())) {
+            LOG.warn("Received CLOSING for region " + encodedName +
+                " from server " + data.getServerName() + " but region was in " +
+                " the state " + regionState + " and not " +
+                "in expected PENDING_CLOSE or CLOSING states");
+            return;
+          }
+          // Transition to CLOSING (or update stamp if already CLOSING)
+          regionState.update(RegionState.State.CLOSING, data.getStamp());
+          break;
+
+        case RS2ZK_REGION_CLOSED:
+          // Should see CLOSED after CLOSING but possible after PENDING_CLOSE
+          if(regionState == null ||
+              (!regionState.isPendingClose() && !regionState.isClosing())) {
+            LOG.warn("Received CLOSED for region " + encodedName +
+                " from server " + data.getServerName() + " but region was in " +
+                " the state " + regionState + " and not " +
+                "in expected PENDING_CLOSE or CLOSING states");
+            return;
+          }
+          // Handle CLOSED by assigning elsewhere or stopping if a disable
+          new ClosedRegionHandler(master, this, data, regionState.getRegion())
+          .submit();
+          break;
+
+        case RS2ZK_REGION_OPENING:
+          // Should see OPENING after we have asked it to OPEN or additional
+          // times after already being in state of OPENING
+          if(regionState == null ||
+              (!regionState.isPendingOpen() && !regionState.isOpening())) {
+            LOG.warn("Received OPENING for region " + encodedName +
+                " from server " + data.getServerName() + " but region was in " +
+                " the state " + regionState + " and not " +
+                "in expected PENDING_OPEN or OPENING states");
+            return;
+          }
+          // Transition to OPENING (or update stamp if already OPENING)
+          regionState.update(RegionState.State.OPENING, data.getStamp());
+          break;
+
+        case RS2ZK_REGION_OPENED:
+          // Should see OPENED after OPENING but possible after PENDING_OPEN
+          if(regionState == null ||
+              (!regionState.isPendingOpen() && !regionState.isOpening())) {
+            LOG.warn("Received OPENED for region " + encodedName +
+                " from server " + data.getServerName() + " but region was in " +
+                " the state " + regionState + " and not " +
+                "in expected PENDING_OPEN or OPENING states");
+            return;
+          }
+          // If this is a catalog table, update catalog manager accordingly
+          // Moving root and meta editing over to RS who does the opening
+          LOG.debug("Processing OPENED for region " + regionState.getRegion() +
+              " which isMeta[" + regionState.getRegion().isMetaRegion() + "] " +
+              " isRoot[" + regionState.getRegion().isRootRegion() + "]");
+
+          // Used to have updating of root/meta locations here but it's
+          // automatic in CatalogTracker now
+
+          // Handle OPENED by removing from transition and deleted zk node
+          new OpenedRegionHandler(master, this, data, regionState.getRegion(),
+              serverManager.getServerInfo(data.getServerName()))
+          .submit();
+          break;
+      }
     }
   }
 
@@ -160,17 +336,19 @@ public class AssignmentManager extends ZooKeeperListener {
    * </ol>
    */
   @Override
-  public synchronized void nodeCreated(String path) {
+  public void nodeCreated(String path) {
     if(path.startsWith(watcher.assignmentZNode)) {
-      try {
-        RegionTransitionData data = ZKAssign.getData(watcher, path);
-        if(data == null) {
-          return;
+      synchronized(regionsInTransition) {
+        try {
+          RegionTransitionData data = ZKAssign.getData(watcher, path);
+          if(data == null) {
+            return;
+          }
+          handleRegion(data);
+        } catch (KeeperException e) {
+          LOG.error("Unexpected ZK exception reading unassigned node data", e);
+          master.abort();
         }
-        handleRegion(data);
-      } catch (KeeperException e) {
-        LOG.error("Unexpected ZK exception reading unassigned node data", e);
-        status.abort();
       }
     }
   }
@@ -188,17 +366,19 @@ public class AssignmentManager extends ZooKeeperListener {
    * </ol>
    */
   @Override
-  public synchronized void nodeDataChanged(String path) {
+  public void nodeDataChanged(String path) {
     if(path.startsWith(watcher.assignmentZNode)) {
-      try {
-        RegionTransitionData data = ZKAssign.getData(watcher, path);
-        if(data == null) {
-          return;
+      synchronized(regionsInTransition) {
+        try {
+          RegionTransitionData data = ZKAssign.getData(watcher, path);
+          if(data == null) {
+            return;
+          }
+          handleRegion(data);
+        } catch (KeeperException e) {
+          LOG.error("Unexpected ZK exception reading unassigned node data", e);
+          master.abort();
         }
-        handleRegion(data);
-      } catch (KeeperException e) {
-        LOG.error("Unexpected ZK exception reading unassigned node data", e);
-        status.abort();
       }
     }
   }
@@ -217,19 +397,589 @@ public class AssignmentManager extends ZooKeeperListener {
    * </ol>
    */
   @Override
-  public synchronized void nodeChildrenChanged(String path) {
+  public void nodeChildrenChanged(String path) {
     if(path.equals(watcher.assignmentZNode)) {
-      try {
-        List<NodeAndData> newNodes = ZKUtil.watchAndGetNewChildren(watcher,
-            watcher.assignmentZNode);
-        for(NodeAndData newNode : newNodes) {
-          LOG.debug("Handling new unassigned node: " + newNode);
-          handleRegion(RegionTransitionData.fromBytes(newNode.getData()));
+      synchronized(regionsInTransition) {
+        try {
+          List<NodeAndData> newNodes = ZKUtil.watchAndGetNewChildren(watcher,
+              watcher.assignmentZNode);
+          for(NodeAndData newNode : newNodes) {
+            LOG.debug("Handling new unassigned node: " + newNode);
+            handleRegion(RegionTransitionData.fromBytes(newNode.getData()));
+          }
+        } catch(KeeperException e) {
+          LOG.error("Unexpected ZK exception reading unassigned children", e);
+          master.abort();
         }
-      } catch(KeeperException e) {
-        LOG.error("Unexpected ZK exception reading unassigned children", e);
-        status.abort();
       }
+    }
+  }
+
+  /**
+   * Marks the region as online.  Removes it from regions in transition and
+   * updates the in-memory assignment information.
+   * <p>
+   * Used when a region has been successfully opened on a region server.
+   * @param regionInfo
+   * @param serverInfo
+   */
+  public void regionOnline(HRegionInfo regionInfo, HServerInfo serverInfo) {
+    synchronized(regionsInTransition) {
+      regionsInTransition.remove(regionInfo.getEncodedName());
+      regionsInTransition.notifyAll();
+    }
+    synchronized(regions) {
+      regions.put(regionInfo, serverInfo);
+      Set<HRegionInfo> regionSet = servers.get(serverInfo);
+      if(regionSet == null) {
+        regionSet = new TreeSet<HRegionInfo>();
+        servers.put(serverInfo, regionSet);
+      }
+      regionSet.add(regionInfo);
+    }
+  }
+
+  /**
+   * Marks the region as offline.  Removes it from regions in transition and
+   * removes in-memory assignment information.
+   * <p>
+   * Used when a region has been closed and should remain closed.
+   * @param regionInfo
+   * @param serverInfo
+   */
+  public void regionOffline(HRegionInfo regionInfo) {
+    synchronized(regionsInTransition) {
+      regionsInTransition.remove(regionInfo.getEncodedName());
+      regionsInTransition.notifyAll();
+    }
+    synchronized(regions) {
+      HServerInfo serverInfo = regions.remove(regionInfo);
+      Set<HRegionInfo> serverRegions = servers.get(serverInfo);
+      serverRegions.remove(regionInfo);
+    }
+  }
+
+  /**
+   * Sets the region as offline by removing in-memory assignment information but
+   * retaining transition information.
+   * <p>
+   * Used when a region has been closed but should be reassigned.
+   * @param regionInfo
+   */
+  public void setOffline(HRegionInfo regionInfo) {
+    synchronized(regions) {
+      HServerInfo serverInfo = regions.remove(regionInfo);
+      Set<HRegionInfo> serverRegions = servers.get(serverInfo);
+      serverRegions.remove(regionInfo);
+    }
+  }
+
+  // Assignment methods
+
+  /**
+   * Assigns the specified region.
+   * <p>
+   * If a RegionPlan is available with a valid destination then it will be used
+   * to determine what server region is assigned to.  If no RegionPlan is
+   * available, region will be assigned to a random available server.
+   * <p>
+   * Updates the RegionState and sends the OPEN RPC.
+   * <p>
+   * This will only succeed if the region is in transition and in a CLOSED or
+   * OFFLINE state or not in transition (in-memory not zk).  If the in-memory
+   * checks pass, the zk node is forced to OFFLINE before assigning.
+   *
+   * @param regionName server to be assigned
+   */
+  public void assign(HRegionInfo region) {
+    LOG.debug("Starting assignment for region " + region);
+    // Grab the state of this region and synchronize on it
+    String regionName = region.getEncodedName();
+    RegionState state;
+    synchronized(regionsInTransition) {
+      state = regionsInTransition.get(regionName);
+      if(state == null) {
+        state = new RegionState(region, RegionState.State.OFFLINE);
+        regionsInTransition.put(regionName, state);
+      }
+    }
+    synchronized(state) {
+      if(!state.isClosed() && !state.isOffline()) {
+        LOG.info("Attempting to assign region but it is in transition and in " +
+            "an unexpected state:" + state);
+        return;
+      } else {
+        state.update(RegionState.State.OFFLINE);
+      }
+      try {
+        if(!ZKAssign.createOrForceNodeOffline(master.getZooKeeper(), region,
+            master.getServerName())) {
+          LOG.warn("Attempted to create/force node into OFFLINE state before " +
+              "completing assignment but failed to do so");
+          return;
+        }
+      } catch (KeeperException e) {
+        LOG.error("Unexpected ZK exception creating/setting node OFFLINE", e);
+        master.abort();
+        return;
+      }
+      // Pickup existing plan or make a new one
+      RegionPlan plan;
+      synchronized(regionPlans) {
+        plan = regionPlans.get(regionName);
+        if(plan == null) {
+          LOG.debug("No previous transition plan for " + regionName +
+              " so generating a random one from " + serverManager.numServers() +
+              " ( " + serverManager.getOnlineServers().size() + ") available servers");
+          plan = new RegionPlan(regionName, null,
+              LoadBalancer.randomAssignment(serverManager.getOnlineServersList()));
+          regionPlans.put(regionName, plan);
+        }
+      }
+      // Transition RegionState to PENDING_OPEN and send OPEN RPC
+      state.update(RegionState.State.PENDING_OPEN);
+      serverManager.sendRegionOpen(plan.getDestination(), state.getRegion());
+    }
+  }
+
+  /**
+   * Unassigns the specified region.
+   * <p>
+   * Updates the RegionState and sends the OPEN RPC.
+   * <p>
+   * If a RegionPlan is already set, it will remain.  If this is being used
+   * to disable a table, be sure to use {@link #disableTable(String)} to ensure
+   * regions are not onlined after being closed.
+   *
+   * @param regionName server to be unassigned
+   */
+  public void unassign(HRegionInfo region) {
+    LOG.debug("Starting unassignment of region " + region + " (offlining)");
+    // Check if this region is currently assigned
+    if (!regions.containsKey(region)) {
+      LOG.debug("Attempted to unassign region " + region + " but it is not " +
+          "currently assigned anywhere");
+      return;
+    }
+    String regionName = region.getEncodedName();
+    // Grab the state of this region and synchronize on it
+    RegionState state;
+    synchronized(regionsInTransition) {
+      state = regionsInTransition.get(regionName);
+      if(state == null) {
+        state = new RegionState(region, RegionState.State.PENDING_CLOSE);
+        regionsInTransition.put(regionName, state);
+      } else {
+        LOG.debug("Attempting to unassign region " + region + " but it is " +
+            "already in transition (" + state.getState() + ")");
+        return;
+      }
+    }
+    // Send OPEN RPC
+    try {
+      serverManager.sendRegionClose(regions.get(region), state.getRegion());
+    } catch (NotServingRegionException e) {
+      LOG.warn("Attempted to close region " + region + " but got an NSRE", e);
+    }
+  }
+
+  /**
+   * Waits until the specified region has completed assignment.
+   * <p>
+   * If the region is already assigned, returns immediately.  Otherwise, method
+   * blocks until the region is assigned.
+   * @param regionInfo region to wait on assignment for
+   * @throws InterruptedException
+   */
+  public void waitForAssignment(HRegionInfo regionInfo)
+  throws InterruptedException {
+    synchronized(regions) {
+      while(!regions.containsKey(regionInfo)) {
+        regions.wait();
+      }
+    }
+  }
+
+  /**
+   * Assigns the ROOT region.
+   * <p>
+   * Assumes that ROOT is currently closed and is not being actively served by
+   * any RegionServer.
+   * <p>
+   * Forcibly unsets the current root region location in ZooKeeper and assigns
+   * ROOT to a random RegionServer.
+   */
+  public void assignRoot() {
+    // Force assignment to a random server
+    assign(HRegionInfo.ROOT_REGIONINFO);
+  }
+
+  /**
+   * Assigns the META region.
+   * <p>
+   * Assumes that META is currently closed and is not being actively served by
+   * any RegionServer.
+   * <p>
+   * Forcibly assigns META to a random RegionServer.
+   */
+  public void assignMeta() {
+    // Force assignment to a random server
+    assign(HRegionInfo.FIRST_META_REGIONINFO);
+  }
+
+  /**
+   * Assigns all user regions, if any exist.  Used during cluster startup.
+   * <p>
+   * This is a synchronous call and will return once every region has been
+   * assigned.  If anything fails, an exception is thrown and the cluster
+   * should be shutdown.
+   */
+  public void assignAllUserRegions() throws IOException {
+    // First experiment at synchronous assignment
+    // Simpler because just wait for no regions in transition
+
+    // Scan META for all user regions
+    List<HRegionInfo> allRegions = MetaScanner.listAllRegions(
+        master.getConfiguration());
+    if(allRegions == null || allRegions.isEmpty()) {
+      return;
+    }
+
+    // Get all available servers
+    List<HServerInfo> servers = serverManager.getOnlineServersList();
+
+    LOG.info("Assigning " + allRegions.size() + " across " + servers.size() +
+        " servers");
+
+    // Generate a cluster startup region placement plan
+    Map<HServerInfo,List<HRegionInfo>> bulkPlan =
+      LoadBalancer.bulkAssignment(allRegions, servers);
+
+    // For each server, create OFFLINE nodes and send OPEN RPCs
+    for(Map.Entry<HServerInfo,List<HRegionInfo>> entry : bulkPlan.entrySet()) {
+      HServerInfo server = entry.getKey();
+      List<HRegionInfo> regions = entry.getValue();
+      LOG.debug("Assigning " + regions.size() + " regions to " + server);
+      for(HRegionInfo region : regions) {
+        LOG.debug("Assigning " + region + " to " + server);
+        String regionName = region.getEncodedName();
+        RegionPlan plan = new RegionPlan(regionName, null,server);
+        regionPlans.put(regionName, plan);
+        assign(region);
+      }
+    }
+
+    // Wait for no regions to be in transition
+    try {
+      waitUntilNoRegionsInTransition();
+    } catch (InterruptedException e) {
+      LOG.error("Interrupted waiting for regions to be assigned", e);
+      throw new IOException(e);
+    }
+
+    LOG.info("\n\nAll user regions have been assigned");
+  }
+
+  private void rebuildUserRegions() throws IOException {
+    Map<HRegionInfo,HServerAddress> allRegions =
+      MetaReader.fullScan(catalogTracker);
+    for(Map.Entry<HRegionInfo,HServerAddress> region : allRegions.entrySet()) {
+      HServerAddress regionLocation = region.getValue();
+      HRegionInfo regionInfo = region.getKey();
+      if(regionLocation == null) {
+        regions.put(regionInfo, null);
+        continue;
+      }
+      HServerInfo serverInfo = serverManager.getHServerInfo(regionLocation);
+      regions.put(regionInfo, serverInfo);
+      Set<HRegionInfo> regionSet = servers.get(serverInfo);
+      if(regionSet == null) {
+        regionSet = new TreeSet<HRegionInfo>();
+        servers.put(serverInfo, regionSet);
+      }
+      regionSet.add(regionInfo);
+    }
+  }
+
+  /**
+   * Blocks until there are no regions in transition.  It is possible that there
+   * are regions in transition immediately after this returns but guarantees
+   * that if it returns without an exception that there was a period of time
+   * with no regions in transition from the point-of-view of the in-memory
+   * state of the Master.
+   * @throws InterruptedException
+   */
+  public void waitUntilNoRegionsInTransition() throws InterruptedException {
+    synchronized(regionsInTransition) {
+      while(regionsInTransition.size() > 0) {
+        regionsInTransition.wait();
+      }
+    }
+  }
+
+  /**
+   * Gets the map of regions currently in transition.
+   * @return
+   */
+  public Map<String, RegionState> getRegionsInTransition() {
+    return regionsInTransition;
+  }
+
+  /**
+   * Checks if the specified table has been disabled by the user.
+   * @param tableName
+   * @return
+   */
+  public boolean isTableDisabled(String tableName) {
+    synchronized(disabledTables) {
+      return disabledTables.contains(tableName);
+    }
+  }
+
+  /**
+   * Checks if the table of the specified region has been disabled by the user.
+   * @param regionName
+   * @return
+   */
+  public boolean isTableOfRegionDisabled(byte [] regionName) {
+    return isTableDisabled(Bytes.toString(
+        HRegionInfo.getTableName(regionName)));
+  }
+
+  /**
+   * Sets the specified table to be disabled.
+   * @param tableName table to be disabled
+   */
+  public void disableTable(String tableName) {
+    synchronized(disabledTables) {
+      if(!isTableDisabled(tableName)) {
+        disabledTables.add(tableName);
+        try {
+          ZKTableDisable.disableTable(master.getZooKeeper(), tableName);
+        } catch (KeeperException e) {
+          LOG.warn("ZK error setting table as disabled", e);
+        }
+      }
+    }
+  }
+
+  /**
+   * Unsets the specified table from being disabled.
+   * <p>
+   * This operation only acts on the in-memory
+   * @param tableName table to be undisabled
+   */
+  public void undisableTable(String tableName) {
+    synchronized(disabledTables) {
+      if(isTableDisabled(tableName)) {
+        disabledTables.remove(tableName);
+        try {
+          ZKTableDisable.undisableTable(master.getZooKeeper(), tableName);
+        } catch (KeeperException e) {
+          LOG.warn("ZK error setting table as disabled", e);
+        }
+      }
+    }
+  }
+
+  /**
+   * Rebuild the set of disabled tables from zookeeper.  Used during master
+   * failover.
+   */
+  private void rebuildDisabledTables() {
+    synchronized(disabledTables) {
+      List<String> disabledTables;
+      try {
+        disabledTables = ZKTableDisable.getDisabledTables(master.getZooKeeper());
+      } catch (KeeperException e) {
+        LOG.warn("ZK error getting list of disabled tables", e);
+        return;
+      }
+      if(!disabledTables.isEmpty()) {
+        LOG.info("Rebuilt list of " + disabledTables.size() + " disabled " +
+            "tables from zookeeper");
+        disabledTables.addAll(disabledTables);
+      }
+    }
+  }
+
+  /**
+   * Gets the online regions of the specified table.
+   * @param tableName
+   * @return
+   */
+  public List<HRegionInfo> getRegionsOfTable(byte[] tableName) {
+    List<HRegionInfo> tableRegions = new ArrayList<HRegionInfo>();
+    for(HRegionInfo regionInfo : regions.tailMap(new HRegionInfo(
+        new HTableDescriptor(tableName), null, null)).keySet()) {
+      if(Bytes.equals(regionInfo.getTableDesc().getName(), tableName)) {
+        tableRegions.add(regionInfo);
+      } else {
+        break;
+      }
+    }
+    return tableRegions;
+  }
+
+  /**
+   * Unsets the specified table as disabled (enables it).
+   */
+  public class TimeoutMonitor extends Chore {
+
+    private final int timeout;
+
+    /**
+     * Creates a periodic monitor to check for time outs on region transition
+     * operations.  This will deal with retries if for some reason something
+     * doesn't happen within the specified timeout.
+     * @param period
+     * @param stop
+     * @param timeout
+     */
+    public TimeoutMonitor(final int period, final AtomicBoolean stop,
+        final int timeout) {
+      super("AssignmentTimeoutMonitor", period, stop);
+      this.timeout = timeout;
+    }
+
+    @Override
+    protected void chore() {
+      synchronized(regionsInTransition) {
+        // Iterate all regions in transition checking for time outs
+        long now = System.currentTimeMillis();
+        for(RegionState regionState : regionsInTransition.values()) {
+          if(regionState.getStamp() + timeout <= now) {
+            HRegionInfo regionInfo = regionState.getRegion();
+            String regionName = regionInfo.getEncodedName();
+            LOG.info("Region transition timed out for region " + regionName);
+            // Expired!  Do a retry.
+            switch(regionState.getState()) {
+              case OFFLINE:
+              case CLOSED:
+                LOG.info("Region has been OFFLINE or CLOSED for too long, " +
+                    "reassigning " + regionInfo.getRegionNameAsString());
+                assign(regionState.getRegion());
+                break;
+              case PENDING_OPEN:
+              case OPENING:
+                LOG.info("Region has been PENDING_OPEN or OPENING for too " +
+                    "long, reassigning " + regionInfo.getRegionNameAsString());
+                assign(regionState.getRegion());
+                break;
+              case OPEN:
+                LOG.warn("Long-running region in OPEN state?  This should " +
+                    "not happen");
+                break;
+              case PENDING_CLOSE:
+              case CLOSING:
+                LOG.info("Region has been PENDING_CLOSE or CLOSING for too " +
+                    "long, resending close rpc");
+                unassign(regionInfo);
+                break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  public static class RegionState implements Writable {
+    private HRegionInfo region;
+
+    public enum State {
+      OFFLINE,        // region is in an offline state
+      PENDING_OPEN,   // sent rpc to server to open but has not begun
+      OPENING,        // server has begun to open but not yet done
+      OPEN,           // server opened region and updated meta
+      PENDING_CLOSE,  // sent rpc to server to close but has not begun
+      CLOSING,        // server has begun to close but not yet done
+      CLOSED          // server closed region and updated meta
+    }
+
+    private State state;
+    private long stamp;
+
+    public RegionState() {}
+
+    RegionState(HRegionInfo region, State state) {
+      this(region, state, System.currentTimeMillis());
+    }
+
+    RegionState(HRegionInfo region, State state, long stamp) {
+      this.region = region;
+      this.state = state;
+      this.stamp = stamp;
+    }
+
+    public void update(State state, long stamp) {
+      this.state = state;
+      this.stamp = stamp;
+    }
+
+    public void update(State state) {
+      this.state = state;
+      this.stamp = System.currentTimeMillis();
+    }
+
+    public State getState() {
+      return state;
+    }
+
+    public long getStamp() {
+      return stamp;
+    }
+
+    public HRegionInfo getRegion() {
+      return region;
+    }
+
+    public boolean isClosing() {
+      return state == State.CLOSING;
+    }
+
+    public boolean isClosed() {
+      return state == State.CLOSED;
+    }
+
+    public boolean isPendingClose() {
+      return state == State.PENDING_CLOSE;
+    }
+
+    public boolean isOpening() {
+      return state == State.OPENING;
+    }
+
+    public boolean isOpened() {
+      return state == State.OPEN;
+    }
+
+    public boolean isPendingOpen() {
+      return state == State.PENDING_OPEN;
+    }
+
+    public boolean isOffline() {
+      return state == State.OFFLINE;
+    }
+
+    @Override
+    public String toString() {
+      return "RegionState (" + region.getRegionNameAsString() + ") " + state +
+             " at time " + stamp;
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      region = new HRegionInfo();
+      region.readFields(in);
+      state = State.valueOf(in.readUTF());
+      stamp = in.readLong();
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      region.write(out);
+      out.writeUTF(state.name());
+      out.writeLong(stamp);
     }
   }
 }

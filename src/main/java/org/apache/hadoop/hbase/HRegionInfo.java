@@ -316,6 +316,24 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   }
 
   /**
+   * Gets the table name from the specified region name.
+   * @param regionName
+   * @return
+   */
+  public static byte [] getTableName(byte [] regionName) {
+    int offset = -1;
+    for (int i = 0; i < regionName.length; i++) {
+      if (regionName[i] == DELIMITER) {
+        offset = i;
+        break;
+      }
+    }
+    byte [] tableName = new byte[offset];
+    System.arraycopy(regionName, 0, tableName, 0, offset);
+    return tableName;
+  }
+
+  /**
    * Separate elements of a regionName.
    * @param regionName
    * @return Array of byte[] containing tableName, startKey and id

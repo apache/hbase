@@ -385,7 +385,7 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * @return True if this region has references.
    */
-  boolean hasReferences() {
+  public boolean hasReferences() {
     for (Store store : this.stores.values()) {
       for (StoreFile sf : store.getStorefiles()) {
         // Found a reference, return.

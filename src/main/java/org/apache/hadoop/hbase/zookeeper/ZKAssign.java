@@ -19,8 +19,9 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.KeeperException.NoNodeException;
@@ -119,20 +120,20 @@ public class ZKAssign {
    * of a table.
    *
    * @param zkw zk reference
-   * @param regionName region to be created as offline
+   * @param region region to be created as offline
    * @param serverName server event originates from
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NodeExistsException if node already exists
    */
-  public static void createNodeOffline(ZooKeeperWatcher zkw, String regionName,
+  public static void createNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
       String serverName)
   throws KeeperException, KeeperException.NodeExistsException {
-    zkw.debug("Creating an unassigned node for " + regionName +
+    zkw.debug("Creating an unassigned node for " + region.getEncodedName() +
         " in an OFFLINE state");
     RegionTransitionData data = new RegionTransitionData(
-        HBaseEventType.M2ZK_REGION_OFFLINE, regionName, serverName);
+        EventType.M2ZK_REGION_OFFLINE, region.getRegionName(), serverName);
     synchronized(zkw.getNodes()) {
-      String node = getNodeName(zkw, regionName);
+      String node = getNodeName(zkw, region.getEncodedName());
       zkw.getNodes().add(node);
       ZKUtil.createAndWatch(zkw, node, data.getBytes());
     }
@@ -151,22 +152,61 @@ public class ZKAssign {
    * <p>This method should only be used during recovery of regionserver failure.
    *
    * @param zkw zk reference
-   * @param regionName region to be forced as offline
+   * @param region region to be forced as offline
    * @param serverName server event originates from
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
-  public static void forceNodeOffline(ZooKeeperWatcher zkw, String regionName,
+  public static void forceNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
       String serverName)
   throws KeeperException, KeeperException.NoNodeException {
-    zkw.debug("Forcing an existing unassigned node for " + regionName +
-        " to an OFFLINE state");
+    zkw.debug("Forcing an existing unassigned node for " +
+        region.getEncodedName() + " to an OFFLINE state");
     RegionTransitionData data = new RegionTransitionData(
-        HBaseEventType.M2ZK_REGION_OFFLINE, regionName, serverName);
+        EventType.M2ZK_REGION_OFFLINE, region.getRegionName(), serverName);
     synchronized(zkw.getNodes()) {
-      String node = getNodeName(zkw, regionName);
+      String node = getNodeName(zkw, region.getEncodedName());
       zkw.getNodes().add(node);
       ZKUtil.setData(zkw, node, data.getBytes());
+    }
+  }
+
+
+  /**
+   * Creates or force updates an unassigned node to the OFFLINE state for the
+   * specified region.
+   * <p>
+   * Attempts to create the node but if it exists will force it to transition to
+   * and OFFLINE state.
+   *
+   * <p>Sets a watcher on the unassigned region node if the method is
+   * successful.
+   *
+   * <p>This method should be used when assigning a region.
+   *
+   * @param zkw zk reference
+   * @param region region to be created as offline
+   * @param serverName server event originates from
+   * @throws KeeperException if unexpected zookeeper exception
+   * @throws KeeperException.NodeExistsException if node already exists
+   */
+  public static boolean createOrForceNodeOffline(ZooKeeperWatcher zkw,
+      HRegionInfo region, String serverName)
+  throws KeeperException {
+    zkw.debug("Creating or updating an unassigned node for " +
+        region.getEncodedName() + " with an OFFLINE state");
+    RegionTransitionData data = new RegionTransitionData(
+        EventType.M2ZK_REGION_OFFLINE, region.getRegionName(), serverName);
+    synchronized(zkw.getNodes()) {
+      String node = getNodeName(zkw, region.getEncodedName());
+      zkw.getNodes().add(node);
+      int version = ZKUtil.checkExists(zkw, node);
+      if(version == -1) {
+        ZKUtil.createAndWatch(zkw, node, data.getBytes());
+        return true;
+      } else {
+        return ZKUtil.setData(zkw, node, data.getBytes(), version);
+      }
     }
   }
 
@@ -186,15 +226,94 @@ public class ZKAssign {
    * of the specified regions transition.
    *
    * @param zkw zk reference
-   * @param regionName opened region to be deleted from zk
+   * @param region opened region to be deleted from zk
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
   public static boolean deleteOpenedNode(ZooKeeperWatcher zkw,
       String regionName)
   throws KeeperException, KeeperException.NoNodeException {
+    return deleteNode(zkw, regionName, EventType.RS2ZK_REGION_OPENED);
+  }
+
+  /**
+   * Deletes an existing unassigned node that is in the CLOSED state for the
+   * specified region.
+   *
+   * <p>If a node does not already exist for this region, a
+   * {@link NoNodeException} will be thrown.
+   *
+   * <p>No watcher is set whether this succeeds or not.
+   *
+   * <p>Returns false if the node was not in the proper state but did exist.
+   *
+   * <p>This method is used during table disables when a region finishes
+   * successfully closing.  This is the Master acknowledging completion
+   * of the specified regions transition to being closed.
+   *
+   * @param zkw zk reference
+   * @param region closed region to be deleted from zk
+   * @throws KeeperException if unexpected zookeeper exception
+   * @throws KeeperException.NoNodeException if node does not exist
+   */
+  public static boolean deleteClosedNode(ZooKeeperWatcher zkw,
+      String regionName)
+  throws KeeperException, KeeperException.NoNodeException {
+    return deleteNode(zkw, regionName, EventType.RS2ZK_REGION_CLOSED);
+  }
+
+  /**
+   * Deletes an existing unassigned node that is in the CLOSING state for the
+   * specified region.
+   *
+   * <p>If a node does not already exist for this region, a
+   * {@link NoNodeException} will be thrown.
+   *
+   * <p>No watcher is set whether this succeeds or not.
+   *
+   * <p>Returns false if the node was not in the proper state but did exist.
+   *
+   * <p>This method is used during table disables when a region finishes
+   * successfully closing.  This is the Master acknowledging completion
+   * of the specified regions transition to being closed.
+   *
+   * @param zkw zk reference
+   * @param region closing region to be deleted from zk
+   * @throws KeeperException if unexpected zookeeper exception
+   * @throws KeeperException.NoNodeException if node does not exist
+   */
+  public static boolean deleteClosingNode(ZooKeeperWatcher zkw,
+      String regionName)
+  throws KeeperException, KeeperException.NoNodeException {
+    return deleteNode(zkw, regionName, EventType.RS2ZK_REGION_CLOSING);
+  }
+
+  /**
+   * Deletes an existing unassigned node that is in the specified state for the
+   * specified region.
+   *
+   * <p>If a node does not already exist for this region, a
+   * {@link NoNodeException} will be thrown.
+   *
+   * <p>No watcher is set whether this succeeds or not.
+   *
+   * <p>Returns false if the node was not in the proper state but did exist.
+   *
+   * <p>This method is used during table disables when a region finishes
+   * successfully closing.  This is the Master acknowledging completion
+   * of the specified regions transition to being closed.
+   *
+   * @param zkw zk reference
+   * @param region region to be deleted from zk
+   * @param expectedState state region must be in for delete to complete
+   * @throws KeeperException if unexpected zookeeper exception
+   * @throws KeeperException.NoNodeException if node does not exist
+   */
+  private static boolean deleteNode(ZooKeeperWatcher zkw, String regionName,
+      EventType expectedState)
+  throws KeeperException, KeeperException.NoNodeException {
     zkw.debug("Deleting an existing unassigned node for " + regionName +
-        " that is in a OPENED state");
+        " that is in a " + expectedState + " state");
     String node = getNodeName(zkw, regionName);
     Stat stat = new Stat();
     byte [] bytes = ZKUtil.getDataNoWatch(zkw, node, stat);
@@ -202,16 +321,17 @@ public class ZKAssign {
       throw KeeperException.create(Code.NONODE);
     }
     RegionTransitionData data = RegionTransitionData.fromBytes(bytes);
-    if(!data.getEventType().equals(HBaseEventType.RS2ZK_REGION_OPENED)) {
-      zkw.warn("Attempting to delete an unassigned node in OPENED state but " +
-          "node is in " + data.getEventType() + " state");
+    if(!data.getEventType().equals(expectedState)) {
+      zkw.warn("Attempting to delete an unassigned node in " + expectedState +
+          " state but node is in " + data.getEventType() + " state");
       return false;
     }
     synchronized(zkw.getNodes()) {
       // TODO: Does this go here or only if we successfully delete node?
       zkw.getNodes().remove(node);
       if(!ZKUtil.deleteNode(zkw, node, stat.getVersion())) {
-        zkw.warn("Attempting to delete an unassigned node in OPENED state but " +
+        zkw.warn("Attempting to delete an unassigned node in " + expectedState +
+            " state but " +
             "after verifying it was in OPENED state, we got a version mismatch");
         return false;
       }
@@ -245,28 +365,32 @@ public class ZKAssign {
    * <p>Does not transition nodes from any states.  If a node already exists
    * for this region, a {@link NodeExistsException} will be thrown.
    *
+   * <p>If creation is successful, returns the version number of the CLOSING
+   * node created.
+   *
    * <p>Does not set any watches.
    *
    * <p>This method should only be used by a RegionServer when initiating a
    * close of a region after receiving a CLOSE RPC from the Master.
    *
    * @param zkw zk reference
-   * @param regionName region to be created as closing
+   * @param region region to be created as closing
    * @param serverName server event originates from
+   * @return version of node after transition, -1 if unsuccessful transition
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NodeExistsException if node already exists
    */
-  public static void createNodeClosing(ZooKeeperWatcher zkw, String regionName,
+  public static int createNodeClosing(ZooKeeperWatcher zkw, HRegionInfo region,
       String serverName)
   throws KeeperException, KeeperException.NodeExistsException {
-    zkw.debug("Creating an unassigned node for " + regionName +
+    zkw.debug("Creating an unassigned node for " + region.getEncodedName() +
     " in a CLOSING state");
     RegionTransitionData data = new RegionTransitionData(
-        HBaseEventType.RS2ZK_REGION_CLOSING, regionName, serverName);
+        EventType.RS2ZK_REGION_CLOSING, region.getRegionName(), serverName);
     synchronized(zkw.getNodes()) {
-      String node = getNodeName(zkw, regionName);
+      String node = getNodeName(zkw, region.getEncodedName());
       zkw.getNodes().add(node);
-      ZKUtil.createAndWatch(zkw, node, data.getBytes());
+      return ZKUtil.createAndWatch(zkw, node, data.getBytes());
     }
   }
 
@@ -275,7 +399,8 @@ public class ZKAssign {
    * currently in the CLOSING state to be in the CLOSED state.
    *
    * <p>Does not transition nodes from other states.  If for some reason the
-   * node could not be transitioned, the method returns false.
+   * node could not be transitioned, the method returns -1.  If the transition
+   * is successful, the version of the node after transition is returned.
    *
    * <p>This method can fail and return false for three different reasons:
    * <ul><li>Unassigned node for this region does not exist</li>
@@ -290,17 +415,17 @@ public class ZKAssign {
    * close of a region after receiving a CLOSE RPC from the Master.
    *
    * @param zkw zk reference
-   * @param regionName region to be transitioned to closed
+   * @param region region to be transitioned to closed
    * @param serverName server event originates from
-   * @return true if transition was successful, false if not
+   * @return version of node after transition, -1 if unsuccessful transition
    * @throws KeeperException if unexpected zookeeper exception
    */
-  public static boolean transitionNodeClosed(ZooKeeperWatcher zkw,
-      String regionName, String serverName)
+  public static int transitionNodeClosed(ZooKeeperWatcher zkw,
+      HRegionInfo region, String serverName, int expectedVersion)
   throws KeeperException {
-    return transitionNode(zkw, regionName, serverName,
-        HBaseEventType.RS2ZK_REGION_CLOSING,
-        HBaseEventType.RS2ZK_REGION_CLOSED);
+    return transitionNode(zkw, region, serverName,
+        EventType.RS2ZK_REGION_CLOSING,
+        EventType.RS2ZK_REGION_CLOSED, expectedVersion);
   }
 
   /**
@@ -308,9 +433,10 @@ public class ZKAssign {
    * currently in the OFFLINE state to be in the OPENING state.
    *
    * <p>Does not transition nodes from other states.  If for some reason the
-   * node could not be transitioned, the method returns false.
+   * node could not be transitioned, the method returns -1.  If the transition
+   * is successful, the version of the node written as OPENING is returned.
    *
-   * <p>This method can fail and return false for three different reasons:
+   * <p>This method can fail and return -1 for three different reasons:
    * <ul><li>Unassigned node for this region does not exist</li>
    * <li>Unassigned node for this region is not in OFFLINE state</li>
    * <li>After verifying OFFLINE state, update fails because of wrong version
@@ -323,17 +449,50 @@ public class ZKAssign {
    * open of a region after receiving an OPEN RPC from the Master.
    *
    * @param zkw zk reference
-   * @param regionName region to be transitioned to opening
+   * @param region region to be transitioned to opening
    * @param serverName server event originates from
-   * @return true if transition was successful, false if not
+   * @return version of node after transition, -1 if unsuccessful transition
    * @throws KeeperException if unexpected zookeeper exception
    */
-  public static boolean transitionNodeOpening(ZooKeeperWatcher zkw,
-      String regionName, String serverName)
+  public static int transitionNodeOpening(ZooKeeperWatcher zkw,
+      HRegionInfo region, String serverName)
   throws KeeperException {
-    return transitionNode(zkw, regionName, serverName,
-        HBaseEventType.M2ZK_REGION_OFFLINE,
-        HBaseEventType.RS2ZK_REGION_OPENING);
+    return transitionNode(zkw, region, serverName,
+        EventType.M2ZK_REGION_OFFLINE,
+        EventType.RS2ZK_REGION_OPENING, -1);
+  }
+  /**
+   * Retransitions an existing unassigned node for the specified region which is
+   * currently in the OPENING state to be in the OPENING state.
+   *
+   * <p>Does not transition nodes from other states.  If for some reason the
+   * node could not be transitioned, the method returns -1.  If the transition
+   * is successful, the version of the node rewritten as OPENING is returned.
+   *
+   * <p>This method can fail and return -1 for three different reasons:
+   * <ul><li>Unassigned node for this region does not exist</li>
+   * <li>Unassigned node for this region is not in OPENING state</li>
+   * <li>After verifying OPENING state, update fails because of wrong version
+   * (someone else already transitioned the node)</li>
+   * </ul>
+   *
+   * <p>Does not set any watches.
+   *
+   * <p>This method should only be used by a RegionServer when initiating an
+   * open of a region after receiving an OPEN RPC from the Master.
+   *
+   * @param zkw zk reference
+   * @param region region to be transitioned to opening
+   * @param serverName server event originates from
+   * @return version of node after transition, -1 if unsuccessful transition
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static int retransitionNodeOpening(ZooKeeperWatcher zkw,
+      HRegionInfo region, String serverName, int expectedVersion)
+  throws KeeperException {
+    return transitionNode(zkw, region, serverName,
+        EventType.RS2ZK_REGION_OPENING,
+        EventType.RS2ZK_REGION_OPENING, expectedVersion);
   }
 
   /**
@@ -341,7 +500,8 @@ public class ZKAssign {
    * currently in the OPENING state to be in the OPENED state.
    *
    * <p>Does not transition nodes from other states.  If for some reason the
-   * node could not be transitioned, the method returns false.
+   * node could not be transitioned, the method returns -1.  If the transition
+   * is successful, the version of the node after transition is returned.
    *
    * <p>This method can fail and return false for three different reasons:
    * <ul><li>Unassigned node for this region does not exist</li>
@@ -358,17 +518,17 @@ public class ZKAssign {
    * open of a region.
    *
    * @param zkw zk reference
-   * @param regionName region to be transitioned to opened
+   * @param region region to be transitioned to opened
    * @param serverName server event originates from
-   * @return true if transition was successful, false if not
+   * @return version of node after transition, -1 if unsuccessful transition
    * @throws KeeperException if unexpected zookeeper exception
    */
-  public static boolean transitionNodeOpened(ZooKeeperWatcher zkw,
-      String regionName, String serverName)
+  public static int transitionNodeOpened(ZooKeeperWatcher zkw,
+      HRegionInfo region, String serverName, int expectedVersion)
   throws KeeperException {
-    return transitionNode(zkw, regionName, serverName,
-        HBaseEventType.RS2ZK_REGION_OPENING,
-        HBaseEventType.RS2ZK_REGION_OPENED);
+    return transitionNode(zkw, region, serverName,
+        EventType.RS2ZK_REGION_OPENING,
+        EventType.RS2ZK_REGION_OPENED, expectedVersion);
   }
 
   /**
@@ -379,33 +539,36 @@ public class ZKAssign {
    *
    * <p>Method first reads existing data and verifies it is in the expected
    * state.  If the node does not exist or the node is not in the expected
-   * state, the method returns false.
+   * state, the method returns -1.  If the transition is successful, the
+   * version number of the node following the transition is returned.
    *
    * <p>If the read state is what is expected, it attempts to write the new
    * state and data into the node.  When doing this, it includes the expected
    * version (determined when the existing state was verified) to ensure that
    * only one transition is successful.  If there is a version mismatch, the
-   * method returns false.
+   * method returns -1.
    *
    * <p>If the write is successful, no watch is set and the method returns true.
    *
    * @param zkw zk reference
-   * @param regionName region to be transitioned to opened
+   * @param region region to be transitioned to opened
    * @param serverName server event originates from
    * @param beginState state the node must currently be in to do transition
    * @param endState state to transition node to if all checks pass
-   * @return true if transition was successful, false if not
+   * @return version of node after transition, -1 if unsuccessful transition
    * @throws KeeperException if unexpected zookeeper exception
    */
-  private static boolean transitionNode(ZooKeeperWatcher zkw, String regionName,
-      String serverName, HBaseEventType beginState, HBaseEventType endState)
+  private static int transitionNode(ZooKeeperWatcher zkw, HRegionInfo region,
+      String serverName, EventType beginState, EventType endState,
+      int expectedVersion)
   throws KeeperException {
+    String encoded = region.getEncodedName();
     if(zkw.isDebugEnabled()) {
-      zkw.debug("Attempting to transition node for " + regionName +
+      zkw.debug("Attempting to transition node for " + encoded +
         " from " + beginState.toString() + " to " + endState.toString());
     }
 
-    String node = getNodeName(zkw, regionName);
+    String node = getNodeName(zkw, encoded);
 
     // Read existing data of the node
     Stat stat = new Stat();
@@ -414,37 +577,45 @@ public class ZKAssign {
     RegionTransitionData existingData =
       RegionTransitionData.fromBytes(existingBytes);
 
+    // Verify it is the expected version
+    if(expectedVersion != -1 && stat.getVersion() != expectedVersion) {
+      zkw.warn("Attempt to transition the unassigned node for " + encoded +
+          " from " + beginState + " to " + endState + " failed, " +
+          "the node existed but was version " + stat.getVersion() +
+          " not the expected version " + expectedVersion);
+        return -1;
+    }
+
     // Verify it is in expected state
     if(!existingData.getEventType().equals(beginState)) {
-      zkw.warn("Attempt to transition the unassigned node for " + regionName +
+      zkw.warn("Attempt to transition the unassigned node for " + encoded +
         " from " + beginState + " to " + endState + " failed, " +
         "the node existed but was in the state " + existingData.getEventType());
-      return false;
+      return -1;
     }
 
     // Write new data, ensuring data has not changed since we last read it
     try {
       RegionTransitionData data = new RegionTransitionData(endState,
-          regionName, serverName);
-      if(!ZKUtil.setData(zkw, node, data.getBytes(),
-          stat.getVersion())) {
-        zkw.warn("Attempt to transition the unassigned node for " + regionName +
+          region.getRegionName(), serverName);
+      if(!ZKUtil.setData(zkw, node, data.getBytes(), stat.getVersion())) {
+        zkw.warn("Attempt to transition the unassigned node for " + encoded +
         " from " + beginState + " to " + endState + " failed, " +
         "the node existed and was in the expected state but then when " +
         "setting data we got a version mismatch");
-        return false;
+        return -1;
       }
       if(zkw.isDebugEnabled()) {
-        zkw.debug("Successfully transitioned node for " + regionName +
+        zkw.debug("Successfully transitioned node for " + encoded +
           " from " + beginState + " to " + endState);
       }
-      return true;
+      return stat.getVersion() + 1;
     } catch (KeeperException.NoNodeException nne) {
-      zkw.warn("Attempt to transition the unassigned node for " + regionName +
+      zkw.warn("Attempt to transition the unassigned node for " + encoded +
         " from " + beginState + " to " + endState + " failed, " +
         "the node existed and was in the expected state but then when " +
         "setting data it no longer existed");
-      return false;
+      return -1;
     }
   }
 

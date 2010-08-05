@@ -22,13 +22,13 @@ package org.apache.hadoop.hbase.zookeeper;
 
 /**
  * Base class for internal listeners of ZooKeeper events.
- * 
+ *
  * The {@link ZooKeeperWatcher} for a process will execute the appropriate
  * methods of implementations of this class.  In order to receive events from
  * the watcher, every listener must register itself via {@link ZooKeeperWatcher#registerListener}.
- * 
+ *
  * Subclasses need only override those methods in which they are interested.
- * 
+ *
  * Note that the watcher will be blocked when invoking methods in listeners so
  * they must not be long-running.
  */
@@ -36,10 +36,9 @@ public class ZooKeeperListener {
 
   // Reference to the zk watcher which also contains configuration and constants
   protected ZooKeeperWatcher watcher;
-  
+
   /**
    * Construct a ZooKeeper event listener.
-   * TODO: This should take ServerStatus which will contain ZKWatcher ref?
    */
   public ZooKeeperListener(ZooKeeperWatcher watcher) {
     this.watcher = watcher;

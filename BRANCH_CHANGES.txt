@@ -19,6 +19,7 @@ Branch 0.90.0 - Master Rewrite Branch
                 master cleanup and refactor)
     HBASE-2696  [part2-v2-FinishRS_FixClient] ZooKeeper cleanup and refactor
     HBASE-2695  [ZK-Master-Final-v4] Rest of Master/ZK cleanup and refactor
+    HBASE-2697  [part-v10] The big one!
 
   NEW FEATURES
 

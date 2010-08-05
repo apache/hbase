@@ -59,7 +59,7 @@ public class LoadBalancer {
   // Number of seconds between each run of the load balancer
   private final long balancerPeriod;
 
-  private Random rand;
+  private static final Random rand = new Random();
 
   /**
    * Instantiate the load balancer with the specified configuration.
@@ -70,7 +70,6 @@ public class LoadBalancer {
    */
   public LoadBalancer(Configuration conf) {
     balancerPeriod = conf.getLong("hbase.balancer.period", 300000);
-    rand = new Random();
   }
 
   /**
@@ -197,7 +196,8 @@ public class LoadBalancer {
       List<HRegionInfo> regions = server.getValue();
       int numToOffload = Math.min(regionCount - max, regions.size());
       for(int i=0; i<numToOffload; i++) {
-        regionsToMove.add(new RegionPlan(regions.get(i), serverInfo, null));
+        regionsToMove.add(new RegionPlan(regions.get(i).getEncodedName(),
+            serverInfo, null));
       }
       serverBalanceInfo.put(serverInfo,
           new BalanceInfo(numToOffload, (-1)*numToOffload));
@@ -250,7 +250,8 @@ public class LoadBalancer {
         int idx =
           balanceInfo == null ? 0 : balanceInfo.getNextRegionForUnload();
         HRegionInfo region = server.getValue().get(idx);
-        regionsToMove.add(new RegionPlan(region, server.getKey(), null));
+        regionsToMove.add(new RegionPlan(region.getEncodedName(),
+            server.getKey(), null));
         if(--neededRegions == 0) {
           // No more regions needed, done shedding
           break;
@@ -359,7 +360,7 @@ public class LoadBalancer {
    * @return map of server to the regions it should take, or null if no
    *         assignment is possible (ie. no regions or no servers)
    */
-  public Map<HServerInfo,List<HRegionInfo>> bulkAssignment(
+  public static Map<HServerInfo,List<HRegionInfo>> bulkAssignment(
       List<HRegionInfo> regions, List<HServerInfo> servers) {
     if(regions.size() == 0 || servers.size() == 0) {
       return null;
@@ -499,7 +500,7 @@ public class LoadBalancer {
    * @param servers
    * @return map of regions to the server it should be assigned to
    */
-  public Map<HRegionInfo,HServerInfo> immediateAssignment(
+  public static Map<HRegionInfo,HServerInfo> immediateAssignment(
       List<HRegionInfo> regions, List<HServerInfo> servers) {
     Map<HRegionInfo,HServerInfo> assignments =
       new TreeMap<HRegionInfo,HServerInfo>();
@@ -507,6 +508,14 @@ public class LoadBalancer {
       assignments.put(region, servers.get(rand.nextInt(servers.size())));
     }
     return assignments;
+  }
+
+  public static HServerInfo randomAssignment(List<HServerInfo> servers) {
+    if(servers == null || servers.isEmpty()) {
+      LOG.warn("Wanted to do random assignment but no servers to assign to");
+      return null;
+    }
+    return servers.get(rand.nextInt(servers.size()));
   }
 
   /**
@@ -521,7 +530,7 @@ public class LoadBalancer {
    */
   public static class RegionPlan implements Comparable<RegionPlan> {
 
-    private final HRegionInfo region;
+    private final String regionName;
     private final HServerInfo source;
     private HServerInfo dest;
 
@@ -536,8 +545,8 @@ public class LoadBalancer {
      * @param source regionserver region should be moved from
      * @param dest regionserver region should be moved to
      */
-    public RegionPlan(HRegionInfo region, HServerInfo source, HServerInfo dest) {
-      this.region = region;
+    public RegionPlan(String regionName, HServerInfo source, HServerInfo dest) {
+      this.regionName = regionName;
       this.source = source;
       this.dest = dest;
     }
@@ -566,11 +575,11 @@ public class LoadBalancer {
     }
 
     /**
-     * Get the region information for the region this plan is for.
-     * @return region info
+     * Get the region name for the region this plan is for.
+     * @return region name
      */
-    public HRegionInfo getRegionInfo() {
-      return region;
+    public String getRegionName() {
+      return regionName;
     }
 
     /**
@@ -579,7 +588,7 @@ public class LoadBalancer {
      */
     @Override
     public int compareTo(RegionPlan o) {
-      return getRegionInfo().compareTo(o.getRegionInfo());
+      return regionName.compareTo(o.getRegionName());
     }
   }
 }

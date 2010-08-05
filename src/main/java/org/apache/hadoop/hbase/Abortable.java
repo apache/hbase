@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase;
 
 /**
  * Interface to support the aborting of a given server or client.
- *
- * <p>This is used primarily for ZooKeeper usage when we could get an unexpected
+ * <p>
+ * This is used primarily for ZooKeeper usage when we could get an unexpected
  * and fatal exception, requiring an abort.
- *
- * <p>Implemented by the Master, RegionServer, and TableServers (client).
+ * <p>
+ * Implemented by the Master, RegionServer, and TableServers (client).
  */
 public interface Abortable {
   /**

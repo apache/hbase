@@ -48,10 +48,10 @@ public class ActiveMasterManager extends ZooKeeperListener {
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
 
   private final HServerAddress address;
-  private final MasterStatus status;
+  private final MasterController status;
 
   ActiveMasterManager(ZooKeeperWatcher watcher, HServerAddress address,
-      MasterStatus status) {
+      MasterController status) {
     super(watcher);
     this.address = address;
     this.status = status;

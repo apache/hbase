@@ -22,9 +22,11 @@ package org.apache.hadoop.hbase.executor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.ServerController;
 import org.apache.hadoop.hbase.executor.HBaseExecutorService.HBaseExecutorServiceType;
 
 
@@ -32,56 +34,51 @@ import org.apache.hadoop.hbase.executor.HBaseExecutorService.HBaseExecutorServic
  * Abstract base class for all HBase event handlers. Subclasses should
  * implement the process() method where the actual handling of the event
  * happens.
- *
+ * <p>
  * HBaseEventType is a list of ALL events (which also corresponds to messages -
  * either internal to one component or between components). The event type
  * names specify the component from which the event originated, and the
  * component which is supposed to handle it.
- *
+ * <p>
  * Listeners can listen to all the events by implementing the interface
  * HBaseEventHandlerListener, and by registering themselves as a listener. They
  * will be called back before and after the process of every event.
- *
- * TODO: Rename HBaseEvent and HBaseEventType to EventHandler and EventType
- * after ZK refactor as it currently would clash with EventType from ZK and
- * make the code very confusing.
  */
-public abstract class HBaseEventHandler implements Runnable
-{
-  private static final Log LOG = LogFactory.getLog(HBaseEventHandler.class);
+public abstract class EventHandler implements Runnable, Comparable<Runnable> {
+  private static final Log LOG = LogFactory.getLog(EventHandler.class);
   // type of event this object represents
-  protected HBaseEventType eventType = HBaseEventType.NONE;
-  // is this a region server or master?
-  protected boolean isRegionServer;
-  // name of the server - this is needed for naming executors in case of tests
-  // where region servers may be co-located.
-  protected String serverName;
+  protected EventType eventType;
+  // server controller
+  protected ServerController server;
   // listeners that are called before and after an event is processed
-  protected static List<HBaseEventHandlerListener> eventHandlerListeners =
-    Collections.synchronizedList(new ArrayList<HBaseEventHandlerListener>());
+  protected static List<EventHandlerListener> eventHandlerListeners =
+    Collections.synchronizedList(new ArrayList<EventHandlerListener>());
+  // sequence id generator for default FIFO ordering of events
+  protected static AtomicLong seqids = new AtomicLong(0);
+  // sequence id for this event
+  protected long seqid;
 
   /**
    * This interface provides hooks to listen to various events received by the
    * queue. A class implementing this can listen to the updates by calling
    * registerListener and stop receiving updates by calling unregisterListener
    */
-  public interface HBaseEventHandlerListener {
+  public interface EventHandlerListener {
     /**
      * Called before any event is processed
      */
-    public void beforeProcess(HBaseEventHandler event);
+    public void beforeProcess(EventHandler event);
     /**
      * Called after any event is processed
      */
-    public void afterProcess(HBaseEventHandler event);
+    public void afterProcess(EventHandler event);
   }
 
   /**
    * These are a list of HBase events that can be handled by the various
    * HBaseExecutorService's. All the events are serialized as byte values.
    */
-  public enum HBaseEventType {
-    NONE (-1),
+  public enum EventType {
     // Messages originating from RS (NOTE: there is NO direct communication from
     // RS to Master). These are a result of RS updates into ZK.
     RS2ZK_REGION_CLOSING      (1),   // RS is in process of closing a region
@@ -89,51 +86,81 @@ public abstract class HBaseEventHandler implements Runnable
     RS2ZK_REGION_OPENING      (3),   // RS is in process of opening a region
     RS2ZK_REGION_OPENED       (4),   // RS has finished opening a region
 
+    // Messages originating from Master to RS
+    M2RS_OPEN_REGION          (20),  // Master asking RS to open a region
+    M2RS_OPEN_ROOT            (21),  // Master asking RS to open root
+    M2RS_OPEN_META            (22),  // Master asking RS to open meta
+    M2RS_CLOSE_REGION         (23),  // Master asking RS to close a region
+    M2RS_CLOSE_ROOT           (24),  // Master asking RS to close root
+    M2RS_CLOSE_META           (25),  // Master asking RS to close meta
+
+    // Messages originating from Client to Master
+    C2M_DELETE_TABLE          (40),   // Client asking Master to delete a table
+    C2M_DISABLE_TABLE         (41),   // Client asking Master to disable a table
+    C2M_ENABLE_TABLE          (42),   // Client asking Master to enable a table
+    C2M_MODIFY_TABLE          (43),   // Client asking Master to modify a table
+    C2M_ADD_FAMILY            (44),   // Client asking Master to add family to table
+    C2M_DELETE_FAMILY         (45),   // Client asking Master to delete family of table
+    C2M_MODIFY_FAMILY         (46),   // Client asking Master to modify family of table
+
     // Updates from master to ZK. This is done by the master and there is
     // nothing to process by either Master or RS
-    M2ZK_REGION_OFFLINE       (50);  // Master adds this region as offline in ZK
+    M2ZK_REGION_OFFLINE       (50),  // Master adds this region as offline in ZK
 
-    private final byte value;
+    // Master controlled events to be executed on the master
+    M_SERVER_SHUTDOWN         (70);  // Master is processing shutdown of a RS
 
     /**
+     * Returns the executor service type (the thread pool instance) for this
+     * event type.  Every type must be handled here.  Multiple types map to
      * Called by the HMaster. Returns a name of the executor service given an
-     * event type. Every event type has en entry - if the event should not be
+     * event type. Every event type has an entry - if the event should not be
      * handled just add the NONE executor.
      * @return name of the executor service
      */
-    public HBaseExecutorServiceType getMasterExecutorForEvent() {
-      HBaseExecutorServiceType executorServiceType = null;
+    public HBaseExecutorServiceType getExecutorServiceType() {
       switch(this) {
 
-      case RS2ZK_REGION_CLOSING:
-      case RS2ZK_REGION_CLOSED:
-        executorServiceType = HBaseExecutorServiceType.MASTER_CLOSEREGION;
-        break;
+        // Master executor services
 
-      case RS2ZK_REGION_OPENING:
-      case RS2ZK_REGION_OPENED:
-        executorServiceType = HBaseExecutorServiceType.MASTER_OPENREGION;
-        break;
+        case RS2ZK_REGION_CLOSED:
+          return HBaseExecutorServiceType.MASTER_CLOSE_REGION;
 
-      case M2ZK_REGION_OFFLINE:
-        executorServiceType = HBaseExecutorServiceType.NONE;
-        break;
+        case RS2ZK_REGION_OPENED:
+          return HBaseExecutorServiceType.MASTER_OPEN_REGION;
 
-      default:
-        throw new RuntimeException("Unhandled event type in the master.");
+        case M_SERVER_SHUTDOWN:
+          return HBaseExecutorServiceType.MASTER_SERVER_OPERATIONS;
+
+        case C2M_DELETE_TABLE:
+        case C2M_DISABLE_TABLE:
+        case C2M_ENABLE_TABLE:
+        case C2M_MODIFY_TABLE:
+          return HBaseExecutorServiceType.MASTER_TABLE_OPERATIONS;
+
+        // RegionServer executor services
+
+        case M2RS_OPEN_REGION:
+          return HBaseExecutorServiceType.RS_OPEN_REGION;
+
+        case M2RS_OPEN_ROOT:
+          return HBaseExecutorServiceType.RS_OPEN_ROOT;
+
+        case M2RS_OPEN_META:
+          return HBaseExecutorServiceType.RS_OPEN_META;
+
+        case M2RS_CLOSE_REGION:
+          return HBaseExecutorServiceType.RS_CLOSE_REGION;
+
+        case M2RS_CLOSE_ROOT:
+          return HBaseExecutorServiceType.RS_CLOSE_ROOT;
+
+        case M2RS_CLOSE_META:
+          return HBaseExecutorServiceType.RS_CLOSE_META;
+
+        default:
+          throw new RuntimeException("Unhandled event type " + this.name());
       }
-
-      return executorServiceType;
-    }
-
-    /**
-     * Called by the RegionServer. Returns a name of the executor service given an
-     * event type. Every event type has en entry - if the event should not be
-     * handled just return a null executor name.
-     * @return name of the event service
-     */
-    public static String getRSExecutorForEvent(String serverName) {
-      throw new RuntimeException("Unsupported operation.");
     }
 
     /**
@@ -141,25 +168,11 @@ public abstract class HBaseEventHandler implements Runnable
      * server that starts these event executor services wants to handle these
      * event types.
      */
-    public void startMasterExecutorService(String serverName) {
-      HBaseExecutorServiceType serviceType = getMasterExecutorForEvent();
-      if(serviceType == HBaseExecutorServiceType.NONE) {
-        throw new RuntimeException("Event type " + toString() + " not handled on master.");
-      }
-      serviceType.startExecutorService(serverName);
+    public void startExecutorService(String serverName, int maxThreads) {
+      getExecutorServiceType().startExecutorService(serverName, maxThreads);
     }
 
-    public static void startRSExecutorService() {
-
-    }
-
-    HBaseEventType(int intValue) {
-      this.value = (byte)intValue;
-    }
-
-    public byte getByteValue() {
-      return value;
-    }
+    EventType(int value) {}
 
     @Override
     public String toString() {
@@ -172,33 +185,15 @@ public abstract class HBaseEventHandler implements Runnable
         default:                    return this.name();
       }
     }
-
-    public static HBaseEventType fromByte(byte value) {
-      switch(value) {
-        case  -1: return HBaseEventType.NONE;
-        case  1 : return HBaseEventType.RS2ZK_REGION_CLOSING;
-        case  2 : return HBaseEventType.RS2ZK_REGION_CLOSED;
-        case  3 : return HBaseEventType.RS2ZK_REGION_OPENING;
-        case  4 : return HBaseEventType.RS2ZK_REGION_OPENED;
-        case  50: return HBaseEventType.M2ZK_REGION_OFFLINE;
-
-        default:
-          throw new RuntimeException("Invalid byte value for conversion to HBaseEventType");
-      }
-    }
   }
 
   /**
    * Default base class constructor.
-   *
-   * TODO: isRegionServer and serverName will go away once we do the HMaster
-   * refactor. We will end up passing a ServerStatus which should tell us both
-   * the name and if it is a RS or master.
    */
-  public HBaseEventHandler(boolean isRegionServer, String serverName, HBaseEventType eventType) {
-    this.isRegionServer = isRegionServer;
+  public EventHandler(ServerController server, EventType eventType) {
+    this.server = server;
     this.eventType = eventType;
-    this.serverName = serverName;
+    seqid = seqids.incrementAndGet();
   }
 
   /**
@@ -207,7 +202,7 @@ public abstract class HBaseEventHandler implements Runnable
    */
   public void run() {
     // fire all beforeProcess listeners
-    for(HBaseEventHandlerListener listener : eventHandlerListeners) {
+    for(EventHandlerListener listener : eventHandlerListeners) {
       listener.beforeProcess(this);
     }
 
@@ -219,7 +214,7 @@ public abstract class HBaseEventHandler implements Runnable
     }
 
     // fire all afterProcess listeners
-    for(HBaseEventHandlerListener listener : eventHandlerListeners) {
+    for(EventHandlerListener listener : eventHandlerListeners) {
       LOG.debug("Firing " + listener.getClass().getName() +
                 ".afterProcess event listener for event " + eventType);
       listener.afterProcess(this);
@@ -235,19 +230,15 @@ public abstract class HBaseEventHandler implements Runnable
   /**
    * Subscribe to updates before and after processing events
    */
-  public static void registerListener(HBaseEventHandlerListener listener) {
+  public static void registerListener(EventHandlerListener listener) {
     eventHandlerListeners.add(listener);
   }
 
   /**
    * Stop receiving updates before and after processing events
    */
-  public static void unregisterListener(HBaseEventHandlerListener listener) {
+  public static void unregisterListener(EventHandlerListener listener) {
     eventHandlerListeners.remove(listener);
-  }
-
-  public boolean isRegionServer() {
-    return isRegionServer;
   }
 
   /**
@@ -255,15 +246,14 @@ public abstract class HBaseEventHandler implements Runnable
    * @return
    */
   public HBaseExecutorServiceType getEventHandlerName() {
-    // TODO: check for isRegionServer here
-    return eventType.getMasterExecutorForEvent();
+    return eventType.getExecutorServiceType();
   }
 
   /**
    * Return the event type
    * @return
    */
-  public HBaseEventType getHBEvent() {
+  public EventType getEventType() {
     return eventType;
   }
 
@@ -274,9 +264,42 @@ public abstract class HBaseEventHandler implements Runnable
   public void submit() {
     HBaseExecutorServiceType serviceType = getEventHandlerName();
     if(serviceType == null) {
-      throw new RuntimeException("Event " + eventType + " not handled on this server " + serverName);
+      throw new RuntimeException("Event " + eventType + " not handled on " +
+          "this server " + server.getServerName());
     }
-    serviceType.getExecutor(serverName).submit(this);
+    serviceType.getExecutor(server.getServerName()).submit(this);
+  }
+
+
+  /**
+   * Get the priority level for this handler instance.  This uses natural
+   * ordering so lower numbers are higher priority.
+   * <p>
+   * Lowest priority is Integer.MAX_VALUE.  Highest priority is 0.
+   * <p>
+   * Subclasses should override this method to allow prioritizing handlers.
+   * <p>
+   * Handlers with the same priority are handled in FIFO order.
+   * <p>
+   * @return Integer.MAX_VALUE by default, override to set higher priorities
+   */
+  public int getPriority() {
+    return Integer.MAX_VALUE;
+  }
+
+  /**
+   * Default prioritized runnable comparator which implements a FIFO ordering.
+   * <p>
+   * Subclasses should not override this.  Instead, if they want to implement
+   * priority beyond FIFO, they should override {@link #getPriority()}.
+   */
+  @Override
+  public int compareTo(Runnable o) {
+    EventHandler eh = (EventHandler)o;
+    if(getPriority() != eh.getPriority()) {
+      return (getPriority() < eh.getPriority()) ? -1 : 1;
+    }
+    return (this.seqid < eh.seqid) ? -1 : 1;
   }
 
   /**

@@ -81,6 +81,8 @@ public class ZooKeeperWatcher implements Watcher {
   public String clusterStateZNode;
   // znode used for region transitioning and assignment
   public String assignmentZNode;
+  // znode used for table disabling/enabling
+  public String tableZNode;
 
   /**
    * Instantiate a ZooKeeper connection and watcher.
@@ -103,6 +105,7 @@ public class ZooKeeperWatcher implements Watcher {
       ZKUtil.createAndFailSilent(this, baseZNode);
       ZKUtil.createAndFailSilent(this, assignmentZNode);
       ZKUtil.createAndFailSilent(this, rsZNode);
+      ZKUtil.createAndFailSilent(this, tableZNode);
     } catch (KeeperException e) {
       error("Unexpected KeeperException creating base node", e);
       error("Message: " + e.getMessage());
@@ -125,7 +128,9 @@ public class ZooKeeperWatcher implements Watcher {
     clusterStateZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.state", "shutdown"));
     assignmentZNode = ZKUtil.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.regionInTransition", "unassigned"));
+        conf.get("zookeeper.znode.unassigned", "unassigned"));
+    tableZNode = ZKUtil.joinZNode(baseZNode,
+        conf.get("zookeeper.znode.tableEnableDisable", "table"));
   }
 
   /**

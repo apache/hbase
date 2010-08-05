@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -50,7 +51,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.ServerController;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
@@ -185,7 +185,7 @@ public class HConnectionManager {
   }
 
   /* Encapsulates finding the servers for an HBase instance */
-  static class TableServers implements ServerConnection, ServerController {
+  static class TableServers implements ServerConnection, Abortable {
     static final Log LOG = LogFactory.getLog(TableServers.class);
     private final Class<? extends HRegionInterface> serverInterfaceClass;
     private final long pause;
@@ -262,7 +262,8 @@ public class HConnectionManager {
       // initialize zookeeper and master address manager
       getZooKeeperWatcher();
       masterAddressManager = new MasterAddressManager(zooKeeper, this);
-      masterAddressManager.monitorMaster();
+      zooKeeper.registerListener(masterAddressManager);
+      masterAddressManager.start();
 
       this.master = null;
       this.masterChecked = false;
@@ -579,6 +580,20 @@ public class HConnectionManager {
         throw new TableNotFoundException(Bytes.toString(tableName));
       }
       return result;
+    }
+
+    @Override
+    public HRegionLocation locateRegion(final byte [] regionName)
+    throws IOException {
+      // TODO implement.  use old stuff or new stuff?
+      return null;
+    }
+
+    @Override
+    public List<HRegionLocation> locateRegions(final byte [] tableName)
+    throws IOException {
+      // TODO implement.  use old stuff or new stuff?
+      return null;
     }
 
     public HRegionLocation locateRegion(final byte [] tableName,
@@ -972,6 +987,7 @@ public class HConnectionManager {
                 regionServer.getInetSocketAddress(), this.conf,
                 this.maxRPCAttempts, this.rpcTimeout);
           } catch (RemoteException e) {
+            LOG.warn("Remove exception connecting to RS", e);
             throw RemoteExceptionHandler.decodeRemoteException(e);
           }
           this.servers.put(regionServer.toString(), server);
@@ -1006,7 +1022,7 @@ public class HConnectionManager {
       return zooKeeper;
     }
 
-    /*
+    /**
      * Repeatedly try to find the root region in ZK
      * @return HRegionLocation for root region if found
      * @throws NoServerForRegionException - if the root region can not be
@@ -1579,38 +1595,11 @@ public class HConnectionManager {
       }
     }
 
-    // ServerController implementation so that we can use ZooKeeperWatcher
-    // Our abort() call does the ZK reset() as was previously done when
-    // getting ZK expiration
-    // TODO: Maybe this is not right.  Should there be a super-interface to
-    //       ServerStatus/Controller that _just_ has the abort method?
-    //       The only method that really makes no sense here is get address
-
     @Override
     public void abort() {
       if(zooKeeper != null) {
         zooKeeper.close();
         zooKeeper = null;
-      }
-    }
-
-    @Override
-    public Configuration getConfiguration() {
-      return conf;
-    }
-
-    @Override
-    public HServerAddress getHServerAddress() {
-      return null;
-    }
-
-    @Override
-    public ZooKeeperWatcher getZooKeeper() {
-      try {
-        return getZooKeeperWatcher();
-      } catch (IOException e) {
-        LOG.error("Problem getting zk watcher", e);
-        return null;
       }
     }
   }

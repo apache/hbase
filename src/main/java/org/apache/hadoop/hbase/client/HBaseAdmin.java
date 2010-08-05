@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 
@@ -642,12 +643,15 @@ public class HBaseAdmin {
    * Asynchronous operation.
    *
    * @param regionname region name to close
-   * @param args Optional server name.  Otherwise, we'll send close to the
+   * @param Optional server name.  Otherwise, we'll send close to the
    * server registered in .META.
    * @throws IOException if a remote or network exception occurs
    */
   public void closeRegion(final String regionname, final Object... args)
   throws IOException {
+    // TODO: reimplement this.  i don't think we will be able to send a
+    //       server name anymore as client does not have this, would have to
+    //       use META or be passed an HServerAddress
     closeRegion(Bytes.toBytes(regionname), args);
   }
 
@@ -693,7 +697,40 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void flush(final byte [] tableNameOrRegionName) throws IOException {
-    modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_FLUSH);
+    // TODO: implement two new connection methods and change split/compact
+    boolean isTable = checkTableOrRegion(tableNameOrRegionName);
+    if(!isTable) {
+      HRegionLocation hrl = connection.locateRegion(tableNameOrRegionName);
+      HRegionInterface hri =
+        connection.getHRegionConnection(hrl.getServerAddress());
+      hri.flushRegion(hrl.getRegionInfo());
+      return;
+    }
+    List<HRegionLocation> regionLocations =
+      connection.locateRegions(tableNameOrRegionName);
+    for(HRegionLocation hrl : regionLocations) {
+      HRegionInterface hri =
+        connection.getHRegionConnection(hrl.getServerAddress());
+      hri.flushRegion(hrl.getRegionInfo());
+    }
+  }
+
+  /**
+   * Checks if the specified table or region name is a table or region.  Returns
+   * true if it is a table name and false if not (so likely a region name).
+   * @param tableNameOrRegionName
+   * @return true if table, false if not
+   * @throws IllegalArgumentException
+   * @throws ZooKeeperConnectionException 
+   * @throws MasterNotRunningException 
+   */
+  private boolean checkTableOrRegion(final byte [] tableNameOrRegionName)
+  throws IllegalArgumentException, MasterNotRunningException,
+  ZooKeeperConnectionException {
+    if (tableNameOrRegionName == null) {
+      throw new IllegalArgumentException("Pass a table name or region name");
+    }
+    return tableExists(tableNameOrRegionName);
   }
 
   /**
@@ -825,7 +862,7 @@ public class HBaseAdmin {
         }
         arr = new Writable[1];
         arr[0] = (HTableDescriptor)args[0];
-        getMaster().modifyTable(tableName, op, arr);
+//        getMaster().modifyTable(tableName, op, arr);
         break;
 
       case TABLE_COMPACT:
@@ -845,7 +882,7 @@ public class HBaseAdmin {
               "ImmutableBytesWritable");
           }
         }
-        getMaster().modifyTable(tableName, op, arr);
+//        getMaster().modifyTable(tableName, op, arr);
         break;
 
       case CLOSE_REGION:
@@ -867,7 +904,7 @@ public class HBaseAdmin {
               "ImmutableBytesWritable, not " + args[i]);
           }
         }
-        getMaster().modifyTable(tableName, op, arr);
+//        getMaster().modifyTable(tableName, op, arr);
         break;
 
       default:

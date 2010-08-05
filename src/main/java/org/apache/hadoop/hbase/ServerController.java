@@ -20,25 +20,44 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
- * Set of functions that are exposed by any HBase process (implemented by the
- * master, region server, and client).
+ * Defines the set of shared functions implemented by all HBase servers (Masters
+ * and RegionServers).
  */
 public interface ServerController extends Abortable {
   /**
-   * Return the address of the current server.
+   * Returns the address of the current server.
    */
   public HServerAddress getHServerAddress();
 
   /**
-   * Get the configuration object for this server.
+   * Gets the configuration object for this server.
    */
   public Configuration getConfiguration();
 
   /**
-   * Get the ZooKeeper instance for this server.
+   * Gets the ZooKeeper instance for this server.
    */
   public ZooKeeperWatcher getZooKeeper();
+
+  /**
+   * Gets the unique server name for this server.
+   * @return unique server name
+   */
+  public String getServerName();
+
+  /**
+   * Return the server RPC connection object
+   */
+  public ServerConnection getServerConnection();
+
+  /**
+   * Returns the timeout to use for operations such as waiting on root and meta
+   * availability.
+   * @return default timeout to wait for root and meta
+   */
+  public long getTimeout();
 }

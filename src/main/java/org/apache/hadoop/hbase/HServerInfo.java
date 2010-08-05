@@ -148,6 +148,8 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   }
 
   /**
+   * Gets the unique server instance name.  Includes the hostname, port, and
+   * start code.
    * @return Server name made of the concatenation of hostname, port and
    * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
    */

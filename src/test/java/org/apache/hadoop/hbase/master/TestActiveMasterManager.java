@@ -189,7 +189,7 @@ public class TestActiveMasterManager {
     }
   }
 
-  public static class DummyMasterStatus implements MasterStatus {
+  public static class DummyMasterStatus implements MasterController {
 
     private AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -200,11 +200,6 @@ public class TestActiveMasterManager {
 
     @Override
     public FileSystemManager getFileSystemManager() {
-      return null;
-    }
-
-    @Override
-    public RegionManager getRegionManager() {
       return null;
     }
 
@@ -263,6 +258,21 @@ public class TestActiveMasterManager {
     @Override
     public ZooKeeperWatcher getZooKeeper() {
       return null;
+    }
+
+    @Override
+    public String getServerName() {
+      return null;
+    }
+
+    @Override
+    public boolean isRegionServer() {
+      return false;
+    }
+
+    @Override
+    public long getTimeout() {
+      return 0;
     }
 
   }

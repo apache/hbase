@@ -24,8 +24,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.zookeeper.KeeperException;
 
+/**
+ * Tracks the root region server location node in zookeeper.
+ */
 public class RootRegionTracker extends ZooKeeperNodeTracker {
   private static final Log LOG = LogFactory.getLog(RootRegionTracker.class);
 
@@ -60,19 +62,16 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
   }
 
   /**
-   * Sets the root region location.
-   * @param address
-   * @throws KeeperException unexpected zk exception
+   * Gets the root region location, if available, and waits for up to the
+   * specified timeout if not immediately available.
+   * @param timeout maximum time to wait, in millis, use 0 for forever
+   * @return server address for server hosting root region, null if timed out
+   * @throws InterruptedException if interrupted while waiting
    */
-  public void setRootRegionLocation(HServerAddress address)
-  throws KeeperException {
-    try {
-      ZKUtil.createAndWatch(watcher, watcher.rootServerZNode,
-        Bytes.toBytes(address.toString()));
-    } catch(KeeperException.NodeExistsException nee) {
-      ZKUtil.setData(watcher, watcher.rootServerZNode,
-          Bytes.toBytes(address.toString()));
-    }
+  public HServerAddress waitRootRegionLocation(long timeout)
+  throws InterruptedException {
+    byte [] data = super.blockUntilAvailable(timeout);
+    return data == null ? null : new HServerAddress(Bytes.toString(data));
   }
 
   @Override

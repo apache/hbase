@@ -69,7 +69,12 @@ public class ClusterStatusTracker extends ZooKeeperNodeTracker {
    */
   public void setClusterDown()
   throws KeeperException {
-    ZKUtil.deleteNode(watcher, watcher.clusterStateZNode);
+    try {
+      ZKUtil.deleteNode(watcher, watcher.clusterStateZNode);
+    } catch(KeeperException.NoNodeException nne) {
+      LOG.warn("Attempted to set cluster as down but already down, cluster " +
+          "state node (" + watcher.clusterStateZNode + ") not found");
+    }
   }
 
   @Override

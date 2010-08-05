@@ -136,12 +136,31 @@ public interface HConnection {
    * lives in, ignoring any value that might be in the cache.
    * @param tableName name of the table <i>row</i> is in
    * @param row row key you're trying to find the region of
-   * @return HRegionLocation that describes where to find the reigon in
+   * @return HRegionLocation that describes where to find the region in
    * question
    * @throws IOException if a remote or network exception occurs
    */
   public HRegionLocation relocateRegion(final byte [] tableName,
       final byte [] row)
+  throws IOException;
+
+  /**
+   * Gets the location of the region of <i>regionName</i>.
+   * @param regionName name of the region to locate
+   * @return HRegionLocation that describes where to find the region in
+   * question
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HRegionLocation locateRegion(final byte [] regionName)
+  throws IOException;
+
+  /**
+   * Gets the locations of all regions in the specified table, <i>tableName</i>.
+   * @param tableName table to get regions of
+   * @return list of region locations for all regions of table
+   * @throws IOException
+   */
+  public List<HRegionLocation> locateRegions(byte[] tableName)
   throws IOException;
 
   /**
@@ -199,7 +218,7 @@ public interface HConnection {
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
    */
-  public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable) 
+  public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
 
 

@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -27,7 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -45,16 +48,66 @@ public class TestRestartCluster {
   private static final byte[] TABLENAME = Bytes.toBytes("master_transitions");
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a")};
 
+
+  private static final byte [][] TABLES = new byte[][] {
+      Bytes.toBytes("restartTableOne"),
+      Bytes.toBytes("restartTableTwo"),
+      Bytes.toBytes("restartTableThree")
+  };
+  private static final byte [] FAMILY = Bytes.toBytes("family");
+
   @BeforeClass public static void beforeAllTests() throws Exception {
     conf = HBaseConfiguration.create();
     utility = new HBaseTestingUtility(conf);
   }
 
   @AfterClass public static void afterAllTests() throws IOException {
-    utility.shutdownMiniCluster();
+//    utility.shutdownMiniCluster();
   }
 
   @Before public void setup() throws IOException {
+  }
+
+  @Test (timeout=300000)
+  public void testClusterRestart() throws Exception {
+
+    utility.getConfiguration().set("hbase.test.build.dir",
+        utility.setupClusterTestBuildDir().getAbsolutePath());
+
+    LOG.info("\n\nStarting cluster the first time");
+    utility.startMiniCluster(3);
+
+    LOG.info("\n\nCreating tables");
+    for(byte [] TABLE : TABLES) {
+      utility.createTable(TABLE, FAMILY);
+      utility.waitTableAvailable(TABLE, 30000);
+    }
+
+    LOG.info("\n\nShutting down cluster");
+    utility.getHBaseCluster().shutdown();
+    utility.getHBaseCluster().join();
+
+    LOG.info("\n\nSleeping a bit");
+    Thread.sleep(2000);
+
+    LOG.info("\n\nStarting cluster the second time");
+    utility.restartHBaseCluster(3);
+
+    LOG.info("\n\nWaiting for tables to be available");
+    for(byte [] TABLE : TABLES) {
+      try {
+        utility.createTable(TABLE, FAMILY);
+        assertTrue("Able to create table that should already exist", false);
+      } catch(TableExistsException tee) {
+        LOG.info("Table already exists as expected");
+      }
+      utility.waitTableAvailable(TABLE, 30000);
+    }
+
+    LOG.info("\n\nShutting stuff down now");
+    utility.shutdownMiniCluster();
+
+    LOG.info("\n\nDone!");
   }
 
   @Test (timeout=300000) public void testRestartClusterAfterKill()throws Exception {
@@ -72,7 +125,7 @@ public class TestRestartCluster {
         HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(), HMaster.MASTER);
 
     LOG.debug("Created UNASSIGNED zNode for ROOT and META regions in state " +
-        HBaseEventType.M2ZK_REGION_OFFLINE);
+        EventType.M2ZK_REGION_OFFLINE);
 
     // start the HB cluster
     LOG.info("Starting HBase cluster...");

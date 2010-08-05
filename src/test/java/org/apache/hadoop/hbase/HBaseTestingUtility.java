@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -141,7 +140,7 @@ public class HBaseTestingUtility {
    * single instance only is how the minidfscluster works.
    * @return The calculated cluster test build directory.
    */
-  File setupClusterTestBuildDir() {
+  public File setupClusterTestBuildDir() {
     String randomStr = UUID.randomUUID().toString();
     String dirStr = getTestDir(randomStr).toString();
     File dir = new File(dirStr).getAbsoluteFile();
@@ -153,8 +152,11 @@ public class HBaseTestingUtility {
   /**
    * @throws IOException If a cluster -- zk, dfs, or hbase -- already running.
    */
-  void isRunningCluster() throws IOException {
-    if (this.clusterTestBuildDir == null) return;
+  void isRunningCluster(String passedBuildPath) throws IOException {
+    if (this.clusterTestBuildDir == null ||
+        passedBuildPath != null) {
+      return;
+    }
     throw new IOException("Cluster already running at " +
       this.clusterTestBuildDir);
   }
@@ -185,8 +187,11 @@ public class HBaseTestingUtility {
     //     base_dir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
     // Some tests also do this:
     //  System.getProperty("test.cache.data", "build/test/cache");
-    if (dir == null) this.clusterTestBuildDir = setupClusterTestBuildDir();
-    else this.clusterTestBuildDir = dir;
+    if (dir == null) {
+      this.clusterTestBuildDir = setupClusterTestBuildDir();
+    } else {
+      this.clusterTestBuildDir = dir;
+    }
     System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestBuildDir.toString());
     System.setProperty("test.cache.data", this.clusterTestBuildDir.toString());
     this.dfsCluster = new MiniDFSCluster(0, this.conf, servers, true, true,
@@ -237,7 +242,9 @@ public class HBaseTestingUtility {
    * @see #startMiniZKCluster()
    */
   public void shutdownMiniZKCluster() throws IOException {
-    if (this.zkCluster != null) this.zkCluster.shutdown();
+    if (this.zkCluster != null) {
+      this.zkCluster.shutdown();
+    }
   }
 
   /**
@@ -267,10 +274,16 @@ public class HBaseTestingUtility {
   throws Exception {
     LOG.info("Starting up minicluster");
     // If we already put up a cluster, fail.
-    isRunningCluster();
+    String testBuildPath = conf.get("hbase.test.build.dir", null);
+    isRunningCluster(testBuildPath);
+    if(testBuildPath != null) {
+      LOG.info("\n\nUsing passed path: " + testBuildPath + "\n\n");
+    }
     // Make a new random dir to home everything in.  Set it as system property.
     // minidfs reads home from system property.
-    this.clusterTestBuildDir = setupClusterTestBuildDir();
+    this.clusterTestBuildDir =
+      testBuildPath == null ?
+          setupClusterTestBuildDir() : new File(testBuildPath);
     System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestBuildDir.getPath());
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
@@ -282,7 +295,7 @@ public class HBaseTestingUtility {
     // Do old style too just to be safe.
     this.conf.set("fs.default.name", fs.getUri().toString());
     this.dfsCluster.waitClusterUp();
-   
+
     // Start up a zk cluster.
     if (this.zkCluster == null) {
       startMiniZKCluster(this.clusterTestBuildDir);
@@ -297,9 +310,28 @@ public class HBaseTestingUtility {
     // Don't leave here till we've done a successful scan of the .META.
     HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
-    while (s.next() != null) continue;
+    while (s.next() != null) {
+      continue;
+    }
     LOG.info("Minicluster is up");
     return this.hbaseCluster;
+  }
+
+  /**
+   * Starts the hbase cluster up again after shutting it down previously in a
+   * test.  Use this if you want to keep dfs/zk up and just stop/start hbase.
+   * @param servers number of region servers
+   * @throws IOException
+   */
+  public void restartHBaseCluster(int servers) throws IOException {
+    this.hbaseCluster = new MiniHBaseCluster(this.conf, servers);
+    // Don't leave here till we've done a successful scan of the .META.
+    HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
+    ResultScanner s = t.getScanner(new Scan());
+    while (s.next() != null) {
+      continue;
+    }
+    LOG.info("HBase has been restarted");
   }
 
   /**
@@ -513,7 +545,7 @@ public class HBaseTestingUtility {
     results.close();
     return digest.toString();
   }
-  
+
   /**
    * Creates many regions names "aaa" to "zzz".
    *
@@ -551,7 +583,7 @@ public class HBaseTestingUtility {
     };
     return createMultiRegions(c, table, columnFamily, KEYS);
   }
-  
+
   public int createMultiRegions(final Configuration c, final HTable table,
       final byte[] columnFamily, byte [][] startKeys)
   throws IOException {
@@ -567,6 +599,7 @@ public class HBaseTestingUtility {
     // and end key. Adding the custom regions below adds those blindly,
     // including the new start region from empty to "bbb". lg
     List<byte[]> rows = getMetaTableRows(htd.getName());
+    List<HRegionInfo> newRegions = new ArrayList<HRegionInfo>(startKeys.length);
     // add custom ones
     int count = 0;
     for (int i = 0; i < startKeys.length; i++) {
@@ -578,6 +611,7 @@ public class HBaseTestingUtility {
         Writables.getBytes(hri));
       meta.put(put);
       LOG.info("createMultiRegions: inserted " + hri.toString());
+      newRegions.add(hri);
       count++;
     }
     // see comment above, remove "old" (or previous) single region
@@ -589,6 +623,10 @@ public class HBaseTestingUtility {
     // flush cache of regions
     HConnection conn = table.getConnection();
     conn.clearRegionCache();
+    // assign all the new regions
+    for(HRegionInfo hri : newRegions) {
+      hbaseCluster.getMaster().assignRegion(hri);
+    }
     return count;
   }
 
@@ -609,7 +647,7 @@ public class HBaseTestingUtility {
     s.close();
     return rows;
   }
-  
+
   /**
    * Returns all rows from the .META. table for a given user table
    *
@@ -812,7 +850,7 @@ public class HBaseTestingUtility {
   }
 
   public void cleanupTestDir() throws IOException {
-    getTestDir().getFileSystem(conf).delete(getTestDir(), true);    
+    getTestDir().getFileSystem(conf).delete(getTestDir(), true);
   }
 
   public void waitTableAvailable(byte[] table, long timeoutMillis)
@@ -872,16 +910,16 @@ public class HBaseTestingUtility {
    * You'll get a NPE if you call before you've started a minidfscluster.
    * @param soft Soft limit
    * @param hard Hard limit
-   * @throws NoSuchFieldException 
-   * @throws SecurityException 
-   * @throws IllegalAccessException 
-   * @throws IllegalArgumentException 
+   * @throws NoSuchFieldException
+   * @throws SecurityException
+   * @throws IllegalAccessException
+   * @throws IllegalArgumentException
    */
   public void setNameNodeNameSystemLeasePeriod(final int soft, final int hard)
   throws SecurityException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
     // TODO: If 0.20 hadoop do one thing, if 0.21 hadoop do another.
     // Not available in 0.20 hdfs.  Use reflection to make it happen.
-    
+
     // private NameNode nameNode;
     Field field = this.dfsCluster.getClass().getDeclaredField("nameNode");
     field.setAccessible(true);
@@ -897,10 +935,10 @@ public class HBaseTestingUtility {
    * </pre>
    * @param stream A DFSClient.DFSOutputStream.
    * @param max
-   * @throws NoSuchFieldException 
-   * @throws SecurityException 
-   * @throws IllegalAccessException 
-   * @throws IllegalArgumentException 
+   * @throws NoSuchFieldException
+   * @throws SecurityException
+   * @throws IllegalAccessException
+   * @throws IllegalArgumentException
    */
   public static void setMaxRecoveryErrorCount(final OutputStream stream,
       final int max) {
@@ -943,14 +981,18 @@ public class HBaseTestingUtility {
       for (Result r = null; (r = s.next()) != null;) {
         byte [] b =
           r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-        if (b == null || b.length <= 0) break;
+        if (b == null || b.length <= 0) {
+          break;
+        }
         rows++;
       }
       s.close();
       // If I get to here and all rows have a Server, then all have been assigned.
-      if (rows == countOfRegions) break;
+      if (rows == countOfRegions) {
+        break;
+      }
       LOG.info("Found=" + rows);
-      Threads.sleep(1000); 
+      Threads.sleep(1000);
     }
   }
 }

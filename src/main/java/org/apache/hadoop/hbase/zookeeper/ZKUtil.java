@@ -207,22 +207,22 @@ public class ZKUtil {
    *
    * @param zkw zk reference
    * @param znode path of node to watch
-   * @return true if znode exists, false if does not exist or error
+   * @return version of the node if it exists, -1 if does not exist
    * @throws KeeperException if unexpected zookeeper exception
    */
-  public static boolean checkExists(ZooKeeperWatcher zkw, String znode)
+  public static int checkExists(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
     try {
       Stat s = zkw.getZooKeeper().exists(znode, null);
-      return s != null ? true : false;
+      return s != null ? s.getVersion() : -1;
     } catch (KeeperException e) {
       zkw.warn("Unable to set watcher on znode (" + znode + ")", e);
       zkw.keeperException(e);
-      return false;
+      return -1;
     } catch (InterruptedException e) {
       zkw.warn("Unable to set watcher on znode (" + znode + ")", e);
       zkw.interruptedException(e);
-      return false;
+      return -1;
     }
   }
 
@@ -370,6 +370,7 @@ public class ZKUtil {
     public byte [] getData() {
       return data;
     }
+    @Override
     public String toString() {
       return node + " (" + RegionTransitionData.fromBytes(data) + ")";
     }
@@ -732,21 +733,25 @@ public class ZKUtil {
    *
    * <p>The node created is persistent and open access.
    *
+   * <p>Returns the version number of the created node if successful.
+   *
    * @param zkw zk reference
    * @param znode path of node to create
    * @param data data of node to create
+   * @return version of node created
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NodeExistsException if node already exists
    */
-  public static void createAndWatch(ZooKeeperWatcher zkw,
+  public static int createAndWatch(ZooKeeperWatcher zkw,
       String znode, byte [] data)
   throws KeeperException, KeeperException.NodeExistsException {
     try {
       zkw.getZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
           CreateMode.PERSISTENT);
-      zkw.getZooKeeper().exists(znode, zkw);
+      return zkw.getZooKeeper().exists(znode, zkw).getVersion();
     } catch (InterruptedException e) {
       zkw.interruptedException(e);
+      return -1;
     }
   }
 
@@ -829,6 +834,22 @@ public class ZKUtil {
     } catch(InterruptedException ie) {
       zkw.interruptedException(ie);
       return false;
+    }
+  }
+
+  /**
+   * Deletes the specified node.  Fails silent if the node does not exist.
+   * @param zkw
+   * @param joinZNode
+   * @throws KeeperException
+   */
+  public static void deleteNodeFailSilent(ZooKeeperWatcher zkw, String node)
+  throws KeeperException {
+    try {
+      zkw.getZooKeeper().delete(node, -1);
+    } catch(KeeperException.NoNodeException nne) {
+    } catch(InterruptedException ie) {
+      zkw.interruptedException(ie);
     }
   }
 

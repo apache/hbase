@@ -22,26 +22,20 @@ package org.apache.hadoop.hbase.master;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.ServerController;
-import org.apache.hadoop.hbase.client.ServerConnection;
 
 /**
- * These are the set of functions implemented by the HMaster and accessed by
- * the other packages in the master.
- *
- * TODO: this list has to be cleaned up, this is a re-factor only change that
- * preserves the functions in the interface.
+ * Defines the set of functions implemented by the HMaster related to control
+ * of the master process and cluster shutdown.
  */
-public interface MasterStatus extends ServerController {
+public interface MasterController extends ServerController {
+
+  // TODO: getServerManager and getFileManager exist because each references the
+  //       other in a single call.  should figure how to clean this up.
 
   /**
-   * Return the server manager for region server related info
+   * Returns the server manager which manages  for region server related info
    */
   public ServerManager getServerManager();
-
-  /**
-   * Return the region manager for region related info
-   */
-  public RegionManager getRegionManager();
 
   /**
    * Return the file system manager for dealing with FS related stuff
@@ -61,23 +55,32 @@ public interface MasterStatus extends ServerController {
   public void setClusterStartup(boolean isClusterStartup);
 
   /**
-   * Return the server RPC connection
+   * Requests a shutdown of the cluster.
+   * <p>
+   * Requesting a shutdown
    */
-  public ServerConnection getServerConnection();
+  public void requestShutdown();
 
-  // TODO: the semantics of the following methods should be defined. Once that
-  // is clear, most of these should move to server status
-
-  // start shutting down the server
-  public void startShutdown();
-  // is a shutdown requested
+  /**
+   * Gets a boolean representing whether a shutdown has been requested or not.
+   * @return if a shutdown has been requested or not
+   */
   public AtomicBoolean getShutdownRequested();
-  // sets the closed variable in the master to true
+
+  /**
+   * Sets the cluster as closed.
+   */
   public void setClosed();
-  // returns the closed atomic boolean
+
+  /**
+   * Gets an atomic boolean that represents whether the master is closed.
+   * @return boolean used to get/set master closed status
+   */
   public AtomicBoolean getClosed();
-  // returns the boolean value of the closed atomic boolean
+
+  /**
+   * Returns true if the master is closed, false if not.
+   * @return if master is closed
+   */
   public boolean isClosed();
-  // is the server shutdown
-  public void shutdown();
 }

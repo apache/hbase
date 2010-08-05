@@ -1,21 +1,153 @@
 List of things todo for branch, including comments from reviews not yet
 implemented.
 
+harder stuff
+---
 
-Now:
+* make final decisions on root/meta timeouts.  almost everyone is coordinating
+  access through CatalogTracker which should make it easy to standardize.
+  if there are operations that should just retry indefinitely, they need to
+  resubmit themselves to their executor service.
+
+* move splits to RS side, integrate new patch from stack on trunk
+  might need a new CREATED unassigned now, or new rpc, but get rid of sending
+  split notification on heartbeat?
+  how to handle splits concurrent with disable?
+
+* review master startup order
+  we should use cluster flag in zk to signal RS to
+  start rather than master availability and between master up and cluster up
+  the master can do bulk of it's initialization.
+
+* figure what to do with client table admin ops (flush, split, compact)
+  (direct to RS rpc calls are in place, need to update client)
+
+* on region open (and wherever split children notify master) should check if
+  if the table is disabled and should close the regions... maybe.
+
+* in RootEditor there is a race condition between delete and watch?
+
+* review FileSystemManager calls
+
+* there are some races with master wanting to connect for rpc
+  to regionserver and the rs starting its rpc server, need to address
+
+* figure how to handle the very rare but possible race condition where two
+  RSs will update META and the later one can squash the valid one if there was
+  a long gc pause
+  
+* review synchronization in AssignmentManager
+
+* migrate TestMasterTransitions or make new?
+
+* fix or remove last couple master tests that used RSOQ
+
+* write new tests!!!
+
+
+somewhat easier stuff
+---
+
+* regionserver exit and expiration need to be finished in ServerManager
+
+* jsp pages borked
+
+* make sync calls for enable/disable (check and verify methods?)
+  this still needs some love and testing but should be much easier to control now
+
+* integrate load balancing
+  implemented but need to start a thread or chore, each time, wait for no
+  regions in transition, generate and iterate the plan, putting it in-memory
+  and then triggering the assignment.  if the master crashes mid-balance,
+  it should finish up to the point of the last CLOSE RPC it sent out to an RS.
+  Regions will be sitting in CLOSED in ZK, failover master will pick it up,
+  re-executes the ClosedRegionHandler() on it
 
 * synchronize all access to the boolean in ActiveMasterManager
+  (now this is probably just move it to extend ZKNodeTracker)
 
-* Remove TODO in HCM about Abortable interface
+* update client to use new admin functions straight to rs
+  possibly migrate client to use CatalogTracker?
 
-Think about:
 
-* renaming master file manager?  MasterFS/MasterFileSystem
+notes from 8/4 (with what i did tonight for them, which is most of what is different in this diff)
+---
+
+* in CatalogTracker need to stabilize on one getRoot and one getMeta method to
+  use that waits and uses the default wait-for-catalogs timeout.
+  
+  We should get rid of the 'refresh' boolean that I have in there and
+  should always ping the server to ensure it is serving the region before we
+  return it.  If we do eventually drop root and put the meta locations into zk
+  we would no longer need this, so will not always have to pay this tax.
+  
+  >>  This is done.  You pass default timeout in constructor.  Two methods now are:
+
+      waitForRootServerConnectionDefault()
+      waitForMetaServerConnectionDefault()
+
+
+* ROOT changes
+
+  RootEditor -> RootLocationEditor, delete -> unset
+
+  Change the way we unset the root location.  Set the data to null rather than
+  deleting the node.  Requires changes to RootLocationEditor and RootRegionTracker.
+
+  >>  Thought there was a race condition here, but there is not.  In fact, we do
+  not even need to set the watch in the delete method.  It is already properly
+  being handled by RootRegionTracker.
+
+
+* In AssignmentManager.processFailure() need to insert RegionState into RIT map
+
+  >>  This is done.  This needs tests but I think failover is all in place now.
+
+
+* On RS-side, make separate OpenRootHandler and OpenMetaHandler
+
+  >>  Added four new handlers for open/close of root/meta and associated
+      executors
+
+
+* Add priorities to Opened/Closed handlers on Master
+
+  >>  Added ROOT, META, USER priorities
+
+
+* In RegionTransitionData, store the actual byte[] regionName rather than
+  the encoded name
+
+  >>  Done.  We should also get in practice of naming variables encodedName if
+      it is that.
+
+
+* Executor services need to be using a priority queue
+
+  >>  Done.  I think all stuff to set pool size and add priorities is in.
+
+
+* In EventType, completely remove differentiating between Master and RS.
+  This means for a given EventType, it will map to the same handler whether it
+  is on RS or Master.
+
+  >>  Done.
+
+  Also in EventType, remove fromByte() and use an ordinal() method
+  
+  >>  Done.  Can we remove even having the (int) values for the enums now?
 
 
 Later:
 
+* renaming master file manager?  MasterFS/MasterFileSystem
+
 * ServerStatus/MasterStatus
+
+  + We now have:  Abortable as the base class (M, RS, and Client implement abort())
+  +               ServerController (M and RS implement getZK/ServerName/Info/etc)
+  +               RegionServerController (RS, definitely the hacky one)
+  +               MasterController (get/set of shutdown, close, etc)
 
   - These need new names to be more descriptive (ServerControl?)
   - They should have a very clear purpose that adds value beyond passing
@@ -26,7 +158,7 @@ Later:
 
 * HBaseEventHandler/HBaseEventType/HBaseExecutorService
 
-  - After ZK changes, renamed to EventHandler/EventType
+  X (done) After ZK changes, renamed to EventHandler/EventType
   - Currently multiple types map to a single handler, we may want 1-to-1
   - Need to do a full review of the semantics of these once bulk of
     master rewrite is done

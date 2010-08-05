@@ -34,13 +34,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
- * This class abstract a bunch of operations the HMaster needs to interact with 
- * the underlying file system, including splitting log files, checking file 
+ * This class abstract a bunch of operations the HMaster needs to interact with
+ * the underlying file system, including splitting log files, checking file
  * system status, etc.
  */
 public class FileSystemManager {
@@ -48,7 +49,7 @@ public class FileSystemManager {
   // HBase configuration
   Configuration conf;
   // master status
-  MasterStatus masterStatus;
+  MasterController masterStatus;
   // Keep around for convenience.
   private final FileSystem fs;
   // Is the fileystem ok?
@@ -59,8 +60,8 @@ public class FileSystemManager {
   private final Path rootdir;
   // create the split log lock
   final Lock splitLogLock = new ReentrantLock();
-  
-  public FileSystemManager(Configuration conf, MasterStatus masterStatus) throws IOException {
+
+  public FileSystemManager(Configuration conf, MasterController masterStatus) throws IOException {
     this.conf = conf;
     this.masterStatus = masterStatus;
     // Set filesystem to be that of this.rootdir else we get complaints about
@@ -105,7 +106,7 @@ public class FileSystemManager {
   public Path getOldLogDir() {
     return this.oldLogDir;
   }
-  
+
   /**
    * Checks to see if the file system is still accessible.
    * If not, sets closed
@@ -123,7 +124,7 @@ public class FileSystemManager {
     }
     return this.fsOk;
   }
-  
+
   /**
    * @return HBase root dir.
    * @throws IOException
@@ -131,20 +132,22 @@ public class FileSystemManager {
   public Path getRootDir() {
     return this.rootdir;
   }
-  
+
   public Lock getSplitLogLock() {
     return splitLogLock;
   }
-  
-  /*
+
+  /**
    * Inspect the log directory to recover any log file without
-   * ad active region server.
+   * an active region server.
    */
   public void splitLogAfterStartup() {
     Path logsDirPath =
       new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
     try {
-      if (!this.fs.exists(logsDirPath)) return;
+      if (!this.fs.exists(logsDirPath)) {
+        return;
+      }
     } catch (IOException e) {
       throw new RuntimeException("Could exists for " + logsDirPath, e);
     }
@@ -179,8 +182,8 @@ public class FileSystemManager {
       }
     }
   }
-  
-  /*
+
+  /**
    * Get the rootdir.  Make sure its wholesome and exists before returning.
    * @param rd
    * @param conf
@@ -238,7 +241,7 @@ public class FileSystemManager {
     }
   }
 
-  /*
+  /**
    * @param hri Set all family block caching to <code>b</code>
    * @param b
    */
@@ -249,5 +252,30 @@ public class FileSystemManager {
         hcd.setInMemory(b);
       }
     }
+  }
+
+  public void deleteRegion(HRegionInfo region) throws IOException {
+    fs.delete(HRegion.getRegionDir(rootdir, region), true);
+  }
+
+  public void deleteTable(byte[] tableName) throws IOException {
+    fs.delete(new Path(rootdir, Bytes.toString(tableName)), true);
+  }
+
+  public void updateRegionInfo(HRegionInfo region) {
+    // TODO implement this.  i think this is currently broken in trunk i don't
+    //      see this getting updated.
+    //      @see HRegion.checkRegioninfoOnFilesystem()
+  }
+
+  public void addFamily(HRegionInfo region, byte[] familyName) {
+    // TODO Looks like the family directory is just created on the first flush?
+  }
+
+  public void deleteFamily(HRegionInfo region, byte[] familyName)
+  throws IOException {
+    fs.delete(Store.getStoreHomedir(
+        new Path(rootdir, region.getTableDesc().getNameAsString()),
+        region.getEncodedName(), familyName), true);
   }
 }

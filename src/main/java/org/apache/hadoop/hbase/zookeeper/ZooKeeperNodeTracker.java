@@ -35,13 +35,13 @@ import org.apache.zookeeper.KeeperException;
 public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
 
   /** Path of node being tracked */
-  private String node;
+  protected String node;
 
   /** Data of the node being tracked */
   private byte [] data;
 
   /** Used to abort if a fatal error occurs */
-  private Abortable abortable;
+  protected Abortable abortable;
 
   /**
    * Constructs a new ZK node tracker.
@@ -93,6 +93,23 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
   throws InterruptedException {
     while(data == null) {
       wait();
+    }
+    return data;
+  }
+
+  /**
+   * Gets the data of the node, blocking until the node is available or the
+   * specified timeout has elapsed.
+   *
+   * @param timeout maximum time to wait for the node data to be available,
+   *                in milliseconds
+   * @return data of the node
+   * @throws InterruptedException if the waiting thread is interrupted
+   */
+  public synchronized byte [] blockUntilAvailable(long timeout)
+  throws InterruptedException {
+    while(data == null) {
+      wait(timeout);
     }
     return data;
   }

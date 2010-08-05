@@ -24,7 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -43,88 +43,77 @@ import org.apache.commons.logging.LogFactory;
  * HBEventHandler class and create an event type that submits to this service.
  *
  */
-public class HBaseExecutorService
-{
+public class HBaseExecutorService {
   private static final Log LOG = LogFactory.getLog(HBaseExecutorService.class);
   // default number of threads in the pool
   private int corePoolSize = 1;
-  // max number of threads - maximum concurrency
-  private int maximumPoolSize = 5;
   // how long to retain excess threads
   private long keepAliveTimeInMillis = 1000;
   // the thread pool executor that services the requests
   ThreadPoolExecutor threadPoolExecutor;
   // work queue to use - unbounded queue
-  BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<Runnable>();
+  BlockingQueue<Runnable> workQueue = new PriorityBlockingQueue<Runnable>();
   // name for this executor service
   String name;
   // hold the all the executors created in a map addressable by their names
   static Map<String, HBaseExecutorService> executorServicesMap =
     Collections.synchronizedMap(new HashMap<String, HBaseExecutorService>());
 
-  
   /**
-   * The following is a list of names for the various executor services in both 
+   * The following is a list of names for the various executor services in both
    * the master and the region server.
    */
   public enum HBaseExecutorServiceType {
-    NONE                       (-1),
-    MASTER_CLOSEREGION         (1),
-    MASTER_OPENREGION          (2);
-    
-    private final int value;
-    
-    HBaseExecutorServiceType(int intValue) {
-      this.value = intValue;
-    }
-    
-    public void startExecutorService(String serverName) {
-      // if this is NONE then there is no executor to start
-      if(value == NONE.value) {
-        throw new RuntimeException("Cannot start NONE executor type.");
-      }
+
+    // Master executor services
+    MASTER_CLOSE_REGION        (1),
+    MASTER_OPEN_REGION         (2),
+    MASTER_SERVER_OPERATIONS   (3),
+    MASTER_TABLE_OPERATIONS    (4),
+
+    // RegionServer executor services
+    RS_OPEN_REGION             (20),
+    RS_OPEN_ROOT               (21),
+    RS_OPEN_META               (22),
+    RS_CLOSE_REGION            (23),
+    RS_CLOSE_ROOT              (24),
+    RS_CLOSE_META              (25);
+
+    HBaseExecutorServiceType(int value) {}
+
+    public void startExecutorService(String serverName, int maxThreads) {
       String name = getExecutorName(serverName);
       if(HBaseExecutorService.isExecutorServiceRunning(name)) {
         LOG.debug("Executor service " + toString() + " already running on " + serverName);
         return;
       }
       LOG.debug("Starting executor service [" + name + "]");
-      HBaseExecutorService.startExecutorService(name);
+      HBaseExecutorService.startExecutorService(name, maxThreads);
     }
-    
+
     public HBaseExecutorService getExecutor(String serverName) {
-      // if this is NONE then there is no executor
-      if(value == NONE.value) {
-        return null;
-      }
       return HBaseExecutorService.getExecutorService(getExecutorName(serverName));
     }
-    
+
     public String getExecutorName(String serverName) {
-      // if this is NONE then there is no executor
-      if(value == NONE.value) {
-        return null;
-      }
       return (this.toString() + "-" + serverName);
     }
   }
-
-
 
   /**
    * Start an executor service with a given name. If there was a service already
    * started with the same name, this throws a RuntimeException.
    * @param name Name of the service to start.
    */
-  public static void startExecutorService(String name) {
+  public static void startExecutorService(String name, int maxThreads) {
     if(executorServicesMap.get(name) != null) {
       throw new RuntimeException("An executor service with the name " + name + " is already running!");
     }
-    HBaseExecutorService hbes = new HBaseExecutorService(name);
+    HBaseExecutorService hbes = new HBaseExecutorService(name, maxThreads);
     executorServicesMap.put(name, hbes);
     LOG.debug("Starting executor service: " + name);
   }
-  
+
   public static boolean isExecutorServiceRunning(String name) {
     return (executorServicesMap.containsKey(name));
   }
@@ -140,7 +129,7 @@ public class HBaseExecutorService
     }
     return executor;
   }
-  
+
   public static void shutdown() {
     for(Entry<String, HBaseExecutorService> entry : executorServicesMap.entrySet()) {
       entry.getValue().threadPoolExecutor.shutdown();
@@ -148,16 +137,11 @@ public class HBaseExecutorService
     executorServicesMap.clear();
   }
 
-  protected HBaseExecutorService(String name) {
+  protected HBaseExecutorService(String name, int maxThreads) {
     this.name = name;
     // create the thread pool executor
-    threadPoolExecutor = new ThreadPoolExecutor(
-                                corePoolSize,
-                                maximumPoolSize,
-                                keepAliveTimeInMillis,
-                                TimeUnit.MILLISECONDS,
-                                workQueue
-                                );
+    threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, maxThreads,
+        keepAliveTimeInMillis, TimeUnit.MILLISECONDS, workQueue);
     // name the threads for this threadpool
     threadPoolExecutor.setThreadFactory(new NamedThreadFactory(name));
   }
