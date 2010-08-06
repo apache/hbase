@@ -3,9 +3,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hbase</groupId>
-  <artifactId>public-branch-master-rewrite</artifactId>
+  <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>${hbase.version}</version>
+    <version>0.89.0-SNAPSHOT</version>
   <name>HBase</name>
   <description>
   HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need random, realtime read/write access to your Big Data.
@@ -52,7 +52,8 @@
       <post>user@hbase.apache.org</post>
       <archive>http://mail-archives.apache.org/mod_mbox/hbase-user/</archive>
       <otherArchives>
-        <otherArchive>http://dir.gmane.org/gmane.comp.java.hbase.user</otherArchive>
+        <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.user</otherArchive>
+        <otherArchive>http://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
@@ -62,7 +63,8 @@
       <post>dev@hbase.apache.org</post>
       <archive>http://mail-archives.apache.org/mod_mbox/hbase-dev/</archive>
       <otherArchives>
-        <otherArchive>http://dir.gmane.org/gmane.comp.java.hbase.devel</otherArchive>
+        <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.devel</otherArchive>
+        <otherArchive>http://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
@@ -286,6 +288,37 @@
 
     <plugins>
       <plugin>
+          <groupId>com.agilejava.docbkx</groupId>
+          <artifactId>docbkx-maven-plugin</artifactId>
+          <version>2.0.10</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>generate-html</goal>
+            </goals>
+            <phase>pre-site</phase>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.docbook</groupId>
+            <artifactId>docbook-xml</artifactId>
+            <version>4.4</version>
+            <scope>runtime</scope>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <xincludeSupported>true</xincludeSupported>
+          <chunkedOutput>true</chunkedOutput>
+          <useIdAsFilename>true</useIdAsFilename>
+          <targetDirectory>
+
+          ${basedir}/target/site/
+
+          </targetDirectory>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <!-- THIS might not be doable
         <executions>
@@ -410,6 +443,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.5</version>
         <executions>
           <execution>
             <id>add-jspc-source</id>
@@ -443,8 +477,7 @@
   <properties>
     <compileSource>1.6</compileSource>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <hbase.version>0.21.0-SNAPSHOT</hbase.version>
-    <hadoop.version>0.20.3-append-r956776+1240</hadoop.version>
+    <hadoop.version>0.20.3-append-r964955-1240</hadoop.version>
 
     <commons-cli.version>1.2</commons-cli.version>
     <commons-logging.version>1.1.1</commons-logging.version>
@@ -580,21 +613,6 @@
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
     </dependency>
-
-    <!--
-      This is highly dubious!
-
-      We need SLF4J >= 1.5.6 and Thrift depends on that version.
-      hadoop-core on the other hand depends on SLF4J 1.4.3 (even though it is optional)
-      and Mavens dependency resolution mechanism choses the 'nearest' dependency in case
-      of a conflict of dependencies on the same level. The nearest is always the one
-      that was defined first in the pom:
-      http://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html
-
-      That's why we've added an explicit dependency to SFL4J-API even though we don't need it.
-      Make sure to check the version of SLF4J Hadoop and Thrift depend on when you upgrade
-      one of them.
-    -->
     <dependency>
       <groupId>org.apache.thrift</groupId>
       <artifactId>thrift</artifactId>
@@ -720,19 +738,9 @@
 
     <!-- Avro dependencies -->
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>1.4.3</version>
-    </dependency>
-    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>avro</artifactId>
       <version>1.3.2</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>1.4.3</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
@@ -763,11 +771,6 @@
      <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-test</artifactId>
-    </dependency>
-     <dependency>
-       <groupId>com.google.guava</groupId>
-       <artifactId>guava</artifactId>
-       <version>${guava.version}</version>
     </dependency>
   </dependencies>
 
@@ -820,6 +823,20 @@
       <plugin>
         <artifactId>maven-project-info-reports-plugin</artifactId>
         <version>2.1.2</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>project-team</report>
+              <report>mailing-list</report>
+              <report>cim</report>
+              <report>issue-tracking</report>
+              <report>license</report>
+              <report>scm</report>
+              <report>index</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+
       </plugin>
       <!-- Disabled for now.
       <plugin>
@@ -852,6 +869,7 @@
         <configuration>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
+          <templateFile>src/site/site.vm</templateFile>
         </configuration>
       </plugin>
       <plugin>
@@ -860,6 +878,14 @@
         <configuration>
           <docfilessubdirs>true</docfilessubdirs>
         </configuration>
+        <reportSets>
+          <reportSet>
+            <id>default</id>
+            <reports>
+              <report>javadoc</report>
+            </reports>
+          </reportSet>
+        </reportSets>
         <!--
           This is probably not needed, given the smallness of the HBase source code, but left here in case
           <minmemory>128m</minmemory>
@@ -908,12 +934,10 @@
         <artifactId>taglist-maven-plugin</artifactId>
         <version>2.4</version>
       </plugin>
-      -->
       <plugin>
         <artifactId>maven-surefire-report-plugin</artifactId>
         <version>2.5</version>
       </plugin>
-      <!--
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
         <version>2.1</version>
@@ -922,6 +946,7 @@
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
+        <version>0.6</version>
       </plugin>
     </plugins>
   </reporting>
