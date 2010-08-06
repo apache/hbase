@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MasterAddressTracker;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -58,7 +59,6 @@ import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.regionserver.MasterAddressManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
@@ -201,7 +201,7 @@ public class HConnectionManager {
     // ZooKeeper reference
     private ZooKeeperWatcher zooKeeper;
     // ZooKeeper-based master address tracker
-    private MasterAddressManager masterAddressManager;
+    private MasterAddressTracker masterAddressTracker;
 
     private final Object rootRegionLock = new Object();
     private final Object metaRegionLock = new Object();
@@ -261,9 +261,9 @@ public class HConnectionManager {
 
       // initialize zookeeper and master address manager
       getZooKeeperWatcher();
-      masterAddressManager = new MasterAddressManager(zooKeeper, this);
-      zooKeeper.registerListener(masterAddressManager);
-      masterAddressManager.start();
+      masterAddressTracker = new MasterAddressTracker(zooKeeper, this);
+      zooKeeper.registerListener(masterAddressTracker);
+      masterAddressTracker.start();
 
       this.master = null;
       this.masterChecked = false;
@@ -301,14 +301,6 @@ public class HConnectionManager {
         }
       }
 
-      // If not, we need to connect to ZK to get the
-      ZooKeeperWatcher zk;
-      try {
-        zk = getZooKeeperWatcher();
-      } catch (IOException e) {
-        throw new ZooKeeperConnectionException(e);
-      }
-
       HServerAddress masterLocation = null;
       synchronized (this.masterLock) {
         for (int tries = 0;
@@ -318,7 +310,7 @@ public class HConnectionManager {
         tries++) {
 
           try {
-            masterLocation = masterAddressManager.getMasterAddress();
+            masterLocation = masterAddressTracker.getMasterAddress();
             if(masterLocation == null) {
               LOG.info("ZooKeeper available but no active master location found");
               throw new MasterNotRunningException();
@@ -1596,7 +1588,9 @@ public class HConnectionManager {
     }
 
     @Override
-    public void abort() {
+    public void abort(final String msg, Throwable t) {
+      if (t != null) LOG.fatal(msg, t);
+      else LOG.fatal(msg);
       if(zooKeeper != null) {
         zooKeeper.close();
         zooKeeper = null;

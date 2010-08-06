@@ -21,13 +21,13 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.hbase.ServerController;
+import org.apache.hadoop.hbase.Server;
 
 /**
  * Defines the set of functions implemented by the HMaster related to control
  * of the master process and cluster shutdown.
  */
-public interface MasterController extends ServerController {
+public interface MasterController extends Server {
 
   // TODO: getServerManager and getFileManager exist because each references the
   //       other in a single call.  should figure how to clean this up.

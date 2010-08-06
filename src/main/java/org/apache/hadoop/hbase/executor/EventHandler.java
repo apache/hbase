@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.ServerController;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.HBaseExecutorService.HBaseExecutorServiceType;
 
 
@@ -49,7 +49,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   // type of event this object represents
   protected EventType eventType;
   // server controller
-  protected ServerController server;
+  protected Server server;
   // listeners that are called before and after an event is processed
   protected static List<EventHandlerListener> eventHandlerListeners =
     Collections.synchronizedList(new ArrayList<EventHandlerListener>());
@@ -190,7 +190,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   /**
    * Default base class constructor.
    */
-  public EventHandler(ServerController server, EventType eventType) {
+  public EventHandler(Server server, EventType eventType) {
     this.server = server;
     this.eventType = eventType;
     seqid = seqids.incrementAndGet();

@@ -1,5 +1,5 @@
-/*
- * Copyright 2010 The Apache Software Foundation
+/**
+ * Copyright 2007 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,18 +17,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.util;
 
-package org.apache.hadoop.hbase;
+import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AbstractMergeTestBase;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.HMerge;
 
-public class HBaseConfTool {
+/** Tests region merging */
+public class TestMergeMeta extends AbstractMergeTestBase {
 
-  public static void main(String args[]) {
-    if (args.length < 1)
-      return;
+  /** constructor
+   * @throws Exception
+   */
+  public TestMergeMeta() throws Exception {
+    super(false);
+    conf.setLong("hbase.client.pause", 1 * 1000);
+    conf.setInt("hbase.client.retries.number", 2);
+  }
 
-    Configuration conf = HBaseConfiguration.create();
-    System.out.println(conf.get(args[0]));
+  /**
+   * test case
+   * @throws IOException
+   */
+  public void testMergeMeta() throws IOException {
+    assertNotNull(dfsCluster);
+    HMerge.merge(conf, dfsCluster.getFileSystem(), HConstants.META_TABLE_NAME);
   }
 }

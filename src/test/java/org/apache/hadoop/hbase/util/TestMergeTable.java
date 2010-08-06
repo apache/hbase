@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2007 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,13 +17,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.util;
 
-import java.util.Comparator;
+import java.io.IOException;
 
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.hbase.AbstractMergeTestBase;
+import org.apache.hadoop.hbase.util.HMerge;
 
 /**
- * Interface that brings writable and comparable together
+ * Tests merging a normal table's regions
  */
-public interface WritableComparator<T> extends Writable, Comparator<T> {}
+public class TestMergeTable extends AbstractMergeTestBase {
+
+  /**
+   * Test case
+   * @throws IOException
+   */
+  public void testMergeTable() throws IOException {
+    assertNotNull(dfsCluster);
+    HMerge.merge(conf, dfsCluster.getFileSystem(), desc.getName());
+  }
+}

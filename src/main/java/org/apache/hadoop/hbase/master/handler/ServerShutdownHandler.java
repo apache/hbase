@@ -19,13 +19,13 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
-import org.apache.hadoop.hbase.ServerController;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
 
 
 public class ServerShutdownHandler extends EventHandler {
 
-  public ServerShutdownHandler(ServerController server) {
+  public ServerShutdownHandler(Server server) {
     super(server, EventType.M_SERVER_SHUTDOWN);
   }
 
@@ -33,5 +33,4 @@ public class ServerShutdownHandler extends EventHandler {
   public void process() {
     // TODO: implement this
   }
-
 }

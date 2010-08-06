@@ -23,11 +23,11 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.ServerController;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.util.Progressable;
 
-public interface RegionServerController extends ServerController {
+public interface RegionServerController extends Server {
 
   // this is unfortunate but otherwise all the implementation of region
   // open/close must happen in HRS itself and not in handlers

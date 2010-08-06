@@ -205,27 +205,6 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Gets the region info for the region with the specified encoded name.
-   * <p>
-   * Currently this does a full scan of the regions map looking for a region
-   * with the specified encoded name.
-   * <p>
-   * Returns null if none found.
-   * @param regionName
-   * @return
-   * @deprecated should be able to remove this now?
-   */
-  @Deprecated
-  private HRegionInfo getRegionInfoFromEncoded(String encodedName) {
-    for(HRegionInfo regionInfo : regions.keySet()) {
-      if(regionInfo.getEncodedName().equals(encodedName)) {
-        return regionInfo;
-      }
-    }
-    return null;
-  }
-
-  /**
    * Handles various states an unassigned node can be in.
    * <p>
    * Method is called when a state change is suspected for an unassigned node.
@@ -346,8 +325,7 @@ public class AssignmentManager extends ZooKeeperListener {
           }
           handleRegion(data);
         } catch (KeeperException e) {
-          LOG.error("Unexpected ZK exception reading unassigned node data", e);
-          master.abort();
+          master.abort("Unexpected ZK exception reading unassigned node data", e);
         }
       }
     }
@@ -376,8 +354,7 @@ public class AssignmentManager extends ZooKeeperListener {
           }
           handleRegion(data);
         } catch (KeeperException e) {
-          LOG.error("Unexpected ZK exception reading unassigned node data", e);
-          master.abort();
+          master.abort("Unexpected ZK exception reading unassigned node data", e);
         }
       }
     }
@@ -408,8 +385,7 @@ public class AssignmentManager extends ZooKeeperListener {
             handleRegion(RegionTransitionData.fromBytes(newNode.getData()));
           }
         } catch(KeeperException e) {
-          LOG.error("Unexpected ZK exception reading unassigned children", e);
-          master.abort();
+          master.abort("Unexpected ZK exception reading unassigned children", e);
         }
       }
     }
@@ -519,8 +495,7 @@ public class AssignmentManager extends ZooKeeperListener {
           return;
         }
       } catch (KeeperException e) {
-        LOG.error("Unexpected ZK exception creating/setting node OFFLINE", e);
-        master.abort();
+        master.abort("Unexpected ZK exception creating/setting node OFFLINE", e);
         return;
       }
       // Pickup existing plan or make a new one

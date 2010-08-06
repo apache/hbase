@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2008 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,28 +17,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 
-/** Tests region merging */
-public class TestMergeMeta extends AbstractMergeTestBase {
+/**
+ * Reports a problem with a lease
+ */
+public class LeaseException extends DoNotRetryIOException {
 
-  /** constructor
-   * @throws Exception
-   */
-  public TestMergeMeta() throws Exception {
-    super(false);
-    conf.setLong("hbase.client.pause", 1 * 1000);
-    conf.setInt("hbase.client.retries.number", 2);
+  private static final long serialVersionUID = 8179703995292418650L;
+
+  /** default constructor */
+  public LeaseException() {
+    super();
   }
 
   /**
-   * test case
-   * @throws IOException
+   * @param message
    */
-  public void testMergeMeta() throws IOException {
-    assertNotNull(dfsCluster);
-    HMerge.merge(conf, dfsCluster.getFileSystem(), HConstants.META_TABLE_NAME);
+  public LeaseException(String message) {
+    super(message);
   }
 }

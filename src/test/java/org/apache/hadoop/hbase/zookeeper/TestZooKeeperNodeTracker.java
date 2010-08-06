@@ -216,12 +216,6 @@ public class TestZooKeeperNodeTracker {
         Abortable abortable) {
       super(watcher, node, abortable);
     }
-
-    @Override
-    protected Log getLog() {
-      return LOG;
-    }
-
   }
 
   public static class TestingZKListener extends ZooKeeperListener {
@@ -279,7 +273,7 @@ public class TestZooKeeperNodeTracker {
 
   public static class StubAbortable implements Abortable {
     @Override
-    public void abort() {}
+    public void abort(final String msg, final Throwable t) {}
   }
 
   public static class StubWatcher implements Watcher {

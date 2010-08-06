@@ -23,7 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.ServerController;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -56,7 +56,7 @@ public class OpenedRegionHandler extends EventHandler {
     }
   };
 
-  public OpenedRegionHandler(ServerController server,
+  public OpenedRegionHandler(Server server,
       AssignmentManager assignmentManager, RegionTransitionData data,
       HRegionInfo regionInfo, HServerInfo serverInfo) {
     super(server, EventType.RS2ZK_REGION_OPENED);
@@ -87,8 +87,7 @@ public class OpenedRegionHandler extends EventHandler {
       ZKAssign.deleteOpenedNode(server.getZooKeeper(),
           regionInfo.getEncodedName());
     } catch (KeeperException e) {
-      LOG.fatal("Error deleting OPENED node in ZK", e);
-      server.abort();
+      server.abort("Error deleting OPENED node in ZK", e);
     }
     assignmentManager.regionOnline(regionInfo, serverInfo);
     LOG.debug("Opened region " + regionInfo);

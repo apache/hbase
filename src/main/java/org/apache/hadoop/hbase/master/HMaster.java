@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -76,9 +75,9 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
+import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -130,8 +129,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
   // Region server tracker
   private RegionServerTracker regionServerTracker;
 
-  // A Sleeper that sleeps for threadWakeFrequency; sleep if nothing todo.
-  private final Sleeper sleeper;
   // RPC server for the HMaster
   private final HBaseServer rpcServer;
   // Address of the HMaster
@@ -215,9 +212,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
         conf.getInt("hbase.master.catalog.timeout", 30000));
     assignmentManager = new AssignmentManager(zooKeeper, this,
         serverManager, catalogTracker);
-    // create a sleeper to sleep for a configured wait frequency
-    int threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
-    this.sleeper = new Sleeper(threadWakeFrequency, this.closed);
 
     /*
      * 4. Block on becoming the active master.
@@ -939,7 +933,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
   }
 
   @Override
-  public void abort() {
+  public void abort(final String msg, final Throwable t) {
+    if (t != null) LOG.fatal(msg, t);
+    else LOG.fatal(msg);
     this.startShutdown();
   }
 
@@ -951,12 +947,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
   @Override
   public String getServerName() {
     return address.toString();
-  }
-
-  @Override
-  public long getTimeout() {
-    // TODO: use configuration
-    return 5000;
   }
 
   public CatalogTracker getCatalogTracker() {

@@ -120,8 +120,7 @@ public class OpenRegionHandler extends EventHandler {
                 }
                 openingInteger.set(vsn);
               } catch (KeeperException e) {
-                LOG.error("ZK exception refreshing OPENING node", e);
-                server.abort();
+                server.abort("ZK exception refreshing OPENING node", e);
               }
             }
       });

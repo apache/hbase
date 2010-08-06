@@ -76,9 +76,4 @@ public class ClusterStatusTracker extends ZooKeeperNodeTracker {
           "state node (" + watcher.clusterStateZNode + ") not found");
     }
   }
-
-  @Override
-  protected Log getLog() {
-    return LOG;
-  }
 }

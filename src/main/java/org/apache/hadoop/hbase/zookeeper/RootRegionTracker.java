@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -29,8 +27,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Tracks the root region server location node in zookeeper.
  */
 public class RootRegionTracker extends ZooKeeperNodeTracker {
-  private static final Log LOG = LogFactory.getLog(RootRegionTracker.class);
-
   /**
    * Creates a root region location tracker.
    *
@@ -72,10 +68,5 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
   throws InterruptedException {
     byte [] data = super.blockUntilAvailable(timeout);
     return data == null ? null : new HServerAddress(Bytes.toString(data));
-  }
-
-  @Override
-  protected Log getLog() {
-    return LOG;
   }
 }

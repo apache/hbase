@@ -25,7 +25,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerController;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
@@ -41,7 +41,7 @@ public class DisableTableHandler extends EventHandler {
   private final CatalogTracker catalogTracker;
   private final AssignmentManager assignmentManager;
 
-  public DisableTableHandler(ServerController server, byte [] tableName,
+  public DisableTableHandler(Server server, byte [] tableName,
       CatalogTracker catalogTracker, AssignmentManager assignmentManager) {
     super(server, EventType.C2M_DISABLE_TABLE);
     this.tableName = tableName;

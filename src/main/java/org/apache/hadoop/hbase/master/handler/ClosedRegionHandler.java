@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.master.handler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerController;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -59,7 +59,7 @@ public class ClosedRegionHandler extends EventHandler {
     }
   };
 
-  public ClosedRegionHandler(ServerController server,
+  public ClosedRegionHandler(Server server,
       AssignmentManager assignmentManager, RegionTransitionData data,
       HRegionInfo regionInfo) {
     super(server, EventType.RS2ZK_REGION_CLOSED);
@@ -96,8 +96,7 @@ public class ClosedRegionHandler extends EventHandler {
             "not exist");
         return;
       } catch (KeeperException e) {
-        LOG.fatal("Error deleting CLOSED node in ZK", e);
-        server.abort();
+        server.abort("Error deleting CLOSED node in ZK", e);
       }
       assignmentManager.regionOffline(regionInfo);
       return;
@@ -106,5 +105,4 @@ public class ClosedRegionHandler extends EventHandler {
     assignmentManager.setOffline(regionInfo);
     assignmentManager.assign(regionInfo);
   }
-
 }

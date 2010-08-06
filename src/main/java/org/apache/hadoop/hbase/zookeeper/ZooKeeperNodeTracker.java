@@ -35,13 +35,13 @@ import org.apache.zookeeper.KeeperException;
 public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
 
   /** Path of node being tracked */
-  protected String node;
+  protected final String node;
 
   /** Data of the node being tracked */
   private byte [] data;
 
   /** Used to abort if a fatal error occurs */
-  protected Abortable abortable;
+  protected final Abortable abortable;
 
   /**
    * Constructs a new ZK node tracker.
@@ -78,8 +78,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
         }
       }
     } catch (KeeperException e) {
-      getLog().fatal("Unexpected exception during initialization, aborting", e);
-      abortable.abort();
+      abortable.abort("Unexpected exception during initialization, aborting", e);
     }
   }
 
@@ -139,8 +138,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
           nodeDeleted(path);
         }
       } catch(KeeperException e) {
-        getLog().fatal("Unexpected exception handling nodeCreated event", e);
-        abortable.abort();
+        abortable.abort("Unexpected exception handling nodeCreated event", e);
       }
     }
   }
@@ -155,8 +153,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
           this.data = null;
         }
       } catch(KeeperException e) {
-        getLog().fatal("Unexpected exception handling nodeCreated event", e);
-        abortable.abort();
+        abortable.abort("Unexpected exception handling nodeDeleted event", e);
       }
     }
   }
@@ -167,10 +164,4 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
       nodeCreated(path);
     }
   }
-
-  /**
-   * Gets the logger.  Used to provide more clear log messages.
-   * @return log instance of extending class
-   */
-  protected abstract Log getLog();
 }

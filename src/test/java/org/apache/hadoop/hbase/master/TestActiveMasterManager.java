@@ -243,7 +243,7 @@ public class TestActiveMasterManager {
     public void startShutdown() {}
 
     @Override
-    public void abort() {}
+    public void abort(final String msg, final Throwable t) {}
 
     @Override
     public Configuration getConfiguration() {

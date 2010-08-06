@@ -84,8 +84,7 @@ public class RegionServerTracker extends ZooKeeperListener {
       try {
         ZKUtil.watchAndGetNewChildren(watcher, watcher.rsZNode);
       } catch (KeeperException e) {
-        LOG.error("Unexpected zk exception getting RS nodes", e);
-        abortable.abort();
+        abortable.abort("Unexpected zk exception getting RS nodes", e);
       }
     }
   }

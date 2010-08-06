@@ -48,25 +48,25 @@ public class ActiveMasterManager extends ZooKeeperListener {
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
 
   private final HServerAddress address;
-  private final MasterController status;
+  private final MasterController master;
 
   ActiveMasterManager(ZooKeeperWatcher watcher, HServerAddress address,
       MasterController status) {
     super(watcher);
     this.address = address;
-    this.status = status;
+    this.master = status;
   }
 
   @Override
   public void nodeCreated(String path) {
-    if(path.equals(watcher.masterAddressZNode) && !status.isClosed()) {
+    if(path.equals(watcher.masterAddressZNode) && !master.isClosed()) {
       handleMasterNodeChange();
     }
   }
 
   @Override
   public void nodeDeleted(String path) {
-    if(path.equals(watcher.masterAddressZNode) && !status.isClosed()) {
+    if(path.equals(watcher.masterAddressZNode) && !master.isClosed()) {
       handleMasterNodeChange();
     }
   }
@@ -101,8 +101,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
         }
       }
     } catch (KeeperException ke) {
-      LOG.fatal("Received an unexpected KeeperException, aborting", ke);
-      status.abort();
+      master.abort("Received an unexpected KeeperException, aborting", ke);
     }
   }
 
@@ -125,8 +124,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
         return;
       }
     } catch (KeeperException ke) {
-      LOG.fatal("Received an unexpected KeeperException, aborting", ke);
-      status.abort();
+      master.abort("Received an unexpected KeeperException, aborting", ke);
       return;
     }
     // There is another active master, this is not a cluster startup
@@ -134,9 +132,9 @@ public class ActiveMasterManager extends ZooKeeperListener {
     LOG.info("Another master is already the active master, waiting to become " +
     "the next active master");
     clusterHasActiveMaster.set(true);
-    status.setClusterStartup(false);
+    master.setClusterStartup(false);
     synchronized(clusterHasActiveMaster) {
-      while(clusterHasActiveMaster.get() && !status.isClosed()) {
+      while(clusterHasActiveMaster.get() && !master.isClosed()) {
         try {
           clusterHasActiveMaster.wait();
         } catch (InterruptedException e) {
@@ -144,7 +142,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
           LOG.debug("Interrupted waiting for master to die", e);
         }
       }
-      if(status.isClosed()) {
+      if(master.isClosed()) {
         return;
       }
       // Try to become active master again now that there is no active master

@@ -24,10 +24,10 @@ import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
- * Defines the set of shared functions implemented by all HBase servers (Masters
+ * Defines the set of shared functions implemented by HBase servers (Masters
  * and RegionServers).
  */
-public interface ServerController extends Abortable {
+public interface Server extends Abortable {
   /**
    * Returns the address of the current server.
    */
@@ -53,11 +53,4 @@ public interface ServerController extends Abortable {
    * Return the server RPC connection object
    */
   public ServerConnection getServerConnection();
-
-  /**
-   * Returns the timeout to use for operations such as waiting on root and meta
-   * availability.
-   * @return default timeout to wait for root and meta
-   */
-  public long getTimeout();
 }

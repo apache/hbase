@@ -236,7 +236,7 @@ public class ZooKeeperWatcher implements Watcher {
       case Expired:
         error("Received Expired from ZooKeeper, aborting server");
         if(abortable != null) {
-          abortable.abort();
+          abortable.abort("Received Expired from ZooKeeper, aborting server", null);
         }
         break;
     }

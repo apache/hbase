@@ -1,5 +1,5 @@
-/**
- * Copyright 2008 The Apache Software Foundation
+/*
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,27 +17,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+
+package org.apache.hadoop.hbase.util;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 
 /**
- * Thrown when a value is longer than the specified LENGTH
+ * Tool that prints out a configuration.
+ * Pass the configuration key on the command-line.
  */
-public class ValueOverMaxLengthException extends DoNotRetryIOException {
+public class HBaseConfTool {
+  public static void main(String args[]) {
+    if (args.length < 1) {
+      System.err.println("Usage: HBaseConfTool <CONFIGURATION_KEY>");
+      System.exit(1);
+      return;
+    }
 
-  private static final long serialVersionUID = -5525656352372008316L;
-
-  /**
-   * default constructor
-   */
-  public ValueOverMaxLengthException() {
-    super();
+    Configuration conf = HBaseConfiguration.create();
+    System.out.println(conf.get(args[0]));
   }
-
-  /**
-   * @param message
-   */
-  public ValueOverMaxLengthException(String message) {
-    super(message);
-  }
-
 }

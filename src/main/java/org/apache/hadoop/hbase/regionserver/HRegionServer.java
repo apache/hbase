@@ -66,9 +66,8 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.LeaseListener;
-import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.MasterAddressTracker;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownRowLockException;
@@ -76,7 +75,6 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HMsg.Type;
-import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -96,6 +94,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
@@ -229,7 +228,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private ZooKeeperWatcher zooKeeper;
 
   // master address manager and watcher
-  private MasterAddressManager masterAddressManager;
+  private MasterAddressTracker masterAddressManager;
 
   // catalog tracker
   private CatalogTracker catalogTracker;
@@ -343,7 +342,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         + serverInfo.getServerName(), this);
 
     // create the master address manager, register with zk, and start it
-    masterAddressManager = new MasterAddressManager(zooKeeper, this);
+    masterAddressManager = new MasterAddressTracker(zooKeeper, this);
     zooKeeper.registerListener(masterAddressManager);
     masterAddressManager.start();
 
@@ -2352,13 +2351,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return threadWakeFrequency;
   }
 
-  // ServerStatus
-
-  @Override
-  public void abort() {
-    this.abort("Received abort call");
-  }
-
   @Override
   public HServerAddress getHServerAddress() {
     return this.address;
@@ -2508,11 +2500,5 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public ServerConnection getServerConnection() {
     return connection;
-  }
-
-  @Override
-  public long getTimeout() {
-    // TODO: use configuration
-    return 5000;
   }
 }
