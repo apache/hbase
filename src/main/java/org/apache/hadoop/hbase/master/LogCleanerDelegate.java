@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 /**
@@ -38,4 +37,3 @@ public interface LogCleanerDelegate extends Configurable {
    */
   public boolean isLogDeletable(Path filePath);
 }
-

@@ -142,7 +142,7 @@ public class ServerManager {
    */
   public ServerManager(MasterController masterStatus,
       MasterMetrics masterMetrics,
-      FileSystemManager fileSystemManager) {
+      MasterFileSystem fileSystemManager) {
     this.masterStatus = masterStatus;
     this.masterMetrics = masterMetrics;
     Configuration c = masterStatus.getConfiguration();
@@ -150,13 +150,13 @@ public class ServerManager {
       60 * 1000);
     this.minimumServerCount = c.getInt("hbase.regions.server.count.min", 1);
     this.serverMonitorThread = new ServerMonitor(metaRescanInterval,
-      this.masterStatus.getShutdownRequested());
+      this.masterStatus.isClusterShutdown());
     String n = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this.serverMonitorThread,
       n + ".serverMonitor");
     this.oldLogCleaner = new OldLogsCleaner(
       c.getInt("hbase.master.meta.thread.rescanfrequency",60 * 1000),
-        this.masterStatus.getShutdownRequested(), c,
+        this.masterStatus.isClusterShutdown(), c,
         fileSystemManager.getFileSystem(),
         fileSystemManager.getOldLogDir());
     Threads.setDaemonThreadRunning(oldLogCleaner,
@@ -281,12 +281,12 @@ public class ServerManager {
         this.quiescedServers.incrementAndGet();
       }
     }
-    if (this.masterStatus.getShutdownRequested().get()) {
+    if (this.masterStatus.isClusterShutdown()) {
       if (quiescedServers.get() >= availableServers.get()) {
         // If the only servers we know about are meta servers, then we can
         // proceed with shutdown
         LOG.info("All user tables quiesced. Proceeding with shutdown");
-        this.masterStatus.requestShutdown();
+        this.masterStatus.shutdown();
       }
       if (!this.masterStatus.isClosed()) {
         if (msgs.length > 0 &&
@@ -573,11 +573,6 @@ public class ServerManager {
    * a MSG_REGIONSERVER_STOP.
    */
   void letRegionServersShutdown() {
-    if (!masterStatus.getFileSystemManager().checkFileSystem()) {
-      // Forget waiting for the region servers if the file system has gone
-      // away. Just exit as quickly as possible.
-      return;
-    }
     synchronized (onlineServers) {
       while (onlineServers.size() > 0) {
         LOG.info("Waiting on following regionserver(s) to go down " +

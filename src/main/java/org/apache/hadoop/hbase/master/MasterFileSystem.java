@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -32,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -40,12 +42,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
- * This class abstract a bunch of operations the HMaster needs to interact with
+ * This class abstracts a bunch of operations the HMaster needs to interact with
  * the underlying file system, including splitting log files, checking file
  * system status, etc.
  */
-public class FileSystemManager {
-  private static final Log LOG = LogFactory.getLog(FileSystemManager.class.getName());
+public class MasterFileSystem {
+  private static final Log LOG = LogFactory.getLog(MasterFileSystem.class.getName());
   // HBase configuration
   Configuration conf;
   // master status
@@ -61,8 +63,8 @@ public class FileSystemManager {
   // create the split log lock
   final Lock splitLogLock = new ReentrantLock();
 
-  public FileSystemManager(Configuration conf, MasterController masterStatus) throws IOException {
-    this.conf = conf;
+  public MasterFileSystem(MasterController masterStatus) throws IOException {
+    this.conf = masterStatus.getConfiguration();
     this.masterStatus = masterStatus;
     // Set filesystem to be that of this.rootdir else we get complaints about
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
@@ -133,23 +135,20 @@ public class FileSystemManager {
     return this.rootdir;
   }
 
-  public Lock getSplitLogLock() {
-    return splitLogLock;
-  }
-
   /**
    * Inspect the log directory to recover any log file without
    * an active region server.
+   * @param onlineServers Map of online servers keyed by
+   * {@link HServerInfo#getServerName()}
    */
-  public void splitLogAfterStartup() {
-    Path logsDirPath =
-      new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
+  void splitLogAfterStartup(final Map<String, HServerInfo> onlineServers) {
+    Path logsDirPath = new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
     try {
       if (!this.fs.exists(logsDirPath)) {
         return;
       }
     } catch (IOException e) {
-      throw new RuntimeException("Could exists for " + logsDirPath, e);
+      throw new RuntimeException("Failed exists test on " + logsDirPath, e);
     }
     FileStatus[] logFolders;
     try {
@@ -164,7 +163,7 @@ public class FileSystemManager {
     for (FileStatus status : logFolders) {
       String serverName = status.getPath().getName();
       LOG.info("Found log folder : " + serverName);
-      if(masterStatus.getServerManager().getServerInfo(serverName) == null) {
+      if(onlineServers.get(serverName) == null) {
         LOG.info("Log folder doesn't belong " +
           "to a known region server, splitting");
         this.splitLogLock.lock();
@@ -266,10 +265,6 @@ public class FileSystemManager {
     // TODO implement this.  i think this is currently broken in trunk i don't
     //      see this getting updated.
     //      @see HRegion.checkRegioninfoOnFilesystem()
-  }
-
-  public void addFamily(HRegionInfo region, byte[] familyName) {
-    // TODO Looks like the family directory is just created on the first flush?
   }
 
   public void deleteFamily(HRegionInfo region, byte[] familyName)

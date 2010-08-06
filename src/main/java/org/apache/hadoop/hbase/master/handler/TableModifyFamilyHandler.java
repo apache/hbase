@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.master.FileSystemManager;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterController;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -41,7 +41,7 @@ public class TableModifyFamilyHandler extends TableEventHandler {
 
   public TableModifyFamilyHandler(byte[] tableName,
       HColumnDescriptor familyDesc, MasterController server,
-      CatalogTracker catalogTracker, FileSystemManager fileManager) {
+      CatalogTracker catalogTracker, MasterFileSystem fileManager) {
     super(EventType.C2M_ADD_FAMILY, tableName, server,
         catalogTracker, fileManager);
     this.familyDesc = familyDesc;

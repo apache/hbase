@@ -112,13 +112,20 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @throws IOException e
    */
   public void modifyTable(byte[] tableName, HTableDescriptor htd)
-    throws IOException;
+  throws IOException;
 
   /**
    * Shutdown an HBase cluster.
    * @throws IOException e
    */
   public void shutdown() throws IOException;
+
+  /**
+   * Stop HBase Master only.
+   * Does not shutdown the cluster.
+   * @throws IOException e
+   */
+  public void stopMaster() throws IOException;
 
   /**
    * Return cluster status.

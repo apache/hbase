@@ -916,7 +916,7 @@ public class HBaseAdmin {
   }
 
   /**
-   * Shuts down the HBase instance
+   * Shuts down the HBase cluster
    * @throws IOException if a remote or network exception occurs
    */
   public synchronized void shutdown() throws IOException {

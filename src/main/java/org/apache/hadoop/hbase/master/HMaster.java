@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -94,6 +95,13 @@ import org.apache.zookeeper.Watcher;
  * run the cluster.  All others park themselves in their constructor until
  * master or cluster shutdown or until the active master loses its lease in
  * zookeeper.  Thereafter, all running master jostle to take over master role.
+ * 
+ * <p>The Master can be asked shutdown the cluster. See {@link #shutdown()}.  In
+ * this case it will tell all regionservers to go down and then wait on them
+ * all reporting in that they are down.  This master will then shut itself down.
+ * 
+ * <p>You can also shutdown just this master.  Call {@link #close()}.
+ * 
  * @see HMasterInterface
  * @see HMasterRegionInterface
  * @see Watcher
@@ -110,8 +118,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
   // able to set shutdown flag.  Using AtomicBoolean can pass a reference
   // rather than have them have to know about the hosting Master class.
   final AtomicBoolean closed = new AtomicBoolean(true);
-  // TODO: Is this separate flag necessary?
-  private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
+  // Set if we are to shutdown the cluster.
+  private final AtomicBoolean clusterShutdown = new AtomicBoolean(false);
 
   // The configuration for the Master
   private final Configuration conf;
@@ -134,7 +142,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
   // Address of the HMaster
   private final HServerAddress address;
   // file system manager for the master FS operations
-  private final FileSystemManager fileSystemManager;
+  private final MasterFileSystem fileSystemManager;
 
   private final ServerConnection connection;
   // server manager to deal with region server info
@@ -146,7 +154,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
   private final CatalogTracker catalogTracker;
 
   // True if this is the master that started the cluster.
-  boolean isClusterStartup;
+  boolean clusterStarter;
+
+  /** Set on abort -- usually failure of our zk session
+   */
+  private volatile boolean abort = false;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -192,8 +204,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
      */
     zooKeeper =
       new ZooKeeperWatcher(conf, MASTER + "-" + getHServerAddress(), this);
-    isClusterStartup = 0 ==
-      ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
+    clusterStarter = 0 == ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
 
     /*
      * 3. Initialize master components.
@@ -204,7 +215,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
     this.connection = ServerConnectionManager.getConnection(conf);
     this.metrics = new MasterMetrics(this.getName());
     clusterStatusTracker = new ClusterStatusTracker(zooKeeper, this);
-    fileSystemManager = new FileSystemManager(conf, this);
+    fileSystemManager = new MasterFileSystem(this);
     serverManager = new ServerManager(this, metrics, fileSystemManager);
     regionServerTracker = new RegionServerTracker(zooKeeper, this,
         serverManager);
@@ -229,7 +240,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
     zooKeeper.registerListener(activeMasterManager);
     zooKeeper.registerListener(assignmentManager);
     // Wait here until we are the active master
-    activeMasterManager.blockUntilBecomingActiveMaster();
+    boolean thisMasterStartedCluster =
+      activeMasterManager.blockUntilBecomingActiveMaster();
 
     // TODO: We should start everything here instead of before we become
     //       active master and some after.  Requires change to RS side to not
@@ -257,8 +269,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
   @Override
   public void run() {
     try {
-      if(isClusterStartup()) {
-        // This is a cluster startup, you are the first master.
+      if (this.clusterStarter) {
+        // This master is starting the cluster (its not a preexisting cluster
+        // that this master is joining).
         // Initialize the filesystem, which does the following:
         //   - Creates the root hbase directory in the FS if DNE
         //   - If fresh start, create first ROOT and META regions (bootstrap)
@@ -270,7 +283,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
         // TODO: Do we want to do this before/while/after RSs check in?
         //       It seems that this method looks at active RSs but happens
         //       concurrently with when we expect them to be checking in
-        fileSystemManager.splitLogAfterStartup();
+        fileSystemManager.splitLogAfterStartup(serverManager.getOnlineServers());
       }
       // start up all service threads.
       startServiceThreads();
@@ -288,9 +301,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
       // guarantee that the transition has completed
       assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
       // start assignment of user regions, startup or failure
-      if(isClusterStartup()) {
-        // Create or clear out unassigned node in ZK, read all regions from
-        // META and assign them out.
+      if (this.clusterStarter) {
+        // We're starting up the cluster.  Create or clear out unassigned node
+        // in ZK, read all regions from META and assign them out.
         assignmentManager.processStartup();
       } else {
         // Process existing unassigned nodes in ZK, read all regions from META,
@@ -300,7 +313,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
       LOG.info("HMaster started on " + this.address.toString());
       while (!this.closed.get()) {
         // check if we should be shutting down
-        if (this.shutdownRequested.get()) {
+        if (this.clusterShutdown.get()) {
           if (this.serverManager.numServers() == 0) {
             startShutdown();
             break;
@@ -313,9 +326,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
 
         // wait for an interruption
         // TODO: something better?  we need to check closed and shutdown?
-        synchronized(this.shutdownRequested) {
+        synchronized(this.clusterShutdown) {
           try {
-            this.shutdownRequested.wait();
+            this.clusterShutdown.wait();
           } catch(InterruptedException e) {
             LOG.debug("Main thread interrupted", e);
           }
@@ -333,7 +346,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
     }
 
     // Wait for all the remaining region servers to report in.
-    this.serverManager.letRegionServersShutdown();
+    if (!this.abort) this.serverManager.letRegionServersShutdown();
 
     // Clean up and close up shop
     if (this.infoServer != null) {
@@ -352,21 +365,13 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
   }
 
   /**
-   * Returns true if this master process was responsible for starting the
-   * cluster, false if not.
-   */
-  public boolean isClusterStartup() {
-    return isClusterStartup;
-  }
-
-  /**
    * Sets whether this is a cluster startup or not.  Used by the
    * {@link ActiveMasterManager} to set to false if we determine another master
    * has become the primary.
    * @param isClusterStartup false if another master became active before us
    */
   public void setClusterStartup(boolean isClusterStartup) {
-    this.isClusterStartup = isClusterStartup;
+    this.clusterStarter = isClusterStartup;
   }
 
   public HServerAddress getHServerAddress() {
@@ -402,13 +407,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
   }
 
   /**
-   * Return the file systen manager instance
-   */
-  public FileSystemManager getFileSystemManager() {
-    return fileSystemManager;
-  }
-
-  /**
    * @return Return configuration being used by this server.
    */
   public Configuration getConfiguration() {
@@ -419,8 +417,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
     return this.serverManager;
   }
 
-  public AtomicBoolean getShutdownRequested() {
-    return this.shutdownRequested;
+  @Override
+  public boolean isClusterShutdown() {
+    return this.clusterShutdown.get();
   }
 
   public void setClosed() {
@@ -563,19 +562,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
 
   public boolean isMasterRunning() {
     return !this.closed.get();
-  }
-
-  public void requestShutdown() {
-    LOG.info("Cluster shutdown requested. Starting to quiesce servers");
-    synchronized(shutdownRequested) {
-      shutdownRequested.set(true);
-      shutdownRequested.notifyAll();
-    }
-    try {
-      clusterStatusTracker.setClusterDown();
-    } catch (KeeperException e) {
-      LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
-    }
   }
 
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)
@@ -785,6 +771,50 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
     System.exit(0);
   }
 
+  @Override
+  public void abort(final String msg, final Throwable t) {
+    if (t != null) LOG.fatal(msg, t);
+    else LOG.fatal(msg);
+    this.abort = true;
+  }
+
+  @Override
+  public ZooKeeperWatcher getZooKeeper() {
+    return zooKeeper;
+  }
+
+  @Override
+  public String getServerName() {
+    return address.toString();
+  }
+
+  public CatalogTracker getCatalogTracker() {
+    return catalogTracker;
+  }
+
+  @Override
+  public void shutdown() {
+    LOG.info("Cluster shutdown requested. Starting to quiesce servers");
+    synchronized (clusterShutdown) {
+      clusterShutdown.set(true);
+      clusterShutdown.notifyAll();
+    }
+    try {
+      clusterStatusTracker.setClusterDown();
+    } catch (KeeperException e) {
+      LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
+    }
+  }
+
+  @Override
+  public void stopMaster() {
+    // TODO
+  }
+
+  public void assignRegion(HRegionInfo hri) {
+    assignmentManager.assign(hri);
+  }
+
   /**
    * Utility for constructing an instance of the passed HMaster class.
    * @param masterClass
@@ -886,7 +916,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
             cluster.startup();
           } else {
             HMaster master = constructMaster(masterClass, conf);
-            if (master.shutdownRequested.get()) {
+            if (master.clusterShutdown.get()) {
               LOG.info("Won't bring the Master up as a shutdown is requested");
               return;
             }
@@ -930,35 +960,5 @@ implements HMasterInterface, HMasterRegionInterface, MasterController {
    */
   public static void main(String [] args) {
     doMain(args, HMaster.class);
-  }
-
-  @Override
-  public void abort(final String msg, final Throwable t) {
-    if (t != null) LOG.fatal(msg, t);
-    else LOG.fatal(msg);
-    this.startShutdown();
-  }
-
-  @Override
-  public ZooKeeperWatcher getZooKeeper() {
-    return zooKeeper;
-  }
-
-  @Override
-  public String getServerName() {
-    return address.toString();
-  }
-
-  public CatalogTracker getCatalogTracker() {
-    return catalogTracker;
-  }
-
-  @Override
-  public void shutdown() {
-    requestShutdown();
-  }
-
-  public void assignRegion(HRegionInfo hri) {
-    assignmentManager.assign(hri);
   }
 }

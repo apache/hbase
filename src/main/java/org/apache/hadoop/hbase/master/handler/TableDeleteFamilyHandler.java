@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.master.FileSystemManager;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterController;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -40,7 +40,7 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
 
   public TableDeleteFamilyHandler(byte[] tableName, byte [] familyName,
       MasterController server, CatalogTracker catalogTracker,
-      FileSystemManager fileManager) {
+      MasterFileSystem fileManager) {
     super(EventType.C2M_ADD_FAMILY, tableName, server, catalogTracker,
         fileManager);
     this.familyName = familyName;

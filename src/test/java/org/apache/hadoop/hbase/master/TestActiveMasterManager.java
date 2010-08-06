@@ -199,7 +199,7 @@ public class TestActiveMasterManager {
     }
 
     @Override
-    public FileSystemManager getFileSystemManager() {
+    public MasterFileSystem getFileSystemManager() {
       return null;
     }
 

@@ -32,17 +32,17 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Handles everything on master-side related to master election.
  *
- * Listens and responds to ZooKeeper notifications on the master znode,
- * both nodeCreated and nodeDeleted.
+ * <p>Listens and responds to ZooKeeper notifications on the master znode,
+ * both <code>nodeCreated</code> and <code>nodeDeleted</code>.
  *
- * Contains blocking methods which will hold up backup masters, waiting
+ * <p>Contains blocking methods which will hold up backup masters, waiting
  * for the active master to fail.
  *
- * This class is instantiated in the HMaster constructor and the method
+ * <p>This class is instantiated in the HMaster constructor and the method
  * {@link #blockUntilBecomingActiveMaster()} is called to wait until becoming
  * the active master of the cluster.
  */
-public class ActiveMasterManager extends ZooKeeperListener {
+class ActiveMasterManager extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(ActiveMasterManager.class);
 
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
@@ -51,10 +51,10 @@ public class ActiveMasterManager extends ZooKeeperListener {
   private final MasterController master;
 
   ActiveMasterManager(ZooKeeperWatcher watcher, HServerAddress address,
-      MasterController status) {
+      MasterController master) {
     super(watcher);
     this.address = address;
-    this.master = status;
+    this.master = master;
   }
 
   @Override
@@ -77,11 +77,11 @@ public class ActiveMasterManager extends ZooKeeperListener {
    * that the current state of the master node matches the event at the time of
    * our next ZK request.
    *
-   * Uses the watchAndCheckExists method which watches the master address node
+   * <p>Uses the watchAndCheckExists method which watches the master address node
    * regardless of whether it exists or not.  If it does exist (there is an
    * active master), it returns true.  Otherwise it returns false.
    *
-   * A watcher is set which guarantees that this method will get called again if
+   * <p>A watcher is set which guarantees that this method will get called again if
    * there is another change in the master node.
    */
   private void handleMasterNodeChange() {
@@ -113,26 +113,30 @@ public class ActiveMasterManager extends ZooKeeperListener {
    *
    * This also makes sure that we are watching the master znode so will be
    * notified if another master dies.
+   * @return False if we did not start up this cluster, another
+   * master did, or if a problem (zookeeper, stop flag has been set on this
+   * Master)
    */
-  void blockUntilBecomingActiveMaster() {
+  boolean blockUntilBecomingActiveMaster() {
+    boolean thisMasterStartedCluster = true;
     // Try to become the active master, watch if there is another master
     try {
       if(ZKUtil.setAddressAndWatch(watcher, watcher.masterAddressZNode,
           address)) {
         // We are the master, return
         clusterHasActiveMaster.set(true);
-        return;
+        return thisMasterStartedCluster;
       }
     } catch (KeeperException ke) {
       master.abort("Received an unexpected KeeperException, aborting", ke);
-      return;
+      return false;
     }
     // There is another active master, this is not a cluster startup
     // and we must wait until the active master dies
     LOG.info("Another master is already the active master, waiting to become " +
-    "the next active master");
+      "the next active master");
     clusterHasActiveMaster.set(true);
-    master.setClusterStartup(false);
+    thisMasterStartedCluster = false;
     synchronized(clusterHasActiveMaster) {
       while(clusterHasActiveMaster.get() && !master.isClosed()) {
         try {
@@ -143,11 +147,12 @@ public class ActiveMasterManager extends ZooKeeperListener {
         }
       }
       if(master.isClosed()) {
-        return;
+        return thisMasterStartedCluster;
       }
       // Try to become active master again now that there is no active master
       blockUntilBecomingActiveMaster();
     }
+    return thisMasterStartedCluster;
   }
 
   public void stop() {

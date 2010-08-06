@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventHandler;
-import org.apache.hadoop.hbase.master.FileSystemManager;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterController;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -46,11 +46,11 @@ public abstract class TableEventHandler extends EventHandler {
 
   protected final byte [] tableName;
   protected final CatalogTracker catalogTracker;
-  protected final FileSystemManager fileManager;
+  protected final MasterFileSystem fileManager;
 
   public TableEventHandler(EventType eventType, byte [] tableName,
       MasterController server, CatalogTracker catalogTracker,
-      FileSystemManager fileManager) {
+      MasterFileSystem fileManager) {
     super(server, eventType);
     this.tableName = tableName;
     this.catalogTracker = catalogTracker;
