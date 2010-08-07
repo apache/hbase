@@ -31,7 +31,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,6 +41,8 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.MetaScanner;
@@ -70,7 +71,7 @@ import org.apache.zookeeper.KeeperException;
 public class AssignmentManager extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(AssignmentManager.class);
 
-  protected MasterController master;
+  protected Server master;
 
   private ServerManager serverManager;
 
@@ -113,7 +114,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param watcher zookeeper watcher
    * @param status master status
    */
-  public AssignmentManager(ZooKeeperWatcher watcher, MasterController master,
+  public AssignmentManager(ZooKeeperWatcher watcher, Server master,
       ServerManager serverManager, CatalogTracker catalogTracker) {
     super(watcher);
     this.master = master;
@@ -122,7 +123,7 @@ public class AssignmentManager extends ZooKeeperListener {
     Configuration conf = master.getConfiguration();
     this.timeoutMonitor = new TimeoutMonitor(
         conf.getInt("hbase.master.assignment.timeoutmonitor.period", 30000),
-        master.getClosed(),
+        master,
         conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 15000));
     Threads.setDaemonThreadRunning(timeoutMonitor,
         master.getServerName() + ".timeoutMonitor");
@@ -808,12 +809,13 @@ public class AssignmentManager extends ZooKeeperListener {
      * operations.  This will deal with retries if for some reason something
      * doesn't happen within the specified timeout.
      * @param period
-     * @param stop
+   * @param stopper When {@link Stoppable#isStopped()} is true, this thread will
+   * cleanup and exit cleanly.
      * @param timeout
      */
-    public TimeoutMonitor(final int period, final AtomicBoolean stop,
+    public TimeoutMonitor(final int period, final Stoppable stopper,
         final int timeout) {
-      super("AssignmentTimeoutMonitor", period, stop);
+      super("AssignmentTimeoutMonitor", period, stopper);
       this.timeout = timeout;
     }
 

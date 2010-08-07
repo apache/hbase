@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -48,10 +49,10 @@ class ActiveMasterManager extends ZooKeeperListener {
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
 
   private final HServerAddress address;
-  private final MasterController master;
+  private final Server master;
 
   ActiveMasterManager(ZooKeeperWatcher watcher, HServerAddress address,
-      MasterController master) {
+      Server master) {
     super(watcher);
     this.address = address;
     this.master = master;
@@ -59,14 +60,14 @@ class ActiveMasterManager extends ZooKeeperListener {
 
   @Override
   public void nodeCreated(String path) {
-    if(path.equals(watcher.masterAddressZNode) && !master.isClosed()) {
+    if(path.equals(watcher.masterAddressZNode) && !master.isStopped()) {
       handleMasterNodeChange();
     }
   }
 
   @Override
   public void nodeDeleted(String path) {
-    if(path.equals(watcher.masterAddressZNode) && !master.isClosed()) {
+    if(path.equals(watcher.masterAddressZNode) && !master.isStopped()) {
       handleMasterNodeChange();
     }
   }
@@ -138,7 +139,7 @@ class ActiveMasterManager extends ZooKeeperListener {
     clusterHasActiveMaster.set(true);
     thisMasterStartedCluster = false;
     synchronized(clusterHasActiveMaster) {
-      while(clusterHasActiveMaster.get() && !master.isClosed()) {
+      while(clusterHasActiveMaster.get() && !master.isStopped()) {
         try {
           clusterHasActiveMaster.wait();
         } catch (InterruptedException e) {
@@ -146,7 +147,7 @@ class ActiveMasterManager extends ZooKeeperListener {
           LOG.debug("Interrupted waiting for master to die", e);
         }
       }
-      if(master.isClosed()) {
+      if(master.isStopped()) {
         return thisMasterStartedCluster;
       }
       // Try to become active master again now that there is no active master

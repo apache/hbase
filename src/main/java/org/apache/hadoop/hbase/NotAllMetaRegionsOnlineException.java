@@ -17,20 +17,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+
 /**
- * Implementers are Stoppable.
+ * Thrown when an operation requires the root and all meta regions to be online
  */
-public interface Stoppable {
+public class NotAllMetaRegionsOnlineException extends DoNotRetryIOException {
+  private static final long serialVersionUID = 6439786157874827523L;
   /**
-   * Stop this service.
-   * @param why Why we're stopping.
+   * default constructor
    */
-  public void stop(String why);
+  public NotAllMetaRegionsOnlineException() {
+    super();
+  }
 
   /**
-   * @return True if {@link #stop(String)} has been closed.
+   * @param message
    */
-  public boolean isStopped();
+  public NotAllMetaRegionsOnlineException(String message) {
+    super(message);
+  }
 }

@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  * Defines the set of shared functions implemented by HBase servers (Masters
  * and RegionServers).
  */
-public interface Server extends Abortable {
+public interface Server extends Abortable, Stoppable {
   /**
    * Returns the address of the current server.
    */

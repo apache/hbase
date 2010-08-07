@@ -25,15 +25,15 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.master.MasterController;
 
 public class DeleteTableHandler extends TableEventHandler {
   private static final Log LOG = LogFactory.getLog(DeleteTableHandler.class);
 
-  public DeleteTableHandler(byte [] tableName, MasterController server,
+  public DeleteTableHandler(byte [] tableName, Server server,
       CatalogTracker catalogTracker, MasterFileSystem fileManager) {
     super(EventType.C2M_DELETE_TABLE, tableName, server, catalogTracker,
         fileManager);

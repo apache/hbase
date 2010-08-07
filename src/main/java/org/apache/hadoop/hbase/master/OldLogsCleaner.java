@@ -27,11 +27,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
 
 /**
  * This Chore, everytime it runs, will clear the logs in the old logs folder
@@ -53,12 +52,13 @@ public class OldLogsCleaner extends Chore {
   /**
    *
    * @param p the period of time to sleep between each run
-   * @param s the stopper boolean
+   * @param stopper When {@link Stoppable#isStopped()} is true, this thread will
+   * cleanup and exit cleanly.
    * @param conf configuration to use
    * @param fs handle to the FS
    * @param oldLogDir the path to the archived logs
    */
-  public OldLogsCleaner(final int p, final AtomicBoolean s,
+  public OldLogsCleaner(final int p, final Stoppable s,
                         Configuration conf, FileSystem fs,
                         Path oldLogDir) {
     super("OldLogsCleaner", p, s);
@@ -70,6 +70,7 @@ public class OldLogsCleaner extends Chore {
     this.logCleaner = getLogCleaner();
   }
 
+  @SuppressWarnings("unchecked")
   private LogCleanerDelegate getLogCleaner() {
     try {
       Class c = Class.forName(conf.get("hbase.master.logcleanerplugin.impl",

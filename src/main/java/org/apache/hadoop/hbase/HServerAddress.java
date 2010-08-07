@@ -44,7 +44,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
    */
   public HServerAddress(InetSocketAddress address) {
     this.address = address;
-    this.stringValue = address.getAddress().getHostAddress() + ":" +
+    this.stringValue = address.getAddress().getHostName() + ":" +
       address.getPort();
   }
 

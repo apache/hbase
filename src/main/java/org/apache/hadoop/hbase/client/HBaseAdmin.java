@@ -929,6 +929,21 @@ public class HBaseAdmin {
   }
 
   /**
+   * Shuts down the current HBase master only.
+   * Does not shutdown the cluster.
+   * @see #shutdown()
+   * @throws IOException if a remote or network exception occurs
+   */
+  public synchronized void stopMaster() throws IOException {
+    isMasterRunning();
+    try {
+      getMaster().stopMaster();
+    } catch (RemoteException e) {
+      throw RemoteExceptionHandler.decodeRemoteException(e);
+    }
+  }
+
+  /**
    * @return cluster status
    * @throws IOException if a remote or network exception occurs
    */

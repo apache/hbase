@@ -25,13 +25,13 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.master.MasterController;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -49,7 +49,7 @@ public abstract class TableEventHandler extends EventHandler {
   protected final MasterFileSystem fileManager;
 
   public TableEventHandler(EventType eventType, byte [] tableName,
-      MasterController server, CatalogTracker catalogTracker,
+      Server server, CatalogTracker catalogTracker,
       MasterFileSystem fileManager) {
     super(server, eventType);
     this.tableName = tableName;

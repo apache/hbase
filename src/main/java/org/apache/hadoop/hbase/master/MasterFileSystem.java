@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -51,7 +52,7 @@ public class MasterFileSystem {
   // HBase configuration
   Configuration conf;
   // master status
-  MasterController masterStatus;
+  Server master;
   // Keep around for convenience.
   private final FileSystem fs;
   // Is the fileystem ok?
@@ -63,9 +64,9 @@ public class MasterFileSystem {
   // create the split log lock
   final Lock splitLogLock = new ReentrantLock();
 
-  public MasterFileSystem(MasterController masterStatus) throws IOException {
-    this.conf = masterStatus.getConfiguration();
-    this.masterStatus = masterStatus;
+  public MasterFileSystem(Server master) throws IOException {
+    this.conf = master.getConfiguration();
+    this.master = master;
     // Set filesystem to be that of this.rootdir else we get complaints about
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
     // default localfs.  Presumption is that rootdir is fully-qualified before
@@ -119,8 +120,7 @@ public class MasterFileSystem {
       try {
         FSUtils.checkFileSystemAvailable(this.fs);
       } catch (IOException e) {
-        LOG.fatal("Shutting down HBase cluster: file system not available", e);
-        masterStatus.setClosed();
+        master.abort("Shutting down HBase cluster: file system not available", e);
         this.fsOk = false;
       }
     }
