@@ -68,12 +68,11 @@ public class CompactSplitThread extends Thread {
 
   @Override
   public void run() {
-    int count = 0;
-    while (!this.server.isStopRequested()) {
+    while (!this.server.isStopped()) {
       HRegion r = null;
       try {
         r = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
-        if (r != null && !this.server.isStopRequested()) {
+        if (r != null && !this.server.isStopped()) {
           synchronized (regionsInQueue) {
             regionsInQueue.remove(r);
           }
@@ -81,7 +80,7 @@ public class CompactSplitThread extends Thread {
           try {
             // Don't interrupt us while we are working
             byte [] midKey = r.compactStores();
-            if (midKey != null && !this.server.isStopRequested()) {
+            if (midKey != null && !this.server.isStopped()) {
               split(r, midKey);
             }
           } finally {
@@ -127,7 +126,7 @@ public class CompactSplitThread extends Thread {
    */
   public synchronized void compactionRequested(final HRegion r,
       final boolean force, final String why) {
-    if (this.server.stopRequested.get()) {
+    if (this.server.isStopped()) {
       return;
     }
     r.setForceMajorCompaction(force);

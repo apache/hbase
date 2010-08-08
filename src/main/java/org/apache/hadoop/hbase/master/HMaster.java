@@ -171,8 +171,6 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   public HMaster(Configuration conf) throws IOException, KeeperException {
     // initialize some variables
     this.conf = conf;
-    // set the thread name
-    setName(MASTER + "-" + this.address);
 
     /*
      * 1. Determine address and initialize RPC server (but do not start).
@@ -183,6 +181,9 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     this.rpcServer = HBaseRPC.getServer(this, a.getBindAddress(), a.getPort(),
       numHandlers, false, conf);
     this.address = new HServerAddress(rpcServer.getListenerAddress());
+
+    // set the thread name now we have an address
+    setName(MASTER + "-" + this.address);
 
     /*
      * 2. Determine if this is a fresh cluster startup or failed over master.

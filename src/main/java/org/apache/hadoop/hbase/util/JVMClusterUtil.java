@@ -60,7 +60,7 @@ public class JVMClusterUtil {
       // cases, we'll jump out of the run without setting online flag.  Check
       // stopRequested so we don't wait here a flag that will never be flipped.
       while (!this.regionServer.isOnline() &&
-          !this.regionServer.isStopRequested()) {
+          !this.regionServer.isStopped()) {
         try {
           Thread.sleep(1000);
         } catch (InterruptedException e) {

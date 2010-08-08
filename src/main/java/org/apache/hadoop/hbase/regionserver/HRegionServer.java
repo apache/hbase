@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterAddressTracker;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
@@ -123,7 +124,7 @@ import org.apache.zookeeper.KeeperException;
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
 public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
-    Runnable, Stoppable, RegionServerController {
+    Runnable, RegionServerController {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
@@ -131,10 +132,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   // Set when a report to the master comes back with a message asking us to
   // shutdown. Also set by call to stop when debugging or running unit tests
-  // of HRegionServer in isolation. We use AtomicBoolean rather than
-  // plain boolean so we can pass a reference to Chore threads. Otherwise,
-  // Chore threads need to know about the hosting class.
-  protected final AtomicBoolean stopRequested = new AtomicBoolean(false);
+  // of HRegionServer in isolation.
+  protected volatile boolean stopped = false;
 
   protected final AtomicBoolean quiesced = new AtomicBoolean(false);
 
@@ -283,7 +282,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         10 * 1000);
     this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 1 * 1000);
 
-    sleeper = new Sleeper(this.msgInterval, this.stopRequested);
+    sleeper = new Sleeper(this.msgInterval, this);
 
     this.maxScannerResultSize = conf.getLong(
         HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
@@ -311,7 +310,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   private void initialize() throws IOException {
     this.abortRequested = false;
-    this.stopRequested.set(false);
+    this.stopped = false;
 
     // Server to handle client requests
     this.server = HBaseRPC.getServer(this, address.getBindAddress(), address
@@ -390,7 +389,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     int multiplier = this.conf.getInt(HConstants.THREAD_WAKE_FREQUENCY
         + ".multiplier", 1000);
     this.majorCompactionChecker = new MajorCompactionChecker(this,
-        this.threadWakeFrequency * multiplier, this.stopRequested);
+        this.threadWakeFrequency * multiplier, this);
 
     this.leases = new Leases((int) conf.getLong(
         HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
@@ -408,7 +407,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     boolean quiesceRequested = false;
     try {
       MapWritable w = null;
-      while (!stopRequested.get()) {
+      while (!this.stopped) {
         w = reportForDuty();
         if (w != null) {
           init(w);
@@ -421,7 +420,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       List<HMsg> outboundMessages = new ArrayList<HMsg>();
       long lastMsg = 0;
       // Now ask master what it wants us to do and tell it what we have done
-      for (int tries = 0; !stopRequested.get() && isHealthy();) {
+      for (int tries = 0; !this.stopped && isHealthy();) {
         // Try to get the root region location from zookeeper.
         if (!haveRootRegion.get()) {
           HServerAddress rootServer = catalogTracker.getRootLocation();
@@ -461,22 +460,21 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             if (this.quiesced.get() && onlineRegions.size() == 0) {
               // We've just told the master we're exiting because we aren't
               // serving any regions. So set the stop bit and exit.
-              LOG.info("Server quiesced and not serving any regions. "
-                  + "Starting shutdown");
-              stopRequested.set(true);
+              stop("Server quiesced and not serving any regions. " +
+                "Starting shutdown");
               this.outboundMsgs.clear();
               continue;
             }
 
             // Queue up the HMaster's instruction stream for processing
             boolean restart = false;
-            for (int i = 0; !restart && !stopRequested.get() && i < msgs.length; i++) {
+            for (int i = 0; !restart && !stopped && i < msgs.length; i++) {
               LOG.info(msgs[i].toString());
               this.connection.unsetRootRegionLocation();
               switch (msgs[i].getType()) {
 
                 case MSG_REGIONSERVER_STOP:
-                  stopRequested.set(true);
+                  stop("MSG_REGIONSERVER_STOP");
                   break;
 
                 case MSG_REGIONSERVER_QUIESCE:
@@ -505,7 +503,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             // Reset tries count if we had a successful transaction.
             tries = 0;
 
-            if (restart || this.stopRequested.get()) {
+            if (restart || this.stopped) {
               toDo.clear();
               continue;
             }
@@ -524,7 +522,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
               // Check filesystem every so often.
               checkFileSystem();
             }
-            if (this.stopRequested.get()) {
+            if (this.stopped) {
               LOG.info("Stop requested, clearing toDo despite exception");
               toDo.clear();
               continue;
@@ -723,7 +721,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       isOnline = true;
     } catch (Throwable e) {
       this.isOnline = false;
-      this.stopRequested.set(true);
+      stop("Failed initialization");
       throw convertThrowableToIOE(cleanup(e, "Failed init"),
           "Region server startup failed");
     }
@@ -864,8 +862,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     private final HRegionServer instance;
 
     MajorCompactionChecker(final HRegionServer h, final int sleepTime,
-        final AtomicBoolean stopper) {
-      super("MajorCompactionChecker", sleepTime, stopper);
+        final Stoppable stopper) {
+      super("MajorCompactionChecker", sleepTime, h);
       this.instance = h;
       LOG.info("Runs every " + sleepTime + "ms");
     }
@@ -1067,8 +1065,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (!(leases.isAlive() && compactSplitThread.isAlive()
         && cacheFlusher.isAlive() && hlogRoller.isAlive()
         && workerThread.isAlive() && this.majorCompactionChecker.isAlive())) {
-      // One or more threads are no longer alive - shut down
-      stop();
+      stop("One or more threads are no longer alive -- stop");
       return false;
     }
     return true;
@@ -1079,12 +1076,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return this.hlog;
   }
 
-  /**
-   * Sets a flag that will cause all the HRegionServer threads to shut down in
-   * an orderly fashion. Used by unit tests.
-   */
-  public void stop() {
-    this.stopRequested.set(true);
+  @Override
+  public void stop(final String msg) {
+    this.stopped = true;
+    LOG.info(msg);
     synchronized (this) {
       // Wakes run() if it is sleeping
       notifyAll(); // FindBugs NN_NAKED_NOTIFY
@@ -1112,7 +1107,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (this.metrics != null) {
       LOG.info("Dump of metrics: " + this.metrics.toString());
     }
-    stop();
+    stop(reason);
   }
 
   /**
@@ -1156,7 +1151,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private boolean getMaster() {
     HServerAddress masterAddress = null;
     while ((masterAddress = masterAddressManager.getMasterAddress()) == null) {
-      if (stopRequested.get()) {
+      if (stopped) {
         return false;
       }
       LOG.debug("No master found, will retry");
@@ -1164,7 +1159,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     LOG.info("Telling master at " + masterAddress + " that we are up");
     HMasterRegionInterface master = null;
-    while (!stopRequested.get() && master == null) {
+    while (!stopped && master == null) {
       try {
         // Do initial RPC setup. The final argument indicates that the RPC
         // should retry indefinitely.
@@ -1186,14 +1181,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * us by the master.
    */
   private MapWritable reportForDuty() {
-    while (!stopRequested.get() && !getMaster()) {
+    while (!stopped && !getMaster()) {
       sleeper.sleep();
       LOG.warn("Unable to get master for initialization");
     }
 
     MapWritable result = null;
     long lastMsg = 0;
-    while (!stopRequested.get()) {
+    while (!stopped) {
       try {
         this.requestCount.set(0);
         MemoryUsage memory = ManagementFactory.getMemoryMXBean()
@@ -1269,11 +1264,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     public void run() {
       try {
-        while (!stopRequested.get()) {
+        while (!stopped) {
           ToDoEntry e = null;
           try {
             e = toDo.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
-            if (e == null || stopRequested.get()) {
+            if (e == null || stopped) {
               continue;
             }
             LOG.info("Worker: " + e.msg);
@@ -1309,11 +1304,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
                 break;
 
               case TESTING_MSG_BLOCK_RS:
-                while (!stopRequested.get()) {
+                while (!stopped) {
                   Threads.sleep(1000);
                   LOG.info("Regionserver blocked by "
-                      + HMsg.Type.TESTING_MSG_BLOCK_RS + "; "
-                      + stopRequested.get());
+                      + HMsg.Type.TESTING_MSG_BLOCK_RS + "; " + stopped);
                 }
                 break;
 
@@ -1951,8 +1945,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   @Override
   public void openRegion(HRegionInfo region) {
-    LOG.info("Received request to open region: "
-        + region.getRegionNameAsString());
+    LOG.info("Received request to open region: " +
+      region.getRegionNameAsString());
     if(region.isRootRegion()) {
       new OpenRootHandler(this, catalogTracker, region).submit();
     } else if(region.isMetaRegion()) {
@@ -2023,8 +2017,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   /**
    * @return true if a stop has been requested.
    */
-  public boolean isStopRequested() {
-    return this.stopRequested.get();
+  public boolean isStopped() {
+    return this.stopped;
   }
 
   /**
@@ -2195,7 +2189,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * @throws IOException
    */
   protected void checkOpen() throws IOException {
-    if (this.stopRequested.get() || this.abortRequested) {
+    if (this.stopped || this.abortRequested) {
       throw new IOException("Server not running"
           + (this.abortRequested ? ", aborting" : ""));
     }

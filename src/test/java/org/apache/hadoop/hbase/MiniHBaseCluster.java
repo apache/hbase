@@ -304,7 +304,7 @@ public class MiniHBaseCluster {
     JVMClusterUtil.RegionServerThread server =
       hbaseCluster.getRegionServers().get(serverNumber);
     LOG.info("Stopping " + server.toString());
-    server.getRegionServer().stop();
+    server.getRegionServer().stop("Stopping rs " + serverNumber);
     return server;
   }
 

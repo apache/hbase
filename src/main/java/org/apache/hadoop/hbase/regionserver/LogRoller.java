@@ -56,7 +56,7 @@ class LogRoller extends Thread implements LogRollListener {
 
   @Override
   public void run() {
-    while (!server.isStopRequested()) {
+    while (!server.isStopped()) {
       long now = System.currentTimeMillis();
       boolean periodic = false;
       if (!rollLog.get()) {

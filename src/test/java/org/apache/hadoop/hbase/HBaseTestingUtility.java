@@ -88,11 +88,14 @@ public class HBaseTestingUtility {
 
   /**
    * System property key to get test directory value.
+   * Name is as it is because mini dfs has hard-codings to put test data here.
    */
   public static final String TEST_DIRECTORY_KEY = "test.build.data";
 
   /**
    * Default parent direccounttory for test output.
+   * Target is at it is because minidfscluster has hard-codings to put its data
+   * here.
    */
   public static final String DEFAULT_TEST_DIRECTORY = "target/build/data";
 
@@ -115,6 +118,8 @@ public class HBaseTestingUtility {
    * @return Where to write test data on local filesystem; usually
    * {@link #DEFAULT_TEST_DIRECTORY}
    * @see #setupClusterTestBuildDir()
+   * @see #clusterTestBuildDir()
+   * @see #getTestFileSystem()
    */
   public static Path getTestDir() {
     return new Path(System.getProperty(TEST_DIRECTORY_KEY,
@@ -126,15 +131,19 @@ public class HBaseTestingUtility {
    * @return Path to a subdirectory named <code>subdirName</code> under
    * {@link #getTestDir()}.
    * @see #setupClusterTestBuildDir()
+   * @see #clusterTestBuildDir(String)
+   * @see #getTestFileSystem()
    */
   public static Path getTestDir(final String subdirName) {
     return new Path(getTestDir(), subdirName);
   }
 
   /**
-   * Home our cluster in a dir under target/test.  Give it a random name
+   * Home our cluster in a dir under {@link #DEFAULT_TEST_DIRECTORY}.  Give it a
+   * random name
    * so can have many concurrent clusters running if we need to.  Need to
-   * amend the test.build.data System property.  Its what minidfscluster bases
+   * amend the {@link #TEST_DIRECTORY_KEY} System property.  Its what
+   * minidfscluster bases
    * it data dir on.  Moding a System property is not the way to do concurrent
    * instances -- another instance could grab the temporary
    * value unintentionally -- but not anything can do about it at moment;
@@ -850,8 +859,34 @@ public class HBaseTestingUtility {
     return FileSystem.get(conf);
   }
 
-  public void cleanupTestDir() throws IOException {
-    getTestDir().getFileSystem(conf).delete(getTestDir(), true);
+  /**
+   * @return True if we removed the test dir
+   * @throws IOException
+   */
+  public boolean cleanupTestDir() throws IOException {
+    return deleteDir(getTestDir());
+  }
+
+  /**
+   * @param subdir Test subdir name.
+   * @return True if we removed the test dir
+   * @throws IOException
+   */
+  public boolean cleanupTestDir(final String subdir) throws IOException {
+    return deleteDir(getTestDir(subdir));
+  }
+
+  /**
+   * @param dir Directory to delete
+   * @return True if we deleted it.
+   * @throws IOException 
+   */
+  public boolean deleteDir(final Path dir) throws IOException {
+    FileSystem fs = getTestFileSystem();
+    if (fs.exists(dir)) {
+      return fs.delete(getTestDir(), true);
+    }
+    return false;
   }
 
   public void waitTableAvailable(byte[] table, long timeoutMillis)
