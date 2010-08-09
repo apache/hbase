@@ -92,7 +92,6 @@ public class ZooKeeperWatcher implements Watcher {
   public ZooKeeperWatcher(Configuration conf, String name,
       Abortable abortable)
   throws IOException {
-//    super(conf, name);
     this.name = name;
     this.quorum = ZKConfig.getZKQuorumServersString(conf);
     this.zooKeeper = ZKUtil.connect(conf, quorum, this);

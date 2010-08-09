@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -212,8 +213,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
         serverManager);
     catalogTracker = new CatalogTracker(zooKeeper, connection, this,
         conf.getInt("hbase.master.catalog.timeout", 30000));
-    assignmentManager = new AssignmentManager(zooKeeper, this,
-        serverManager, catalogTracker);
+    assignmentManager = new AssignmentManager(this, serverManager, catalogTracker);
     clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
 
     /*
@@ -767,10 +767,15 @@ implements HMasterInterface, HMasterRegionInterface, Server {
       Constructor<? extends HMaster> c =
         masterClass.getConstructor(Configuration.class);
       return c.newInstance(conf);
+    } catch (InvocationTargetException ite) {
+      Throwable target = ite.getTargetException();
+      throw new RuntimeException("Failed construction of Master: " +
+        masterClass.toString() + ((target.getCause() != null)?
+          target.getCause().getMessage(): ""), target);
     } catch (Exception e) {
-      throw new RuntimeException("Failed construction of " +
-        "Master: " + masterClass.toString() +
-        ((e.getCause() != null)? e.getCause().getMessage(): ""), e);
+      throw new RuntimeException("Failed construction of Master: " +
+        masterClass.toString() + ((e.getCause() != null)?
+          e.getCause().getMessage(): ""), e);
     }
   }
 

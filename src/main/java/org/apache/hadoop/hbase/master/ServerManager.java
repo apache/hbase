@@ -142,7 +142,7 @@ public class ServerManager {
   /**
    * Constructor.
    * @param master
-   * @param masterMetrics
+   * @param masterMetrics If null, we won't pass metrics.
    * @param masterFileSystem
    */
   public ServerManager(Server master,
@@ -411,7 +411,7 @@ public class ServerManager {
     // Refresh the info object and the load information
     this.onlineServers.put(serverInfo.getServerName(), serverInfo);
     HServerLoad load = serverInfo.getLoad();
-    if(load != null) {
+    if(load != null && this.masterMetrics != null) {
       masterMetrics.incrementRequests(load.getNumberOfRequests());
     }
     // No more piggyback messages on heartbeats for other stuff

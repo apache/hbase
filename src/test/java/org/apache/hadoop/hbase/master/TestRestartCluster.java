@@ -62,7 +62,7 @@ public class TestRestartCluster {
   }
 
   @AfterClass public static void afterAllTests() throws IOException {
-//    utility.shutdownMiniCluster();
+    utility.shutdownMiniCluster();
   }
 
   @Before public void setup() throws IOException {
@@ -118,11 +118,11 @@ public class TestRestartCluster {
     String unassignedZNode = zooKeeper.assignmentZNode;
     ZKUtil.createAndFailSilent(zooKeeper, unassignedZNode);
 
-    ZKAssign.createNodeOffline(zooKeeper,
-        HRegionInfo.ROOT_REGIONINFO.getEncodedName(), HMaster.MASTER);
+    ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.ROOT_REGIONINFO,
+      HMaster.MASTER);
 
-    ZKAssign.createNodeOffline(zooKeeper,
-        HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(), HMaster.MASTER);
+    ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.FIRST_META_REGIONINFO,
+      HMaster.MASTER);
 
     LOG.debug("Created UNASSIGNED zNode for ROOT and META regions in state " +
         EventType.M2ZK_REGION_OFFLINE);

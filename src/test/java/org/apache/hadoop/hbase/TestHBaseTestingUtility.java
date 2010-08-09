@@ -65,7 +65,7 @@ public class TestHBaseTestingUtility {
   @Test public void testMiniCluster() throws Exception {
     MiniHBaseCluster cluster = this.hbt.startMiniCluster();
     try {
-      
+      assertEquals(1, cluster.getLiveRegionServerThreads().size());
     } finally {
       cluster.shutdown();
     }

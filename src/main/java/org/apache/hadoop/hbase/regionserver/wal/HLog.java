@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.util.concurrent.NamingThreadFactory;
 
@@ -327,8 +328,9 @@ public class HLog implements Syncable {
     }
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
     this.enabled = conf.getBoolean("hbase.regionserver.hlog.enabled", true);
-    LOG.info("HLog configuration: blocksize=" + this.blocksize +
-      ", rollsize=" + this.logrollsize +
+    LOG.info("HLog configuration: blocksize=" +
+      StringUtils.byteDesc(this.blocksize) +
+      ", rollsize=" + StringUtils.byteDesc(this.logrollsize) +
       ", enabled=" + this.enabled +
       ", flushlogentries=" + this.flushlogentries +
       ", optionallogflushinternal=" + this.optionalFlushInterval + "ms");
@@ -888,7 +890,7 @@ public class HLog implements Syncable {
         LOG.error("Error while syncing, requesting close of hlog ", e);
         requestLogRoll();
       } catch (InterruptedException e) {
-        LOG.debug(getName() + "interrupted while waiting for sync requests");
+        LOG.debug(getName() + " interrupted while waiting for sync requests");
       } finally {
         syncerShuttingDown = true;
         syncDone.signalAll();

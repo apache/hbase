@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.NodeAndData;
 import org.apache.hadoop.io.Writable;
 import org.apache.zookeeper.KeeperException;
@@ -111,12 +110,13 @@ public class AssignmentManager extends ZooKeeperListener {
    *
    * <p>This manager must be started with {@link #start()}.
    *
-   * @param watcher zookeeper watcher
    * @param status master status
+   * @param serverManager
+   * @param catalogTracker
    */
-  public AssignmentManager(ZooKeeperWatcher watcher, Server master,
-      ServerManager serverManager, CatalogTracker catalogTracker) {
-    super(watcher);
+  public AssignmentManager(Server master, ServerManager serverManager,
+      CatalogTracker catalogTracker) {
+    super(master.getZooKeeper());
     this.master = master;
     this.serverManager = serverManager;
     this.catalogTracker = catalogTracker;

@@ -24,13 +24,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -40,9 +40,11 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+/**
+ * Test the {@link ActiveMasterManager}.
+ */
 public class TestActiveMasterManager {
-  private static final Log LOG = LogFactory.getLog(TestActiveMasterManager.class);
-
+  private final static Log LOG = LogFactory.getLog(TestActiveMasterManager.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass
@@ -54,6 +56,7 @@ public class TestActiveMasterManager {
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
   }
+
   /**
    * Unit tests that uses ZooKeeper but does not use the master-side methods
    * but rather acts directly on ZK.
@@ -74,7 +77,7 @@ public class TestActiveMasterManager {
     HServerAddress secondMasterAddress = new HServerAddress("secondMaster", 1234);
 
     // Should not have a master yet
-    DummyMasterStatus ms1 = new DummyMasterStatus();
+    DummyMaster ms1 = new DummyMaster();
     ActiveMasterManager activeMasterManager = new ActiveMasterManager(zk,
         firstMasterAddress, ms1);
     zk.registerListener(activeMasterManager);
@@ -104,7 +107,7 @@ public class TestActiveMasterManager {
     assertFalse(t.isActiveMaster);
 
     // Close the first server and delete it's master node
-    ms1.setClosed();
+    ms1.stop("stopping first server");
 
     // Use a listener to capture when the node is actually deleted
     NodeDeletionListener listener = new NodeDeletionListener(zk, zk.masterAddressZNode);
@@ -152,7 +155,7 @@ public class TestActiveMasterManager {
     public WaitToBeMasterThread(ZooKeeperWatcher zk,
         HServerAddress address) {
       this.manager = new ActiveMasterManager(zk, address,
-          new DummyMasterStatus());
+          new DummyMaster());
       isActiveMaster = false;
     }
 
@@ -189,58 +192,16 @@ public class TestActiveMasterManager {
     }
   }
 
-  public static class DummyMasterStatus implements MasterController {
-
-    private AtomicBoolean closed = new AtomicBoolean(false);
-
-    @Override
-    public AtomicBoolean getClosed() {
-      return closed;
-    }
-
-    @Override
-    public MasterFileSystem getFileSystemManager() {
-      return null;
-    }
+  /**
+   * Dummy Master Implementation.
+   */
+  public static class DummyMaster implements Server {
+    private volatile boolean stopped;
 
     @Override
     public ServerConnection getServerConnection() {
       return null;
     }
-
-    @Override
-    public ServerManager getServerManager() {
-      return null;
-    }
-
-    @Override
-    public AtomicBoolean getShutdownRequested() {
-      return null;
-    }
-
-    @Override
-    public boolean isClosed() {
-      return closed.get();
-    }
-
-    @Override
-    public boolean isClusterStartup() {
-      return false;
-    }
-
-    @Override
-    public void setClosed() {
-      closed.set(true);
-    }
-
-    @Override
-    public void setClusterStartup(boolean isClusterStartup) {}
-
-    @Override
-    public void shutdown() {}
-
-    @Override
-    public void startShutdown() {}
 
     @Override
     public void abort(final String msg, final Throwable t) {}
@@ -266,14 +227,13 @@ public class TestActiveMasterManager {
     }
 
     @Override
-    public boolean isRegionServer() {
-      return false;
+    public boolean isStopped() {
+      return this.stopped;
     }
 
     @Override
-    public long getTimeout() {
-      return 0;
+    public void stop(String why) {
+      this.stopped = true;
     }
-
   }
 }

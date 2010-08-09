@@ -200,9 +200,6 @@ public final class HConstants {
   /** The catalog family */
   public static final byte [] CATALOG_FAMILY = Bytes.toBytes(CATALOG_FAMILY_STR);
 
-  /** The catalog historian family */
-  public static final byte [] CATALOG_HISTORIAN_FAMILY = Bytes.toBytes("historian");
-
   /** The regioninfo column qualifier */
   public static final byte [] REGIONINFO_QUALIFIER = Bytes.toBytes("regioninfo");
 

@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -62,7 +63,7 @@ public class TestMasterAddressManager {
     ZKUtil.createAndFailSilent(zk, zk.baseZNode);
 
     // Should not have a master yet
-    MasterAddressManager addressManager = new MasterAddressManager(zk, null);
+    MasterAddressTracker addressManager = new MasterAddressTracker(zk, null);
     addressManager.start();
     assertFalse(addressManager.hasMaster());
     zk.registerListener(addressManager);
