@@ -93,11 +93,9 @@ public class HBaseTestingUtility {
   public static final String TEST_DIRECTORY_KEY = "test.build.data";
 
   /**
-   * Default parent direccounttory for test output.
-   * Target is at it is because minidfscluster has hard-codings to put its data
-   * here.
+   * Default parent directory for test output.
    */
-  public static final String DEFAULT_TEST_DIRECTORY = "target/build/data";
+  public static final String DEFAULT_TEST_DIRECTORY = "target/test-data";
 
   public HBaseTestingUtility() {
     this(HBaseConfiguration.create());
@@ -291,9 +289,8 @@ public class HBaseTestingUtility {
     }
     // Make a new random dir to home everything in.  Set it as system property.
     // minidfs reads home from system property.
-    this.clusterTestBuildDir =
-      testBuildPath == null ?
-          setupClusterTestBuildDir() : new File(testBuildPath);
+    this.clusterTestBuildDir = testBuildPath == null?
+      setupClusterTestBuildDir() : new File(testBuildPath);
     System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestBuildDir.getPath());
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
