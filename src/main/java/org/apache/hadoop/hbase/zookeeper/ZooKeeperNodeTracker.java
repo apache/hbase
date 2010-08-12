@@ -107,7 +107,11 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
   public synchronized byte [] blockUntilAvailable(long timeout)
   throws InterruptedException {
     while(data == null) {
-      wait(timeout);
+      if (timeout == -1) {
+        wait();
+      } else {
+        wait(timeout);
+      }
     }
     return data;
   }

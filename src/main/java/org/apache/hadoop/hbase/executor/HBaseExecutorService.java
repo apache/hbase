@@ -70,6 +70,7 @@ public class HBaseExecutorService {
     MASTER_OPEN_REGION         (2),
     MASTER_SERVER_OPERATIONS   (3),
     MASTER_TABLE_OPERATIONS    (4),
+    MASTER_RS_SHUTDOWN         (5),
 
     // RegionServer executor services
     RS_OPEN_REGION             (20),
@@ -125,7 +126,8 @@ public class HBaseExecutorService {
   public static HBaseExecutorService getExecutorService(String name) {
     HBaseExecutorService executor = executorServicesMap.get(name);
     if(executor == null) {
-      LOG.debug("Executor service [" + name + "] not found.");
+      LOG.debug("Executor service [" + name + "] not found in " +
+        executorServicesMap);
     }
     return executor;
   }

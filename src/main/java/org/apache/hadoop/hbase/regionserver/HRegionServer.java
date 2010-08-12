@@ -329,7 +329,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     initializeZooKeeper();
     initializeThreads();
-    int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
+    int nbBlocks = 0; // FIXXX conf.getInt("hbase.regionserver.nbreservationblocks", 4);
     for (int i = 0; i < nbBlocks; i++) {
       reservedSpace.add(new byte[HConstants.DEFAULT_SIZE_RESERVATION_BLOCK]);
     }
@@ -347,7 +347,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     // create the catalog tracker and start it
     this.catalogTracker = new CatalogTracker(zooKeeper, connection, this,
-        conf.getInt("hbase.regionserver.catalog.timeout", 30000));
+        conf.getInt("hbase.regionserver.catalog.timeout", -1));
     catalogTracker.start();
   }
 

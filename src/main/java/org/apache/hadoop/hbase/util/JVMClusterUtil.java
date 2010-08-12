@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -80,17 +81,22 @@ public class JVMClusterUtil {
    * @return Region server added.
    */
   public static JVMClusterUtil.RegionServerThread createRegionServerThread(final Configuration c,
-    final Class<? extends HRegionServer> hrsc, final int index)
+      final Class<? extends HRegionServer> hrsc, final int index)
   throws IOException {
-      HRegionServer server;
-      try {
-        server = hrsc.getConstructor(Configuration.class).newInstance(c);
-      } catch (Exception e) {
-        IOException ioe = new IOException();
-        ioe.initCause(e);
-        throw ioe;
-      }
-      return new JVMClusterUtil.RegionServerThread(server, index);
+    HRegionServer server;
+    try {
+      server = hrsc.getConstructor(Configuration.class).newInstance(c);
+    } catch (InvocationTargetException ite) {
+      Throwable target = ite.getTargetException();
+      throw new RuntimeException("Failed construction of RegionServer: " +
+        hrsc.toString() + ((target.getCause() != null)?
+          target.getCause().getMessage(): ""), target);
+    } catch (Exception e) {
+      IOException ioe = new IOException();
+      ioe.initCause(e);
+      throw ioe;
+    }
+    return new JVMClusterUtil.RegionServerThread(server, index);
   }
 
   /**

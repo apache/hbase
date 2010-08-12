@@ -27,10 +27,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -83,6 +85,7 @@ public class AssignmentManager extends ZooKeeperListener {
     new TreeMap<String,RegionState>();
 
   /** Plans for region movement. */
+  // TODO: When do plans get cleaned out?  Ever?
   private final Map<String,RegionPlan> regionPlans =
     new TreeMap<String,RegionPlan>();
 
@@ -104,6 +107,8 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   private final SortedMap<HRegionInfo,HServerInfo> regions =
     new TreeMap<HRegionInfo,HServerInfo>();
+
+  private final ReentrantLock assignLock = new ReentrantLock();
 
   /**
    * Constructs a new assignment manager.
@@ -150,6 +155,11 @@ public class AssignmentManager extends ZooKeeperListener {
    * @throws IOException
    */
   void processFailover() throws KeeperException, IOException {
+    // Concurrency note: In the below the accesses on regionsInTransition are
+    // outside of a synchronization block where usually all accesses to RIT are
+    // synchronized.  The presumption is that in this case it is safe since this
+    // method is being played by a single thread on startup.
+
     // Scan META to build list of existing regions, servers, and assignment
     rebuildUserRegions();
     // Pickup any disabled tables
@@ -170,7 +180,7 @@ public class AssignmentManager extends ZooKeeperListener {
       String encodedName = regionInfo.getEncodedName();
       switch(data.getEventType()) {
         case RS2ZK_REGION_CLOSING:
-          // Just insert region into RIT
+          // Just insert region into RIT.
           // If this never updates the timeout will trigger new assignment
           regionsInTransition.put(encodedName,
               new RegionState(regionInfo, RegionState.State.CLOSING,
@@ -463,59 +473,88 @@ public class AssignmentManager extends ZooKeeperListener {
    * Updates the RegionState and sends the OPEN RPC.
    * <p>
    * This will only succeed if the region is in transition and in a CLOSED or
-   * OFFLINE state or not in transition (in-memory not zk).  If the in-memory
-   * checks pass, the zk node is forced to OFFLINE before assigning.
+   * OFFLINE state or not in transition (in-memory not zk), and of course, the
+   * chosen server is up and running (It may have just crashed!).  If the
+   * in-memory checks pass, the zk node is forced to OFFLINE before assigning.
    *
    * @param regionName server to be assigned
    */
   public void assign(HRegionInfo region) {
     LOG.debug("Starting assignment for region " + region);
     // Grab the state of this region and synchronize on it
-    String regionName = region.getEncodedName();
+    String encodedName = region.getEncodedName();
     RegionState state;
-    synchronized(regionsInTransition) {
-      state = regionsInTransition.get(regionName);
-      if(state == null) {
-        state = new RegionState(region, RegionState.State.OFFLINE);
-        regionsInTransition.put(regionName, state);
+    // This assignLock is used bridging the two synchronization blocks.  Once
+    // we've made it into the 'state' synchronization block, then we can let
+    // go of this lock.  There must be a better construct that this -- St.Ack 20100811
+    this.assignLock.lock();
+    try {
+      synchronized(regionsInTransition) {
+        state = regionsInTransition.get(encodedName);
+        if(state == null) {
+          state = new RegionState(region, RegionState.State.OFFLINE);
+          regionsInTransition.put(encodedName, state);
+        }
+      }
+      synchronized(state) {
+        this.assignLock.unlock();
+        assign(state);
+      }
+    } finally {
+      if (this.assignLock.isHeldByCurrentThread()) this.assignLock.unlock();
+    }
+  }
+
+  /**
+   * Caller must hold lock on the passed <code>state</code> object.
+   * @param state 
+   */
+  private void assign(final RegionState state) {
+    if(!state.isClosed() && !state.isOffline()) {
+      LOG.info("Attempting to assign region but it is in transition and in " +
+          "an unexpected state:" + state);
+      return;
+    } else {
+      state.update(RegionState.State.OFFLINE);
+    }
+    try {
+      if(!ZKAssign.createOrForceNodeOffline(master.getZooKeeper(),
+          state.getRegion(), master.getServerName())) {
+        LOG.warn("Attempted to create/force node into OFFLINE state before " +
+            "completing assignment but failed to do so");
+        return;
+      }
+    } catch (KeeperException e) {
+      master.abort("Unexpected ZK exception creating/setting node OFFLINE", e);
+      return;
+    }
+    // Pickup existing plan or make a new one
+    String encodedName = state.getRegion().getEncodedName();
+    RegionPlan plan;
+    synchronized(regionPlans) {
+      plan = regionPlans.get(encodedName);
+      if(plan == null) {
+        LOG.debug("No previous transition plan for " + encodedName +
+            " so generating a random one from " + serverManager.numServers() +
+            " ( " + serverManager.getOnlineServers().size() + ") available servers");
+        plan = new RegionPlan(encodedName, null,
+            LoadBalancer.randomAssignment(serverManager.getOnlineServersList()));
+        regionPlans.put(encodedName, plan);
       }
     }
-    synchronized(state) {
-      if(!state.isClosed() && !state.isOffline()) {
-        LOG.info("Attempting to assign region but it is in transition and in " +
-            "an unexpected state:" + state);
-        return;
-      } else {
-        state.update(RegionState.State.OFFLINE);
-      }
-      try {
-        if(!ZKAssign.createOrForceNodeOffline(master.getZooKeeper(), region,
-            master.getServerName())) {
-          LOG.warn("Attempted to create/force node into OFFLINE state before " +
-              "completing assignment but failed to do so");
-          return;
-        }
-      } catch (KeeperException e) {
-        master.abort("Unexpected ZK exception creating/setting node OFFLINE", e);
-        return;
-      }
-      // Pickup existing plan or make a new one
-      RegionPlan plan;
-      synchronized(regionPlans) {
-        plan = regionPlans.get(regionName);
-        if(plan == null) {
-          LOG.debug("No previous transition plan for " + regionName +
-              " so generating a random one from " + serverManager.numServers() +
-              " ( " + serverManager.getOnlineServers().size() + ") available servers");
-          plan = new RegionPlan(regionName, null,
-              LoadBalancer.randomAssignment(serverManager.getOnlineServersList()));
-          regionPlans.put(regionName, plan);
-        }
-      }
-      // Transition RegionState to PENDING_OPEN and send OPEN RPC
-      state.update(RegionState.State.PENDING_OPEN);
+    try {
+      // Send OPEN RPC. This can fail if the server on other end is is not up.
       serverManager.sendRegionOpen(plan.getDestination(), state.getRegion());
+    } catch (Throwable t) {
+      LOG.warn("Failed assignment of " + state.getRegion());
+      // Clean out plan we failed execute and one that doesn't look like it'll
+      // succeed anyways; we need a new plan!
+      synchronized(regionPlans) {
+        this.regionPlans.remove(encodedName);
+      }
     }
+    // Transition RegionState to PENDING_OPEN
+    state.update(RegionState.State.PENDING_OPEN);
   }
 
   /**
@@ -694,11 +733,10 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Gets the map of regions currently in transition.
-   * @return
+   * @return A copy of the Map of regions currently in transition.
    */
-  public Map<String, RegionState> getRegionsInTransition() {
-    return regionsInTransition;
+  public NavigableMap<String, RegionState> getRegionsInTransition() {
+    return new TreeMap<String, RegionState>(this.regionsInTransition);
   }
 
   /**

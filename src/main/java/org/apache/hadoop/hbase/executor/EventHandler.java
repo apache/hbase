@@ -258,8 +258,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   }
 
   /**
-   * Submits this event object to the correct executor service. This is causes
-   * this object to get executed by the correct ExecutorService.
+   * Submits this event object to the correct executor service.
    */
   public void submit() {
     HBaseExecutorServiceType serviceType = getEventHandlerName();

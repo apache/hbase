@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.catalog;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.zookeeper.MetaNodeTracker;
@@ -115,7 +117,7 @@ public class CatalogTracker {
    */
   public void waitForRoot()
   throws InterruptedException {
-    rootRegionTracker.waitRootRegionLocation(0);
+    rootRegionTracker.waitRootRegionLocation(-1);
   }
 
   /**
@@ -319,7 +321,17 @@ public class CatalogTracker {
 
   private HRegionInterface getCachedConnection(HServerAddress address)
   throws IOException {
-    return connection.getHRegionConnection(address, false);
+    HRegionInterface protocol = null;
+    try {
+      protocol = connection.getHRegionConnection(address, false);
+    } catch (RetriesExhaustedException e) {
+      if (e.getCause() != null && e.getCause() instanceof ConnectException) {
+        // Catch this; presume it means the cached connection has gone bad.
+      } else {
+        throw e;
+      }
+    }
+    return protocol;
   }
 
   private boolean verifyRegionLocation(HRegionInterface metaServer,

@@ -212,7 +212,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     regionServerTracker = new RegionServerTracker(zooKeeper, this,
         serverManager);
     catalogTracker = new CatalogTracker(zooKeeper, connection, this,
-        conf.getInt("hbase.master.catalog.timeout", 30000));
+        conf.getInt("hbase.master.catalog.timeout", -1));
     assignmentManager = new AssignmentManager(this, serverManager, catalogTracker);
     clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
 

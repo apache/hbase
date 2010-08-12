@@ -597,7 +597,7 @@ public class ServerManager {
   /**
    * Sends an OPEN RPC to the specified server to open the specified region.
    * <p>
-   * There is no reason a region server should reject this open.
+   * Open should not fail but can if server just crashed.
    * <p>
    * @param server server to open a region
    * @param regionName region to open

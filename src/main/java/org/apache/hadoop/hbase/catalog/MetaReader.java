@@ -109,13 +109,34 @@ public class MetaReader {
   private static HServerAddress readLocation(HRegionInterface metaServer,
       byte [] catalogRegionName, byte [] regionName)
   throws IOException {
-    Result r = metaServer.get(catalogRegionName, new Get(regionName).addColumn(
-        HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER));
-    if(r == null || r.isEmpty()) {
+    Result r = null;
+    try {
+      r = metaServer.get(catalogRegionName,
+        new Get(regionName).addColumn(HConstants.CATALOG_FAMILY,
+        HConstants.SERVER_QUALIFIER));
+    } catch (java.net.ConnectException e) {
+      if (e.getMessage() != null &&
+          e.getMessage().contains("Connection refused")) {
+        // Treat this exception + message as unavailable catalog table. Catch it
+        // and fall through to return a null
+      } else {
+        throw e;
+      }
+    } catch (IOException e) {
+      if (e.getCause() != null && e.getCause() instanceof IOException &&
+          e.getCause().getMessage() != null &&
+          e.getCause().getMessage().contains("Connection reset by peer")) {
+        // Treat this exception + message as unavailable catalog table. Catch it
+        // and fall through to return a null
+      } else {
+        throw e;
+      }
+    }
+    if (r == null || r.isEmpty()) {
       return null;
     }
-    byte [] value =
-      r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+    byte [] value = r.getValue(HConstants.CATALOG_FAMILY,
+      HConstants.SERVER_QUALIFIER);
     return new HServerAddress(Bytes.toString(value));
   }
 
