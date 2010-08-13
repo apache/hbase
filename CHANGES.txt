@@ -1,5 +1,11 @@
 HBase Change Log
-Release 0.20.6 - Unreleased
+Release 0.20.7 - Unreleased
+  BUG FIXES
+   HBASE-2909  SoftValueSortedMap is broken, can generate NPEs
+
+  IMPROVEMENTS
+
+Release 0.20.6 - July 30, 2010
   BUG FIXES
    HBASE-2763  Cross-port HADOOP-6833 IPC parameter leak bug
    HBASE-2772  Scan doesn't recover from region server failure
