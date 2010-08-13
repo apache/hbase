@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.RegionServerController;
+import org.apache.hadoop.hbase.regionserver.RegionServer;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.util.Progressable;
 import org.apache.zookeeper.KeeperException;
@@ -44,18 +44,18 @@ import org.apache.zookeeper.KeeperException.Code;
 public class OpenRegionHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(OpenRegionHandler.class);
 
-  private final RegionServerController server;
+  private final RegionServer server;
 
   private final CatalogTracker catalogTracker;
 
   private final HRegionInfo regionInfo;
 
-  public OpenRegionHandler(RegionServerController server,
+  public OpenRegionHandler(RegionServer server,
       CatalogTracker catalogTracker, HRegionInfo regionInfo) {
     this(server, catalogTracker, regionInfo, EventType.M2RS_OPEN_REGION);
   }
 
-  protected OpenRegionHandler(RegionServerController server,
+  protected OpenRegionHandler(RegionServer server,
       CatalogTracker catalogTracker, HRegionInfo regionInfo,
       EventType eventType) {
     super(server, eventType);
@@ -70,21 +70,19 @@ public class OpenRegionHandler extends EventHandler {
 
   @Override
   public void process() {
-    LOG.debug("Processing open region of " +
-        regionInfo.getRegionNameAsString());
+    LOG.debug("Processing open of " + regionInfo.getRegionNameAsString());
+    final String encodedName = regionInfo.getEncodedName();
 
-    final String regionName = regionInfo.getEncodedName();
-
-    // Previously we would check for root region availability (but only that it
+    // TODO: Previously we would check for root region availability (but only that it
     // was initially available, does not check if it later went away)
     // Do we need to wait on both root and meta to be available to open a region
     // now since we edit meta?
 
     // Check that this region is not already online
-    HRegion region = server.getOnlineRegion(regionName);
-    if(region != null) {
-      LOG.warn("Attemping to open region " + regionInfo.getRegionNameAsString()
-          + " but it's already online on this server");
+    HRegion region = server.getFromOnlineRegions(encodedName);
+    if (region != null) {
+      LOG.warn("Attempting open of " + regionInfo.getRegionNameAsString() +
+        " but it's already online on this server");
       return;
     }
 
@@ -100,7 +98,7 @@ public class OpenRegionHandler extends EventHandler {
       }
     } catch (KeeperException e) {
       LOG.error("Error transitioning node from OFFLINE to OPENING for region " +
-      		regionName, e);
+        encodedName, e);
       return;
     }
 
@@ -108,7 +106,8 @@ public class OpenRegionHandler extends EventHandler {
     final AtomicInteger openingInteger = new AtomicInteger(openingVersion);
     try {
       // Instantiate the region.  This also periodically updates OPENING.
-      region = server.instantiateRegion(regionInfo, server.getLog(),
+      region = HRegion.openHRegion(regionInfo, server.getWAL(),
+          server.getConfiguration(), server.getFlushRequester(),
           new Progressable() {
             public void progress() {
               try {
@@ -125,8 +124,8 @@ public class OpenRegionHandler extends EventHandler {
             }
       });
     } catch (IOException e) {
-      LOG.error("IOException instantiating region for " + regionInfo);
-      LOG.debug("Resetting state of transition node from OPENING to OFFLINE");
+      LOG.error("IOException instantiating region for " + regionInfo +
+        "; resetting state of transition node from OPENING to OFFLINE");
       try {
         // TODO: We should rely on the master timing out OPENING instead of this
         ZKAssign.forceNodeOffline(server.getZooKeeper(), regionInfo,
@@ -138,8 +137,7 @@ public class OpenRegionHandler extends EventHandler {
       return;
     }
 
-    // Re-transition node to OPENING again to verify someone else has not
-    // stomped on us
+    // Re-transition node to OPENING again to verify no one has stomped on us
     openingVersion = openingInteger.get();
     try {
       if((openingVersion = ZKAssign.retransitionNodeOpening(
@@ -159,13 +157,9 @@ public class OpenRegionHandler extends EventHandler {
       return;
     }
 
-    LOG.debug("Re-transitioned node to OPENING, completing OPEN by adding to " +
-        "online regions, doing on-open checks, and updating ROOT or META " +
-        "for region " + region.getRegionNameAsString());
-
     // Do checks to see if we need to compact (references or too many files)
     if(region.hasReferences() || region.hasTooManyStoreFiles()) {
-      server.getCompactSplitThread().compactionRequested(region,
+      server.getCompactionRequester().requestCompaction(region,
           region.hasReferences() ? "Region has references on open" :
                                    "Region has too many store files");
     }
@@ -213,7 +207,6 @@ public class OpenRegionHandler extends EventHandler {
     }
 
     // Done!  Successful region open
-    LOG.debug("Completed region open and successfully transitioned node to " +
-        "OPENED for region " + region.getRegionNameAsString());
+    LOG.debug("Opened " + region.getRegionNameAsString());
   }
 }

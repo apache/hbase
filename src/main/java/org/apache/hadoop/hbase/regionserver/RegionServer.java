@@ -19,33 +19,29 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.util.Progressable;
 
-public interface RegionServerController extends Server {
+/**
+ * Interface implemented by {@link HRegionServer}
+ */
+public interface RegionServer extends Server, OnlineRegions {
+  public HLog getWAL();
 
-  // this is unfortunate but otherwise all the implementation of region
-  // open/close must happen in HRS itself and not in handlers
-  // handlers could make calls to HRS methods and logic still in HRS, just
-  // trying to reduce the already massive class
+  /**
+   * @return Implementation of {@link CompactionRequestor} or null.
+   */
+  public CompactionRequestor getCompactionRequester();
+  
+  /**
+   * @return Implementation of {@link FlushRequester} or null.
+   */
+  public FlushRequester getFlushRequester();
 
-  public HRegion getOnlineRegion(String regionName);
-
-  public void addToOnlineRegions(HRegion region);
-
-  public HRegion instantiateRegion(final HRegionInfo regionInfo,
-      final HLog wal, Progressable progressable) throws IOException;
-
-  public HLog getLog();
-
-  public CompactSplitThread getCompactSplitThread();
-
+  /**
+   * Return data structure that has Server address and startcode.
+   * @return The HServerInfo for this RegionServer.
+   */
   public HServerInfo getServerInfo();
-
-  public HRegion removeFromOnlineRegions(HRegionInfo regionInfo);
 }

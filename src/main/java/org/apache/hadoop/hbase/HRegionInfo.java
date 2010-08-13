@@ -103,8 +103,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       // old format region name. ROOT and first META region also 
       // use this format.EncodedName is the JenkinsHash value.
       int hashVal = Math.abs(JenkinsHash.getInstance().hash(regionName,
-                                                            regionName.length,
-                                                            0));
+        regionName.length, 0));
       encodedName = String.valueOf(hashVal);
     }
     return encodedName;

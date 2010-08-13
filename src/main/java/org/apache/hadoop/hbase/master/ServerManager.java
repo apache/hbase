@@ -285,8 +285,6 @@ public class ServerManager {
     }
     if (this.clusterShutdown) {
       if (quiescedServers.get() >= availableServers.get()) {
-        // If the only servers we know about are meta servers, then we can
-        // proceed with shutdown
         this.master.stop("All user tables quiesced. Proceeding with shutdown");
         notifyOnlineServers();
       } else if (!this.master.isStopped()) {

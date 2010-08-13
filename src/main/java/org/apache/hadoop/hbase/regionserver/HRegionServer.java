@@ -58,13 +58,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterAddressTracker;
@@ -74,8 +75,6 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -115,7 +114,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.DNS;
-import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 
@@ -124,7 +122,7 @@ import org.apache.zookeeper.KeeperException;
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
 public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
-    Runnable, RegionServerController {
+    Runnable, RegionServer {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
@@ -159,7 +157,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * Map of regions currently being served by this region server. Key is the
    * encoded region name.
    */
-  protected final Map<String, HRegion> onlineRegions = new ConcurrentHashMap<String, HRegion>();
+  protected final Map<String, HRegion> onlineRegions =
+    new ConcurrentHashMap<String, HRegion>();
 
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final LinkedBlockingQueue<HMsg> outboundMsgs = new LinkedBlockingQueue<HMsg>();
@@ -876,7 +875,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         try {
           if (r != null && r.isMajorCompaction()) {
             // Queue a compaction. Will recognize if major is needed.
-            this.instance.compactSplitThread.compactionRequested(r, getName()
+            this.instance.compactSplitThread.requestCompaction(r, getName()
                 + " requests major compaction");
           }
         } catch (IOException e) {
@@ -1074,7 +1073,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   /** @return the HLog */
-  public HLog getLog() {
+  public HLog getWAL() {
     return this.hlog;
   }
 
@@ -1287,7 +1286,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
                 region.flushcache();
                 region.shouldSplit(true);
                 // force a compaction; split will be side-effect.
-                compactSplitThread.compactionRequested(region, e.msg.getType()
+                compactSplitThread.requestCompaction(region, e.msg.getType()
                     .name());
                 break;
 
@@ -1295,7 +1294,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
               case MSG_REGION_COMPACT:
                 // Compact a region
                 region = getRegion(info.getRegionName());
-                compactSplitThread.compactionRequested(region, e.msg
+                compactSplitThread.requestCompaction(region, e.msg
                     .isType(Type.MSG_REGION_MAJOR_COMPACT), e.msg.getType()
                     .name());
                 break;
@@ -1352,34 +1351,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
-  /*
-   * @param regionInfo RegionInfo for the Region we're to instantiate and
-   * initialize.
-   *
-   * @param wal Set into here the regions' seqid.
-   *
-   * @param reporter periodic callback
-   *
-   * @return
-   *
-   * @throws IOException
-   */
-  public HRegion instantiateRegion(final HRegionInfo regionInfo,
-      final HLog wal, Progressable reporter) throws IOException {
-    Path dir = HTableDescriptor.getTableDir(rootDir, regionInfo.getTableDesc()
-        .getName());
-    HRegion r = HRegion.newHRegion(dir, this.hlog, this.fs, conf, regionInfo,
-        this.cacheFlusher);
-    long seqid = r.initialize(reporter);
-    // If a wal and its seqid is < that of new region, use new regions seqid.
-    if (wal != null) {
-      if (seqid > wal.getSequenceNumber()) {
-        wal.setSequenceNumber(seqid);
-      }
-    }
-    return r;
-  }
-
   /** Called either when the master tells us to restart or from stop() */
   ArrayList<HRegion> closeAllRegions() {
     ArrayList<HRegion> regionsToClose = new ArrayList<HRegion>();
@@ -1400,12 +1371,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
     }
     for (HRegion region : regionsToClose) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("closing region " + Bytes.toString(region.getRegionName()));
-      }
       try {
-        new CloseRegionHandler(this, region.getRegionInfo(), abortRequested)
-            .execute();
+        new CloseRegionHandler(this, region.getRegionInfo(), abortRequested).execute();
       } catch (Throwable e) {
         cleanup(e, "Error closing " + Bytes.toString(region.getRegionName()));
       }
@@ -1998,7 +1965,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // force a compaction, split will be side-effect
     // TODO: flush/compact/split refactor will make it trivial to do this
     // sync/async (and won't require us to do a compaction to split!)
-    compactSplitThread.compactionRequested(region, "User-triggered split");
+    compactSplitThread.requestCompaction(region, "User-triggered split");
   }
 
   @Override
@@ -2007,7 +1974,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     HRegion region = getRegion(regionInfo.getRegionName());
     region.flushcache();
     region.shouldSplit(true);
-    compactSplitThread.compactionRequested(region, major, "User-triggered "
+    compactSplitThread.requestCompaction(region, major, "User-triggered "
         + (major ? "major " : "") + "compaction");
   }
 
@@ -2070,20 +2037,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
-  /**
-   * This method removes HRegion corresponding to hri from the Map of
-   * onlineRegions.
-   *
-   * @param hri
-   *          the HRegionInfo corresponding to the HRegion to-be-removed.
-   * @return the removed HRegion, or null if the HRegion was not in
-   *         onlineRegions.
-   */
-  public HRegion removeFromOnlineRegions(HRegionInfo hri) {
+  @Override
+  public HRegion removeFromOnlineRegions(final String encodedName) {
     this.lock.writeLock().lock();
     HRegion toReturn = null;
     try {
-      toReturn = onlineRegions.remove(Bytes.mapKey(hri.getRegionName()));
+      toReturn = onlineRegions.remove(encodedName);
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -2111,12 +2070,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return sortedRegions;
   }
 
-  /**
-   * @param regionName
-   * @return HRegion for the passed encoded <code>regionName</code> or null if
-   *         named region is not member of the online regions.
-   */
-  public HRegion getOnlineRegion(final String encodedRegionName) {
+  @Override
+  public HRegion getFromOnlineRegions(final String encodedRegionName) {
     return onlineRegions.get(encodedRegionName);
   }
 
@@ -2126,7 +2081,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    *         named region is not member of the online regions.
    */
   public HRegion getOnlineRegion(final byte[] regionName) {
-    return getOnlineRegion(HRegionInfo.encodeRegionName(regionName));
+    return getFromOnlineRegions(HRegionInfo.encodeRegionName(regionName));
   }
 
   /** @return the request count */
@@ -2489,8 +2444,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  public CompactSplitThread getCompactSplitThread() {
-    return compactSplitThread;
+  public CompactionRequestor getCompactionRequester() {
+    return this.compactSplitThread;
   }
 
   @Override

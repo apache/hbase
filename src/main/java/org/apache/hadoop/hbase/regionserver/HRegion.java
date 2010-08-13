@@ -214,7 +214,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   final long memstoreFlushSize;
   private volatile long lastFlushTime;
-  final FlushRequester flushListener;
+  final FlushRequester flushRequester;
   private final long blockingMemStoreSize;
   final long threadWakeFrequency;
   // Used to guard splits and closes
@@ -244,7 +244,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.tableDir = null;
     this.blockingMemStoreSize = 0L;
     this.conf = null;
-    this.flushListener = null;
+    this.flushRequester = null;
     this.fs = null;
     this.memstoreFlushSize = 0L;
     this.log = null;
@@ -272,22 +272,19 @@ public class HRegion implements HeapSize { // , Writable{
    * @param conf is global configuration settings.
    * @param regionInfo - HRegionInfo that describes the region
    * is new), then read them from the supplied path.
-   * @param flushListener an object that implements CacheFlushListener or null
-   * making progress to master -- otherwise master might think region deploy
-   * failed.  Can be null.
+   * @param flushRequester an object that implements {@link FlushRequester} or null
    *
    * @see HRegion#newHRegion(Path, HLog, FileSystem, Configuration, org.apache.hadoop.hbase.HRegionInfo, FlushRequester)
-
    */
   public HRegion(Path tableDir, HLog log, FileSystem fs, Configuration conf,
-      HRegionInfo regionInfo, FlushRequester flushListener) {
+      HRegionInfo regionInfo, FlushRequester flushRequester) {
     this.tableDir = tableDir;
     this.comparator = regionInfo.getComparator();
     this.log = log;
     this.fs = fs;
     this.conf = conf;
     this.regionInfo = regionInfo;
-    this.flushListener = flushListener;
+    this.flushRequester = flushRequester;
     this.threadWakeFrequency = conf.getLong(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000);
     String encodedNameStr = this.regionInfo.getEncodedName();
@@ -1803,7 +1800,7 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   private void requestFlush() {
-    if (this.flushListener == null) {
+    if (this.flushRequester == null) {
       return;
     }
     synchronized (writestate) {
@@ -1813,7 +1810,7 @@ public class HRegion implements HeapSize { // , Writable{
       writestate.flushRequested = true;
     }
     // Make request outside of synchronize block; HBASE-818.
-    this.flushListener.request(this);
+    this.flushRequester.requestFlush(this);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Flush requested on " + this);
     }
@@ -2508,10 +2505,10 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Convenience method to open a HRegion outside of an HRegionServer context.
+   * Open a Region.
    * @param info Info for region to be opened.
    * @param rootDir Root directory for HBase instance
-   * @param log HLog for region to use. This method will call
+   * @param wal HLog for region to use. This method will call
    * HLog#setSequenceNumber(long) passing the result of the call to
    * HRegion#getMinSequenceId() to ensure the log id is properly kept
    * up.  HRegionStore does this every time it opens a new region.
@@ -2520,8 +2517,29 @@ public class HRegion implements HeapSize { // , Writable{
    *
    * @throws IOException
    */
-  public static HRegion openHRegion(final HRegionInfo info, final Path rootDir,
-    final HLog log, final Configuration conf)
+  public static HRegion openHRegion(final HRegionInfo info, final HLog wal,
+      final Configuration conf)
+  throws IOException {
+    return openHRegion(info, wal, conf, null, null);
+  }
+
+  /**
+   * Open a Region.
+   * @param info Info for region to be opened.
+   * @param wal HLog for region to use. This method will call
+   * HLog#setSequenceNumber(long) passing the result of the call to
+   * HRegion#getMinSequenceId() to ensure the log id is properly kept
+   * up.  HRegionStore does this every time it opens a new region.
+   * @param conf
+   * @param flusher An interface we can request flushes against.
+   * @param reporter An interface we can report progress against.
+   * @return new HRegion
+   *
+   * @throws IOException
+   */
+  public static HRegion openHRegion(final HRegionInfo info, final HLog wal,
+    final Configuration conf, final FlushRequester flusher,
+    final Progressable reporter)
   throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
@@ -2529,12 +2547,13 @@ public class HRegion implements HeapSize { // , Writable{
     if (info == null) {
       throw new NullPointerException("Passed region info is null");
     }
-    HRegion r = HRegion.newHRegion(
-        HTableDescriptor.getTableDir(rootDir, info.getTableDesc().getName()),
-        log, FileSystem.get(conf), conf, info, null);
-    long seqid = r.initialize();
-    if (log != null) {
-      log.setSequenceNumber(seqid);
+    Path dir = HTableDescriptor.getTableDir(FSUtils.getRootDir(conf),
+      info.getTableDesc().getName());
+    HRegion r = HRegion.newHRegion(dir, wal, FileSystem.get(conf), conf, info,
+      flusher);
+    long seqid = r.initialize(reporter);
+    if (wal != null) {
+      wal.setSequenceNumber(seqid);
     }
     return r;
   }

@@ -79,7 +79,7 @@ class LogRoller extends Thread implements LogRollListener {
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
         this.lastrolltime = now;
-        byte [][] regionsToFlush = server.getLog().rollWriter();
+        byte [][] regionsToFlush = server.getWAL().rollWriter();
         if (regionsToFlush != null) {
           for (byte [] r: regionsToFlush) scheduleFlush(r);
         }
@@ -116,7 +116,7 @@ class LogRoller extends Thread implements LogRollListener {
     if (r != null) {
       requester = this.server.getFlushRequester();
       if (requester != null) {
-        requester.request(r);
+        requester.requestFlush(r);
         scheduled = true;
       }
     }

@@ -26,7 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.RegionServerController;
+import org.apache.hadoop.hbase.regionserver.RegionServer;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
@@ -38,23 +38,23 @@ import org.apache.zookeeper.KeeperException;
 public class CloseRegionHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(CloseRegionHandler.class);
 
-  private final RegionServerController server;
+  private final RegionServer server;
 
   private final HRegionInfo regionInfo;
 
   private final boolean abort;
 
-  public CloseRegionHandler(RegionServerController server,
+  public CloseRegionHandler(RegionServer server,
       HRegionInfo regionInfo) {
     this(server, regionInfo, false);
   }
 
-  public CloseRegionHandler(RegionServerController server,
+  public CloseRegionHandler(RegionServer server,
       HRegionInfo regionInfo, boolean abort) {
     this(server, regionInfo, abort, EventType.M2RS_CLOSE_REGION);
   }
 
-  protected CloseRegionHandler(RegionServerController server,
+  protected CloseRegionHandler(RegionServer server,
       HRegionInfo regionInfo, boolean abort, EventType eventType) {
     super(server, eventType);
     this.server = server;
@@ -68,17 +68,13 @@ public class CloseRegionHandler extends EventHandler {
 
   @Override
   public void process() {
-    LOG.debug("Processing close region of " +
-        regionInfo.getRegionNameAsString());
-
-    String regionName = regionInfo.getEncodedName();
-
+    String name = regionInfo.getRegionNameAsString();
+    LOG.debug("Processing close of " + name);
+    String encodedRegionName = regionInfo.getEncodedName();
     // Check that this region is being served here
-    HRegion region = server.getOnlineRegion(regionName);
+    HRegion region = server.getFromOnlineRegions(encodedRegionName);
     if(region == null) {
-      LOG.warn("Received a CLOSE for the region " +
-          regionInfo.getRegionNameAsString() + " but not currently serving " +
-          "this region");
+      LOG.warn("Received CLOSE for region " + name + " but currently not serving");
       return;
     }
 
@@ -101,13 +97,13 @@ public class CloseRegionHandler extends EventHandler {
     try {
       // TODO: If we need to keep updating CLOSING stamp to prevent against
       //       a timeout if this is long-running, need to spin up a thread?
-      server.removeFromOnlineRegions(regionInfo);
+      server.removeFromOnlineRegions(regionInfo.getEncodedName());
       region.close(abort);
     } catch (IOException e) {
-      LOG.error("IOException closing region for " + regionInfo);
-      LOG.debug("Deleting transition node that was in CLOSING");
+      LOG.error("IOException closing region for " + regionInfo +
+        "; deleting transition node that was in CLOSING");
       try {
-        ZKAssign.deleteClosingNode(server.getZooKeeper(), regionName);
+        ZKAssign.deleteClosingNode(server.getZooKeeper(), encodedRegionName);
       } catch (KeeperException e1) {
         LOG.error("Error deleting CLOSING node");
         return;
@@ -119,14 +115,14 @@ public class CloseRegionHandler extends EventHandler {
     try {
       if(ZKAssign.transitionNodeClosed(server.getZooKeeper(), regionInfo,
           server.getServerName(), expectedVersion) == -1) {
-        LOG.warn("Completed the OPEN of a region but when transitioning from " +
-            " OPENING to OPENED got a version mismatch, someone else clashed " +
+        LOG.warn("Completed the CLOSE of a region but when transitioning from " +
+            " CLOSING to CLOSED got a version mismatch, someone else clashed " +
             "so now unassigning");
         region.close();
         return;
       }
     } catch (KeeperException e) {
-      LOG.error("Failed transitioning node from OPENING to OPENED", e);
+      LOG.error("Failed transitioning node from CLOSING to CLOSED", e);
       return;
     } catch (IOException e) {
       LOG.error("Failed to close region after failing to transition", e);
@@ -134,8 +130,6 @@ public class CloseRegionHandler extends EventHandler {
     }
 
     // Done!  Successful region open
-    LOG.debug("Completed region close and successfully transitioned node to " +
-        "CLOSED for region " + region.getRegionNameAsString() + " (" +
-        regionName + ")");
+    LOG.debug("Closed region " + region.getRegionNameAsString());
   }
 }

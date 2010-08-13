@@ -40,7 +40,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Compact region on request and then run split if appropriate
  */
-public class CompactSplitThread extends Thread {
+public class CompactSplitThread extends Thread implements CompactionRequestor {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
 
   private HTable root = null;
@@ -110,13 +110,9 @@ public class CompactSplitThread extends Thread {
     LOG.info(getName() + " exiting");
   }
 
-  /**
-   * @param r HRegion store belongs to
-   * @param why Why compaction requested -- used in debug messages
-   */
-  public synchronized void compactionRequested(final HRegion r,
+  public synchronized void requestCompaction(final HRegion r,
       final String why) {
-    compactionRequested(r, false, why);
+    requestCompaction(r, false, why);
   }
 
   /**
@@ -124,7 +120,7 @@ public class CompactSplitThread extends Thread {
    * @param force Whether next compaction should be major
    * @param why Why compaction requested -- used in debug messages
    */
-  public synchronized void compactionRequested(final HRegion r,
+  public synchronized void requestCompaction(final HRegion r,
       final boolean force, final String why) {
     if (this.server.isStopped()) {
       return;
@@ -177,7 +173,7 @@ public class CompactSplitThread extends Thread {
     oldRegionInfo.setOffline(true);
     oldRegionInfo.setSplit(true);
     // Inform the HRegionServer that the parent HRegion is no-longer online.
-    this.server.removeFromOnlineRegions(oldRegionInfo);
+    this.server.removeFromOnlineRegions(oldRegionInfo.getEncodedName());
 
     Put put = new Put(oldRegionInfo.getRegionName());
     put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,

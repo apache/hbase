@@ -17,19 +17,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.handler;
+package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.RegionServer;
-
-/**
- * Handles closing of the root region on a region server.
- * <p>
- * This is executed after receiving an CLOSE RPC from the master for root.
- */
-public class CloseRootHandler extends CloseRegionHandler {
-  public CloseRootHandler(RegionServer server,
-      HRegionInfo regionInfo) {
-    super(server, regionInfo, false, EventType.M2RS_CLOSE_ROOT);
-  }
+public interface CompactionRequestor {
+  /**
+   * @param r Region to compact
+   * @param why Why compaction was requested -- used in debug messages
+   */
+  public void requestCompaction(final HRegion r, final String why);
 }

@@ -345,7 +345,7 @@ public class TestWALReplay {
     private HRegion r;
 
     @Override
-    public void request(HRegion region) {
+    public void requestFlush(HRegion region) {
       count++;
       try {
         r.flushcache();

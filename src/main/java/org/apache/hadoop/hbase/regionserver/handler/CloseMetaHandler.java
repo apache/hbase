@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase.regionserver.handler;
 
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.RegionServerController;
+import org.apache.hadoop.hbase.regionserver.RegionServer;
 
 /**
  * Handles closing of the root region on a region server.
@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerController;
  * This is executed after receiving an CLOSE RPC from the master for root.
  */
 public class CloseMetaHandler extends CloseRegionHandler {
-  public CloseMetaHandler(RegionServerController server,
+  public CloseMetaHandler(RegionServer server,
       HRegionInfo regionInfo) {
     super(server, regionInfo, false, EventType.M2RS_CLOSE_META);
   }

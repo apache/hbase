@@ -311,7 +311,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
           int count = this.serverManager.numServers();
           if (count != countOfServersStillRunning) {
             countOfServersStillRunning = count;
-            LOG.info("Regionservers still running; " +
+            LOG.info("Regionserver(s) still running: " +
               countOfServersStillRunning);
           }
         }
@@ -750,7 +750,8 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   }
 
   @Override
-  public void stop(String why) {
+  public void stop(final String why) {
+    LOG.info(why);
     this.stopped = true;
   }
 

@@ -17,19 +17,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.handler;
-
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.RegionServer;
+package org.apache.hadoop.hbase.regionserver;
 
 /**
- * Handles closing of the root region on a region server.
- * <p>
- * This is executed after receiving an CLOSE RPC from the master for root.
+ * Interface to Map of online regions.  In the  Map, the key is the region's
+ * encoded name and the value is an {@link HRegion} instance.
  */
-public class CloseRootHandler extends CloseRegionHandler {
-  public CloseRootHandler(RegionServer server,
-      HRegionInfo regionInfo) {
-    super(server, regionInfo, false, EventType.M2RS_CLOSE_ROOT);
-  }
+interface OnlineRegions {
+  /**
+   * Add to online regions.
+   * @param r
+   */
+  public void addToOnlineRegions(final HRegion r);
+
+  /**
+   * This method removes HRegion corresponding to hri from the Map of onlineRegions.
+   *
+   * @param encodedRegionName
+   * @return the removed HRegion, or null if the HRegion was not in onlineRegions.
+   */
+  public HRegion removeFromOnlineRegions(String encodedRegionName);
+
+  /**
+   * @param encodedRegionName
+   * @return HRegion for the passed encoded <code>encodedRegionName</code> or
+   * null if named region is not member of the online regions.
+   */
+  public HRegion getFromOnlineRegions(String encodedRegionName);
 }
