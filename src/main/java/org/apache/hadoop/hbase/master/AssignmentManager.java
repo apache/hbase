@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
@@ -623,9 +624,10 @@ public class AssignmentManager extends ZooKeeperListener {
    * <p>
    * Forcibly unsets the current root region location in ZooKeeper and assigns
    * ROOT to a random RegionServer.
+   * @throws KeeperException 
    */
-  public void assignRoot() {
-    // Force assignment to a random server
+  public void assignRoot() throws KeeperException {
+    RootLocationEditor.deleteRootLocation(this.master.getZooKeeper());
     assign(HRegionInfo.ROOT_REGIONINFO);
   }
 
@@ -654,9 +656,9 @@ public class AssignmentManager extends ZooKeeperListener {
     // Simpler because just wait for no regions in transition
 
     // Scan META for all user regions
-    List<HRegionInfo> allRegions = MetaScanner.listAllRegions(
-        master.getConfiguration());
-    if(allRegions == null || allRegions.isEmpty()) {
+    List<HRegionInfo> allRegions =
+      MetaScanner.listAllRegions(master.getConfiguration());
+    if (allRegions == null || allRegions.isEmpty()) {
       return;
     }
 

@@ -83,7 +83,7 @@ public class MiniHBaseCluster {
       new ConcurrentHashMap<HServerInfo, IOException>();
 
     public MiniHBaseClusterMaster(final Configuration conf)
-    throws IOException, KeeperException {
+    throws IOException, KeeperException, InterruptedException {
       super(conf);
     }
 
@@ -152,7 +152,7 @@ public class MiniHBaseCluster {
     private Thread shutdownThread = null;
 
     public MiniHBaseClusterRegionServer(Configuration conf)
-        throws IOException {
+        throws IOException, InterruptedException {
       super(setDifferentUser(conf));
     }
 

@@ -90,14 +90,16 @@ public class CatalogTracker {
    * Determines current availability of catalog tables and ensures all further
    * transitions of either region is tracked.
    * @throws IOException
+   * @throws InterruptedException 
    */
-  public void start() throws IOException {
+  public void start() throws IOException, InterruptedException {
     // Register listeners with zk
     zookeeper.registerListener(rootRegionTracker);
     zookeeper.registerListener(metaNodeTracker);
     // Start root tracking
     rootRegionTracker.start();
-    // Determine meta assignment
+    // Determine meta assignment; may not work because root and meta not yet
+    // deployed.
     getMetaServerConnection(true);
   }
 
@@ -105,8 +107,9 @@ public class CatalogTracker {
    * Gets the current location for <code>-ROOT-</code> or null if location is
    * not currently available.
    * @return location of root, null if not available
+   * @throws InterruptedException 
    */
-  public HServerAddress getRootLocation() {
+  public HServerAddress getRootLocation() throws InterruptedException {
     return rootRegionTracker.getRootRegionLocation();
   }
 
@@ -117,7 +120,7 @@ public class CatalogTracker {
    */
   public void waitForRoot()
   throws InterruptedException {
-    rootRegionTracker.waitRootRegionLocation(-1);
+    rootRegionTracker.getRootRegionLocation();
   }
 
   /**
@@ -130,12 +133,11 @@ public class CatalogTracker {
    * @throws NotAllMetaRegionsOnlineException if root not available before
    *                                          timeout
    */
-  public HServerAddress waitForRoot(long timeout)
+  public HServerAddress waitForRoot(final long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException {
     HServerAddress address = rootRegionTracker.waitRootRegionLocation(timeout);
     if (address == null) {
-      throw new NotAllMetaRegionsOnlineException(
-          "Timed out (" + timeout + "ms)");
+      throw new NotAllMetaRegionsOnlineException("Timed out; " + timeout + "ms");
     }
     return address;
   }
@@ -176,9 +178,10 @@ public class CatalogTracker {
    * if available.  Returns null if no location is immediately available.
    * @return connection to server hosting root, null if not available
    * @throws IOException
+   * @throws InterruptedException 
    */
   private HRegionInterface getRootServerConnection()
-  throws IOException {
+  throws IOException, InterruptedException {
     HServerAddress address = rootRegionTracker.getRootRegionLocation();
     if (address == null) {
       return null;
@@ -200,9 +203,10 @@ public class CatalogTracker {
    *
    * @return connection to server hosting meta, null if location not available
    * @throws IOException
+   * @throws InterruptedException 
    */
   private HRegionInterface getMetaServerConnection(boolean refresh)
-  throws IOException {
+  throws IOException, InterruptedException {
     synchronized(metaAvailable) {
       if(metaAvailable.get()) {
         HRegionInterface current = getCachedConnection(metaLocation);

@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooKeeper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -46,7 +46,6 @@ import org.junit.Test;
 
 public class TestZooKeeperNodeTracker {
   private static final Log LOG = LogFactory.getLog(TestZooKeeperNodeTracker.class);
-
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private final static Random rand = new Random();
@@ -69,11 +68,11 @@ public class TestZooKeeperNodeTracker {
         "testNodeTracker", abortable);
     ZKUtil.createAndFailSilent(zk, zk.baseZNode);
 
-    String node =
+    final String node =
       ZKUtil.joinZNode(zk.baseZNode, new Long(rand.nextLong()).toString());
 
-    byte [] dataOne = Bytes.toBytes("dataOne");
-    byte [] dataTwo = Bytes.toBytes("dataTwo");
+    final byte [] dataOne = Bytes.toBytes("dataOne");
+    final byte [] dataTwo = Bytes.toBytes("dataTwo");
 
     // Start a ZKNT with no node currently available
     TestTracker localTracker = new TestTracker(zk, node, abortable);
@@ -97,7 +96,7 @@ public class TestZooKeeperNodeTracker {
 
     // Create a completely separate zk connection for test triggers and avoid
     // any weird watcher interactions from the test
-    ZooKeeper zkconn = new ZooKeeper(
+    final ZooKeeper zkconn = new ZooKeeper(
         ZKConfig.getZKQuorumServersString(TEST_UTIL.getConfiguration()), 60000,
         new StubWatcher());
 
@@ -176,7 +175,6 @@ public class TestZooKeeperNodeTracker {
     assertTrue(thread.hasData);
     assertTrue(Bytes.equals(thread.tracker.getData(), dataOne));
     LOG.info("Successfully got data one following a data change on all trackers and threads");
-
   }
 
   public static class WaitToGetDataThread extends Thread {

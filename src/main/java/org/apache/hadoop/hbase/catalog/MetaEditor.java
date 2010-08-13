@@ -72,8 +72,8 @@ public class MetaEditor {
   public static void updateMetaLocation(CatalogTracker catalogTracker,
       HRegionInfo regionInfo, HServerInfo serverInfo)
   throws IOException {
-    updateLocation(catalogTracker.waitForRootServerConnectionDefault(),
-        CatalogTracker.ROOT_REGION, regionInfo, serverInfo);
+    HRegionInterface server = catalogTracker.waitForRootServerConnectionDefault();
+    updateLocation(server, CatalogTracker.ROOT_REGION, regionInfo, serverInfo);
   }
 
   /**
@@ -112,15 +112,14 @@ public class MetaEditor {
   throws IOException {
     Put put = new Put(regionInfo.getRegionName());
     put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-        Bytes.toBytes(serverInfo.getHostnamePort()));
+      Bytes.toBytes(serverInfo.getHostnamePort()));
     put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-        Bytes.toBytes(serverInfo.getStartCode()));
+      Bytes.toBytes(serverInfo.getStartCode()));
     server.put(catalogRegionName, put);
-
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
-          " in region " + Bytes.toString(catalogRegionName) + " with " +
-          "server=" + serverInfo.getHostnamePort() + ", " +
-          "startcode=" + serverInfo.getStartCode());
+      " in region " + Bytes.toString(catalogRegionName) + " with " +
+      "server=" + serverInfo.getHostnamePort() + ", " +
+      "startcode=" + serverInfo.getStartCode());
   }
 
   /**

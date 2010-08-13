@@ -253,8 +253,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    *
    * @param conf
    * @throws IOException
+   * @throws InterruptedException 
    */
-  public HRegionServer(Configuration conf) throws IOException {
+  public HRegionServer(Configuration conf) throws IOException, InterruptedException {
     machineName = DNS.getDefaultHost(conf.get(
         "hbase.regionserver.dns.interface", "default"), conf.get(
         "hbase.regionserver.dns.nameserver", "default"));
@@ -307,8 +308,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * call it.
    *
    * @throws IOException
+   * @throws InterruptedException 
    */
-  private void initialize() throws IOException {
+  private void initialize() throws IOException, InterruptedException {
     this.abortRequested = false;
     this.stopped = false;
 
@@ -335,7 +337,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
-  private void initializeZooKeeper() throws IOException {
+  private void initializeZooKeeper() throws IOException, InterruptedException {
     // open connection to zookeeper and set primary watcher
     zooKeeper = new ZooKeeperWatcher(conf, REGIONSERVER + "-"
         + serverInfo.getServerName(), this);

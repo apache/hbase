@@ -92,5 +92,4 @@ public class OpenedRegionHandler extends EventHandler {
     assignmentManager.regionOnline(regionInfo, serverInfo);
     LOG.debug("Opened region " + regionInfo);
   }
-
 }

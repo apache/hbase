@@ -32,6 +32,10 @@ import org.apache.zookeeper.KeeperException;
  * RegionServers.
  */
 public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
+  /**
+   * Pass this if you do not want a timeout.
+   */
+  public final static long NO_TIMEOUT = -1;
 
   /** Path of node being tracked */
   protected final String node;
@@ -89,10 +93,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
    */
   public synchronized byte [] blockUntilAvailable()
   throws InterruptedException {
-    while(data == null) {
-      wait();
-    }
-    return data;
+    return blockUntilAvailable(NO_TIMEOUT);
   }
 
   /**
@@ -100,18 +101,19 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
    * specified timeout has elapsed.
    *
    * @param timeout maximum time to wait for the node data to be available,
-   *                in milliseconds
+   *                in milliseconds.  Pass {@link #NO_TIMEOUT} for no timeout.
    * @return data of the node
    * @throws InterruptedException if the waiting thread is interrupted
    */
   public synchronized byte [] blockUntilAvailable(long timeout)
   throws InterruptedException {
-    while(data == null) {
-      if (timeout == -1) {
-        wait();
-      } else {
-        wait(timeout);
-      }
+    if (timeout != NO_TIMEOUT && timeout < 0) throw new IllegalArgumentException();
+    long startTime = System.currentTimeMillis();
+    long remaining = timeout;
+    while ((remaining == NO_TIMEOUT || remaining > 0) && this.data == null) {
+      if (remaining == NO_TIMEOUT) wait();
+      else wait(remaining);
+      remaining = timeout - (System.currentTimeMillis() - startTime);
     }
     return data;
   }

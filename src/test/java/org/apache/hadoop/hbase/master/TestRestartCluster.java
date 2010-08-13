@@ -19,9 +19,11 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -82,6 +85,9 @@ public class TestRestartCluster {
       utility.createTable(TABLE, FAMILY);
       utility.waitTableAvailable(TABLE, 30000);
     }
+    List<HRegionInfo> allRegions =
+      MetaScanner.listAllRegions(utility.getConfiguration());
+    assertEquals(3, allRegions.size());
 
     LOG.info("\n\nShutting down cluster");
     utility.getHBaseCluster().shutdown();
@@ -92,6 +98,9 @@ public class TestRestartCluster {
 
     LOG.info("\n\nStarting cluster the second time");
     utility.restartHBaseCluster(3);
+
+    allRegions = MetaScanner.listAllRegions(utility.getConfiguration());
+    assertEquals(3, allRegions.size());
 
     LOG.info("\n\nWaiting for tables to be available");
     for(byte [] TABLE : TABLES) {

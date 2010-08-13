@@ -168,8 +168,10 @@ implements HMasterInterface, HMasterRegionInterface, Server {
    *     region server queue, file system manager, etc
    * <li>Block until becoming active master
    * </ol>
+   * @throws InterruptedException 
    */
-  public HMaster(Configuration conf) throws IOException, KeeperException {
+  public HMaster(Configuration conf)
+  throws IOException, KeeperException, InterruptedException {
     // initialize some variables
     this.conf = conf;
 
@@ -274,6 +276,11 @@ implements HMasterInterface, HMasterRegionInterface, Server {
       startServiceThreads();
       // wait for minimum number of region servers to be up
       serverManager.waitForMinServers();
+
+      // TOOD: Whey do we assign root and meta on startup?  Shouldn't we check
+      // if we started the cluster before we assigning root and meta?  Perhaps
+      // they are happy where they are?  St.Ack 20100812.
+
       // assign the root region
       assignmentManager.assignRoot();
       catalogTracker.waitForRoot();
@@ -293,7 +300,8 @@ implements HMasterInterface, HMasterRegionInterface, Server {
         // rebuild in-memory state.
         assignmentManager.processFailover();
       }
-      LOG.info("HMaster started on " + this.address.toString());
+      LOG.info("HMaster started on " + this.address.toString() +
+        "; clusterStarter=" + this.clusterStarter);
       Sleeper sleeper = new Sleeper(1000, this);
       int countOfServersStillRunning = this.serverManager.numServers();
       while (!this.stopped  && !this.abort) {
@@ -768,10 +776,11 @@ implements HMasterInterface, HMasterRegionInterface, Server {
         masterClass.getConstructor(Configuration.class);
       return c.newInstance(conf);
     } catch (InvocationTargetException ite) {
-      Throwable target = ite.getTargetException();
+      Throwable target = ite.getTargetException() != null?
+        ite.getTargetException(): ite;
+      if (target.getCause() != null) target = target.getCause();
       throw new RuntimeException("Failed construction of Master: " +
-        masterClass.toString() + ((target.getCause() != null)?
-          target.getCause().getMessage(): ""), target);
+        masterClass.toString(), target);
     } catch (Exception e) {
       throw new RuntimeException("Failed construction of Master: " +
         masterClass.toString() + ((e.getCause() != null)?
@@ -786,7 +795,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     private MiniZooKeeperCluster zkcluster = null;
 
     public LocalHMaster(Configuration conf)
-    throws IOException, KeeperException {
+    throws IOException, KeeperException, InterruptedException {
       super(conf);
     }
 

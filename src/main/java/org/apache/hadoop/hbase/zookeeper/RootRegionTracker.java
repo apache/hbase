@@ -48,25 +48,33 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
   }
 
   /**
-   * Gets the root region location, if available.  Null if not.
-   * @return server address for server hosting root region, null if none
-   *         available
+   * Gets the root region location, if available.  Null if not.  Does not block.
+   * @return server address for server hosting root region, null if none available
+   * @throws InterruptedException 
    */
-  public HServerAddress getRootRegionLocation() {
-    byte [] data = super.getData();
-    return data == null ? null : new HServerAddress(Bytes.toString(data));
+  public HServerAddress getRootRegionLocation() throws InterruptedException {
+    return dataToHServerAddress(super.getData());
   }
 
   /**
    * Gets the root region location, if available, and waits for up to the
    * specified timeout if not immediately available.
-   * @param timeout maximum time to wait, in millis, use 0 for forever
+   * @param timeout maximum time to wait, in millis, use {@link ZooKeeperNodeTracker#NO_TIMEOUT} for
+   * forever
    * @return server address for server hosting root region, null if timed out
    * @throws InterruptedException if interrupted while waiting
    */
   public HServerAddress waitRootRegionLocation(long timeout)
   throws InterruptedException {
-    byte [] data = super.blockUntilAvailable(timeout);
-    return data == null ? null : new HServerAddress(Bytes.toString(data));
+    return dataToHServerAddress(super.blockUntilAvailable(timeout));
+  }
+
+  /*
+   * @param data
+   * @return Returns null if <code>data</code> is null else converts passed data
+   * to an HServerAddress instance.
+   */
+  private static HServerAddress dataToHServerAddress(final byte [] data) {
+    return data == null ? null: new HServerAddress(Bytes.toString(data));
   }
 }

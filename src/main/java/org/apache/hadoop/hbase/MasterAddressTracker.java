@@ -85,7 +85,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    */
   public synchronized HServerAddress waitForMaster(long timeout)
   throws InterruptedException {
-    byte [] data = super.blockUntilAvailable(timeout);
+    byte [] data = super.blockUntilAvailable();
     return data == null ? null : new HServerAddress(Bytes.toString(data));
   }
 }

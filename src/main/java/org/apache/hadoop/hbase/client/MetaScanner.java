@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.util.Writables;
  * minor releases.
  */
 public class MetaScanner {
-
   /**
    * Scans the meta table and calls a visitor on each RowResult and uses a empty
    * start row value as table name.
@@ -52,7 +51,7 @@ public class MetaScanner {
   public static void metaScan(Configuration configuration,
       MetaScannerVisitor visitor)
   throws IOException {
-    metaScan(configuration, visitor, HConstants.EMPTY_START_ROW);
+    metaScan(configuration, visitor, null);
   }
 
   /**
