@@ -30,6 +30,6 @@ import org.apache.hadoop.hbase.regionserver.RegionServer;
 public class CloseMetaHandler extends CloseRegionHandler {
   public CloseMetaHandler(RegionServer server,
       HRegionInfo regionInfo) {
-    super(server, regionInfo, false, EventType.M2RS_CLOSE_META);
+    super(server, regionInfo, false, true, EventType.M2RS_CLOSE_META);
   }
 }

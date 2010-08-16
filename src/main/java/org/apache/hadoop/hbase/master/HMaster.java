@@ -154,8 +154,6 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   private boolean stopped = false;
   // Set on abort -- usually failure of our zk session
   private volatile boolean abort = false;
-  // Gets set to the time a cluster shutdown was initiated.
-  private volatile boolean runningClusterShutdown;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -307,7 +305,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
       while (!this.stopped  && !this.abort) {
         // Master has nothing to do
         sleeper.sleep();
-        if (this.runningClusterShutdown) {
+        if (this.serverManager.isClusterShutdown()) {
           int count = this.serverManager.numServers();
           if (count != countOfServersStillRunning) {
             countOfServersStillRunning = count;
@@ -322,7 +320,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
 
     // Wait for all the remaining region servers to report in IFF we were
     // running a cluster shutdown AND we were NOT aborting.
-    if (!this.abort && this.runningClusterShutdown) {
+    if (!this.abort && this.serverManager.isClusterShutdown()) {
       this.serverManager.letRegionServersShutdown();
     }
 
@@ -736,7 +734,6 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   @Override
   public void shutdown() {
     this.serverManager.shutdownCluster();
-    this.runningClusterShutdown = true;
     try {
       this.clusterStatusTracker.setClusterDown();
     } catch (KeeperException e) {

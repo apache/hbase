@@ -51,6 +51,7 @@ public class RegionServerTracker extends ZooKeeperListener {
     this.abortable = abortable;
     this.serverManager = serverManager;
   }
+
   /**
    * Starts the tracking of online RegionServers.
    *

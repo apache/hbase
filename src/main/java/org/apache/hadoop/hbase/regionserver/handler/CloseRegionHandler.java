@@ -38,28 +38,47 @@ import org.apache.zookeeper.KeeperException;
 public class CloseRegionHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(CloseRegionHandler.class);
 
+  private final int FAILED = -1;
+
   private final RegionServer server;
 
   private final HRegionInfo regionInfo;
 
+  // If true, the hosting server is aborting.  Region close process is different
+  // when we are aborting.
   private final boolean abort;
+
+  // Update zk on closing transitions. Usually true.  Its false if cluster
+  // is going down.  In this case, its the rs that initiates the region
+  // close -- not the master process so state up in zk will unlikely be
+  // CLOSING.
+  private final boolean zk;
 
   public CloseRegionHandler(RegionServer server,
       HRegionInfo regionInfo) {
-    this(server, regionInfo, false);
+    this(server, regionInfo, false, true);
   }
 
-  public CloseRegionHandler(RegionServer server,
-      HRegionInfo regionInfo, boolean abort) {
-    this(server, regionInfo, abort, EventType.M2RS_CLOSE_REGION);
+  /**
+   * This method used internally by the RegionServer to close out regions.
+   * @param server
+   * @param regionInfo
+   * @param abort If the regionserver is aborting.
+   * @param zk If the close should be noted out in zookeeper.
+   */
+  public CloseRegionHandler(final RegionServer server,
+      final HRegionInfo regionInfo, final boolean abort, final boolean zk) {
+    this(server, regionInfo, abort, zk, EventType.M2RS_CLOSE_REGION);
   }
 
   protected CloseRegionHandler(RegionServer server,
-      HRegionInfo regionInfo, boolean abort, EventType eventType) {
+      HRegionInfo regionInfo, boolean abort, final boolean zk,
+      EventType eventType) {
     super(server, eventType);
     this.server = server;
     this.regionInfo = regionInfo;
     this.abort = abort;
+    this.zk = zk;
   }
 
   public HRegionInfo getRegionInfo() {
@@ -73,24 +92,15 @@ public class CloseRegionHandler extends EventHandler {
     String encodedRegionName = regionInfo.getEncodedName();
     // Check that this region is being served here
     HRegion region = server.getFromOnlineRegions(encodedRegionName);
-    if(region == null) {
+    if (region == null) {
       LOG.warn("Received CLOSE for region " + name + " but currently not serving");
       return;
     }
 
-    // Create ZK node in CLOSING state
-    int expectedVersion;
-    try {
-      if((expectedVersion = ZKAssign.createNodeClosing(server.getZooKeeper(),
-          regionInfo, server.getServerName())) == -1) {
-        LOG.warn("Error creating node in CLOSING state, aborting close of " +
-            regionInfo.getRegionNameAsString());
-        return;
-      }
-    } catch (KeeperException e) {
-      LOG.warn("Error creating node in CLOSING state, aborting close of " +
-          regionInfo.getRegionNameAsString());
-      return;
+    int expectedVersion = FAILED;
+    if (this.zk) {
+      expectedVersion = setClosingState();
+      if (expectedVersion == FAILED) return;
     }
 
     // Close the region
@@ -100,21 +110,24 @@ public class CloseRegionHandler extends EventHandler {
       server.removeFromOnlineRegions(regionInfo.getEncodedName());
       region.close(abort);
     } catch (IOException e) {
-      LOG.error("IOException closing region for " + regionInfo +
-        "; deleting transition node that was in CLOSING");
-      try {
-        ZKAssign.deleteClosingNode(server.getZooKeeper(), encodedRegionName);
-      } catch (KeeperException e1) {
-        LOG.error("Error deleting CLOSING node");
-        return;
-      }
-      return;
+      LOG.error("IOException closing region for " + regionInfo);
+      if (this.zk) deleteClosingState();
     }
 
-    // Transition ZK node to CLOSED
+    if (this.zk) setClosedState(expectedVersion, region);
+
+    // Done!  Successful region open
+    LOG.debug("Closed region " + region.getRegionNameAsString());
+  }
+
+  /**
+   * Transition ZK node to CLOSED
+   * @param expectedVersion
+   */
+  private void setClosedState(final int expectedVersion, final HRegion region) {
     try {
       if(ZKAssign.transitionNodeClosed(server.getZooKeeper(), regionInfo,
-          server.getServerName(), expectedVersion) == -1) {
+          server.getServerName(), expectedVersion) == FAILED) {
         LOG.warn("Completed the CLOSE of a region but when transitioning from " +
             " CLOSING to CLOSED got a version mismatch, someone else clashed " +
             "so now unassigning");
@@ -128,8 +141,36 @@ public class CloseRegionHandler extends EventHandler {
       LOG.error("Failed to close region after failing to transition", e);
       return;
     }
+  }
 
-    // Done!  Successful region open
-    LOG.debug("Closed region " + region.getRegionNameAsString());
+  /**
+   * @return True if succeeded, false otherwise.
+   */
+  private void deleteClosingState() {
+    try {
+      ZKAssign.deleteClosingNode(server.getZooKeeper(),
+          this.regionInfo.getEncodedName()); 
+    } catch (KeeperException e1) {
+      LOG.error("Error deleting CLOSING node");
+    }
+  }
+
+  /**
+   * Create ZK node in CLOSING state.
+   * @return The expectedVersion.  If -1, we failed setting CLOSING.
+   */
+  private int setClosingState() {
+    int expectedVersion = FAILED;
+    try {
+      if ((expectedVersion = ZKAssign.createNodeClosing(
+          server.getZooKeeper(), regionInfo, server.getServerName())) == FAILED) {
+        LOG.warn("Error creating node in CLOSING state, aborting close of "
+            + regionInfo.getRegionNameAsString());
+      }
+    } catch (KeeperException e) {
+      LOG.warn("Error creating node in CLOSING state, aborting close of "
+          + regionInfo.getRegionNameAsString());
+    }
+    return expectedVersion;
   }
 }

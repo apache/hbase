@@ -266,15 +266,14 @@ public class MetaUtils {
     if (this.rootRegion != null) {
       return this.rootRegion;
     }
-    this.rootRegion = HRegion.openHRegion(HRegionInfo.ROOT_REGIONINFO,
-      this.rootdir, getLog(), this.conf);
+    this.rootRegion = HRegion.openHRegion(HRegionInfo.ROOT_REGIONINFO, getLog(),
+      this.conf);
     this.rootRegion.compactStores();
     return this.rootRegion;
   }
 
   private HRegion openMetaRegion(HRegionInfo metaInfo) throws IOException {
-    HRegion meta =
-      HRegion.openHRegion(metaInfo, this.rootdir, getLog(), this.conf);
+    HRegion meta = HRegion.openHRegion(metaInfo, getLog(), this.conf);
     meta.compactStores();
     return meta;
   }

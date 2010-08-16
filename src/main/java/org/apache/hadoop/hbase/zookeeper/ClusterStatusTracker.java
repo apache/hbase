@@ -28,8 +28,6 @@ import org.apache.zookeeper.KeeperException;
 public class ClusterStatusTracker extends ZooKeeperNodeTracker {
   private static final Log LOG = LogFactory.getLog(ClusterStatusTracker.class);
 
-  public static final byte [] upData = Bytes.toBytes("up");
-
   /**
    * Creates a cluster status tracker.
    *
@@ -56,6 +54,7 @@ public class ClusterStatusTracker extends ZooKeeperNodeTracker {
    */
   public void setClusterUp()
   throws KeeperException {
+    byte [] upData = Bytes.toBytes(new java.util.Date().toString());
     try {
       ZKUtil.createAndWatch(watcher, watcher.clusterStateZNode, upData);
     } catch(KeeperException.NodeExistsException nee) {
@@ -64,7 +63,7 @@ public class ClusterStatusTracker extends ZooKeeperNodeTracker {
   }
 
   /**
-   * Sets the cluster as down.
+   * Sets the cluster as down by deleting the znode.
    * @throws KeeperException unexpected zk exception
    */
   public void setClusterDown()

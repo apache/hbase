@@ -30,6 +30,6 @@ import org.apache.hadoop.hbase.regionserver.RegionServer;
 public class CloseRootHandler extends CloseRegionHandler {
   public CloseRootHandler(RegionServer server,
       HRegionInfo regionInfo) {
-    super(server, regionInfo, false, EventType.M2RS_CLOSE_ROOT);
+    super(server, regionInfo, false, true, EventType.M2RS_CLOSE_ROOT);
   }
 }

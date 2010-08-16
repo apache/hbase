@@ -58,9 +58,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HMsg;
-import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -75,6 +73,8 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -110,6 +110,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
@@ -124,16 +125,11 @@ import org.apache.zookeeper.KeeperException;
 public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     Runnable, RegionServer {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
-  private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
-  private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
-  private static final HMsg[] EMPTY_HMSG_ARRAY = new HMsg[] {};
 
   // Set when a report to the master comes back with a message asking us to
   // shutdown. Also set by call to stop when debugging or running unit tests
   // of HRegionServer in isolation.
   protected volatile boolean stopped = false;
-
-  protected final AtomicBoolean quiesced = new AtomicBoolean(false);
 
   // Go down hard. Used if file system becomes unavailable and also in
   // debugging and unit tests.
@@ -230,6 +226,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   // catalog tracker
   private CatalogTracker catalogTracker;
+
+  // Cluster Status Tracker
+  private ZooKeeperNodeTracker clusterShutdownTracker;
 
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
@@ -350,6 +349,31 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.catalogTracker = new CatalogTracker(zooKeeper, connection, this,
         conf.getInt("hbase.regionserver.catalog.timeout", -1));
     catalogTracker.start();
+
+    this.clusterShutdownTracker = new ZooKeeperNodeTracker(this.zooKeeper,
+        this.zooKeeper.clusterStateZNode, this) {
+      @Override
+      public synchronized void nodeDeleted(String path) {
+        super.nodeDeleted(path);
+        if (getData() == null) {
+          // Cluster was just marked for shutdown.
+          LOG.info("Received cluster shutdown message");
+          closeUserRegions();
+          TODO: QUEUE UP THE CLOSEREGIONHANDLERSS FOR USER REGIONS
+          if (onlineRegions.isEmpty()) {
+            // We closed all user regions and there is nothing else left
+            // on this server; just go down.
+            HRegionServer.this.stop("All user regions closed; not " +
+              "carrying catalog regions -- so stopping");
+          } else {
+            LOG.info("Closed all user regions; still carrying " +
+              onlineRegions.values());
+          }
+        }
+      }
+    };
+    this.zooKeeper.registerListener(this.clusterShutdownTracker);
+    this.clusterShutdownTracker.start();
   }
 
   private void initializeThreads() throws IOException {
@@ -405,7 +429,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   public void run() {
     regionServerThread = Thread.currentThread();
-    boolean quiesceRequested = false;
     try {
       MapWritable w = null;
       while (!this.stopped) {
@@ -441,11 +464,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         if ((now - lastMsg) >= msgInterval || !outboundMessages.isEmpty()) {
           try {
             doMetrics();
-            MemoryUsage memory = ManagementFactory.getMemoryMXBean()
-                .getHeapMemoryUsage();
-            HServerLoad hsl = new HServerLoad(requestCount.get(), (int) (memory
-                .getUsed() / 1024 / 1024),
-                (int) (memory.getMax() / 1024 / 1024));
+            MemoryUsage memory =
+              ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+            HServerLoad hsl = new HServerLoad(requestCount.get(),
+              (int)(memory.getUsed() / 1024 / 1024),
+              (int) (memory.getMax() / 1024 / 1024));
             for (HRegion r : onlineRegions.values()) {
               hsl.addRegionInfo(createRegionLoad(r));
             }
@@ -453,19 +476,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             this.requestCount.set(0);
             addOutboundMsgs(outboundMessages);
             HMsg msgs[] = this.hbaseMaster.regionServerReport(serverInfo,
-                outboundMessages.toArray(EMPTY_HMSG_ARRAY),
-                getMostLoadedRegions());
+              outboundMessages.toArray(HMsg.EMPTY_HMSG_ARRAY),
+              getMostLoadedRegions());
             lastMsg = System.currentTimeMillis();
             updateOutboundMsgs(outboundMessages);
             outboundMessages.clear();
-            if (this.quiesced.get() && onlineRegions.size() == 0) {
-              // We've just told the master we're exiting because we aren't
-              // serving any regions. So set the stop bit and exit.
-              stop("Server quiesced and not serving any regions. " +
-                "Starting shutdown");
-              this.outboundMsgs.clear();
-              continue;
-            }
 
             // Queue up the HMaster's instruction stream for processing
             boolean restart = false;
@@ -473,22 +488,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
               LOG.info(msgs[i].toString());
               this.connection.unsetRootRegionLocation();
               switch (msgs[i].getType()) {
-
-                case MSG_REGIONSERVER_STOP:
-                  stop("MSG_REGIONSERVER_STOP");
-                  break;
-
-                case MSG_REGIONSERVER_QUIESCE:
-                  if (!quiesceRequested) {
-                    try {
-                      toDo.put(new ToDoEntry(msgs[i]));
-                    } catch (InterruptedException e) {
-                      throw new RuntimeException("Putting into msgQueue was "
-                          + "interrupted.", e);
-                    }
-                    quiesceRequested = true;
-                  }
-                  break;
 
                 default:
                   if (fsOk) {
@@ -575,47 +574,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // Just skip out w/o closing regions.
     } else if (abortRequested) {
       if (this.fsOk) {
-        // Only try to clean up if the file system is available
-        try {
-          if (this.hlog != null) {
-            this.hlog.close();
-            LOG.info("On abort, closed hlog");
-          }
-        } catch (Throwable e) {
-          LOG.error("Unable to close log in abort", RemoteExceptionHandler
-              .checkThrowable(e));
-        }
+        closeWAL(false);
         closeAllRegions(); // Don't leave any open file handles
       }
       LOG.info("aborting server at: " + this.serverInfo.getServerName());
     } else {
-      ArrayList<HRegion> closedRegions = closeAllRegions();
-      try {
-        if (this.hlog != null) {
-          hlog.closeAndDelete();
-        }
-      } catch (Throwable e) {
-        LOG.error("Close and delete failed", RemoteExceptionHandler
-            .checkThrowable(e));
-      }
-      try {
-        HMsg[] exitMsg = new HMsg[closedRegions.size() + 1];
-        exitMsg[0] = REPORT_EXITING;
-        // Tell the master what regions we are/were serving
-        int i = 1;
-        for (HRegion region : closedRegions) {
-          exitMsg[i++] = new HMsg(HMsg.Type.MSG_REPORT_CLOSE, region
-              .getRegionInfo());
-        }
-
-        LOG.info("telling master that region server is shutting down at: "
-            + serverInfo.getServerName());
-        hbaseMaster.regionServerReport(serverInfo, exitMsg,
-            (HRegionInfo[]) null);
-      } catch (Throwable e) {
-        LOG.warn("Failed to send exiting message to master: ",
-            RemoteExceptionHandler.checkThrowable(e));
-      }
+      closeAllRegions();
+      closeWAL(true);
+      closeAllScanners();
       LOG.info("stopping server at: " + this.serverInfo.getServerName());
     }
 
@@ -631,6 +597,32 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       join();
     }
     LOG.info(Thread.currentThread().getName() + " exiting");
+  }
+
+  private void closeWAL(final boolean delete) {
+    try {
+      if (this.hlog != null) {
+        if (delete) {
+          hlog.closeAndDelete();
+        } else {
+          hlog.close();
+        }
+      }
+    } catch (Throwable e) {
+      LOG.error("Close and delete failed", RemoteExceptionHandler.checkThrowable(e));
+    }
+  }
+
+  private void closeAllScanners() {
+    // Close any outstanding scanners. Means they'll get an UnknownScanner
+    // exception next time they come in.
+    for (Map.Entry<String, InternalScanner> e : this.scanners.entrySet()) {
+      try {
+        e.getValue().close();
+      } catch (IOException ioe) {
+        LOG.warn("Closing scanner " + e.getKey(), ioe);
+      }
+    }
   }
 
   /*
@@ -1229,7 +1221,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   void reportSplit(HRegionInfo oldRegion, HRegionInfo newRegionA,
       HRegionInfo newRegionB) {
     this.outboundMsgs.add(new HMsg(
-        HMsg.Type.MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS, oldRegion, newRegionA,
+        HMsg.Type.REGION_SPLIT, oldRegion, newRegionA,
         newRegionB, Bytes.toBytes("Daughters; "
             + newRegionA.getRegionNameAsString() + ", "
             + newRegionB.getRegionNameAsString())));
@@ -1277,11 +1269,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             HRegionInfo info = e.msg.getRegionInfo();
             switch (e.msg.getType()) {
 
-              case MSG_REGIONSERVER_QUIESCE:
-                closeUserRegions();
-                break;
-
-              case MSG_REGION_SPLIT:
+              case SPLIT_REGION:
                 region = getRegion(info.getRegionName());
                 region.flushcache();
                 region.shouldSplit(true);
@@ -1290,25 +1278,25 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
                     .name());
                 break;
 
-              case MSG_REGION_MAJOR_COMPACT:
-              case MSG_REGION_COMPACT:
+              case MAJOR_COMPACTION:
+              case COMPACT_REGION:
                 // Compact a region
                 region = getRegion(info.getRegionName());
                 compactSplitThread.requestCompaction(region, e.msg
-                    .isType(Type.MSG_REGION_MAJOR_COMPACT), e.msg.getType()
+                    .isType(Type.MAJOR_COMPACTION), e.msg.getType()
                     .name());
                 break;
 
-              case MSG_REGION_FLUSH:
+              case FLUSH_REGION:
                 region = getRegion(info.getRegionName());
                 region.flushcache();
                 break;
 
-              case TESTING_MSG_BLOCK_RS:
+              case TESTING_BLOCK_REGIONSERVER:
                 while (!stopped) {
                   Threads.sleep(1000);
                   LOG.info("Regionserver blocked by "
-                      + HMsg.Type.TESTING_MSG_BLOCK_RS + "; " + stopped);
+                      + HMsg.Type.TESTING_BLOCK_REGIONSERVER + "; " + stopped);
                 }
                 break;
 
@@ -1353,31 +1341,20 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   /** Called either when the master tells us to restart or from stop() */
   ArrayList<HRegion> closeAllRegions() {
-    ArrayList<HRegion> regionsToClose = new ArrayList<HRegion>();
+    List<HRegion> closedRegions = new ArrayList<HRegion>();
+    closedRegions.addAll(closeUserRegions());
+    ArrayList<HRegion> remainingRegionsToClose = new ArrayList<HRegion>();
     this.lock.writeLock().lock();
     try {
-      regionsToClose.addAll(onlineRegions.values());
-      onlineRegions.clear();
+      remainingRegionsToClose.addAll(onlineRegions.values());
     } finally {
       this.lock.writeLock().unlock();
     }
-    // Close any outstanding scanners. Means they'll get an UnknownScanner
-    // exception next time they come in.
-    for (Map.Entry<String, InternalScanner> e : this.scanners.entrySet()) {
-      try {
-        e.getValue().close();
-      } catch (IOException ioe) {
-        LOG.warn("Closing scanner " + e.getKey(), ioe);
-      }
+    closeRegions(remainingRegionsToClose);
+    if (!this.onlineRegions.isEmpty()) {
+      LOG.warn("Online regions is not empty: " + this.onlineRegions);
     }
-    for (HRegion region : regionsToClose) {
-      try {
-        new CloseRegionHandler(this, region.getRegionInfo(), abortRequested).execute();
-      } catch (Throwable e) {
-        cleanup(e, "Error closing " + Bytes.toString(region.getRegionName()));
-      }
-    }
-    return regionsToClose;
+    return remainingRegionsToClose;
   }
 
   /*
@@ -1406,13 +1383,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   /** Called as the first stage of cluster shutdown. */
-  void closeUserRegions() {
+  List<HRegion> closeUserRegions() {
     ArrayList<HRegion> regionsToClose = new ArrayList<HRegion>();
     this.lock.writeLock().lock();
     try {
       synchronized (onlineRegions) {
-        for (Iterator<Map.Entry<String, HRegion>> i = onlineRegions.entrySet()
-            .iterator(); i.hasNext();) {
+        for (Iterator<Map.Entry<String, HRegion>> i = onlineRegions.entrySet().iterator();
+            i.hasNext();) {
           Map.Entry<String, HRegion> e = i.next();
           HRegion r = e.getValue();
           if (!r.getRegionInfo().isMetaRegion()) {
@@ -1424,10 +1401,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     } finally {
       this.lock.writeLock().unlock();
     }
+    return closeRegions(regionsToClose);
+  }
+
+  List<HRegion> closeRegions(final List<HRegion> regions) {
     // Run region closes in parallel.
     Set<Thread> threads = new HashSet<Thread>();
     try {
-      for (final HRegion r : regionsToClose) {
+      for (final HRegion r : regions) {
         RegionCloserThread t = new RegionCloserThread(r);
         t.start();
         threads.add(t);
@@ -1443,12 +1424,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         }
       }
     }
-    this.quiesced.set(true);
-    if (onlineRegions.size() == 0) {
-      outboundMsgs.add(REPORT_EXITING);
-    } else {
-      outboundMsgs.add(REPORT_QUIESCED);
-    }
+    return regions;
   }
 
   //
@@ -1928,7 +1904,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public boolean closeRegion(HRegionInfo region)
       throws NotServingRegionException {
-    LOG.info("Received request to close region: "
+    LOG.info("Received close region: "
         + region.getRegionNameAsString());
     // TODO: Need to check if this is being served here but currently undergoing
     // a split (so master needs to retry close after split is complete)

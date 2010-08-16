@@ -234,7 +234,7 @@ public class AssignmentManager extends ZooKeeperListener {
         return;
       }
       String encodedName = HRegionInfo.encodeRegionName(data.getRegionName());
-      LOG.debug("Attempting to handle region transition for server " +
+      LOG.debug("Handling region transition for server " +
           data.getServerName() + " and region " + encodedName);
       RegionState regionState = regionsInTransition.get(encodedName);
       switch(data.getEventType()) {
@@ -561,7 +561,7 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Unassigns the specified region.
    * <p>
-   * Updates the RegionState and sends the OPEN RPC.
+   * Updates the RegionState and sends the CLOSE RPC.
    * <p>
    * If a RegionPlan is already set, it will remain.  If this is being used
    * to disable a table, be sure to use {@link #disableTable(String)} to ensure
@@ -591,7 +591,7 @@ public class AssignmentManager extends ZooKeeperListener {
         return;
       }
     }
-    // Send OPEN RPC
+    // Send CLOSE RPC
     try {
       serverManager.sendRegionClose(regions.get(region), state.getRegion());
     } catch (NotServingRegionException e) {

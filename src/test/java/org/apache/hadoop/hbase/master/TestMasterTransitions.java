@@ -413,7 +413,7 @@ public class TestMasterTransitions {
       // After all closes, add blocking message before the region opens start to
       // come in.
       cluster.addMessageToSendRegionServer(hrs,
-        new HMsg(HMsg.Type.TESTING_MSG_BLOCK_RS));
+        new HMsg(HMsg.Type.TESTING_BLOCK_REGIONSERVER));
       // Wait till one of the above close messages has an effect before we start
       // wait on all regions back online.
       while (!listener.closed) Threads.sleep(100);

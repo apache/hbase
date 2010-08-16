@@ -181,8 +181,7 @@ public class TestMergeTool extends HBaseTestCase {
 
     // Now verify that we can read all the rows from regions 0, 1
     // in the new merged region.
-    HRegion merged =
-      HRegion.openHRegion(mergedInfo, this.testDir, log, this.conf);
+    HRegion merged = HRegion.openHRegion(mergedInfo, log, this.conf);
     verifyMerge(merged, upperbound);
     merged.close();
     LOG.info("Verified " + msg);

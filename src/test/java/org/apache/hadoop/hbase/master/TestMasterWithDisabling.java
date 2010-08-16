@@ -98,7 +98,7 @@ public class TestMasterWithDisabling {
 
     @Override
     public boolean process(HServerInfo serverInfo, HMsg incomingMsg) {
-      if (!incomingMsg.isType(HMsg.Type.MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS)) {
+      if (!incomingMsg.isType(HMsg.Type.SPLIT)) {
         return true;
       }
       try {
