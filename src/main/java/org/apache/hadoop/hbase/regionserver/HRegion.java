@@ -1164,7 +1164,7 @@ public class HRegion implements HeapSize { // , Writable{
   protected InternalScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
     newScannerLock.readLock().lock();
     try {
-      if (this.closed.get()) {
+      if (this.closing.get() || this.closed.get()) {
         throw new NotServingRegionException("Region " + this + " closed");
       }
       // Verify families are all valid

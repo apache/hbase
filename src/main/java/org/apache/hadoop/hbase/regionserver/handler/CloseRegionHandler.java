@@ -32,10 +32,13 @@ import org.apache.zookeeper.KeeperException;
 
 /**
  * Handles closing of a region on a region server.
- * <p>
- * This is executed after receiving an CLOSE RPC from the master.
  */
 public class CloseRegionHandler extends EventHandler {
+  // NOTE on priorities shutting down.  There are none for close. There are some
+  // for open.  I think that is right.  On shutdown, we want the meta to close
+  // before root and both to close after the user regions have closed.  What
+  // about the case where master tells us to shutdown a catalog region and we
+  // have a running queue of user regions to close?
   private static final Log LOG = LogFactory.getLog(CloseRegionHandler.class);
 
   private final int FAILED = -1;
@@ -54,8 +57,8 @@ public class CloseRegionHandler extends EventHandler {
   // CLOSING.
   private final boolean zk;
 
-  public CloseRegionHandler(RegionServer server,
-      HRegionInfo regionInfo) {
+  // This is executed after receiving an CLOSE RPC from the master.
+  public CloseRegionHandler(RegionServer server, HRegionInfo regionInfo) {
     this(server, regionInfo, false, true);
   }
 
@@ -71,9 +74,8 @@ public class CloseRegionHandler extends EventHandler {
     this(server, regionInfo, abort, zk, EventType.M2RS_CLOSE_REGION);
   }
 
-  protected CloseRegionHandler(RegionServer server,
-      HRegionInfo regionInfo, boolean abort, final boolean zk,
-      EventType eventType) {
+  protected CloseRegionHandler(RegionServer server, HRegionInfo regionInfo,
+      boolean abort, final boolean zk, EventType eventType) {
     super(server, eventType);
     this.server = server;
     this.regionInfo = regionInfo;

@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.ServerConnection;
+import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
@@ -28,11 +28,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  * and RegionServers).
  */
 public interface Server extends Abortable, Stoppable {
-  /**
-   * Returns the address of the current server.
-   */
-  public HServerAddress getHServerAddress();
-
   /**
    * Gets the configuration object for this server.
    */
@@ -53,7 +48,7 @@ public interface Server extends Abortable, Stoppable {
   public String getServerName();
 
   /**
-   * Return the server RPC connection object
+   * @return This servers executor service.
    */
-  public ServerConnection getServerConnection();
+  public ExecutorService getExecutorService();
 }

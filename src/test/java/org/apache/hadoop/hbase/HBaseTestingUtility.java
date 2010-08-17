@@ -161,10 +161,7 @@ public class HBaseTestingUtility {
    * @throws IOException If a cluster -- zk, dfs, or hbase -- already running.
    */
   void isRunningCluster(String passedBuildPath) throws IOException {
-    if (this.clusterTestBuildDir == null ||
-        passedBuildPath != null) {
-      return;
-    }
+    if (this.clusterTestBuildDir == null || passedBuildPath != null) return;
     throw new IOException("Cluster already running at " +
       this.clusterTestBuildDir);
   }
@@ -252,6 +249,7 @@ public class HBaseTestingUtility {
   public void shutdownMiniZKCluster() throws IOException {
     if (this.zkCluster != null) {
       this.zkCluster.shutdown();
+      this.zkCluster = null;
     }
   }
 
@@ -282,10 +280,10 @@ public class HBaseTestingUtility {
   throws Exception {
     LOG.info("Starting up minicluster");
     // If we already put up a cluster, fail.
-    String testBuildPath = conf.get("hbase.test.build.dir", null);
+    String testBuildPath = conf.get(TEST_DIRECTORY_KEY, null);
     isRunningCluster(testBuildPath);
     if(testBuildPath != null) {
-      LOG.info("\n\nUsing passed path: " + testBuildPath + "\n\n");
+      LOG.info("Using passed path: " + testBuildPath);
     }
     // Make a new random dir to home everything in.  Set it as system property.
     // minidfs reads home from system property.
@@ -373,6 +371,7 @@ public class HBaseTestingUtility {
           new Path(this.clusterTestBuildDir.toString()))) {
         LOG.warn("Failed delete of " + this.clusterTestBuildDir.toString());
       }
+      this.clusterTestBuildDir = null;
     }
     LOG.info("Minicluster is down");
   }

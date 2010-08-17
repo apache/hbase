@@ -56,8 +56,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
-import org.apache.hadoop.hbase.executor.HBaseExecutorService;
-import org.apache.hadoop.hbase.executor.HBaseExecutorService.HBaseExecutorServiceType;
+import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
@@ -155,6 +155,9 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   // Set on abort -- usually failure of our zk session
   private volatile boolean abort = false;
 
+  // Instance of the hbase executor service.
+  private ExecutorService service;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    *
@@ -208,11 +211,12 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     this.connection = ServerConnectionManager.getConnection(conf);
     this.metrics = new MasterMetrics(this.getName());
     fileSystemManager = new MasterFileSystem(this);
-    serverManager = new ServerManager(this, metrics, fileSystemManager);
+    serverManager = new ServerManager(this, this.connection, metrics,
+      fileSystemManager);
     regionServerTracker = new RegionServerTracker(zooKeeper, this,
-        serverManager);
+      serverManager);
     catalogTracker = new CatalogTracker(zooKeeper, connection, this,
-        conf.getInt("hbase.master.catalog.timeout", -1));
+      conf.getInt("hbase.master.catalog.timeout", -1));
     assignmentManager = new AssignmentManager(this, serverManager, catalogTracker);
     clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
 
@@ -275,24 +279,20 @@ implements HMasterInterface, HMasterRegionInterface, Server {
       // wait for minimum number of region servers to be up
       serverManager.waitForMinServers();
 
-      // TOOD: Whey do we assign root and meta on startup?  Shouldn't we check
-      // if we started the cluster before we assigning root and meta?  Perhaps
-      // they are happy where they are?  St.Ack 20100812.
-
-      // assign the root region
-      assignmentManager.assignRoot();
-      catalogTracker.waitForRoot();
-      // assign the meta region
-      assignmentManager.assignMeta();
-      catalogTracker.waitForMeta();
-      // above check waits for general meta availability but this does not
-      // guarantee that the transition has completed
-      assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
       // start assignment of user regions, startup or failure
       if (this.clusterStarter) {
-        // We're starting up the cluster.  Create or clear out unassigned node
-        // in ZK, read all regions from META and assign them out.
-        assignmentManager.processStartup();
+        // Clean out current state of unassigned
+        assignmentManager.cleanoutUnassigned();
+        // assign the root region
+        assignmentManager.assignRoot();
+        catalogTracker.waitForRoot();
+        // assign the meta region
+        assignmentManager.assignMeta();
+        catalogTracker.waitForMeta();
+        // above check waits for general meta availability but this does not
+        // guarantee that the transition has completed
+        assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
+        assignmentManager.assignAllUserRegions();
       } else {
         // Process existing unassigned nodes in ZK, read all regions from META,
         // rebuild in-memory state.
@@ -300,19 +300,10 @@ implements HMasterInterface, HMasterRegionInterface, Server {
       }
       LOG.info("HMaster started on " + this.address.toString() +
         "; clusterStarter=" + this.clusterStarter);
+      // Check if we should stop every second.
       Sleeper sleeper = new Sleeper(1000, this);
-      int countOfServersStillRunning = this.serverManager.numServers();
       while (!this.stopped  && !this.abort) {
-        // Master has nothing to do
         sleeper.sleep();
-        if (this.serverManager.isClusterShutdown()) {
-          int count = this.serverManager.numServers();
-          if (count != countOfServersStillRunning) {
-            countOfServersStillRunning = count;
-            LOG.info("Regionserver(s) still running: " +
-              countOfServersStillRunning);
-          }
-        }
       }
     } catch (Throwable t) {
       abort("Unhandled exception. Starting shutdown.", t);
@@ -336,11 +327,10 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     this.rpcServer.stop();
     this.activeMasterManager.stop();
     this.zooKeeper.close();
-    HBaseExecutorService.shutdown();
+    this.service.shutdown();
     LOG.info("HMaster main thread exiting");
   }
 
-  @Override
   public HServerAddress getHServerAddress() {
     return address;
   }
@@ -373,9 +363,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     return this.infoServer;
   }
 
-  /**
-   * @return Return configuration being used by this server.
-   */
+  @Override
   public Configuration getConfiguration() {
     return this.conf;
   }
@@ -384,16 +372,17 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     return this.serverManager;
   }
 
-  public ServerConnection getServerConnection() {
-    return this.connection;
-  }
-
   /**
    * Get the ZK wrapper object - needed by master_jsp.java
    * @return the zookeeper wrapper
    */
   public ZooKeeperWatcher getZooKeeperWatcher() {
     return this.zooKeeper;
+  }
+
+  @Override
+  public ExecutorService getExecutorService() {
+    return this.service;
   }
 
   /*
@@ -406,18 +395,15 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   private void startServiceThreads() {
     try {
       // Start the executor service pools
-      HBaseExecutorServiceType.MASTER_OPEN_REGION.startExecutorService(
-        getServerName(),
-          conf.getInt("hbase.master.executor.openregion.threads", 5));
-      HBaseExecutorServiceType.MASTER_CLOSE_REGION.startExecutorService(
-        getServerName(),
-          conf.getInt("hbase.master.executor.closeregion.threads", 5));
-      HBaseExecutorServiceType.MASTER_SERVER_OPERATIONS.startExecutorService(
-        getServerName(),
-          conf.getInt("hbase.master.executor.serverops.threads", 5));
-      HBaseExecutorServiceType.MASTER_TABLE_OPERATIONS.startExecutorService(
-        getServerName(),
-          conf.getInt("hbase.master.executor.tableops.threads", 5));
+      this.service = new ExecutorService(getServerName());
+      this.service.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
+        conf.getInt("hbase.master.executor.openregion.threads", 5));
+      this.service.startExecutorService(ExecutorType.MASTER_CLOSE_REGION,
+        conf.getInt("hbase.master.executor.closeregion.threads", 5));
+      this.service.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
+        conf.getInt("hbase.master.executor.serverops.threads", 5));
+      this.service.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS,
+        conf.getInt("hbase.master.executor.tableops.threads", 5));
 
       // Put up info server.
       int port = this.conf.getInt("hbase.master.info.port", 60010);
@@ -685,8 +671,8 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   public void modifyTable(final byte[] tableName, HTableDescriptor htd)
   throws IOException {
     LOG.info("modifyTable(SET_HTD): " + htd);
-    new ModifyTableHandler(tableName, this, catalogTracker, fileSystemManager)
-    .submit();
+    this.service.submit(new ModifyTableHandler(tableName, this, catalogTracker,
+      fileSystemManager));
   }
 
   /**

@@ -82,8 +82,8 @@ public class AssignmentManager extends ZooKeeperListener {
   private TimeoutMonitor timeoutMonitor;
 
   /** Regions currently in transition. */
-  private final Map<String,RegionState> regionsInTransition =
-    new TreeMap<String,RegionState>();
+  private final Map<String, RegionState> regionsInTransition =
+    new TreeMap<String, RegionState>();
 
   /** Plans for region movement. */
   // TODO: When do plans get cleaned out?  Ever?
@@ -136,17 +136,16 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Cluster startup.  Reset all unassigned nodes and assign all user regions.
+   * Reset all unassigned znodes.  Called on startup of master.
+   * Call {@link #assignAllUserRegions()} after root and meta have been assigned.
    * @throws IOException
    * @throws KeeperException
    */
-  void processStartup() throws IOException, KeeperException {
+  void cleanoutUnassigned() throws IOException, KeeperException {
     // Cleanup any existing ZK nodes and start watching
     ZKAssign.deleteAllNodes(watcher);
     ZKUtil.listChildrenAndWatchForNewChildren(watcher,
         watcher.assignmentZNode);
-    // Assign all existing user regions out
-    assignAllUserRegions();
   }
 
   /**
@@ -230,12 +229,13 @@ public class AssignmentManager extends ZooKeeperListener {
       // Verify this is a known server
       if(!serverManager.isServerOnline(data.getServerName())) {
         LOG.warn("Attempted to handle region transition for server " +
-            data.getServerName() + " but server is not online");
+          data.getServerName() + " but server is not online");
         return;
       }
       String encodedName = HRegionInfo.encodeRegionName(data.getRegionName());
+      String prettyPrintedRegionName = HRegionInfo.prettyPrint(encodedName);
       LOG.debug("Handling region transition for server " +
-          data.getServerName() + " and region " + encodedName);
+        data.getServerName() + " and region " + prettyPrintedRegionName);
       RegionState regionState = regionsInTransition.get(encodedName);
       switch(data.getEventType()) {
 
@@ -244,7 +244,7 @@ public class AssignmentManager extends ZooKeeperListener {
           // times after already being in state of CLOSING
           if(regionState == null ||
               (!regionState.isPendingClose() && !regionState.isClosing())) {
-            LOG.warn("Received CLOSING for region " + encodedName +
+            LOG.warn("Received CLOSING for region " + prettyPrintedRegionName +
                 " from server " + data.getServerName() + " but region was in " +
                 " the state " + regionState + " and not " +
                 "in expected PENDING_CLOSE or CLOSING states");
@@ -258,15 +258,15 @@ public class AssignmentManager extends ZooKeeperListener {
           // Should see CLOSED after CLOSING but possible after PENDING_CLOSE
           if(regionState == null ||
               (!regionState.isPendingClose() && !regionState.isClosing())) {
-            LOG.warn("Received CLOSED for region " + encodedName +
+            LOG.warn("Received CLOSED for region " + prettyPrintedRegionName +
                 " from server " + data.getServerName() + " but region was in " +
                 " the state " + regionState + " and not " +
                 "in expected PENDING_CLOSE or CLOSING states");
             return;
           }
           // Handle CLOSED by assigning elsewhere or stopping if a disable
-          new ClosedRegionHandler(master, this, data, regionState.getRegion())
-          .submit();
+          this.master.getExecutorService().submit(new ClosedRegionHandler(master,
+            this, data, regionState.getRegion()));
           break;
 
         case RS2ZK_REGION_OPENING:
@@ -274,7 +274,8 @@ public class AssignmentManager extends ZooKeeperListener {
           // times after already being in state of OPENING
           if(regionState == null ||
               (!regionState.isPendingOpen() && !regionState.isOpening())) {
-            LOG.warn("Received OPENING for region " + encodedName +
+            LOG.warn("Received OPENING for region " +
+                prettyPrintedRegionName +
                 " from server " + data.getServerName() + " but region was in " +
                 " the state " + regionState + " and not " +
                 "in expected PENDING_OPEN or OPENING states");
@@ -288,7 +289,8 @@ public class AssignmentManager extends ZooKeeperListener {
           // Should see OPENED after OPENING but possible after PENDING_OPEN
           if(regionState == null ||
               (!regionState.isPendingOpen() && !regionState.isOpening())) {
-            LOG.warn("Received OPENED for region " + encodedName +
+            LOG.warn("Received OPENED for region " +
+                prettyPrintedRegionName +
                 " from server " + data.getServerName() + " but region was in " +
                 " the state " + regionState + " and not " +
                 "in expected PENDING_OPEN or OPENING states");
@@ -296,17 +298,16 @@ public class AssignmentManager extends ZooKeeperListener {
           }
           // If this is a catalog table, update catalog manager accordingly
           // Moving root and meta editing over to RS who does the opening
-          LOG.debug("Processing OPENED for region " + regionState.getRegion() +
-              " which isMeta[" + regionState.getRegion().isMetaRegion() + "] " +
-              " isRoot[" + regionState.getRegion().isRootRegion() + "]");
+          LOG.debug("Processing OPENED for region " +
+            regionState.getRegion().getRegionNameAsString());
 
           // Used to have updating of root/meta locations here but it's
           // automatic in CatalogTracker now
 
           // Handle OPENED by removing from transition and deleted zk node
-          new OpenedRegionHandler(master, this, data, regionState.getRegion(),
-              serverManager.getServerInfo(data.getServerName()))
-          .submit();
+          this.master.getExecutorService().submit(
+            new OpenedRegionHandler(master, this, data, regionState.getRegion(),
+              this.serverManager.getServerInfo(data.getServerName())));
           break;
       }
     }
@@ -481,7 +482,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param regionName server to be assigned
    */
   public void assign(HRegionInfo region) {
-    LOG.debug("Starting assignment for region " + region);
+    LOG.debug("Starting assignment for region " + region.getRegionNameAsString());
     // Grab the state of this region and synchronize on it
     String encodedName = region.getEncodedName();
     RegionState state;
@@ -535,7 +536,8 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized(regionPlans) {
       plan = regionPlans.get(encodedName);
       if(plan == null) {
-        LOG.debug("No previous transition plan for " + encodedName +
+        LOG.debug("No previous transition plan for " +
+            state.getRegion().getRegionNameAsString() +
             " so generating a random one from " + serverManager.numServers() +
             " ( " + serverManager.getOnlineServers().size() + ") available servers");
         plan = new RegionPlan(encodedName, null,
@@ -570,24 +572,27 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param regionName server to be unassigned
    */
   public void unassign(HRegionInfo region) {
-    LOG.debug("Starting unassignment of region " + region + " (offlining)");
+    LOG.debug("Starting unassignment of region " +
+      region.getRegionNameAsString() + " (offlining)");
     // Check if this region is currently assigned
     if (!regions.containsKey(region)) {
-      LOG.debug("Attempted to unassign region " + region + " but it is not " +
-          "currently assigned anywhere");
+      LOG.debug("Attempted to unassign region " + region.getRegionNameAsString() +
+        " but it is not " +
+        "currently assigned anywhere");
       return;
     }
-    String regionName = region.getEncodedName();
+    String encodedName = region.getEncodedName();
     // Grab the state of this region and synchronize on it
     RegionState state;
     synchronized(regionsInTransition) {
-      state = regionsInTransition.get(regionName);
+      state = regionsInTransition.get(encodedName);
       if(state == null) {
         state = new RegionState(region, RegionState.State.PENDING_CLOSE);
-        regionsInTransition.put(regionName, state);
+        regionsInTransition.put(encodedName, state);
       } else {
-        LOG.debug("Attempting to unassign region " + region + " but it is " +
-            "already in transition (" + state.getState() + ")");
+        LOG.debug("Attempting to unassign region " +
+          region.getRegionNameAsString() + " but it is " +
+          "already in transition (" + state.getState() + ")");
         return;
       }
     }
@@ -595,7 +600,8 @@ public class AssignmentManager extends ZooKeeperListener {
     try {
       serverManager.sendRegionClose(regions.get(region), state.getRegion());
     } catch (NotServingRegionException e) {
-      LOG.warn("Attempted to close region " + region + " but got an NSRE", e);
+      LOG.warn("Attempted to close region " + region.getRegionNameAsString() +
+        " but got an NSRE", e);
     }
   }
 
@@ -678,7 +684,7 @@ public class AssignmentManager extends ZooKeeperListener {
       List<HRegionInfo> regions = entry.getValue();
       LOG.debug("Assigning " + regions.size() + " regions to " + server);
       for(HRegionInfo region : regions) {
-        LOG.debug("Assigning " + region + " to " + server);
+        LOG.debug("Assigning " + region.getRegionNameAsString() + " to " + server);
         String regionName = region.getEncodedName();
         RegionPlan plan = new RegionPlan(regionName, null,server);
         regionPlans.put(regionName, plan);
@@ -694,7 +700,7 @@ public class AssignmentManager extends ZooKeeperListener {
       throw new IOException(e);
     }
 
-    LOG.info("\n\nAll user regions have been assigned");
+    LOG.info("All user regions have been assigned");
   }
 
   private void rebuildUserRegions() throws IOException {
@@ -861,14 +867,13 @@ public class AssignmentManager extends ZooKeeperListener {
 
     @Override
     protected void chore() {
-      synchronized(regionsInTransition) {
+      synchronized (regionsInTransition) {
         // Iterate all regions in transition checking for time outs
         long now = System.currentTimeMillis();
-        for(RegionState regionState : regionsInTransition.values()) {
+        for (RegionState regionState : regionsInTransition.values()) {
           if(regionState.getStamp() + timeout <= now) {
             HRegionInfo regionInfo = regionState.getRegion();
-            String regionName = regionInfo.getEncodedName();
-            LOG.info("Region transition timed out for region " + regionName);
+            LOG.info("Regions in transition timed out:  " + regionState);
             // Expired!  Do a retry.
             switch(regionState.getState()) {
               case OFFLINE:
@@ -980,8 +985,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
     @Override
     public String toString() {
-      return "RegionState (" + region.getRegionNameAsString() + ") " + state +
-             " at time " + stamp;
+      return region.getRegionNameAsString() + " state=" + state +
+        ", ts=" + stamp;
     }
 
     @Override

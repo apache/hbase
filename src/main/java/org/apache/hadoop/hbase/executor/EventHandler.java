@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.executor.HBaseExecutorService.HBaseExecutorServiceType;
+import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 
 
 /**
@@ -35,13 +35,13 @@ import org.apache.hadoop.hbase.executor.HBaseExecutorService.HBaseExecutorServic
  * implement the process() method where the actual handling of the event
  * happens.
  * <p>
- * HBaseEventType is a list of ALL events (which also corresponds to messages -
+ * EventType is a list of ALL events (which also corresponds to messages -
  * either internal to one component or between components). The event type
  * names specify the component from which the event originated, and the
  * component which is supposed to handle it.
  * <p>
  * Listeners can listen to all the events by implementing the interface
- * HBaseEventHandlerListener, and by registering themselves as a listener. They
+ * EventHandlerListener, and by registering themselves as a listener. They
  * will be called back before and after the process of every event.
  */
 public abstract class EventHandler implements Runnable, Comparable<Runnable> {
@@ -118,58 +118,49 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
      * handled just add the NONE executor.
      * @return name of the executor service
      */
-    public HBaseExecutorServiceType getExecutorServiceType() {
+    public ExecutorType getExecutorServiceType() {
       switch(this) {
 
         // Master executor services
 
         case RS2ZK_REGION_CLOSED:
-          return HBaseExecutorServiceType.MASTER_CLOSE_REGION;
+          return ExecutorType.MASTER_CLOSE_REGION;
 
         case RS2ZK_REGION_OPENED:
-          return HBaseExecutorServiceType.MASTER_OPEN_REGION;
+          return ExecutorType.MASTER_OPEN_REGION;
 
         case M_SERVER_SHUTDOWN:
-          return HBaseExecutorServiceType.MASTER_SERVER_OPERATIONS;
+          return ExecutorType.MASTER_SERVER_OPERATIONS;
 
         case C2M_DELETE_TABLE:
         case C2M_DISABLE_TABLE:
         case C2M_ENABLE_TABLE:
         case C2M_MODIFY_TABLE:
-          return HBaseExecutorServiceType.MASTER_TABLE_OPERATIONS;
+          return ExecutorType.MASTER_TABLE_OPERATIONS;
 
         // RegionServer executor services
 
         case M2RS_OPEN_REGION:
-          return HBaseExecutorServiceType.RS_OPEN_REGION;
+          return ExecutorType.RS_OPEN_REGION;
 
         case M2RS_OPEN_ROOT:
-          return HBaseExecutorServiceType.RS_OPEN_ROOT;
+          return ExecutorType.RS_OPEN_ROOT;
 
         case M2RS_OPEN_META:
-          return HBaseExecutorServiceType.RS_OPEN_META;
+          return ExecutorType.RS_OPEN_META;
 
         case M2RS_CLOSE_REGION:
-          return HBaseExecutorServiceType.RS_CLOSE_REGION;
+          return ExecutorType.RS_CLOSE_REGION;
 
         case M2RS_CLOSE_ROOT:
-          return HBaseExecutorServiceType.RS_CLOSE_ROOT;
+          return ExecutorType.RS_CLOSE_ROOT;
 
         case M2RS_CLOSE_META:
-          return HBaseExecutorServiceType.RS_CLOSE_META;
+          return ExecutorType.RS_CLOSE_META;
 
         default:
           throw new RuntimeException("Unhandled event type " + this.name());
       }
-    }
-
-    /**
-     * Start the executor service that handles the passed in event type. The
-     * server that starts these event executor services wants to handle these
-     * event types.
-     */
-    public void startExecutorService(String serverName, int maxThreads) {
-      getExecutorServiceType().startExecutorService(serverName, maxThreads);
     }
 
     EventType(int value) {}
@@ -245,7 +236,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
    * Return the name for this event type.
    * @return
    */
-  public HBaseExecutorServiceType getEventHandlerName() {
+  public ExecutorType getExecutorType() {
     return eventType.getExecutorServiceType();
   }
 
@@ -256,19 +247,6 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   public EventType getEventType() {
     return eventType;
   }
-
-  /**
-   * Submits this event object to the correct executor service.
-   */
-  public void submit() {
-    HBaseExecutorServiceType serviceType = getEventHandlerName();
-    if(serviceType == null) {
-      throw new RuntimeException("Event " + eventType + " not handled on " +
-          "this server " + server.getServerName());
-    }
-    serviceType.getExecutor(server.getServerName()).submit(this);
-  }
-
 
   /**
    * Get the priority level for this handler instance.  This uses natural

@@ -27,8 +27,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -38,15 +36,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestRestartCluster {
   private static final Log LOG = LogFactory.getLog(TestRestartCluster.class);
-  private static Configuration conf;
-  private static HBaseTestingUtility utility;
+  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static ZooKeeperWatcher zooKeeper;
   private static final byte[] TABLENAME = Bytes.toBytes("master_transitions");
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a")};
@@ -59,69 +55,17 @@ public class TestRestartCluster {
   };
   private static final byte [] FAMILY = Bytes.toBytes("family");
 
-  @BeforeClass public static void beforeAllTests() throws Exception {
-    conf = HBaseConfiguration.create();
-    utility = new HBaseTestingUtility(conf);
+  @Before public void setup() throws Exception {
   }
 
-  @AfterClass public static void afterAllTests() throws IOException {
-    utility.shutdownMiniCluster();
+  @After public void teardown() throws IOException {
+    UTIL.shutdownMiniCluster();
   }
 
-  @Before public void setup() throws IOException {
-  }
-
-  @Test (timeout=300000)
-  public void testClusterRestart() throws Exception {
-
-    utility.getConfiguration().set("hbase.test.build.dir",
-        utility.setupClusterTestBuildDir().getAbsolutePath());
-
-    LOG.info("\n\nStarting cluster the first time");
-    utility.startMiniCluster(3);
-
-    LOG.info("\n\nCreating tables");
-    for(byte [] TABLE : TABLES) {
-      utility.createTable(TABLE, FAMILY);
-      utility.waitTableAvailable(TABLE, 30000);
-    }
-    List<HRegionInfo> allRegions =
-      MetaScanner.listAllRegions(utility.getConfiguration());
-    assertEquals(3, allRegions.size());
-
-    LOG.info("\n\nShutting down cluster");
-    utility.getHBaseCluster().shutdown();
-    utility.getHBaseCluster().join();
-
-    LOG.info("\n\nSleeping a bit");
-    Thread.sleep(2000);
-
-    LOG.info("\n\nStarting cluster the second time");
-    utility.restartHBaseCluster(3);
-
-    allRegions = MetaScanner.listAllRegions(utility.getConfiguration());
-    assertEquals(3, allRegions.size());
-
-    LOG.info("\n\nWaiting for tables to be available");
-    for(byte [] TABLE : TABLES) {
-      try {
-        utility.createTable(TABLE, FAMILY);
-        assertTrue("Able to create table that should already exist", false);
-      } catch(TableExistsException tee) {
-        LOG.info("Table already exists as expected");
-      }
-      utility.waitTableAvailable(TABLE, 30000);
-    }
-
-    LOG.info("\n\nShutting stuff down now");
-    utility.shutdownMiniCluster();
-
-    LOG.info("\n\nDone!");
-  }
-
-  @Test (timeout=300000) public void testRestartClusterAfterKill()throws Exception {
-    utility.startMiniZKCluster();
-    zooKeeper = new ZooKeeperWatcher(conf, "cluster1", null);
+  @Test (timeout=300000) public void testRestartClusterAfterKill()
+  throws Exception {
+    UTIL.startMiniZKCluster();
+    zooKeeper = new ZooKeeperWatcher(UTIL.getConfiguration(), "cluster1", null);
 
     // create the unassigned region, throw up a region opened state for META
     String unassignedZNode = zooKeeper.assignmentZNode;
@@ -138,12 +82,49 @@ public class TestRestartCluster {
 
     // start the HB cluster
     LOG.info("Starting HBase cluster...");
-    utility.startMiniCluster(2);
+    UTIL.startMiniCluster(2);
 
-    utility.createTable(TABLENAME, FAMILIES);
+    UTIL.createTable(TABLENAME, FAMILIES);
     LOG.info("Created a table, waiting for table to be available...");
-    utility.waitTableAvailable(TABLENAME, 60*1000);
+    UTIL.waitTableAvailable(TABLENAME, 60*1000);
 
-    LOG.info("Master deleted unassgined region and started up successfully.");
+    LOG.info("Master deleted unassigned region and started up successfully.");
+  }
+
+  @Test (timeout=300000)
+  public void testClusterRestart() throws Exception {
+    UTIL.startMiniCluster(3);
+    LOG.info("\n\nCreating tables");
+    for(byte [] TABLE : TABLES) {
+      UTIL.createTable(TABLE, FAMILY);
+      UTIL.waitTableAvailable(TABLE, 30000);
+    }
+    List<HRegionInfo> allRegions =
+      MetaScanner.listAllRegions(UTIL.getConfiguration());
+    assertEquals(3, allRegions.size());
+
+    LOG.info("\n\nShutting down cluster");
+    UTIL.getHBaseCluster().shutdown();
+    UTIL.getHBaseCluster().join();
+
+    LOG.info("\n\nSleeping a bit");
+    Thread.sleep(2000);
+
+    LOG.info("\n\nStarting cluster the second time");
+    UTIL.restartHBaseCluster(3);
+
+    allRegions = MetaScanner.listAllRegions(UTIL.getConfiguration());
+    assertEquals(3, allRegions.size());
+
+    LOG.info("\n\nWaiting for tables to be available");
+    for(byte [] TABLE: TABLES) {
+      try {
+        UTIL.createTable(TABLE, FAMILY);
+        assertTrue("Able to create table that should already exist", false);
+      } catch(TableExistsException tee) {
+        LOG.info("Table already exists as expected");
+      }
+      UTIL.waitTableAvailable(TABLE, 30000);
+    }
   }
 }

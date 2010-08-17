@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,6 +43,7 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
@@ -66,8 +66,6 @@ import org.apache.hadoop.hbase.util.Threads;
  */
 public class ServerManager {
   private static final Log LOG = LogFactory.getLog(ServerManager.class);
-
-  private final AtomicInteger availableServers = new AtomicInteger(0);
 
   // Set if we are to shutdown the cluster.
   private volatile boolean clusterShutdown = false;
@@ -103,6 +101,8 @@ public class ServerManager {
 
   private final OldLogsCleaner oldLogCleaner;
 
+  private final ServerConnection connection;
+
   /**
    * Dumps into log current stats on dead servers and number of servers
    * TODO: Make this a metric; dump metrics into log.
@@ -114,7 +114,7 @@ public class ServerManager {
 
     @Override
     protected void chore() {
-      int numServers = availableServers.get();
+      int numServers = numServers();
       int numDeadServers = deadServers.size();
       double averageLoad = getAverageLoad();
       String deadServersList = null;
@@ -146,10 +146,12 @@ public class ServerManager {
    * @param masterFileSystem
    */
   public ServerManager(Server master,
+      final ServerConnection connection,
       MasterMetrics masterMetrics,
       MasterFileSystem masterFileSystem) {
     this.master = master;
     this.masterMetrics = masterMetrics;
+    this.connection = connection;
     Configuration c = master.getConfiguration();
     int metaRescanInterval = c.getInt("hbase.master.meta.thread.rescanfrequency",
       60 * 1000);
@@ -246,9 +248,8 @@ public class ServerManager {
     String serverName = info.getServerName();
     info.setLoad(load);
     // TODO: Why did we update the RS location ourself?  Shouldn't RS do this?
-//    masterStatus.getZooKeeper().updateRSLocationGetWatch(info, watcher);
+    // masterStatus.getZooKeeper().updateRSLocationGetWatch(info, watcher);
     onlineServers.put(serverName, info);
-    availableServers.incrementAndGet();
     if(hri == null) {
       serverConnections.remove(serverName);
     } else {
@@ -291,7 +292,19 @@ public class ServerManager {
       return HMsg.STOP_REGIONSERVER_ARRAY;
     }
 
-    return processRegionServerAllsWell(info, mostLoadedRegions, HMsg.EMPTY_HMSG_ARRAY);
+    HMsg [] reply = null;
+    int numservers = numServers();
+    if (this.clusterShutdown) {
+      if (numservers <= 2) {
+        // Shutdown needs to be staggered; the meta regions need to close last
+        // in case they need to be updated during the close melee.  If <= 2
+        // servers left, then these are the two that were carrying root and meta
+        // most likely (TODO: This presumes unsplittable meta -- FIX). Tell
+        // these servers can shutdown now too.
+        reply = HMsg.STOP_REGIONSERVER_ARRAY;
+      }
+    }
+    return processRegionServerAllsWell(info, mostLoadedRegions, reply);
   }
 
   private boolean raceThatShouldNotHappenAnymore(final HServerInfo storedInfo,
@@ -342,7 +355,6 @@ public class ServerManager {
   private boolean removeServerInfo(final String serverName) {
     HServerInfo info = this.onlineServers.remove(serverName);
     if (info != null) {
-      this.availableServers.decrementAndGet();
       return true;
     }
     return false;
@@ -368,7 +380,12 @@ public class ServerManager {
 
   /** @return the number of active servers */
   public int numServers() {
-    return availableServers.get();
+    int num = -1;
+    // This synchronized seems gratuitous.
+    synchronized (this.onlineServers) {
+      num = this.onlineServers.size();
+    }
+    return num;
   }
 
   /**
@@ -453,18 +470,20 @@ public class ServerManager {
     }
     // Remove the server from the known servers lists and update load info
     this.onlineServers.remove(serverName);
-    this.availableServers.decrementAndGet();
     this.serverConnections.remove(serverName);
     // If cluster is going down, yes, servers are going to be expiring; don't
     // process as a dead server
     if (this.clusterShutdown) {
-      LOG.info("Cluster shutdown in progress; " + hsi.getServerName() +
-        " is down");
+      LOG.info("Cluster shutdown set; " + hsi.getServerName() +
+        " expired; onlineServers=" + this.onlineServers.size());
+      if (this.onlineServers.isEmpty()) {
+        master.stop("Cluster shutdown set; onlineServer=0");
+      }
       return;
     }
     // Add to dead servers and queue a shutdown processing.
     this.deadServers.add(serverName);
-    new ServerShutdownHandler(master).submit();
+    this.master.getExecutorService().submit(new ServerShutdownHandler(master));
     LOG.debug("Added=" + serverName +
       " to dead servers, submitted shutdown handler to be executed");
   }
@@ -562,7 +581,7 @@ public class ServerManager {
       HRegionInterface hri = serverConnections.get(info.getServerName());
       if(hri == null) {
         LOG.info("new connection");
-        hri = master.getServerConnection().getHRegionConnection(
+        hri = this.connection.getHRegionConnection(
           info.getServerAddress(), false);
         serverConnections.put(info.getServerName(), hri);
       }

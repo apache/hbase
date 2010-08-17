@@ -564,7 +564,8 @@ public class ZKAssign {
   throws KeeperException {
     String encoded = region.getEncodedName();
     if(zkw.isDebugEnabled()) {
-      zkw.debug("Attempting to transition node for " + encoded +
+      zkw.debug("Attempting to transition node " +
+        HRegionInfo.prettyPrint(encoded) +
         " from " + beginState.toString() + " to " + endState.toString());
     }
 
@@ -606,7 +607,7 @@ public class ZKAssign {
         return -1;
       }
       if(zkw.isDebugEnabled()) {
-        zkw.debug("Successfully transitioned node for " + encoded +
+        zkw.debug("Successfully transitioned node " + encoded +
           " from " + beginState + " to " + endState);
       }
       return stat.getVersion() + 1;

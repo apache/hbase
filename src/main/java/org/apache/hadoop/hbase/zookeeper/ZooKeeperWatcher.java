@@ -165,9 +165,9 @@ public class ZooKeeperWatcher implements Watcher {
   @Override
   public void process(WatchedEvent event) {
     LOG.debug("<" + name + "> Received ZooKeeper Event, " +
-        "type: " + event.getType() + ", " +
-        "state:" + event.getState() + ", " +
-        "path: " + event.getPath());
+        "type=" + event.getType() + ", " +
+        "state=" + event.getState() + ", " +
+        "path=" + event.getPath());
 
     // While we are still using both ZKWs, need to call parent process()
 //    super.process(event);

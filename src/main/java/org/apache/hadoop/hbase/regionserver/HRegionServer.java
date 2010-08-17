@@ -58,7 +58,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -73,8 +75,6 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -85,8 +85,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
-import org.apache.hadoop.hbase.executor.HBaseExecutorService;
-import org.apache.hadoop.hbase.executor.HBaseExecutorService.HBaseExecutorServiceType;
+import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
@@ -246,6 +246,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   private final String machineName;
 
+  // Instance of the hbase executor service.
+  private ExecutorService service;
+
   /**
    * Starts a HRegionServer at the default location
    *
@@ -355,20 +358,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       @Override
       public synchronized void nodeDeleted(String path) {
         super.nodeDeleted(path);
-        if (getData() == null) {
+        if (isClusterShutdown()) {
           // Cluster was just marked for shutdown.
           LOG.info("Received cluster shutdown message");
-          closeUserRegions();
-          TODO: QUEUE UP THE CLOSEREGIONHANDLERSS FOR USER REGIONS
-          if (onlineRegions.isEmpty()) {
-            // We closed all user regions and there is nothing else left
-            // on this server; just go down.
-            HRegionServer.this.stop("All user regions closed; not " +
-              "carrying catalog regions -- so stopping");
-          } else {
-            LOG.info("Closed all user regions; still carrying " +
-              onlineRegions.values());
-          }
+          closeUserRegions(false);
         }
       }
     };
@@ -376,29 +369,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.clusterShutdownTracker.start();
   }
 
+  /**
+   * @return True if cluster shutdown in progress
+   */
+  private boolean isClusterShutdown() {
+    return this.clusterShutdownTracker.getData() == null;
+  }
+
   private void initializeThreads() throws IOException {
     this.workerThread = new Thread(worker);
-
-    // Start executor services
-
-    HBaseExecutorServiceType.RS_OPEN_REGION.startExecutorService(
-        getServerName(),
-        conf.getInt("hbase.regionserver.executor.openregion.threads", 5));
-    HBaseExecutorServiceType.RS_OPEN_ROOT.startExecutorService(
-        getServerName(),
-        conf.getInt("hbase.regionserver.executor.openroot.threads", 1));
-    HBaseExecutorServiceType.RS_OPEN_META.startExecutorService(
-        getServerName(),
-        conf.getInt("hbase.regionserver.executor.openmeta.threads", 1));
-    HBaseExecutorServiceType.RS_CLOSE_REGION.startExecutorService(
-        getServerName(),
-        conf.getInt("hbase.regionserver.executor.closeregion.threads", 5));
-    HBaseExecutorServiceType.RS_CLOSE_ROOT.startExecutorService(
-        getServerName(),
-        conf.getInt("hbase.regionserver.executor.closeroot.threads", 1));
-    HBaseExecutorServiceType.RS_CLOSE_META.startExecutorService(
-        getServerName(),
-        conf.getInt("hbase.regionserver.executor.closemeta.threads", 1));
 
     // Cache flushing thread.
     this.cacheFlusher = new MemStoreFlusher(conf, this);
@@ -430,33 +409,19 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public void run() {
     regionServerThread = Thread.currentThread();
     try {
-      MapWritable w = null;
       while (!this.stopped) {
-        w = reportForDuty();
-        if (w != null) {
-          init(w);
-          break;
-        }
-        sleeper.sleep();
-        LOG.warn("No response from master on reportForDuty. Sleeping and "
-            + "then trying again.");
+        if (tryReportForDuty()) break;
       }
-      List<HMsg> outboundMessages = new ArrayList<HMsg>();
       long lastMsg = 0;
-      // Now ask master what it wants us to do and tell it what we have done
+      List<HMsg> outboundMessages = new ArrayList<HMsg>();
+      // The main run loop.
       for (int tries = 0; !this.stopped && isHealthy();) {
-        // Try to get the root region location from zookeeper.
-        if (!haveRootRegion.get()) {
-          HServerAddress rootServer = catalogTracker.getRootLocation();
-          if (rootServer != null) {
-            // By setting the root region location, we bypass the wait imposed
-            // on
-            // HTable for all regions being assigned.
-            this.connection.setRootRegionLocation(new HRegionLocation(
-                HRegionInfo.ROOT_REGIONINFO, rootServer));
-            haveRootRegion.set(true);
-          }
+        if (isClusterShutdown() && this.onlineRegions.isEmpty()) {
+          stop("Exiting; cluster shutdown set and not carrying any regions");
+          continue;
         }
+        // Try to get the root region location from zookeeper.
+        checkRootRegionLocation();
         long now = System.currentTimeMillis();
         // Drop into the send loop if msgInterval has elapsed or if something
         // to send. If we fail talking to the master, then we'll sleep below
@@ -464,49 +429,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         if ((now - lastMsg) >= msgInterval || !outboundMessages.isEmpty()) {
           try {
             doMetrics();
-            MemoryUsage memory =
-              ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-            HServerLoad hsl = new HServerLoad(requestCount.get(),
-              (int)(memory.getUsed() / 1024 / 1024),
-              (int) (memory.getMax() / 1024 / 1024));
-            for (HRegion r : onlineRegions.values()) {
-              hsl.addRegionInfo(createRegionLoad(r));
-            }
-            this.serverInfo.setLoad(hsl);
-            this.requestCount.set(0);
-            addOutboundMsgs(outboundMessages);
-            HMsg msgs[] = this.hbaseMaster.regionServerReport(serverInfo,
-              outboundMessages.toArray(HMsg.EMPTY_HMSG_ARRAY),
-              getMostLoadedRegions());
+            tryRegionServerReport(outboundMessages);
             lastMsg = System.currentTimeMillis();
-            updateOutboundMsgs(outboundMessages);
-            outboundMessages.clear();
-
-            // Queue up the HMaster's instruction stream for processing
-            boolean restart = false;
-            for (int i = 0; !restart && !stopped && i < msgs.length; i++) {
-              LOG.info(msgs[i].toString());
-              this.connection.unsetRootRegionLocation();
-              switch (msgs[i].getType()) {
-
-                default:
-                  if (fsOk) {
-                    try {
-                      toDo.put(new ToDoEntry(msgs[i]));
-                    } catch (InterruptedException e) {
-                      throw new RuntimeException("Putting into msgQueue was "
-                          + "interrupted.", e);
-                    }
-                  }
-              }
-            }
             // Reset tries count if we had a successful transaction.
             tries = 0;
-
-            if (restart || this.stopped) {
-              toDo.clear();
-              continue;
-            }
+            if (this.stopped) continue;
           } catch (Exception e) { // FindBugs REC_CATCH_EXCEPTION
             // Two special exceptions could be printed out here,
             // PleaseHoldException and YouAreDeadException
@@ -534,18 +461,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           }
         }
         now = System.currentTimeMillis();
-        HMsg msg = this.outboundMsgs.poll((msgInterval - (now - lastMsg)),
-            TimeUnit.MILLISECONDS);
-        // If we got something, add it to list of things to send.
-        if (msg != null) {
-          outboundMessages.add(msg);
-        }
+        HMsg msg = this.outboundMsgs.poll((msgInterval - (now - lastMsg)), TimeUnit.MILLISECONDS);
+        if (msg != null) outboundMessages.add(msg);
       } // for
     } catch (Throwable t) {
       if (!checkOOME(t)) {
         abort("Unhandled exception", t);
       }
     }
+    this.toDo.clear();
     this.leases.closeAfterLeasesExpire();
     this.worker.stop();
     this.server.stop();
@@ -574,16 +498,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // Just skip out w/o closing regions.
     } else if (abortRequested) {
       if (this.fsOk) {
+        closeAllRegions(abortRequested); // Don't leave any open file handles
         closeWAL(false);
-        closeAllRegions(); // Don't leave any open file handles
       }
       LOG.info("aborting server at: " + this.serverInfo.getServerName());
     } else {
-      closeAllRegions();
+      closeAllRegions(abortRequested);
       closeWAL(true);
       closeAllScanners();
       LOG.info("stopping server at: " + this.serverInfo.getServerName());
     }
+    waitOnAllRegionsToClose();
 
     // Make sure the proxy is down.
     if (this.hbaseMaster != null) {
@@ -597,6 +522,102 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       join();
     }
     LOG.info(Thread.currentThread().getName() + " exiting");
+  }
+
+  /**
+   * Wait on regions close.
+   */
+  private void waitOnAllRegionsToClose() {
+    // Wait till all regions are closed before going out.
+    int lastCount = -1;
+    while (!this.onlineRegions.isEmpty()) {
+      int count = this.onlineRegions.size();
+      // Only print a message if the count of regions has changed.
+      if (count != lastCount) {
+        lastCount = count;
+        LOG.info("Waiting on " + count + " regions to close");
+        // Only print out regions still closing if a small number else will
+        // swamp the log.
+        if (count < 10) {
+          LOG.debug(this.onlineRegions);
+        }
+      }
+      Threads.sleep(1000);
+    }
+  }
+
+  List<HMsg> tryRegionServerReport(final List<HMsg> outboundMessages)
+  throws IOException {
+    this.serverInfo.setLoad(buildServerLoad());
+    this.requestCount.set(0);
+    addOutboundMsgs(outboundMessages);
+    HMsg [] msgs = this.hbaseMaster.regionServerReport(this.serverInfo,
+      outboundMessages.toArray(HMsg.EMPTY_HMSG_ARRAY),
+      getMostLoadedRegions());
+    updateOutboundMsgs(outboundMessages);
+    outboundMessages.clear();
+
+    // Queue up the HMaster's instruction stream for processing
+    for (int i = 0; !this.stopped && msgs != null && i < msgs.length; i++) {
+      LOG.info(msgs[i].toString());
+      // Intercept stop regionserver messages
+      if (msgs[i].getType().equals(HMsg.Type.STOP_REGIONSERVER)) {
+        stop("Received " + msgs[i]);
+        continue;
+      }
+      this.connection.unsetRootRegionLocation();
+      switch (msgs[i].getType()) {
+        default:
+          if (fsOk) {
+            try {
+              toDo.put(new ToDoEntry(msgs[i]));
+            } catch (InterruptedException e) {
+              throw new RuntimeException("Putting into msgQueue was "
+                  + "interrupted.", e);
+            }
+          }
+      }
+    }
+    return outboundMessages;
+  }
+
+  private HServerLoad buildServerLoad() {
+    MemoryUsage memory = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+    HServerLoad hsl = new HServerLoad(requestCount.get(),
+      (int)(memory.getUsed() / 1024 / 1024),
+      (int) (memory.getMax() / 1024 / 1024));
+    for (HRegion r : this.onlineRegions.values()) {
+      hsl.addRegionInfo(createRegionLoad(r));
+    }
+    return hsl;
+  }
+
+  /**
+   * @return True if successfully invoked {@link #reportForDuty()}
+   * @throws IOException
+   */
+  private boolean tryReportForDuty() throws IOException {
+    MapWritable w = reportForDuty();
+    if (w != null) {
+      init(w);
+      return true;
+    }
+    sleeper.sleep();
+    LOG.warn("No response on reportForDuty. Sleeping and then retrying.");
+    return false;
+  }
+
+  private void checkRootRegionLocation() throws InterruptedException {
+    if (this.haveRootRegion.get()) return;
+    HServerAddress rootServer = catalogTracker.getRootLocation();
+    if (rootServer != null) {
+      // By setting the root region location, we bypass the wait imposed on
+      // HTable for all regions being assigned.
+      HRegionLocation hrl =
+        new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer);
+      this.connection.setRootRegionLocation(hrl);
+      this.haveRootRegion.set(true);
+    }
   }
 
   private void closeWAL(final boolean delete) {
@@ -995,6 +1016,22 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         abort("Uncaught exception in service thread " + t.getName(), e);
       }
     };
+
+    // Start executor services
+    this.service = new ExecutorService(getServerName());
+    this.service.startExecutorService(ExecutorType.RS_OPEN_REGION,
+      conf.getInt("hbase.regionserver.executor.openregion.threads", 5));
+    this.service.startExecutorService(ExecutorType.RS_OPEN_ROOT,
+      conf.getInt("hbase.regionserver.executor.openroot.threads", 1));
+    this.service.startExecutorService(ExecutorType.RS_OPEN_META,
+      conf.getInt("hbase.regionserver.executor.openmeta.threads", 1));
+    this.service.startExecutorService(ExecutorType.RS_CLOSE_REGION,
+      conf.getInt("hbase.regionserver.executor.closeregion.threads", 5));
+    this.service.startExecutorService(ExecutorType.RS_CLOSE_ROOT,
+      conf.getInt("hbase.regionserver.executor.closeroot.threads", 1));
+    this.service.startExecutorService(ExecutorType.RS_CLOSE_META,
+      conf.getInt("hbase.regionserver.executor.closemeta.threads", 1));
+
     Threads.setDaemonThreadRunning(this.hlogRoller, n + ".logRoller", handler);
     Threads.setDaemonThreadRunning(this.cacheFlusher, n + ".cacheFlusher",
         handler);
@@ -1130,7 +1167,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     Threads.shutdown(this.cacheFlusher);
     Threads.shutdown(this.compactSplitThread);
     Threads.shutdown(this.hlogRoller);
-    HBaseExecutorService.shutdown();
+    this.service.shutdown();
   }
 
   /**
@@ -1339,97 +1376,54 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
-  /** Called either when the master tells us to restart or from stop() */
-  ArrayList<HRegion> closeAllRegions() {
-    List<HRegion> closedRegions = new ArrayList<HRegion>();
-    closedRegions.addAll(closeUserRegions());
-    ArrayList<HRegion> remainingRegionsToClose = new ArrayList<HRegion>();
+  /**
+   * Closes all regions.  Called on our way out.
+   * Assumes that its not possible for new regions to be added to onlineRegions
+   * while this method runs.
+   */
+  protected void closeAllRegions(final boolean abort) {
+    closeUserRegions(abort);
+    // Only root and meta should remain.  Are we carrying root or meta?
+    HRegion meta = null;
+    HRegion root = null;
     this.lock.writeLock().lock();
     try {
-      remainingRegionsToClose.addAll(onlineRegions.values());
+      for (Map.Entry<String, HRegion> e: onlineRegions.entrySet()) {
+        HRegionInfo hri = e.getValue().getRegionInfo();
+        if (hri.isRootRegion()) {
+          root = e.getValue();
+        } else if (hri.isMetaRegion()) {
+          meta = e.getValue();
+        }
+        if (meta != null && root != null) break;
+      }
     } finally {
       this.lock.writeLock().unlock();
     }
-    closeRegions(remainingRegionsToClose);
-    if (!this.onlineRegions.isEmpty()) {
-      LOG.warn("Online regions is not empty: " + this.onlineRegions);
-    }
-    return remainingRegionsToClose;
+    if (meta != null) closeRegion(meta.getRegionInfo(), abort, false);
+    if (root != null) closeRegion(root.getRegionInfo(), abort, false);
   }
 
-  /*
-   * Thread to run close of a region.
+  /**
+   * Schedule closes on all user regions.
+   * @param abort Whether we're running an abort.
    */
-  private static class RegionCloserThread extends Thread {
-    private final HRegion r;
-
-    protected RegionCloserThread(final HRegion r) {
-      super(Thread.currentThread().getName() + ".regionCloser." + r.toString());
-      this.r = r;
-    }
-
-    @Override
-    public void run() {
-      try {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Closing region " + r.toString());
-        }
-        r.close();
-      } catch (Throwable e) {
-        LOG.error("Error closing region " + r.toString(),
-            RemoteExceptionHandler.checkThrowable(e));
-      }
-    }
-  }
-
-  /** Called as the first stage of cluster shutdown. */
-  List<HRegion> closeUserRegions() {
-    ArrayList<HRegion> regionsToClose = new ArrayList<HRegion>();
+  void closeUserRegions(final boolean abort) {
     this.lock.writeLock().lock();
     try {
-      synchronized (onlineRegions) {
-        for (Iterator<Map.Entry<String, HRegion>> i = onlineRegions.entrySet().iterator();
-            i.hasNext();) {
-          Map.Entry<String, HRegion> e = i.next();
+      synchronized (this.onlineRegions) {
+        for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
           HRegion r = e.getValue();
           if (!r.getRegionInfo().isMetaRegion()) {
-            regionsToClose.add(r);
-            i.remove();
+            // Don't update zk with this close transition; pass false.
+            closeRegion(r.getRegionInfo(), abort, false);
           }
         }
       }
     } finally {
       this.lock.writeLock().unlock();
     }
-    return closeRegions(regionsToClose);
   }
-
-  List<HRegion> closeRegions(final List<HRegion> regions) {
-    // Run region closes in parallel.
-    Set<Thread> threads = new HashSet<Thread>();
-    try {
-      for (final HRegion r : regions) {
-        RegionCloserThread t = new RegionCloserThread(r);
-        t.start();
-        threads.add(t);
-      }
-    } finally {
-      for (Thread t : threads) {
-        while (t.isAlive()) {
-          try {
-            t.join();
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          }
-        }
-      }
-    }
-    return regions;
-  }
-
-  //
-  // HRegionInterface
-  //
 
   public HRegionInfo getRegionInfo(final byte[] regionName)
       throws NotServingRegionException {
@@ -1893,19 +1887,18 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
     if(region.isRootRegion()) {
-      new OpenRootHandler(this, catalogTracker, region).submit();
+      this.service.submit(new OpenRootHandler(this, catalogTracker, region));
     } else if(region.isMetaRegion()) {
-      new OpenMetaHandler(this, catalogTracker, region).submit();
+      this.service.submit(new OpenMetaHandler(this, catalogTracker, region));
     } else {
-      new OpenRegionHandler(this, catalogTracker, region).submit();
+      this.service.submit(new OpenRegionHandler(this, catalogTracker, region));
     }
   }
 
   @Override
   public boolean closeRegion(HRegionInfo region)
-      throws NotServingRegionException {
-    LOG.info("Received close region: "
-        + region.getRegionNameAsString());
+  throws NotServingRegionException {
+    LOG.info("Received close region: " + region.getRegionNameAsString());
     // TODO: Need to check if this is being served here but currently undergoing
     // a split (so master needs to retry close after split is complete)
     if (!onlineRegions.containsKey(region.getEncodedName())) {
@@ -1913,13 +1906,28 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       throw new NotServingRegionException("Received close for "
           + region.getRegionNameAsString() + " but we are not serving it");
     }
-    if(region.isRootRegion()) {
-      new CloseRootHandler(this, region).submit();
-    } else if(region.isMetaRegion()) {
-      new CloseMetaHandler(this, region).submit();
+    return closeRegion(region, false, true);
+  }
+
+  /**
+   * @param region Region to close
+   * @param abort True if we are aborting
+   * @param zk True if we are to update zk about the region close; if the close
+   * was orchestrated by master, then update zk.  If the close is being run by
+   * the regionserver because its going down, don't update zk.
+   * @return
+   */
+  protected boolean closeRegion(HRegionInfo region, final boolean abort,
+      final boolean zk) {
+    CloseRegionHandler crh = null;
+    if (region.isRootRegion()) {
+      crh = new CloseRootHandler(this, region, abort, zk);
+    } else if (region.isMetaRegion()) {
+      crh = new CloseMetaHandler(this, region, abort, zk);
     } else {
-      new CloseRegionHandler(this, region).submit();
+      crh = new CloseRegionHandler(this, region, abort, zk);
     }
+    this.service.submit(crh);
     return true;
   }
 
@@ -2279,13 +2287,23 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  public HServerAddress getHServerAddress() {
-    return this.address;
+  public ZooKeeperWatcher getZooKeeper() {
+    return zooKeeper;
   }
 
   @Override
-  public ZooKeeperWatcher getZooKeeper() {
-    return zooKeeper;
+  public String getServerName() {
+    return serverInfo.getServerName();
+  }
+ 
+  @Override
+  public ExecutorService getExecutorService() {
+    return this.service;
+  }
+
+  @Override
+  public CompactionRequestor getCompactionRequester() {
+    return this.compactSplitThread;
   }
 
   //
@@ -2412,20 +2430,5 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     Class<? extends HRegionServer> regionServerClass = (Class<? extends HRegionServer>) conf
         .getClass(HConstants.REGION_SERVER_IMPL, HRegionServer.class);
     doMain(args, regionServerClass);
-  }
-
-  @Override
-  public String getServerName() {
-    return serverInfo.getServerName();
-  }
-
-  @Override
-  public CompactionRequestor getCompactionRequester() {
-    return this.compactSplitThread;
-  }
-
-  @Override
-  public ServerConnection getServerConnection() {
-    return connection;
   }
 }

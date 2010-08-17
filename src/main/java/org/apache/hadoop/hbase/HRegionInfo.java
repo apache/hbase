@@ -109,6 +109,22 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     return encodedName;
   }
 
+  /**
+   * Use logging.
+   * @param encodedRegionName The encoded regionname.
+   * @return <code>-ROOT-</code> if passed <code>70236052</code> or
+   * <code>.META.</code> if passed </code>1028785192</code> else returns
+   * <code>encodedRegionName</code>
+   */
+  public static String prettyPrint(final String encodedRegionName) {
+    if (encodedRegionName.equals("70236052")) {
+      return encodedRegionName + "/-ROOT-";
+    } else if (encodedRegionName.equals("1028785192")) {
+      return encodedRegionName + "/.META.";
+    }
+    return encodedRegionName;
+  }
+
   /** delimiter used between portions of a region name */
   public static final int DELIMITER = ',';
 

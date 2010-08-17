@@ -24,12 +24,16 @@ import org.apache.hadoop.hbase.regionserver.RegionServer;
 
 /**
  * Handles closing of the root region on a region server.
- * <p>
- * This is executed after receiving an CLOSE RPC from the master for root.
  */
 public class CloseMetaHandler extends CloseRegionHandler {
-  public CloseMetaHandler(RegionServer server,
-      HRegionInfo regionInfo) {
-    super(server, regionInfo, false, true, EventType.M2RS_CLOSE_META);
+  // Called when master tells us shutdown a region via close rpc
+  public CloseMetaHandler(RegionServer server, HRegionInfo regionInfo) {
+    this(server, regionInfo, false, true);
+  }
+
+  // Called when regionserver determines its to go down; not master orchestrated
+  public CloseMetaHandler(RegionServer server, HRegionInfo regionInfo,
+      final boolean abort, final boolean zk) {
+    super(server, regionInfo, abort, zk, EventType.M2RS_CLOSE_META);
   }
 }
