@@ -169,3 +169,7 @@ Later:
     (if finish, need to use files not directory, and use right location)
   - Put notes from reviewboard/jira into LB javadoc or hbase "book"
 
+
+
+St.Ack
+ -- Ensure root and meta are last to close on cluster shutdown; it shoudl be the case but verify.
