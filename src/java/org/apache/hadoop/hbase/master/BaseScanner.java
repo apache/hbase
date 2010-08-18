@@ -189,7 +189,7 @@ abstract class BaseScanner extends Chore implements HConstants {
         long startCode = getStartCode(values);
 
         // Note Region has been assigned.
-        checkAssigned(regionServer, region, info, serverAddress, startCode);
+        checkAssigned(regionServer, region, info, serverAddress, startCode, true);
         if (isSplitParent(info)) {
           splitParents.put(info, values);
         }
@@ -522,36 +522,31 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @param regionServer
    * @param meta
    * @param info
-   * @param serverAddress
+   * @param hostnameAndPort hostname ':' port as it comes out of .META.
    * @param startCode
+   * @param checkTwice should we check twice before adding a region
+   * to unassigned pool.
    * @throws IOException
    */
   protected void checkAssigned(final HRegionInterface regionServer,
-    final MetaRegion meta, final HRegionInfo info,
-    final String serverAddress, final long startCode) 
+    final MetaRegion meta, HRegionInfo info,
+    final String hostnameAndPort, final long startCode, boolean checkTwice)
   throws IOException {
+    boolean tryAgain = false;
     String serverName = null;
-    String sa = serverAddress;
+    String sa = hostnameAndPort;
     long sc = startCode;
-    // Scans are sloppy. They don't respect row locks and they get and
-    // cache a row internally so may have data that is stale. Make sure that for
-    // sure we have the right server and servercode. We are trying to avoid
-    // double-assignments. See hbase-1784. Will have to wait till 0.21 hbase
-    // where we use zk to mediate state transitions to do better.
-    Get g = new Get(info.getRegionName());
-    g.addFamily(HConstants.CATALOG_FAMILY);
-    Result r = regionServer.get(meta.getRegionName(), g);
-    if (r != null && !r.isEmpty()) {
-      sa = getServerAddress(r);
-      if (sa != null && sa.length() > 0 && !sa.equalsIgnoreCase(serverAddress)) {
-        LOG.debug("GET on " + info.getRegionNameAsString() + " got different " +
-          "address than SCAN: sa=" + sa + ", serverAddress=" + serverAddress);
-      }
-      // Reget startcode in case its changed in the meantime too.
-      sc = getStartCode(r);
-      if (sc != startCode) {
-        LOG.debug("GET on " + info.getRegionNameAsString() + " got different " +
-          "startcode than SCAN: sc=" + sc + ", serverAddress=" + startCode);
+    if (sa == null || sa.length() <= 0) {
+      // Scans are sloppy.  They cache a row internally so may have data that
+      // is a little stale.  Make sure that for sure this serverAddress is null.
+      // We are trying to avoid double-assignments.  See hbase-1784.
+      Get g = new Get(info.getRegionName());
+      g.addFamily(HConstants.CATALOG_FAMILY);
+      Result r = regionServer.get(meta.getRegionName(), g);
+      if (r != null && !r.isEmpty()) {
+        sa = getServerAddress(r);
+        sc = getStartCode(r);
+        info = master.getHRegionInfo(r.getRow(), r);
       }
     }
     if (sa != null && sa.length() > 0) {
@@ -563,27 +558,42 @@ abstract class BaseScanner extends Chore implements HConstants {
        * a dead server. Regions that were on a dead server will get reassigned
        * by ProcessServerShutdown
        */
-      if (info.isOffline() ||
+      if (info == null || info.isOffline() ||
         this.master.regionManager.regionIsInTransition(info.getRegionNameAsString()) ||
-          (serverName != null && this.master.serverManager.isDead(serverName))) {
+          (serverName != null && this.master.getServerManager().isDead(serverName))) {
         return;
       }
       if (serverName != null) {
-        storedInfo = this.master.serverManager.getServerInfo(serverName);
+        storedInfo = this.master.getServerManager().getServerInfo(serverName);
       }
 
       // If we can't find the HServerInfo, then add it to the list of
       //  unassigned regions.
       if (storedInfo == null) {
-        // The current assignment is invalid
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Current assignment of " + info.getRegionNameAsString() +
-            " is not valid; " + " serverAddress=" + sa +
-            ", startCode=" + sc + " unknown.");
+        if (checkTwice) {
+          tryAgain = true;
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Current assignment of " + info.getRegionNameAsString() +
+              " is not valid; " + " serverAddress=" + sa +
+              ", startCode=" + sc + " unknown.");
+          }
+          // Now get the region assigned
+          this.master.regionManager.setUnassigned(info, true);
         }
-        // Now get the region assigned
-        this.master.regionManager.setUnassigned(info, true);
       }
+    }
+    if (tryAgain) {
+      // The current assignment is invalid. But we need to try again.
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Current assignment of " + info.getRegionNameAsString() +
+          " is not valid; " + " serverAddress=" + sa +
+          ", startCode=" + sc + " unknown; checking once more!");
+      }
+      // passing null for hostNameAndPort will force the function
+      // to reget the assignment from META and protect against
+      // double assignment race conditions (HBASE-2755).
+      checkAssigned(regionServer, meta, info, null, 0, false);
     }
   }
 
