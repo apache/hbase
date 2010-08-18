@@ -58,9 +58,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HMsg;
-import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -75,6 +73,8 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -109,8 +109,8 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
@@ -228,7 +228,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private CatalogTracker catalogTracker;
 
   // Cluster Status Tracker
-  private ZooKeeperNodeTracker clusterShutdownTracker;
+  private ClusterStatusTracker clusterStatusTracker;
 
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
@@ -268,14 +268,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // use will be in #serverInfo data member. For example, we may have been
     // passed a port of 0 which means we should pick some ephemeral port to bind
     // to.
-    address = new HServerAddress(addressStr);
-    LOG.info("My address is " + address);
+    this.address = new HServerAddress(addressStr);
 
-    this.abortRequested = false;
     this.fsOk = true;
     this.conf = conf;
     this.connection = ServerConnectionManager.getConnection(conf);
-
     this.isOnline = false;
 
     // Config'ed params
@@ -290,7 +287,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
 
-    // Task thread to process requests from Master
+    // Task thread to process requests from Master.  TODO: REMOVE
     this.worker = new Worker();
 
     this.numRegionsToReport = conf.getInt(
@@ -332,7 +329,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     initializeZooKeeper();
     initializeThreads();
-    int nbBlocks = 0; // FIXXX conf.getInt("hbase.regionserver.nbreservationblocks", 4);
+    int nbBlocks = 0; // TODO: FIX WAS OOME'ing in TESTS ->  conf.getInt("hbase.regionserver.nbreservationblocks", 4);
     for (int i = 0; i < nbBlocks; i++) {
       reservedSpace.add(new byte[HConstants.DEFAULT_SIZE_RESERVATION_BLOCK]);
     }
@@ -353,27 +350,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         conf.getInt("hbase.regionserver.catalog.timeout", -1));
     catalogTracker.start();
 
-    this.clusterShutdownTracker = new ZooKeeperNodeTracker(this.zooKeeper,
-        this.zooKeeper.clusterStateZNode, this) {
-      @Override
-      public synchronized void nodeDeleted(String path) {
-        super.nodeDeleted(path);
-        if (isClusterShutdown()) {
-          // Cluster was just marked for shutdown.
-          LOG.info("Received cluster shutdown message");
-          closeUserRegions(false);
-        }
-      }
-    };
-    this.zooKeeper.registerListener(this.clusterShutdownTracker);
-    this.clusterShutdownTracker.start();
+    this.clusterStatusTracker = new ClusterStatusTracker(this.zooKeeper, this);
+    this.clusterStatusTracker.start();
+    this.clusterStatusTracker.blockUntilAvailable();
   }
 
   /**
    * @return True if cluster shutdown in progress
    */
-  private boolean isClusterShutdown() {
-    return this.clusterShutdownTracker.getData() == null;
+  private boolean isClusterUp() {
+    return this.clusterStatusTracker.isClusterUp();
   }
 
   private void initializeThreads() throws IOException {
@@ -407,7 +393,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * load/unload instructions.
    */
   public void run() {
-    regionServerThread = Thread.currentThread();
+    this.regionServerThread = Thread.currentThread();
+    boolean calledCloseUserRegions = false;
     try {
       while (!this.stopped) {
         if (tryReportForDuty()) break;
@@ -416,9 +403,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       List<HMsg> outboundMessages = new ArrayList<HMsg>();
       // The main run loop.
       for (int tries = 0; !this.stopped && isHealthy();) {
-        if (isClusterShutdown() && this.onlineRegions.isEmpty()) {
-          stop("Exiting; cluster shutdown set and not carrying any regions");
-          continue;
+        if (!isClusterUp()) {
+          if (this.onlineRegions.isEmpty()) {
+            stop("Exiting; cluster shutdown set and not carrying any regions");
+          } else if (!calledCloseUserRegions) {
+            closeUserRegions(this.abortRequested);
+            calledCloseUserRegions = true;
+          }
         }
         // Try to get the root region location from zookeeper.
         checkRootRegionLocation();
@@ -592,21 +583,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return hsl;
   }
 
-  /**
-   * @return True if successfully invoked {@link #reportForDuty()}
-   * @throws IOException
-   */
-  private boolean tryReportForDuty() throws IOException {
-    MapWritable w = reportForDuty();
-    if (w != null) {
-      init(w);
-      return true;
-    }
-    sleeper.sleep();
-    LOG.warn("No response on reportForDuty. Sleeping and then retrying.");
-    return false;
-  }
-
   private void checkRootRegionLocation() throws InterruptedException {
     if (this.haveRootRegion.get()) return;
     HServerAddress rootServer = catalogTracker.getRootLocation();
@@ -691,7 +667,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    *
    * @param c Extra configuration.
    */
-  protected void init(final MapWritable c) throws IOException {
+  protected void handleReportForDutyResponse(final MapWritable c) throws IOException {
     try {
       for (Map.Entry<Writable, Writable> e : c.entrySet()) {
         String key = e.getKey().toString();
@@ -716,7 +692,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         HServerAddress hsa = new HServerAddress(hra, this.serverInfo
             .getServerAddress().getPort());
         LOG.info("Master passed us address to use. Was="
-            + this.serverInfo.getServerAddress() + ", Now=" + hra);
+            + this.serverInfo.getServerAddress() + ", Now=" + hsa.toString());
         this.serverInfo.setServerAddress(hsa);
       }
       // Master sent us hbase.rootdir to use. Should be fully qualified
@@ -1109,7 +1085,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public void stop(final String msg) {
     this.stopped = true;
-    LOG.info(msg);
+    LOG.info("STOPPED: " + msg);
     synchronized (this) {
       // Wakes run() if it is sleeping
       notifyAll(); // FindBugs NN_NAKED_NOTIFY
@@ -1206,6 +1182,21 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return true;
   }
 
+  /**
+   * @return True if successfully invoked {@link #reportForDuty()}
+   * @throws IOException
+   */
+  private boolean tryReportForDuty() throws IOException {
+    MapWritable w = reportForDuty();
+    if (w != null) {
+      handleReportForDutyResponse(w);
+      return true;
+    }
+    sleeper.sleep();
+    LOG.warn("No response on reportForDuty. Sleeping and then retrying.");
+    return false;
+  }
+
   /*
    * Let the master know we're here Run initialization using parameters passed
    * us by the master.
@@ -1221,18 +1212,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     while (!stopped) {
       try {
         this.requestCount.set(0);
-        MemoryUsage memory = ManagementFactory.getMemoryMXBean()
-            .getHeapMemoryUsage();
-        HServerLoad hsl = new HServerLoad(0,
-            (int) memory.getUsed() / 1024 / 1024,
-            (int) memory.getMax() / 1024 / 1024);
-        this.serverInfo.setLoad(hsl);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("sending initial server load: " + hsl);
-        }
         lastMsg = System.currentTimeMillis();
         ZKUtil.setAddressAndWatch(zooKeeper, ZKUtil.joinZNode(
             zooKeeper.rsZNode, ZKUtil.getNodeName(serverInfo)), address);
+        this.serverInfo.setLoad(buildServerLoad());
         result = this.hbaseMaster.regionServerStartup(this.serverInfo);
         break;
       } catch (IOException e) {
@@ -2294,11 +2277,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public String getServerName() {
     return serverInfo.getServerName();
-  }
- 
-  @Override
-  public ExecutorService getExecutorService() {
-    return this.service;
   }
 
   @Override

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
@@ -111,6 +112,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private final ReentrantLock assignLock = new ReentrantLock();
 
+  private final ExecutorService executorService;
+
   /**
    * Constructs a new assignment manager.
    *
@@ -119,13 +122,15 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param status master status
    * @param serverManager
    * @param catalogTracker
+   * @param service
    */
   public AssignmentManager(Server master, ServerManager serverManager,
-      CatalogTracker catalogTracker) {
+      CatalogTracker catalogTracker, final ExecutorService service) {
     super(master.getZooKeeper());
     this.master = master;
     this.serverManager = serverManager;
     this.catalogTracker = catalogTracker;
+    this.executorService = service;
     Configuration conf = master.getConfiguration();
     this.timeoutMonitor = new TimeoutMonitor(
         conf.getInt("hbase.master.assignment.timeoutmonitor.period", 30000),
@@ -265,7 +270,7 @@ public class AssignmentManager extends ZooKeeperListener {
             return;
           }
           // Handle CLOSED by assigning elsewhere or stopping if a disable
-          this.master.getExecutorService().submit(new ClosedRegionHandler(master,
+          this.executorService.submit(new ClosedRegionHandler(master,
             this, data, regionState.getRegion()));
           break;
 
@@ -296,16 +301,8 @@ public class AssignmentManager extends ZooKeeperListener {
                 "in expected PENDING_OPEN or OPENING states");
             return;
           }
-          // If this is a catalog table, update catalog manager accordingly
-          // Moving root and meta editing over to RS who does the opening
-          LOG.debug("Processing OPENED for region " +
-            regionState.getRegion().getRegionNameAsString());
-
-          // Used to have updating of root/meta locations here but it's
-          // automatic in CatalogTracker now
-
           // Handle OPENED by removing from transition and deleted zk node
-          this.master.getExecutorService().submit(
+          this.executorService.submit(
             new OpenedRegionHandler(master, this, data, regionState.getRegion(),
               this.serverManager.getServerInfo(data.getServerName())));
           break;

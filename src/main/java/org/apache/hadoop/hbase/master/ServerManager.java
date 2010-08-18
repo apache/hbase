@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.ServerConnection;
+import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
@@ -103,6 +104,8 @@ public class ServerManager {
 
   private final ServerConnection connection;
 
+  private final ExecutorService executorService;
+
   /**
    * Dumps into log current stats on dead servers and number of servers
    * TODO: Make this a metric; dump metrics into log.
@@ -144,14 +147,17 @@ public class ServerManager {
    * @param master
    * @param masterMetrics If null, we won't pass metrics.
    * @param masterFileSystem
+   * @param service ExecutorService instance.
    */
   public ServerManager(Server master,
       final ServerConnection connection,
       MasterMetrics masterMetrics,
-      MasterFileSystem masterFileSystem) {
+      MasterFileSystem masterFileSystem,
+      ExecutorService service) {
     this.master = master;
     this.masterMetrics = masterMetrics;
     this.connection = connection;
+    this.executorService = service;
     Configuration c = master.getConfiguration();
     int metaRescanInterval = c.getInt("hbase.master.meta.thread.rescanfrequency",
       60 * 1000);
@@ -483,7 +489,7 @@ public class ServerManager {
     }
     // Add to dead servers and queue a shutdown processing.
     this.deadServers.add(serverName);
-    this.master.getExecutorService().submit(new ServerShutdownHandler(master));
+    this.executorService.submit(new ServerShutdownHandler(master));
     LOG.debug("Added=" + serverName +
       " to dead servers, submitted shutdown handler to be executed");
   }

@@ -182,8 +182,8 @@ public class MiniHBaseCluster {
     }
 
     @Override
-    protected void init(MapWritable c) throws IOException {
-      super.init(c);
+    protected void handleReportForDutyResponse(MapWritable c) throws IOException {
+      super.handleReportForDutyResponse(c);
       // Run this thread to shutdown our filesystem on way out.
       this.shutdownThread = new SingleFileSystemShutdownThread(getFileSystem());
     }

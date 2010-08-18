@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
@@ -46,9 +45,4 @@ public interface Server extends Abortable, Stoppable {
    * @return unique server name
    */
   public String getServerName();
-
-  /**
-   * @return This servers executor service.
-   */
-  public ExecutorService getExecutorService();
 }

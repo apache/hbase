@@ -313,7 +313,7 @@ public class ZKAssign {
       EventType expectedState)
   throws KeeperException, KeeperException.NoNodeException {
     zkw.debug("Deleting an existing unassigned node for " + regionName +
-        " that is in a " + expectedState + " state");
+        " that is in expected state " + expectedState);
     String node = getNodeName(zkw, regionName);
     Stat stat = new Stat();
     byte [] bytes = ZKUtil.getDataNoWatch(zkw, node, stat);

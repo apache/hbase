@@ -156,7 +156,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   private volatile boolean abort = false;
 
   // Instance of the hbase executor service.
-  private ExecutorService service;
+  private ExecutorService executorService;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -165,15 +165,14 @@ implements HMasterInterface, HMasterRegionInterface, Server {
    * <li>Initialize HMaster RPC and address
    * <li>Connect to ZooKeeper and figure out if this is a fresh cluster start or
    *     a failed over master
+   * <li>Block until becoming active master
    * <li>Initialize master components - server manager, region manager, metrics,
    *     region server queue, file system manager, etc
-   * <li>Block until becoming active master
    * </ol>
    * @throws InterruptedException 
    */
-  public HMaster(Configuration conf)
+  public HMaster(final Configuration conf)
   throws IOException, KeeperException, InterruptedException {
-    // initialize some variables
     this.conf = conf;
 
     /*
@@ -191,7 +190,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
 
     /*
      * 2. Determine if this is a fresh cluster startup or failed over master.
-     *  This is done by checking for the existence of any ephemeral
+     * This is done by checking for the existence of any ephemeral
      * RegionServer nodes in ZooKeeper.  These nodes are created by RSs on
      * their initialization but only after they find the primary master.  As
      * long as this check is done before we write our address into ZK, this
@@ -199,29 +198,13 @@ implements HMasterInterface, HMasterRegionInterface, Server {
      * startup (none have become active master yet), which is why there is an
      * additional check if this master does not become primary on its first attempt.
      */
-    zooKeeper = new ZooKeeperWatcher(conf, MASTER + "-" + getHServerAddress(), this);
-    clusterStarter = 0 == ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
+    this.zooKeeper =
+      new ZooKeeperWatcher(conf, MASTER + "-" + getMasterAddress(), this);
+    this.clusterStarter = 0 ==
+      ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
 
     /*
-     * 3. Initialize master components.
-     * This includes the filesystem manager, server manager, region manager,
-     * metrics, queues, sleeper, etc...
-     */
-    // TODO: Do this using Dependency Injection, using PicoContainer or Spring.
-    this.connection = ServerConnectionManager.getConnection(conf);
-    this.metrics = new MasterMetrics(this.getName());
-    fileSystemManager = new MasterFileSystem(this);
-    serverManager = new ServerManager(this, this.connection, metrics,
-      fileSystemManager);
-    regionServerTracker = new RegionServerTracker(zooKeeper, this,
-      serverManager);
-    catalogTracker = new CatalogTracker(zooKeeper, connection, this,
-      conf.getInt("hbase.master.catalog.timeout", -1));
-    assignmentManager = new AssignmentManager(this, serverManager, catalogTracker);
-    clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
-
-    /*
-     * 4. Block on becoming the active master.
+     * 3. Block on becoming the active master.
      * We race with other masters to write our address into ZooKeeper.  If we
      * succeed, we are the primary/active master and finish initialization.
      *
@@ -231,20 +214,41 @@ implements HMasterInterface, HMasterRegionInterface, Server {
      */
     activeMasterManager = new ActiveMasterManager(zooKeeper, address, this);
     zooKeeper.registerListener(activeMasterManager);
-    zooKeeper.registerListener(assignmentManager);
+
     // Wait here until we are the active master
     clusterStarter = activeMasterManager.blockUntilBecomingActiveMaster();
 
-    // TODO: We should start everything here instead of before we become
-    //       active master and some after.  Requires change to RS side to not
-    //       start until clusterStatus is up rather than master is available.
+    /**
+     * 4. We are active master now... go initialize components we need to run.
+     */
+    // TODO: Do this using Dependency Injection, using PicoContainer or Spring.
+    this.metrics = new MasterMetrics(this.getName());
+    this.fileSystemManager = new MasterFileSystem(this);
+    this.connection = ServerConnectionManager.getConnection(conf);
+    this.executorService = new ExecutorService(getServerName());
 
-    // We are the active master now.
+    this.serverManager = new ServerManager(this, this.connection, metrics,
+      fileSystemManager, this.executorService);
+
+    this.catalogTracker = new CatalogTracker(zooKeeper, connection, this,
+      conf.getInt("hbase.master.catalog.timeout", -1));
+    this.catalogTracker.start();
+
+    this.assignmentManager = new AssignmentManager(this, serverManager,
+      this.catalogTracker, this.executorService);
+    zooKeeper.registerListener(assignmentManager);
+
+    this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
+      this.serverManager);
     regionServerTracker.start();
-    catalogTracker.start();
-    clusterStatusTracker.setClusterUp();
 
-    LOG.info("Server active/primary master; " + this.address);
+    // Set the cluster as up.
+    this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
+    this.clusterStatusTracker.setClusterUp();
+    this.clusterStatusTracker.start();
+
+    LOG.info("Server active/primary master; " + this.address +
+      "; clusterStarter=" + this.clusterStarter);
   }
 
   /**
@@ -258,48 +262,19 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   @Override
   public void run() {
     try {
-      if (this.clusterStarter) {
-        // This master is starting the cluster (its not a preexisting cluster
-        // that this master is joining).
-        // Initialize the filesystem, which does the following:
-        //   - Creates the root hbase directory in the FS if DNE
-        //   - If fresh start, create first ROOT and META regions (bootstrap)
-        //   - Checks the FS to make sure the root directory is readable
-        //   - Creates the archive directory for logs
-        fileSystemManager.initialize();
-        // Do any log splitting necessary
-        // TODO: Should do this in background rather than block master startup
-        // TODO: Do we want to do this before/while/after RSs check in?
-        //       It seems that this method looks at active RSs but happens
-        //       concurrently with when we expect them to be checking in
-        fileSystemManager.splitLogAfterStartup(serverManager.getOnlineServers());
-      }
       // start up all service threads.
       startServiceThreads();
       // wait for minimum number of region servers to be up
-      serverManager.waitForMinServers();
-
+      this.serverManager.waitForMinServers();
       // start assignment of user regions, startup or failure
       if (this.clusterStarter) {
-        // Clean out current state of unassigned
-        assignmentManager.cleanoutUnassigned();
-        // assign the root region
-        assignmentManager.assignRoot();
-        catalogTracker.waitForRoot();
-        // assign the meta region
-        assignmentManager.assignMeta();
-        catalogTracker.waitForMeta();
-        // above check waits for general meta availability but this does not
-        // guarantee that the transition has completed
-        assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
-        assignmentManager.assignAllUserRegions();
+        clusterStarterInitializations(this.fileSystemManager,
+            this.serverManager, this.catalogTracker, this.assignmentManager);
       } else {
         // Process existing unassigned nodes in ZK, read all regions from META,
         // rebuild in-memory state.
-        assignmentManager.processFailover();
+        this.assignmentManager.processFailover();
       }
-      LOG.info("HMaster started on " + this.address.toString() +
-        "; clusterStarter=" + this.clusterStarter);
       // Check if we should stop every second.
       Sleeper sleeper = new Sleeper(1000, this);
       while (!this.stopped  && !this.abort) {
@@ -327,12 +302,45 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     this.rpcServer.stop();
     this.activeMasterManager.stop();
     this.zooKeeper.close();
-    this.service.shutdown();
+    this.executorService.shutdown();
     LOG.info("HMaster main thread exiting");
   }
 
-  public HServerAddress getHServerAddress() {
-    return address;
+  /*
+   * Initializations we need to do if we are cluster starter.
+   * @param starter
+   * @param mfs
+   * @throws IOException 
+   */
+  private static void clusterStarterInitializations(final MasterFileSystem mfs,
+    final ServerManager sm, final CatalogTracker ct, final AssignmentManager am)
+  throws IOException, InterruptedException, KeeperException {
+      // This master is starting the cluster (its not a preexisting cluster
+      // that this master is joining).
+      // Initialize the filesystem, which does the following:
+      //   - Creates the root hbase directory in the FS if DNE
+      //   - If fresh start, create first ROOT and META regions (bootstrap)
+      //   - Checks the FS to make sure the root directory is readable
+      //   - Creates the archive directory for logs
+      mfs.initialize();
+      // Do any log splitting necessary
+      // TODO: Should do this in background rather than block master startup
+      // TODO: Do we want to do this before/while/after RSs check in?
+      //       It seems that this method looks at active RSs but happens
+      //       concurrently with when we expect them to be checking in
+      mfs.splitLogAfterStartup(sm.getOnlineServers());
+      // Clean out current state of unassigned
+      am.cleanoutUnassigned();
+      // assign the root region
+      am.assignRoot();
+      ct.waitForRoot();
+      // assign the meta region
+      am.assignMeta();
+      ct.waitForMeta();
+      // above check waits for general meta availability but this does not
+      // guarantee that the transition has completed
+      am.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
+      am.assignAllUserRegions();
   }
 
   /*
@@ -351,7 +359,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
 
   /** @return HServerAddress of the master server */
   public HServerAddress getMasterAddress() {
-    return getHServerAddress();
+    return this.address;
   }
 
   public long getProtocolVersion(String protocol, long clientVersion) {
@@ -380,11 +388,6 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     return this.zooKeeper;
   }
 
-  @Override
-  public ExecutorService getExecutorService() {
-    return this.service;
-  }
-
   /*
    * Start up all services. If any of these threads gets an unhandled exception
    * then they just die with a logged message.  This should be fine because
@@ -395,14 +398,13 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   private void startServiceThreads() {
     try {
       // Start the executor service pools
-      this.service = new ExecutorService(getServerName());
-      this.service.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
+      this.executorService.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
         conf.getInt("hbase.master.executor.openregion.threads", 5));
-      this.service.startExecutorService(ExecutorType.MASTER_CLOSE_REGION,
+      this.executorService.startExecutorService(ExecutorType.MASTER_CLOSE_REGION,
         conf.getInt("hbase.master.executor.closeregion.threads", 5));
-      this.service.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
+      this.executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
         conf.getInt("hbase.master.executor.serverops.threads", 5));
-      this.service.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS,
+      this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS,
         conf.getInt("hbase.master.executor.tableops.threads", 5));
 
       // Put up info server.
@@ -413,7 +415,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
         this.infoServer.setAttribute(MASTER, this);
         this.infoServer.start();
       }
-      // Start the server so everything else is running before we start
+      // Start the server last so everything else is running before we start
       // receiving requests.
       this.rpcServer.start();
       if (LOG.isDebugEnabled()) {
@@ -671,7 +673,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   public void modifyTable(final byte[] tableName, HTableDescriptor htd)
   throws IOException {
     LOG.info("modifyTable(SET_HTD): " + htd);
-    this.service.submit(new ModifyTableHandler(tableName, this, catalogTracker,
+    this.executorService.submit(new ModifyTableHandler(tableName, this, catalogTracker,
       fileSystemManager));
   }
 

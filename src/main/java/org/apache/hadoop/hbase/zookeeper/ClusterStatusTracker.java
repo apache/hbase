@@ -22,9 +22,17 @@ package org.apache.hadoop.hbase.zookeeper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 
+/**
+ * Tracker on cluster settings up in zookeeper.
+ * This is not related to {@link ClusterStatus}.  That class is a data structure
+ * that holds snapshot of current view on cluster.  This class is about tracking
+ * cluster attributes up in zookeeper.
+ *
+ */
 public class ClusterStatusTracker extends ZooKeeperNodeTracker {
   private static final Log LOG = LogFactory.getLog(ClusterStatusTracker.class);
 
@@ -37,11 +45,17 @@ public class ClusterStatusTracker extends ZooKeeperNodeTracker {
    * @param abortable
    */
   public ClusterStatusTracker(ZooKeeperWatcher watcher, Abortable abortable) {
-    super(watcher, watcher.rootServerZNode, abortable);
+    super(watcher, watcher.clusterStateZNode, abortable);
+  }
+
+  @Override
+  public synchronized void start() {
+    super.start();
+    this.watcher.registerListener(this);
   }
 
   /**
-   * Checks if the root region location is available.
+   * Checks if cluster is up.
    * @return true if root region location is available, false if not
    */
   public boolean isClusterUp() {

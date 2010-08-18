@@ -9,6 +9,9 @@ harder stuff
   if there are operations that should just retry indefinitely, they need to
   resubmit themselves to their executor service.
 
+  -- Should never timeout IMO and we changed executors so root and meta are
+  done separately so this should be ok? -- St.Ack 20100815
+
 * move splits to RS side, integrate new patch from stack on trunk
   might need a new CREATED unassigned now, or new rpc, but get rid of sending
   split notification on heartbeat?
@@ -18,14 +21,22 @@ harder stuff
   we should use cluster flag in zk to signal RS to
   start rather than master availability and between master up and cluster up
   the master can do bulk of it's initialization.
+  
+  -- Yes.  CST is currently a little off in that its homed on root location
+  rather than the up/down status.  Also shutdown.  RS now watches /hbase/shutdown
+  and starts shutdown when this goes down -- St.Ack 20100815
 
 * figure what to do with client table admin ops (flush, split, compact)
   (direct to RS rpc calls are in place, need to update client)
+  
+  -- And then remove this stuff from HMsg -- St.Ack 20100815
 
 * on region open (and wherever split children notify master) should check if
   if the table is disabled and should close the regions... maybe.
 
 * in RootEditor there is a race condition between delete and watch?
+
+  -- Didn't you say that this was a pigment of your emancipation? -- St.Ack 20100815
 
 * review FileSystemManager calls
 
@@ -49,6 +60,9 @@ somewhat easier stuff
 ---
 
 * regionserver exit and expiration need to be finished in ServerManager
+
+  -- Mostly done.  Need to also implement server shutdown again -- St.Ack 20100815
+
 
 * jsp pages borked
 
@@ -142,6 +156,8 @@ Later:
 
 * renaming master file manager?  MasterFS/MasterFileSystem
 
+  -- I renamed this stuff -- St.Ack 20100815
+
 * ServerStatus/MasterStatus
 
   + We now have:  Abortable as the base class (M, RS, and Client implement abort())
@@ -155,6 +171,12 @@ Later:
   - Current idea is these things would just have accessors/setters to
     the server status booleans and abort() methods (like closed, closing,
     abortRequested)
+
+  -- Done.  I removed MasterStatus/MasterController.  Not necessary.
+  The RSController was renamed RegionServer.  Not the best but until 
+  something better.  I got rid of a few of the calls it was doing
+  as they didn't seem needed (e.g. call openHRegion, a static, rather
+  than do an open on the passed regionservercontroller) -- St.Ack 20100815
 
 * HBaseEventHandler/HBaseEventType/HBaseExecutorService
 

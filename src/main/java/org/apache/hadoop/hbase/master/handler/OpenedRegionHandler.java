@@ -80,7 +80,7 @@ public class OpenedRegionHandler extends EventHandler {
 
   @Override
   public void process() {
-    LOG.debug("Handling OPENED event with data: " + data);
+    LOG.debug("Handling OPENED event; deleting unassigned node with data: " + data);
     // TODO: should we check if this table was disabled and get it closed?
     // Remove region from in-memory transition and unassigned node from ZK
     try {
@@ -90,6 +90,6 @@ public class OpenedRegionHandler extends EventHandler {
       server.abort("Error deleting OPENED node in ZK", e);
     }
     assignmentManager.regionOnline(regionInfo, serverInfo);
-    LOG.debug("Opened region " + regionInfo);
+    LOG.debug("Opened region " + regionInfo.getRegionNameAsString());
   }
 }
