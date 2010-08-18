@@ -17,6 +17,9 @@ harder stuff
   split notification on heartbeat?
   how to handle splits concurrent with disable?
 
+  -- We need means of fixup if only one edit goes in.. the offlining of parent.
+  St.Ack 20100817
+
 * review master startup order
   we should use cluster flag in zk to signal RS to
   start rather than master availability and between master up and cluster up
@@ -25,6 +28,7 @@ harder stuff
   -- Yes.  CST is currently a little off in that its homed on root location
   rather than the up/down status.  Also shutdown.  RS now watches /hbase/shutdown
   and starts shutdown when this goes down -- St.Ack 20100815
+  -- This should be done now. St.Ack 20100817
 
 * figure what to do with client table admin ops (flush, split, compact)
   (direct to RS rpc calls are in place, need to update client)
@@ -62,6 +66,7 @@ somewhat easier stuff
 * regionserver exit and expiration need to be finished in ServerManager
 
   -- Mostly done.  Need to also implement server shutdown again -- St.Ack 20100815
+  -- Whats missing is servershutdownhandler. St.Ack 20100817
 
 
 * jsp pages borked
@@ -127,6 +132,8 @@ notes from 8/4 (with what i did tonight for them, which is most of what is diffe
 * Add priorities to Opened/Closed handlers on Master
 
   >>  Added ROOT, META, USER priorities
+  -- I don't think these are used? And priorites on close are odd in that
+  on shutdown we want meta and root to close last.  St.Ack 20100817
 
 
 * In RegionTransitionData, store the actual byte[] regionName rather than
@@ -139,6 +146,10 @@ notes from 8/4 (with what i did tonight for them, which is most of what is diffe
 * Executor services need to be using a priority queue
 
   >>  Done.  I think all stuff to set pool size and add priorities is in.
+  -- Interestingly, if we mess up transitions... shutdown can be hung as
+  executors that are outstanding without matching other-ends will be
+  stuck trying to remove elements from queue... server won't go down.
+  St.Ack 20100817
 
 
 * In EventType, completely remove differentiating between Master and RS.
