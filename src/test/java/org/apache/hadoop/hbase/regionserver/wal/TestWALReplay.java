@@ -132,7 +132,7 @@ public class TestWALReplay {
     Path basedir = new Path(this.hbaseRootDir, tableNameStr);
     deleteDir(basedir);
     HLog wal = createWAL(this.conf);
-    HRegion region = HRegion.openHRegion(hri, basedir, wal, this.conf);
+    HRegion region = HRegion.openHRegion(hri, wal, this.conf);
     Path f =  new Path(basedir, "hfile");
     HFile.Writer writer = new HFile.Writer(this.fs, f);
     byte [] family = hri.getTableDesc().getFamilies().iterator().next().getName();

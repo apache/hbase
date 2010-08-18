@@ -64,7 +64,7 @@ public class TestHMsg extends TestCase {
       new HRegionInfo(new HTableDescriptor(Bytes.toBytes("parent")),
       parentbytes, parentbytes);
     // Assert simple HMsg serializes
-    HMsg hmsg = new HMsg(HMsg.Type.CLOSE_ALL_USER_REGIONS, parent);
+    HMsg hmsg = new HMsg(HMsg.Type.STOP_REGIONSERVER, parent);
     byte [] bytes = Writables.getBytes(hmsg);
     HMsg close = (HMsg)Writables.getWritable(bytes, new HMsg());
     assertTrue(close.equals(hmsg));

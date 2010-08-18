@@ -110,7 +110,14 @@ public class CatalogTracker {
    * @throws InterruptedException 
    */
   public HServerAddress getRootLocation() throws InterruptedException {
-    return rootRegionTracker.getRootRegionLocation();
+    return this.rootRegionTracker.getRootRegionLocation();
+  }
+
+  /**
+   * @return Location of meta or null if not yet available.
+   */
+  public HServerAddress getMetaLocation() {
+    return this.metaLocation;
   }
 
   /**

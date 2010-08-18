@@ -39,7 +39,7 @@ public class OOMEHMaster extends HMaster {
   private List<byte []> retainer = new ArrayList<byte[]>();
 
   public OOMEHMaster(HBaseConfiguration conf)
-  throws IOException, KeeperException {
+  throws IOException, KeeperException, InterruptedException {
     super(conf);
   }
 

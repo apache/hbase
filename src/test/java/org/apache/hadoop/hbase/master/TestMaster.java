@@ -50,7 +50,7 @@ import static org.junit.Assert.*;
 
 public class TestMaster {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestMasterWithDisabling.class);
+  private static final Log LOG = LogFactory.getLog(TestMaster.class);
   private static final byte[] TABLENAME = Bytes.toBytes("TestMaster");
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
 

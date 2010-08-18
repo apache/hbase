@@ -48,12 +48,6 @@ public class ClusterStatusTracker extends ZooKeeperNodeTracker {
     super(watcher, watcher.clusterStateZNode, abortable);
   }
 
-  @Override
-  public synchronized void start() {
-    super.start();
-    this.watcher.registerListener(this);
-  }
-
   /**
    * Checks if cluster is up.
    * @return true if root region location is available, false if not

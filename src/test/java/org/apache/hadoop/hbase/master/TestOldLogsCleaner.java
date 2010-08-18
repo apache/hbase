@@ -21,25 +21,22 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
 
+import java.net.URLEncoder;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Stoppable;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.conf.Configuration;
-
-import java.net.URLEncoder;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 public class TestOldLogsCleaner {
-
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
 
@@ -74,13 +71,25 @@ public class TestOldLogsCleaner {
   @Test
   public void testLogCleaning() throws Exception{
     Configuration c = TEST_UTIL.getConfiguration();
-    Path oldLogDir = new Path(TEST_UTIL.getTestDir(),
+    Path oldLogDir = new Path(HBaseTestingUtility.getTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     String fakeMachineName = URLEncoder.encode("regionserver:60020", "UTF8");
 
     FileSystem fs = FileSystem.get(c);
-    AtomicBoolean stop = new AtomicBoolean(false);
-    OldLogsCleaner cleaner = new OldLogsCleaner(1000, stop,c, fs, oldLogDir);
+    Stoppable stoppable = new Stoppable() {
+      private volatile boolean stopped = false;
+
+      @Override
+      public void stop(String why) {
+        this.stopped = true;
+      }
+
+      @Override
+      public boolean isStopped() {
+        return this.stopped;
+      }
+    };
+    OldLogsCleaner cleaner = new OldLogsCleaner(1000, stoppable,c, fs, oldLogDir);
 
     // Create 2 invalid files, 1 "recent" file, 1 very new file and 30 old files
     long now = System.currentTimeMillis();

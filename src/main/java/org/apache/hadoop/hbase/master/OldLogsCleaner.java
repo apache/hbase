@@ -58,9 +58,8 @@ public class OldLogsCleaner extends Chore {
    * @param fs handle to the FS
    * @param oldLogDir the path to the archived logs
    */
-  public OldLogsCleaner(final int p, final Stoppable s,
-                        Configuration conf, FileSystem fs,
-                        Path oldLogDir) {
+  public OldLogsCleaner(final int p, final Stoppable s, Configuration conf,
+      FileSystem fs, Path oldLogDir) {
     super("OldLogsCleaner", p, s);
     this.maxDeletedLogs =
         conf.getInt("hbase.master.logcleaner.maxdeletedlogs", 20);
@@ -70,9 +69,9 @@ public class OldLogsCleaner extends Chore {
     this.logCleaner = getLogCleaner();
   }
 
-  @SuppressWarnings("unchecked")
   private LogCleanerDelegate getLogCleaner() {
     try {
+      @SuppressWarnings("rawtypes")
       Class c = Class.forName(conf.get("hbase.master.logcleanerplugin.impl",
         TimeToLiveLogCleaner.class.getCanonicalName()));
       LogCleanerDelegate cleaner = (LogCleanerDelegate) c.newInstance();

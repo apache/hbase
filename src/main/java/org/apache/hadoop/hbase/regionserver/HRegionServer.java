@@ -342,7 +342,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     // create the master address manager, register with zk, and start it
     masterAddressManager = new MasterAddressTracker(zooKeeper, this);
-    zooKeeper.registerListener(masterAddressManager);
     masterAddressManager.start();
 
     // create the catalog tracker and start it

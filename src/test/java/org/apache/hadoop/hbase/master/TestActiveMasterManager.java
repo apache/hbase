@@ -199,20 +199,10 @@ public class TestActiveMasterManager {
     private volatile boolean stopped;
 
     @Override
-    public ServerConnection getServerConnection() {
-      return null;
-    }
-
-    @Override
     public void abort(final String msg, final Throwable t) {}
 
     @Override
     public Configuration getConfiguration() {
-      return null;
-    }
-
-    @Override
-    public HServerAddress getHServerAddress() {
       return null;
     }
 

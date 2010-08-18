@@ -70,6 +70,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
    * or {@link getData} to get the data of the node if it is available.
    */
   public synchronized void start() {
+    this.watcher.registerListener(this);
     try {
       if(ZKUtil.watchAndCheckExists(watcher, node)) {
         byte [] data = ZKUtil.getDataAndWatch(watcher, node);
