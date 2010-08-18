@@ -1,6 +1,44 @@
 List of things todo for branch, including comments from reviews not yet
 implemented.
 
+---
+remaining tasks before merge
+---
+
+* finish baseline implementation of new splits
+
+* shutdown handler
+
+* integrate load balancer
+
+* fix jsp pages
+
+* ensure root/meta are last to close on cluster shutdown
+
+
+---
+tasks to complete post merge
+---
+
+* move client to use CatalogTracker and add region admin methods
+
+* bulletproof splits.  need to be recoverable from every point including
+  partial META edits over on RS.
+  
+* review timeout semantics for client calls.  servers should generally wait
+  forever on root/meta but client class need to eventually timeout.
+  
+  we need to document new configuration parameters as well since this will now
+  be a 'timeout' rather than 'retries' and 'delay'.
+
+* finish rewriting or making any existing failing unit tests pass
+
+* new master unit tests (failover, failing RS and Master during various points
+  of regions in transition, etc)
+
+
+
+
 harder stuff
 ---
 
@@ -20,16 +58,6 @@ harder stuff
   -- We need means of fixup if only one edit goes in.. the offlining of parent.
   St.Ack 20100817
 
-* review master startup order
-  we should use cluster flag in zk to signal RS to
-  start rather than master availability and between master up and cluster up
-  the master can do bulk of it's initialization.
-  
-  -- Yes.  CST is currently a little off in that its homed on root location
-  rather than the up/down status.  Also shutdown.  RS now watches /hbase/shutdown
-  and starts shutdown when this goes down -- St.Ack 20100815
-  -- This should be done now. St.Ack 20100817
-
 * figure what to do with client table admin ops (flush, split, compact)
   (direct to RS rpc calls are in place, need to update client)
   
@@ -37,12 +65,6 @@ harder stuff
 
 * on region open (and wherever split children notify master) should check if
   if the table is disabled and should close the regions... maybe.
-
-* in RootEditor there is a race condition between delete and watch?
-
-  -- Didn't you say that this was a pigment of your emancipation? -- St.Ack 20100815
-
-* review FileSystemManager calls
 
 * there are some races with master wanting to connect for rpc
   to regionserver and the rs starting its rpc server, need to address
@@ -89,6 +111,49 @@ somewhat easier stuff
   possibly migrate client to use CatalogTracker?
 
 
+* Executor services need to be using a priority queue
+
+  >>  Done.  I think all stuff to set pool size and add priorities is in.
+  -- Interestingly, if we mess up transitions... shutdown can be hung as
+  executors that are outstanding without matching other-ends will be
+  stuck trying to remove elements from queue... server won't go down.
+  St.Ack 20100817
+
+
+
+St.Ack
+ -- Ensure root and meta are last to close on cluster shutdown; it shoudl be the case but verify.
+
+ 
+ 
+================================================================================
+
+COMPLETED STUFF (retained to ensure final review of these issues at the end)
+
+================================================================================
+
+
+* review master startup order
+  we should use cluster flag in zk to signal RS to
+  start rather than master availability and between master up and cluster up
+  the master can do bulk of it's initialization.
+  
+  -- Yes.  CST is currently a little off in that its homed on root location
+  rather than the up/down status.  Also shutdown.  RS now watches /hbase/shutdown
+  and starts shutdown when this goes down -- St.Ack 20100815
+  -- This should be done now. St.Ack 20100817
+
+  
+* in RootEditor there is a race condition between delete and watch?
+
+  -- Didn't you say that this was a pigment of your emancipation? -- St.Ack 20100815
+
+* review FileSystemManager calls
+  
+  
+  
+  
+  
 notes from 8/4 (with what i did tonight for them, which is most of what is different in this diff)
 ---
 
@@ -142,16 +207,7 @@ notes from 8/4 (with what i did tonight for them, which is most of what is diffe
   >>  Done.  We should also get in practice of naming variables encodedName if
       it is that.
 
-
-* Executor services need to be using a priority queue
-
-  >>  Done.  I think all stuff to set pool size and add priorities is in.
-  -- Interestingly, if we mess up transitions... shutdown can be hung as
-  executors that are outstanding without matching other-ends will be
-  stuck trying to remove elements from queue... server won't go down.
-  St.Ack 20100817
-
-
+  
 * In EventType, completely remove differentiating between Master and RS.
   This means for a given EventType, it will map to the same handler whether it
   is on RS or Master.
@@ -202,7 +258,4 @@ Later:
     (if finish, need to use files not directory, and use right location)
   - Put notes from reviewboard/jira into LB javadoc or hbase "book"
 
-
-
-St.Ack
- -- Ensure root and meta are last to close on cluster shutdown; it shoudl be the case but verify.
+  
