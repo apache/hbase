@@ -88,10 +88,12 @@ public class TestZKBasedReopenRegion {
   @Test (timeout=300000) public void testOpenRegion()
   throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    LOG.info("Number of region servers = " + cluster.getLiveRegionServerThreads().size());
+    LOG.info("Number of region servers = " +
+      cluster.getLiveRegionServerThreads().size());
 
     int rsIdx = 0;
-    HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
+    HRegionServer regionServer =
+      TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
     Collection<HRegion> regions = regionServer.getOnlineRegions();
     HRegion region;
     while((region = regions.iterator().next()) != null) {
@@ -106,26 +108,31 @@ public class TestZKBasedReopenRegion {
 
     EventHandlerListener closeListener =
       new RegionEventListener(region.getRegionNameAsString(),
-          closeEventProcessed, EventType.M2RS_CLOSE_REGION);
-    EventHandler.registerListener(closeListener);
+          closeEventProcessed, EventType.RS2ZK_REGION_CLOSED);
+    cluster.getMaster().executorService.
+      registerListener(EventType.RS2ZK_REGION_CLOSED, closeListener);
 
     EventHandlerListener openListener =
       new RegionEventListener(region.getRegionNameAsString(),
-          reopenEventProcessed, EventType.M2RS_OPEN_REGION);
-    EventHandler.registerListener(openListener);
+          reopenEventProcessed, EventType.RS2ZK_REGION_OPENED);
+    cluster.getMaster().executorService.
+      registerListener(EventType.RS2ZK_REGION_OPENED, openListener);
 
-    regionServer.closeRegion(region.getRegionInfo());
+    LOG.info("Unassign " + region.getRegionNameAsString());
+    cluster.getMaster().assignmentManager.unassign(region.getRegionInfo());
 
     synchronized(closeEventProcessed) {
       closeEventProcessed.wait(3*60*1000);
     }
-    if(!closeEventProcessed.get()) {
+
+    if (!closeEventProcessed.get()) {
       throw new Exception("Timed out, close event not called on master.");
     }
 
     synchronized(reopenEventProcessed) {
       reopenEventProcessed.wait(3*60*1000);
     }
+
     if(!reopenEventProcessed.get()) {
       throw new Exception("Timed out, open event not called on master after region close.");
     }

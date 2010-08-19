@@ -19,9 +19,6 @@
  */
 package org.apache.hadoop.hbase.executor;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -50,13 +47,14 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   protected EventType eventType;
   // server controller
   protected Server server;
-  // listeners that are called before and after an event is processed
-  protected static List<EventHandlerListener> eventHandlerListeners =
-    Collections.synchronizedList(new ArrayList<EventHandlerListener>());
+
   // sequence id generator for default FIFO ordering of events
   protected static AtomicLong seqids = new AtomicLong(0);
   // sequence id for this event
   protected long seqid;
+
+  // Listener to call pre- and post- processing.
+  private EventHandlerListener listener;
 
   /**
    * This interface provides hooks to listen to various events received by the
@@ -188,28 +186,17 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   }
 
   /**
-   * This is a wrapper around process, used to update listeners before and after
-   * events are processed.
+   * This is a wrapper around {@link #process()} to give listeners a chance to run.
    */
   public void run() {
-    // fire all beforeProcess listeners
-    for(EventHandlerListener listener : eventHandlerListeners) {
-      listener.beforeProcess(this);
-    }
-
+    if (getListener() != null) this.listener.beforeProcess(this);
     // call the main process function
     try {
       process();
     } catch(Throwable t) {
       LOG.error("Caught throwable while processing event " + eventType, t);
     }
-
-    // fire all afterProcess listeners
-    for(EventHandlerListener listener : eventHandlerListeners) {
-      LOG.debug("Firing " + listener.getClass().getName() +
-                ".afterProcess event listener for event " + eventType);
-      listener.afterProcess(this);
-    }
+    if (getListener() != null) this.listener.afterProcess(this);
   }
 
   /**
@@ -217,20 +204,6 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
    * subclasses.
    */
   public abstract void process();
-
-  /**
-   * Subscribe to updates before and after processing events
-   */
-  public static void registerListener(EventHandlerListener listener) {
-    eventHandlerListeners.add(listener);
-  }
-
-  /**
-   * Stop receiving updates before and after processing events
-   */
-  public static void unregisterListener(EventHandlerListener listener) {
-    eventHandlerListeners.remove(listener);
-  }
 
   /**
    * Return the name for this event type.
@@ -285,5 +258,19 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
    */
   public void execute() {
     this.run();
+  }
+
+  /**
+   * @return Current listener or null if none set.
+   */
+  public synchronized EventHandlerListener getListener() {
+    return listener;
+  }
+
+  /**
+   * @param listener Listener to call pre- and post- {@link #process()}.
+   */
+  public synchronized void setListener(EventHandlerListener listener) {
+    this.listener = listener;
   }
 }

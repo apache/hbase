@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.executor;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,21 +31,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This is a generic executor service. This component abstracts a
- * threadpool, a queue to which jobs can be submitted and a Runnable that
- * handles the object that is added to the queue.
+ * threadpool, a queue to which {@link EventHandler.EventType}s can be submitted,
+ * and a <code>Runnable</code> that handles the object that is added to the queue.
  *
  * <p>In order to create a new service, create an instance of this class and 
  * then do: <code>instance.startExecutorService("myService");</code>.  When done
  * call {@link #shutdown()}.
  *
  * In order to use the service created above, you need to override the
- * <code>EventHandler</code> class and create an event type that submits to this
- * service.
+ * {@link EventHandler} class and create an {@link EventHandler.EventType} that
+ * submits to this service.  Register pre- and post- processing listeners
+ * by registering your implementation of {@link EventHandler.EventHandlerListener}
+ * with {@link #registerListener(EventType, EventHandlerListener)}.  Be sure
+ * to deregister your listener when done via {@link #unregisterListener(EventType)}.
  */
 public class ExecutorService {
   private static final Log LOG = LogFactory.getLog(ExecutorService.class);
@@ -52,6 +58,9 @@ public class ExecutorService {
   // hold the all the executors created in a map addressable by their names
   private final ConcurrentHashMap<String, Executor> executorMap =
     new ConcurrentHashMap<String, Executor>();
+  // listeners that are called before and after an event is processed
+  private ConcurrentHashMap<EventHandler.EventType, EventHandlerListener> eventHandlerListeners =
+    new ConcurrentHashMap<EventHandler.EventType, EventHandlerListener>();
 
   private final String servername;
 
@@ -102,7 +111,7 @@ public class ExecutorService {
       throw new RuntimeException("An executor service with the name " + name +
         " is already running!");
     }
-    Executor hbes = new Executor(name, maxThreads);
+    Executor hbes = new Executor(name, maxThreads, this.eventHandlerListeners);
     if (this.executorMap.putIfAbsent(name, hbes) != null) {
       throw new RuntimeException("An executor service with the name " + name +
       " is already running (2)!");
@@ -153,6 +162,29 @@ public class ExecutorService {
   }
 
   /**
+   * Subscribe to updates before and after processing instances of
+   * {@link EventHandler.EventType}.  Currently only one listener per
+   * event type.
+   * @param type Type of event we're registering listener for
+   * @param listener The listener to run.
+   * @return The <code>listener</code> that was passed
+   */
+  public void registerListener(final EventHandler.EventType type,
+      final EventHandlerListener listener) {
+    this.eventHandlerListeners.put(type, listener);
+  }
+
+  /**
+   * Stop receiving updates before and after processing instances of
+   * {@link EventHandler.EventType}
+   * @param type Type of event we're registering listener for
+   * @return The listener we removed or null if we did not remove it.
+   */
+  public EventHandlerListener unregisterListener(final EventHandler.EventType type) {
+    return this.eventHandlerListeners.remove(type);
+  }
+
+  /**
    * Executor instance.
    */
   private static class Executor {
@@ -166,9 +198,12 @@ public class ExecutorService {
     BlockingQueue<Runnable> workQueue = new PriorityBlockingQueue<Runnable>();
     private final AtomicInteger threadid = new AtomicInteger(0);
     private final String name;
+    private final Map<EventHandler.EventType, EventHandlerListener> eventHandlerListeners;
 
-    protected Executor(String name, int maxThreads) {
+    protected Executor(String name, int maxThreads,
+        final Map<EventHandler.EventType, EventHandlerListener> eventHandlerListeners) {
       this.name = name;
+      this.eventHandlerListeners = eventHandlerListeners;
       // create the thread pool executor
       this.threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, maxThreads,
           keepAliveTimeInMillis, TimeUnit.MILLISECONDS, workQueue);
@@ -182,7 +217,14 @@ public class ExecutorService {
      * Submit the event to the queue for handling.
      * @param event
      */
-    void submit(Runnable event) {
+    void submit(final EventHandler event) {
+      // If there is a listener for this type, make sure we call the before
+      // and after process methods.
+      EventHandlerListener listener =
+        this.eventHandlerListeners.get(event.getEventType());
+      if (listener != null) {
+        event.setListener(listener);
+      }
       this.threadPoolExecutor.execute(event);
     }
   }

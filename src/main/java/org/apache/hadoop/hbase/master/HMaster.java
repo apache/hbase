@@ -141,7 +141,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   private final ServerManager serverManager;
 
   // manager of assignment nodes in zookeeper
-  private final AssignmentManager assignmentManager;
+  final AssignmentManager assignmentManager;
   // manager of catalog regions
   private final CatalogTracker catalogTracker;
   // Cluster status zk tracker and local setter
@@ -156,7 +156,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   private volatile boolean abort = false;
 
   // Instance of the hbase executor service.
-  private ExecutorService executorService;
+  ExecutorService executorService;
 
   /**
    * Initializes the HMaster. The steps are as follows:

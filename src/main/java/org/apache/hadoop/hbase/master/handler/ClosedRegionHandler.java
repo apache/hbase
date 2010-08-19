@@ -84,7 +84,7 @@ public class ClosedRegionHandler extends EventHandler {
   public void process() {
     LOG.debug("Handling CLOSED event with data: " + data);
     // Check if this table is being disabled or not
-    if(assignmentManager.isTableOfRegionDisabled(regionInfo.getRegionName())) {
+    if (assignmentManager.isTableOfRegionDisabled(regionInfo.getRegionName())) {
       // Disabling so should not be reassigned, just delete the CLOSED node
       LOG.debug("Table being disabled so deleting ZK node and removing from " +
           "regions in transition, skipping assignment");
@@ -101,7 +101,7 @@ public class ClosedRegionHandler extends EventHandler {
       assignmentManager.regionOffline(regionInfo);
       return;
     }
-    // ZK Node is in CLOSED state, assign it (transition to OFFLINE done here)
+    // ZK Node is in CLOSED state, assign it.
     assignmentManager.setOffline(regionInfo);
     assignmentManager.assign(regionInfo);
   }

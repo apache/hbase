@@ -239,15 +239,15 @@ public class AssignmentManager extends ZooKeeperListener {
       }
       String encodedName = HRegionInfo.encodeRegionName(data.getRegionName());
       String prettyPrintedRegionName = HRegionInfo.prettyPrint(encodedName);
-      LOG.debug("Handling region transition for server " +
-        data.getServerName() + " and region " + prettyPrintedRegionName);
+      LOG.debug("Handling transition=" + data.getEventType() + ", server=" +
+        data.getServerName() + ", region=" + prettyPrintedRegionName);
       RegionState regionState = regionsInTransition.get(encodedName);
       switch(data.getEventType()) {
 
         case RS2ZK_REGION_CLOSING:
           // Should see CLOSING after we have asked it to CLOSE or additional
           // times after already being in state of CLOSING
-          if(regionState == null ||
+          if (regionState == null ||
               (!regionState.isPendingClose() && !regionState.isClosing())) {
             LOG.warn("Received CLOSING for region " + prettyPrintedRegionName +
                 " from server " + data.getServerName() + " but region was in " +
@@ -261,7 +261,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
         case RS2ZK_REGION_CLOSED:
           // Should see CLOSED after CLOSING but possible after PENDING_CLOSE
-          if(regionState == null ||
+          if (regionState == null ||
               (!regionState.isPendingClose() && !regionState.isClosing())) {
             LOG.warn("Received CLOSED for region " + prettyPrintedRegionName +
                 " from server " + data.getServerName() + " but region was in " +
@@ -270,6 +270,9 @@ public class AssignmentManager extends ZooKeeperListener {
             return;
           }
           // Handle CLOSED by assigning elsewhere or stopping if a disable
+          // If we got here all is good.  Need to update RegionState -- else
+          // what follows will fail because not in expected state.
+          regionState.update(RegionState.State.CLOSED, data.getStamp());
           this.executorService.submit(new ClosedRegionHandler(master,
             this, data, regionState.getRegion()));
           break;
