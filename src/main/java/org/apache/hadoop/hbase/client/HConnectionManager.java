@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
@@ -469,15 +470,11 @@ public class HConnectionManager {
     }
 
     /*
-     * If online == true
-     *   Returns true if all regions are online
-     *   Returns false in any other case
-     * If online == false
-     *   Returns true if all regions are offline
-     *   Returns false in any other case
+     * @param True if table is online
      */
     private boolean testTableOnlineState(byte[] tableName, boolean online)
     throws IOException {
+      // TODO: Replace w/ CatalogTracker-based tableExists test.
       if (!tableExists(tableName)) {
         throw new TableNotFoundException(Bytes.toString(tableName));
       }
@@ -485,53 +482,14 @@ public class HConnectionManager {
         // The root region is always enabled
         return true;
       }
-      int rowsScanned = 0;
-      int rowsOffline = 0;
-      byte[] startKey =
-        HRegionInfo.createRegionName(tableName, null, HConstants.ZEROES, false);
-      byte[] endKey;
-      HRegionInfo currentRegion;
-      Scan scan = new Scan(startKey);
-      scan.addColumn(HConstants.CATALOG_FAMILY,
-          HConstants.REGIONINFO_QUALIFIER);
-      int rows = this.conf.getInt("hbase.meta.scanner.caching", 100);
-      scan.setCaching(rows);
-      ScannerCallable s = new ScannerCallable(this,
-          (Bytes.equals(tableName, HConstants.META_TABLE_NAME) ?
-              HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME), scan);
       try {
-        // Open scanner
-        getRegionServerWithRetries(s);
-        do {
-          currentRegion = s.getHRegionInfo();
-          Result r;
-          Result [] rrs;
-          while ((rrs = getRegionServerWithRetries(s)) != null && rrs.length > 0) {
-            r = rrs[0];
-            byte [] value = r.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER);
-            if (value != null) {
-              HRegionInfo info = Writables.getHRegionInfoOrNull(value);
-              if (info != null) {
-                if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
-                  rowsScanned += 1;
-                  rowsOffline += info.isOffline() ? 1 : 0;
-                }
-              }
-            }
-          }
-          endKey = currentRegion.getEndKey();
-        } while (!(endKey == null ||
-            Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY)));
-      } finally {
-        s.setClose();
-        // Doing below will call 'next' again and this will close the scanner
-        // Without it we leave scanners open.
-        getRegionServerWithRetries(s);
+        List<String> tables = ZKTableDisable.getDisabledTables(this.zooKeeper);
+        String searchStr = Bytes.toString(tableName);
+        boolean disabled = tables.contains(searchStr);
+        return online? !disabled: disabled;
+      } catch (KeeperException e) {
+        throw new IOException("Failed listing disabled tables", e);
       }
-      LOG.debug("Rowscanned=" + rowsScanned + ", rowsOffline=" + rowsOffline);
-      boolean onOffLine = online? rowsOffline == 0: rowsOffline == rowsScanned;
-      return rowsScanned > 0 && onOffLine;
     }
 
     private static class HTableDescriptorFinder

@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -267,7 +266,7 @@ public class TestAdmin {
     } catch (RetriesExhaustedException e) {
       ok = true;
     }
-    assertEquals(true, ok);
+    assertTrue(ok);
     this.admin.enableTable(table);
 
     //Test that table is enabled
@@ -276,7 +275,7 @@ public class TestAdmin {
     } catch (RetriesExhaustedException e) {
       ok = false;
     }
-    assertEquals(true, ok);
+    assertTrue(ok);
   }
 
   @Test

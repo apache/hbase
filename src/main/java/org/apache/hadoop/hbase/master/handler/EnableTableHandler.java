@@ -38,6 +38,7 @@ public class EnableTableHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(EnableTableHandler.class);
 
   private final byte [] tableName;
+  private final String tableNameStr;
   private final CatalogTracker catalogTracker;
   private final AssignmentManager assignmentManager;
 
@@ -45,6 +46,7 @@ public class EnableTableHandler extends EventHandler {
       CatalogTracker catalogTracker, AssignmentManager assignmentManager) {
     super(server, EventType.C2M_ENABLE_TABLE);
     this.tableName = tableName;
+    this.tableNameStr = Bytes.toString(tableName);
     this.catalogTracker = catalogTracker;
     this.assignmentManager = assignmentManager;
   }
@@ -52,27 +54,25 @@ public class EnableTableHandler extends EventHandler {
   @Override
   public void process() {
     try {
-      LOG.info("Attemping to enable the table " + Bytes.toString(tableName));
+      LOG.info("Attemping to enable the table " + this.tableNameStr);
       handleEnableTable();
     } catch (IOException e) {
-      LOG.error("Error trying to enable the table " + Bytes.toString(tableName),
-          e);
+      LOG.error("Error trying to enable the table " + this.tableNameStr, e);
     }
   }
 
   private void handleEnableTable() throws IOException {
     // Check if table exists
-    if(!MetaReader.tableExists(catalogTracker, Bytes.toString(tableName))) {
+    if(!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
       throw new TableNotFoundException(Bytes.toString(tableName));
     }
     // Get the regions of this table
     List<HRegionInfo> regions = MetaReader.getTableRegions(catalogTracker,
         tableName);
+    // Set the table as disabled so it doesn't get re-onlined
+    assignmentManager.undisableTable(this.tableNameStr);
     // Verify all regions of table are disabled
-    for(HRegionInfo region : regions) {
-      if(!region.isOffline()) {
-        continue;
-      }
+    for (HRegionInfo region : regions) {
       assignmentManager.assign(region);
     }
   }

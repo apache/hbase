@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 
 public class ModifyTableHandler extends TableEventHandler {
-  public ModifyTableHandler(byte [] tableName, Server server,
-      CatalogTracker catalogTracker, MasterFileSystem fileManager) {
+  public ModifyTableHandler(final byte [] tableName, final Server server,
+      final CatalogTracker catalogTracker, final MasterFileSystem fileManager) {
     super(EventType.C2M_MODIFY_TABLE, tableName, server, catalogTracker,
         fileManager);
   }
@@ -38,11 +38,11 @@ public class ModifyTableHandler extends TableEventHandler {
   @Override
   protected void handleTableOperation(List<HRegionInfo> regions)
   throws IOException {
-    for(HRegionInfo region : regions) {
+    for (HRegionInfo region : regions) {
       // Update region info in META
       MetaEditor.updateRegionInfo(catalogTracker, region);
       // Update region info in FS
-      fileManager.updateRegionInfo(region);
+      this.fileManager.updateRegionInfo(region);
     }
   }
 }

@@ -72,7 +72,8 @@ public class TestMaster {
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
     TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
-    TEST_UTIL.loadTable(new HTable(TABLENAME), FAMILYNAME);
+    TEST_UTIL.loadTable(new HTable(TEST_UTIL.getConfiguration(), TABLENAME),
+      FAMILYNAME);
 
     List<Pair<HRegionInfo, HServerAddress>> tableRegions =
       MetaReader.getTableRegionsAndLocations(m.getCatalogTracker(),
@@ -89,7 +90,8 @@ public class TestMaster {
     CountDownLatch aboutToOpen = new CountDownLatch(1);
     CountDownLatch proceed = new CountDownLatch(1);
     RegionOpenListener list = new RegionOpenListener(aboutToOpen, proceed);
-    EventHandler.registerListener(list);
+    cluster.getMaster().executorService.
+      registerListener(EventType.RS2ZK_REGION_OPENED, list);
 
     LOG.info("Splitting table");
     admin.split(TABLENAME);
@@ -143,5 +145,4 @@ public class TestMaster {
     public void beforeProcess(EventHandler event) {
     }
   }
-
 }

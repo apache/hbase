@@ -408,7 +408,6 @@ public class HBaseAdmin {
     // Wait until all regions are enabled
     boolean enabled = false;
     for (int tries = 0; tries < this.numRetries; tries++) {
-
       try {
         getMaster().enableTable(tableName);
       } catch (RemoteException e) {

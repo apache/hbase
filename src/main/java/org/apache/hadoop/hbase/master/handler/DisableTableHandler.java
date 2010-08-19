@@ -38,6 +38,7 @@ public class DisableTableHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(DisableTableHandler.class);
 
   private final byte [] tableName;
+  private final String tableNameStr;
   private final CatalogTracker catalogTracker;
   private final AssignmentManager assignmentManager;
 
@@ -45,6 +46,7 @@ public class DisableTableHandler extends EventHandler {
       CatalogTracker catalogTracker, AssignmentManager assignmentManager) {
     super(server, EventType.C2M_DISABLE_TABLE);
     this.tableName = tableName;
+    this.tableNameStr = Bytes.toString(this.tableName);
     this.catalogTracker = catalogTracker;
     this.assignmentManager = assignmentManager;
   }
@@ -52,49 +54,27 @@ public class DisableTableHandler extends EventHandler {
   @Override
   public void process() {
     try {
-      LOG.info("Attemping to disable the table " + Bytes.toString(tableName));
+      LOG.info("Attemping to disable the table " + this.tableNameStr);
       handleDisableTable();
     } catch (IOException e) {
-      LOG.error("Error trying to disable the table " + Bytes.toString(tableName),
-          e);
+      LOG.error("Error trying to disable the table " + this.tableNameStr, e);
     }
   }
 
-  // Meta scan
-  @SuppressWarnings("unused")
-  private void oldDisableTable() throws IOException {
-    // Check if table exists
-    if(!MetaReader.tableExists(catalogTracker, Bytes.toString(tableName))) {
-      throw new TableNotFoundException(Bytes.toString(tableName));
-    }
-    // Set the table as disabled so it doesn't get re-onlined
-    assignmentManager.disableTable(Bytes.toString(tableName));
-    // Get the regions of this table
-    // TODO: should we use in-memory state?  need to deal with concurrent splits
-    List<HRegionInfo> regions = MetaReader.getTableRegions(catalogTracker,
-        tableName);
-    // Verify all regions of table are offline
-    for(HRegionInfo region : regions) {
-      if(region.isOffline()) {
-        continue;
-      }
-      // Unassign any regions still online
-      assignmentManager.unassign(region);
-    }
-  }
-
-  // In-memory scan
   private void handleDisableTable() throws IOException {
     // Check if table exists
     // TODO: do we want to keep this in-memory as well?  i guess this is
     //       part of old master rewrite, schema to zk to check for table
     //       existence and such
-    if(!MetaReader.tableExists(catalogTracker, Bytes.toString(tableName))) {
+    if(!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
       throw new TableNotFoundException(Bytes.toString(tableName));
     }
     // Set the table as disabled so it doesn't get re-onlined
-    assignmentManager.disableTable(Bytes.toString(tableName));
-    // Get the online regions of this table
+    assignmentManager.disableTable(this.tableNameStr);
+    // Get the online regions of this table.
+    // TODO: What if region splitting at the time we get this listing?
+    // TODO: Remove offline flag from HRI
+    // TODO: Confirm we have parallel closing going on.
     List<HRegionInfo> regions = assignmentManager.getRegionsOfTable(tableName);
     // Unassign the online regions
     for(HRegionInfo region : regions) {
