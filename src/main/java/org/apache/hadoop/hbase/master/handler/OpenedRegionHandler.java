@@ -33,7 +33,7 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Handles OPENED region event on Master.
  */
-public class OpenedRegionHandler extends EventHandler {
+public class OpenedRegionHandler extends EventHandler implements TotesHRegionInfo {
   private static final Log LOG = LogFactory.getLog(OpenedRegionHandler.class);
 
   private final AssignmentManager assignmentManager;
@@ -76,6 +76,11 @@ public class OpenedRegionHandler extends EventHandler {
   @Override
   public int getPriority() {
     return priority.getValue();
+  }
+
+  @Override
+  public HRegionInfo getHRegionInfo() {
+    return this.regionInfo;
   }
 
   @Override

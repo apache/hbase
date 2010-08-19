@@ -37,12 +37,13 @@ import org.apache.zookeeper.KeeperException;
  * <p>
  * Otherwise, assigns the region to another server.
  */
-public class ClosedRegionHandler extends EventHandler {
+public class ClosedRegionHandler extends EventHandler implements TotesHRegionInfo {
   private static final Log LOG = LogFactory.getLog(ClosedRegionHandler.class);
 
   private final AssignmentManager assignmentManager;
   private final RegionTransitionData data;
   private final HRegionInfo regionInfo;
+
   private final ClosedPriority priority;
 
   private enum ClosedPriority {
@@ -78,6 +79,11 @@ public class ClosedRegionHandler extends EventHandler {
   @Override
   public int getPriority() {
     return priority.getValue();
+  }
+
+  @Override
+  public HRegionInfo getHRegionInfo() {
+    return this.regionInfo;
   }
 
   @Override

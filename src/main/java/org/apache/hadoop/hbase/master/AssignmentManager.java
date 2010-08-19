@@ -239,8 +239,9 @@ public class AssignmentManager extends ZooKeeperListener {
       }
       String encodedName = HRegionInfo.encodeRegionName(data.getRegionName());
       String prettyPrintedRegionName = HRegionInfo.prettyPrint(encodedName);
-      LOG.debug("Handling transition=" + data.getEventType() + ", server=" +
-        data.getServerName() + ", region=" + prettyPrintedRegionName);
+      LOG.debug("Handling transition=" + data.getEventType().name() +
+        "/" + data.getEventType().toString() +
+        ", server=" + data.getServerName() + ", region=" + prettyPrintedRegionName);
       RegionState regionState = regionsInTransition.get(encodedName);
       switch(data.getEventType()) {
 

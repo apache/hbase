@@ -39,9 +39,9 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.master.handler.TotesHRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -51,10 +51,13 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestZKBasedCloseRegion {
-  private static final Log LOG = LogFactory.getLog(TestZKBasedCloseRegion.class);
+/**
+ * Test open and close of regions using zk.
+ */
+public class TestZKBasedOpenCloseRegion {
+  private static final Log LOG = LogFactory.getLog(TestZKBasedOpenCloseRegion.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final String TABLENAME = "master_transitions";
+  private static final String TABLENAME = "TestZKBasedOpenCloseRegion";
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a"),
     Bytes.toBytes("b"), Bytes.toBytes("c")};
 
@@ -84,6 +87,108 @@ public class TestZKBasedCloseRegion {
     }
   }
 
+  /**
+   * Test we reopen a region once closed.
+   * @throws Exception
+   */
+  @Test (timeout=300000) public void testReOpenRegion()
+  throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    LOG.info("Number of region servers = " +
+      cluster.getLiveRegionServerThreads().size());
+
+    int rsIdx = 0;
+    HRegionServer regionServer =
+      TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
+    Collection<HRegion> regions = regionServer.getOnlineRegions();
+    HRegion region;
+    while((region = regions.iterator().next()) != null) {
+      if(!region.getRegionInfo().isMetaRegion() && !region.getRegionInfo().isRootRegion()) {
+        break;
+      }
+    }
+    LOG.debug("Asking RS to close region " + region.getRegionNameAsString());
+
+    AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
+    AtomicBoolean reopenEventProcessed = new AtomicBoolean(false);
+
+    EventHandlerListener closeListener =
+      new ReopenEventListener(region.getRegionNameAsString(),
+          closeEventProcessed, EventType.RS2ZK_REGION_CLOSED);
+    cluster.getMaster().executorService.
+      registerListener(EventType.RS2ZK_REGION_CLOSED, closeListener);
+
+    EventHandlerListener openListener =
+      new ReopenEventListener(region.getRegionNameAsString(),
+          reopenEventProcessed, EventType.RS2ZK_REGION_OPENED);
+    cluster.getMaster().executorService.
+      registerListener(EventType.RS2ZK_REGION_OPENED, openListener);
+
+    LOG.info("Unassign " + region.getRegionNameAsString());
+    cluster.getMaster().assignmentManager.unassign(region.getRegionInfo());
+
+    synchronized(closeEventProcessed) {
+      closeEventProcessed.wait(3*60*1000);
+    }
+
+    if (!closeEventProcessed.get()) {
+      throw new Exception("Timed out, close event not called on master.");
+    }
+
+    synchronized(reopenEventProcessed) {
+      reopenEventProcessed.wait(3*60*1000);
+    }
+
+    if(!reopenEventProcessed.get()) {
+      throw new Exception("Timed out, open event not called on master after region close.");
+    }
+
+    LOG.info("\n\n\nDone with test, RS informed master successfully.\n\n\n");
+  }
+
+  public static class ReopenEventListener implements EventHandlerListener {
+    private static final Log LOG = LogFactory.getLog(ReopenEventListener.class);
+    String regionName;
+    AtomicBoolean eventProcessed;
+    EventType eventType;
+
+    public ReopenEventListener(String regionName,
+        AtomicBoolean eventProcessed, EventType eventType) {
+      this.regionName = regionName;
+      this.eventProcessed = eventProcessed;
+      this.eventType = eventType;
+    }
+
+    @Override
+    public void beforeProcess(EventHandler event) {
+      if(event.getEventType() == eventType) {
+        LOG.info("Received " + eventType + " and beginning to process it");
+      }
+    }
+
+    @Override
+    public void afterProcess(EventHandler event) {
+      LOG.info("afterProcess(" + event + ")");
+      if(event.getEventType() == eventType) {
+        LOG.info("Finished processing " + eventType);
+        String regionName = "";
+        if(eventType == EventType.RS2ZK_REGION_OPENED) {
+          TotesHRegionInfo hriCarrier = (TotesHRegionInfo)event;
+          regionName = hriCarrier.getHRegionInfo().getRegionNameAsString();
+        } else if(eventType == EventType.RS2ZK_REGION_CLOSED) {
+          TotesHRegionInfo hriCarrier = (TotesHRegionInfo)event;
+          regionName = hriCarrier.getHRegionInfo().getRegionNameAsString();
+        }
+        if(this.regionName.equals(regionName)) {
+          eventProcessed.set(true);
+        }
+        synchronized(eventProcessed) {
+          eventProcessed.notifyAll();
+        }
+      }
+    }
+  }
+
   @Test (timeout=300000) public void testCloseRegion()
   throws Exception {
     LOG.info("Running testCloseRegion");
@@ -105,9 +210,9 @@ public class TestZKBasedCloseRegion {
     EventHandlerListener listener =
       new CloseRegionEventListener(region.getRegionNameAsString(),
           closeEventProcessed);
-    EventHandler.registerListener(listener);
+    cluster.getMaster().executorService.registerListener(EventType.RS2ZK_REGION_CLOSED, listener);
 
-    regionServer.closeRegion(region.getRegionInfo());
+    cluster.getMaster().assignmentManager.unassign(region.getRegionInfo());
 
     synchronized(closeEventProcessed) {
       // wait for 3 minutes
@@ -135,10 +240,10 @@ public class TestZKBasedCloseRegion {
     @Override
     public void afterProcess(EventHandler event) {
       LOG.info("afterProcess(" + event + ")");
-      if(event.getEventType() == EventType.M2RS_CLOSE_REGION) {
+      if(event.getEventType() == EventType.RS2ZK_REGION_CLOSED) {
         LOG.info("Finished processing CLOSE REGION");
-        CloseRegionHandler closeHandler = (CloseRegionHandler)event;
-        if(regionToClose.equals(closeHandler.getRegionInfo().getRegionNameAsString())) {
+        TotesHRegionInfo hriCarrier = (TotesHRegionInfo)event;
+        if(regionToClose.equals(hriCarrier.getHRegionInfo().getRegionNameAsString())) {
           closeEventProcessed.set(true);
         }
         synchronized(closeEventProcessed) {
@@ -230,12 +335,12 @@ public class TestZKBasedCloseRegion {
   }
 
   public static void main(String args[]) throws Exception {
-    TestZKBasedCloseRegion.beforeAllTests();
+    TestZKBasedOpenCloseRegion.beforeAllTests();
 
-    TestZKBasedCloseRegion test = new TestZKBasedCloseRegion();
+    TestZKBasedOpenCloseRegion test = new TestZKBasedOpenCloseRegion();
     test.setup();
     test.testCloseRegion();
 
-    TestZKBasedCloseRegion.afterAllTests();
+    TestZKBasedOpenCloseRegion.afterAllTests();
   }
 }
