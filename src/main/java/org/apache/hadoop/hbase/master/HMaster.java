@@ -108,7 +108,7 @@ import org.apache.zookeeper.Watcher;
  * @see Watcher
  */
 public class HMaster extends Thread
-implements HMasterInterface, HMasterRegionInterface, Server {
+implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
   // MASTER is name of the webapp and the attribute name used stuffing this
@@ -376,8 +376,19 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     return this.conf;
   }
 
+  @Override
   public ServerManager getServerManager() {
     return this.serverManager;
+  }
+
+  @Override
+  public ExecutorService getExecutorService() {
+    return this.executorService;
+  }
+
+  @Override
+  public MasterFileSystem getMasterFileSystem() {
+    return this.fileSystemManager;
   }
 
   /**
@@ -583,7 +594,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
       throw new IOException("Can't delete catalog tables");
     }
     //
-    new DeleteTableHandler(tableName, this, catalogTracker, fileSystemManager)
+    new DeleteTableHandler(tableName, this, this)
     .execute();
     LOG.info("deleted table: " + Bytes.toString(tableName));
   }
@@ -593,8 +604,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     if (isCatalogTable(tableName)) {
       throw new IOException("Can't modify catalog tables");
     }
-    new TableAddFamilyHandler(tableName, column, this, catalogTracker,
-        fileSystemManager).execute();
+    new TableAddFamilyHandler(tableName, column, this, this).execute();
   }
 
   public void modifyColumn(byte [] tableName, byte [] columnName,
@@ -603,8 +613,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     if (isCatalogTable(tableName)) {
       throw new IOException("Can't modify catalog tables");
     }
-    new TableModifyFamilyHandler(tableName, descriptor, this, catalogTracker,
-        fileSystemManager).execute();
+    new TableModifyFamilyHandler(tableName, descriptor, this, this).execute();
   }
 
   public void deleteColumn(final byte [] tableName, final byte [] c)
@@ -612,8 +621,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     if (isCatalogTable(tableName)) {
       throw new IOException("Can't modify catalog tables");
     }
-    new TableDeleteFamilyHandler(tableName, c, this, catalogTracker,
-        fileSystemManager).execute();
+    new TableDeleteFamilyHandler(tableName, c, this, this).execute();
   }
 
   public void enableTable(final byte [] tableName) throws IOException {
@@ -672,9 +680,7 @@ implements HMasterInterface, HMasterRegionInterface, Server {
   @Override
   public void modifyTable(final byte[] tableName, HTableDescriptor htd)
   throws IOException {
-    LOG.info("modifyTable(SET_HTD): " + htd);
-    this.executorService.submit(new ModifyTableHandler(tableName, this, catalogTracker,
-      fileSystemManager));
+    this.executorService.submit(new ModifyTableHandler(tableName, htd, this, this));
   }
 
   /**
@@ -715,8 +721,14 @@ implements HMasterInterface, HMasterRegionInterface, Server {
     return address.toString();
   }
 
+  @Override
   public CatalogTracker getCatalogTracker() {
     return catalogTracker;
+  }
+
+  @Override
+  public AssignmentManager getAssignmentManager() {
+    return this.assignmentManager;
   }
 
   @Override

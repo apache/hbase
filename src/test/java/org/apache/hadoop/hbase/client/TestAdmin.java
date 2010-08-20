@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -82,6 +83,45 @@ public class TestAdmin {
       HConstants.CATALOG_FAMILY);
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
+  }
+
+  /**
+   * Verify schema modification takes.
+   * @throws IOException
+   */
+  @Test public void changeTableSchema() throws IOException {
+    final byte [] tableName = Bytes.toBytes("changeTableSchema");
+    HTableDescriptor [] tables = admin.listTables();
+    int numTables = tables.length;
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    tables = this.admin.listTables();
+    assertEquals(numTables + 1, tables.length);
+    HTableDescriptor htd = this.admin.getTableDescriptor(tableName);
+    // Make a copy and assert copy is good.
+    HTableDescriptor copy = new HTableDescriptor(htd);
+    assertTrue(htd.equals(copy));
+    // Now amend the copy. Introduce differences.
+    long newFlushSize = htd.getMemStoreFlushSize() / 2;
+    copy.setMemStoreFlushSize(newFlushSize);
+    final String key = "anyoldkey";
+    assertTrue(htd.getValue(key) == null);
+    copy.setValue(key, key);
+    boolean expectedException = false;
+    try {
+      this.admin.modifyTable(tableName, copy);
+    } catch (TableNotDisabledException e) {
+      expectedException = true;
+    }
+    assertTrue(expectedException);
+    this.admin.disableTable(tableName);
+    assertTrue(this.admin.isTableDisabled(tableName));
+    this.admin.modifyTable(tableName, copy);
+    HTableDescriptor modifiedhcd = this.admin.getTableDescriptor(tableName);
+    // Assert returned modifiedhcd is same as the copy.
+    assertFalse(htd.equals(modifiedhcd));
+    assertTrue(copy.equals(modifiedhcd));
+    assertEquals(newFlushSize, modifiedhcd.getMemStoreFlushSize());
+    assertEquals(key, modifiedhcd.getValue(key));
   }
 
   @Test

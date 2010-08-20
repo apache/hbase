@@ -27,9 +27,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -40,10 +39,8 @@ public class TableAddFamilyHandler extends TableEventHandler {
   private final HColumnDescriptor familyDesc;
 
   public TableAddFamilyHandler(byte[] tableName, HColumnDescriptor familyDesc,
-      Server server, CatalogTracker catalogTracker,
-      MasterFileSystem fileManager) {
-    super(EventType.C2M_ADD_FAMILY, tableName, server, catalogTracker,
-        fileManager);
+      Server server, final MasterServices masterServices) {
+    super(EventType.C2M_ADD_FAMILY, tableName, server, masterServices);
     this.familyDesc = familyDesc;
   }
 
@@ -61,9 +58,9 @@ public class TableAddFamilyHandler extends TableEventHandler {
       // Update the HTD
       region.getTableDesc().addFamily(familyDesc);
       // Update region in META
-      MetaEditor.updateRegionInfo(catalogTracker, region);
+      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), region);
       // Update region info in FS
-      fileManager.updateRegionInfo(region);
+      this.masterServices.getMasterFileSystem().updateRegionInfo(region);
     }
   }
 }

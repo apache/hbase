@@ -28,10 +28,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventHandler;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -43,18 +42,16 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public abstract class TableEventHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(TableEventHandler.class);
-
+  protected final MasterServices masterServices;
   protected final byte [] tableName;
-  protected final CatalogTracker catalogTracker;
-  protected final MasterFileSystem fileManager;
+  protected final String tableNameStr;
 
-  public TableEventHandler(EventType eventType, byte [] tableName,
-      Server server, CatalogTracker catalogTracker,
-      MasterFileSystem fileManager) {
+  public TableEventHandler(EventType eventType, byte [] tableName, Server server,
+      MasterServices masterServices) {
     super(server, eventType);
+    this.masterServices = masterServices;
     this.tableName = tableName;
-    this.catalogTracker = catalogTracker;
-    this.fileManager = fileManager;
+    this.tableNameStr = Bytes.toString(this.tableName);
   }
 
   @Override
@@ -71,20 +68,19 @@ public abstract class TableEventHandler extends EventHandler {
 
   private List<HRegionInfo> tableChecks() throws IOException {
     // Check if table exists
-    if(!MetaReader.tableExists(catalogTracker, Bytes.toString(tableName))) {
+    if (!MetaReader.tableExists(this.masterServices.getCatalogTracker(),
+        this.tableNameStr)) {
       throw new TableNotFoundException(Bytes.toString(tableName));
+    }
+    // Verify table is offline
+    if (!this.masterServices.getAssignmentManager().
+        isTableDisabled(this.tableNameStr)) {
+      throw new TableNotDisabledException(tableName);
     }
     // Get the regions of this table
     // TODO: Use in-memory state of master?
-    List<HRegionInfo> regions = MetaReader.getTableRegions(catalogTracker,
-        tableName);
-    // Verify all regions of table are disabled
-    for(HRegionInfo region : regions) {
-      if(!region.isOffline()) {
-        throw new TableNotDisabledException(tableName);
-      }
-    }
-    return regions;
+    return MetaReader.getTableRegions(this.masterServices.getCatalogTracker(),
+      tableName);
   }
 
   protected abstract void handleTableOperation(List<HRegionInfo> regions)

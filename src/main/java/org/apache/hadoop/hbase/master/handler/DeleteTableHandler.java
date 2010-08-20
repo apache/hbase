@@ -26,17 +26,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.MasterServices;
 
 public class DeleteTableHandler extends TableEventHandler {
   private static final Log LOG = LogFactory.getLog(DeleteTableHandler.class);
 
   public DeleteTableHandler(byte [] tableName, Server server,
-      CatalogTracker catalogTracker, MasterFileSystem fileManager) {
-    super(EventType.C2M_DELETE_TABLE, tableName, server, catalogTracker,
-        fileManager);
+      final MasterServices masterServices) {
+    super(EventType.C2M_DELETE_TABLE, tableName, server, masterServices);
   }
 
   @Override
@@ -45,11 +43,11 @@ public class DeleteTableHandler extends TableEventHandler {
     for(HRegionInfo region : regions) {
       LOG.debug("Deleting region " + region + " from META and FS");
       // Remove region from META
-      MetaEditor.deleteRegion(catalogTracker, region);
+      MetaEditor.deleteRegion(this.masterServices.getCatalogTracker(), region);
       // Delete region from FS
-      fileManager.deleteRegion(region);
+      this.masterServices.getMasterFileSystem().deleteRegion(region);
     }
     // Delete table from FS
-    fileManager.deleteTable(tableName);
+    this.masterServices.getMasterFileSystem().deleteTable(tableName);
   }
 }

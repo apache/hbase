@@ -23,16 +23,19 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.MasterServices;
 
 public class ModifyTableHandler extends TableEventHandler {
-  public ModifyTableHandler(final byte [] tableName, final Server server,
-      final CatalogTracker catalogTracker, final MasterFileSystem fileManager) {
-    super(EventType.C2M_MODIFY_TABLE, tableName, server, catalogTracker,
-        fileManager);
+  private final HTableDescriptor htd;
+
+  public ModifyTableHandler(final byte [] tableName,
+      final HTableDescriptor htd, final Server server,
+      final MasterServices masterServices) {
+    super(EventType.C2M_MODIFY_TABLE, tableName, server, masterServices);
+    this.htd = htd;
   }
 
   @Override
@@ -40,9 +43,10 @@ public class ModifyTableHandler extends TableEventHandler {
   throws IOException {
     for (HRegionInfo region : regions) {
       // Update region info in META
-      MetaEditor.updateRegionInfo(catalogTracker, region);
+      region.setTableDesc(this.htd);
+      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), region);
       // Update region info in FS
-      this.fileManager.updateRegionInfo(region);
+      this.masterServices.getMasterFileSystem().updateRegionInfo(region);
     }
   }
 }

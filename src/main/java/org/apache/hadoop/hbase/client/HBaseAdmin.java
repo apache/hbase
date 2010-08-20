@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
@@ -613,8 +614,7 @@ public class HBaseAdmin {
   public void modifyColumn(final String tableName, final String columnName,
       HColumnDescriptor descriptor)
   throws IOException {
-    modifyColumn(Bytes.toBytes(tableName), Bytes.toBytes(columnName),
-      descriptor);
+    modifyColumn(Bytes.toBytes(tableName), Bytes.toBytes(columnName), descriptor);
   }
 
   /**
@@ -800,6 +800,21 @@ public class HBaseAdmin {
     modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_SPLIT);
   }
 
+  /**
+   * Modify an existing table, more IRB friendly version.
+   * Asynchronous operation.
+   *
+   * @param tableName name of table.
+   * @param htd modified description of the table
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void modifyTable(final byte [] tableName, HTableDescriptor htd)
+  throws IOException {
+    if (isTableEnabled(tableName)) throw new TableNotDisabledException(tableName);
+    getMaster().modifyTable(tableName, htd);
+  }
+
+
   /*
    * Call modifyTable using passed tableName or region name String.  If no
    * such table, presume we have been passed a region name.
@@ -818,19 +833,6 @@ public class HBaseAdmin {
     byte [] regionName = tableName == null? tableNameOrRegionName: null;
     Object [] args = regionName == null? null: new byte [][] {regionName};
     modifyTable(tableName == null? null: tableName, op, args);
-  }
-
-  /**
-   * Modify an existing table, more IRB friendly version.
-   * Asynchronous operation.
-   *
-   * @param tableName name of table.
-   * @param htd modified description of the table
-   * @throws IOException if a remote or network exception occurs
-   */
-  public void modifyTable(final byte [] tableName, HTableDescriptor htd)
-  throws IOException {
-    modifyTable(tableName, HConstants.Modify.TABLE_SET_HTD, htd);
   }
 
   /**
@@ -861,7 +863,7 @@ public class HBaseAdmin {
         }
         arr = new Writable[1];
         arr[0] = (HTableDescriptor)args[0];
-//        getMaster().modifyTable(tableName, op, arr);
+        // getMaster().modifyTable(tableName, htd);
         break;
 
       case TABLE_COMPACT:
