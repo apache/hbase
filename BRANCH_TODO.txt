@@ -7,11 +7,7 @@ remaining tasks before merge
 
 * finish baseline implementation of new splits
 
-* shutdown handler
-
 * integrate load balancer
-
-* fix jsp pages
 
 * ensure root/meta are last to close on cluster shutdown
 
