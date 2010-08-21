@@ -20,21 +20,24 @@
 package org.apache.hadoop.hbase.regionserver.handler;
 
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.RegionServer;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 /**
  * Handles closing of the root region on a region server.
  */
 public class CloseRootHandler extends CloseRegionHandler {
   // This is executed after receiving an CLOSE RPC from the master for root.
-  public CloseRootHandler(RegionServer server, HRegionInfo regionInfo) {
-    this(server, regionInfo, false, true);
+  public CloseRootHandler(final Server server,
+      final RegionServerServices rsServices, HRegionInfo regionInfo) {
+    this(server, rsServices, regionInfo, false, true);
   }
 
   // This is called directly by the regionserver when its determined its
   // shutting down.
-  public CloseRootHandler(RegionServer server, HRegionInfo regionInfo,
+  public CloseRootHandler(final Server server,
+      final RegionServerServices rsServices, HRegionInfo regionInfo,
       final boolean abort, final boolean zk) {
-    super(server, regionInfo, abort, zk, EventType.M2RS_CLOSE_ROOT);
+    super(server, rsServices, regionInfo, abort, zk, EventType.M2RS_CLOSE_ROOT);
   }
 }

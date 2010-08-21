@@ -20,13 +20,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 /**
- * Interface implemented by {@link HRegionServer}
+ * Services provided by {@link HRegionServer}
  */
-public interface RegionServer extends Server, OnlineRegions {
+public interface RegionServerServices extends OnlineRegions {
   public HLog getWAL();
 
   /**

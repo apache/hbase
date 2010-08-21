@@ -172,7 +172,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
       // flush all regions
 
       List<HRegion> regions =
-        new ArrayList<HRegion>(server.getOnlineRegions());
+        new ArrayList<HRegion>(server.getOnlineRegionsLocalContext());
       for (HRegion r: regions) {
         r.flushcache();
       }

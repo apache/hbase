@@ -20,7 +20,9 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
+import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -67,12 +69,6 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Stoppable, Ab
   public Result getClosestRowBefore(final byte [] regionName,
     final byte [] row, final byte [] family)
   throws IOException;
-
-  /**
-   *
-   * @return the regions served by this regionserver
-   */
-  public HRegion [] getOnlineRegionsAsArray();
 
   /**
    * Perform Get operation.
@@ -259,11 +255,10 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Stoppable, Ab
 
 
   /**
-   * Method used when a master is taking the place of another failed one.
-   * @return All regions assigned on this region server
+   * @return All regions online on this region server
    * @throws IOException e
    */
-  public HRegionInfo[] getRegionsAssignment() throws IOException;
+  public NavigableSet<HRegionInfo> getOnlineRegions();
 
   /**
    * Method used when a master is taking the place of another failed one.

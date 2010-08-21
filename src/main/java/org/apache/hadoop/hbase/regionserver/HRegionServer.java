@@ -36,10 +36,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterAddressTracker;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -123,7 +124,7 @@ import org.apache.zookeeper.KeeperException;
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
 public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
-    Runnable, RegionServer {
+    Runnable, RegionServerServices, Server {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
   // Set when a report to the master comes back with a message asking us to
@@ -1869,11 +1870,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
     if(region.isRootRegion()) {
-      this.service.submit(new OpenRootHandler(this, catalogTracker, region));
+      this.service.submit(new OpenRootHandler(this, this, catalogTracker, region));
     } else if(region.isMetaRegion()) {
-      this.service.submit(new OpenMetaHandler(this, catalogTracker, region));
+      this.service.submit(new OpenMetaHandler(this, this, catalogTracker, region));
     } else {
-      this.service.submit(new OpenRegionHandler(this, catalogTracker, region));
+      this.service.submit(new OpenRegionHandler(this, this, catalogTracker, region));
     }
   }
 
@@ -1903,11 +1904,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       final boolean zk) {
     CloseRegionHandler crh = null;
     if (region.isRootRegion()) {
-      crh = new CloseRootHandler(this, region, abort, zk);
+      crh = new CloseRootHandler(this, this, region, abort, zk);
     } else if (region.isMetaRegion()) {
-      crh = new CloseMetaHandler(this, region, abort, zk);
+      crh = new CloseMetaHandler(this, this, region, abort, zk);
     } else {
-      crh = new CloseRegionHandler(this, region, abort, zk);
+      crh = new CloseRegionHandler(this, this, region, abort, zk);
     }
     this.service.submit(crh);
     return true;
@@ -1969,28 +1970,25 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return lock.writeLock();
   }
 
-  /**
-   * @return Immutable list of this servers regions.
-   */
-  public Collection<HRegion> getOnlineRegions() {
-    return Collections.unmodifiableCollection(onlineRegions.values());
-  }
-
-  public HRegion[] getOnlineRegionsAsArray() {
-    return getOnlineRegions().toArray(new HRegion[0]);
-  }
-
-  /**
-   * @return The HRegionInfos from online regions sorted
-   */
-  public SortedSet<HRegionInfo> getSortedOnlineRegionInfos() {
-    SortedSet<HRegionInfo> result = new TreeSet<HRegionInfo>();
-    synchronized (this.onlineRegions) {
-      for (HRegion r : this.onlineRegions.values()) {
-        result.add(r.getRegionInfo());
+  @Override
+  public NavigableSet<HRegionInfo> getOnlineRegions() {
+    NavigableSet<HRegionInfo> sortedset = new TreeSet<HRegionInfo>();
+    synchronized(this.onlineRegions) {
+      for (Map.Entry<String,HRegion> e: this.onlineRegions.entrySet()) {
+        sortedset.add(e.getValue().getRegionInfo());
       }
     }
-    return result;
+    return sortedset;
+  }
+
+  /**
+   * For tests and web ui.
+   * This method will only work if HRegionServer is in the same JVM as client;
+   * HRegion cannot be serialized to cross an rpc.
+   * @see #getOnlineRegions()
+   */
+  public Collection<HRegion> getOnlineRegionsLocalContext() {
+    return Collections.unmodifiableCollection(this.onlineRegions.values());
   }
 
   @Override

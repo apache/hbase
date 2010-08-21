@@ -343,7 +343,7 @@ public class MiniHBaseCluster {
   public void flushcache() throws IOException {
     for (JVMClusterUtil.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
-      for(HRegion r: t.getRegionServer().getOnlineRegions()) {
+      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
         r.flushcache();
       }
     }
@@ -376,7 +376,7 @@ public class MiniHBaseCluster {
     List<HRegion> ret = new ArrayList<HRegion>();
     for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
-      for (HRegion region : hrs.getOnlineRegions()) {
+      for (HRegion region : hrs.getOnlineRegionsLocalContext()) {
         if (Bytes.equals(region.getTableDesc().getName(), tableName)) {
           ret.add(region);
         }

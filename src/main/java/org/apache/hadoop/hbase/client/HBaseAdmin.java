@@ -610,11 +610,25 @@ public class HBaseAdmin {
    * @param columnName name of column to be modified
    * @param descriptor new column descriptor to use
    * @throws IOException if a remote or network exception occurs
+   * @deprecated The <code>columnName</code> is redundant. Use {@link #addColumn(String, HColumnDescriptor)}
    */
   public void modifyColumn(final String tableName, final String columnName,
       HColumnDescriptor descriptor)
   throws IOException {
-    modifyColumn(Bytes.toBytes(tableName), Bytes.toBytes(columnName), descriptor);
+    modifyColumn(tableName,  descriptor);
+  }
+
+  /**
+   * Modify an existing column family on a table.
+   * Asynchronous operation.
+   *
+   * @param tableName name of table
+   * @param descriptor new column descriptor to use
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void modifyColumn(final String tableName, HColumnDescriptor descriptor)
+  throws IOException {
+    modifyColumn(Bytes.toBytes(tableName), descriptor);
   }
 
   /**
@@ -625,16 +639,27 @@ public class HBaseAdmin {
    * @param columnName name of column to be modified
    * @param descriptor new column descriptor to use
    * @throws IOException if a remote or network exception occurs
+   * @deprecated The <code>columnName</code> is redundant. Use {@link #modifyColumn(byte[], HColumnDescriptor)}
    */
   public void modifyColumn(final byte [] tableName, final byte [] columnName,
     HColumnDescriptor descriptor)
   throws IOException {
+    modifyColumn(tableName, descriptor);
+  }
+
+  /**
+   * Modify an existing column family on a table.
+   * Asynchronous operation.
+   *
+   * @param tableName name of table
+   * @param descriptor new column descriptor to use
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void modifyColumn(final byte [] tableName, HColumnDescriptor descriptor)
+  throws IOException {
     HTableDescriptor.isLegalTableName(tableName);
-    try {
-      getMaster().modifyColumn(tableName, columnName, descriptor);
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    }
+    if (isTableEnabled(tableName)) throw new TableNotDisabledException(tableName);
+    getMaster().modifyColumn(tableName, descriptor);
   }
 
   /**
@@ -802,7 +827,8 @@ public class HBaseAdmin {
 
   /**
    * Modify an existing table, more IRB friendly version.
-   * Asynchronous operation.
+   * Asynchronous operation.  This means that it may be a while before your
+   * schema change is updated across all of the table.
    *
    * @param tableName name of table.
    * @param htd modified description of the table
@@ -810,6 +836,7 @@ public class HBaseAdmin {
    */
   public void modifyTable(final byte [] tableName, HTableDescriptor htd)
   throws IOException {
+    HTableDescriptor.isLegalTableName(tableName);
     if (isTableEnabled(tableName)) throw new TableNotDisabledException(tableName);
     getMaster().modifyTable(tableName, htd);
   }

@@ -24,9 +24,10 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.RegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
@@ -43,7 +44,7 @@ public class CloseRegionHandler extends EventHandler {
 
   private final int FAILED = -1;
 
-  private final RegionServer server;
+  private final RegionServerServices rsServices;
 
   private final HRegionInfo regionInfo;
 
@@ -58,26 +59,31 @@ public class CloseRegionHandler extends EventHandler {
   private final boolean zk;
 
   // This is executed after receiving an CLOSE RPC from the master.
-  public CloseRegionHandler(RegionServer server, HRegionInfo regionInfo) {
-    this(server, regionInfo, false, true);
+  public CloseRegionHandler(final Server server,
+      final RegionServerServices rsServices, HRegionInfo regionInfo) {
+    this(server, rsServices, regionInfo, false, true);
   }
 
   /**
    * This method used internally by the RegionServer to close out regions.
    * @param server
+   * @param rsServices
    * @param regionInfo
    * @param abort If the regionserver is aborting.
    * @param zk If the close should be noted out in zookeeper.
    */
-  public CloseRegionHandler(final RegionServer server,
+  public CloseRegionHandler(final Server server,
+      final RegionServerServices rsServices,
       final HRegionInfo regionInfo, final boolean abort, final boolean zk) {
-    this(server, regionInfo, abort, zk, EventType.M2RS_CLOSE_REGION);
+    this(server, rsServices,  regionInfo, abort, zk, EventType.M2RS_CLOSE_REGION);
   }
 
-  protected CloseRegionHandler(RegionServer server, HRegionInfo regionInfo,
+  protected CloseRegionHandler(final Server server,
+      final RegionServerServices rsServices, HRegionInfo regionInfo,
       boolean abort, final boolean zk, EventType eventType) {
     super(server, eventType);
     this.server = server;
+    this.rsServices = rsServices;
     this.regionInfo = regionInfo;
     this.abort = abort;
     this.zk = zk;
@@ -93,7 +99,7 @@ public class CloseRegionHandler extends EventHandler {
     LOG.debug("Processing close of " + name);
     String encodedRegionName = regionInfo.getEncodedName();
     // Check that this region is being served here
-    HRegion region = server.getFromOnlineRegions(encodedRegionName);
+    HRegion region = this.rsServices.getFromOnlineRegions(encodedRegionName);
     if (region == null) {
       LOG.warn("Received CLOSE for region " + name + " but currently not serving");
       return;
@@ -109,7 +115,7 @@ public class CloseRegionHandler extends EventHandler {
     try {
       // TODO: If we need to keep updating CLOSING stamp to prevent against
       //       a timeout if this is long-running, need to spin up a thread?
-      server.removeFromOnlineRegions(regionInfo.getEncodedName());
+      this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
       region.close(abort);
     } catch (IOException e) {
       LOG.error("IOException closing region for " + regionInfo);

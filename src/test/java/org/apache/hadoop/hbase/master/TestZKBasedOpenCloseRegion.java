@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.handler.TotesHRegionInfo;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -100,32 +99,32 @@ public class TestZKBasedOpenCloseRegion {
     int rsIdx = 0;
     HRegionServer regionServer =
       TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
-    Collection<HRegion> regions = regionServer.getOnlineRegions();
-    HRegion region;
-    while((region = regions.iterator().next()) != null) {
-      if(!region.getRegionInfo().isMetaRegion() && !region.getRegionInfo().isRootRegion()) {
+    Collection<HRegionInfo> regions = regionServer.getOnlineRegions();
+    HRegionInfo hri;
+    while((hri = regions.iterator().next()) != null) {
+      if(!hri.isMetaRegion() && !hri.isRootRegion()) {
         break;
       }
     }
-    LOG.debug("Asking RS to close region " + region.getRegionNameAsString());
+    LOG.debug("Asking RS to close region " + hri.getRegionNameAsString());
 
     AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
     AtomicBoolean reopenEventProcessed = new AtomicBoolean(false);
 
     EventHandlerListener closeListener =
-      new ReopenEventListener(region.getRegionNameAsString(),
+      new ReopenEventListener(hri.getRegionNameAsString(),
           closeEventProcessed, EventType.RS2ZK_REGION_CLOSED);
     cluster.getMaster().executorService.
       registerListener(EventType.RS2ZK_REGION_CLOSED, closeListener);
 
     EventHandlerListener openListener =
-      new ReopenEventListener(region.getRegionNameAsString(),
+      new ReopenEventListener(hri.getRegionNameAsString(),
           reopenEventProcessed, EventType.RS2ZK_REGION_OPENED);
     cluster.getMaster().executorService.
       registerListener(EventType.RS2ZK_REGION_OPENED, openListener);
 
-    LOG.info("Unassign " + region.getRegionNameAsString());
-    cluster.getMaster().assignmentManager.unassign(region.getRegionInfo());
+    LOG.info("Unassign " + hri.getRegionNameAsString());
+    cluster.getMaster().assignmentManager.unassign(hri);
 
     synchronized(closeEventProcessed) {
       closeEventProcessed.wait(3*60*1000);
@@ -197,22 +196,22 @@ public class TestZKBasedOpenCloseRegion {
 
     int rsIdx = 0;
     HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
-    Collection<HRegion> regions = regionServer.getOnlineRegions();
-    HRegion region;
-    while((region = regions.iterator().next()) != null) {
-      if(!region.getRegionInfo().isMetaRegion() && !region.getRegionInfo().isRootRegion()) {
+    Collection<HRegionInfo> regions = regionServer.getOnlineRegions();
+    HRegionInfo hri;
+    while((hri = regions.iterator().next()) != null) {
+      if(!hri.isMetaRegion() && !hri.isRootRegion()) {
         break;
       }
     }
-    LOG.debug("Asking RS to close region " + region.getRegionNameAsString());
+    LOG.debug("Asking RS to close region " + hri.getRegionNameAsString());
 
     AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
     EventHandlerListener listener =
-      new CloseRegionEventListener(region.getRegionNameAsString(),
+      new CloseRegionEventListener(hri.getRegionNameAsString(),
           closeEventProcessed);
     cluster.getMaster().executorService.registerListener(EventType.RS2ZK_REGION_CLOSED, listener);
 
-    cluster.getMaster().assignmentManager.unassign(region.getRegionInfo());
+    cluster.getMaster().assignmentManager.unassign(hri);
 
     synchronized(closeEventProcessed) {
       // wait for 3 minutes

@@ -41,7 +41,7 @@ public class TableModifyFamilyHandler extends TableEventHandler {
   public TableModifyFamilyHandler(byte[] tableName,
       HColumnDescriptor familyDesc, Server server,
       final MasterServices masterServices) {
-    super(EventType.C2M_ADD_FAMILY, tableName, server, masterServices);
+    super(EventType.C2M_MODIFY_FAMILY, tableName, server, masterServices);
     this.familyDesc = familyDesc;
   }
 
@@ -49,10 +49,9 @@ public class TableModifyFamilyHandler extends TableEventHandler {
   protected void handleTableOperation(List<HRegionInfo> regions) throws IOException {
     HTableDescriptor htd = regions.get(0).getTableDesc();
     byte [] familyName = familyDesc.getName();
-    if(htd.hasFamily(familyName)) {
-      throw new InvalidFamilyOperationException(
-          "Family '" + Bytes.toString(familyName) + "' already exists so " +
-          "cannot be modified");
+    if(!htd.hasFamily(familyName)) {
+      throw new InvalidFamilyOperationException("Family '" +
+        Bytes.toString(familyName) + "' doesn't exists so cannot be modified");
     }
     for(HRegionInfo region : regions) {
       // Update the HTD

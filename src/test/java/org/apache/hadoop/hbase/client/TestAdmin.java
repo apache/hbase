@@ -27,6 +27,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -40,6 +41,10 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -96,6 +101,8 @@ public class TestAdmin {
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
+
+    // FIRST, do htabledescriptor changes.
     HTableDescriptor htd = this.admin.getTableDescriptor(tableName);
     // Make a copy and assert copy is good.
     HTableDescriptor copy = new HTableDescriptor(htd);
@@ -115,13 +122,119 @@ public class TestAdmin {
     assertTrue(expectedException);
     this.admin.disableTable(tableName);
     assertTrue(this.admin.isTableDisabled(tableName));
-    this.admin.modifyTable(tableName, copy);
-    HTableDescriptor modifiedhcd = this.admin.getTableDescriptor(tableName);
+    modifyTable(tableName, copy);
+    HTableDescriptor modifiedHtd = this.admin.getTableDescriptor(tableName);
     // Assert returned modifiedhcd is same as the copy.
-    assertFalse(htd.equals(modifiedhcd));
-    assertTrue(copy.equals(modifiedhcd));
-    assertEquals(newFlushSize, modifiedhcd.getMemStoreFlushSize());
-    assertEquals(key, modifiedhcd.getValue(key));
+    assertFalse(htd.equals(modifiedHtd));
+    assertTrue(copy.equals(modifiedHtd));
+    assertEquals(newFlushSize, modifiedHtd.getMemStoreFlushSize());
+    assertEquals(key, modifiedHtd.getValue(key));
+
+    // Reenable table.
+    this.admin.enableTable(tableName);
+    assertFalse(this.admin.isTableDisabled(tableName));
+
+    // Now work on column family changes.
+    int countOfFamilies = modifiedHtd.getFamilies().size();
+    assertTrue(countOfFamilies > 0);
+    HColumnDescriptor hcd = modifiedHtd.getFamilies().iterator().next();
+    int maxversions = hcd.getMaxVersions();
+    final int newMaxVersions = maxversions + 1;
+    hcd.setMaxVersions(newMaxVersions);
+    expectedException = false;
+    final byte [] hcdName = hcd.getName();
+    try {
+      this.admin.modifyColumn(tableName, hcd);
+      LOG.info("Modified column");
+    } catch (TableNotDisabledException e) {
+      LOG.error("EXCEP", e);
+      expectedException = true;
+    }
+    assertTrue(expectedException);
+    this.admin.disableTable(tableName);
+    assertTrue(this.admin.isTableDisabled(tableName));
+    modifyColumn(tableName, hcd);
+    this.admin.modifyColumn(tableName, hcd);
+    modifiedHtd = this.admin.getTableDescriptor(tableName);
+    HColumnDescriptor modifiedHcd = modifiedHtd.getFamily(hcdName);
+    assertEquals(newMaxVersions, modifiedHcd.getMaxVersions());
+
+    TODO: ADD/REMOVE COLUMN, REMOVE TABLE
+  }
+
+  /**
+   * Modify table is async so wait on completion of the table operation in master.
+   * @param tableName
+   * @param htd
+   * @throws IOException
+   */
+  private void modifyTable(final byte [] tableName, final HTableDescriptor htd)
+  throws IOException {
+    MasterServices services = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    ExecutorService executor = services.getExecutorService();
+    AtomicBoolean done = new AtomicBoolean(false);
+    executor.registerListener(EventType.C2M_MODIFY_TABLE, new DoneListener(done));
+    this.admin.modifyTable(tableName, htd);
+    while (!done.get()) {
+      synchronized (done) {
+        try {
+          done.wait(1000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+    executor.unregisterListener(EventType.C2M_MODIFY_TABLE);
+  }
+
+  /**
+   * Modify table is async so wait on completion of the table operation in master.
+   * @param tableName
+   * @param htd
+   * @throws IOException
+   */
+  private void modifyColumn(final byte [] tableName, final HColumnDescriptor hcd)
+  throws IOException {
+    MasterServices services = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    ExecutorService executor = services.getExecutorService();
+    AtomicBoolean done = new AtomicBoolean(false);
+    executor.registerListener(EventType.C2M_MODIFY_FAMILY, new DoneListener(done));
+    this.admin.modifyColumn(tableName, hcd);
+    while (!done.get()) {
+      synchronized (done) {
+        try {
+          done.wait(1000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+  }
+
+  /**
+   * Listens for when an event is done in Master.
+   */
+  static class DoneListener implements EventHandler.EventHandlerListener {
+    private final AtomicBoolean done;
+
+    DoneListener(final AtomicBoolean done) {
+      super();
+      this.done = done;
+    }
+
+    @Override
+    public void afterProcess(EventHandler event) {
+      this.done.set(true);
+      synchronized (this.done) {
+        // Wake anyone waiting on this value to change.
+        this.done.notifyAll();
+      }
+    }
+
+    @Override
+    public void beforeProcess(EventHandler event) {
+      // continue
+    }
   }
 
   @Test

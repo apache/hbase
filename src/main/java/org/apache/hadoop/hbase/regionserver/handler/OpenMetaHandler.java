@@ -20,8 +20,9 @@
 package org.apache.hadoop.hbase.regionserver.handler;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.regionserver.RegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 /**
  * Handles opening of a meta region on a region server.
@@ -29,8 +30,9 @@ import org.apache.hadoop.hbase.regionserver.RegionServer;
  * This is executed after receiving an OPEN RPC from the master for meta.
  */
 public class OpenMetaHandler extends OpenRegionHandler {
-  public OpenMetaHandler(RegionServer server,
+  public OpenMetaHandler(final Server server,
+      final RegionServerServices rsServices,
       CatalogTracker catalogTracker, HRegionInfo regionInfo) {
-    super(server, catalogTracker, regionInfo, EventType.M2RS_OPEN_META);
+    super(server,rsServices,  catalogTracker, regionInfo, EventType.M2RS_OPEN_META);
   }
 }

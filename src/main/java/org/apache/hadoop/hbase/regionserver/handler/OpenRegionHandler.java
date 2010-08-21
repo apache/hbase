@@ -25,12 +25,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.RegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.util.Progressable;
 import org.apache.zookeeper.KeeperException;
@@ -44,22 +45,24 @@ import org.apache.zookeeper.KeeperException.Code;
 public class OpenRegionHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(OpenRegionHandler.class);
 
-  private final RegionServer server;
+  private final RegionServerServices rsServices;
 
   private final CatalogTracker catalogTracker;
 
   private final HRegionInfo regionInfo;
 
-  public OpenRegionHandler(RegionServer server,
+  public OpenRegionHandler(final Server server,
+      final RegionServerServices rsServices,
       CatalogTracker catalogTracker, HRegionInfo regionInfo) {
-    this(server, catalogTracker, regionInfo, EventType.M2RS_OPEN_REGION);
+    this(server, rsServices, catalogTracker, regionInfo, EventType.M2RS_OPEN_REGION);
   }
 
-  protected OpenRegionHandler(RegionServer server,
+  protected OpenRegionHandler(final Server server,
+      final RegionServerServices rsServices,
       CatalogTracker catalogTracker, HRegionInfo regionInfo,
       EventType eventType) {
     super(server, eventType);
-    this.server = server;
+    this.rsServices = rsServices;
     this.catalogTracker = catalogTracker;
     this.regionInfo = regionInfo;
   }
@@ -79,7 +82,7 @@ public class OpenRegionHandler extends EventHandler {
     // now since we edit meta?
 
     // Check that this region is not already online
-    HRegion region = server.getFromOnlineRegions(encodedName);
+    HRegion region = this.rsServices.getFromOnlineRegions(encodedName);
     if (region != null) {
       LOG.warn("Attempting open of " + regionInfo.getRegionNameAsString() +
         " but it's already online on this server");
@@ -106,8 +109,8 @@ public class OpenRegionHandler extends EventHandler {
     final AtomicInteger openingInteger = new AtomicInteger(openingVersion);
     try {
       // Instantiate the region.  This also periodically updates OPENING.
-      region = HRegion.openHRegion(regionInfo, server.getWAL(),
-          server.getConfiguration(), server.getFlushRequester(),
+      region = HRegion.openHRegion(regionInfo, this.rsServices.getWAL(),
+          server.getConfiguration(), this.rsServices.getFlushRequester(),
           new Progressable() {
             public void progress() {
               try {
@@ -159,26 +162,26 @@ public class OpenRegionHandler extends EventHandler {
 
     // Do checks to see if we need to compact (references or too many files)
     if(region.hasReferences() || region.hasTooManyStoreFiles()) {
-      server.getCompactionRequester().requestCompaction(region,
+      this.rsServices.getCompactionRequester().requestCompaction(region,
           region.hasReferences() ? "Region has references on open" :
                                    "Region has too many store files");
     }
 
     // Add to online regions
-    server.addToOnlineRegions(region);
+    this.rsServices.addToOnlineRegions(region);
 
     // Update ZK, ROOT or META
     try {
       if(regionInfo.isRootRegion()) {
         RootLocationEditor.setRootLocation(server.getZooKeeper(),
-            server.getServerInfo().getServerAddress());
+            this.rsServices.getServerInfo().getServerAddress());
       } else if(regionInfo.isMetaRegion()) {
         // TODO: doh, this has weird naming between RootEditor/MetaEditor
         MetaEditor.updateMetaLocation(catalogTracker, regionInfo,
-            server.getServerInfo());
+            this.rsServices.getServerInfo());
       } else {
         MetaEditor.updateRegionLocation(catalogTracker, region.getRegionInfo(),
-          server.getServerInfo());
+          this.rsServices.getServerInfo());
       }
     } catch (IOException e) {
       // TODO: rollback the open?

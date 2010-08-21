@@ -71,12 +71,10 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
   /**
    * Modifies an existing column on the specified table
    * @param tableName table name
-   * @param columnName name of the column to edit
    * @param descriptor new column descriptor
    * @throws IOException e
    */
-  public void modifyColumn(final byte [] tableName, final byte [] columnName,
-    HColumnDescriptor descriptor)
+  public void modifyColumn(final byte [] tableName, HColumnDescriptor descriptor)
   throws IOException;
 
 

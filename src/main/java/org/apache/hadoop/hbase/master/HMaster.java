@@ -607,8 +607,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     new TableAddFamilyHandler(tableName, column, this, this).execute();
   }
 
-  public void modifyColumn(byte [] tableName, byte [] columnName,
-    HColumnDescriptor descriptor)
+  public void modifyColumn(byte [] tableName, HColumnDescriptor descriptor)
   throws IOException {
     if (isCatalogTable(tableName)) {
       throw new IOException("Can't modify catalog tables");
