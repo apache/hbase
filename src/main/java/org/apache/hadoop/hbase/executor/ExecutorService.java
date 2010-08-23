@@ -45,9 +45,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * then do: <code>instance.startExecutorService("myService");</code>.  When done
  * call {@link #shutdown()}.
  *
- * In order to use the service created above, you need to override the
- * {@link EventHandler} class and create an {@link EventHandler.EventType} that
- * submits to this service.  Register pre- and post- processing listeners
+ * <p>In order to use the service created above, call
+ * {@link #submit(EventHandler)}. Register pre- and post- processing listeners
  * by registering your implementation of {@link EventHandler.EventHandlerListener}
  * with {@link #registerListener(EventType, EventHandlerListener)}.  Be sure
  * to deregister your listener when done via {@link #unregisterListener(EventType)}.
@@ -58,15 +57,17 @@ public class ExecutorService {
   // hold the all the executors created in a map addressable by their names
   private final ConcurrentHashMap<String, Executor> executorMap =
     new ConcurrentHashMap<String, Executor>();
+
   // listeners that are called before and after an event is processed
   private ConcurrentHashMap<EventHandler.EventType, EventHandlerListener> eventHandlerListeners =
     new ConcurrentHashMap<EventHandler.EventType, EventHandlerListener>();
 
+  // Name of the server hosting this executor service.
   private final String servername;
 
   /**
-   * The following is a list of names for the various executor services in both
-   * the master and the region server.
+   * The following is a list of all executor types, both those that run in the
+   * master and those that run in the regionserver.
    */
   public enum ExecutorType {
 
@@ -87,8 +88,61 @@ public class ExecutorService {
 
     ExecutorType(int value) {}
 
+    /**
+     * @param serverName
+     * @return Conflation of the executor type and the passed servername.
+     */
     String getExecutorName(String serverName) {
       return this.toString() + "-" + serverName;
+    }
+  }
+
+  /**
+   * Returns the executor service type (the thread pool instance) for the
+   * passed event handler type.
+   * @param type EventHandler type.
+   */
+  public ExecutorType getExecutorServiceType(final EventHandler.EventType type) {
+    switch(type) {
+      // Master executor services
+
+      case RS2ZK_REGION_CLOSED:
+        return ExecutorType.MASTER_CLOSE_REGION;
+
+      case RS2ZK_REGION_OPENED:
+        return ExecutorType.MASTER_OPEN_REGION;
+
+      case M_SERVER_SHUTDOWN:
+        return ExecutorType.MASTER_SERVER_OPERATIONS;
+
+      case C2M_DELETE_TABLE:
+      case C2M_DISABLE_TABLE:
+      case C2M_ENABLE_TABLE:
+      case C2M_MODIFY_TABLE:
+        return ExecutorType.MASTER_TABLE_OPERATIONS;
+
+      // RegionServer executor services
+
+      case M2RS_OPEN_REGION:
+        return ExecutorType.RS_OPEN_REGION;
+
+      case M2RS_OPEN_ROOT:
+        return ExecutorType.RS_OPEN_ROOT;
+
+      case M2RS_OPEN_META:
+        return ExecutorType.RS_OPEN_META;
+
+      case M2RS_CLOSE_REGION:
+        return ExecutorType.RS_CLOSE_REGION;
+
+      case M2RS_CLOSE_ROOT:
+        return ExecutorType.RS_CLOSE_ROOT;
+
+      case M2RS_CLOSE_META:
+        return ExecutorType.RS_CLOSE_META;
+
+      default:
+        throw new RuntimeException("Unhandled event type " + type);
     }
   }
 
@@ -158,7 +212,7 @@ public class ExecutorService {
   }
 
   public void submit(final EventHandler eh) {
-    getExecutor(eh.getExecutorType()).submit(eh);
+    getExecutor(getExecutorServiceType(eh.getEventType())).submit(eh);
   }
 
   /**

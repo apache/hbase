@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
@@ -579,64 +581,38 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
   }
 
-  private boolean isCatalogTable(final byte [] tableName) {
+  private static boolean isCatalogTable(final byte [] tableName) {
     return Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME) ||
            Bytes.equals(tableName, HConstants.META_TABLE_NAME);
   }
 
-  // TODO: Sync or async on this stuff?
-  //       Right now this will swallow exceptions either way, might need
-  //       process() which throws nothing but execute() which throws IOE so
-  //       synchronous stuff can throw exceptions?
-
   public void deleteTable(final byte [] tableName) throws IOException {
-    if (isCatalogTable(tableName)) {
-      throw new IOException("Can't delete catalog tables");
-    }
-    //
-    new DeleteTableHandler(tableName, this, this)
-    .execute();
-    LOG.info("deleted table: " + Bytes.toString(tableName));
+    new DeleteTableHandler(tableName, this, this).process();
   }
 
   public void addColumn(byte [] tableName, HColumnDescriptor column)
   throws IOException {
-    if (isCatalogTable(tableName)) {
-      throw new IOException("Can't modify catalog tables");
-    }
-    new TableAddFamilyHandler(tableName, column, this, this).execute();
+    new TableAddFamilyHandler(tableName, column, this, this).process();
   }
 
   public void modifyColumn(byte [] tableName, HColumnDescriptor descriptor)
   throws IOException {
-    if (isCatalogTable(tableName)) {
-      throw new IOException("Can't modify catalog tables");
-    }
-    new TableModifyFamilyHandler(tableName, descriptor, this, this).execute();
+    new TableModifyFamilyHandler(tableName, descriptor, this, this).process();
   }
 
   public void deleteColumn(final byte [] tableName, final byte [] c)
   throws IOException {
-    if (isCatalogTable(tableName)) {
-      throw new IOException("Can't modify catalog tables");
-    }
-    new TableDeleteFamilyHandler(tableName, c, this, this).execute();
+    new TableDeleteFamilyHandler(tableName, c, this, this).process();
   }
 
   public void enableTable(final byte [] tableName) throws IOException {
-    if (isCatalogTable(tableName)) {
-      throw new IOException("Can't enable catalog tables");
-    }
     new EnableTableHandler(this, tableName, catalogTracker, assignmentManager)
-    .execute();
+      .process();
   }
 
   public void disableTable(final byte [] tableName) throws IOException {
-    if (isCatalogTable(tableName)) {
-      throw new IOException("Can't disable catalog tables");
-    }
     new DisableTableHandler(this, tableName, catalogTracker, assignmentManager)
-    .execute();
+      .process();
   }
 
   /**
@@ -680,6 +656,21 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public void modifyTable(final byte[] tableName, HTableDescriptor htd)
   throws IOException {
     this.executorService.submit(new ModifyTableHandler(tableName, htd, this, this));
+  }
+
+  @Override
+  public void checkTableModifiable(final byte [] tableName)
+  throws IOException {
+    String tableNameStr = Bytes.toString(tableName);
+    if (isCatalogTable(tableName)) {
+      throw new IOException("Can't modify catalog tables");
+    }
+    if (!MetaReader.tableExists(getCatalogTracker(), tableNameStr)) {
+      throw new TableNotFoundException(tableNameStr);
+    }
+    if (!getAssignmentManager().isTableDisabled(Bytes.toString(tableName))) {
+      throw new TableNotDisabledException(tableName);
+    }
   }
 
   /**

@@ -33,20 +33,20 @@ public class ModifyTableHandler extends TableEventHandler {
 
   public ModifyTableHandler(final byte [] tableName,
       final HTableDescriptor htd, final Server server,
-      final MasterServices masterServices) {
+      final MasterServices masterServices) throws IOException {
     super(EventType.C2M_MODIFY_TABLE, tableName, server, masterServices);
     this.htd = htd;
   }
 
   @Override
-  protected void handleTableOperation(List<HRegionInfo> regions)
+  protected void handleTableOperation(List<HRegionInfo> hris)
   throws IOException {
-    for (HRegionInfo region : regions) {
+    for (HRegionInfo hri : hris) {
       // Update region info in META
-      region.setTableDesc(this.htd);
-      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), region);
+      hri.setTableDesc(this.htd);
+      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), hri);
       // Update region info in FS
-      this.masterServices.getMasterFileSystem().updateRegionInfo(region);
+      this.masterServices.getMasterFileSystem().updateRegionInfo(hri);
     }
   }
 }

@@ -19,62 +19,83 @@
  */
 package org.apache.hadoop.hbase.executor;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 
 
 /**
  * Abstract base class for all HBase event handlers. Subclasses should
- * implement the process() method where the actual handling of the event
- * happens.
+ * implement the {@link #process()} method.  Subclasses should also do all
+ * necessary checks up in their constructor if possible -- check table exists,
+ * is disabled, etc. -- so they fail fast rather than later when process is
+ * running.  Do it this way because process be invoked directly but event
+ * handlers are also
+ * run in an executor context -- i.e. asynchronously -- and in this case,
+ * exceptions thrown at process time will not be seen by the invoker, not till
+ * we implement a call-back mechanism so the client can pick them up later.
  * <p>
- * EventType is a list of ALL events (which also corresponds to messages -
- * either internal to one component or between components). The event type
- * names specify the component from which the event originated, and the
- * component which is supposed to handle it.
+ * Event handlers have an {@link EventType}.
+ * {@link EventType} is a list of ALL handler event types.  We need to keep
+ * a full list in one place -- and as enums is a good shorthand for an
+ * implemenations -- because event handlers can be passed to executors when
+ * they are to be run asynchronously. The
+ * hbase executor, see {@link ExecutorService}, has a switch for passing
+ * event type to executor.
  * <p>
- * Listeners can listen to all the events by implementing the interface
- * EventHandlerListener, and by registering themselves as a listener. They
- * will be called back before and after the process of every event.
+ * Event listeners can be installed and will be called pre- and post- process if
+ * this EventHandler is run in a Thread (its a Runnable so if its {@link #run()}
+ * method gets called).  Implement
+ * {@link EventHandlerListener}s, and registering using
+ * {@link #setListener(EventHandlerListener)}.
+ * @see {@link ExecutorService}
  */
 public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   private static final Log LOG = LogFactory.getLog(EventHandler.class);
+
   // type of event this object represents
   protected EventType eventType;
-  // server controller
+
   protected Server server;
 
   // sequence id generator for default FIFO ordering of events
   protected static AtomicLong seqids = new AtomicLong(0);
-  // sequence id for this event
-  protected long seqid;
 
-  // Listener to call pre- and post- processing.
+  // sequence id for this event
+  private final long seqid;
+
+  // Listener to call pre- and post- processing.  May be null.
   private EventHandlerListener listener;
 
   /**
-   * This interface provides hooks to listen to various events received by the
-   * queue. A class implementing this can listen to the updates by calling
-   * registerListener and stop receiving updates by calling unregisterListener
+   * This interface provides pre- and post-process hooks for events.
    */
   public interface EventHandlerListener {
     /**
      * Called before any event is processed
+     * @param The event handler whose process method is about to be called.
      */
     public void beforeProcess(EventHandler event);
     /**
      * Called after any event is processed
+     * @param The event handler whose process method is about to be called.
      */
     public void afterProcess(EventHandler event);
   }
 
   /**
-   * These are a list of HBase events that can be handled by the various
-   * HBaseExecutorService's. All the events are serialized as byte values.
+   * List of all HBase event handler types.  Event types are named by a
+   * convention: event type names specify the component from which the event
+   * originated and then where its destined -- e.g. RS2ZK_ prefix means the
+   * event came from a regionserver destined for zookeeper -- and then what
+   * the even is; e.g. REGION_OPENING.
+   * 
+   * <p>We give the enums indices so we can add types later and keep them
+   * grouped together rather than have to add them always to the end as we
+   * would have to if we used raw enum ordinals.
    */
   public enum EventType {
     // Messages originating from RS (NOTE: there is NO direct communication from
@@ -109,71 +130,9 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     M_SERVER_SHUTDOWN         (70);  // Master is processing shutdown of a RS
 
     /**
-     * Returns the executor service type (the thread pool instance) for this
-     * event type.  Every type must be handled here.  Multiple types map to
-     * Called by the HMaster. Returns a name of the executor service given an
-     * event type. Every event type has an entry - if the event should not be
-     * handled just add the NONE executor.
-     * @return name of the executor service
+     * Constructor
      */
-    public ExecutorType getExecutorServiceType() {
-      switch(this) {
-
-        // Master executor services
-
-        case RS2ZK_REGION_CLOSED:
-          return ExecutorType.MASTER_CLOSE_REGION;
-
-        case RS2ZK_REGION_OPENED:
-          return ExecutorType.MASTER_OPEN_REGION;
-
-        case M_SERVER_SHUTDOWN:
-          return ExecutorType.MASTER_SERVER_OPERATIONS;
-
-        case C2M_DELETE_TABLE:
-        case C2M_DISABLE_TABLE:
-        case C2M_ENABLE_TABLE:
-        case C2M_MODIFY_TABLE:
-          return ExecutorType.MASTER_TABLE_OPERATIONS;
-
-        // RegionServer executor services
-
-        case M2RS_OPEN_REGION:
-          return ExecutorType.RS_OPEN_REGION;
-
-        case M2RS_OPEN_ROOT:
-          return ExecutorType.RS_OPEN_ROOT;
-
-        case M2RS_OPEN_META:
-          return ExecutorType.RS_OPEN_META;
-
-        case M2RS_CLOSE_REGION:
-          return ExecutorType.RS_CLOSE_REGION;
-
-        case M2RS_CLOSE_ROOT:
-          return ExecutorType.RS_CLOSE_ROOT;
-
-        case M2RS_CLOSE_META:
-          return ExecutorType.RS_CLOSE_META;
-
-        default:
-          throw new RuntimeException("Unhandled event type " + this.name());
-      }
-    }
-
     EventType(int value) {}
-
-    @Override
-    public String toString() {
-      switch(this) {
-        case RS2ZK_REGION_CLOSED:   return "CLOSED";
-        case RS2ZK_REGION_CLOSING:  return "CLOSING";
-        case RS2ZK_REGION_OPENED:   return "OPENED";
-        case RS2ZK_REGION_OPENING:  return "OPENING";
-        case M2ZK_REGION_OFFLINE:   return "OFFLINE";
-        default:                    return this.name();
-      }
-    }
   }
 
   /**
@@ -185,40 +144,29 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     seqid = seqids.incrementAndGet();
   }
 
-  /**
-   * This is a wrapper around {@link #process()} to give listeners a chance to run.
-   */
   public void run() {
-    if (getListener() != null) this.listener.beforeProcess(this);
-    // call the main process function
     try {
+      if (getListener() != null) getListener().beforeProcess(this);
       process();
+      if (getListener() != null) getListener().afterProcess(this);
     } catch(Throwable t) {
       LOG.error("Caught throwable while processing event " + eventType, t);
     }
-    if (getListener() != null) this.listener.afterProcess(this);
   }
 
   /**
    * This method is the main processing loop to be implemented by the various
    * subclasses.
+   * @throws IOException
    */
-  public abstract void process();
-
-  /**
-   * Return the name for this event type.
-   * @return
-   */
-  public ExecutorType getExecutorType() {
-    return eventType.getExecutorServiceType();
-  }
+  public abstract void process() throws IOException;
 
   /**
    * Return the event type
    * @return
    */
   public EventType getEventType() {
-    return eventType;
+    return this.eventType;
   }
 
   /**
@@ -238,6 +186,13 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   }
 
   /**
+   * @return This events' sequence id.
+   */
+  public long getSeqid() {
+    return this.seqid;
+  }
+
+  /**
    * Default prioritized runnable comparator which implements a FIFO ordering.
    * <p>
    * Subclasses should not override this.  Instead, if they want to implement
@@ -250,14 +205,6 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
       return (getPriority() < eh.getPriority()) ? -1 : 1;
     }
     return (this.seqid < eh.seqid) ? -1 : 1;
-  }
-
-  /**
-   * Executes this event object in the caller's thread. This is a synchronous
-   * way of executing the event.
-   */
-  public void execute() {
-    this.run();
   }
 
   /**

@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 
@@ -50,4 +52,12 @@ public interface MasterServices {
    * @return Master's instance of {@link ExecutorService}
    */
   public ExecutorService getExecutorService();
+
+  /**
+   * Check table is modifiable; i.e. exists and is offline.
+   * @param tableName Name of table to check.
+   * @throws TableNotDisabledException
+   * @throws TableNotFoundException 
+   */
+  public void checkTableModifiable(final byte [] tableName) throws IOException;
 }

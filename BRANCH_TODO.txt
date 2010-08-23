@@ -8,8 +8,15 @@ remaining tasks before merge
 * finish baseline implementation of new splits
 
 * integrate load balancer
+- Looksee if we are still deleting location from meta; not needed any
+more and if we don't delete, then we can put region back on the server
+that used to be serving it; can add old location to new RegionPlan
+-- St.Ack 08/21
 
 * ensure root/meta are last to close on cluster shutdown
+- Add asking RS what it has when only two servers remaining...
+and when only root or meta, then send explicit close of each.
+Do it this way to ensure correct shutdown order -- St.Ack 08/21
 
 
 ---
@@ -120,6 +127,20 @@ somewhat easier stuff
 St.Ack
  -- Ensure root and meta are last to close on cluster shutdown; it shoudl be the case but verify.
 
+From Master:
+
+  // TODO: Sync or async on this stuff? execute means sync.  submit means later.
+  //       Right now this will swallow exceptions either way, might need
+  //       process() which throws nothing but execute() which throws IOE so
+  //       synchronous stuff can throw exceptions?
+
+At the moment we have a mix of sync and async.  Whats missing is a callback mechanism
+(Benoit's Twisted Deferred would do nicely here).  I change EventHandler to
+remove the execute so synchronous call process directly.  Also made it so
+process now throws an exception  Also, changed handlers so they do checks
+in constructor and constructor throws IOE.  This way, we fail fast so even if
+asynchronous operation, its possible we'll see the TableNotDisabledException.
+There is more to do in here but should be good enough for merge.
  
  
 ================================================================================

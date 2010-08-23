@@ -594,7 +594,6 @@ public class HBaseAdmin {
    */
   public void deleteColumn(final byte [] tableName, final byte [] columnName)
   throws IOException {
-    HTableDescriptor.isLegalTableName(tableName);
     try {
       getMaster().deleteColumn(tableName, columnName);
     } catch (RemoteException e) {
@@ -657,9 +656,14 @@ public class HBaseAdmin {
    */
   public void modifyColumn(final byte [] tableName, HColumnDescriptor descriptor)
   throws IOException {
-    HTableDescriptor.isLegalTableName(tableName);
-    if (isTableEnabled(tableName)) throw new TableNotDisabledException(tableName);
-    getMaster().modifyColumn(tableName, descriptor);
+    try {
+      getMaster().modifyColumn(tableName, descriptor);
+    } catch (RemoteException re) {
+      // Convert RE exceptions in here; client shouldn't have to deal with them,
+      // at least w/ the type of exceptions that come out of this method:
+      // TableNotFoundException, etc.
+      throw RemoteExceptionHandler.decodeRemoteException(re);
+    }
   }
 
   /**
@@ -836,9 +840,14 @@ public class HBaseAdmin {
    */
   public void modifyTable(final byte [] tableName, HTableDescriptor htd)
   throws IOException {
-    HTableDescriptor.isLegalTableName(tableName);
-    if (isTableEnabled(tableName)) throw new TableNotDisabledException(tableName);
-    getMaster().modifyTable(tableName, htd);
+    try {
+      getMaster().modifyTable(tableName, htd);
+    } catch (RemoteException re) {
+      // Convert RE exceptions in here; client shouldn't have to deal with them,
+      // at least w/ the type of exceptions that come out of this method:
+      // TableNotFoundException, etc.
+      throw RemoteExceptionHandler.decodeRemoteException(re);
+    }
   }
 
 

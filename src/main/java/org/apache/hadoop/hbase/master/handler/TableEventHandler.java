@@ -26,8 +26,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -35,23 +33,23 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Base class for performing operations against tables.
- * <p>
- * Ensures all regions of the table are offline and then executes
- * {@link #handleTableOperation(List)} with a list of regions of the
- * table.
+ * Checks on whether the process can go forward are done in constructor rather
+ * than later on in {@link #process()}.  The idea is to fail fast rather than
+ * later down in an async invocation of {@link #process()} (which currently has
+ * no means of reporting back issues once started).
  */
 public abstract class TableEventHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(TableEventHandler.class);
   protected final MasterServices masterServices;
   protected final byte [] tableName;
-  protected final String tableNameStr;
 
   public TableEventHandler(EventType eventType, byte [] tableName, Server server,
-      MasterServices masterServices) {
+      MasterServices masterServices)
+  throws IOException {
     super(server, eventType);
     this.masterServices = masterServices;
     this.tableName = tableName;
-    this.tableNameStr = Bytes.toString(this.tableName);
+    this.masterServices.checkTableModifiable(tableName);
   }
 
   @Override
@@ -59,28 +57,14 @@ public abstract class TableEventHandler extends EventHandler {
     try {
       LOG.info("Handling table operation " + eventType + " on table " +
           Bytes.toString(tableName));
-      handleTableOperation(tableChecks());
+      List<HRegionInfo> hris =
+        MetaReader.getTableRegions(this.masterServices.getCatalogTracker(),
+          tableName);
+      handleTableOperation(hris);
     } catch (IOException e) {
       LOG.error("Error trying to delete the table " + Bytes.toString(tableName),
           e);
     }
-  }
-
-  private List<HRegionInfo> tableChecks() throws IOException {
-    // Check if table exists
-    if (!MetaReader.tableExists(this.masterServices.getCatalogTracker(),
-        this.tableNameStr)) {
-      throw new TableNotFoundException(Bytes.toString(tableName));
-    }
-    // Verify table is offline
-    if (!this.masterServices.getAssignmentManager().
-        isTableDisabled(this.tableNameStr)) {
-      throw new TableNotDisabledException(tableName);
-    }
-    // Get the regions of this table
-    // TODO: Use in-memory state of master?
-    return MetaReader.getTableRegions(this.masterServices.getCatalogTracker(),
-      tableName);
   }
 
   protected abstract void handleTableOperation(List<HRegionInfo> regions)

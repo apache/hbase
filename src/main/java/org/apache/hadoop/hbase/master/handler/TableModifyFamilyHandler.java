@@ -40,7 +40,7 @@ public class TableModifyFamilyHandler extends TableEventHandler {
 
   public TableModifyFamilyHandler(byte[] tableName,
       HColumnDescriptor familyDesc, Server server,
-      final MasterServices masterServices) {
+      final MasterServices masterServices) throws IOException {
     super(EventType.C2M_MODIFY_FAMILY, tableName, server, masterServices);
     this.familyDesc = familyDesc;
   }
@@ -53,13 +53,13 @@ public class TableModifyFamilyHandler extends TableEventHandler {
       throw new InvalidFamilyOperationException("Family '" +
         Bytes.toString(familyName) + "' doesn't exists so cannot be modified");
     }
-    for(HRegionInfo region : regions) {
+    for(HRegionInfo hri : regions) {
       // Update the HTD
-      region.getTableDesc().addFamily(familyDesc);
+      hri.getTableDesc().addFamily(familyDesc);
       // Update region in META
-      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), region);
+      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), hri);
       // Update region info in FS
-      this.masterServices.getMasterFileSystem().updateRegionInfo(region);
+      this.masterServices.getMasterFileSystem().updateRegionInfo(hri);
     }
   }
 }

@@ -197,7 +197,7 @@ public class AssignmentManager extends ZooKeeperListener {
           regionsInTransition.put(encodedName,
               new RegionState(regionInfo, RegionState.State.CLOSED,
                   data.getStamp()));
-          new ClosedRegionHandler(master, this, data, regionInfo).execute();
+          new ClosedRegionHandler(master, this, data, regionInfo).process();
           break;
 
         case RS2ZK_REGION_OPENING:
@@ -214,7 +214,7 @@ public class AssignmentManager extends ZooKeeperListener {
               new RegionState(regionInfo, RegionState.State.OPENING,
                   data.getStamp()));
           new OpenedRegionHandler(master, this, data, regionInfo,
-              serverManager.getServerInfo(data.getServerName())).execute();
+              serverManager.getServerInfo(data.getServerName())).process();
           break;
       }
     }
@@ -239,8 +239,7 @@ public class AssignmentManager extends ZooKeeperListener {
       }
       String encodedName = HRegionInfo.encodeRegionName(data.getRegionName());
       String prettyPrintedRegionName = HRegionInfo.prettyPrint(encodedName);
-      LOG.debug("Handling transition=" + data.getEventType().name() +
-        "/" + data.getEventType().toString() +
+      LOG.debug("Handling transition=" + data.getEventType() +
         ", server=" + data.getServerName() + ", region=" + prettyPrintedRegionName);
       RegionState regionState = regionsInTransition.get(encodedName);
       switch(data.getEventType()) {

@@ -116,7 +116,7 @@ public class TestAdmin {
     boolean expectedException = false;
     try {
       this.admin.modifyTable(tableName, copy);
-    } catch (TableNotDisabledException e) {
+    } catch (TableNotDisabledException re) {
       expectedException = true;
     }
     assertTrue(expectedException);
@@ -130,7 +130,7 @@ public class TestAdmin {
     assertEquals(newFlushSize, modifiedHtd.getMemStoreFlushSize());
     assertEquals(key, modifiedHtd.getValue(key));
 
-    // Reenable table.
+    // Reenable table to test it fails if not disabled.
     this.admin.enableTable(tableName);
     assertFalse(this.admin.isTableDisabled(tableName));
 
@@ -141,25 +141,53 @@ public class TestAdmin {
     int maxversions = hcd.getMaxVersions();
     final int newMaxVersions = maxversions + 1;
     hcd.setMaxVersions(newMaxVersions);
-    expectedException = false;
     final byte [] hcdName = hcd.getName();
+    expectedException = false;
     try {
       this.admin.modifyColumn(tableName, hcd);
-      LOG.info("Modified column");
-    } catch (TableNotDisabledException e) {
-      LOG.error("EXCEP", e);
+    } catch (TableNotDisabledException re) {
       expectedException = true;
     }
     assertTrue(expectedException);
     this.admin.disableTable(tableName);
     assertTrue(this.admin.isTableDisabled(tableName));
-    modifyColumn(tableName, hcd);
+    // Modify Column is synchronous
     this.admin.modifyColumn(tableName, hcd);
     modifiedHtd = this.admin.getTableDescriptor(tableName);
     HColumnDescriptor modifiedHcd = modifiedHtd.getFamily(hcdName);
     assertEquals(newMaxVersions, modifiedHcd.getMaxVersions());
 
-    TODO: ADD/REMOVE COLUMN, REMOVE TABLE
+    // Try adding a column
+    // Reenable table to test it fails if not disabled.
+    this.admin.enableTable(tableName);
+    assertFalse(this.admin.isTableDisabled(tableName));
+    final String xtracolName = "xtracol";
+    HColumnDescriptor xtracol = new HColumnDescriptor(xtracolName);
+    xtracol.setValue(xtracolName, xtracolName);
+    try {
+      this.admin.addColumn(tableName, xtracol);
+    } catch (TableNotDisabledException re) {
+      expectedException = true;
+    }
+    assertTrue(expectedException);
+    this.admin.disableTable(tableName);
+    assertTrue(this.admin.isTableDisabled(tableName));
+    this.admin.addColumn(tableName, xtracol);
+    modifiedHtd = this.admin.getTableDescriptor(tableName);
+    hcd = modifiedHtd.getFamily(xtracol.getName());
+    assertTrue(hcd != null);
+    assertTrue(hcd.getValue(xtracolName).equals(xtracolName));
+
+    // Delete the just-added column.
+    this.admin.deleteColumn(tableName, xtracol.getName());
+    modifiedHtd = this.admin.getTableDescriptor(tableName);
+    hcd = modifiedHtd.getFamily(xtracol.getName());
+    assertTrue(hcd == null);
+
+    // Delete the table
+    this.admin.deleteTable(tableName);
+    this.admin.listTables();
+    assertFalse(this.admin.tableExists(tableName));
   }
 
   /**
@@ -185,30 +213,6 @@ public class TestAdmin {
       }
     }
     executor.unregisterListener(EventType.C2M_MODIFY_TABLE);
-  }
-
-  /**
-   * Modify table is async so wait on completion of the table operation in master.
-   * @param tableName
-   * @param htd
-   * @throws IOException
-   */
-  private void modifyColumn(final byte [] tableName, final HColumnDescriptor hcd)
-  throws IOException {
-    MasterServices services = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    ExecutorService executor = services.getExecutorService();
-    AtomicBoolean done = new AtomicBoolean(false);
-    executor.registerListener(EventType.C2M_MODIFY_FAMILY, new DoneListener(done));
-    this.admin.modifyColumn(tableName, hcd);
-    while (!done.get()) {
-      synchronized (done) {
-        try {
-          done.wait(1000);
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
-    }
   }
 
   /**

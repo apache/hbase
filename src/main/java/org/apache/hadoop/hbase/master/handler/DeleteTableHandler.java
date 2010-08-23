@@ -33,7 +33,7 @@ public class DeleteTableHandler extends TableEventHandler {
   private static final Log LOG = LogFactory.getLog(DeleteTableHandler.class);
 
   public DeleteTableHandler(byte [] tableName, Server server,
-      final MasterServices masterServices) {
+      final MasterServices masterServices) throws IOException {
     super(EventType.C2M_DELETE_TABLE, tableName, server, masterServices);
   }
 

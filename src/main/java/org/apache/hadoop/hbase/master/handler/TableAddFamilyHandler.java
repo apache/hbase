@@ -39,28 +39,28 @@ public class TableAddFamilyHandler extends TableEventHandler {
   private final HColumnDescriptor familyDesc;
 
   public TableAddFamilyHandler(byte[] tableName, HColumnDescriptor familyDesc,
-      Server server, final MasterServices masterServices) {
+      Server server, final MasterServices masterServices) throws IOException {
     super(EventType.C2M_ADD_FAMILY, tableName, server, masterServices);
     this.familyDesc = familyDesc;
   }
 
   @Override
-  protected void handleTableOperation(List<HRegionInfo> regions)
+  protected void handleTableOperation(List<HRegionInfo> hris)
   throws IOException {
-    HTableDescriptor htd = regions.get(0).getTableDesc();
+    HTableDescriptor htd = hris.get(0).getTableDesc();
     byte [] familyName = familyDesc.getName();
     if(htd.hasFamily(familyName)) {
       throw new InvalidFamilyOperationException(
           "Family '" + Bytes.toString(familyName) + "' already exists so " +
           "cannot be added");
     }
-    for(HRegionInfo region : regions) {
+    for(HRegionInfo hri : hris) {
       // Update the HTD
-      region.getTableDesc().addFamily(familyDesc);
+      hri.getTableDesc().addFamily(familyDesc);
       // Update region in META
-      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), region);
+      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), hri);
       // Update region info in FS
-      this.masterServices.getMasterFileSystem().updateRegionInfo(region);
+      this.masterServices.getMasterFileSystem().updateRegionInfo(hri);
     }
   }
 }

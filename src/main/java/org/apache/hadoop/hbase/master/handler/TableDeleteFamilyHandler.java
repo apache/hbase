@@ -39,29 +39,31 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
   private final byte [] familyName;
 
   public TableDeleteFamilyHandler(byte[] tableName, byte [] familyName,
-      Server server, final MasterServices masterServices) {
+      Server server, final MasterServices masterServices) throws IOException {
     super(EventType.C2M_ADD_FAMILY, tableName, server, masterServices);
     this.familyName = familyName;
   }
 
   @Override
-  protected void handleTableOperation(List<HRegionInfo> regions) throws IOException {
-    HTableDescriptor htd = regions.get(0).getTableDesc();
+  protected void handleTableOperation(List<HRegionInfo> hris) throws IOException {
+    HTableDescriptor htd = hris.get(0).getTableDesc();
     if(!htd.hasFamily(familyName)) {
       throw new InvalidFamilyOperationException(
           "Family '" + Bytes.toString(familyName) + "' does not exist so " +
           "cannot be deleted");
     }
-    for(HRegionInfo region : regions) {
+    for(HRegionInfo hri : hris) {
       // Update the HTD
-      region.getTableDesc().removeFamily(familyName);
+      hri.getTableDesc().removeFamily(familyName);
       // Update region in META
-      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), region);
+      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), hri);
       MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
       // Update region info in FS
-      mfs.updateRegionInfo(region);
+      mfs.updateRegionInfo(hri);
       // Delete directory in FS
-      mfs.deleteFamily(region, familyName);
+      mfs.deleteFamily(hri, familyName);
+      // Update region info in FS
+      this.masterServices.getMasterFileSystem().updateRegionInfo(hri);
     }
   }
 }
