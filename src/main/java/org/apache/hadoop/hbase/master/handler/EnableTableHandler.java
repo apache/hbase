@@ -39,16 +39,21 @@ public class EnableTableHandler extends EventHandler {
 
   private final byte [] tableName;
   private final String tableNameStr;
-  private final CatalogTracker catalogTracker;
   private final AssignmentManager assignmentManager;
+  private final CatalogTracker ct;
 
   public EnableTableHandler(Server server, byte [] tableName,
-      CatalogTracker catalogTracker, AssignmentManager assignmentManager) {
+      CatalogTracker catalogTracker, AssignmentManager assignmentManager)
+  throws TableNotFoundException, IOException {
     super(server, EventType.C2M_ENABLE_TABLE);
     this.tableName = tableName;
     this.tableNameStr = Bytes.toString(tableName);
-    this.catalogTracker = catalogTracker;
+    this.ct = catalogTracker;
     this.assignmentManager = assignmentManager;
+    // Check if table exists
+    if(!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
+      throw new TableNotFoundException(Bytes.toString(tableName));
+    }
   }
 
   @Override
@@ -62,13 +67,8 @@ public class EnableTableHandler extends EventHandler {
   }
 
   private void handleEnableTable() throws IOException {
-    // Check if table exists
-    if(!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
-      throw new TableNotFoundException(Bytes.toString(tableName));
-    }
     // Get the regions of this table
-    List<HRegionInfo> regions = MetaReader.getTableRegions(catalogTracker,
-        tableName);
+    List<HRegionInfo> regions = MetaReader.getTableRegions(this.ct, tableName);
     // Set the table as disabled so it doesn't get re-onlined
     assignmentManager.undisableTable(this.tableNameStr);
     // Verify all regions of table are disabled

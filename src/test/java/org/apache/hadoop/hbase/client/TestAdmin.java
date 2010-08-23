@@ -26,7 +26,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,6 +41,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -46,6 +50,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -80,6 +85,31 @@ public class TestAdmin {
     this.admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
   }
 
+  @Test public void testSplitCompactFlushClose() throws IOException {
+    final byte [] tableName = Bytes.toBytes("testSplitCompactFlushClose");
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    HTable t = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    TEST_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
+    NavigableSet<HRegionInfo> hris = getClusterRegions();
+    assertFalse(hris.isEmpty());
+    this.admin.split(tableName);
+    NavigableSet<HRegionInfo> splitHris = getClusterRegions();
+    assertFalse(splitHris.isEmpty());
+    int originalCount = hris.size();
+    int postSplitCount = splitHris.size();
+    assertTrue(postSplitCount > originalCount);
+  }
+
+  private NavigableSet<HRegionInfo> getClusterRegions() {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    List<RegionServerThread> rss = cluster.getRegionServerThreads();
+    NavigableSet<HRegionInfo> hris = new TreeSet<HRegionInfo>();
+    for (RegionServerThread rst: rss) {
+      hris.addAll(rst.getRegionServer().getOnlineRegions());
+    }
+    return hris;
+  }
+
   @Test
   public void testCreateTable() throws IOException {
     HTableDescriptor [] tables = admin.listTables();
@@ -94,7 +124,7 @@ public class TestAdmin {
    * Verify schema modification takes.
    * @throws IOException
    */
-  @Test public void changeTableSchema() throws IOException {
+  @Test public void testChangeTableSchema() throws IOException {
     final byte [] tableName = Bytes.toBytes("changeTableSchema");
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
@@ -242,7 +272,7 @@ public class TestAdmin {
   }
 
   @Test
-  public void testCreateTableWithRegions() throws IOException {
+  public void testCreateTableWithRegions() throws IOException, InterruptedException {
 
     byte[] tableName = Bytes.toBytes("testCreateTableWithRegions");
 

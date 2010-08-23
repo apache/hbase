@@ -232,8 +232,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.serverManager = new ServerManager(this, this.connection, metrics,
       fileSystemManager, this.executorService);
 
-    this.catalogTracker = new CatalogTracker(zooKeeper, connection, this,
-      conf.getInt("hbase.master.catalog.timeout", -1));
+    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
+      this, conf.getInt("hbase.master.catalog.timeout", -1));
     this.catalogTracker.start();
 
     this.assignmentManager = new AssignmentManager(this, serverManager,
@@ -805,7 +805,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   protected static void doMain(String [] args,
-      Class<? extends HMaster> masterClass) {
+      Class<? extends HMaster> masterClass) throws IOException {
     if (args.length < 1) {
       printUsageAndExit();
     }
@@ -895,8 +895,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   /**
    * Main program
    * @param args
+   * @throws IOException 
    */
-  public static void main(String [] args) {
+  public static void main(String [] args) throws IOException {
     doMain(args, HMaster.class);
   }
 }

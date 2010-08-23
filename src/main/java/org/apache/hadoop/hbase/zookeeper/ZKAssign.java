@@ -107,14 +107,12 @@ public class ZKAssign {
   // Master methods
 
   /**
-   * Creates a new unassigned node in the OFFLINE state for the specified
-   * region.
+   * Creates a new unassigned node in the OFFLINE state for the specified region.
    *
    * <p>Does not transition nodes from other states.  If a node already exists
    * for this region, a {@link NodeExistsException} will be thrown.
    *
-   * <p>Sets a watcher on the unassigned region node if the method is
-   * successful.
+   * <p>Sets a watcher on the unassigned region node if the method is successful.
    *
    * <p>This method should only be used during cluster startup and the enabling
    * of a table.
@@ -128,10 +126,16 @@ public class ZKAssign {
   public static void createNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
       String serverName)
   throws KeeperException, KeeperException.NodeExistsException {
+    createNodeOffline(zkw, region, serverName, EventType.M2ZK_REGION_OFFLINE);
+  }
+
+  public static void createNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
+      String serverName, final EventType event)
+  throws KeeperException, KeeperException.NodeExistsException {
     zkw.debug("Creating an unassigned node for " + region.getEncodedName() +
         " in an OFFLINE state");
-    RegionTransitionData data = new RegionTransitionData(
-        EventType.M2ZK_REGION_OFFLINE, region.getRegionName(), serverName);
+    RegionTransitionData data = new RegionTransitionData(event,
+      region.getRegionName(), serverName);
     synchronized(zkw.getNodes()) {
       String node = getNodeName(zkw, region.getEncodedName());
       zkw.getNodes().add(node);
@@ -457,10 +461,17 @@ public class ZKAssign {
   public static int transitionNodeOpening(ZooKeeperWatcher zkw,
       HRegionInfo region, String serverName)
   throws KeeperException {
-    return transitionNode(zkw, region, serverName,
-        EventType.M2ZK_REGION_OFFLINE,
-        EventType.RS2ZK_REGION_OPENING, -1);
+    return transitionNodeOpening(zkw, region, serverName,
+      EventType.M2ZK_REGION_OFFLINE);
   }
+
+  public static int transitionNodeOpening(ZooKeeperWatcher zkw,
+      HRegionInfo region, String serverName, final EventType beginState)
+  throws KeeperException {
+    return transitionNode(zkw, region, serverName, beginState,
+      EventType.RS2ZK_REGION_OPENING, -1);
+  }
+
   /**
    * Retransitions an existing unassigned node for the specified region which is
    * currently in the OPENING state to be in the OPENING state.

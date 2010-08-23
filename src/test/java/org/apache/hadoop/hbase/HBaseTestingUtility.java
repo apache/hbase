@@ -784,11 +784,10 @@ public class HBaseTestingUtility {
    * Returns a HBaseAdmin instance.
    *
    * @return The HBaseAdmin instance.
-   * @throws MasterNotRunningException
-   * @throws ZooKeeperConnectionException
+   * @throws IOException 
    */
   public HBaseAdmin getHBaseAdmin()
-  throws MasterNotRunningException, ZooKeeperConnectionException {
+  throws IOException {
     if (hbaseAdmin == null) {
       hbaseAdmin = new HBaseAdmin(getConfiguration());
     }
@@ -813,7 +812,7 @@ public class HBaseTestingUtility {
    */
   public void closeRegion(byte[] regionName) throws IOException {
     HBaseAdmin admin = getHBaseAdmin();
-    admin.closeRegion(regionName, (Object[]) null);
+    admin.closeRegion(regionName, null);
   }
 
   /**

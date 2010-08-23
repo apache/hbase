@@ -277,7 +277,7 @@ public class ServerManager {
    * @throws IOException
    */
   HMsg [] regionServerReport(final HServerInfo serverInfo,
-    final HMsg msgs[], final HRegionInfo[] mostLoadedRegions)
+    final HMsg [] msgs, final HRegionInfo[] mostLoadedRegions)
   throws IOException {
     // Be careful. This method does returns in the middle.
     HServerInfo info = new HServerInfo(serverInfo);
@@ -296,6 +296,18 @@ public class ServerManager {
     // Check startcodes
     if (raceThatShouldNotHappenAnymore(storedInfo, info)) {
       return HMsg.STOP_REGIONSERVER_ARRAY;
+    }
+
+    for (HMsg msg: msgs) {
+      LOG.info("Received " + msg);
+      switch (msg.getType()) {
+        REGION_SPLIT:
+          // Nothing to do?
+          break;
+
+        default:
+          LOG.error("Unhandled msg type " + msg);
+      }
     }
 
     HMsg [] reply = null;

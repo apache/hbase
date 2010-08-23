@@ -343,7 +343,8 @@ public final class HConstants {
    * HRegion server lease period in milliseconds. Clients must report in within this period
    * else they are considered dead. Unit measured in ms (milliseconds).
    */
-  public static String HBASE_REGIONSERVER_LEASE_PERIOD_KEY   = "hbase.regionserver.lease.period";
+  public static String HBASE_REGIONSERVER_LEASE_PERIOD_KEY =
+    "hbase.regionserver.lease.period";
 
 
   /**

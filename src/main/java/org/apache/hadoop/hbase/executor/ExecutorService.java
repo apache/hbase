@@ -124,6 +124,7 @@ public class ExecutorService {
       // RegionServer executor services
 
       case M2RS_OPEN_REGION:
+      case RS2RS_OPEN_REGION:
         return ExecutorType.RS_OPEN_REGION;
 
       case M2RS_OPEN_ROOT:

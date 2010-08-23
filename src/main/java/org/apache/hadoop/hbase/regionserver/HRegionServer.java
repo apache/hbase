@@ -346,8 +346,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     masterAddressManager.start();
 
     // create the catalog tracker and start it
-    this.catalogTracker = new CatalogTracker(zooKeeper, connection, this,
-        conf.getInt("hbase.regionserver.catalog.timeout", -1));
+    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
+      this, this.conf.getInt("hbase.regionserver.catalog.timeout", -1));
     catalogTracker.start();
 
     this.clusterStatusTracker = new ClusterStatusTracker(this.zooKeeper, this);

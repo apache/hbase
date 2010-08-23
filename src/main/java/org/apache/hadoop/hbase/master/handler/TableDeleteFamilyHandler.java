@@ -52,7 +52,7 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
           "Family '" + Bytes.toString(familyName) + "' does not exist so " +
           "cannot be deleted");
     }
-    for(HRegionInfo hri : hris) {
+    for (HRegionInfo hri : hris) {
       // Update the HTD
       hri.getTableDesc().removeFamily(familyName);
       // Update region in META

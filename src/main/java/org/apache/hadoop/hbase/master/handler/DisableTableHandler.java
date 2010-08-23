@@ -39,16 +39,22 @@ public class DisableTableHandler extends EventHandler {
 
   private final byte [] tableName;
   private final String tableNameStr;
-  private final CatalogTracker catalogTracker;
   private final AssignmentManager assignmentManager;
 
   public DisableTableHandler(Server server, byte [] tableName,
-      CatalogTracker catalogTracker, AssignmentManager assignmentManager) {
+      CatalogTracker catalogTracker, AssignmentManager assignmentManager)
+  throws TableNotFoundException, IOException {
     super(server, EventType.C2M_DISABLE_TABLE);
     this.tableName = tableName;
     this.tableNameStr = Bytes.toString(this.tableName);
-    this.catalogTracker = catalogTracker;
     this.assignmentManager = assignmentManager;
+    // Check if table exists
+    // TODO: do we want to keep this in-memory as well?  i guess this is
+    //       part of old master rewrite, schema to zk to check for table
+    //       existence and such
+    if(!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
+      throw new TableNotFoundException(Bytes.toString(tableName));
+    }
   }
 
   @Override
@@ -62,13 +68,6 @@ public class DisableTableHandler extends EventHandler {
   }
 
   private void handleDisableTable() throws IOException {
-    // Check if table exists
-    // TODO: do we want to keep this in-memory as well?  i guess this is
-    //       part of old master rewrite, schema to zk to check for table
-    //       existence and such
-    if(!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
-      throw new TableNotFoundException(Bytes.toString(tableName));
-    }
     // Set the table as disabled so it doesn't get re-onlined
     assignmentManager.disableTable(this.tableNameStr);
     // Get the online regions of this table.

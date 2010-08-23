@@ -43,22 +43,6 @@ public class HMsg implements Writable {
   public static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
 
   public static enum Type {
-    /** Split the specified region */
-    SPLIT_REGION,
-
-    /** Compact the specified region */
-    COMPACT_REGION,
-
-    /**
-     * Flush region.
-     */
-    FLUSH_REGION,
-
-    /**
-     * Run Major Compaction
-     */
-    MAJOR_COMPACTION,
-
     /** Master tells region server to stop.
      */
     STOP_REGIONSERVER,

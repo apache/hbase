@@ -27,8 +27,11 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.KeeperException;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -144,7 +147,7 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
   throws IOException {
     final HRegionInfo oldRegionInfo = region.getRegionInfo();
     final long startTime = System.currentTimeMillis();
-    final HRegion[] newRegions = region.splitRegion(midKey);
+    final HRegion [] newRegions = region.splitRegion(midKey);
     if (newRegions == null) {
       // Didn't need to be split
       return;
@@ -200,6 +203,19 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
       t.put(put);
     }
 
+    // Open the regions on this server. TODO: Revisit.  Make sure no holes.
+    for (int i = 0; i < newRegions.length; i++) {
+      HRegionInfo hri = newRegions[i].getRegionInfo();
+      try {
+        ZKAssign.createNodeOffline(this.server.getZooKeeper(), hri,
+          this.server.getServerName(), EventType.RS2ZK_REGION_OFFLINE);
+      } catch (KeeperException e) {
+        this.server.abort("Unexpected ZK exception creating/setting node OFFLINE", e);
+        return;
+      }
+      this.server.openRegion(hri);
+    }
+
     // If we crash here, the master will not know of the new daughters and they
     // will not be assigned.  The metascanner when it runs will notice and take
     // care of assigning the new daughters.
@@ -208,7 +224,7 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
     server.reportSplit(oldRegionInfo, newRegions[0].getRegionInfo(),
       newRegions[1].getRegionInfo());
 
-    LOG.info("region split, META updated, and report to master all" +
+    LOG.info("region split, META updated, daughters opened, and report to master all" +
       " successful. Old region=" + oldRegionInfo.toString() +
       ", new regions: " + newRegions[0].toString() + ", " +
       newRegions[1].toString() + ". Split took " +

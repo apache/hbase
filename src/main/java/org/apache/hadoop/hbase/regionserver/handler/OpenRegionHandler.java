@@ -89,21 +89,8 @@ public class OpenRegionHandler extends EventHandler {
       return;
     }
 
-    // Transition ZK node from OFFLINE to OPENING
-    // TODO: should also handle transition from CLOSED?
-    int openingVersion;
-    try {
-      if((openingVersion = ZKAssign.transitionNodeOpening(server.getZooKeeper(),
-          regionInfo, server.getServerName())) == -1) {
-        LOG.warn("Error transitioning node from OFFLINE to OPENING, " +
-            "aborting open");
-        return;
-      }
-    } catch (KeeperException e) {
-      LOG.error("Error transitioning node from OFFLINE to OPENING for region " +
-        encodedName, e);
-      return;
-    }
+    int openingVersion = transitionZookeeper(encodedName);
+    if (openingVersion == -1) return;
 
     // Open the region
     final AtomicInteger openingInteger = new AtomicInteger(openingVersion);
@@ -131,6 +118,8 @@ public class OpenRegionHandler extends EventHandler {
         "; resetting state of transition node from OPENING to OFFLINE");
       try {
         // TODO: We should rely on the master timing out OPENING instead of this
+        // TODO: What if this was a split open?  The RS made the OFFLINE
+        // znode, not the master.
         ZKAssign.forceNodeOffline(server.getZooKeeper(), regionInfo,
             server.getServerName());
       } catch (KeeperException e1) {
@@ -211,5 +200,22 @@ public class OpenRegionHandler extends EventHandler {
 
     // Done!  Successful region open
     LOG.debug("Opened " + region.getRegionNameAsString());
+  }
+
+  int transitionZookeeper(final String encodedName) {
+    // Transition ZK node from OFFLINE to OPENING
+    // TODO: should also handle transition from CLOSED?
+    int openingVersion = -1;
+    try {
+      if ((openingVersion = ZKAssign.transitionNodeOpening(server.getZooKeeper(),
+          regionInfo, server.getServerName())) == -1) {
+        LOG.warn("Error transitioning node from OFFLINE to OPENING, " +
+            "aborting open");
+      }
+    } catch (KeeperException e) {
+      LOG.error("Error transitioning node from OFFLINE to OPENING for region " +
+        encodedName, e);
+    }
+    return openingVersion;
   }
 }

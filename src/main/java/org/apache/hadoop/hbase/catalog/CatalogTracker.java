@@ -71,13 +71,16 @@ public class CatalogTracker {
   /**
    * Constructs the catalog tracker.  Find current state of catalog tables and
    * begin active tracking by executing {@link #start()}.
-   * @param zookeeper zk reference
+   * @param zk
    * @param connection server connection
    * @param abortable if fatal exception
+   * @throws IOException 
    */
-  public CatalogTracker(ZooKeeperWatcher zookeeper, ServerConnection connection,
-      Abortable abortable, int defaultTimeout) {
-    this.zookeeper = zookeeper;
+  public CatalogTracker(final ZooKeeperWatcher zk,
+      final ServerConnection connection, final Abortable abortable,
+      final int defaultTimeout)
+  throws IOException {
+    this.zookeeper = zk;
     this.connection = connection;
     this.rootRegionTracker = new RootRegionTracker(zookeeper, abortable);
     this.metaNodeTracker = new MetaNodeTracker(zookeeper, this);
