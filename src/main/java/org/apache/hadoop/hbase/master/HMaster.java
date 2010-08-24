@@ -54,10 +54,10 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -72,7 +72,6 @@ import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
-import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -121,8 +120,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private final Configuration conf;
   // server for the web ui
   private InfoServer infoServer;
-  // Reporting to track master metrics.
-  private final MasterMetrics metrics;
 
   // Our zk client.
   private ZooKeeperWatcher zooKeeper;
@@ -168,7 +165,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * <li>Connect to ZooKeeper and figure out if this is a fresh cluster start or
    *     a failed over master
    * <li>Block until becoming active master
-   * <li>Initialize master components - server manager, region manager, metrics,
+   * <li>Initialize master components - server manager, region manager,
    *     region server queue, file system manager, etc
    * </ol>
    * @throws InterruptedException 
@@ -224,13 +221,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
      * 4. We are active master now... go initialize components we need to run.
      */
     // TODO: Do this using Dependency Injection, using PicoContainer or Spring.
-    this.metrics = new MasterMetrics(this.getName());
     this.fileSystemManager = new MasterFileSystem(this);
     this.connection = ServerConnectionManager.getConnection(conf);
     this.executorService = new ExecutorService(getServerName());
 
-    this.serverManager = new ServerManager(this, this.connection, metrics,
-      fileSystemManager, this.executorService);
+    this.serverManager = new ServerManager(this, this);
 
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
       this, conf.getInt("hbase.master.catalog.timeout", -1));

@@ -18,7 +18,7 @@
     e.printStackTrace();
   }
   RegionServerMetrics metrics = regionServer.getMetrics();
-  Collection<HRegionInfo> onlineRegions = regionServer.getSortedOnlineRegionInfos();
+  Collection<HRegionInfo> onlineRegions = regionServer.getOnlineRegions();
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;
 
 %><?xml version="1.0" encoding="UTF-8" ?>

@@ -113,7 +113,8 @@ public class TestZooKeeper {
   public void testRegionServerSessionExpired() throws Exception {
     LOG.info("Starting testRegionServerSessionExpired");
     new HTable(conf, HConstants.META_TABLE_NAME);
-    TEST_UTIL.expireRegionServerSession(0);
+    int metaIndex = TEST_UTIL.getMiniHBaseCluster().getServerWithMeta();
+    TEST_UTIL.expireRegionServerSession(metaIndex);
     testSanity();
   }
 
@@ -133,13 +134,12 @@ public class TestZooKeeper {
 
     HBaseAdmin admin = new HBaseAdmin(conf);
     String tableName = "test"+System.currentTimeMillis();
-    HTableDescriptor desc =
-        new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor family = new HColumnDescriptor("fam");
     desc.addFamily(family);
     admin.createTable(desc);
 
-    HTable table = new HTable(tableName);
+    HTable table = new HTable(conf, tableName);
     Put put = new Put(Bytes.toBytes("testrow"));
     put.add(Bytes.toBytes("fam"),
         Bytes.toBytes("col"), Bytes.toBytes("testdata"));

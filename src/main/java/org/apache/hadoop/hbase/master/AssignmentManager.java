@@ -905,6 +905,36 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
 
+  public void processServerShutdown(final HServerInfo hsi) {
+    synchronized (regionsInTransition) {
+      // Iterate all regions in transition checking if were on this server
+      final String serverName = hsi.getServerName();
+      for (Map.Entry<String, RegionState> e: this.regionsInTransition.entrySet()) {
+        if (!e.getKey().equals(serverName)) continue;
+        RegionState regionState = e.getValue();
+        switch(regionState.getState()) {
+          case OFFLINE:
+          case CLOSED:
+          case PENDING_OPEN:
+          case OPENING:
+            // TODO: Do I need to replay logs for PENDING_OPEN and OPENING?
+            // Maybe the server took on edits?
+          case PENDING_CLOSE:
+          case CLOSING:
+            LOG.info("Region " + regionState.getRegion().getRegionNameAsString() +
+              " was in state=" + regionState.getStamp() + " on shutdown server=" +
+              serverName + ", reassigning");
+            assign(regionState.getRegion());
+            break;
+
+          case OPEN:
+            LOG.warn("Long-running region in OPEN state?  Should not happen");
+            break;
+        }
+      }
+    }
+  }
+
   public static class RegionState implements Writable {
     private HRegionInfo region;
 

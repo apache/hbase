@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,7 +43,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.ServerConnection;
-import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
@@ -82,19 +81,8 @@ public class ServerManager {
   private final Map<String, HRegionInterface> serverConnections =
     new HashMap<String, HRegionInterface>();
 
-  /**
-   * Set of known dead servers.  On znode expiration, servers are added here.
-   * This is needed in case of a network partitioning where the server's lease
-   * expires, but the server is still running. After the network is healed,
-   * and it's server logs are recovered, it will be told to call server startup
-   * because by then, its regions have probably been reassigned.
-   */
-  private final Set<String> deadServers =
-    Collections.synchronizedSet(new HashSet<String>());
-
-  private Server master;
-
-  private MasterMetrics masterMetrics;
+  private final Server master;
+  private final MasterServices services;
 
   private final ServerMonitor serverMonitorThread;
 
@@ -102,9 +90,10 @@ public class ServerManager {
 
   private final OldLogsCleaner oldLogCleaner;
 
-  private final ServerConnection connection;
+  // Reporting to track master metrics.
+  private final MasterMetrics metrics;
 
-  private final ExecutorService executorService;
+  private final DeadServer deadservers = new DeadServer();
 
   /**
    * Dumps into log current stats on dead servers and number of servers
@@ -118,58 +107,37 @@ public class ServerManager {
     @Override
     protected void chore() {
       int numServers = numServers();
-      int numDeadServers = deadServers.size();
+      int numDeadServers = deadservers.size();
       double averageLoad = getAverageLoad();
-      String deadServersList = null;
-      if (numDeadServers > 0) {
-        StringBuilder sb = new StringBuilder("Dead Server [");
-        boolean first = true;
-        synchronized (deadServers) {
-          for (String server: deadServers) {
-            if (!first) {
-              sb.append(",  ");
-              first = false;
-            }
-            sb.append(server);
-          }
-        }
-        sb.append("]");
-        deadServersList = sb.toString();
-      }
+      String deadServersList = deadservers.toString();
       LOG.info(numServers + " region servers, " + numDeadServers +
         " dead, average load " + averageLoad +
-        (deadServersList != null? deadServers: ""));
+        ((deadServersList != null && deadServersList.length() > 0)?
+          deadServersList: ""));
     }
   }
 
   /**
    * Constructor.
    * @param master
-   * @param masterMetrics If null, we won't pass metrics.
-   * @param masterFileSystem
-   * @param service ExecutorService instance.
+   * @param services
    */
-  public ServerManager(Server master,
-      final ServerConnection connection,
-      MasterMetrics masterMetrics,
-      MasterFileSystem masterFileSystem,
-      ExecutorService service) {
+  public ServerManager(final Server master, final MasterServices services) {
     this.master = master;
-    this.masterMetrics = masterMetrics;
-    this.connection = connection;
-    this.executorService = service;
+    this.services = services;
     Configuration c = master.getConfiguration();
     int metaRescanInterval = c.getInt("hbase.master.meta.thread.rescanfrequency",
       60 * 1000);
     this.minimumServerCount = c.getInt("hbase.regions.server.count.min", 1);
+    this.metrics = new MasterMetrics(master.getServerName());
     this.serverMonitorThread = new ServerMonitor(metaRescanInterval, master);
     String n = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this.serverMonitorThread,
       n + ".serverMonitor");
     this.oldLogCleaner = new OldLogsCleaner(
       c.getInt("hbase.master.meta.thread.rescanfrequency",60 * 1000),
-      master, c, masterFileSystem.getFileSystem(),
-      masterFileSystem.getOldLogDir());
+      master, c, this.services.getMasterFileSystem().getFileSystem(),
+      this.services.getMasterFileSystem().getOldLogDir());
     Threads.setDaemonThreadRunning(oldLogCleaner,
       n + ".oldLogCleaner");
   }
@@ -190,7 +158,8 @@ public class ServerManager {
     // for processing by ProcessServerShutdown.
     HServerInfo info = new HServerInfo(serverInfo);
     String hostAndPort = info.getServerAddress().toString();
-    HServerInfo existingServer = haveServerWithSameHostAndPortAlready(info.getHostnamePort());
+    HServerInfo existingServer =
+      haveServerWithSameHostAndPortAlready(info.getHostnamePort());
     if (existingServer != null) {
       String message = "Server start rejected; we already have " + hostAndPort +
         " registered; existingServer=" + existingServer + ", newServer=" + info;
@@ -225,9 +194,7 @@ public class ServerManager {
    */
   private void checkIsDead(final String serverName, final String what)
   throws YouAreDeadException {
-    if (!isDead(serverName)) {
-      return;
-    }
+    if (!this.deadservers.isDeadServer(serverName)) return;
     String message = "Server " + what + " rejected; currently processing " +
       serverName + " as dead server";
     LOG.debug(message);
@@ -360,8 +327,8 @@ public class ServerManager {
     // Refresh the info object and the load information
     this.onlineServers.put(serverInfo.getServerName(), serverInfo);
     HServerLoad load = serverInfo.getLoad();
-    if(load != null && this.masterMetrics != null) {
-      masterMetrics.incrementRequests(load.getNumberOfRequests());
+    if (load != null && this.metrics != null) {
+      this.metrics.incrementRequests(load.getNumberOfRequests());
     }
     // No more piggyback messages on heartbeats for other stuff
     return msgs;
@@ -424,6 +391,10 @@ public class ServerManager {
     }
   }
 
+  public Set<String> getDeadServers() {
+    return this.deadservers.clone();
+  }
+
   /**
    * @param hsa
    * @return The HServerInfo whose HServerAddress is <code>hsa</code> or null
@@ -481,7 +452,7 @@ public class ServerManager {
         " but server is not currently online");
       return;
     }
-    if (this.deadServers.contains(serverName)) {
+    if (this.deadservers.contains(serverName)) {
       // TODO: Can this happen?  It shouldn't be online in this case?
       LOG.warn("Received expiration of " + hsi.getServerName() +
           " but server shutdown is already in progress");
@@ -500,47 +471,10 @@ public class ServerManager {
       }
       return;
     }
-    // Add to dead servers and queue a shutdown processing.
-    this.deadServers.add(serverName);
-    this.executorService.submit(new ServerShutdownHandler(master));
+    this.services.getExecutorService().submit(new ServerShutdownHandler(this.master,
+        this.services, deadservers, info));
     LOG.debug("Added=" + serverName +
       " to dead servers, submitted shutdown handler to be executed");
-  }
-
-  /**
-   * @param serverName
-   */
-  void removeDeadServer(String serverName) {
-    this.deadServers.remove(serverName);
-  }
-
-  /**
-   * @param serverName
-   * @return true if server is dead
-   */
-  public boolean isDead(final String serverName) {
-    return isDead(serverName, false);
-  }
-
-  /**
-   * @param serverName Servername as either <code>host:port</code> or
-   * <code>host,port,startcode</code>.
-   * @param hostAndPortOnly True if <code>serverName</code> is host and
-   * port only (<code>host:port</code>) and if so, then we do a prefix compare
-   * (ignoring start codes) looking for dead server.
-   * @return true if server is dead
-   */
-  boolean isDead(final String serverName, final boolean hostAndPortOnly) {
-    return isDead(this.deadServers, serverName, hostAndPortOnly);
-  }
-
-  static boolean isDead(final Set<String> deadServers,
-      final String serverName, final boolean hostAndPortOnly) {
-    return HServerInfo.isServer(deadServers, serverName, hostAndPortOnly);
-  }
-
-  Set<String> getDeadServers() {
-    return this.deadServers;
   }
 
   public boolean canAssignUserRegions() {
@@ -597,11 +531,12 @@ public class ServerManager {
 
   private HRegionInterface getServerConnection(HServerInfo info) {
     try {
+      ServerConnection connection =
+        ServerConnectionManager.getConnection(this.master.getConfiguration());
       HRegionInterface hri = serverConnections.get(info.getServerName());
       if(hri == null) {
         LOG.info("new connection");
-        hri = this.connection.getHRegionConnection(
-          info.getServerAddress(), false);
+        hri = connection.getHRegionConnection(info.getServerAddress(), false);
         serverConnections.put(info.getServerName(), hri);
       }
       return hri;

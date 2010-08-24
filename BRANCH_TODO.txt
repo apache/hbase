@@ -284,4 +284,6 @@ Later:
     (if finish, need to use files not directory, and use right location)
   - Put notes from reviewboard/jira into LB javadoc or hbase "book"
 
-  
+ Questions:
+
+ If region in RIT, do I need to wait on log replay if region was in OPENING or PENDING_OPEN state?

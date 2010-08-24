@@ -26,10 +26,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -41,16 +38,15 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.EventHandler;
-import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -85,31 +81,6 @@ public class TestAdmin {
     this.admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
   }
 
-  @Test public void testSplitCompactFlushClose() throws IOException {
-    final byte [] tableName = Bytes.toBytes("testSplitCompactFlushClose");
-    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    TEST_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
-    NavigableSet<HRegionInfo> hris = getClusterRegions();
-    assertFalse(hris.isEmpty());
-    this.admin.split(tableName);
-    NavigableSet<HRegionInfo> splitHris = getClusterRegions();
-    assertFalse(splitHris.isEmpty());
-    int originalCount = hris.size();
-    int postSplitCount = splitHris.size();
-    assertTrue(postSplitCount > originalCount);
-  }
-
-  private NavigableSet<HRegionInfo> getClusterRegions() {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    List<RegionServerThread> rss = cluster.getRegionServerThreads();
-    NavigableSet<HRegionInfo> hris = new TreeSet<HRegionInfo>();
-    for (RegionServerThread rst: rss) {
-      hris.addAll(rst.getRegionServer().getOnlineRegions());
-    }
-    return hris;
-  }
-
   @Test
   public void testCreateTable() throws IOException {
     HTableDescriptor [] tables = admin.listTables();
@@ -118,6 +89,21 @@ public class TestAdmin {
       HConstants.CATALOG_FAMILY);
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
+  }
+
+  @Test
+  public void testGetTableDescriptor() throws IOException {
+    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
+    HColumnDescriptor fam2 = new HColumnDescriptor("fam2");
+    HColumnDescriptor fam3 = new HColumnDescriptor("fam3");
+    HTableDescriptor htd = new HTableDescriptor("myTestTable");
+    htd.addFamily(fam1);
+    htd.addFamily(fam2);
+    htd.addFamily(fam3);
+    this.admin.createTable(htd);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), "myTestTable");
+    HTableDescriptor confirmedHtd = table.getTableDescriptor();
+    assertEquals(htd.compareTo(confirmedHtd), 0);
   }
 
   /**
@@ -441,15 +427,20 @@ public class TestAdmin {
     Put put = new Put(row);
     put.add(HConstants.CATALOG_FAMILY, qualifier, value);
     ht.put(put);
+    Get get = new Get(row);
+    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
+    ht.get(get);
 
     this.admin.disableTable(table);
 
     // Test that table is disabled
-    Get get = new Get(row);
+    get = new Get(row);
     get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
     boolean ok = false;
     try {
       ht.get(get);
+    } catch (NotServingRegionException e) {
+      ok = true;
     } catch (RetriesExhaustedException e) {
       ok = true;
     }
@@ -547,8 +538,8 @@ public class TestAdmin {
       }
     };
     t.start();
-    // tell the master to split the table
-    admin.split(Bytes.toString(tableName));
+    // Split the table
+    this.admin.split(Bytes.toString(tableName));
     t.join();
 
     // Verify row count
@@ -757,26 +748,13 @@ public class TestAdmin {
     for(int i = 0; i < times; i++) {
       String tableName = "table"+i;
       this.admin.disableTable(tableName);
+      byte [] tableNameBytes = Bytes.toBytes(tableName);
+      assertTrue(this.admin.isTableDisabled(tableNameBytes));
       this.admin.enableTable(tableName);
+      assertFalse(this.admin.isTableDisabled(tableNameBytes));
       this.admin.disableTable(tableName);
+      assertTrue(this.admin.isTableDisabled(tableNameBytes));
       this.admin.deleteTable(tableName);
     }
   }
-
-  @Test
-  public void testGetTableDescriptor() throws IOException {
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    HColumnDescriptor fam2 = new HColumnDescriptor("fam2");
-    HColumnDescriptor fam3 = new HColumnDescriptor("fam3");
-    HTableDescriptor htd = new HTableDescriptor("myTestTable");
-    htd.addFamily(fam1);
-    htd.addFamily(fam2);
-    htd.addFamily(fam3);
-    this.admin.createTable(htd);
-    HTable table = new HTable("myTestTable");
-    HTableDescriptor confirmedHtd = table.getTableDescriptor();
-
-    assertEquals(htd.compareTo(confirmedHtd), 0);
-  }
 }
-

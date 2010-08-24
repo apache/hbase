@@ -1972,7 +1972,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     try {
       region = getOnlineRegion(regionName);
       if (region == null) {
-        throw new NotServingRegionException(regionName);
+        throw new NotServingRegionException("Region is not online: " + regionName);
       }
       return region;
     } finally {

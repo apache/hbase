@@ -25,16 +25,17 @@ import java.util.Set;
 import org.junit.Test;
 
 
-public class TestServerManager {
+public class TestDeadServer {
   @Test public void testIsDead() {
     Set<String> deadServers = new HashSet<String>();
+    DeadServer ds = new DeadServer();
     final String hostname123 = "one,123,3";
-    assertFalse(ServerManager.isDead(deadServers, hostname123, false));
-    assertFalse(ServerManager.isDead(deadServers, hostname123, true));
+    assertFalse(ds.isDeadServer(hostname123, false));
+    assertFalse(ds.isDeadServer(hostname123, true));
     deadServers.add(hostname123);
-    assertTrue(ServerManager.isDead(deadServers, hostname123, false));
-    assertFalse(ServerManager.isDead(deadServers, "one:1", true));
-    assertFalse(ServerManager.isDead(deadServers, "one:1234", true));
-    assertTrue(ServerManager.isDead(deadServers, "one:123", true));
+    assertTrue(ds.isDeadServer(hostname123, false));
+    assertFalse(ds.isDeadServer("one:1", true));
+    assertFalse(ds.isDeadServer("one:1234", true));
+    assertTrue(ds.isDeadServer("one:123", true));
   }
 }
