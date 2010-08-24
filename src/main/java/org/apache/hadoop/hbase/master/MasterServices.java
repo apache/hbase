@@ -21,18 +21,14 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 
 /**
  * Services Master supplies
  */
 public interface MasterServices {
-  /**
-   * @return Master's instance of {@link CatalogTracker}
-   */
-  public CatalogTracker getCatalogTracker();
-
   /**
    * @return Master's instance of the {@link AssignmentManager}
    */

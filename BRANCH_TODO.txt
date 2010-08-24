@@ -6,6 +6,12 @@ remaining tasks before merge
 ---
 
 * finish baseline implementation of new splits
+-- Basic split works now.  RS opens daughters on itself.
+I made the mistake of keeping up state
+in zk at first but thats not necessary; at moment if split fails
+we kill the regionserver rather than have a hole in our table.
+TODO: Come back and review after merge to make sure this jibes
+w/ new split transaction code.  St.Ack 20100823.
 
 * integrate load balancer
 - Looksee if we are still deleting location from meta; not needed any
@@ -27,6 +33,7 @@ tasks to complete post merge
 
 * bulletproof splits.  need to be recoverable from every point including
   partial META edits over on RS.
+
   
 * review timeout semantics for client calls.  servers should generally wait
   forever on root/meta but client class need to eventually timeout.
@@ -60,6 +67,8 @@ harder stuff
 
   -- We need means of fixup if only one edit goes in.. the offlining of parent.
   St.Ack 20100817
+  -- This should be in place; rs opens daughters on itself now.
+  St.Ack 20100823.
 
 * figure what to do with client table admin ops (flush, split, compact)
   (direct to RS rpc calls are in place, need to update client)

@@ -19,8 +19,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Services provided by {@link HRegionServer}
@@ -43,4 +47,15 @@ public interface RegionServerServices extends OnlineRegions {
    * @return The HServerInfo for this RegionServer.
    */
   public HServerInfo getServerInfo();
+
+  /**
+   * Tasks to perform after region open to complete deploy of region on
+   * regionserver
+   * @param r Region to open.
+   * @param ct Instance of {@link CatalogTracker}
+   * @throws KeeperException
+   * @throws IOException
+   */
+  public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
+  throws KeeperException, IOException;
 }

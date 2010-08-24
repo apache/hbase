@@ -42,7 +42,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -75,8 +74,9 @@ import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiPut;
@@ -288,9 +288,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
 
-    // Task thread to process requests from Master.  TODO: REMOVE
-    this.worker = new Worker();
-
     this.numRegionsToReport = conf.getInt(
         "hbase.regionserver.numregionstoreport", 10);
 
@@ -363,7 +360,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   private void initializeThreads() throws IOException {
-    this.workerThread = new Thread(worker);
 
     // Cache flushing thread.
     this.cacheFlusher = new MemStoreFlusher(conf, this);
@@ -441,8 +437,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
               checkFileSystem();
             }
             if (this.stopped) {
-              LOG.info("Stop requested, clearing toDo despite exception");
-              toDo.clear();
               continue;
             }
             LOG.warn("Attempt=" + tries, e);
@@ -460,9 +454,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         abort("Unhandled exception", t);
       }
     }
-    this.toDo.clear();
     this.leases.closeAfterLeasesExpire();
-    this.worker.stop();
     this.server.stop();
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
@@ -548,7 +540,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     updateOutboundMsgs(outboundMessages);
     outboundMessages.clear();
 
-    // Queue up the HMaster's instruction stream for processing
     for (int i = 0; !this.stopped && msgs != null && i < msgs.length; i++) {
       LOG.info(msgs[i].toString());
       // Intercept stop regionserver messages
@@ -557,17 +548,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         continue;
       }
       this.connection.unsetRootRegionLocation();
-      switch (msgs[i].getType()) {
-        default:
-          if (fsOk) {
-            try {
-              toDo.put(new ToDoEntry(msgs[i]));
-            } catch (InterruptedException e) {
-              throw new RuntimeException("Putting into msgQueue was "
-                  + "interrupted.", e);
-            }
-          }
-      }
+      LOG.warn("NOT PROCESSING " + msgs[i] + " -- WHY IS MASTER SENDING IT TO US?");
     }
     return outboundMessages;
   }
@@ -1013,7 +994,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         handler);
     Threads.setDaemonThreadRunning(this.compactSplitThread, n + ".compactor",
         handler);
-    Threads.setDaemonThreadRunning(this.workerThread, n + ".worker", handler);
     Threads.setDaemonThreadRunning(this.majorCompactionChecker, n
         + ".majorCompactionChecker", handler);
 
@@ -1070,7 +1050,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Verify that all threads are alive
     if (!(leases.isAlive() && compactSplitThread.isAlive()
         && cacheFlusher.isAlive() && hlogRoller.isAlive()
-        && workerThread.isAlive() && this.majorCompactionChecker.isAlive())) {
+        && this.majorCompactionChecker.isAlive())) {
       stop("One or more threads are no longer alive -- stop");
       return false;
     }
@@ -1083,12 +1063,40 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
+  public CatalogTracker getCatalogTracker() {
+    return this.catalogTracker;
+  }
+
+  @Override
   public void stop(final String msg) {
     this.stopped = true;
     LOG.info("STOPPED: " + msg);
     synchronized (this) {
       // Wakes run() if it is sleeping
       notifyAll(); // FindBugs NN_NAKED_NOTIFY
+    }
+  }
+
+  @Override
+  public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
+  throws KeeperException, IOException {
+    // Do checks to see if we need to compact (references or too many files)
+    if (r.hasReferences() || r.hasTooManyStoreFiles()) {
+      getCompactionRequester().requestCompaction(r,
+        r.hasReferences()? "Region has references on open" :
+          "Region has too many store files");
+    }
+    // Add to online regions
+    addToOnlineRegions(r);
+    // Update ZK, ROOT or META
+    if (r.getRegionInfo().isRootRegion()) {
+      RootLocationEditor.setRootLocation(getZooKeeper(),
+        getServerInfo().getServerAddress());
+    } else if(r.getRegionInfo().isMetaRegion()) {
+      // TODO: doh, this has weird naming between RootEditor/MetaEditor
+      MetaEditor.updateMetaLocation(ct, r.getRegionInfo(), getServerInfo());
+    } else {
+      MetaEditor.updateRegionLocation(ct, r.getRegionInfo(), getServerInfo());
     }
   }
 
@@ -1139,7 +1147,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   protected void join() {
     Threads.shutdown(this.majorCompactionChecker);
-    Threads.shutdown(this.workerThread);
     Threads.shutdown(this.cacheFlusher);
     Threads.shutdown(this.compactSplitThread);
     Threads.shutdown(this.hlogRoller);
@@ -1250,114 +1257,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // ////////////////////////////////////////////////////////////////////////////
   // HMaster-given operations
   // ////////////////////////////////////////////////////////////////////////////
-
-  /*
-   * Data structure to hold a HMsg and retries count.
-   */
-  private static final class ToDoEntry {
-    protected final AtomicInteger tries = new AtomicInteger(0);
-    protected final HMsg msg;
-
-    ToDoEntry(final HMsg msg) {
-      this.msg = msg;
-    }
-  }
-
-  final BlockingQueue<ToDoEntry> toDo = new LinkedBlockingQueue<ToDoEntry>();
-  private Worker worker;
-  private Thread workerThread;
-
-  /** Thread that performs long running requests from the master */
-  class Worker implements Runnable {
-    void stop() {
-      synchronized (toDo) {
-        toDo.notifyAll();
-      }
-    }
-
-    public void run() {
-      try {
-        while (!stopped) {
-          ToDoEntry e = null;
-          try {
-            e = toDo.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
-            if (e == null || stopped) {
-              continue;
-            }
-            LOG.info("Worker: " + e.msg);
-            HRegion region = null;
-            HRegionInfo info = e.msg.getRegionInfo();
-            switch (e.msg.getType()) {
-
-              case SPLIT_REGION:
-                region = getRegion(info.getRegionName());
-                region.flushcache();
-                region.shouldSplit(true);
-                // force a compaction; split will be side-effect.
-                compactSplitThread.requestCompaction(region, e.msg.getType()
-                    .name());
-                break;
-
-              case MAJOR_COMPACTION:
-              case COMPACT_REGION:
-                // Compact a region
-                region = getRegion(info.getRegionName());
-                compactSplitThread.requestCompaction(region, e.msg
-                    .isType(Type.MAJOR_COMPACTION), e.msg.getType()
-                    .name());
-                break;
-
-              case FLUSH_REGION:
-                region = getRegion(info.getRegionName());
-                region.flushcache();
-                break;
-
-              case TESTING_BLOCK_REGIONSERVER:
-                while (!stopped) {
-                  Threads.sleep(1000);
-                  LOG.info("Regionserver blocked by "
-                      + HMsg.Type.TESTING_BLOCK_REGIONSERVER + "; " + stopped);
-                }
-                break;
-
-              default:
-                throw new AssertionError(
-                    "Impossible state during msg processing.  Instruction: "
-                        + e.msg.toString());
-            }
-          } catch (InterruptedException ex) {
-            LOG.warn("Processing Worker queue", ex);
-          } catch (Exception ex) {
-            if (ex instanceof IOException) {
-              ex = RemoteExceptionHandler.checkIOException((IOException) ex);
-            }
-            if (e != null && e.tries.get() < numRetries) {
-              LOG.warn(ex);
-              e.tries.incrementAndGet();
-              try {
-                toDo.put(e);
-              } catch (InterruptedException ie) {
-                throw new RuntimeException("Putting into msgQueue was "
-                    + "interrupted.", ex);
-              }
-            } else {
-              LOG.error("unable to process message"
-                  + (e != null ? (": " + e.msg.toString()) : ""), ex);
-              if (!checkFileSystem()) {
-                break;
-              }
-            }
-          }
-        }
-      } catch (Throwable t) {
-        if (!checkOOME(t)) {
-          LOG.fatal("Unhandled exception", t);
-        }
-      } finally {
-        LOG.info("worker thread exiting");
-      }
-    }
-  }
 
   /**
    * Closes all regions.  Called on our way out.

@@ -40,7 +40,7 @@ import org.apache.zookeeper.KeeperException.Code;
 /**
  * Handles opening of a region on a region server.
  * <p>
- * This is executed after receiving an OPEN RPC from the master.
+ * This is executed after receiving an OPEN RPC from the master or client.
  */
 public class OpenRegionHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(OpenRegionHandler.class);
@@ -54,7 +54,8 @@ public class OpenRegionHandler extends EventHandler {
   public OpenRegionHandler(final Server server,
       final RegionServerServices rsServices,
       CatalogTracker catalogTracker, HRegionInfo regionInfo) {
-    this(server, rsServices, catalogTracker, regionInfo, EventType.M2RS_OPEN_REGION);
+    this(server, rsServices, catalogTracker, regionInfo,
+      EventType.M2RS_OPEN_REGION);
   }
 
   protected OpenRegionHandler(final Server server,
@@ -72,7 +73,7 @@ public class OpenRegionHandler extends EventHandler {
   }
 
   @Override
-  public void process() {
+  public void process() throws IOException {
     LOG.debug("Processing open of " + regionInfo.getRegionNameAsString());
     final String encodedName = regionInfo.getEncodedName();
 
@@ -89,7 +90,7 @@ public class OpenRegionHandler extends EventHandler {
       return;
     }
 
-    int openingVersion = transitionZookeeper(encodedName);
+    int openingVersion = transitionZookeeperOfflineToOpening(encodedName);
     if (openingVersion == -1) return;
 
     // Open the region
@@ -136,7 +137,7 @@ public class OpenRegionHandler extends EventHandler {
           server.getZooKeeper(), regionInfo, server.getServerName(),
           openingVersion)) == -1) {
         LOG.warn("Completed the OPEN of a region but when transitioning from " +
-            " OPENING to OPENED got a version mismatch, someone else clashed " +
+            " OPENING to OPENING got a version mismatch, someone else clashed " +
             "so now unassigning");
         region.close();
         return;
@@ -149,29 +150,10 @@ public class OpenRegionHandler extends EventHandler {
       return;
     }
 
-    // Do checks to see if we need to compact (references or too many files)
-    if(region.hasReferences() || region.hasTooManyStoreFiles()) {
-      this.rsServices.getCompactionRequester().requestCompaction(region,
-          region.hasReferences() ? "Region has references on open" :
-                                   "Region has too many store files");
-    }
-
-    // Add to online regions
-    this.rsServices.addToOnlineRegions(region);
-
     // Update ZK, ROOT or META
     try {
-      if(regionInfo.isRootRegion()) {
-        RootLocationEditor.setRootLocation(server.getZooKeeper(),
-            this.rsServices.getServerInfo().getServerAddress());
-      } else if(regionInfo.isMetaRegion()) {
-        // TODO: doh, this has weird naming between RootEditor/MetaEditor
-        MetaEditor.updateMetaLocation(catalogTracker, regionInfo,
-            this.rsServices.getServerInfo());
-      } else {
-        MetaEditor.updateRegionLocation(catalogTracker, region.getRegionInfo(),
-          this.rsServices.getServerInfo());
-      }
+      this.rsServices.postOpenDeployTasks(region,
+        this.server.getCatalogTracker());
     } catch (IOException e) {
       // TODO: rollback the open?
       LOG.error("Error updating region location in catalog table", e);
@@ -202,7 +184,7 @@ public class OpenRegionHandler extends EventHandler {
     LOG.debug("Opened " + region.getRegionNameAsString());
   }
 
-  int transitionZookeeper(final String encodedName) {
+  int transitionZookeeperOfflineToOpening(final String encodedName) {
     // Transition ZK node from OFFLINE to OPENING
     // TODO: should also handle transition from CLOSED?
     int openingVersion = -1;

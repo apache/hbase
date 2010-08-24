@@ -44,7 +44,7 @@ public class ModifyTableHandler extends TableEventHandler {
     for (HRegionInfo hri : hris) {
       // Update region info in META
       hri.setTableDesc(this.htd);
-      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), hri);
+      MetaEditor.updateRegionInfo(this.server.getCatalogTracker(), hri);
       // Update region info in FS
       this.masterServices.getMasterFileSystem().updateRegionInfo(hri);
     }

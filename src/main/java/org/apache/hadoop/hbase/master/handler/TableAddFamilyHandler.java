@@ -58,7 +58,7 @@ public class TableAddFamilyHandler extends TableEventHandler {
       // Update the HTD
       hri.getTableDesc().addFamily(familyDesc);
       // Update region in META
-      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), hri);
+      MetaEditor.updateRegionInfo(this.server.getCatalogTracker(), hri);
       // Update region info in FS
       this.masterServices.getMasterFileSystem().updateRegionInfo(hri);
     }

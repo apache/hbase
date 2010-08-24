@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -55,6 +56,34 @@ public class MetaEditor {
     catalogTracker.waitForMetaServerConnectionDefault().put(
         CatalogTracker.META_REGION, put);
     LOG.info("Added region " + regionInfo + " to META");
+  }
+
+  /**
+   * Offline parent in meta.
+   * Used when splitting.
+   * @param catalogTracker
+   * @param parent
+   * @param a Split daughter region A
+   * @param b Split daughter region B
+   * @throws NotAllMetaRegionsOnlineException
+   * @throws IOException
+   */
+  public static void offlineParentInMeta(CatalogTracker catalogTracker,
+      HRegionInfo parent, final HRegionInfo a, final HRegionInfo b)
+  throws NotAllMetaRegionsOnlineException, IOException {
+    Put put = new Put(parent.getRegionName());
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+      Writables.getBytes(parent));
+    put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+        HConstants.EMPTY_BYTE_ARRAY);
+    put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+        HConstants.EMPTY_BYTE_ARRAY);
+    put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
+      Writables.getBytes(a));
+    put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,
+      Writables.getBytes(b));
+    catalogTracker.waitForMetaServerConnectionDefault().put(CatalogTracker.META_REGION, put);
+    LOG.info("Offlined parent region " + parent + " in META");
   }
 
   /**

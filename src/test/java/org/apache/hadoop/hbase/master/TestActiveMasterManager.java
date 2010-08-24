@@ -31,7 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.client.ServerConnection;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -224,6 +224,11 @@ public class TestActiveMasterManager {
     @Override
     public void stop(String why) {
       this.stopped = true;
+    }
+
+    @Override
+    public CatalogTracker getCatalogTracker() {
+      return null;
     }
   }
 }

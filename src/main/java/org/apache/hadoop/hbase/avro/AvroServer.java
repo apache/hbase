@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.avro.generated.AClusterStatus;
 import org.apache.hadoop.hbase.avro.generated.ADelete;
 import org.apache.hadoop.hbase.avro.generated.AFamilyDescriptor;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hbase.avro.generated.HBase;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -124,11 +122,9 @@ public class AvroServer {
     // TODO(hammer): figure out appropriate setting of maxSize for htablePool
     /**
      * Constructs an HBaseImpl object.
-     * 
-     * @throws MasterNotRunningException
-     * @throws ZooKeeperConnectionException
+     * @throws IOException 
      */
-    HBaseImpl() throws MasterNotRunningException, ZooKeeperConnectionException {
+    HBaseImpl() throws IOException {
       conf = HBaseConfiguration.create();
       admin = new HBaseAdmin(conf);
       htablePool = new HTablePool(conf, 10);
@@ -366,8 +362,7 @@ public class AvroServer {
     // NB: Asynchronous operation
     public Void modifyFamily(ByteBuffer table, ByteBuffer familyName, AFamilyDescriptor familyDescriptor) throws AIOError {
       try {
-	admin.modifyColumn(Bytes.toBytes(table), Bytes.toBytes(familyName),
-                           AvroUtil.afdToHCD(familyDescriptor));
+	admin.modifyColumn(Bytes.toBytes(table), AvroUtil.afdToHCD(familyDescriptor));
 	return null;
       } catch (IOException e) {
 	AIOError ioe = new AIOError();
@@ -496,7 +491,6 @@ public class AvroServer {
 	  aie.message = new Utf8("scanner ID is invalid: " + scannerId);
           throw aie;
         }
-        Result[] results = null;
         return AvroUtil.resultsToAResults(scanner.next(numberOfRows));
       } catch (IOException e) {
     	AIOError ioe = new AIOError();
@@ -556,7 +550,7 @@ public class AvroServer {
     Log LOG = LogFactory.getLog("AvroServer");
     LOG.info("starting HBase Avro server on port " + Integer.toString(port));
     SpecificResponder r = new SpecificResponder(HBase.class, new HBaseImpl());
-    HttpServer server = new HttpServer(r, 9090);
+    new HttpServer(r, 9090);
     Thread.sleep(1000000);
   }
 

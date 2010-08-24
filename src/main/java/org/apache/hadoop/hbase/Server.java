@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
@@ -36,6 +37,11 @@ public interface Server extends Abortable, Stoppable {
    * Gets the ZooKeeper instance for this server.
    */
   public ZooKeeperWatcher getZooKeeper();
+
+  /**
+   * @return Master's instance of {@link CatalogTracker}
+   */
+  public CatalogTracker getCatalogTracker();
 
   /**
    * Gets the unique server name for this server.

@@ -58,7 +58,7 @@ public abstract class TableEventHandler extends EventHandler {
       LOG.info("Handling table operation " + eventType + " on table " +
           Bytes.toString(tableName));
       List<HRegionInfo> hris =
-        MetaReader.getTableRegions(this.masterServices.getCatalogTracker(),
+        MetaReader.getTableRegions(this.server.getCatalogTracker(),
           tableName);
       handleTableOperation(hris);
     } catch (IOException e) {

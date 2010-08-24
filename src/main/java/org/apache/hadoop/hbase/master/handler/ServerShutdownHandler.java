@@ -32,5 +32,7 @@ public class ServerShutdownHandler extends EventHandler {
   @Override
   public void process() {
     // TODO: implement this
+    
+    // DO FIXUP IF FIND OFFLINED PARENT BUT DAUGHTERS NOT ON LINE
   }
 }

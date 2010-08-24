@@ -301,9 +301,10 @@ public class ServerManager {
     for (HMsg msg: msgs) {
       LOG.info("Received " + msg);
       switch (msg.getType()) {
-        REGION_SPLIT:
-          // Nothing to do?
-          break;
+      case REGION_SPLIT:
+        // Nothing to do?
+        LOG.warn("TODO: update inmemory region state w/ split info " + msg);
+        break;
 
         default:
           LOG.error("Unhandled msg type " + msg);

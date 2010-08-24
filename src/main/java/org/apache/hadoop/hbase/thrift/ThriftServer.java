@@ -46,8 +46,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -184,12 +182,10 @@ public class ThriftServer {
 
     /**
      * Constructs an HBaseHandler object.
-     *
-     * @throws MasterNotRunningException
-     * @throws ZooKeeperConnectionException
+     * @throws IOException 
      */
     HBaseHandler()
-    throws MasterNotRunningException, ZooKeeperConnectionException {
+    throws IOException {
       conf = HBaseConfiguration.create();
       admin = new HBaseAdmin(conf);
       scannerMap = new HashMap<Integer, ResultScanner>();

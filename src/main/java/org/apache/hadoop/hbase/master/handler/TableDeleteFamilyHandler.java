@@ -56,7 +56,7 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
       // Update the HTD
       hri.getTableDesc().removeFamily(familyName);
       // Update region in META
-      MetaEditor.updateRegionInfo(this.masterServices.getCatalogTracker(), hri);
+      MetaEditor.updateRegionInfo(this.server.getCatalogTracker(), hri);
       MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
       // Update region info in FS
       mfs.updateRegionInfo(hri);

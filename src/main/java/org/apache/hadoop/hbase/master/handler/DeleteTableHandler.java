@@ -43,7 +43,7 @@ public class DeleteTableHandler extends TableEventHandler {
     for(HRegionInfo region : regions) {
       LOG.debug("Deleting region " + region + " from META and FS");
       // Remove region from META
-      MetaEditor.deleteRegion(this.masterServices.getCatalogTracker(), region);
+      MetaEditor.deleteRegion(this.server.getCatalogTracker(), region);
       // Delete region from FS
       this.masterServices.getMasterFileSystem().deleteRegion(region);
     }
