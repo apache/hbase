@@ -905,6 +905,10 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
 
+  /**
+   * Process shutdown server removing any assignments.
+   * @param hsi Server that went down.
+   */
   public void processServerShutdown(final HServerInfo hsi) {
     synchronized (regionsInTransition) {
       // Iterate all regions in transition checking if were on this server
@@ -913,16 +917,14 @@ public class AssignmentManager extends ZooKeeperListener {
         if (!e.getKey().equals(serverName)) continue;
         RegionState regionState = e.getValue();
         switch(regionState.getState()) {
-          case OFFLINE:
-          case CLOSED:
           case PENDING_OPEN:
           case OPENING:
-            // TODO: Do I need to replay logs for PENDING_OPEN and OPENING?
-            // Maybe the server took on edits?
+          case OFFLINE:
+          case CLOSED:
           case PENDING_CLOSE:
           case CLOSING:
             LOG.info("Region " + regionState.getRegion().getRegionNameAsString() +
-              " was in state=" + regionState.getStamp() + " on shutdown server=" +
+              " was in state=" + regionState.getState() + " on shutdown server=" +
               serverName + ", reassigning");
             assign(regionState.getRegion());
             break;

@@ -25,13 +25,13 @@ import java.util.NavigableSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.zookeeper.KeeperException;
 
 
 public class ServerShutdownHandler extends EventHandler {
@@ -54,36 +54,33 @@ public class ServerShutdownHandler extends EventHandler {
 
   @Override
   public void process() throws IOException {
-    checkRootHost();
     try {
-      this.server.getCatalogTracker().waitForRoot();
+      this.server.getCatalogTracker().processServerShutdown(this.hsi);
     } catch (InterruptedException e) {
-      // Reinterrupt
       Thread.currentThread().interrupt();
       throw new IOException("Interrupted", e);
-    }
-    checkMetaHost();
-    try {
-      this.server.getCatalogTracker().waitForMeta();
-    } catch (InterruptedException e) {
-      // Reinterrupt
-      Thread.currentThread().interrupt();
-      throw new IOException("Interrupted", e);
+    } catch (KeeperException e) {
+      this.server.abort("In server shutdown processing", e);
+      throw new IOException("Aborting", e);
     }
     final String serverName = this.hsi.getServerName();
-    // First reassign regions in transition.
-    LOG.info("Cleaning regions-in-transition of references to " + serverName);
-    this.services.getAssignmentManager().processServerShutdown(this.hsi);
+
     LOG.info("Splitting logs for " + serverName);
     this.services.getMasterFileSystem().splitLog(serverName);
-    
+
+    // Clean out anything in regions in transition.  Being conservative and
+    // doing after log splitting.  Could do some states before -- OPENING?
+    // OFFLINE? -- and then others after like CLOSING that depend on log
+    // splitting.
+    this.services.getAssignmentManager().processServerShutdown(this.hsi);
+
     NavigableSet<HRegionInfo> hris =
       MetaReader.getServerRegions(this.server.getCatalogTracker(), this.hsi);
     LOG.info("Reassigning the " + hris.size() + " region(s) that " + serverName +
       " was carrying.");
 
     // We should encounter -ROOT- and .META. first in the Set given how its
-    // as sorted set.
+    // a sorted set.
     for (HRegionInfo hri: hris) {
       // If table is not disabled but the region is offlined,
       boolean disabled = this.services.getAssignmentManager().
@@ -97,30 +94,5 @@ public class ServerShutdownHandler extends EventHandler {
     }
     this.deadServers.remove(serverName);
     LOG.info("Finished processing of shutdown of " + serverName);
-  }
-
-  void checkRootHost() throws IOException {
-    HServerAddress rootHsa;
-    try {
-      rootHsa = this.server.getCatalogTracker().getRootLocation();
-    } catch (InterruptedException e) {
-      // Reinterrupt
-      Thread.currentThread().interrupt();
-      throw new IOException("Interrupted", e);
-    }
-    if (this.hsi.getServerAddress().equals(rootHsa)) {
-      LOG.warn("WAS CARRYING ROOT -- DO I HAVE TO DO ANYTHING?  CAN I HURRY NOTIFICATION THAT ROOT IS GONE?");
-    }
-    return;
-  }
-
-  void checkMetaHost() {
-    HServerAddress metaHsa;
-    // TODO: Presumes one meta region only.
-    metaHsa = this.server.getCatalogTracker().getMetaLocation();
-    if (this.hsi.getServerAddress().equals(metaHsa)) {
-      LOG.warn("WAS CARRYING META -- DO I HAVE TO DO ANYTHING? CAN I HURRY NOTIFICATION THAT META IS GONE");
-    }
-    return;
   }
 }

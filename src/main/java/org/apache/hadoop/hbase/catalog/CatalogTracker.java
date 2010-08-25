@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.zookeeper.MetaNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Tracks the availability of the catalog tables <code>-ROOT-</code> and
@@ -354,6 +356,31 @@ public class CatalogTracker {
       return metaServer.getRegionInfo(regionName) != null;
     } catch (NotServingRegionException e) {
       return false;
+    }
+  }
+
+  /**
+   * Check if <code>hsi</code> was carrying <code>-ROOT-</code> or
+   * <code>.META.</code> and if so, clear out old locations.
+   * @param hsi Server that has crashed/shutdown.
+   * @throws InterruptedException
+   * @throws KeeperException
+   */
+  public void processServerShutdown(final HServerInfo hsi)
+  throws InterruptedException, KeeperException {
+    HServerAddress rootHsa = getRootLocation();
+    if (rootHsa == null) {
+      LOG.info("-ROOT- is not assigned; continuing");
+    } else if (hsi.getServerAddress().equals(rootHsa)) {
+      LOG.info(hsi.getServerName() + " carrying -ROOT-; deleting " +
+        "-ROOT- location from meta");
+      RootLocationEditor.deleteRootLocation(this.zookeeper);
+    }
+    HServerAddress metaHsa = getMetaLocation();
+    if (metaHsa == null) {
+      LOG.info(".META. is not assigned; continuing");
+    } else if (hsi.getServerAddress().equals(metaHsa)) {
+      resetMetaLocation();
     }
   }
 }
