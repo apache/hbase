@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -156,6 +157,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   // Instance of the hbase executor service.
   ExecutorService executorService;
+
+  private LoadBalancer balancer;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -297,6 +300,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       }
     }
     this.rpcServer.stop();
+    this.balancer.interrupt();
     this.activeMasterManager.stop();
     this.zooKeeper.close();
     this.executorService.shutdown();
@@ -423,6 +427,14 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         this.infoServer.setAttribute(MASTER, this);
         this.infoServer.start();
       }
+
+      // Start up the load balancer
+      String name = getServerName() + "-loadbalancer";
+      int period = getConfiguration().getInt("hbase.balancer.period", 300000);
+      this.balancer = new LoadBalancer(name, period, this,
+        this.assignmentManager);
+      Threads.setDaemonThreadRunning(this.balancer, name);
+
       // Start the server last so everything else is running before we start
       // receiving requests.
       this.rpcServer.start();

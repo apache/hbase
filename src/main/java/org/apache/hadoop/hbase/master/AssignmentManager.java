@@ -24,14 +24,15 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
@@ -59,8 +60,8 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.NodeAndData;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.io.Writable;
 import org.apache.zookeeper.KeeperException;
 
@@ -88,8 +89,9 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /** Plans for region movement. */
   // TODO: When do plans get cleaned out?  Ever?
-  private final Map<String,RegionPlan> regionPlans =
-    new TreeMap<String,RegionPlan>();
+  // Its cleaned on server shutdown processing -- St.Ack
+  private final Map<String, RegionPlan> regionPlans =
+    new TreeMap<String, RegionPlan>();
 
   /** Set of tables that have been disabled. */
   private final Set<String> disabledTables =
@@ -98,14 +100,19 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Server to regions assignment map.
    * Contains the set of regions currently assigned to a given server.
+   * This Map and {@link #regions} are tied.  Always update this in tandem
+   * with the other under a lock on {@link #regions}
+   * @see #regions
    */
-  private final SortedMap<HServerInfo,Set<HRegionInfo>> servers =
-        new TreeMap<HServerInfo,Set<HRegionInfo>>();
+  private final NavigableMap<HServerInfo, List<HRegionInfo>> servers =
+    new TreeMap<HServerInfo, List<HRegionInfo>>();
 
   /**
    * Region to server assignment map.
    * Contains the server a given region is currently assigned to.
-   * This object should be used for all synchronization around servers/regions.
+   * This Map and {@link #servers} are tied.  Always update this in tandem
+   * with the other under a lock on {@link #regions}
+   * @see #servers
    */
   private final SortedMap<HRegionInfo,HServerInfo> regions =
     new TreeMap<HRegionInfo,HServerInfo>();
@@ -419,12 +426,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     synchronized(regions) {
       regions.put(regionInfo, serverInfo);
-      Set<HRegionInfo> regionSet = servers.get(serverInfo);
-      if(regionSet == null) {
-        regionSet = new TreeSet<HRegionInfo>();
-        servers.put(serverInfo, regionSet);
-      }
-      regionSet.add(regionInfo);
+      addToServers(serverInfo, regionInfo);
     }
   }
 
@@ -443,7 +445,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     synchronized(regions) {
       HServerInfo serverInfo = regions.remove(regionInfo);
-      Set<HRegionInfo> serverRegions = servers.get(serverInfo);
+      List<HRegionInfo> serverRegions = servers.get(serverInfo);
       serverRegions.remove(regionInfo);
     }
   }
@@ -458,7 +460,7 @@ public class AssignmentManager extends ZooKeeperListener {
   public void setOffline(HRegionInfo regionInfo) {
     synchronized(regions) {
       HServerInfo serverInfo = regions.remove(regionInfo);
-      Set<HRegionInfo> serverRegions = servers.get(serverInfo);
+      List<HRegionInfo> serverRegions = servers.get(serverInfo);
       serverRegions.remove(regionInfo);
     }
   }
@@ -535,29 +537,31 @@ public class AssignmentManager extends ZooKeeperListener {
     RegionPlan plan;
     synchronized(regionPlans) {
       plan = regionPlans.get(encodedName);
-      if(plan == null) {
+      if (plan == null) {
         LOG.debug("No previous transition plan for " +
             state.getRegion().getRegionNameAsString() +
             " so generating a random one from " + serverManager.numServers() +
             " ( " + serverManager.getOnlineServers().size() + ") available servers");
-        plan = new RegionPlan(encodedName, null,
-            LoadBalancer.randomAssignment(serverManager.getOnlineServersList()));
+        plan = new RegionPlan(state.getRegion(), null,
+          LoadBalancer.randomAssignment(serverManager.getOnlineServersList()));
         regionPlans.put(encodedName, plan);
       }
     }
     try {
       // Send OPEN RPC. This can fail if the server on other end is is not up.
       serverManager.sendRegionOpen(plan.getDestination(), state.getRegion());
+      // Transition RegionState to PENDING_OPEN
+      state.update(RegionState.State.PENDING_OPEN);
     } catch (Throwable t) {
-      LOG.warn("Failed assignment of " + state.getRegion());
+      LOG.warn("Failed assignment of " +
+        state.getRegion().getRegionNameAsString() + " to " +
+        plan.getDestination(), t);
       // Clean out plan we failed execute and one that doesn't look like it'll
       // succeed anyways; we need a new plan!
       synchronized(regionPlans) {
         this.regionPlans.remove(encodedName);
       }
     }
-    // Transition RegionState to PENDING_OPEN
-    state.update(RegionState.State.PENDING_OPEN);
   }
 
   /**
@@ -686,7 +690,7 @@ public class AssignmentManager extends ZooKeeperListener {
       for(HRegionInfo region : regions) {
         LOG.debug("Assigning " + region.getRegionNameAsString() + " to " + server);
         String regionName = region.getEncodedName();
-        RegionPlan plan = new RegionPlan(regionName, null,server);
+        RegionPlan plan = new RegionPlan(region, null,server);
         regionPlans.put(regionName, plan);
         assign(region);
       }
@@ -715,13 +719,22 @@ public class AssignmentManager extends ZooKeeperListener {
       }
       HServerInfo serverInfo = serverManager.getHServerInfo(regionLocation);
       regions.put(regionInfo, serverInfo);
-      Set<HRegionInfo> regionSet = servers.get(serverInfo);
-      if(regionSet == null) {
-        regionSet = new TreeSet<HRegionInfo>();
-        servers.put(serverInfo, regionSet);
-      }
-      regionSet.add(regionInfo);
+      addToServers(serverInfo, regionInfo);
     }
+  }
+
+  /*
+   * Presumes caller has taken care of necessary locking modifying servers Map.
+   * @param hsi
+   * @param hri
+   */
+  private void addToServers(final HServerInfo hsi, final HRegionInfo hri) {
+    List<HRegionInfo> hris = servers.get(hsi);
+    if (hris == null) {
+      hris = new ArrayList<HRegionInfo>();
+      servers.put(hsi, hris);
+    }
+    hris.add(hri);
   }
 
   /**
@@ -745,6 +758,13 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public NavigableMap<String, RegionState> getRegionsInTransition() {
     return new TreeMap<String, RegionState>(this.regionsInTransition);
+  }
+
+  /**
+   * @return True if regions in transition.
+   */
+  public boolean isRegionsInTransition() {
+    return !this.regionsInTransition.isEmpty();
   }
 
   /**
@@ -910,6 +930,17 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param hsi Server that went down.
    */
   public void processServerShutdown(final HServerInfo hsi) {
+    // Clean out any exisiting assignment plans for this server
+    synchronized (this.regionPlans) {
+      for (Iterator <Map.Entry<String, RegionPlan>> i =
+        this.regionPlans.entrySet().iterator(); i.hasNext();) {
+        Map.Entry<String, RegionPlan> e = i.next();
+        if (e.getValue().getDestination().equals(hsi)) {
+          // Use iterator's remove else we'll get CME.fail a
+          i.remove();
+        }
+      }
+    }
     synchronized (regionsInTransition) {
       // Iterate all regions in transition checking if were on this server
       final String serverName = hsi.getServerName();
@@ -935,6 +966,100 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
+  }
+
+  /**
+   * Update inmemory structures.
+   * @param hsi Server that reported the split
+   * @param parent Parent region that was split
+   * @param a Daughter region A
+   * @param b Daughter region B
+   */
+  public void handleSplitReport(final HServerInfo hsi, final HRegionInfo parent,
+      final HRegionInfo a, final HRegionInfo b) {
+    synchronized (this.regions) {
+      checkRegion(hsi, parent, true);
+      checkRegion(hsi, a, false);
+      this.regions.put(a, hsi);
+      this.regions.put(b, hsi);
+      removeFromServers(hsi, parent, true);
+      removeFromServers(hsi, a, false);
+      removeFromServers(hsi, b, false);
+      addToServers(hsi, a);
+      addToServers(hsi, b);
+    }
+  }
+
+  /*
+   * Caller must hold locks on regions Map.
+   * @param hsi
+   * @param hri
+   * @param expected
+   */
+  private void checkRegion(final HServerInfo hsi, final HRegionInfo hri,
+      final boolean expected) {
+    HServerInfo serverInfo = regions.remove(hri);
+    if (expected) {
+      if (serverInfo == null) {
+        LOG.info("Region not on a server: " + hri.getRegionNameAsString());
+      }
+    } else {
+      if (serverInfo != null) {
+        LOG.warn("Region present on " + hsi + "; unexpected");
+      }
+    }
+  }
+
+  /*
+   * Caller must hold locks on servers Map.
+   * @param hsi
+   * @param hri
+   * @param expected
+   */
+  private void removeFromServers(final HServerInfo hsi, final HRegionInfo hri,
+      final boolean expected) {
+    List<HRegionInfo> serverRegions = this.servers.get(hsi);
+    boolean removed = serverRegions.remove(hri);
+    if (expected) {
+      if (!removed) {
+        LOG.warn(hri.getRegionNameAsString() + " not found on " + hsi +
+          "; unexpected");
+      }
+    } else {
+      if (removed) {
+        LOG.warn(hri.getRegionNameAsString() + " found on " + hsi +
+        "; unexpected");
+      }
+    }
+  }
+
+  /**
+   * @return A clone of current assignments
+   */
+  Map<HServerInfo, List<HRegionInfo>> getAssignments() {
+    // This is an EXPENSIVE clone.  Cloning though is the safest thing to do.
+    // Can't let out original since it can change and at least the loadbalancer
+    // wants to iterate this exported list.  We need to synchronize on regions
+    // since all access to this.servers is under a lock on this.regions.
+    Map<HServerInfo, List<HRegionInfo>> result = null;
+    synchronized (this.regions) {
+      result = new HashMap<HServerInfo, List<HRegionInfo>>(this.servers.size());
+      for (Map.Entry<HServerInfo, List<HRegionInfo>> e: this.servers.entrySet()) {
+        List<HRegionInfo> shallowCopy = new ArrayList<HRegionInfo>(e.getValue());
+        result.put(e.getKey(), shallowCopy);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * @param plan Plan to execute.
+   */
+  void balance(final RegionPlan plan) {
+    synchronized (this.regionPlans) {
+      this.regionPlans.put(plan.getRegionName(), plan);
+    }
+    unassign(plan.getRegionInfo());
   }
 
   public static class RegionState implements Writable {

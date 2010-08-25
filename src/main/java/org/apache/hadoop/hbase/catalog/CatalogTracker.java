@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -365,13 +366,17 @@ public class CatalogTracker {
    * @param hsi Server that has crashed/shutdown.
    * @throws InterruptedException
    * @throws KeeperException
+   * @return Pair of booleans; if this server was carrying root, then first
+   * boolean is set, if server was carrying meta, then second boolean set.
    */
-  public void processServerShutdown(final HServerInfo hsi)
+  public Pair<Boolean, Boolean> processServerShutdown(final HServerInfo hsi)
   throws InterruptedException, KeeperException {
+    Pair<Boolean, Boolean> result = new Pair<Boolean, Boolean>(false, false);
     HServerAddress rootHsa = getRootLocation();
     if (rootHsa == null) {
       LOG.info("-ROOT- is not assigned; continuing");
     } else if (hsi.getServerAddress().equals(rootHsa)) {
+      result.setFirst(true);
       LOG.info(hsi.getServerName() + " carrying -ROOT-; deleting " +
         "-ROOT- location from meta");
       RootLocationEditor.deleteRootLocation(this.zookeeper);
@@ -380,7 +385,9 @@ public class CatalogTracker {
     if (metaHsa == null) {
       LOG.info(".META. is not assigned; continuing");
     } else if (hsi.getServerAddress().equals(metaHsa)) {
+      result.setSecond(true);
       resetMetaLocation();
     }
+    return result;
   }
 }

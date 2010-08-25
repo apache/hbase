@@ -287,3 +287,6 @@ Later:
  Questions:
 
  If region in RIT, do I need to wait on log replay if region was in OPENING or PENDING_OPEN state?
+
+ So on assign, if we fail -- say connection refused when we try open on the RS, regions state remains offline -- who comes along and finds all offline and assigns?
+

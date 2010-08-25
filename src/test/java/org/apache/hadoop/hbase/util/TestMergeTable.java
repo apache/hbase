@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.AbstractMergeTestBase;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.HMerge;
 
 /**
@@ -35,6 +36,8 @@ public class TestMergeTable extends AbstractMergeTestBase {
    */
   public void testMergeTable() throws IOException {
     assertNotNull(dfsCluster);
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    admin.disableTable(desc.getName());
     HMerge.merge(conf, dfsCluster.getFileSystem(), desc.getName());
   }
 }

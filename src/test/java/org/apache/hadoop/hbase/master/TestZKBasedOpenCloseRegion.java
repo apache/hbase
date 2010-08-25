@@ -100,9 +100,11 @@ public class TestZKBasedOpenCloseRegion {
     HRegionServer regionServer =
       TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
     Collection<HRegionInfo> regions = regionServer.getOnlineRegions();
-    HRegionInfo hri;
-    while((hri = regions.iterator().next()) != null) {
-      if(!hri.isMetaRegion() && !hri.isRootRegion()) {
+    HRegionInfo hri = null;
+    for (HRegionInfo i: regions) {
+      LOG.info(i.getRegionNameAsString());
+      if (!i.isMetaRegion()) {
+        hri = i;
         break;
       }
     }

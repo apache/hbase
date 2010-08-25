@@ -35,12 +35,11 @@ import java.util.TreeSet;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
@@ -49,16 +48,21 @@ import org.junit.Test;
 public class TestLoadBalancer {
   private static final Log LOG = LogFactory.getLog(TestLoadBalancer.class);
 
-  private static Configuration conf;
-
   private static LoadBalancer loadBalancer;
 
   private static Random rand;
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
-    conf = HBaseConfiguration.create();
-    loadBalancer = new LoadBalancer(conf);
+    loadBalancer = new LoadBalancer("test", 1, new Stoppable() {
+      @Override
+      public void stop(String why) {
+      }
+      @Override
+      public boolean isStopped() {
+        return false;
+      }
+    }, (AssignmentManager)null);
     rand = new Random();
   }
 
@@ -209,7 +213,7 @@ public class TestLoadBalancer {
       List<HRegionInfo> regions = randomRegions(mock[0]);
       List<HServerInfo> servers = randomServers(mock[1], 0);
       Map<HRegionInfo,HServerInfo> assignments =
-        loadBalancer.immediateAssignment(regions, servers);
+        LoadBalancer.immediateAssignment(regions, servers);
       assertImmediateAssignment(regions, servers, assignments);
       returnRegions(regions);
       returnServers(servers);
@@ -244,7 +248,7 @@ public class TestLoadBalancer {
       List<HRegionInfo> regions = randomRegions(mock[0]);
       List<HServerInfo> servers = randomServers(mock[1], 0);
       Map<HServerInfo,List<HRegionInfo>> assignments =
-        loadBalancer.bulkAssignment(regions, servers);
+        LoadBalancer.bulkAssignment(regions, servers);
       float average = (float)regions.size()/servers.size();
       int min = (int)Math.floor(average);
       int max = (int)Math.ceil(average);

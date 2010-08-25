@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
@@ -79,8 +80,32 @@ class HMerge {
   public static void merge(Configuration conf, FileSystem fs,
     final byte [] tableName)
   throws IOException {
-    HConnection connection = HConnectionManager.getConnection(conf);
-    boolean masterIsRunning = connection.isMasterRunning();
+    merge(conf, fs, tableName, true);
+  }
+
+  /**
+   * Scans the table and merges two adjacent regions if they are small. This
+   * only happens when a lot of rows are deleted.
+   *
+   * When merging the META region, the HBase instance must be offline.
+   * When merging a normal table, the HBase instance must be online, but the
+   * table must be disabled.
+   *
+   * @param conf        - configuration object for HBase
+   * @param fs          - FileSystem where regions reside
+   * @param tableName   - Table to be compacted
+   * @param testMasterRunning True if we are to verify master is down before
+   * running merge
+   * @throws IOException
+   */
+  public static void merge(Configuration conf, FileSystem fs,
+    final byte [] tableName, final boolean testMasterRunning)
+  throws IOException {
+    boolean masterIsRunning = false;
+    if (testMasterRunning) {
+      HConnection connection = HConnectionManager.getConnection(conf);
+      masterIsRunning = connection.isMasterRunning();
+    }
     HConnectionManager.deleteConnectionInfo(conf, false);
     if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
       if (masterIsRunning) {
@@ -92,6 +117,10 @@ class HMerge {
       if(!masterIsRunning) {
         throw new IllegalStateException(
             "HBase instance must be running to merge a normal table");
+      }
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      if (!admin.isTableDisabled(tableName)) {
+        throw new TableNotDisabledException(tableName);
       }
       new OnlineMerger(conf, fs, tableName).process();
     }
@@ -231,21 +260,12 @@ class HMerge {
         if (!Bytes.equals(region.getTableDesc().getName(), this.tableName)) {
           return null;
         }
-        checkOfflined(region);
         return region;
       } catch (IOException e) {
         e = RemoteExceptionHandler.checkIOException(e);
         LOG.error("meta scanner error", e);
         metaScanner.close();
         throw e;
-      }
-    }
-
-    protected void checkOfflined(final HRegionInfo hri)
-    throws TableNotDisabledException {
-      if (!hri.isOffline()) {
-        throw new TableNotDisabledException("Region " +
-          hri.getRegionNameAsString() + " is not disabled");
       }
     }
 

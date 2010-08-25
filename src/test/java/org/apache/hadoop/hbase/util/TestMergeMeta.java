@@ -43,6 +43,6 @@ public class TestMergeMeta extends AbstractMergeTestBase {
    */
   public void testMergeMeta() throws IOException {
     assertNotNull(dfsCluster);
-    HMerge.merge(conf, dfsCluster.getFileSystem(), HConstants.META_TABLE_NAME);
+    HMerge.merge(conf, dfsCluster.getFileSystem(), HConstants.META_TABLE_NAME, false);
   }
 }

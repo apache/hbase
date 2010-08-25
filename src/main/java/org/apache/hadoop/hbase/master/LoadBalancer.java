@@ -31,45 +31,66 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.Stoppable;
 
 /**
  * Makes decisions about the placement and movement of Regions across
  * RegionServers.
  *
- * Cluster-wide load balancing will occur only when there are no regions in
+ * <p>Cluster-wide load balancing will occur only when there are no regions in
  * transition and according to a fixed period of a time using {@link #balanceCluster(Map)}.
  *
- * Inline region placement with {@link #immediateAssignment} can be used when
+ * <p>Inline region placement with {@link #immediateAssignment} can be used when
  * the Master needs to handle closed regions that it currently does not have
  * a destination set for.  This can happen during master failover.
  *
- * On cluster startup, {@link #bulkAssignment} can be used to determine
+ * <p>On cluster startup, {@link #bulkAssignment} can be used to determine
  * locations for all Regions in a cluster.
+ * 
+ * <p>This classes produces plans for the {@link AssignmentManager} to execute.
  */
-public class LoadBalancer {
+public class LoadBalancer extends Chore {
   private static final Log LOG = LogFactory.getLog(LoadBalancer.class);
-
-  // Number of seconds between each run of the load balancer
-  private final long balancerPeriod;
-
   private static final Random rand = new Random();
+  private final AssignmentManager assignmentManager;
 
   /**
    * Instantiate the load balancer with the specified configuration.
    *
    * This sets configuration parameters to be used by the balancing algorithms
    * and launches a background thread to perform periodic load balancing.
-   * @param conf
+   * @param stoppable
+   * @param period
+   * @param name Name for this LB thread.
+   * @param assignmentManager
    */
-  public LoadBalancer(Configuration conf) {
-    balancerPeriod = conf.getLong("hbase.balancer.period", 300000);
+  public LoadBalancer(final String name, final int period,
+      final Stoppable stoppable, final AssignmentManager assignmentManager) {
+    super(name, period, stoppable);
+    this.assignmentManager = assignmentManager;
+  }
+
+  @Override
+  protected void chore() {
+    if (this.assignmentManager.isRegionsInTransition()) {
+      LOG.debug("Not running balancer because regions in transition: " +
+        this.assignmentManager.getRegionsInTransition());
+      return;
+    }
+    Map<HServerInfo, List<HRegionInfo>> assignments =
+      this.assignmentManager.getAssignments();
+    List<RegionPlan> plans = balanceCluster(assignments);
+    if (plans == null || plans.isEmpty()) return;
+    for (RegionPlan plan: plans) {
+      this.assignmentManager.balance(plan);
+    }
   }
 
   /**
@@ -196,8 +217,7 @@ public class LoadBalancer {
       List<HRegionInfo> regions = server.getValue();
       int numToOffload = Math.min(regionCount - max, regions.size());
       for(int i=0; i<numToOffload; i++) {
-        regionsToMove.add(new RegionPlan(regions.get(i).getEncodedName(),
-            serverInfo, null));
+        regionsToMove.add(new RegionPlan(regions.get(i), serverInfo, null));
       }
       serverBalanceInfo.put(serverInfo,
           new BalanceInfo(numToOffload, (-1)*numToOffload));
@@ -250,8 +270,7 @@ public class LoadBalancer {
         int idx =
           balanceInfo == null ? 0 : balanceInfo.getNextRegionForUnload();
         HRegionInfo region = server.getValue().get(idx);
-        regionsToMove.add(new RegionPlan(region.getEncodedName(),
-            server.getKey(), null));
+        regionsToMove.add(new RegionPlan(region, server.getKey(), null));
         if(--neededRegions == 0) {
           // No more regions needed, done shedding
           break;
@@ -511,7 +530,7 @@ public class LoadBalancer {
   }
 
   public static HServerInfo randomAssignment(List<HServerInfo> servers) {
-    if(servers == null || servers.isEmpty()) {
+    if (servers == null || servers.isEmpty()) {
       LOG.warn("Wanted to do random assignment but no servers to assign to");
       return null;
     }
@@ -530,7 +549,7 @@ public class LoadBalancer {
    */
   public static class RegionPlan implements Comparable<RegionPlan> {
 
-    private final String regionName;
+    private final HRegionInfo hri;
     private final HServerInfo source;
     private HServerInfo dest;
 
@@ -541,12 +560,12 @@ public class LoadBalancer {
      * Destination server can be instantiated as null and later set
      * with {@link #setDestination(HServerInfo)}.
      *
-     * @param region region to be moved
+     * @param hri region to be moved
      * @param source regionserver region should be moved from
      * @param dest regionserver region should be moved to
      */
-    public RegionPlan(String regionName, HServerInfo source, HServerInfo dest) {
-      this.regionName = regionName;
+    public RegionPlan(final HRegionInfo hri, HServerInfo source, HServerInfo dest) {
+      this.hri = hri;
       this.source = source;
       this.dest = dest;
     }
@@ -579,7 +598,11 @@ public class LoadBalancer {
      * @return region name
      */
     public String getRegionName() {
-      return regionName;
+      return this.hri.getRegionNameAsString();
+    }
+ 
+    public HRegionInfo getRegionInfo() {
+      return this.hri;
     }
 
     /**
@@ -588,7 +611,7 @@ public class LoadBalancer {
      */
     @Override
     public int compareTo(RegionPlan o) {
-      return regionName.compareTo(o.getRegionName());
+      return getRegionName().compareTo(o.getRegionName());
     }
   }
 }

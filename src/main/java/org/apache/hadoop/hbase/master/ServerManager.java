@@ -269,8 +269,8 @@ public class ServerManager {
       LOG.info("Received " + msg);
       switch (msg.getType()) {
       case REGION_SPLIT:
-        // Nothing to do?
-        LOG.warn("TODO: update inmemory region state w/ split info " + msg);
+        this.services.getAssignmentManager().handleSplitReport(serverInfo,
+            msg.getRegionInfo(), msg.getDaughterA(), msg.getDaughterB());
         break;
 
         default:

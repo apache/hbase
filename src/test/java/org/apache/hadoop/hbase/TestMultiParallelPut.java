@@ -71,10 +71,7 @@ public class TestMultiParallelPut extends MultiRegionTable {
   }
 
   public void doATest(boolean doAbort) throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    conf.set(HConstants.ZOOKEEPER_QUORUM, "localhost:" +
-        super.zooKeeperCluster.getClientPort());
-    HTable table = new HTable(TEST_TABLE);
+    HTable table = new HTable(conf, TEST_TABLE);
     table.setAutoFlush(false);
     table.setWriteBufferSize(10 * 1024 * 1024);
     for ( byte [] k : keys ) {

@@ -27,10 +27,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 
 
@@ -54,8 +56,10 @@ public class ServerShutdownHandler extends EventHandler {
 
   @Override
   public void process() throws IOException {
+    Pair<Boolean, Boolean> carryingCatalog = null;
     try {
-      this.server.getCatalogTracker().processServerShutdown(this.hsi);
+      carryingCatalog =
+        this.server.getCatalogTracker().processServerShutdown(this.hsi);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IOException("Interrupted", e);
@@ -73,6 +77,27 @@ public class ServerShutdownHandler extends EventHandler {
     // OFFLINE? -- and then others after like CLOSING that depend on log
     // splitting.
     this.services.getAssignmentManager().processServerShutdown(this.hsi);
+
+    // Assign root and meta if we were carrying them.
+    if (carryingCatalog.getFirst()) { // -ROOT-
+      try {
+        this.services.getAssignmentManager().assignRoot();
+      } catch (KeeperException e) {
+        this.server.abort("In server shutdown processing, assigning root", e);
+        throw new IOException("Aborting", e);
+      }
+    }
+    if (carryingCatalog.getSecond()) { // .META.
+      this.services.getAssignmentManager().assignMeta();
+    }
+
+    // Wait on meta to come online; we need it to progress.
+    try {
+      this.server.getCatalogTracker().waitForMeta();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted", e);
+    }
 
     NavigableSet<HRegionInfo> hris =
       MetaReader.getServerRegions(this.server.getCatalogTracker(), this.hsi);
