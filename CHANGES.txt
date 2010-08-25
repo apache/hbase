@@ -3,6 +3,8 @@ Release 0.20.7 - Unreleased
   BUG FIXES
    HBASE-2909  SoftValueSortedMap is broken, can generate NPEs
    HBASE-2927  BaseScanner gets stale HRegionInfo in some race cases
+   HBASE-2897  [stargate] RowResultGenerator should handle 
+               NoSuchColumnFamilyException (Andrew Purtell via J-D)
 
   IMPROVEMENTS
 
