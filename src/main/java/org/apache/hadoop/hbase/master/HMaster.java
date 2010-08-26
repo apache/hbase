@@ -26,6 +26,7 @@ import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -537,6 +538,14 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       }
       Map<HServerInfo, List<HRegionInfo>> assignments =
         this.assignmentManager.getAssignments();
+      // Returned Map from AM does not include mention of servers w/o assignments.
+      for (Map.Entry<String, HServerInfo> e:
+          this.serverManager.getOnlineServers().entrySet()) {
+        HServerInfo hsi = e.getValue();
+        if (!assignments.containsKey(hsi)) {
+          assignments.put(hsi, new ArrayList<HRegionInfo>());
+        }
+      }
       List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
       if (plans == null || plans.isEmpty()) return;
       for (RegionPlan plan: plans) {

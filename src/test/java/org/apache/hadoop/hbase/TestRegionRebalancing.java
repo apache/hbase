@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * Test whether region rebalancing works. (HBASE-71)
@@ -104,17 +105,23 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     LOG.debug("Adding 2nd region server.");
     // add a region server - total of 2
     cluster.startRegionServer();
+    while (cluster.getMaster().getServerManager().getOnlineServers().size() < 2) {
+      Threads.sleep(100);
+    }
+    cluster.getMaster().balance();
     assertRegionsAreBalanced();
 
     // add a region server - total of 3
     LOG.debug("Adding 3rd region server.");
     cluster.startRegionServer();
+    cluster.getMaster().balance();
     assertRegionsAreBalanced();
 
     // kill a region server - total of 2
     LOG.debug("Killing the 3rd region server.");
     cluster.stopRegionServer(2, false);
     cluster.waitOnRegionServer(2);
+    cluster.getMaster().balance();
     assertRegionsAreBalanced();
 
     // start two more region servers - total of 4
@@ -122,12 +129,14 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     cluster.startRegionServer();
     LOG.debug("Adding 4th region server");
     cluster.startRegionServer();
+    cluster.getMaster().balance();
     assertRegionsAreBalanced();
 
     for (int i = 0; i < 6; i++){
       LOG.debug("Adding " + (i + 5) + "th region server");
       cluster.startRegionServer();
     }
+    cluster.getMaster().balance();
     assertRegionsAreBalanced();
   }
 
@@ -166,7 +175,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
 
       for (HRegionServer server : servers) {
         int serverLoad = server.getOnlineRegions().size();
-        LOG.debug(server.hashCode() + " Avg: " + avg + " actual: " + serverLoad);
+        LOG.debug(server.getServerName() + " Avg: " + avg + " actual: " + serverLoad);
         if (!(avg > 2.0 && serverLoad <= avgLoadPlusSlop
             && serverLoad >= avgLoadMinusSlop)) {
           LOG.debug(server.hashCode() + " Isn't balanced!!! Avg: " + avg +

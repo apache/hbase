@@ -1034,7 +1034,9 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * @return A clone of current assignments
+   * @return A clone of current assignments. Note, this is assignments only.
+   * If a new server has come in and it has no regions, it will not be included
+   * in the returned Map.
    */
   Map<HServerInfo, List<HRegionInfo>> getAssignments() {
     // This is an EXPENSIVE clone.  Cloning though is the safest thing to do.
@@ -1046,7 +1048,11 @@ public class AssignmentManager extends ZooKeeperListener {
       result = new HashMap<HServerInfo, List<HRegionInfo>>(this.servers.size());
       for (Map.Entry<HServerInfo, List<HRegionInfo>> e: this.servers.entrySet()) {
         List<HRegionInfo> shallowCopy = new ArrayList<HRegionInfo>(e.getValue());
-        result.put(e.getKey(), shallowCopy);
+        HServerInfo clone = new HServerInfo(e.getKey());
+        // Set into server load the number of regions this server is carrying
+        // The load balancer calculation needs it at least and its handy.
+        clone.getLoad().setNumberOfRegions(e.getValue().size());
+        result.put(clone, shallowCopy);
       }
     }
     return result;

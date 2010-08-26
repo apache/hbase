@@ -288,7 +288,7 @@ public class StoreFile {
    */
   public long getMaxSequenceId() {
     if (this.sequenceid == -1) {
-      throw new IllegalAccessError("Has not been initialized");
+      throw new IllegalAccessError(this + " has not been initialized");
     }
     return this.sequenceid;
   }

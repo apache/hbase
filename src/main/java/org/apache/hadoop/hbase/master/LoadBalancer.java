@@ -141,6 +141,7 @@ public class LoadBalancer {
     // Iterate so we can count regions as we build the map
     for(Map.Entry<HServerInfo, List<HRegionInfo>> server :
       clusterState.entrySet()) {
+      server.getKey().getLoad().setNumberOfRegions(server.getValue().size());
       numRegions += server.getKey().getLoad().getNumberOfRegions();
       serversByLoad.put(server.getKey(), server.getValue());
     }
@@ -181,11 +182,16 @@ public class LoadBalancer {
       serversOverloaded++;
       List<HRegionInfo> regions = server.getValue();
       int numToOffload = Math.min(regionCount - max, regions.size());
-      for(int i=0; i<numToOffload; i++) {
-        regionsToMove.add(new RegionPlan(regions.get(i), serverInfo, null));
+      int numTaken = 0;
+      for (HRegionInfo hri: regions) {
+        // Don't rebalance meta regions.
+        if (hri.isMetaRegion()) continue;
+        regionsToMove.add(new RegionPlan(hri, serverInfo, null));
+        numTaken++;
+        if (numTaken >= numToOffload) break;
       }
       serverBalanceInfo.put(serverInfo,
-          new BalanceInfo(numToOffload, (-1)*numToOffload));
+          new BalanceInfo(numToOffload, (-1)*numTaken));
     }
 
     // Walk down least loaded, filling each to the min
@@ -235,6 +241,7 @@ public class LoadBalancer {
         int idx =
           balanceInfo == null ? 0 : balanceInfo.getNextRegionForUnload();
         HRegionInfo region = server.getValue().get(idx);
+        if (region.isMetaRegion()) continue; // Don't move meta regions.
         regionsToMove.add(new RegionPlan(region, server.getKey(), null));
         if(--neededRegions == 0) {
           // No more regions needed, done shedding
@@ -559,11 +566,11 @@ public class LoadBalancer {
     }
 
     /**
-     * Get the region name for the region this plan is for.
-     * @return region name
+     * Get the encoded region name for the region this plan is for.
+     * @return Encoded region name
      */
     public String getRegionName() {
-      return this.hri.getRegionNameAsString();
+      return this.hri.getEncodedName();
     }
  
     public HRegionInfo getRegionInfo() {

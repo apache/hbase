@@ -383,9 +383,10 @@ public class ServerManager {
   }
 
   /**
-   * @return Read-only map of servers to serverinfo.
+   * @return Read-only map of servers to serverinfo
    */
   public Map<String, HServerInfo> getOnlineServers() {
+    // Presumption is that iterating the returned Map is OK.
     synchronized (this.onlineServers) {
       return Collections.unmodifiableMap(this.onlineServers);
     }
