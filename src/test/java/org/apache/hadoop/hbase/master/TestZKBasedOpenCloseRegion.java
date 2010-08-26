@@ -99,15 +99,7 @@ public class TestZKBasedOpenCloseRegion {
     int rsIdx = 0;
     HRegionServer regionServer =
       TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
-    Collection<HRegionInfo> regions = regionServer.getOnlineRegions();
-    HRegionInfo hri = null;
-    for (HRegionInfo i: regions) {
-      LOG.info(i.getRegionNameAsString());
-      if (!i.isMetaRegion()) {
-        hri = i;
-        break;
-      }
-    }
+    HRegionInfo hri = getNonMetaRegion(regionServer.getOnlineRegions());
     LOG.debug("Asking RS to close region " + hri.getRegionNameAsString());
 
     AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
@@ -128,23 +120,27 @@ public class TestZKBasedOpenCloseRegion {
     LOG.info("Unassign " + hri.getRegionNameAsString());
     cluster.getMaster().assignmentManager.unassign(hri);
 
-    synchronized(closeEventProcessed) {
-      closeEventProcessed.wait(3*60*1000);
+    while (!closeEventProcessed.get()) {
+      Threads.sleep(100);
     }
 
-    if (!closeEventProcessed.get()) {
-      throw new Exception("Timed out, close event not called on master.");
+    while (!reopenEventProcessed.get()) {
+      Threads.sleep(100);
     }
 
-    synchronized(reopenEventProcessed) {
-      reopenEventProcessed.wait(3*60*1000);
-    }
+    LOG.info("Done with testReOpenRegion");
+  }
 
-    if(!reopenEventProcessed.get()) {
-      throw new Exception("Timed out, open event not called on master after region close.");
+  private HRegionInfo getNonMetaRegion(final Collection<HRegionInfo> regions) {
+    HRegionInfo hri = null;
+    for (HRegionInfo i: regions) {
+      LOG.info(i.getRegionNameAsString());
+      if (!i.isMetaRegion()) {
+        hri = i;
+        break;
+      }
     }
-
-    LOG.info("\n\n\nDone with test, RS informed master successfully.\n\n\n");
+    return hri;
   }
 
   public static class ReopenEventListener implements EventHandlerListener {
@@ -198,13 +194,7 @@ public class TestZKBasedOpenCloseRegion {
 
     int rsIdx = 0;
     HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
-    Collection<HRegionInfo> regions = regionServer.getOnlineRegions();
-    HRegionInfo hri;
-    while((hri = regions.iterator().next()) != null) {
-      if(!hri.isMetaRegion() && !hri.isRootRegion()) {
-        break;
-      }
-    }
+    HRegionInfo hri = getNonMetaRegion(regionServer.getOnlineRegions());
     LOG.debug("Asking RS to close region " + hri.getRegionNameAsString());
 
     AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
@@ -215,16 +205,10 @@ public class TestZKBasedOpenCloseRegion {
 
     cluster.getMaster().assignmentManager.unassign(hri);
 
-    synchronized(closeEventProcessed) {
-      // wait for 3 minutes
-      closeEventProcessed.wait(3*60*1000);
+    while (!closeEventProcessed.get()) {
+      Threads.sleep(100);
     }
-    if(!closeEventProcessed.get()) {
-      throw new Exception("Timed out, close event not called on master.");
-    }
-    else {
-      LOG.info("Done with test, RS informed master successfully.");
-    }
+    LOG.info("Done with testCloseRegion");
   }
 
   public static class CloseRegionEventListener implements EventHandlerListener {
@@ -244,11 +228,11 @@ public class TestZKBasedOpenCloseRegion {
       if(event.getEventType() == EventType.RS2ZK_REGION_CLOSED) {
         LOG.info("Finished processing CLOSE REGION");
         TotesHRegionInfo hriCarrier = (TotesHRegionInfo)event;
-        if(regionToClose.equals(hriCarrier.getHRegionInfo().getRegionNameAsString())) {
+        if (regionToClose.equals(hriCarrier.getHRegionInfo().getRegionNameAsString())) {
+          LOG.info("Setting closeEventProcessed flag");
           closeEventProcessed.set(true);
-        }
-        synchronized(closeEventProcessed) {
-          closeEventProcessed.notifyAll();
+        } else {
+          LOG.info("Region to close didn't match");
         }
       }
     }

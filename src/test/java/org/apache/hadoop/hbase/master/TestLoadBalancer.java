@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
@@ -54,15 +53,7 @@ public class TestLoadBalancer {
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
-    loadBalancer = new LoadBalancer("test", 1, new Stoppable() {
-      @Override
-      public void stop(String why) {
-      }
-      @Override
-      public boolean isStopped() {
-        return false;
-      }
-    }, (AssignmentManager)null);
+    loadBalancer = new LoadBalancer();
     rand = new Random();
   }
 

@@ -385,6 +385,8 @@ public class CatalogTracker {
     if (metaHsa == null) {
       LOG.info(".META. is not assigned; continuing");
     } else if (hsi.getServerAddress().equals(metaHsa)) {
+      LOG.info(hsi.getServerName() + " carrying .META.; unsetting " +
+        ".META. location");
       result.setSecond(true);
       resetMetaLocation();
     }

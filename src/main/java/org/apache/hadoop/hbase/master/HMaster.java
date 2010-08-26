@@ -26,11 +26,14 @@ import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.UnknownHostException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -54,10 +57,10 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -65,6 +68,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
+import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
@@ -158,7 +162,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   // Instance of the hbase executor service.
   ExecutorService executorService;
 
-  private LoadBalancer balancer;
+  private LoadBalancer balancer = new LoadBalancer();
+  private Chore balancerChore;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -300,7 +305,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       }
     }
     this.rpcServer.stop();
-    this.balancer.interrupt();
+    if (this.balancerChore != null) this.balancerChore.interrupt();
     this.activeMasterManager.stop();
     this.zooKeeper.close();
     this.executorService.shutdown();
@@ -427,13 +432,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         this.infoServer.setAttribute(MASTER, this);
         this.infoServer.start();
       }
-
-      // Start up the load balancer
-      String name = getServerName() + "-loadbalancer";
-      int period = getConfiguration().getInt("hbase.balancer.period", 300000);
-      this.balancer = new LoadBalancer(name, period, this,
-        this.assignmentManager);
-      Threads.setDaemonThreadRunning(this.balancer, name);
+      this.balancerChore = getAndStartBalancerChore(this);
 
       // Start the server last so everything else is running before we start
       // receiving requests.
@@ -452,6 +451,20 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       // Something happened during startup. Shut things down.
       abort("Failed startup", e);
     }
+  }
+
+  private static Chore getAndStartBalancerChore(final HMaster master) {
+    String name = master.getServerName() + "-balancerChore";
+    int period = master.getConfiguration().getInt("hbase.balancer.period", 600000);
+    // Start up the load balancer chore
+    Chore chore = new Chore(name, period, master) {
+      @Override
+      protected void chore() {
+        master.balance();
+      }
+    };
+    Threads.setDaemonThreadRunning(chore, name);
+    return chore;
   }
 
   public MapWritable regionServerStartup(final HServerInfo serverInfo)
@@ -509,6 +522,27 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   public boolean isMasterRunning() {
     return !isStopped();
+  }
+
+  /**
+   * Run the balancer.
+   */
+  public void balance() {
+    synchronized (this.balancer) {
+      // Only allow one balance run at at time.
+      if (this.assignmentManager.isRegionsInTransition()) {
+        LOG.debug("Not running balancer because regions in transition: " +
+          this.assignmentManager.getRegionsInTransition());
+        return;
+      }
+      Map<HServerInfo, List<HRegionInfo>> assignments =
+        this.assignmentManager.getAssignments();
+      List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
+      if (plans == null || plans.isEmpty()) return;
+      for (RegionPlan plan: plans) {
+        this.assignmentManager.balance(plan);
+      }
+    }
   }
 
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)

@@ -35,10 +35,8 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.Stoppable;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -56,42 +54,9 @@ import org.apache.hadoop.hbase.Stoppable;
  * 
  * <p>This classes produces plans for the {@link AssignmentManager} to execute.
  */
-public class LoadBalancer extends Chore {
+public class LoadBalancer {
   private static final Log LOG = LogFactory.getLog(LoadBalancer.class);
   private static final Random rand = new Random();
-  private final AssignmentManager assignmentManager;
-
-  /**
-   * Instantiate the load balancer with the specified configuration.
-   *
-   * This sets configuration parameters to be used by the balancing algorithms
-   * and launches a background thread to perform periodic load balancing.
-   * @param stoppable
-   * @param period
-   * @param name Name for this LB thread.
-   * @param assignmentManager
-   */
-  public LoadBalancer(final String name, final int period,
-      final Stoppable stoppable, final AssignmentManager assignmentManager) {
-    super(name, period, stoppable);
-    this.assignmentManager = assignmentManager;
-  }
-
-  @Override
-  protected void chore() {
-    if (this.assignmentManager.isRegionsInTransition()) {
-      LOG.debug("Not running balancer because regions in transition: " +
-        this.assignmentManager.getRegionsInTransition());
-      return;
-    }
-    Map<HServerInfo, List<HRegionInfo>> assignments =
-      this.assignmentManager.getAssignments();
-    List<RegionPlan> plans = balanceCluster(assignments);
-    if (plans == null || plans.isEmpty()) return;
-    for (RegionPlan plan: plans) {
-      this.assignmentManager.balance(plan);
-    }
-  }
 
   /**
    * Generate a global load balancing plan according to the specified map of

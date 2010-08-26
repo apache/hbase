@@ -85,7 +85,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
 
   @Override
   public void process() {
-    LOG.debug("Handling OPENED event; deleting unassigned node with data: " + data);
+    LOG.debug("Handling OPENED event; deleting unassigned node");
     // TODO: should we check if this table was disabled and get it closed?
     // Remove region from in-memory transition and unassigned node from ZK
     try {

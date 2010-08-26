@@ -88,7 +88,7 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
 
   @Override
   public void process() {
-    LOG.debug("Handling CLOSED event with data: " + data);
+    LOG.debug("Handling CLOSED event");
     // Check if this table is being disabled or not
     if (assignmentManager.isTableOfRegionDisabled(regionInfo.getRegionName())) {
       // Disabling so should not be reassigned, just delete the CLOSED node
