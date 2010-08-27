@@ -29,6 +29,8 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
 import java.util.UUID;
 
 import org.apache.commons.logging.Log;
@@ -39,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
@@ -47,7 +50,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.ReadWriteConsistencyControl;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -384,6 +391,14 @@ public class HBaseTestingUtility {
     this.hbaseCluster.flushcache();
   }
 
+  /**
+   * Flushes all caches in the mini hbase cluster
+   * @throws IOException
+   */
+  public void flush(byte [] tableName) throws IOException {
+    this.hbaseCluster.flushcache(tableName);
+  }
+
 
   /**
    * Create a table.
@@ -506,6 +521,7 @@ public class HBaseTestingUtility {
    * @throws IOException
    */
   public int loadTable(final HTable t, final byte[] f) throws IOException {
+    t.setAutoFlush(false);
     byte[] k = new byte[3];
     int rowCount = 0;
     for (byte b1 = 'a'; b1 <= 'z'; b1++) {
@@ -517,6 +533,34 @@ public class HBaseTestingUtility {
           Put put = new Put(k);
           put.add(f, null, k);
           t.put(put);
+          rowCount++;
+        }
+      }
+    }
+    t.flushCommits();
+    return rowCount;
+  }
+  /**
+   * Load region with rows from 'aaa' to 'zzz'.
+   * @param r Region
+   * @param f Family
+   * @return Count of rows loaded.
+   * @throws IOException
+   */
+  public int loadRegion(final HRegion r, final byte[] f)
+  throws IOException {
+    byte[] k = new byte[3];
+    int rowCount = 0;
+    for (byte b1 = 'a'; b1 <= 'z'; b1++) {
+      for (byte b2 = 'a'; b2 <= 'z'; b2++) {
+        for (byte b3 = 'a'; b3 <= 'z'; b3++) {
+          k[0] = b1;
+          k[1] = b2;
+          k[2] = b3;
+          Put put = new Put(k);
+          put.add(f, null, k);
+          if (r.getLog() == null) put.setWriteToWAL(false);
+          r.put(put);
           rowCount++;
         }
       }
@@ -675,6 +719,26 @@ public class HBaseTestingUtility {
     }
     s.close();
     return rows;
+  }
+
+  /**
+   * Tool to get the reference to the region server object that holds the
+   * region of the specified user table.
+   * It first searches for the meta rows that contain the region of the
+   * specified table, then gets the index of that RS, and finally retrieves
+   * the RS's reference.
+   * @param tableName user table to lookup in .META.
+   * @return region server that holds it, null if the row doesn't exist
+   * @throws IOException
+   */
+  public HRegionServer getRSForFirstRegionInTable(byte[] tableName)
+      throws IOException {
+    List<byte[]> metaRows = getMetaTableRows(tableName);
+    if (metaRows == null || metaRows.size() == 0) {
+      return null;
+    }
+    int index = hbaseCluster.getServerWith(metaRows.get(0));
+    return hbaseCluster.getRegionServerThreads().get(index).getRegionServer();
   }
 
   /**
@@ -1025,5 +1089,43 @@ public class HBaseTestingUtility {
       LOG.info("Found=" + rows);
       Threads.sleep(1000);
     }
+  }
+
+  /**
+   * Do a small get/scan against one store. This is required because store
+   * has no actual methods of querying itself, and relies on StoreScanner.
+   */
+  public static List<KeyValue> getFromStoreFile(Store store,
+                                                Get get) throws IOException {
+    ReadWriteConsistencyControl.resetThreadReadPoint();
+    Scan scan = new Scan(get);
+    InternalScanner scanner = (InternalScanner) store.getScanner(scan,
+        scan.getFamilyMap().get(store.getFamily().getName()));
+
+    List<KeyValue> result = new ArrayList<KeyValue>();
+    scanner.next(result);
+    if (!result.isEmpty()) {
+      // verify that we are on the row we want:
+      KeyValue kv = result.get(0);
+      if (!Bytes.equals(kv.getRow(), get.getRow())) {
+        result.clear();
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Do a small get/scan against one store. This is required because store
+   * has no actual methods of querying itself, and relies on StoreScanner.
+   */
+  public static List<KeyValue> getFromStoreFile(Store store,
+                                                byte [] row,
+                                                NavigableSet<byte[]> columns
+                                                ) throws IOException {
+    Get get = new Get(row);
+    Map<byte[], NavigableSet<byte[]>> s = get.getFamilyMap();
+    s.put(store.getFamily().getName(), columns);
+
+    return getFromStoreFile(store,get);
   }
 }

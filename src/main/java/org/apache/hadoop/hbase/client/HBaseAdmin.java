@@ -52,7 +52,11 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
- * Provides administrative functions for HBase
+ * Provides an interface to manage HBase database table metadata + general 
+ * administrative functions.  Use HBaseAdmin to create, drop, list, enable and 
+ * disable tables. Use it also to add and drop table column families. 
+ * 
+ * See {@link HTable} to add, update, and delete data from an individual table.
  */
 public class HBaseAdmin implements Abortable {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
@@ -71,10 +75,11 @@ public class HBaseAdmin implements Abortable {
    * Constructor
    *
    * @param conf Configuration object
-   * @throws IOException 
+   * @throws MasterNotRunningException if the master is not running
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
   public HBaseAdmin(Configuration conf)
-  throws IOException {
+  throws MasterNotRunningException, ZooKeeperConnectionException {
     this.connection = HConnectionManager.getConnection(conf);
     this.conf = conf;
     this.pause = conf.getLong("hbase.client.pause", 30 * 1000);
@@ -971,10 +976,11 @@ public class HBaseAdmin implements Abortable {
    * Check to see if HBase is running. Throw an exception if not.
    *
    * @param conf system configuration
-   * @throws IOException 
+   * @throws MasterNotRunningException if the master is not running
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
   public static void checkHBaseAvailable(Configuration conf)
-  throws IOException {
+  throws MasterNotRunningException, ZooKeeperConnectionException {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
     copyOfConf.setInt("hbase.client.retries.number", 1);
     new HBaseAdmin(copyOfConf);

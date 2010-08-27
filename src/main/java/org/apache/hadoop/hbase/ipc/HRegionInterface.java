@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 /**
  * Clients interact with HRegionServers using a handle to the HRegionInterface.
@@ -336,4 +337,15 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Stoppable, Ab
    */
   void compactRegion(HRegionInfo regionInfo, boolean major)
   throws NotServingRegionException, IOException;
+
+  /**
+   * Replicates the given entries. The guarantee is that the given entries
+   * will be durable on the slave cluster if this method returns without
+   * any exception.
+   * hbase.replication has to be set to true for this to work.
+   *
+   * @param entries entries to replicate
+   * @throws IOException
+   */
+  public void replicateLogEntries(HLog.Entry[] entries) throws IOException;
 }

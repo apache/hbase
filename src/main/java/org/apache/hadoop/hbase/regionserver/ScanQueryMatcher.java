@@ -20,9 +20,12 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.NavigableSet;
@@ -30,13 +33,36 @@ import java.util.NavigableSet;
 /**
  * A query matcher that is specifically designed for the scan case.
  */
-public class ScanQueryMatcher extends QueryMatcher {
+public class ScanQueryMatcher {
   // Optimization so we can skip lots of compares when we decide to skip
   // to the next row.
   private boolean stickyNextRow;
+  private byte[] stopRow;
+
+  protected TimeRange tr;
+
+  protected Filter filter;
+
+  /** Keeps track of deletes */
+  protected DeleteTracker deletes;
+
+  /** Keeps track of columns and versions */
+  protected ColumnTracker columns;
+
+  /** Key to seek to in memstore and StoreFiles */
+  protected KeyValue startKey;
+
+  /** Oldest allowed version stamp for TTL enforcement */
+  protected long oldestStamp;
+
+  /** Row comparator for the region this query is for */
+  KeyValue.KeyComparator rowComparator;
+
+  /** Row the query is on */
+  protected byte [] row;
 
   /**
-   * Constructs a QueryMatcher for a Scan.
+   * Constructs a ScanQueryMatcher for a Scan.
    * @param scan
    * @param family
    * @param columns
@@ -50,6 +76,7 @@ public class ScanQueryMatcher extends QueryMatcher {
     this.oldestStamp = System.currentTimeMillis() - ttl;
     this.rowComparator = rowComparator;
     this.deletes =  new ScanDeleteTracker();
+    this.stopRow = scan.getStopRow();
     this.startKey = KeyValue.createFirstOnRow(scan.getStartRow());
     this.filter = scan.getFilter();
 
@@ -98,7 +125,7 @@ public class ScanQueryMatcher extends QueryMatcher {
       // could optimize this, if necessary?
       // Could also be called SEEK_TO_CURRENT_ROW, but this
       // should be rare/never happens.
-      return MatchCode.SKIP;
+      return MatchCode.SEEK_NEXT_ROW;
     }
 
     // optimize case.
@@ -123,7 +150,7 @@ public class ScanQueryMatcher extends QueryMatcher {
     long timestamp = kv.getTimestamp();
     if (isExpired(timestamp)) {
       // done, the rest of this column will also be expired as well.
-      return MatchCode.SEEK_NEXT_COL;
+      return getNextRowOrNextColumn(bytes, offset, qualLength);
     }
 
     byte type = kv.getType();
@@ -140,17 +167,39 @@ public class ScanQueryMatcher extends QueryMatcher {
       return MatchCode.SKIP;
     }
 
-    if (!tr.withinTimeRange(timestamp)) {
-      return MatchCode.SKIP;
-    }
-
     if (!this.deletes.isEmpty() &&
         deletes.isDeleted(bytes, offset, qualLength, timestamp)) {
       return MatchCode.SKIP;
     }
 
-    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength);
+    int timestampComparison = tr.compare(timestamp);
+    if (timestampComparison >= 1) {
+      return MatchCode.SKIP;
+    } else if (timestampComparison <= -1) {
+      return getNextRowOrNextColumn(bytes, offset, qualLength);
+    }
 
+    /**
+     * Filters should be checked before checking column trackers. If we do
+     * otherwise, as was previously being done, ColumnTracker may increment its
+     * counter for even that KV which may be discarded later on by Filter. This
+     * would lead to incorrect results in certain cases.
+     */
+    if (filter != null) {
+      ReturnCode filterResponse = filter.filterKeyValue(kv);
+      if (filterResponse == ReturnCode.SKIP) {
+        return MatchCode.SKIP;
+      } else if (filterResponse == ReturnCode.NEXT_COL) {
+        return getNextRowOrNextColumn(bytes, offset, qualLength);
+      } else if (filterResponse == ReturnCode.NEXT_ROW) {
+        stickyNextRow = true;
+        return MatchCode.SEEK_NEXT_ROW;
+      } else if (filterResponse == ReturnCode.SEEK_NEXT_USING_HINT) {
+        return MatchCode.SEEK_NEXT_USING_HINT;
+      }
+    }
+
+    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength);
     // if SKIP -> SEEK_NEXT_COL
     // if (NEXT,DONE) -> SEEK_NEXT_ROW
     // if (INCLUDE) -> INCLUDE
@@ -161,37 +210,127 @@ public class ScanQueryMatcher extends QueryMatcher {
       return MatchCode.SEEK_NEXT_ROW;
     }
 
-    // else INCLUDE
-    // if (colChecker == MatchCode.INCLUDE)
-    // give the filter a chance to run.
-    if (filter == null)
-      return MatchCode.INCLUDE;
+    return MatchCode.INCLUDE;
 
-    ReturnCode filterResponse = filter.filterKeyValue(kv);
-    if (filterResponse == ReturnCode.INCLUDE)
-      return MatchCode.INCLUDE;
+  }
 
-    if (filterResponse == ReturnCode.SKIP)
-      return MatchCode.SKIP;
+  public MatchCode getNextRowOrNextColumn(byte[] bytes, int offset,
+      int qualLength) {
+    if (columns instanceof ExplicitColumnTracker) {
+      //We only come here when we know that columns is an instance of
+      //ExplicitColumnTracker so we should never have a cast exception
+      ((ExplicitColumnTracker)columns).doneWithColumn(bytes, offset,
+          qualLength);
+      if (columns.getColumnHint() == null) {
+        return MatchCode.SEEK_NEXT_ROW;
+      } else {
+        return MatchCode.SEEK_NEXT_COL;
+      }
+    } else {
+      return MatchCode.SEEK_NEXT_COL;
+    }
+  }
 
-    // else if (filterResponse == ReturnCode.NEXT_ROW)
-    stickyNextRow = true;
-    return MatchCode.SEEK_NEXT_ROW;
+  public boolean moreRowsMayExistAfter(KeyValue kv) {
+    if (!Bytes.equals(stopRow , HConstants.EMPTY_END_ROW) &&
+        rowComparator.compareRows(kv.getBuffer(),kv.getRowOffset(),
+            kv.getRowLength(), stopRow, 0, stopRow.length) >= 0) {
+      return false;
+    } else {
+      return true;
+    }
   }
 
   /**
    * Set current row
    * @param row
    */
-  @Override
   public void setRow(byte [] row) {
     this.row = row;
     reset();
   }
 
-  @Override
   public void reset() {
-    super.reset();
+    this.deletes.reset();
+    this.columns.reset();
+
     stickyNextRow = false;
+  }
+
+  // should be in KeyValue.
+  protected boolean isDelete(byte type) {
+    return (type != KeyValue.Type.Put.getCode());
+  }
+
+  protected boolean isExpired(long timestamp) {
+    return (timestamp < oldestStamp);
+  }
+
+  /**
+   *
+   * @return the start key
+   */
+  public KeyValue getStartKey() {
+    return this.startKey;
+  }
+
+  public KeyValue getNextKeyHint(KeyValue kv) {
+    if (filter == null) {
+      return null;
+    } else {
+      return filter.getNextKeyHint(kv);
+    }
+  }
+
+  /**
+   * {@link #match} return codes.  These instruct the scanner moving through
+   * memstores and StoreFiles what to do with the current KeyValue.
+   * <p>
+   * Additionally, this contains "early-out" language to tell the scanner to
+   * move on to the next File (memstore or Storefile), or to return immediately.
+   */
+  public static enum MatchCode {
+    /**
+     * Include KeyValue in the returned result
+     */
+    INCLUDE,
+
+    /**
+     * Do not include KeyValue in the returned result
+     */
+    SKIP,
+
+    /**
+     * Do not include, jump to next StoreFile or memstore (in time order)
+     */
+    NEXT,
+
+    /**
+     * Do not include, return current result
+     */
+    DONE,
+
+    /**
+     * These codes are used by the ScanQueryMatcher
+     */
+
+    /**
+     * Done with the row, seek there.
+     */
+    SEEK_NEXT_ROW,
+    /**
+     * Done with column, seek to next.
+     */
+    SEEK_NEXT_COL,
+
+    /**
+     * Done with scan, thanks to the row filter.
+     */
+    DONE_SCAN,
+
+    /*
+     * Seek to next key which is given as hint.
+     */
+    SEEK_NEXT_USING_HINT,
   }
 }

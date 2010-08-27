@@ -17,33 +17,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.replication.regionserver;
 
-import java.lang.ref.ReferenceQueue;
-import java.lang.ref.SoftReference;
-import java.util.Map;
+import org.apache.hadoop.hbase.metrics.MetricsMBeanBase;
+import org.apache.hadoop.metrics.util.MBeanUtil;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
+
+import javax.management.ObjectName;
 
 /**
- * A SoftReference derivative so that we can track down what keys to remove.
+ * Exports metrics recorded by {@link ReplicationSourceMetrics} as an MBean
+ * for JMX monitoring.
  */
-class SoftValue<K, V> extends SoftReference<V> implements Map.Entry<K, V> {
-  private final K key;
+public class ReplicationStatistics extends MetricsMBeanBase {
 
-  @SuppressWarnings("unchecked")
-  SoftValue(K key, V value, ReferenceQueue queue) {
-    super(value, queue);
-    this.key = key;
-  }
+  private final ObjectName mbeanName;
 
-  public K getKey() {
-    return this.key;
-  }
-
-  public V getValue() {
-    return get();
-  }
-
-  public V setValue(V value) {
-    throw new RuntimeException("Not implemented");
+  /**
+   * Constructor to register the MBean
+   * @param registry which rehistry to use
+   * @param name name to get to this bean
+   */
+  public ReplicationStatistics(MetricsRegistry registry, String name) {
+    super(registry, name);
+    mbeanName = MBeanUtil.registerMBean("Replication", name, this);
   }
 }

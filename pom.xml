@@ -5,7 +5,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-    <version>0.89.0-SNAPSHOT</version>
+  <version>${hbase.version}</version>
   <name>HBase</name>
   <description>
   HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need random, realtime read/write access to your Big Data.
@@ -443,7 +443,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.5</version>
         <executions>
           <execution>
             <id>add-jspc-source</id>
@@ -739,9 +738,19 @@
 
     <!-- Avro dependencies -->
     <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>avro</artifactId>
       <version>1.3.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
@@ -773,6 +782,11 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-test</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
+   </dependency>
   </dependencies>
 
   <!--

@@ -163,7 +163,7 @@ public class TestMemStore extends TestCase {
 
   /**
    * A simple test which verifies the 3 possible states when scanning across snapshot.
-   * @throws IOException 
+   * @throws IOException
    */
   public void testScanAcrossSnapshot2() throws IOException {
     // we are going to the scanning across snapshot with two kvs
@@ -210,7 +210,7 @@ public class TestMemStore extends TestCase {
       throws IOException {
     scanner.seek(KeyValue.createFirstOnRow(new byte[]{}));
     List<KeyValue> returned = Lists.newArrayList();
-    
+
     while (true) {
       KeyValue next = scanner.next();
       if (next == null) break;
@@ -313,15 +313,15 @@ public class TestMemStore extends TestCase {
 
     // COMPLETE INSERT 2
     rwcc.completeMemstoreInsert(w);
-    
+
     // NOW SHOULD SEE NEW KVS IN ADDITION TO OLD KVS.
     // See HBASE-1485 for discussion about what we should do with
     // the duplicate-TS inserts
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
     s = this.memstore.getScanners().get(0);
-    assertScannerResults(s, new KeyValue[]{kv21, kv11, kv22, kv12});    
+    assertScannerResults(s, new KeyValue[]{kv21, kv11, kv22, kv12});
   }
-  
+
   /**
    * When we insert a higher-memstoreTS deletion of a cell but with
    * the same timestamp, we still need to provide consistent reads
@@ -369,9 +369,9 @@ public class TestMemStore extends TestCase {
     // NOW WE SHOULD SEE DELETE
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
     s = this.memstore.getScanners().get(0);
-    assertScannerResults(s, new KeyValue[]{kv11, kvDel, kv12});    
+    assertScannerResults(s, new KeyValue[]{kv11, kvDel, kv12});
   }
-  
+
 
   private static class ReadOwnWritesTester extends Thread {
     static final int NUM_TRIES = 1000;
@@ -454,7 +454,7 @@ public class TestMemStore extends TestCase {
     }
   }
 
-  /** 
+  /**
    * Test memstore snapshots
    * @throws IOException
    */
@@ -570,64 +570,6 @@ public class TestMemStore extends TestCase {
     }
   }
 
-  public void testGet_Basic_Found() throws IOException {
-    byte [] row = Bytes.toBytes("testrow");
-    byte [] fam = Bytes.toBytes("testfamily");
-    byte [] qf1 = Bytes.toBytes("testqualifier1");
-    byte [] qf2 = Bytes.toBytes("testqualifier2");
-    byte [] qf3 = Bytes.toBytes("testqualifier3");
-    byte [] val = Bytes.toBytes("testval");
-
-    //Setting up memstore
-    KeyValue add1 = new KeyValue(row, fam ,qf1, val);
-    KeyValue add2 = new KeyValue(row, fam ,qf2, val);
-    KeyValue add3 = new KeyValue(row, fam ,qf3, val);
-    memstore.add(add1);
-    memstore.add(add2);
-    memstore.add(add3);
-
-    //test
-    Get get = new Get(row);
-    NavigableSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    columns.add(qf2);
-    long ttl = Long.MAX_VALUE;
-
-    QueryMatcher matcher =
-      new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
-
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    boolean res = memstore.get(matcher, result);
-    assertEquals(true, res);
-  }
-
-  public void testGet_Basic_NotFound() throws IOException {
-    byte [] row = Bytes.toBytes("testrow");
-    byte [] fam = Bytes.toBytes("testfamily");
-    byte [] qf1 = Bytes.toBytes("testqualifier1");
-    byte [] qf2 = Bytes.toBytes("testqualifier2");
-    byte [] qf3 = Bytes.toBytes("testqualifier3");
-    byte [] val = Bytes.toBytes("testval");
-
-    //Setting up memstore
-    KeyValue add1 = new KeyValue(row, fam ,qf1, val);
-    KeyValue add3 = new KeyValue(row, fam ,qf3, val);
-    memstore.add(add1);
-    memstore.add(add3);
-
-    //test
-    Get get = new Get(row);
-    NavigableSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    columns.add(qf2);
-    long ttl = Long.MAX_VALUE;
-
-    QueryMatcher matcher =
-      new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
-
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    boolean res = memstore.get(matcher, result);
-    assertEquals(false, res);
-  }
-
   public void testGet_memstoreAndSnapShot() throws IOException {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
@@ -637,16 +579,6 @@ public class TestMemStore extends TestCase {
     byte [] qf4 = Bytes.toBytes("testqualifier4");
     byte [] qf5 = Bytes.toBytes("testqualifier5");
     byte [] val = Bytes.toBytes("testval");
-
-    //Creating get
-    Get get = new Get(row);
-    NavigableSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    columns.add(qf2);
-    columns.add(qf4);
-    long ttl = Long.MAX_VALUE;
-
-    QueryMatcher matcher =
-      new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
 
     //Setting up memstore
     memstore.add(new KeyValue(row, fam ,qf1, val));
@@ -660,64 +592,6 @@ public class TestMemStore extends TestCase {
     memstore.add(new KeyValue(row, fam ,qf4, val));
     memstore.add(new KeyValue(row, fam ,qf5, val));
     assertEquals(2, memstore.kvset.size());
-
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    boolean res = memstore.get(matcher, result);
-    assertEquals(true, res);
-  }
-
-  public void testGet_SpecificTimeStamp() throws IOException {
-    byte [] row = Bytes.toBytes("testrow");
-    byte [] fam = Bytes.toBytes("testfamily");
-    byte [] qf1 = Bytes.toBytes("testqualifier1");
-    byte [] qf2 = Bytes.toBytes("testqualifier2");
-    byte [] qf3 = Bytes.toBytes("testqualifier3");
-    byte [] val = Bytes.toBytes("testval");
-
-    long ts1 = System.currentTimeMillis();
-    long ts2 = ts1++;
-    long ts3 = ts2++;
-
-    //Creating get
-    Get get = new Get(row);
-    get.setTimeStamp(ts2);
-    NavigableSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    columns.add(qf1);
-    columns.add(qf2);
-    columns.add(qf3);
-    long ttl = Long.MAX_VALUE;
-
-    QueryMatcher matcher = new QueryMatcher(get, fam, columns, ttl,
-      KeyValue.KEY_COMPARATOR, 1);
-
-    //Setting up expected
-    List<KeyValue> expected = new ArrayList<KeyValue>();
-    KeyValue kv1 = new KeyValue(row, fam ,qf1, ts2, val);
-    KeyValue kv2 = new KeyValue(row, fam ,qf2, ts2, val);
-    KeyValue kv3 = new KeyValue(row, fam ,qf3, ts2, val);
-    expected.add(kv1);
-    expected.add(kv2);
-    expected.add(kv3);
-
-    //Setting up memstore
-    memstore.add(new KeyValue(row, fam ,qf1, ts1, val));
-    memstore.add(new KeyValue(row, fam ,qf2, ts1, val));
-    memstore.add(new KeyValue(row, fam ,qf3, ts1, val));
-    memstore.add(kv1);
-    memstore.add(kv2);
-    memstore.add(kv3);
-    memstore.add(new KeyValue(row, fam ,qf1, ts3, val));
-    memstore.add(new KeyValue(row, fam ,qf2, ts3, val));
-    memstore.add(new KeyValue(row, fam ,qf3, ts3, val));
-
-    //Get
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    memstore.get(matcher, result);
-
-    assertEquals(expected.size(), result.size());
-    for(int i=0; i<expected.size(); i++){
-      assertEquals(expected.get(i), result.get(i));
-    }
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -785,7 +659,7 @@ public class TestMemStore extends TestCase {
     expected.add(put2);
     expected.add(put1);
 
-    
+
     assertEquals(4, memstore.kvset.size());
     int i = 0;
     for (KeyValue kv: memstore.kvset) {
@@ -825,7 +699,7 @@ public class TestMemStore extends TestCase {
     expected.add(put3);
 
 
-    
+
     assertEquals(5, memstore.kvset.size());
     int i = 0;
     for (KeyValue kv: memstore.kvset) {
@@ -884,9 +758,42 @@ public class TestMemStore extends TestCase {
   }
 
 
+  ////////////////////////////////////
+  //Test for timestamps
+  ////////////////////////////////////
+
+  /**
+   * Test to ensure correctness when using Memstore with multiple timestamps
+   */
+  public void testMultipleTimestamps() throws IOException {
+    long[] timestamps = new long[] {20,10,5,1};
+    Scan scan = new Scan();
+
+    for (long timestamp: timestamps)
+      addRows(memstore,timestamp);
+
+    scan.setTimeRange(0, 2);
+    assertTrue(memstore.shouldSeek(scan));
+
+    scan.setTimeRange(20, 82);
+    assertTrue(memstore.shouldSeek(scan));
+
+    scan.setTimeRange(10, 20);
+    assertTrue(memstore.shouldSeek(scan));
+
+    scan.setTimeRange(8, 12);
+    assertTrue(memstore.shouldSeek(scan));
+
+    /*This test is not required for correctness but it should pass when
+     * timestamp range optimization is on*/
+    //scan.setTimeRange(28, 42);
+    //assertTrue(!memstore.shouldSeek(scan));
+  }
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Helpers
-  //////////////////////////////////////////////////////////////////////////////  
+  //////////////////////////////////////////////////////////////////////////////
   private static byte [] makeQualifier(final int i1, final int i2){
     return Bytes.toBytes(Integer.toString(i1) + ";" +
         Integer.toString(i2));
@@ -1008,5 +915,5 @@ public class TestMemStore extends TestCase {
 
   }
 
-  
+
 }

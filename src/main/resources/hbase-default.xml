@@ -186,6 +186,15 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.regionSplitLimit</name>
+    <value>2147483647</value>
+    <description>Limit for the number of regions after which no more region
+    splitting should take place. This is not a hard limit for the number of
+    regions but acts as a guideline for the regionserver to stop splitting after
+    a certain limit. Default is set to MAX_INT.
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.logroll.period</name>
     <value>3600000</value>
     <description>Period at which we will roll the commit log.</description>
@@ -289,6 +298,17 @@
     after which it will be cleaned by a master thread.
     </description>
   </property>
+  <property>
+    <name>hbase.master.logcleaner.plugins</name>
+    <value>org.apache.hadoop.hbase.master.TimeToLiveLogCleaner,org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner</value>
+    <description>A comma-separated list of LogCleanerDelegate that are used
+    in LogsCleaner. These log cleaners are called in order, so put the log
+    cleaner that prunes the most log files in the front. To implement your own
+    LogCleanerDelegate, just put it in HBase's classpath and add the fully
+    qualified class name here. Without special reason, you should always add
+    the above default log cleaners in the list.
+    </description>
+  </property>  
   <property>
     <name>hbase.regions.percheckin</name>
     <value>10</value>

@@ -41,7 +41,7 @@ import java.util.PriorityQueue;
  * as an InternalScanner at the Store level, you will get runtime exceptions.
  */
 public class KeyValueHeap implements KeyValueScanner, InternalScanner {
-  private PriorityQueue<KeyValueScanner> heap;
+  private PriorityQueue<KeyValueScanner> heap = null;
   private KeyValueScanner current = null;
   private KVScannerComparator comparator;
 
@@ -51,22 +51,25 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
    * @param scanners
    * @param comparator
    */
-  public KeyValueHeap(List<? extends KeyValueScanner> scanners, KVComparator comparator) {
+  public KeyValueHeap(List<? extends KeyValueScanner> scanners,
+      KVComparator comparator) {
     this.comparator = new KVScannerComparator(comparator);
-    this.heap = new PriorityQueue<KeyValueScanner>(scanners.size(),
-        this.comparator);
-    for (KeyValueScanner scanner : scanners) {
-      if (scanner.peek() != null) {
-        this.heap.add(scanner);
-      } else {
-        scanner.close();
+    if (!scanners.isEmpty()) {
+      this.heap = new PriorityQueue<KeyValueScanner>(scanners.size(),
+          this.comparator);
+      for (KeyValueScanner scanner : scanners) {
+        if (scanner.peek() != null) {
+          this.heap.add(scanner);
+        } else {
+          scanner.close();
+        }
       }
+      this.current = heap.poll();
     }
-    this.current = heap.poll();
   }
 
   public KeyValue peek() {
-    if(this.current == null) {
+    if (this.current == null) {
       return null;
     }
     return this.current.peek();
@@ -78,12 +81,12 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
     }
     KeyValue kvReturn = this.current.next();
     KeyValue kvNext = this.current.peek();
-    if(kvNext == null) {
+    if (kvNext == null) {
       this.current.close();
       this.current = this.heap.poll();
     } else {
       KeyValueScanner topScanner = this.heap.peek();
-      if(topScanner == null ||
+      if (topScanner == null ||
           this.comparator.compare(kvNext, topScanner.peek()) > 0) {
         this.heap.add(this.current);
         this.current = this.heap.poll();
@@ -104,10 +107,20 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
    * @return true if there are more keys, false if all scanners are done
    */
   public boolean next(List<KeyValue> result, int limit) throws IOException {
+    if (this.current == null) {
+      return false;
+    }
     InternalScanner currentAsInternal = (InternalScanner)this.current;
-    currentAsInternal.next(result, limit);
+    boolean mayContainsMoreRows = currentAsInternal.next(result, limit);
     KeyValue pee = this.current.peek();
-    if (pee == null) {
+    /*
+     * By definition, any InternalScanner must return false only when it has no
+     * further rows to be fetched. So, we can close a scanner if it returns
+     * false. All existing implementations seem to be fine with this. It is much
+     * more efficient to close scanners which are not needed than keep them in
+     * the heap. This is also required for certain optimizations.
+     */
+    if (pee == null || !mayContainsMoreRows) {
       this.current.close();
     } else {
       this.heap.add(this.current);
@@ -160,12 +173,14 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
   }
 
   public void close() {
-    if(this.current != null) {
+    if (this.current != null) {
       this.current.close();
     }
-    KeyValueScanner scanner;
-    while((scanner = this.heap.poll()) != null) {
-      scanner.close();
+    if (this.heap != null) {
+      KeyValueScanner scanner;
+      while ((scanner = this.heap.poll()) != null) {
+        scanner.close();
+      }
     }
   }
 
@@ -178,10 +193,10 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
    * automatically closed and removed from the heap.
    * @param seekKey KeyValue to seek at or after
    * @return true if KeyValues exist at or after specified key, false if not
-   * @throws IOException 
+   * @throws IOException
    */
   public boolean seek(KeyValue seekKey) throws IOException {
-    if(this.current == null) {
+    if (this.current == null) {
       return false;
     }
     this.heap.add(this.current);
@@ -196,6 +211,33 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
         return true;
       }
       if(!scanner.seek(seekKey)) {
+        scanner.close();
+      } else {
+        this.heap.add(scanner);
+      }
+    }
+    // Heap is returning empty, scanner is done
+    return false;
+  }
+
+  public boolean reseek(KeyValue seekKey) throws IOException {
+    //This function is very identical to the seek(KeyValue) function except that
+    //scanner.seek(seekKey) is changed to scanner.reseek(seekKey)
+    if (this.current == null) {
+      return false;
+    }
+    this.heap.add(this.current);
+    this.current = null;
+
+    KeyValueScanner scanner;
+    while ((scanner = this.heap.poll()) != null) {
+      KeyValue topKey = scanner.peek();
+      if (comparator.getComparator().compare(seekKey, topKey) <= 0) {
+        // Top KeyValue is at-or-after Seek KeyValue
+        this.current = scanner;
+        return true;
+      }
+      if (!scanner.reseek(seekKey)) {
         scanner.close();
       } else {
         this.heap.add(scanner);

@@ -33,7 +33,7 @@
 # Modelled after $HADOOP_HOME/bin/hadoop-daemon.sh
 
 usage="Usage: hbase-daemon.sh [--config <conf-dir>]\
- (start|stop) <hbase-command> \
+ (start|stop|restart) <hbase-command> \
  <args...>"
 
 # if no args specified, show usage
@@ -42,8 +42,8 @@ if [ $# -le 1 ]; then
   exit 1
 fi
 
-bin=`dirname "$0"`
-bin=`cd "$bin"; pwd`
+bin=`dirname "${BASH_SOURCE-$0}"`
+bin=`cd "$bin">/dev/null; pwd`
 
 . "$bin"/hbase-config.sh
 
@@ -69,6 +69,24 @@ hbase_rotate_log ()
     done
     mv "$log" "$log.$num";
     fi
+}
+
+wait_until_done ()
+{
+    p=$1
+    cnt=${HBASE_SLAVE_TIMEOUT:-60}
+    origcnt=$cnt
+    while kill -0 $p > /dev/null 2>&1; do
+      if [ $cnt -gt 1 ]; then
+        cnt=`expr $cnt - 1`
+        sleep 1
+      else
+        echo "Process did not complete after $origcnt seconds, killing."
+        kill -9 $p
+        exit 1
+      fi
+    done
+    return 0
 }
 
 # get log directory
@@ -132,13 +150,12 @@ case $startStop in
 
   (stop)
     if [ -f $pid ]; then
+      # kill -0 == see if the PID exists 
       if kill -0 `cat $pid` > /dev/null 2>&1; then
         echo -n stopping $command
-        echo "`date` Stopping $command" >> $loglog
         if [ "$command" = "master" ]; then
-          nohup nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
-              --config "${HBASE_CONF_DIR}" \
-              $command $startStop "$@" > "$logout" 2>&1 < /dev/null &
+          echo "`date` Killing $command" >> $loglog
+          kill -9 `cat $pid` > /dev/null 2>&1
         else
           echo "`date` Killing $command" >> $loglog
           kill `cat $pid` > /dev/null 2>&1
@@ -150,11 +167,27 @@ case $startStop in
         echo
       else
         retval=$?
-        echo no $command to stop because kill of pid `cat $pid` failed with status $retval
+        echo no $command to stop because kill -0 of pid `cat $pid` failed with status $retval
       fi
     else
       echo no $command to stop because no pid file $pid
     fi
+    ;;
+
+  (restart)
+    thiscmd=$0
+    args=$@
+    # stop the command
+    $thiscmd --config "${HBASE_CONF_DIR}" stop $command $args &
+    wait_until_done $!
+    # wait a user-specified sleep period
+    sp=${HBASE_SLAVE_SLEEP:-3}
+    if [ $sp -gt 0 ]; then
+      sleep $sp
+    fi
+    # start the command
+    $thiscmd --config "${HBASE_CONF_DIR}" start $command $args &
+    wait_until_done $!
     ;;
 
   (*)

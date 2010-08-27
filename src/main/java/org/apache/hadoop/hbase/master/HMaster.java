@@ -31,6 +31,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -182,7 +186,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public HMaster(final Configuration conf)
   throws IOException, KeeperException, InterruptedException {
     this.conf = conf;
-
     /*
      * 1. Determine address and initialize RPC server (but do not start).
      * The RPC server ports can be ephemeral.
@@ -195,6 +198,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     // set the thread name now we have an address
     setName(MASTER + "-" + this.address);
+
+    // Hack! Maps DFSClient => Master for logs.  HDFS made this 
+    // config param for task trackers, but we can piggyback off of it.
+    if (this.conf.get("mapred.task.id") == null) {
+      this.conf.set("mapred.task.id", "hb_m_" + this.address.toString());
+    }
 
     /*
      * 2. Determine if this is a fresh cluster startup or failed over master.
@@ -855,22 +864,41 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   protected static void doMain(String [] args,
-      Class<? extends HMaster> masterClass) throws IOException {
-    if (args.length < 1) {
-      printUsageAndExit();
-    }
+      Class<? extends HMaster> masterClass) {
     Configuration conf = HBaseConfiguration.create();
-    // Process command-line args.
-    for (String cmd: args) {
-      if (cmd.startsWith("--minServers=")) {
-        // How many servers must check in before we'll start assigning.
-        // TODO: Verify works with new master regime.
+
+    Options opt = new Options();
+    opt.addOption("minServers", true, "Minimum RegionServers needed to host user tables");
+    opt.addOption("D", true, "Override HBase Configuration Settings");
+    opt.addOption("backup", false, "Do not try to become HMaster until the primary fails");
+    try {
+      CommandLine cmd = new GnuParser().parse(opt, args);
+
+      if (cmd.hasOption("minServers")) {
+        String val = cmd.getOptionValue("minServers");
         conf.setInt("hbase.regions.server.count.min",
-          Integer.valueOf(cmd.substring(13)));
-        continue;
+            Integer.valueOf(val));
+        LOG.debug("minServers set to " + val);
       }
 
-      if (cmd.equalsIgnoreCase("start")) {
+      if (cmd.hasOption("D")) {
+        for (String confOpt : cmd.getOptionValues("D")) {
+          String[] kv = confOpt.split("=", 2);
+          if (kv.length == 2) {
+            conf.set(kv[0], kv[1]);
+            LOG.debug("-D configuration override: " + kv[0] + "=" + kv[1]);
+          } else {
+            throw new ParseException("-D option format invalid: " + confOpt);
+          }
+        }
+      }
+      
+      // check if we are the backup master - override the conf if so
+      if (cmd.hasOption("backup")) {
+        conf.setBoolean(HConstants.MASTER_TYPE_BACKUP, true);
+      }
+
+      if (cmd.getArgList().contains("start")) {
         try {
           // Print out vm stats before starting up.
           RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
@@ -882,7 +910,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
           // If 'local', defer to LocalHBaseCluster instance.  Starts master
           // and regionserver both in the one JVM.
           if (LocalHBaseCluster.isLocal(conf)) {
-            final MiniZooKeeperCluster zooKeeperCluster = new MiniZooKeeperCluster();
+            final MiniZooKeeperCluster zooKeeperCluster =
+              new MiniZooKeeperCluster();
             File zkDataPath = new File(conf.get("hbase.zookeeper.property.dataDir"));
             int zkClientPort = conf.getInt("hbase.zookeeper.property.clientPort", 0);
             if (zkClientPort == 0) {
@@ -908,16 +937,17 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
             cluster.startup();
           } else {
             HMaster master = constructMaster(masterClass, conf);
+            if (master.isStopped()) {
+              LOG.info("Won't bring the Master up as a shutdown is requested");
+              return;
+            }
             master.start();
           }
         } catch (Throwable t) {
           LOG.error("Failed to start master", t);
           System.exit(-1);
         }
-        break;
-      }
-
-      if (cmd.equalsIgnoreCase("stop")) {
+      } else if (cmd.getArgList().contains("stop")) {
         HBaseAdmin adm = null;
         try {
           adm = new HBaseAdmin(conf);
@@ -934,10 +964,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
           LOG.error("Failed to stop master", t);
           System.exit(-1);
         }
-        break;
+      } else {
+        throw new ParseException("Unknown argument(s): " +
+            org.apache.commons.lang.StringUtils.join(cmd.getArgs(), " "));
       }
-
-      // Print out usage if we get to here.
+    } catch (ParseException e) {
+      LOG.error("Could not parse: ", e);
       printUsageAndExit();
     }
   }

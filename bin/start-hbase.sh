@@ -26,8 +26,8 @@
 # Run this on master node.
 usage="Usage: start-hbase.sh"
 
-bin=`dirname "$0"`
-bin=`cd "$bin"; pwd`
+bin=`dirname "${BASH_SOURCE-$0}"`
+bin=`cd "$bin">/dev/null; pwd`
 
 . "$bin"/hbase-config.sh
 
@@ -49,4 +49,6 @@ else
   "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" start master 
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
     --hosts "${HBASE_REGIONSERVERS}" start regionserver
+  "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
+    --hosts "${HBASE_BACKUP_MASTERS}" start master-backup
 fi

@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 
 import java.net.URLEncoder;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -30,21 +31,26 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.replication.ReplicationZookeeperWrapper;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestOldLogsCleaner {
+public class TestLogsCleaner {
+
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
+  private ReplicationZookeeperWrapper zkHelper;
 
   /**
    * @throws java.lang.Exception
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniZKCluster();
   }
 
   /**
@@ -52,6 +58,7 @@ public class TestOldLogsCleaner {
    */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniZKCluster();
   }
 
   /**
@@ -59,6 +66,12 @@ public class TestOldLogsCleaner {
    */
   @Before
   public void setUp() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    /* TODO REENABLE
+    zkHelper = new ReplicationZookeeperWrapper(
+        ZooKeeperWrapper.createInstance(conf, HRegionServer.class.getName()),
+        conf, new AtomicBoolean(true), "test-cluster");
+        */
   }
 
   /**
@@ -89,23 +102,40 @@ public class TestOldLogsCleaner {
         return this.stopped;
       }
     };
-    OldLogsCleaner cleaner = new OldLogsCleaner(1000, stoppable,c, fs, oldLogDir);
+    LogsCleaner cleaner  = new LogsCleaner(1000, stoppable,c, fs, oldLogDir);
 
     // Create 2 invalid files, 1 "recent" file, 1 very new file and 30 old files
     long now = System.currentTimeMillis();
     fs.delete(oldLogDir, true);
     fs.mkdirs(oldLogDir);
+    // Case 1: 2 invalid files, which would be deleted directly
     fs.createNewFile(new Path(oldLogDir, "a"));
     fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + "a"));
+    // Case 2: 1 "recent" file, not even deletable for the first log cleaner
+    // (TimeToLiveLogCleaner), so we are not going down the chain
     fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + now));
     System.out.println("Now is: " + now);
     for (int i = 0; i < 30; i++) {
-      fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + (now - 6000000 - i) ));
+      // Case 3: old files which would be deletable for the first log cleaner
+      // (TimeToLiveLogCleaner), and also for the second (ReplicationLogCleaner)
+      Path fileName = new Path(oldLogDir, fakeMachineName + "." +
+          (now - 6000000 - i) );
+      fs.createNewFile(fileName);
+      // Case 4: put 3 old log files in ZK indicating that they are scheduled
+      // for replication so these files would pass the first log cleaner
+      // (TimeToLiveLogCleaner) but would be rejected by the second
+      // (ReplicationLogCleaner)
+      if (i % (30/3) == 0) {
+// REENABLE        zkHelper.addLogToList(fileName.getName(), fakeMachineName);
+        System.out.println("Replication log file: " + fileName);
+      }
     }
     for (FileStatus stat : fs.listStatus(oldLogDir)) {
       System.out.println(stat.getPath().toString());
     }
 
+    // Case 2: 1 newer file, not even deletable for the first log cleaner
+    // (TimeToLiveLogCleaner), so we are not going down the chain
     fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + (now + 10000) ));
 
     assertEquals(34, fs.listStatus(oldLogDir).length);
@@ -115,11 +145,16 @@ public class TestOldLogsCleaner {
 
     assertEquals(14, fs.listStatus(oldLogDir).length);
 
-    // We will delete all remaining log files and those that are invalid
+    // We will delete all remaining log files which are not scheduled for
+    // replication and those that are invalid
     cleaner.chore();
 
-    // We end up with the current log file and a newer one
-    assertEquals(2, fs.listStatus(oldLogDir).length);
-  }
+    // We end up with the current log file, a newer one and the 3 old log
+    // files which are scheduled for replication
+    assertEquals(5, fs.listStatus(oldLogDir).length);
 
+    for (FileStatus file : fs.listStatus(oldLogDir)) {
+      System.out.println("Keeped log files: " + file.getPath().getName());
+    }
+  }
 }

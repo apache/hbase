@@ -25,9 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -42,9 +40,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.Compression;
@@ -52,6 +48,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.ImmutableList;
@@ -190,7 +187,7 @@ public class Store implements HeapSize {
     this.storefiles = ImmutableList.copyOf(loadStoreFiles());
   }
 
-  HColumnDescriptor getFamily() {
+  public HColumnDescriptor getFamily() {
     return this.family;
   }
 
@@ -212,7 +209,7 @@ public class Store implements HeapSize {
     return new Path(tabledir, new Path(encodedName,
       new Path(Bytes.toString(family))));
   }
-  
+
   /**
    * Return the directory in which this store stores its
    * StoreFiles
@@ -417,15 +414,17 @@ public class Store implements HeapSize {
    * Write out current snapshot.  Presumes {@link #snapshot()} has been called
    * previously.
    * @param logCacheFlushId flush sequence number
+   * @param snapshot
    * @return true if a compaction is needed
    * @throws IOException
    */
   private StoreFile flushCache(final long logCacheFlushId,
-                               SortedSet<KeyValue> snapshot) throws IOException {
+      SortedSet<KeyValue> snapshot,
+      TimeRangeTracker snapshotTimeRangeTracker) throws IOException {
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
-    return internalFlushCache(snapshot, logCacheFlushId);
+    return internalFlushCache(snapshot, logCacheFlushId, snapshotTimeRangeTracker);
   }
 
   /*
@@ -435,7 +434,8 @@ public class Store implements HeapSize {
    * @throws IOException
    */
   private StoreFile internalFlushCache(final SortedSet<KeyValue> set,
-                                       final long logCacheFlushId)
+      final long logCacheFlushId,
+      TimeRangeTracker snapshotTimeRangeTracker)
       throws IOException {
     StoreFile.Writer writer = null;
     long flushed = 0;
@@ -450,6 +450,7 @@ public class Store implements HeapSize {
     synchronized (flushLock) {
       // A. Write the map out to the disk
       writer = createWriterInTmp(set.size());
+      writer.setTimeRangeTracker(snapshotTimeRangeTracker);
       int entries = 0;
       try {
         for (KeyValue kv: set) {
@@ -466,12 +467,12 @@ public class Store implements HeapSize {
         writer.close();
       }
     }
-    
+
     // Write-out finished successfully, move into the right spot
     Path dstPath = StoreFile.getUniqueFile(fs, homedir);
     LOG.info("Renaming flushed file at " + writer.getPath() + " to " + dstPath);
     fs.rename(writer.getPath(), dstPath);
-    
+
     StoreFile sf = new StoreFile(this.fs, dstPath, blockcache,
       this.conf, this.family.getBloomFilterType(), this.inMemory);
     StoreFile.Reader r = sf.createReader();
@@ -664,7 +665,7 @@ public class Store implements HeapSize {
       LOG.info("Started compaction of " + filesToCompact.size() + " file(s) in " +
           this.storeNameStr + " of " + this.region.getRegionInfo().getRegionNameAsString() +
         (references? ", hasReferences=true,": " ") + " into " +
-          region.getTmpDir() + ", seqid=" + maxId);
+          region.getTmpDir() + ", sequenceid=" + maxId);
       StoreFile.Writer writer = compact(filesToCompact, majorcompaction, maxId);
       // Move the compaction into place.
       StoreFile sf = completeCompaction(filesToCompact, writer);
@@ -954,13 +955,6 @@ public class Store implements HeapSize {
     return wantedVersions > maxVersions ? maxVersions: wantedVersions;
   }
 
-  static void expiredOrDeleted(final Set<KeyValue> set, final KeyValue kv) {
-    boolean b = set.remove(kv);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(kv.toString() + " expired: " + b);
-    }
-  }
-
   static boolean isExpired(final KeyValue key, final long oldestTimestamp) {
     return key.getTimestamp() < oldestTimestamp;
   }
@@ -1200,7 +1194,7 @@ public class Store implements HeapSize {
    * Return a scanner for both the memstore and the HStore files
    * @throws IOException
    */
-  protected KeyValueScanner getScanner(Scan scan,
+  public KeyValueScanner getScanner(Scan scan,
       final NavigableSet<byte []> targetCols) throws IOException {
     lock.readLock().lock();
     try {
@@ -1285,85 +1279,6 @@ public class Store implements HeapSize {
   }
 
   /**
-   * Convenience method that implements the old MapFile.getClosest on top of
-   * HFile Scanners.  getClosest used seek to the asked-for key or just after
-   * (HFile seeks to the key or just before).
-   * @param s Scanner to use
-   * @param kv Key to find.
-   * @return True if we were able to seek the scanner to <code>b</code> or to
-   * the key just after.
-   * @throws IOException
-   */
-  static boolean getClosest(final HFileScanner s, final KeyValue kv)
-      throws IOException {
-    // Pass offsets to key content of a KeyValue; thats whats in the hfile index.
-    int result = s.seekTo(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
-    if (result < 0) {
-      // Not in file.  Will the first key do?
-      if (!s.seekTo()) {
-        return false;
-      }
-    } else if (result > 0) {
-      // Less than what was asked for but maybe < because we're asking for
-      // r/c/HConstants.LATEST_TIMESTAMP -- what was returned was r/c-1/SOME_TS...
-      // A next will get us a r/c/SOME_TS.
-      if (!s.next()) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Retrieve results from this store given the specified Get parameters.
-   * @param get Get operation
-   * @param columns List of columns to match, can be empty (not null)
-   * @param result List to add results to
-   * @throws IOException
-   */
-  public void get(Get get, NavigableSet<byte[]> columns, List<KeyValue> result)
-      throws IOException {
-    KeyComparator keyComparator = this.comparator.getRawComparator();
-
-    // Column matching and version enforcement
-    QueryMatcher matcher = new QueryMatcher(get, this.family.getName(), columns,
-      this.ttl, keyComparator, versionsToReturn(get.getMaxVersions()));
-    this.lock.readLock().lock();
-    try {
-      // Read from memstore
-      if(this.memstore.get(matcher, result)) {
-        // Received early-out from memstore
-        return;
-      }
-
-      // Check if we even have storefiles
-      if (this.storefiles.isEmpty()) {
-        return;
-      }
-
-      // Get storefiles for this store
-      List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
-      for (StoreFile sf : Iterables.reverse(this.storefiles)) {
-        StoreFile.Reader r = sf.getReader();
-        if (r == null) {
-          LOG.warn("StoreFile " + sf + " has a null Reader");
-          continue;
-        }
-        // Get a scanner that caches the block and uses pread
-        storefileScanners.add(r.getScanner(true, true));
-      }
-
-      // StoreFileGetScan will handle reading this store's storefiles
-      StoreFileGetScan scanner = new StoreFileGetScan(storefileScanners, matcher);
-
-      // Run a GET scan and put results into the specified list
-      scanner.get(result);
-    } finally {
-      this.lock.readLock().unlock();
-    }
-  }
-
-  /**
    * Increments the value for the given row/family/qualifier.
    *
    * This function will always be seen as atomic by other readers
@@ -1380,49 +1295,18 @@ public class Store implements HeapSize {
   public long updateColumnValue(byte [] row, byte [] f,
                                 byte [] qualifier, long newValue)
       throws IOException {
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    KeyComparator keyComparator = this.comparator.getRawComparator();
 
-    KeyValue kv = null;
-    // Setting up the QueryMatcher
-    Get get = new Get(row);
-    NavigableSet<byte[]> qualifiers =
-      new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    qualifiers.add(qualifier);
-    QueryMatcher matcher = new QueryMatcher(get, f, qualifiers, this.ttl,
-      keyComparator, 1);
-
-    // lock memstore snapshot for this critical section:
     this.lock.readLock().lock();
-    memstore.readLockLock();
     try {
-      int memstoreCode = this.memstore.getWithCode(matcher, result);
+      long now = EnvironmentEdgeManager.currentTimeMillis();
 
-      if (memstoreCode != 0) {
-        // was in memstore (or snapshot)
-        kv = result.get(0).clone();
-        byte [] buffer = kv.getBuffer();
-        int valueOffset = kv.getValueOffset();
-        Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(newValue), 0,
-            Bytes.SIZEOF_LONG);
-        if (memstoreCode == 2) {
-          // from snapshot, assign new TS
-          long currTs = System.currentTimeMillis();
-          if (currTs == kv.getTimestamp()) {
-            currTs++; // unlikely but catastrophic
-          }
-          Bytes.putBytes(buffer, kv.getTimestampOffset(),
-              Bytes.toBytes(currTs), 0, Bytes.SIZEOF_LONG);
-        }
-      } else {
-        kv = new KeyValue(row, f, qualifier,
-            System.currentTimeMillis(),
-            Bytes.toBytes(newValue));
-      }
-      return add(kv);
-      // end lock
+      return this.memstore.updateColumnValue(row,
+          f,
+          qualifier,
+          newValue,
+          now);
+
     } finally {
-      memstore.readLockUnlock();
       this.lock.readLock().unlock();
     }
   }
@@ -1436,6 +1320,7 @@ public class Store implements HeapSize {
     private long cacheFlushId;
     private SortedSet<KeyValue> snapshot;
     private StoreFile storeFile;
+    private TimeRangeTracker snapshotTimeRangeTracker;
 
     private StoreFlusherImpl(long cacheFlushId) {
       this.cacheFlushId = cacheFlushId;
@@ -1445,11 +1330,12 @@ public class Store implements HeapSize {
     public void prepare() {
       memstore.snapshot();
       this.snapshot = memstore.getSnapshot();
+      this.snapshotTimeRangeTracker = memstore.getSnapshotTimeRangeTracker();
     }
 
     @Override
     public void flushCache() throws IOException {
-      storeFile = Store.this.flushCache(cacheFlushId, snapshot);
+      storeFile = Store.this.flushCache(cacheFlushId, snapshot, snapshotTimeRangeTracker);
     }
 
     @Override

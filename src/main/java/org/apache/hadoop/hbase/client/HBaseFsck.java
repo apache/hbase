@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -74,15 +75,16 @@ public class HBaseFsck extends HBaseAdmin {
    *
    * @param conf Configuration object
    * @throws MasterNotRunningException if the master is not running
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
   public HBaseFsck(Configuration conf) 
-    throws MasterNotRunningException, IOException {
+    throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     super(conf);
     this.conf = conf;
 
     // setup filesystem properties
-    this.fs = FileSystem.get(conf);
     this.rootDir = new Path(conf.get(HConstants.HBASE_DIR));
+    this.fs = rootDir.getFileSystem(conf);
 
 
     // fetch information from master
@@ -249,12 +251,13 @@ public class HBaseFsck extends HBaseAdmin {
     throws IOException {
 
     // make a copy of all entries in META
-    TreeMap<HRegionInfo, MetaEntry> tmp = new TreeMap<HRegionInfo, MetaEntry>(metaEntries);
+    TreeMap<HRegionInfo, MetaEntry> tmp =
+      new TreeMap<HRegionInfo, MetaEntry>(metaEntries);
     long errorCount = 0; // number of inconsistencies detected
     int showProgress = 0;
 
     // loop to contact each region server
-    for (HServerInfo rsinfo:regionServerList) {
+    for (HServerInfo rsinfo: regionServerList) {
       showProgress++;                   // one more server.
       try {
         HRegionInterface server = connection.getHRegionConnection(
@@ -276,7 +279,7 @@ public class HBaseFsck extends HBaseAdmin {
         }
 
         // check to see if the existance of this region matches the region in META
-        for (HRegionInfo r:regions) {
+        for (HRegionInfo r: regions) {
           MetaEntry metaEntry = metaEntries.get(r);
 
           // this entry exists in the region server but is not in the META
@@ -317,7 +320,12 @@ public class HBaseFsck extends HBaseAdmin {
 
     // all the region left in tmp are not found on any region server
     for (MetaEntry metaEntry: tmp.values()) {
-      System.out.print("\nERROR: Region " + metaEntry.getRegionNameAsString() + 
+      // An offlined region will not be present out on a regionserver.  A region
+      // is offlined if table is offlined -- will still have an entry in .META.
+      // of a region is offlined because its a parent region and its daughters
+      // still have references.
+      if (metaEntry.isOffline()) continue;
+      System.out.print("\nERROR: Region " + metaEntry.getRegionNameAsString() +
                          " is not served by any region server " +
                          " but is listed in META to be on server " + 
                          metaEntry.regionServer);

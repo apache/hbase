@@ -102,11 +102,19 @@ public interface Filter extends Writable {
      */
     SKIP,
     /**
+     * Skip this column. Go to the next column in this row.
+     */
+    NEXT_COL,
+    /**
      * Done with columns, skip to next row. Note that filterRow() will
      * still be called.
      */
     NEXT_ROW,
-  }
+    /**
+     * Seek to next key which is given as hint by the filter.
+     */
+    SEEK_NEXT_USING_HINT,
+}
 
   /**
    * Chance to alter the list of keyvalues to be submitted.
@@ -132,4 +140,13 @@ public interface Filter extends Writable {
    */
   public boolean filterRow();
 
+  /**
+   * If the filter returns the match code SEEK_NEXT_USING_HINT, then
+   * it should also tell which is the next key it must seek to.
+   * After receiving the match code SEEK_NEXT_USING_HINT, the QueryMatcher would
+   * call this function to find out which key it must next seek to.
+   * @return KeyValue which must be next seeked. return null if the filter is
+   * not sure which key to seek to next.
+   */
+  public KeyValue getNextKeyHint(KeyValue currentKV);
 }

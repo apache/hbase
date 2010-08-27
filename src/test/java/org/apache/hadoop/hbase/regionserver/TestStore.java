@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 import junit.framework.TestCase;
@@ -52,7 +51,9 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
 import com.google.common.base.Joiner;
@@ -62,7 +63,7 @@ import com.google.common.base.Joiner;
  */
 public class TestStore extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestStore.class);
-  
+
   Store store;
   byte [] table = Bytes.toBytes("table");
   byte [] family = Bytes.toBytes("family");
@@ -99,7 +100,7 @@ public class TestStore extends TestCase {
     Iterator<byte[]> iter = qualifiers.iterator();
     while(iter.hasNext()){
       byte [] next = iter.next();
-      expected.add(new KeyValue(row, family, next, null));
+      expected.add(new KeyValue(row, family, next, 1, (byte[])null));
       get.addColumn(family, next);
     }
   }
@@ -107,7 +108,7 @@ public class TestStore extends TestCase {
   private void init(String methodName) throws IOException {
     init(methodName, HBaseConfiguration.create());
   }
-  
+
   private void init(String methodName, Configuration conf)
   throws IOException {
     //Setting up a Store
@@ -140,8 +141,8 @@ public class TestStore extends TestCase {
   public void testEmptyStoreFile() throws IOException {
     init(this.getName());
     // Write a store file.
-    this.store.add(new KeyValue(row, family, qf1, null));
-    this.store.add(new KeyValue(row, family, qf2, null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
     flush(1);
     // Now put in place an empty store file.  Its a little tricky.  Have to
     // do manually with hacked in sequence id.
@@ -150,7 +151,7 @@ public class TestStore extends TestCase {
     long seqid = f.getMaxSequenceId();
     Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
-    StoreFile.Writer w = StoreFile.createWriter(fs, storedir, 
+    StoreFile.Writer w = StoreFile.createWriter(fs, storedir,
         StoreFile.DEFAULT_BLOCKSIZE_SMALL);
     w.appendMetadata(seqid + 1, false);
     w.close();
@@ -161,7 +162,10 @@ public class TestStore extends TestCase {
       this.store.getFamily(), fs, c);
     System.out.println(this.store.getHRegionInfo().getEncodedName());
     assertEquals(2, this.store.getStorefilesCount());
-    this.store.get(get, qualifiers, result);
+
+    result = HBaseTestingUtility.getFromStoreFile(store,
+        get.getRow(),
+        qualifiers);
     assertEquals(1, result.size());
   }
 
@@ -173,15 +177,16 @@ public class TestStore extends TestCase {
     init(this.getName());
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, null));
-    this.store.add(new KeyValue(row, family, qf2, null));
-    this.store.add(new KeyValue(row, family, qf3, null));
-    this.store.add(new KeyValue(row, family, qf4, null));
-    this.store.add(new KeyValue(row, family, qf5, null));
-    this.store.add(new KeyValue(row, family, qf6, null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf4, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf5, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null));
 
     //Get
-    this.store.get(get, qualifiers, result);
+    result = HBaseTestingUtility.getFromStoreFile(store,
+        get.getRow(), qualifiers);
 
     //Compare
     assertCheck();
@@ -195,25 +200,28 @@ public class TestStore extends TestCase {
     init(this.getName());
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, null));
-    this.store.add(new KeyValue(row, family, qf2, null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
     //flush
     flush(1);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf3, null));
-    this.store.add(new KeyValue(row, family, qf4, null));
+    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf4, 1, (byte[])null));
     //flush
     flush(2);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf5, null));
-    this.store.add(new KeyValue(row, family, qf6, null));
+    this.store.add(new KeyValue(row, family, qf5, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null));
     //flush
     flush(3);
 
     //Get
-    this.store.get(get, qualifiers, result);
+    result = HBaseTestingUtility.getFromStoreFile(store,
+        get.getRow(),
+        qualifiers);
+    //this.store.get(get, qualifiers, result);
 
     //Need to sort the result since multiple files
     Collections.sort(result, KeyValue.COMPARATOR);
@@ -230,23 +238,24 @@ public class TestStore extends TestCase {
     init(this.getName());
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, null));
-    this.store.add(new KeyValue(row, family, qf2, null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
     //flush
     flush(1);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf3, null));
-    this.store.add(new KeyValue(row, family, qf4, null));
+    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf4, 1, (byte[])null));
     //flush
     flush(2);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf5, null));
-    this.store.add(new KeyValue(row, family, qf6, null));
+    this.store.add(new KeyValue(row, family, qf5, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null));
 
     //Get
-    this.store.get(get, qualifiers, result);
+    result = HBaseTestingUtility.getFromStoreFile(store,
+        get.getRow(), qualifiers);
 
     //Need to sort the result since multiple files
     Collections.sort(result, KeyValue.COMPARATOR);
@@ -276,7 +285,7 @@ public class TestStore extends TestCase {
    * test the internal details of how ICV works, especially during a flush scenario.
    */
   public void testIncrementColumnValue_ICVDuringFlush()
-    throws IOException {
+      throws IOException, InterruptedException {
     init(this.getName());
 
     long oldValue = 1L;
@@ -311,10 +320,7 @@ public class TestStore extends TestCase {
     get.setMaxVersions(); // all versions.
     List<KeyValue> results = new ArrayList<KeyValue>();
 
-    NavigableSet<byte[]> cols = new TreeSet<byte[]>();
-    cols.add(qf1);
-
-    this.store.get(get, cols, results);
+    results = HBaseTestingUtility.getFromStoreFile(store, get);
     assertEquals(2, results.size());
 
     long ts1 = results.get(0).getTimestamp();
@@ -324,7 +330,73 @@ public class TestStore extends TestCase {
 
     assertEquals(newValue, Bytes.toLong(results.get(0).getValue()));
     assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
+  }
 
+  public void testIncrementColumnValue_SnapshotFlushCombo() throws Exception {
+    ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
+    EnvironmentEdgeManagerTestHelper.injectEdge(mee);
+    init(this.getName());
+
+    long oldValue = 1L;
+    long newValue = 3L;
+    this.store.add(new KeyValue(row, family, qf1,
+        EnvironmentEdgeManager.currentTimeMillis(),
+        Bytes.toBytes(oldValue)));
+
+    // snapshot the store.
+    this.store.snapshot();
+
+    // update during the snapshot, the exact same TS as the Put (lololol)
+    long ret = this.store.updateColumnValue(row, family, qf1, newValue);
+
+    // memstore should have grown by some amount.
+    assertTrue(ret > 0);
+
+    // then flush.
+    flushStore(store, id++);
+    assertEquals(1, this.store.getStorefiles().size());
+    assertEquals(1, this.store.memstore.kvset.size());
+
+    // now increment again:
+    newValue += 1;
+    this.store.updateColumnValue(row, family, qf1, newValue);
+
+    // at this point we have a TS=1 in snapshot, and a TS=2 in kvset, so increment again:
+    newValue += 1;
+    this.store.updateColumnValue(row, family, qf1, newValue);
+
+    // the second TS should be TS=2 or higher., even though 'time=1' right now.
+
+
+    // how many key/values for this row are there?
+    Get get = new Get(row);
+    get.addColumn(family, qf1);
+    get.setMaxVersions(); // all versions.
+    List<KeyValue> results = new ArrayList<KeyValue>();
+
+    results = HBaseTestingUtility.getFromStoreFile(store, get);
+    assertEquals(2, results.size());
+
+    long ts1 = results.get(0).getTimestamp();
+    long ts2 = results.get(1).getTimestamp();
+
+    assertTrue(ts1 > ts2);
+    assertEquals(newValue, Bytes.toLong(results.get(0).getValue()));
+    assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
+
+    mee.setValue(2); // time goes up slightly
+    newValue += 1;
+    this.store.updateColumnValue(row, family, qf1, newValue);
+
+    results = HBaseTestingUtility.getFromStoreFile(store, get);
+    assertEquals(2, results.size());
+
+    ts1 = results.get(0).getTimestamp();
+    ts2 = results.get(1).getTimestamp();
+
+    assertTrue(ts1 > ts2);
+    assertEquals(newValue, Bytes.toLong(results.get(0).getValue()));
+    assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
   }
 
   public void testHandleErrorsInFlush() throws Exception {
@@ -340,21 +412,21 @@ public class TestStore extends TestCase {
     // Make sure it worked (above is sensitive to caching details in hadoop core)
     FileSystem fs = FileSystem.get(conf);
     assertEquals(FaultyFileSystem.class, fs.getClass());
-    
+
     // Initialize region
     init(getName(), conf);
 
     LOG.info("Adding some data");
-    this.store.add(new KeyValue(row, family, qf1, null));
-    this.store.add(new KeyValue(row, family, qf2, null));
-    this.store.add(new KeyValue(row, family, qf3, null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
 
     LOG.info("Before flush, we should have no files");
     FileStatus[] files = fs.listStatus(store.getHomedir());
     Path[] paths = FileUtil.stat2Paths(files);
     System.err.println("Got paths: " + Joiner.on(",").join(paths));
     assertEquals(0, paths.length);
-        
+
     //flush
     try {
       LOG.info("Flushing");
@@ -363,7 +435,7 @@ public class TestStore extends TestCase {
     } catch (IOException ioe) {
       assertTrue(ioe.getMessage().contains("Fault injected"));
     }
- 
+
     LOG.info("After failed flush, we should still have no files!");
     files = fs.listStatus(store.getHomedir());
     paths = FileUtil.stat2Paths(files);
@@ -371,27 +443,27 @@ public class TestStore extends TestCase {
     assertEquals(0, paths.length);
   }
 
-  
+
   static class FaultyFileSystem extends FilterFileSystem {
     List<SoftReference<FaultyOutputStream>> outStreams =
       new ArrayList<SoftReference<FaultyOutputStream>>();
     private long faultPos = 200;
-    
+
     public FaultyFileSystem() {
       super(new LocalFileSystem());
       System.err.println("Creating faulty!");
     }
-    
+
     @Override
     public FSDataOutputStream create(Path p) throws IOException {
       return new FaultyOutputStream(super.create(p), faultPos);
     }
 
   }
-  
+
   static class FaultyOutputStream extends FSDataOutputStream {
     volatile long faultPos = Long.MAX_VALUE;
-    
+
     public FaultyOutputStream(FSDataOutputStream out,
         long faultPos) throws IOException {
       super(out, null);
@@ -404,7 +476,7 @@ public class TestStore extends TestCase {
       injectFault();
       super.write(buf, offset, length);
     }
-    
+
     private void injectFault() throws IOException {
       if (getPos() >= faultPos) {
         throw new IOException("Fault injected");
@@ -412,12 +484,87 @@ public class TestStore extends TestCase {
     }
   }
 
-  
-  
+
+
   private static void flushStore(Store store, long id) throws IOException {
     StoreFlusher storeFlusher = store.getStoreFlusher(id);
     storeFlusher.prepare();
     storeFlusher.flushCache();
     storeFlusher.commit();
+  }
+
+
+
+  /**
+   * Generate a list of KeyValues for testing based on given parameters
+   * @param timestamps
+   * @param numRows
+   * @param qualifier
+   * @param family
+   * @return
+   */
+  List<KeyValue> getKeyValueSet(long[] timestamps, int numRows,
+      byte[] qualifier, byte[] family) {
+    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    for (int i=1;i<=numRows;i++) {
+      byte[] b = Bytes.toBytes(i);
+      for (long timestamp: timestamps) {
+        kvList.add(new KeyValue(b, family, qualifier, timestamp, b));
+      }
+    }
+    return kvList;
+  }
+
+  /**
+   * Test to ensure correctness when using Stores with multiple timestamps
+   * @throws IOException
+   */
+  public void testMultipleTimestamps() throws IOException {
+    int numRows = 1;
+    long[] timestamps1 = new long[] {1,5,10,20};
+    long[] timestamps2 = new long[] {30,80};
+
+    init(this.getName());
+
+    List<KeyValue> kvList1 = getKeyValueSet(timestamps1,numRows, qf1, family);
+    for (KeyValue kv : kvList1) {
+      this.store.add(kv);
+    }
+
+    this.store.snapshot();
+    flushStore(store, id++);
+
+    List<KeyValue> kvList2 = getKeyValueSet(timestamps2,numRows, qf1, family);
+    for(KeyValue kv : kvList2) {
+      this.store.add(kv);
+    }
+
+    List<KeyValue> result;
+    Get get = new Get(Bytes.toBytes(1));
+    get.addColumn(family,qf1);
+
+    get.setTimeRange(0,15);
+    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(40,90);
+    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(10,45);
+    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(80,145);
+    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(1,2);
+    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(90,200);
+    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    assertTrue(result.size()==0);
   }
 }

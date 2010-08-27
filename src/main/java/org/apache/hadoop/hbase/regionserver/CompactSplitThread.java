@@ -29,10 +29,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -51,11 +48,20 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
 
   private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
 
+  /**
+   * Splitting should not take place if the total number of regions exceed this.
+   * This is not a hard limit to the number of regions but it is a guideline to
+   * stop splitting after number of online regions is greater than this.
+   */
+  private int regionSplitLimit;
+
   /** @param server */
   public CompactSplitThread(HRegionServer server) {
     super();
     this.server = server;
-    this.conf = server.conf;
+    this.conf = server.getConfiguration();
+    this.regionSplitLimit = conf.getInt("hbase.regionserver.regionSplitLimit",
+        Integer.MAX_VALUE);
     this.frequency =
       conf.getLong("hbase.regionserver.thread.splitcompactcheckfrequency",
       20 * 1000);
@@ -75,7 +81,8 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
           try {
             // Don't interrupt us while we are working
             byte [] midKey = r.compactStores();
-            if (midKey != null && !this.server.isStopped()) {
+            if (shouldSplitRegion() && midKey != null &&
+                !this.server.isStopped()) {
               split(r, midKey);
             }
           } finally {
@@ -124,7 +131,6 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Compaction " + (force? "(major) ": "") +
         "requested for region " + r.getRegionNameAsString() +
-        "/" + r.getRegionInfo().getEncodedName() +
         (why != null && !why.isEmpty()? " because: " + why: ""));
     }
     synchronized (regionsInQueue) {
@@ -135,69 +141,39 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
     }
   }
 
-  private void split(final HRegion region, final byte [] midKey)
+  private void split(final HRegion parent, final byte [] midKey)
   throws IOException {
-    final HRegionInfo oldRegionInfo = region.getRegionInfo();
     final long startTime = System.currentTimeMillis();
-    final HRegion [] newRegions = region.splitRegion(midKey);
-    if (newRegions == null) {
-      // Didn't need to be split
+    SplitTransaction st = new SplitTransaction(parent, midKey);
+    // If prepare does not return true, for some reason -- logged inside in
+    // the prepare call -- we are not ready to split just now.  Just return.
+    if (!st.prepare()) return;
+    try {
+      st.execute(this.server, this.server.getCatalogTracker());
+    } catch (IOException ioe) {
+      try {
+        LOG.info("Running rollback of failed split of " +
+          parent.getRegionNameAsString() + "; " + ioe.getMessage());
+        st.rollback(this.server);
+        LOG.info("Successful rollback of failed split of " +
+          parent.getRegionNameAsString());
+      } catch (RuntimeException e) {
+        // If failed rollback, kill this server to avoid having a hole in table.
+        LOG.info("Failed rollback of failed split of " +
+          parent.getRegionNameAsString() + " -- aborting server", e);
+        this.server.abort("Failed split");
+      }
       return;
     }
-    // TODO: Handle splitting of meta.
 
-    // Mark old region as offline and split in META.
-    // NOTE: there is no need for retry logic here. HTable does it for us.
-    oldRegionInfo.setOffline(true);
-    oldRegionInfo.setSplit(true);
-    // Inform the HRegionServer that the parent HRegion is no-longer online.
-    this.server.removeFromOnlineRegions(oldRegionInfo.getEncodedName());
-    MetaEditor.offlineParentInMeta(this.server.getCatalogTracker(),
-      oldRegionInfo, newRegions[0].getRegionInfo(),
-      newRegions[1].getRegionInfo());
-
-    // If we crash here, then the daughters will not be added and we'll have
-    // and offlined parent but no daughters to take up the slack.  hbase-2244
-    // adds fixup to the metascanners.
-    // TODO: Need new fixerupper in new master regime.
-
-    // TODO: if we fail here on out, crash out.  The recovery of a shutdown
-    // server should have fixup and get the daughters up on line.
-
-
-    // Add new regions to META
-    for (int i = 0; i < newRegions.length; i++) {
-      MetaEditor.addRegionToMeta(this.server.getCatalogTracker(),
-        newRegions[i].getRegionInfo());
-    }
-
-    // Open the regions on this server. TODO: Revisit.  Make sure no holes.
-    for (int i = 0; i < newRegions.length; i++) {
-      HRegionInfo hri = newRegions[i].getRegionInfo();
-      HRegion r = null;
-      try {
-        // Instantiate the region.
-        r = HRegion.openHRegion(hri, this.server.getWAL(),
-          this.server.getConfiguration(), this.server.getFlushRequester(), null);
-        this.server.postOpenDeployTasks(r, this.server.getCatalogTracker());
-      } catch (Throwable tt) {
-        this.server.abort("Failed open of " + hri.getRegionNameAsString(), tt);
-      }
-    }
-
-    // If we crash here, the master will not know of the new daughters and they
-    // will not be assigned.  The metascanner when it runs will notice and take
-    // care of assigning the new daughters.
-
-    // Now tell the master about the new regions; it needs to update its
-    // inmemory state of regions.
-    server.reportSplit(oldRegionInfo, newRegions[0].getRegionInfo(),
-      newRegions[1].getRegionInfo());
-
-    LOG.info("region split, META updated, daughters opened, and report to master all" +
-      " successful. Old region=" + oldRegionInfo.toString() +
-      ", new regions: " + newRegions[0].toString() + ", " +
-      newRegions[1].toString() + ". Split took " +
+    // Now tell the master about the new regions.  If we fail here, its OK.
+    // Basescanner will do fix up.  And reporting split to master is going away.
+    // TODO: Verify this still holds in new master rewrite.
+    this.server.reportSplit(parent.getRegionInfo(), st.getFirstDaughter(),
+      st.getSecondDaughter());
+    LOG.info("Region split, META updated, and report to master. Parent=" +
+      parent.getRegionInfo() + ", new regions: " +
+      st.getFirstDaughter() + ", " + st.getSecondDaughter() + ". Split took " +
       StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
   }
 
@@ -218,5 +194,16 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
    */
   public int getCompactionQueueSize() {
     return compactionQueue.size();
+  }
+
+  private boolean shouldSplitRegion() {
+    return (regionSplitLimit > server.getNumberOfOnlineRegions());
+  }
+
+  /**
+   * @return the regionSplitLimit
+   */
+  public int getRegionSplitLimit() {
+    return this.regionSplitLimit;
   }
 }

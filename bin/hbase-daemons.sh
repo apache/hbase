@@ -32,8 +32,8 @@ if [ $# -le 1 ]; then
   exit 1
 fi
 
-bin=`dirname "$0"`
-bin=`cd "$bin"; pwd`
+bin=`dirname "${BASH_SOURCE-$0}"`
+bin=`cd "$bin">/dev/null; pwd`
 
 . $bin/hbase-config.sh
 
@@ -44,6 +44,9 @@ command=$2
 case $command in
   (zookeeper)
     exec "$bin/zookeepers.sh" $args
+    ;;
+  (master-backup)
+    exec "$bin/master-backup.sh" $args
     ;;
   (*)
     exec "$bin/regionservers.sh" $args

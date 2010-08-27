@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
+import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.DependentColumnFilter;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
@@ -184,8 +185,9 @@ public class HbaseObjectWritable implements Writable, Configurable {
 
     // List
     addToMap(List.class, code++);
-    //
+
     addToMap(NavigableSet.class, code++);
+    addToMap(ColumnPrefixFilter.class, code++);
   }
 
   private Class<?> declaredClass;
@@ -464,13 +466,19 @@ public class HbaseObjectWritable implements Writable, Configurable {
         try {
           instanceClass = getClassByName(conf, className);
         } catch (ClassNotFoundException e) {
-          throw new RuntimeException("Can't find class " + className);
+          LOG.error("Can't find class " + className, e);
+          throw new IOException("Can't find class " + className, e);
         }
       } else {
         instanceClass = CODE_TO_CLASS.get(b);
       }
       Writable writable = WritableFactories.newInstance(instanceClass, conf);
-      writable.readFields(in);
+      try {
+        writable.readFields(in);
+      } catch (Exception e) {
+        LOG.error("Error in readFields", e);
+        throw new IOException("Error in readFields" , e);
+      }
       instance = writable;
       if (instanceClass == NullInstance.class) {  // null
         declaredClass = ((NullInstance)instance).declaredClass;

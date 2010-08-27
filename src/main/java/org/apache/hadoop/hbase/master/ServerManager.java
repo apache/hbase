@@ -88,7 +88,7 @@ public class ServerManager {
 
   private int minimumServerCount;
 
-  private final OldLogsCleaner oldLogCleaner;
+  private final LogsCleaner logCleaner;
 
   // Reporting to track master metrics.
   private final MasterMetrics metrics;
@@ -134,11 +134,11 @@ public class ServerManager {
     String n = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this.serverMonitorThread,
       n + ".serverMonitor");
-    this.oldLogCleaner = new OldLogsCleaner(
+    this.logCleaner = new LogsCleaner(
       c.getInt("hbase.master.meta.thread.rescanfrequency",60 * 1000),
       master, c, this.services.getMasterFileSystem().getFileSystem(),
       this.services.getMasterFileSystem().getOldLogDir());
-    Threads.setDaemonThreadRunning(oldLogCleaner,
+    Threads.setDaemonThreadRunning(logCleaner,
       n + ".oldLogCleaner");
   }
 

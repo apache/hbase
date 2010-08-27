@@ -20,18 +20,14 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.rmi.UnexpectedException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.SortedSet;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -39,8 +35,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.regionserver.DeleteCompare.DeleteCode;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -81,6 +77,9 @@ public class MemStore implements HeapSize {
   // Used to track own heapSize
   final AtomicLong size;
 
+  TimeRangeTracker timeRangeTracker;
+  TimeRangeTracker snapshotTimeRangeTracker;
+
   /**
    * Default constructor. Used for tests.
    */
@@ -99,6 +98,8 @@ public class MemStore implements HeapSize {
     this.comparatorIgnoreType = this.comparator.getComparatorIgnoringType();
     this.kvset = new KeyValueSkipListSet(c);
     this.snapshot = new KeyValueSkipListSet(c);
+    timeRangeTracker = new TimeRangeTracker();
+    snapshotTimeRangeTracker = new TimeRangeTracker();
     this.size = new AtomicLong(DEEP_OVERHEAD);
   }
 
@@ -128,6 +129,8 @@ public class MemStore implements HeapSize {
         if (!this.kvset.isEmpty()) {
           this.snapshot = this.kvset;
           this.kvset = new KeyValueSkipListSet(this.comparator);
+          this.snapshotTimeRangeTracker = this.timeRangeTracker;
+          this.timeRangeTracker = new TimeRangeTracker();
           // Reset heap to not include any keys
           this.size.set(DEEP_OVERHEAD);
         }
@@ -167,6 +170,7 @@ public class MemStore implements HeapSize {
       // create a new snapshot and let the old one go.
       if (!ss.isEmpty()) {
         this.snapshot = new KeyValueSkipListSet(this.comparator);
+        this.snapshotTimeRangeTracker = new TimeRangeTracker();
       }
     } finally {
       this.lock.writeLock().unlock();
@@ -183,6 +187,7 @@ public class MemStore implements HeapSize {
     this.lock.readLock().lock();
     try {
       s = heapSizeChange(kv, this.kvset.add(kv));
+      timeRangeTracker.includeTimestamp(kv);
       this.size.addAndGet(s);
     } finally {
       this.lock.readLock().unlock();
@@ -198,9 +203,9 @@ public class MemStore implements HeapSize {
   long delete(final KeyValue delete) {
     long s = 0;
     this.lock.readLock().lock();
-
     try {
       s += heapSizeChange(delete, this.kvset.add(delete));
+      timeRangeTracker.includeTimestamp(delete);
     } finally {
       this.lock.readLock().unlock();
     }
@@ -341,6 +346,112 @@ public class MemStore implements HeapSize {
     }
   }
 
+  /**
+   * Given the specs of a column, update it, first by inserting a new record,
+   * then removing the old one.  Since there is only 1 KeyValue involved, the memstoreTS
+   * will be set to 0, thus ensuring that they instantly appear to anyone. The underlying
+   * store will ensure that the insert/delete each are atomic. A scanner/reader will either
+   * get the new value, or the old value and all readers will eventually only see the new
+   * value after the old was removed.
+   *
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param newValue
+   * @param now
+   * @return
+   */
+  public long updateColumnValue(byte[] row,
+                                byte[] family,
+                                byte[] qualifier,
+                                long newValue,
+                                long now) {
+   this.lock.readLock().lock();
+    try {
+      KeyValue firstKv = KeyValue.createFirstOnRow(
+          row, family, qualifier);
+      // create a new KeyValue with 'now' and a 0 memstoreTS == immediately visible
+      KeyValue newKv;
+      // Is there a KeyValue in 'snapshot' with the same TS? If so, upgrade the timestamp a bit.
+      SortedSet<KeyValue> snSs = snapshot.tailSet(firstKv);
+      if (!snSs.isEmpty()) {
+        KeyValue snKv = snSs.first();
+        // is there a matching KV in the snapshot?
+        if (snKv.matchingRow(firstKv) && snKv.matchingQualifier(firstKv)) {
+          if (snKv.getTimestamp() == now) {
+            // poop,
+            now += 1;
+          }
+        }
+      }
+
+      // logic here: the new ts MUST be at least 'now'. But it could be larger if necessary.
+      // But the timestamp should also be max(now, mostRecentTsInMemstore)
+
+      // so we cant add the new KV w/o knowing what's there already, but we also
+      // want to take this chance to delete some kvs. So two loops (sad)
+
+      SortedSet<KeyValue> ss = kvset.tailSet(firstKv);
+      Iterator<KeyValue> it = ss.iterator();
+      while ( it.hasNext() ) {
+        KeyValue kv = it.next();
+
+        // if this isnt the row we are interested in, then bail:
+        if (!firstKv.matchingRow(kv)) {
+          break; // rows dont match, bail.
+        }
+
+        // if the qualifier matches and it's a put, just RM it out of the kvset.
+        if (firstKv.matchingQualifier(kv)) {
+          // to be extra safe we only remove Puts that have a memstoreTS==0
+          if (kv.getType() == KeyValue.Type.Put.getCode()) {
+            now = Math.max(now, kv.getTimestamp());
+          }
+        }
+      }
+
+
+      // add the new value now. this might have the same TS as an existing KV, thus confusing
+      // readers slightly for a MOMENT until we erase the old one (and thus old value).
+      newKv = new KeyValue(row, family, qualifier,
+          now,
+          Bytes.toBytes(newValue));
+      long addedSize = add(newKv);
+
+      // remove extra versions.
+      ss = kvset.tailSet(firstKv);
+      it = ss.iterator();
+      while ( it.hasNext() ) {
+        KeyValue kv = it.next();
+
+        if (kv == newKv) {
+          // ignore the one i just put in (heh)
+          continue;
+        }
+
+        // if this isnt the row we are interested in, then bail:
+        if (!firstKv.matchingRow(kv)) {
+          break; // rows dont match, bail.
+        }
+
+        // if the qualifier matches and it's a put, just RM it out of the kvset.
+        if (firstKv.matchingQualifier(kv)) {
+          // to be extra safe we only remove Puts that have a memstoreTS==0
+          if (kv.getType() == KeyValue.Type.Put.getCode()) {
+            // false means there was a change, so give us the size.
+            addedSize -= heapSizeChange(kv, false);
+
+            it.remove();
+          }
+        }
+      }
+
+      return addedSize;
+    } finally {
+      this.lock.readLock().unlock();
+    }
+  }
+
   /*
    * Immutable data structure to hold member found in set and the set it was
    * found in.  Include set because it is carrying context.
@@ -390,103 +501,19 @@ public class MemStore implements HeapSize {
     }
   }
 
-  //
-  // HBASE-880/1249/1304
-  //
-
   /**
-   * Perform a single-row Get on the  and snapshot, placing results
-   * into the specified KV list.
-   * <p>
-   * This will return true if it is determined that the query is complete
-   * and it is not necessary to check any storefiles after this.
-   * <p>
-   * Otherwise, it will return false and you should continue on.
-   * @param matcher Column matcher
-   * @param result List to add results to
-   * @return true if done with store (early-out), false if not
+   * Check if this memstore may contain the required keys
+   * @param scan
+   * @return False if the key definitely does not exist in this Memstore
    */
-  public boolean get(QueryMatcher matcher, List<KeyValue> result) {
-    this.lock.readLock().lock();
-    try {
-      if(internalGet(this.kvset, matcher, result) || matcher.isDone()) {
-        return true;
-      }
-      matcher.update();
-      return internalGet(this.snapshot, matcher, result) || matcher.isDone();
-    } finally {
-      this.lock.readLock().unlock();
-    }
+  public boolean shouldSeek(Scan scan) {
+    return timeRangeTracker.includesTimeRange(scan.getTimeRange()) ||
+        snapshotTimeRangeTracker.includesTimeRange(scan.getTimeRange());
   }
 
-  /**
-   * Gets from either the memstore or the snapshop, and returns a code
-   * to let you know which is which.
-   *
-   * @param matcher query matcher
-   * @param result puts results here
-   * @return 1 == memstore, 2 == snapshot, 0 == none
-   */
-  int getWithCode(QueryMatcher matcher, List<KeyValue> result) {
-    this.lock.readLock().lock();
-    try {
-      boolean fromMemstore = internalGet(this.kvset, matcher, result);
-      if (fromMemstore || matcher.isDone())
-        return 1;
-
-      matcher.update();
-      boolean fromSnapshot = internalGet(this.snapshot, matcher, result);
-      if (fromSnapshot || matcher.isDone())
-        return 2;
-
-      return 0;
-    } finally {
-      this.lock.readLock().unlock();
-    }
+  public TimeRangeTracker getSnapshotTimeRangeTracker() {
+    return this.snapshotTimeRangeTracker;
   }
-
-  /**
-   * Small utility functions for use by Store.incrementColumnValue
-   * _only_ under the threat of pain and everlasting race conditions.
-   */
-  void readLockLock() {
-    this.lock.readLock().lock();
-  }
-  void readLockUnlock() {
-    this.lock.readLock().unlock();
-  }
-
-  /**
-   *
-   * @param set memstore or snapshot
-   * @param matcher query matcher
-   * @param result list to add results to
-   * @return true if done with store (early-out), false if not
-   */
-  boolean internalGet(final NavigableSet<KeyValue> set,
-      final QueryMatcher matcher, final List<KeyValue> result) {
-    if(set.isEmpty()) return false;
-    // Seek to startKey
-    SortedSet<KeyValue> tail = set.tailSet(matcher.getStartKey());
-    for (KeyValue kv : tail) {
-      QueryMatcher.MatchCode res = matcher.match(kv);
-      switch(res) {
-        case INCLUDE:
-          result.add(kv);
-          break;
-        case SKIP:
-          break;
-        case NEXT:
-          return false;
-        case DONE:
-          return true;
-        default:
-          throw new RuntimeException("Unexpected " + res);
-      }
-    }
-    return false;
-  }
-
 
   /*
    * MemStoreScanner implements the KeyValueScanner.
@@ -520,7 +547,7 @@ public class MemStore implements HeapSize {
       StoreScanner level with coordination with MemStoreScanner.
 
     */
-    
+
     MemStoreScanner() {
       super();
 
@@ -531,7 +558,7 @@ public class MemStore implements HeapSize {
       KeyValue ret = null;
       long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
       //DebugPrint.println( " MS@" + hashCode() + ": threadpoint = " + readPoint);
-      
+
       while (ret == null && it.hasNext()) {
         KeyValue v = it.next();
         if (v.getMemstoreTS() <= readPoint) {
@@ -566,11 +593,25 @@ public class MemStore implements HeapSize {
       //DebugPrint.println( " MS@" + hashCode() + " snapshot seek: " + snapshotNextRow + " with size = " +
       //    snapshot.size() + " threadread = " + readPoint);
 
-      
+
       KeyValue lowest = getLowest();
 
       // has data := (lowest != null)
       return lowest != null;
+    }
+
+    @Override
+    public boolean reseek(KeyValue key) {
+      while (kvsetNextRow != null &&
+          comparator.compare(kvsetNextRow, key) < 0) {
+        kvsetNextRow = getNext(kvsetIt);
+      }
+
+      while (snapshotNextRow != null &&
+          comparator.compare(snapshotNextRow, key) < 0) {
+        snapshotNextRow = getNext(snapshotIt);
+      }
+      return (kvsetNextRow != null || snapshotNextRow != null);
     }
 
     public synchronized KeyValue peek() {
@@ -630,8 +671,8 @@ public class MemStore implements HeapSize {
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (7 * ClassSize.REFERENCE));
-  
+      ClassSize.OBJECT + (9 * ClassSize.REFERENCE));
+
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
       ClassSize.COPYONWRITE_ARRAYSET + ClassSize.COPYONWRITE_ARRAYLIST +

@@ -50,8 +50,11 @@ import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.common.base.Joiner;
@@ -361,7 +364,7 @@ public class TestHRegion extends HBaseTestCase {
       assertEquals(OperationStatusCode.SUCCESS, codes[i]);
     }
     assertEquals(1, HLog.getSyncOps());
-    
+
     LOG.info("Next a batch put with one invalid family");
     puts[5].add(Bytes.toBytes("BAD_CF"), qual, val);
     codes = this.region.put(puts);
@@ -371,7 +374,7 @@ public class TestHRegion extends HBaseTestCase {
         OperationStatusCode.SUCCESS, codes[i]);
     }
     assertEquals(1, HLog.getSyncOps());
-    
+
     LOG.info("Next a batch put that has to break into two batches to avoid a lock");
     Integer lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
 
@@ -396,7 +399,7 @@ public class TestHRegion extends HBaseTestCase {
       if (System.currentTimeMillis() - startWait > 10000) {
         fail("Timed out waiting for thread to sync first minibatch");
       }
-    }    
+    }
     LOG.info("...releasing row lock, which should let put thread continue");
     region.releaseRowLock(lockedRow);
     LOG.info("...joining on thread");
@@ -408,7 +411,7 @@ public class TestHRegion extends HBaseTestCase {
       assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
         OperationStatusCode.SUCCESS, codes[i]);
     }
-    
+
     LOG.info("Nexta, a batch put which uses an already-held lock");
     lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
     LOG.info("...obtained row lock");
@@ -427,13 +430,13 @@ public class TestHRegion extends HBaseTestCase {
     }
     // Make sure we didn't do an extra batch
     assertEquals(1, HLog.getSyncOps());
-    
+
     // Make sure we still hold lock
     assertTrue(region.isRowLocked(lockedRow));
     LOG.info("...releasing lock");
     region.releaseRowLock(lockedRow);
   }
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // checkAndMutate tests
   //////////////////////////////////////////////////////////////////////////////
@@ -486,6 +489,14 @@ public class TestHRegion extends HBaseTestCase {
     res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId,
         true);
     assertTrue(res);
+
+    //checkAndPut looking for a null value
+    put = new Put(row1);
+    put.add(fam1, qf1, val1);
+
+    res = region.checkAndMutate(row1, fam1, qf1, null, put, lockId, true);
+    assertTrue(res);
+    
   }
 
   public void testCheckAndMutate_WithWrongValue() throws IOException{
@@ -834,7 +845,7 @@ public class TestHRegion extends HBaseTestCase {
     result = region.get(get, null);
     assertEquals(0, result.size());
   }
-  
+
   /**
    * Tests that the special LATEST_TIMESTAMP option for puts gets
    * replaced by the actual timestamp
@@ -863,7 +874,7 @@ public class TestHRegion extends HBaseTestCase {
     LOG.info("Got: " + kv);
     assertTrue("LATEST_TIMESTAMP was not replaced with real timestamp",
         kv.getTimestamp() != HConstants.LATEST_TIMESTAMP);
-    
+
     // Check same with WAL enabled (historically these took different
     // code paths, so check both)
     row = Bytes.toBytes("row2");
@@ -1246,54 +1257,38 @@ public class TestHRegion extends HBaseTestCase {
   public void testMerge() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [][] families = {fam1, fam2, fam3};
-
     HBaseConfiguration hc = initSplit();
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, hc, families);
-
     try {
       LOG.info("" + addContent(region, fam3));
       region.flushcache();
       byte [] splitRow = region.compactStores();
       assertNotNull(splitRow);
       LOG.info("SplitRow: " + Bytes.toString(splitRow));
-      HRegion [] regions = split(region, splitRow);
+      HRegion [] subregions = splitRegion(region, splitRow);
       try {
         // Need to open the regions.
-        // TODO: Add an 'open' to HRegion... don't do open by constructing
-        // instance.
-        for (int i = 0; i < regions.length; i++) {
-          regions[i] = openClosedRegion(regions[i]);
+        for (int i = 0; i < subregions.length; i++) {
+          openClosedRegion(subregions[i]);
+          subregions[i].compactStores();
         }
         Path oldRegionPath = region.getRegionDir();
+        Path oldRegion1 = subregions[0].getRegionDir();
+        Path oldRegion2 = subregions[1].getRegionDir();
         long startTime = System.currentTimeMillis();
-        HRegion subregions [] = region.splitRegion(splitRow);
-        if (subregions != null) {
-          LOG.info("Split region elapsed time: "
-              + ((System.currentTimeMillis() - startTime) / 1000.0));
-          assertEquals("Number of subregions", subregions.length, 2);
-          for (int i = 0; i < subregions.length; i++) {
-            subregions[i] = openClosedRegion(subregions[i]);
-            subregions[i].compactStores();
-          }
-
-          // Now merge it back together
-          Path oldRegion1 = subregions[0].getRegionDir();
-          Path oldRegion2 = subregions[1].getRegionDir();
-          startTime = System.currentTimeMillis();
-          region = HRegion.mergeAdjacent(subregions[0], subregions[1]);
-          LOG.info("Merge regions elapsed time: " +
-              ((System.currentTimeMillis() - startTime) / 1000.0));
-          fs.delete(oldRegion1, true);
-          fs.delete(oldRegion2, true);
-          fs.delete(oldRegionPath, true);
-        }
+        region = HRegion.mergeAdjacent(subregions[0], subregions[1]);
+        LOG.info("Merge regions elapsed time: " +
+            ((System.currentTimeMillis() - startTime) / 1000.0));
+        fs.delete(oldRegion1, true);
+        fs.delete(oldRegion2, true);
+        fs.delete(oldRegionPath, true);
         LOG.info("splitAndMerge completed.");
       } finally {
-        for (int i = 0; i < regions.length; i++) {
+        for (int i = 0; i < subregions.length; i++) {
           try {
-            regions[i].close();
+            subregions[i].close();
           } catch (IOException e) {
             // Ignore.
           }
@@ -1305,6 +1300,38 @@ public class TestHRegion extends HBaseTestCase {
         region.getLog().closeAndDelete();
       }
     }
+  }
+
+  /**
+   * @param parent Region to split.
+   * @param midkey Key to split around.
+   * @return The Regions we created.
+   * @throws IOException
+   */
+  HRegion [] splitRegion(final HRegion parent, final byte [] midkey)
+  throws IOException {
+    PairOfSameType<HRegion> result = null;
+    SplitTransaction st = new SplitTransaction(parent, midkey);
+    // If prepare does not return true, for some reason -- logged inside in
+    // the prepare call -- we are not ready to split just now.  Just return.
+    if (!st.prepare()) return null;
+    try {
+      result = st.execute(null, null);
+    } catch (IOException ioe) {
+      try {
+        LOG.info("Running rollback of failed split of " +
+          parent.getRegionNameAsString() + "; " + ioe.getMessage());
+        st.rollback(null);
+        LOG.info("Successful rollback of failed split of " +
+          parent.getRegionNameAsString());
+        return null;
+      } catch (RuntimeException e) {
+        // If failed rollback, kill this server to avoid having a hole in table.
+        LOG.info("Failed rollback of failed split of " +
+          parent.getRegionNameAsString() + " -- aborting server", e);
+      }
+    }
+    return new HRegion [] {result.getFirst(), result.getSecond()};
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -1367,6 +1394,7 @@ public class TestHRegion extends HBaseTestCase {
     String method = this.getName();
     initHRegion(tableName, method, families);
 
+
     //Putting data in Region
     Put put = new Put(row1);
     put.add(fam1, null, null);
@@ -1384,10 +1412,12 @@ public class TestHRegion extends HBaseTestCase {
     scan.addFamily(fam2);
     scan.addFamily(fam4);
     is = (RegionScanner) region.getScanner(scan);
+    ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
     assertEquals(1, ((RegionScanner)is).storeHeap.getHeap().size());
 
     scan = new Scan();
     is = (RegionScanner) region.getScanner(scan);
+    ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
     assertEquals(families.length -1,
         ((RegionScanner)is).storeHeap.getHeap().size());
   }
@@ -1856,6 +1886,7 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(value+amount, result);
 
     Store store = region.getStore(fam1);
+    // ICV removes any extra values floating around in there.
     assertEquals(1, store.memstore.kvset.size());
     assertTrue(store.memstore.snapshot.isEmpty());
 
@@ -1863,6 +1894,8 @@ public class TestHRegion extends HBaseTestCase {
   }
 
   public void testIncrementColumnValue_BumpSnapshot() throws IOException {
+    ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
+    EnvironmentEdgeManagerTestHelper.injectEdge(mee);
     initHRegion(tableName, getName(), fam1);
 
     long value = 42L;
@@ -2133,7 +2166,7 @@ public class TestHRegion extends HBaseTestCase {
       byte [] splitRow = region.compactStores();
       assertNotNull(splitRow);
       LOG.info("SplitRow: " + Bytes.toString(splitRow));
-      HRegion [] regions = split(region, splitRow);
+      HRegion [] regions = splitRegion(region, splitRow);
       try {
         // Need to open the regions.
         // TODO: Add an 'open' to HRegion... don't do open by constructing
@@ -2173,7 +2206,7 @@ public class TestHRegion extends HBaseTestCase {
         for (int i = 0; i < regions.length; i++) {
           HRegion[] rs = null;
           if (midkeys[i] != null) {
-            rs = split(regions[i], midkeys[i]);
+            rs = splitRegion(regions[i], midkeys[i]);
             for (int j = 0; j < rs.length; j++) {
               sortedMap.put(Bytes.toString(rs[j].getRegionName()),
                 openClosedRegion(rs[j]));
@@ -2226,7 +2259,7 @@ public class TestHRegion extends HBaseTestCase {
 
     HRegion [] regions = null;
     try {
-      regions = region.splitRegion(Bytes.toBytes("" + splitRow));
+      regions = splitRegion(region, Bytes.toBytes("" + splitRow));
       //Opening the regions returned.
       for (int i = 0; i < regions.length; i++) {
         regions[i] = openClosedRegion(regions[i]);
@@ -2651,7 +2684,93 @@ public class TestHRegion extends HBaseTestCase {
 
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Bloom filter test
+  //////////////////////////////////////////////////////////////////////////////
 
+  public void testAllColumnsWithBloomFilter() throws IOException {
+    byte [] TABLE = Bytes.toBytes("testAllColumnsWithBloomFilter");
+    byte [] FAMILY = Bytes.toBytes("family");
+
+    //Create table
+    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY, Integer.MAX_VALUE,
+        HColumnDescriptor.DEFAULT_COMPRESSION,
+        HColumnDescriptor.DEFAULT_IN_MEMORY,
+        HColumnDescriptor.DEFAULT_BLOCKCACHE,
+        Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL,
+        "rowcol",
+        HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+    HTableDescriptor htd = new HTableDescriptor(TABLE);
+    htd.addFamily(hcd);
+    HRegionInfo info = new HRegionInfo(htd, null, null, false);
+    Path path = new Path(DIR + "testAllColumnsWithBloomFilter");
+    region = HRegion.createHRegion(info, path, conf);
+
+    // For row:0, col:0: insert versions 1 through 5.
+    byte row[] = Bytes.toBytes("row:" + 0);
+    byte column[] = Bytes.toBytes("column:" + 0);
+    Put put = new Put(row);
+    for (long idx = 1; idx <= 4; idx++) {
+      put.add(FAMILY, column, idx, Bytes.toBytes("value-version-" + idx));
+    }
+    region.put(put);
+
+    //Flush
+    region.flushcache();
+
+    //Get rows
+    Get get = new Get(row);
+    get.setMaxVersions();
+    KeyValue[] kvs = region.get(get, null).raw();
+
+    //Check if rows are correct
+    assertEquals(4, kvs.length);
+    checkOneCell(kvs[0], FAMILY, 0, 0, 4);
+    checkOneCell(kvs[1], FAMILY, 0, 0, 3);
+    checkOneCell(kvs[2], FAMILY, 0, 0, 2);
+    checkOneCell(kvs[3], FAMILY, 0, 0, 1);
+  }
+
+  /**
+    * Testcase to cover bug-fix for HBASE-2823
+    * Ensures correct delete when issuing delete row
+    * on columns with bloom filter set to row+col (BloomType.ROWCOL)
+   */
+  public void testDeleteRowWithBloomFilter() throws IOException {
+    byte [] tableName = Bytes.toBytes("testDeleteRowWithBloomFilter");
+    byte [] familyName = Bytes.toBytes("familyName");
+
+    // Create Table
+    HColumnDescriptor hcd = new HColumnDescriptor(familyName, Integer.MAX_VALUE,
+        HColumnDescriptor.DEFAULT_COMPRESSION, false, true,
+        HColumnDescriptor.DEFAULT_TTL, "rowcol");
+
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(hcd);
+    HRegionInfo info = new HRegionInfo(htd, null, null, false);
+    Path path = new Path(DIR + "TestDeleteRowWithBloomFilter");
+    region = HRegion.createHRegion(info, path, conf);
+
+    // Insert some data
+    byte row[] = Bytes.toBytes("row1");
+    byte col[] = Bytes.toBytes("col1");
+
+    Put put = new Put(row);
+    put.add(familyName, col, 1, Bytes.toBytes("SomeRandomValue"));
+    region.put(put);
+    region.flushcache();
+
+    Delete del = new Delete(row);
+    region.delete(del, null, true);
+    region.flushcache();
+
+    // Get remaining rows (should have none)
+    Get get = new Get(row);
+    get.addColumn(familyName, col);
+
+    KeyValue[] keyValues = region.get(get, null).raw();
+    assertTrue(keyValues.length == 0);
+  }
 
   private void putData(int startRow, int numRows, byte [] qf,
       byte [] ...families)
@@ -2732,15 +2851,6 @@ public class TestHRegion extends HBaseTestCase {
     }
   }
 
-  protected HRegion [] split(final HRegion r, final byte [] splitRow)
-  throws IOException {
-    // Assert can get mid key from passed region.
-    assertGet(r, fam3, splitRow);
-    HRegion [] regions = r.splitRegion(splitRow);
-    assertEquals(regions.length, 2);
-    return regions;
-  }
-
   private HBaseConfiguration initSplit() {
     HBaseConfiguration conf = new HBaseConfiguration();
     // Always compact if there is more than one store file.
@@ -2775,6 +2885,31 @@ public class TestHRegion extends HBaseTestCase {
     }
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     Path path = new Path(DIR + callingMethod);
+    if (fs.exists(path)) {
+      if (!fs.delete(path, true)) {
+        throw new IOException("Failed delete of " + path);
+      }
+    }
     region = HRegion.createHRegion(info, path, conf);
   }
+
+  /**
+   * Assert that the passed in KeyValue has expected contents for the
+   * specified row, column & timestamp.
+   */
+  private void checkOneCell(KeyValue kv, byte[] cf,
+                             int rowIdx, int colIdx, long ts) {
+    String ctx = "rowIdx=" + rowIdx + "; colIdx=" + colIdx + "; ts=" + ts;
+    assertEquals("Row mismatch which checking: " + ctx,
+                 "row:"+ rowIdx, Bytes.toString(kv.getRow()));
+    assertEquals("ColumnFamily mismatch while checking: " + ctx,
+                 Bytes.toString(cf), Bytes.toString(kv.getFamily()));
+    assertEquals("Column qualifier mismatch while checking: " + ctx,
+                 "column:" + colIdx, Bytes.toString(kv.getQualifier()));
+    assertEquals("Timestamp mismatch while checking: " + ctx,
+                 ts, kv.getTimestamp());
+    assertEquals("Value mismatch while checking: " + ctx,
+                 "value-version-" + ts, Bytes.toString(kv.getValue()));
+  }
+
 }

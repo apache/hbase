@@ -49,6 +49,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -104,6 +108,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -249,6 +254,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   // Instance of the hbase executor service.
   private ExecutorService service;
+
+  // Replication services
+  private Replication replicationHandler;
 
   /**
    * Starts a HRegionServer at the default location
@@ -676,6 +684,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             + this.serverInfo.getServerAddress() + ", Now=" + hsa.toString());
         this.serverInfo.setServerAddress(hsa);
       }
+      
+      // hack! Maps DFSClient => RegionServer for logs.  HDFS made this 
+      // config param for task trackers, but we can piggyback off of it.
+      if (this.conf.get("mapred.task.id") == null) {
+        this.conf.set("mapred.task.id", 
+            "hb_rs_" + this.serverInfo.getServerName());
+      }
+      
       // Master sent us hbase.rootdir to use. Should be fully qualified
       // path with file system specification included. Set 'fs.defaultFS'
       // to match the filesystem on hbase.rootdir else underlying hadoop hdfs
@@ -756,6 +772,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * @return Throwable converted to an IOE; methods can only let out IOEs.
    */
   private Throwable cleanup(final Throwable t, final String msg) {
+    // Don't log as error if NSRE; NSRE is 'normal' operation.
+    if (t instanceof NotServingRegionException) {
+      LOG.debug("NotServingRegionException; " +  t.getMessage());
+      return t;
+    }
     if (msg == null) {
       LOG.error("", RemoteExceptionHandler.checkThrowable(t));
     } else {
@@ -877,16 +898,19 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           + "running at " + this.serverInfo.getServerName()
           + " because logdir " + logdir.toString() + " exists");
     }
-    HLog newlog = instantiateHLog(logdir, oldLogDir);
-    return newlog;
+    this.replicationHandler = new Replication(this, this.fs, logdir, oldLogDir);
+    HLog log = instantiateHLog(logdir, oldLogDir);
+    this.replicationHandler.addLogEntryVisitor(log);
+    return log;
   }
 
   // instantiate
-  protected HLog instantiateHLog(Path logdir, Path oldLogDir)
-      throws IOException {
-    HLog newlog = new HLog(fs, logdir, oldLogDir, conf, hlogRoller, null,
-        serverInfo.getServerAddress().toString());
-    return newlog;
+  protected HLog instantiateHLog(Path logdir, Path oldLogDir) throws IOException {
+    return new HLog(this.fs, logdir, oldLogDir, this.conf, this.hlogRoller,
+      this.replicationHandler != null?
+        this.replicationHandler.getReplicationManager():
+        null,
+        this.serverInfo.getServerAddress().toString());
   }
 
   protected LogRoller getLogRoller() {
@@ -1026,13 +1050,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           port++;
           // update HRS server info port.
           this.serverInfo = new HServerInfo(this.serverInfo.getServerAddress(),
-              this.serverInfo.getStartCode(), port, this.serverInfo
-                  .getHostname());
+            this.serverInfo.getStartCode(), port,
+            this.serverInfo.getHostname());
         }
       }
     }
 
-    // Start Server. This service is like leases in that it internally runs
+    this.replicationHandler.startReplicationServices();
+
+    // Start Server.  This service is like leases in that it internally runs
     // a thread.
     this.server.start();
     LOG.info("HRegionServer started at: "
@@ -1119,7 +1145,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.abortRequested = true;
     this.reservedSpace.clear();
     if (this.metrics != null) {
-      LOG.info("Dump of metrics: " + this.metrics.toString());
+      LOG.info("Dump of metrics: " + this.metrics);
     }
     stop(reason);
   }
@@ -1151,6 +1177,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     Threads.shutdown(this.compactSplitThread);
     Threads.shutdown(this.hlogRoller);
     this.service.shutdown();
+    this.replicationHandler.join();
   }
 
   /**
@@ -1253,10 +1280,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             + newRegionA.getRegionNameAsString() + ", "
             + newRegionB.getRegionNameAsString())));
   }
-
-  // ////////////////////////////////////////////////////////////////////////////
-  // HMaster-given operations
-  // ////////////////////////////////////////////////////////////////////////////
 
   /**
    * Closes all regions.  Called on our way out.
@@ -2221,7 +2244,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (message != null) {
       System.err.println(message);
     }
-    System.err.println("Usage: java org.apache.hbase.HRegionServer start|stop");
+    System.err.println("Usage: java org.apache.hbase.HRegionServer start|stop [-D <conf.param=value>]");
     System.exit(0);
   }
 
@@ -2245,6 +2268,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
+  @Override
+  public void replicateLogEntries(HLog.Entry[] entries) throws IOException {
+    this.replicationHandler.replicateLogEntries(entries);
+  }
+
   /**
    * Do class main.
    *
@@ -2254,15 +2282,26 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   protected static void doMain(final String[] args,
       final Class<? extends HRegionServer> regionServerClass) {
-    if (args.length < 1) {
-      printUsageAndExit();
-    }
     Configuration conf = HBaseConfiguration.create();
 
-    // Process command-line args. TODO: Better cmd-line processing
-    // (but hopefully something not as painful as cli options).
-    for (String cmd : args) {
-      if (cmd.equals("start")) {
+    Options opt = new Options();
+    opt.addOption("D", true, "Override HBase Configuration Settings");
+    try {
+      CommandLine cmd = new GnuParser().parse(opt, args);
+
+      if (cmd.hasOption("D")) {
+        for (String confOpt : cmd.getOptionValues("D")) {
+          String[] kv = confOpt.split("=", 2);
+          if (kv.length == 2) {
+            conf.set(kv[0], kv[1]);
+            LOG.debug("-D configuration override: " + kv[0] + "=" + kv[1]);
+          } else {
+            throw new ParseException("-D option format invalid: " + confOpt);
+          }
+        }
+      }
+
+      if (cmd.getArgList().contains("start")) {
         try {
           // If 'local', don't start a region server here. Defer to
           // LocalHBaseCluster. It manages 'local' clusters.
@@ -2278,19 +2317,20 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             startRegionServer(hrs);
           }
         } catch (Throwable t) {
-          LOG.error("Can not start region server because "
-              + StringUtils.stringifyException(t));
+          LOG.error( "Can not start region server because "+
+              StringUtils.stringifyException(t) );
+          System.exit(-1);
         }
-        break;
+      } else if (cmd.getArgList().contains("stop")) {
+        throw new ParseException("To shutdown the regionserver run " +
+            "bin/hbase-daemon.sh stop regionserver or send a kill signal to" +
+            "the regionserver pid");
+      } else {
+        throw new ParseException("Unknown argument(s): " +
+            org.apache.commons.lang.StringUtils.join(cmd.getArgs(), " "));
       }
-
-      if (cmd.equals("stop")) {
-        printUsageAndExit("To shutdown the regionserver run "
-            + "bin/hbase-daemon.sh stop regionserver or send a kill signal to"
-            + "the regionserver pid");
-      }
-
-      // Print out usage if we get to here.
+    } catch (ParseException e) {
+      LOG.error("Could not parse", e);
       printUsageAndExit();
     }
   }
@@ -2304,5 +2344,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     Class<? extends HRegionServer> regionServerClass = (Class<? extends HRegionServer>) conf
         .getClass(HConstants.REGION_SERVER_IMPL, HRegionServer.class);
     doMain(args, regionServerClass);
+  }
+
+  public int getNumberOfOnlineRegions() {
+    return onlineRegions.size();
   }
 }

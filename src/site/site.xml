@@ -18,7 +18,7 @@
     <menu name="HBase">
       <item name="Overview" href="index.html"/>
       <item name="License" href="license.html" />
-      <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/hadoop/hbase/" />
+      <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/hbase/" />
       <item name="Release Notes" href="https://issues.apache.org/jira/browse/HBASE?report=com.atlassian.jira.plugin.system.project:changelog-panel" />
       <item name="Issue Tracking" href="issue-tracking.html" />
       <item name="Mailing Lists" href="mail-lists.html" />
@@ -35,6 +35,10 @@
       <item name="Bulk Loads" href="bulk-loads.html" />
       <item name="Metrics"      href="metrics.html" />
       <item name="HBase on Windows"      href="cygwin.html" />
+      <item name="Cluster replication"      href="replication.html" />
+      <item name="Pseudo-Distributed HBase"      href="pseudo-distributed.html" />
+      <item name="HBase Book"      href="book.html" />
+      <item name="Example Docbook Article"      href="sample_article.html" />
     </menu>
   </body>
     <skin>

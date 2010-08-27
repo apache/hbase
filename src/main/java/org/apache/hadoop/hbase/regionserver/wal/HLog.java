@@ -28,6 +28,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -36,11 +37,13 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -51,6 +54,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -59,6 +63,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -120,6 +125,15 @@ public class HLog implements Syncable {
   static final Log LOG = LogFactory.getLog(HLog.class);
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
   static final byte [] METAROW = Bytes.toBytes("METAROW");
+
+  /*
+   * Name of directory that holds recovered edits written by the wal log
+   * splitting code, one per region
+   */
+  private static final String RECOVERED_EDITS_DIR = "recovered.edits";
+  private static final Pattern EDITFILES_NAME_PATTERN =
+    Pattern.compile("-?[0-9]+");
+  
   private final FileSystem fs;
   private final Path dir;
   private final Configuration conf;
@@ -141,11 +155,6 @@ public class HLog implements Syncable {
   private int initialReplication;    // initial replication factor of SequenceFile.writer
   private Method getNumCurrentReplicas; // refers to DFSOutputStream.getNumCurrentReplicas
   final static Object [] NO_ARGS = new Object []{};
-
-  /** Name of file that holds recovered edits written by the wal log splitting
-   * code, one per region
-   */
-  public static final String RECOVERED_EDITS = "recovered.edits";
 
   // used to indirectly tell syncFs to force the sync
   private boolean forceSync = false;
@@ -219,6 +228,9 @@ public class HLog implements Syncable {
    * Thread that handles group commit
    */
   private final LogSyncer logSyncerThread;
+
+  private final List<LogEntryVisitor> logEntryVisitors =
+      new CopyOnWriteArrayList<LogEntryVisitor>();
 
   /**
    * Pattern used to validate a HLog file name
@@ -388,7 +400,7 @@ public class HLog implements Syncable {
         !this.logSeqNum.compareAndSet(id, newvalue); id = this.logSeqNum.get()) {
       // This could spin on occasion but better the occasional spin than locking
       // every increment of sequence number.
-      LOG.debug("Change sequence number from " + logSeqNum + " to " + newvalue);
+      LOG.debug("Changed sequenceid from " + logSeqNum + " to " + newvalue);
     }
   }
 
@@ -434,22 +446,27 @@ public class HLog implements Syncable {
       if (closed) {
         return regionsToFlush;
       }
+      // Do all the preparation outside of the updateLock to block
+      // as less as possible the incoming writes
+      long currentFilenum = this.filenum;
+      this.filenum = System.currentTimeMillis();
+      Path newPath = computeFilename();
+      HLog.Writer nextWriter = createWriter(fs, newPath, HBaseConfiguration.create(conf));
+      int nextInitialReplication = fs.getFileStatus(newPath).getReplication();
+      // Can we get at the dfsclient outputstream?  If an instance of
+      // SFLW, it'll have done the necessary reflection to get at the
+      // protected field name.
+      OutputStream nextHdfsOut = null;
+      if (nextWriter instanceof SequenceFileLogWriter) {
+        nextHdfsOut =
+          ((SequenceFileLogWriter)nextWriter).getDFSCOutputStream();
+      }
       synchronized (updateLock) {
         // Clean up current writer.
-        Path oldFile = cleanupCurrentWriter(this.filenum);
-        this.filenum = System.currentTimeMillis();
-        Path newPath = computeFilename();
-        this.writer = createWriter(fs, newPath, HBaseConfiguration.create(conf));
-        this.initialReplication = fs.getFileStatus(newPath).getReplication();
-
-        // Can we get at the dfsclient outputstream?  If an instance of
-        // SFLW, it'll have done the necessary reflection to get at the
-        // protected field name.
-        this.hdfs_out = null;
-        if (this.writer instanceof SequenceFileLogWriter) {
-          this.hdfs_out =
-            ((SequenceFileLogWriter)this.writer).getDFSCOutputStream();
-        }
+        Path oldFile = cleanupCurrentWriter(currentFilenum);
+        this.writer = nextWriter;
+        this.initialReplication = nextInitialReplication;
+        this.hdfs_out = nextHdfsOut;
 
         LOG.info((oldFile != null?
             "Roll " + FSUtils.getPath(oldFile) + ", entries=" +
@@ -457,28 +474,28 @@ public class HLog implements Syncable {
             ", filesize=" +
             this.fs.getFileStatus(oldFile).getLen() + ". ": "") +
           "New hlog " + FSUtils.getPath(newPath));
-        // Tell our listeners that a new log was created
-        if (!this.actionListeners.isEmpty()) {
-          for (LogActionsListener list : this.actionListeners) {
-            list.logRolled(newPath);
-          }
-        }
-        // Can we delete any of the old log files?
-        if (this.outputfiles.size() > 0) {
-          if (this.lastSeqWritten.size() <= 0) {
-            LOG.debug("Last sequence written is empty. Deleting all old hlogs");
-            // If so, then no new writes have come in since all regions were
-            // flushed (and removed from the lastSeqWritten map). Means can
-            // remove all but currently open log file.
-            for (Map.Entry<Long, Path> e : this.outputfiles.entrySet()) {
-              archiveLogFile(e.getValue(), e.getKey());
-            }
-            this.outputfiles.clear();
-          } else {
-            regionsToFlush = cleanOldLogs();
-          }
-        }
         this.numEntries.set(0);
+      }
+      // Tell our listeners that a new log was created
+      if (!this.actionListeners.isEmpty()) {
+        for (LogActionsListener list : this.actionListeners) {
+          list.logRolled(newPath);
+        }
+      }
+      // Can we delete any of the old log files?
+      if (this.outputfiles.size() > 0) {
+        if (this.lastSeqWritten.size() <= 0) {
+          LOG.debug("Last sequenceid written is empty. Deleting all old hlogs");
+          // If so, then no new writes have come in since all regions were
+          // flushed (and removed from the lastSeqWritten map). Means can
+          // remove all but currently open log file.
+          for (Map.Entry<Long, Path> e : this.outputfiles.entrySet()) {
+            archiveLogFile(e.getValue(), e.getKey());
+          }
+          this.outputfiles.clear();
+        } else {
+          regionsToFlush = cleanOldLogs();
+        }
       }
     } finally {
       this.cacheFlushLock.unlock();
@@ -560,7 +577,7 @@ public class HLog implements Syncable {
         byte [] oldestRegion = getOldestRegion(oldestOutstandingSeqNum);
         LOG.debug("Found " + logsToRemove + " hlogs to remove " +
           " out of total " + this.outputfiles.size() + "; " +
-          "oldest outstanding seqnum is " + oldestOutstandingSeqNum +
+          "oldest outstanding sequenceid is " + oldestOutstandingSeqNum +
           " from region " + Bytes.toString(oldestRegion));
       }
       for (Long seq : sequenceNumbers) {
@@ -650,7 +667,7 @@ public class HLog implements Syncable {
         throw e;
       }
       if (currentfilenum >= 0) {
-        oldFile = computeFilename();
+        oldFile = computeFilename(currentfilenum);
         this.outputfiles.put(Long.valueOf(this.logSeqNum.get() - 1), oldFile);
       }
     }
@@ -660,22 +677,27 @@ public class HLog implements Syncable {
   private void archiveLogFile(final Path p, final Long seqno) throws IOException {
     Path newPath = getHLogArchivePath(this.oldLogDir, p);
     LOG.info("moving old hlog file " + FSUtils.getPath(p) +
-      " whose highest sequence/edit id is " + seqno + " to " +
+      " whose highest sequenceid is " + seqno + " to " +
       FSUtils.getPath(newPath));
     this.fs.rename(p, newPath);
-    if (!this.actionListeners.isEmpty()) {
-      for (LogActionsListener list : this.actionListeners) {
-        list.logArchived(p, newPath);
-      }
-    }
+  }
+
+  /**
+   * This is a convenience method that computes a new filename with a given
+   * using the current HLog file-number
+   * @return Path
+   */
+  protected Path computeFilename() {
+    return computeFilename(this.filenum);
   }
 
   /**
    * This is a convenience method that computes a new filename with a given
    * file-number.
+   * @param file-number to use
    * @return Path
    */
-  protected Path computeFilename() {
+  protected Path computeFilename(long filenum) {
     if (filenum < 0) {
       throw new RuntimeException("hlog file number can't be < 0");
     }
@@ -997,10 +1019,13 @@ public class HLog implements Syncable {
    * If the pipeline isn't started yet or is empty, you will get the default
    * replication factor.  Therefore, if this function returns 0, it means you
    * are not properly running with the HDFS-826 patch.
+   * @throws InvocationTargetException
+   * @throws IllegalAccessException
+   * @throws IllegalArgumentException
    *
    * @throws Exception
    */
-  int getLogReplication() throws Exception {
+  int getLogReplication() throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
     if(this.getNumCurrentReplicas != null && this.hdfs_out != null) {
       Object repl = this.getNumCurrentReplicas.invoke(this.hdfs_out, NO_ARGS);
       if (repl instanceof Integer) {
@@ -1029,6 +1054,11 @@ public class HLog implements Syncable {
   throws IOException {
     if (!this.enabled) {
       return;
+    }
+    if (!this.logEntryVisitors.isEmpty()) {
+      for (LogEntryVisitor visitor : this.logEntryVisitors) {
+        visitor.visitLogEntryBeforeWrite(info, logKey, logEdit);
+      }
     }
     try {
       long now = System.currentTimeMillis();
@@ -1181,8 +1211,16 @@ public class HLog implements Syncable {
       srcDir.toString());
     splits = splitLog(rootDir, srcDir, oldLogDir, logfiles, fs, conf);
     try {
-      LOG.info("Spliting is done. Removing old log dir "+srcDir);
-      fs.delete(srcDir, false);
+      FileStatus[] files = fs.listStatus(srcDir);
+      for(FileStatus file : files) {
+        Path newPath = getHLogArchivePath(oldLogDir, file.getPath());
+        LOG.info("Moving " +  FSUtils.getPath(file.getPath()) + " to " +
+                   FSUtils.getPath(newPath));
+        fs.rename(file.getPath(), newPath);
+      }
+      LOG.debug("Moved " + files.length + " log files to " +
+        FSUtils.getPath(oldLogDir));
+      fs.delete(srcDir, true);
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       IOException io = new IOException("Cannot delete: " + srcDir);
@@ -1442,7 +1480,7 @@ public class HLog implements Syncable {
     NamingThreadFactory f  = new NamingThreadFactory(
             "SplitWriter-%1$d", Executors.defaultThreadFactory());
     ThreadPoolExecutor threadPool = (ThreadPoolExecutor)Executors.newFixedThreadPool(logWriterThreads, f);
-    for (final byte[] region : splitLogsMap.keySet()) {
+    for (final byte [] region : splitLogsMap.keySet()) {
       Callable splitter = createNewSplitter(rootDir, logWriters, splitLogsMap, region, fs, conf);
       writeFutureResult.put(region, threadPool.submit(splitter));
     }
@@ -1562,17 +1600,19 @@ public class HLog implements Syncable {
           WriterAndPath wap = logWriters.get(region);
           for (Entry logEntry: entries) {
             if (wap == null) {
-              Path logFile = getRegionLogPath(logEntry, rootDir);
-              if (fs.exists(logFile)) {
-                LOG.warn("Found existing old hlog file. It could be the result of a previous" +
-                        "failed split attempt. Deleting " + logFile +
-                        ", length=" + fs.getFileStatus(logFile).getLen());
-                fs.delete(logFile, false);
+              Path regionedits = getRegionSplitEditsPath(fs, logEntry, rootDir);
+              if (fs.exists(regionedits)) {
+                LOG.warn("Found existing old edits file. It could be the " +
+                  "result of a previous failed split attempt. Deleting " +
+                  regionedits + ", length=" + fs.getFileStatus(regionedits).getLen());
+                if (!fs.delete(regionedits, false)) {
+                  LOG.warn("Failed delete of old " + regionedits);
+                }
               }
-              Writer w = createWriter(fs, logFile, conf);
-              wap = new WriterAndPath(logFile, w);
+              Writer w = createWriter(fs, regionedits, conf);
+              wap = new WriterAndPath(regionedits, w);
               logWriters.put(region, wap);
-              LOG.debug("Creating writer path=" + logFile +
+              LOG.debug("Creating writer path=" + regionedits +
                 " region=" + Bytes.toStringBinary(region));
             }
             wap.w.append(logEntry);
@@ -1626,19 +1666,116 @@ public class HLog implements Syncable {
     }
   }
 
-  private static Path getRegionLogPath(Entry logEntry, Path rootDir) {
-    Path tableDir =
-      HTableDescriptor.getTableDir(rootDir, logEntry.getKey().getTablename());
-    Path regionDir =
-            HRegion.getRegionDir(tableDir, HRegionInfo.encodeRegionName(logEntry.getKey().getRegionName()));
-    return new Path(regionDir, RECOVERED_EDITS);
+  /*
+   * Path to a file under RECOVERED_EDITS_DIR directory of the region found in
+   * <code>logEntry</code> named for the sequenceid in the passed
+   * <code>logEntry</code>: e.g. /hbase/some_table/2323432434/recovered.edits/2332.
+   * This method also ensures existence of RECOVERED_EDITS_DIR under the region
+   * creating it if necessary.
+   * @param fs
+   * @param logEntry
+   * @param rootDir HBase root dir.
+   * @return Path to file into which to dump split log edits.
+   * @throws IOException
+   */
+  private static Path getRegionSplitEditsPath(final FileSystem fs,
+      final Entry logEntry, final Path rootDir)
+  throws IOException {
+    Path tableDir = HTableDescriptor.getTableDir(rootDir,
+      logEntry.getKey().getTablename());
+    Path regiondir = HRegion.getRegionDir(tableDir,
+      HRegionInfo.encodeRegionName(logEntry.getKey().getRegionName()));
+    Path dir = getRegionDirRecoveredEditsDir(regiondir);
+    if (!fs.exists(dir)) {
+      if (!fs.mkdirs(dir)) LOG.warn("mkdir failed on " + dir);
+    }
+    return new Path(dir,
+      formatRecoveredEditsFileName(logEntry.getKey().getLogSeqNum()));
    }
 
+  static String formatRecoveredEditsFileName(final long seqid) {
+    return String.format("%019d", seqid);
+  }
 
 
+  /**
+   * Returns sorted set of edit files made by wal-log splitter.
+   * @param fs
+   * @param regiondir
+   * @return Files in passed <code>regiondir</code> as a sorted set.
+   * @throws IOException
+   */
+  public static NavigableSet<Path> getSplitEditFilesSorted(final FileSystem fs,
+      final Path regiondir)
+  throws IOException {
+    Path editsdir = getRegionDirRecoveredEditsDir(regiondir);
+    FileStatus [] files = fs.listStatus(editsdir, new PathFilter () {
+      @Override
+      public boolean accept(Path p) {
+        boolean result = false;
+        try {
+          // Return files and only files that match the editfile names pattern.
+          // There can be other files in this directory other than edit files.
+          // In particular, on error, we'll move aside the bad edit file giving
+          // it a timestamp suffix.  See moveAsideBadEditsFile.
+          Matcher m = EDITFILES_NAME_PATTERN.matcher(p.getName());
+          result = fs.isFile(p) && m.matches();
+        } catch (IOException e) {
+          LOG.warn("Failed isFile check on " + p);
+        }
+        return result;
+      }
+    });
+    NavigableSet<Path> filesSorted = new TreeSet<Path>();
+    if (files == null) return filesSorted;
+    for (FileStatus status: files) {
+      filesSorted.add(status.getPath());
+    }
+    return filesSorted;
+  }
 
+  /**
+   * Move aside a bad edits file.
+   * @param fs
+   * @param edits Edits file to move aside.
+   * @return The name of the moved aside file.
+   * @throws IOException
+   */
+  public static Path moveAsideBadEditsFile(final FileSystem fs,
+      final Path edits)
+  throws IOException {
+    Path moveAsideName = new Path(edits.getParent(), edits.getName() + "." +
+      System.currentTimeMillis());
+    if (!fs.rename(edits, moveAsideName)) {
+      LOG.warn("Rename failed from " + edits + " to " + moveAsideName);
+    }
+    return moveAsideName;
+  }
 
+  /**
+   * @param regiondir This regions directory in the filesystem.
+   * @return The directory that holds recovered edits files for the region
+   * <code>regiondir</code>
+   */
+  public static Path getRegionDirRecoveredEditsDir(final Path regiondir) {
+    return new Path(regiondir, RECOVERED_EDITS_DIR);
+  }
 
+  /**
+   *
+   * @param visitor
+   */
+  public void addLogEntryVisitor(LogEntryVisitor visitor) {
+    this.logEntryVisitors.add(visitor);
+  }
+
+  /**
+   * 
+   * @param visitor
+   */
+  public void removeLogEntryVisitor(LogEntryVisitor visitor) {
+    this.logEntryVisitors.remove(visitor);
+  }
 
 
   public void addLogActionsListerner(LogActionsListener list) {

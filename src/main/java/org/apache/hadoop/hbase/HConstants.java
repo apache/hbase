@@ -81,6 +81,12 @@ public final class HConstants {
   /** default port for master web api */
   public static final int DEFAULT_MASTER_INFOPORT = 60010;
 
+  /** Parameter name for the master type being backup (waits for primary to go inactive). */
+  public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
+
+  /** by default every master is a possible primary master unless the conf explicitly overrides it */
+  public static final boolean DEFAULT_MASTER_TYPE_BACKUP = false;
+
   /** Name of ZooKeeper quorum configuration parameter. */
   public static final String ZOOKEEPER_QUORUM = "hbase.zookeeper.quorum";
 
@@ -351,6 +357,9 @@ public final class HConstants {
    * Default value of {@link #HBASE_REGIONSERVER_LEASE_PERIOD_KEY}.
    */
   public static long DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD = 60000;
+
+  public static final String
+      REPLICATION_ENABLE_KEY = "hbase.replication";
 
   private HConstants() {
     // Can't be instantiated with this ctor.

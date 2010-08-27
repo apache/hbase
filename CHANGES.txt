@@ -25,6 +25,8 @@ Release 0.21.0 - Unreleased
    HBASE-2565  Remove contrib module from hbase
    HBASE-2397  Bytes.toStringBinary escapes printable chars
    HBASE-2771  Update our hadoop jar to be latest from 0.20-append branch
+   HBASE-2803  Remove remaining Get code from Store.java,etc
+   HBASE-2553  Revisit IncrementColumnValue implementation in 0.22
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
@@ -426,6 +428,66 @@ Release 0.21.0 - Unreleased
    HBASE-2707  Can't recover from a dead ROOT server if any exceptions happens
                during log splitting
    HBASE-2501  Refactor StoreFile Code
+   HBASE-2806  DNS hiccups cause uncaught NPE in HServerAddress#getBindAddress
+               (Benoit Sigoure via Stack)
+   HBASE-2806  (small compile fix via jgray)
+   HBASE-2797  Another NPE in ReadWriteConsistencyControl
+   HBASE-2831  Fix '$bin' path duplication in setup scripts
+               (Nicolas Spiegelberg via Stack)
+   HBASE-2781  ZKW.createUnassignedRegion doesn't make sure existing znode is 
+               in the right state (Karthik Ranganathan via JD)
+   HBASE-2727  Splits writing one file only is untenable; need dir of recovered
+               edits ordered by sequenceid
+   HBASE-2843  Readd bloomfilter test over zealously removed by HBASE-2625 
+   HBASE-2846  Make rest server be same as thrift and avro servers
+   HBASE-1511  Pseudo distributed mode in LocalHBaseCluster
+               (Nicolas Spiegelberg via Stack)
+   HBASE-2851  Remove testDynamicBloom() unit test
+               (Nicolas Spiegelberg via Stack)
+   HBASE-2853  TestLoadIncrementalHFiles fails on TRUNK
+   HBASE-2854  broken tests on trunk         
+   HBASE-2859  Cleanup deprecated stuff in TestHLog (Alex Newman via Stack)
+   HBASE-2858  TestReplication.queueFailover fails half the time
+   HBASE-2863  HBASE-2553 removed an important edge case
+   HBASE-2866  Region permanently offlined
+   HBASE-2849  HBase clients cannot recover when their ZooKeeper session
+               becomes invalid (Benôit Sigoure via Stack)
+   HBASE-2876  HBase hbck: false positive error reported for parent regions
+               that are in offline state in meta after a split
+   HBASE-2815  not able to run the test suite in background because TestShell
+               gets suspended on tty output (Alexey Kovyrin via Stack)
+   HBASE-2852  Bloom filter NPE (pranav via jgray)
+   HBASE-2820  hbck throws an error if HBase root dir isn't on the default FS
+   HBASE-2884  TestHFileOutputFormat flaky when map tasks generate identical
+               data
+   HBASE-2890  Initialize RPC JMX metrics on startup (Gary Helmling via Stack)
+   HBASE-2755  Duplicate assignment of a region after region server recovery
+               (Kannan Muthukkaruppan via Stack)
+   HBASE-2892  Replication metrics aren't updated
+   HBASE-2461  Split doesn't handle IOExceptions when creating new region
+               reference files
+   HBASE-2871  Make "start|stop" commands symmetric for Master & Cluster
+               (Nicolas Spiegelberg via Stack)
+   HBASE-2901  HBASE-2461 broke build
+   HBASE-2823  Entire Row Deletes not stored in Row+Col Bloom
+               (Alexander Georgiev via Stack)
+   HBASE-2897  RowResultGenerator should handle NoSuchColumnFamilyException
+   HBASE-2905  NPE when inserting mass data via REST interface (Sandy Yin via
+               Andrew Purtell)
+   HBASE-2908  Wrong order of null-check [in TIF] (Libor Dener via Stack)
+   HBASE-2909  SoftValueSortedMap is broken, can generate NPEs
+   HBASE-2919  initTableReducerJob: Unused method parameter
+               (Libor Dener via Stack)
+   HBASE-2923  Deadlock between HRegion.internalFlushCache and close
+   HBASE-2927  BaseScanner gets stale HRegionInfo in some race cases
+   HBASE-2928  Fault in logic in BinaryPrefixComparator leads to
+               ArrayIndexOutOfBoundsException (pranav via jgray)
+   HBASE-2924  TestLogRolling doesn't use the right HLog half the time
+   HBASE-2931  Do not throw RuntimeExceptions in RPC/HbaseObjectWritable
+               code, ensure we log and rethrow as IOE
+               (Karthik Ranganathan via Stack)
+   HBASE-2915  Deadlock between HRegion.ICV and HRegion.close
+   HBASE-2920  HTable.checkAndPut/Delete doesn't handle null values
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
@@ -750,6 +812,49 @@ Release 0.21.0 - Unreleased
                (Nicolas Spiegelberg via JD)
    HBASE-2786  TestHLog.testSplit hangs (Nicolas Spiegelberg via JD)
    HBASE-2790  Purge apache-forrest from TRUNK
+   HBASE-2793  Add ability to extract a specified list of versions of a column 
+               in a single roundtrip (Kannan via Ryan)
+   HBASE-2828  HTable unnecessarily coupled with HMaster
+               (Nicolas Spiegelberg via Stack)
+   HBASE-2265  HFile and Memstore should maintain minimum and maximum timestamps
+               (Pranav via Ryan)
+   HBASE-2836  Speed mvn site building by removing generation of useless reports
+   HBASE-2808  Document the implementation of replication
+   HBASE-2517  During reads when passed the specified time range, seek to
+               next column (Pranav via jgray)
+   HBASE-2835  Update hadoop jar to head of branch-0.20-append to catch three
+               added patches
+   HBASE-2840  Remove the final remnants of the old Get code - the query matchers 
+               and other helper classes
+   HBASE-2845  Small edit of shell main help page cutting down some on white
+               space and text
+   HBASE-2850  slf4j version needs to be reconciled in pom: thrift wants 1.5.x
+               and hadoop/avro 1.4.x
+   HBASE-2865  Cleanup of LRU logging; its hard to read, uses custom MB'maker,
+               repeats info, too many numbers after the point, etc.
+   HBASE-2869  Regularize how we log sequenceids -- sometimes its myseqid,
+               other times its sequence id, etc.
+   HBASE-2873  Minor clean up in basescanner; fix a log and make deletes of
+               region processing run in order
+   HBASE-2830  NotServingRegionException shouldn't log a stack trace
+   HBASE-2874  Unnecessary double-synchronization in ZooKeeperWrapper
+               (Benoît Sigoure via Stack)
+   HBASE-2879  Offer ZK CLI outside of HBase Shell
+               (Nicolas Spiegelberg via Stack)
+   HBASE-2886  Add search box to site (Alex Baranau via Stack)
+   HBASE-2792  Create a better way to chain log cleaners
+               (Chongxin Li via Stack)
+   HBASE-2844  Capping the number of regions (Pranav Khaitan via Stack)
+   HBASE-2870  Add Backup CLI Option to HMaster (Nicolas Spiegelberg via Stack)
+   HBASE-2868  Do some small cleanups in org.apache.hadoop.hbase.regionserver.wal
+               (Alex Newman via Stack)
+   HBASE-1660  HBASE-1660 script to handle rolling restarts
+               (Nicolas Spiegelberg via Stack)
+   HBASE-1517  Implement inexpensive seek operations in HFile (Pranav via Ryan)
+   HBASE-2903  ColumnPrefix filtering (Pranav via Ryan)
+   HBASE-2904  Smart seeking using filters (Pranav via Ryan)
+   HBASE-2922  HLog preparation and cleanup are done under the updateLock, 
+               major slowdown
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
@@ -793,6 +898,10 @@ Release 0.21.0 - Unreleased
                (Jeff Hammerbacher via Ryan Rawson)
    HBASE-7     Provide a HBase checker and repair tool similar to fsck
                (dhruba borthakur via Stack)
+   HBASE-2223  Handle 10min+ network partitions between clusters
+   HBASE-2862  Name DFSClient for Improved Debugging
+               (Nicolas Spiegelberg via Stack)
+   HBASE-2838  Replication metrics
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

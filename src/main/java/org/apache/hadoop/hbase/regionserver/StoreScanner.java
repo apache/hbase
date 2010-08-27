@@ -154,30 +154,24 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
 
-    // exclude scan files that have failed file filters
+    // include only those scan files which pass all filters
     for (StoreFileScanner sfs : sfScanners) {
-      if (isGet &&
-          !sfs.shouldSeek(scan.getStartRow(), columns)) {
-        continue; // exclude this hfs
+      if (sfs.shouldSeek(scan, columns)) {
+        scanners.add(sfs);
       }
-      scanners.add(sfs);
     }
 
     // Then the memstore scanners
-    scanners.addAll(this.store.memstore.getScanners());
+    if (this.store.memstore.shouldSeek(scan)) {
+      scanners.addAll(this.store.memstore.getScanners());
+    }
     return scanners;
   }
 
   public synchronized KeyValue peek() {
-    try {
-      checkReseek();
-    } catch (IOException e) {
-      throw new RuntimeException("IOE conversion", e);
-    }
     if (this.heap == null) {
-      return null;
+      return this.lastTop;
     }
-
     return this.heap.peek();
   }
 
@@ -233,11 +227,16 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       return false;
     }
 
-    matcher.setRow(peeked.getRow());
+    // only call setRow if the row changes; avoids confusing the query matcher
+    // if scanning intra-row
+    if ((matcher.row == null) || !peeked.matchingRow(matcher.row)) {
+      matcher.setRow(peeked.getRow());
+    }
+
     KeyValue kv;
     List<KeyValue> results = new ArrayList<KeyValue>();
     LOOP: while((kv = this.heap.peek()) != null) {
-      QueryMatcher.MatchCode qcode = matcher.match(kv);
+      ScanQueryMatcher.MatchCode qcode = matcher.match(kv);
       //DebugPrint.println("SS peek kv = " + kv + " with qcode = " + qcode);
       switch(qcode) {
         case INCLUDE:
@@ -262,6 +261,10 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
           return false;
 
         case SEEK_NEXT_ROW:
+          if (!matcher.moreRowsMayExistAfter(kv)) {
+            outResult.addAll(results);
+            return false;
+          }
           heap.next();
           break;
 
@@ -274,6 +277,15 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
 
         case SKIP:
           this.heap.next();
+          break;
+
+        case SEEK_NEXT_USING_HINT:
+          KeyValue nextKV = matcher.getNextKeyHint(kv);
+          if (nextKV != null) {
+            reseek(nextKV);
+          } else {
+            heap.next();
+          }
           break;
 
         default:
@@ -321,18 +333,20 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
 
   private void checkReseek() throws IOException {
     if (this.heap == null && this.lastTop != null) {
-
-      reseek(this.lastTop);
+      resetScannerStack(this.lastTop);
       this.lastTop = null; // gone!
     }
     // else dont need to reseek
   }
 
-  private void reseek(KeyValue lastTopKey) throws IOException {
+  private void resetScannerStack(KeyValue lastTopKey) throws IOException {
     if (heap != null) {
       throw new RuntimeException("StoreScanner.reseek run on an existing heap!");
     }
 
+    /* When we have the scan object, should we not pass it to getScanners()
+     * to get a limited set of scanners? We did so in the constructor and we
+     * could have done it now by storing the scan object from the constructor */
     List<KeyValueScanner> scanners = getScanners();
 
     for(KeyValueScanner scanner : scanners) {
@@ -346,5 +360,12 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     matcher.reset();
     KeyValue kv = heap.peek();
     matcher.setRow((kv == null ? lastTopKey : kv).getRow());
+  }
+
+  @Override
+  public synchronized boolean reseek(KeyValue kv) throws IOException {
+    //Heap cannot be null, because this is only called from next() which
+    //guarantees that heap will never be null before this call.
+    return this.heap.reseek(kv);
   }
 }
