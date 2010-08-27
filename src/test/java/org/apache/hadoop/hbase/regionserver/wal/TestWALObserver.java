@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,10 +42,8 @@ import static org.junit.Assert.*;
 /**
  * Test that the actions are called while playing with an HLog
  */
-public class TestLogActionsListener {
-
-  protected static final Log LOG =
-      LogFactory.getLog(TestLogActionsListener.class);
+public class TestWALObserver {
+  protected static final Log LOG = LogFactory.getLog(TestWALObserver.class);
 
   private final static HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
@@ -82,9 +83,11 @@ public class TestLogActionsListener {
    */
   @Test
   public void testActionListener() throws Exception {
-    DummyLogActionsListener list = new DummyLogActionsListener();
-    DummyLogActionsListener laterList = new DummyLogActionsListener();
-    HLog hlog = new HLog(fs, logDir, oldLogDir, conf, null, list, null);
+    DummyWALObserver observer = new DummyWALObserver();
+    List<WALObserver> list = new ArrayList<WALObserver>();
+    list.add(observer);
+    DummyWALObserver laterobserver = new DummyWALObserver();
+    HLog hlog = new HLog(fs, logDir, oldLogDir, conf, list, null);
     HRegionInfo hri = new HRegionInfo(new HTableDescriptor(SOME_BYTES),
         SOME_BYTES, SOME_BYTES, false);
 
@@ -96,26 +99,37 @@ public class TestLogActionsListener {
       HLogKey key = new HLogKey(b,b, 0, 0);
       hlog.append(hri, key, edit);
       if (i == 10) {
-        hlog.addLogActionsListerner(laterList);
+        hlog.registerWALActionsListener(laterobserver);
       }
       if (i % 2 == 0) {
         hlog.rollWriter();
       }
     }
-    assertEquals(11, list.logRollCounter);
-    assertEquals(5, laterList.logRollCounter);
+    assertEquals(11, observer.logRollCounter);
+    assertEquals(5, laterobserver.logRollCounter);
   }
 
   /**
    * Just counts when methods are called
    */
-  static class DummyLogActionsListener implements LogActionsListener {
-
+  static class DummyWALObserver implements WALObserver {
     public int logRollCounter = 0;
 
     @Override
     public void logRolled(Path newFile) {
       logRollCounter++;
+    }
+
+    @Override
+    public void logRollRequested() {
+      // Not interested
+    }
+
+    @Override
+    public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
+        WALEdit logEdit) {
+      // Not interested
+      
     }
   }
 }

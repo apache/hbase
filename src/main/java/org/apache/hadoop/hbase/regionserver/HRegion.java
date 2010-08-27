@@ -940,7 +940,7 @@ public class HRegion implements HeapSize { // , Writable{
     //     and that all updates to the log for this regionName that have lower
     //     log-sequence-ids can be safely ignored.
     if (wal != null) {
-      wal.completeCacheFlush(getRegionName(),
+      wal.completeCacheFlush(this.regionInfo.getEncodedNameAsBytes(),
         regionInfo.getTableDesc().getName(), completeSequenceId,
         this.getRegionInfo().isMetaRegion());
     }
@@ -1831,7 +1831,7 @@ public class HRegion implements HeapSize { // , Writable{
         // Check this edit is for me. Also, guard against writing the special
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
         if (kv.matchingFamily(HLog.METAFAMILY) ||
-            !Bytes.equals(key.getRegionName(), this.regionInfo.getRegionName())) {
+            !Bytes.equals(key.getEncodedRegionName(), this.regionInfo.getRegionName())) {
           skippedEdits++;
           continue;
         }
@@ -2369,7 +2369,7 @@ public class HRegion implements HeapSize { // , Writable{
     fs.mkdirs(regionDir);
     HRegion region = HRegion.newHRegion(tableDir,
       new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME),
-          new Path(regionDir, HConstants.HREGION_OLDLOGDIR_NAME), conf, null),
+          new Path(regionDir, HConstants.HREGION_OLDLOGDIR_NAME), conf),
       fs, conf, info, null);
     region.initialize();
     return region;
@@ -3132,7 +3132,7 @@ public class HRegion implements HeapSize { // , Writable{
         + EnvironmentEdgeManager.currentTimeMillis());
     final Path oldLogDir = new Path(c.get("hbase.tmp.dir"),
         HConstants.HREGION_OLDLOGDIR_NAME);
-    final HLog log = new HLog(fs, logdir, oldLogDir, c, null);
+    final HLog log = new HLog(fs, logdir, oldLogDir, c);
     try {
       processTable(fs, tableDir, log, c, majorCompact);
      } finally {

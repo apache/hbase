@@ -34,11 +34,14 @@ interface OnlineRegions {
    * This method removes HRegion corresponding to hri from the Map of onlineRegions.
    *
    * @param encodedRegionName
-   * @return the removed HRegion, or null if the HRegion was not in onlineRegions.
+   * @return True if we removed a region from online list.
    */
-  public HRegion removeFromOnlineRegions(String encodedRegionName);
+  public boolean removeFromOnlineRegions(String encodedRegionName);
 
   /**
+   * Return {@link HRegion} instance.
+   * Only works if caller is in same context, in same JVM. HRegion is not
+   * serializable.
    * @param encodedRegionName
    * @return HRegion for the passed encoded <code>encodedRegionName</code> or
    * null if named region is not member of the online regions.

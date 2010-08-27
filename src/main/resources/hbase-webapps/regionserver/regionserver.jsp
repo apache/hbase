@@ -50,7 +50,7 @@
 <table>
 <tr><th>Region Name</th><th>Start Key</th><th>End Key</th><th>Metrics</th></tr>
 <%   for (HRegionInfo r: onlineRegions) { 
-        HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getRegionName());
+        HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
  %>
 <tr><td><%= r.getRegionNameAsString() %></td>
     <td><%= Bytes.toStringBinary(r.getStartKey()) %></td><td><%= Bytes.toStringBinary(r.getEndKey()) %></td>

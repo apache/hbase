@@ -108,6 +108,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -255,7 +256,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // Instance of the hbase executor service.
   private ExecutorService service;
 
-  // Replication services
+  // Replication services. If no replication, this handler will be null.
   private Replication replicationHandler;
 
   /**
@@ -374,9 +375,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     // Compaction thread
     this.compactSplitThread = new CompactSplitThread(this);
-
-    // Log rolling thread
-    this.hlogRoller = new LogRoller(this);
 
     // Background thread to check for major compactions; needed if region
     // has not gotten updates in a while. Make it run at a lesser frequency.
@@ -701,7 +699,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // Get fs instance used by this RS
       this.fs = FileSystem.get(this.conf);
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
-      this.hlog = setupHLog();
+      this.hlog = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
       startServiceThreads();
@@ -741,12 +739,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   /**
-   * @param regionName
+   * @param encodedRegionName
    * @return An instance of RegionLoad.
    * @throws IOException
    */
-  public HServerLoad.RegionLoad createRegionLoad(final byte[] regionName) {
-    return createRegionLoad(this.onlineRegions.get(Bytes.mapKey(regionName)));
+  public HServerLoad.RegionLoad createRegionLoad(final String encodedRegionName) {
+    return createRegionLoad(this.onlineRegions.get(encodedRegionName));
   }
 
   /*
@@ -887,30 +885,59 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return isOnline;
   }
 
-  private HLog setupHLog() throws IOException {
+  /**
+   * Setup WAL log and replication if enabled.
+   * Replication setup is done in here because it wants to be hooked up to WAL.
+   * @return A WAL instance.
+   * @throws IOException
+   */
+  private HLog setupWALAndReplication() throws IOException {
     final Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     Path logdir = new Path(rootDir, HLog.getHLogDirectoryName(this.serverInfo));
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Log dir " + logdir);
+      LOG.debug("logdir=" + logdir);
     }
-    if (fs.exists(logdir)) {
-      throw new RegionServerRunningException("region server already "
+    if (this.fs.exists(logdir)) {
+      throw new RegionServerRunningException("Region server already "
           + "running at " + this.serverInfo.getServerName()
           + " because logdir " + logdir.toString() + " exists");
     }
-    this.replicationHandler = new Replication(this, this.fs, logdir, oldLogDir);
-    HLog log = instantiateHLog(logdir, oldLogDir);
-    this.replicationHandler.addLogEntryVisitor(log);
-    return log;
+
+    // Instantiate replication manager if replication enabled.  Pass it the
+    // log directories.
+    this.replicationHandler = Replication.isReplication(this.conf)?
+      new Replication(this, this.fs, logdir, oldLogDir): null;
+    return instantiateHLog(logdir, oldLogDir);
   }
 
-  // instantiate
+  /**
+   * Called by {@link #setupWALAndReplication()} creating WAL instance.
+   * @param logdir
+   * @param oldLogDir
+   * @return WAL instance.
+   * @throws IOException
+   */
   protected HLog instantiateHLog(Path logdir, Path oldLogDir) throws IOException {
-    return new HLog(this.fs, logdir, oldLogDir, this.conf, this.hlogRoller,
-      this.replicationHandler != null?
-        this.replicationHandler.getReplicationManager():
-        null,
-        this.serverInfo.getServerAddress().toString());
+    return new HLog(this.fs, logdir, oldLogDir, this.conf,
+      getWALActionListeners(), this.serverInfo.getServerAddress().toString());
+  }
+
+  /**
+   * Called by {@link #instantiateHLog(Path, Path)} setting up WAL instance.
+   * Add any {@link WALObserver}s you want inserted before WAL startup.
+   * @return List of WALActionsListener that will be passed in to
+   * {@link HLog} on construction.
+   */
+  protected List<WALObserver> getWALActionListeners() {
+    List<WALObserver> listeners = new ArrayList<WALObserver>();
+    // Log roller.
+    this.hlogRoller = new LogRoller(this, this);
+    if (this.replicationHandler != null) {
+      listeners = new ArrayList<WALObserver>();
+      // Replication handler is an implementation of WALActionsListener.
+      listeners.add(this.replicationHandler);
+    }
+    return listeners;
   }
 
   protected LogRoller getLogRoller() {
@@ -1056,7 +1083,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
     }
 
-    this.replicationHandler.startReplicationServices();
+    if (this.replicationHandler != null) {
+      this.replicationHandler.startReplicationServices();
+    }
 
     // Start Server.  This service is like leases in that it internally runs
     // a thread.
@@ -1177,7 +1206,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     Threads.shutdown(this.compactSplitThread);
     Threads.shutdown(this.hlogRoller);
     this.service.shutdown();
-    this.replicationHandler.join();
+    if (this.replicationHandler != null) {
+      this.replicationHandler.join();
+    }
   }
 
   /**
@@ -1924,7 +1955,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  public HRegion removeFromOnlineRegions(final String encodedName) {
+  public boolean removeFromOnlineRegions(final String encodedName) {
     this.lock.writeLock().lock();
     HRegion toReturn = null;
     try {
@@ -1932,7 +1963,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     } finally {
       this.lock.writeLock().unlock();
     }
-    return toReturn;
+    return toReturn != null;
   }
 
   /**
@@ -2269,7 +2300,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  public void replicateLogEntries(HLog.Entry[] entries) throws IOException {
+  public void replicateLogEntries(final HLog.Entry[] entries)
+  throws IOException {
+    if (this.replicationHandler == null) return;
     this.replicationHandler.replicateLogEntries(entries);
   }
 

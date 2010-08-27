@@ -217,7 +217,9 @@ class SplitTransaction {
     List<StoreFile> hstoreFilesToSplit = this.parent.close(false);
     this.journal.add(JournalEntry.CLOSED_PARENT_REGION);
 
-    if (or != null) or.removeFromOnlineRegions(this.parent.getRegionInfo().getEncodedName());
+    if (or != null) {
+      or.removeFromOnlineRegions(this.parent.getRegionInfo().getEncodedName());
+    }
     this.journal.add(JournalEntry.OFFLINED_PARENT);
 
     splitStoreFiles(this.splitdir, hstoreFilesToSplit);

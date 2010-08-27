@@ -148,6 +148,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   //TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
   public static final String NO_HASH = null;
   private volatile String encodedName = NO_HASH;
+  private byte [] encodedNameAsBytes = null;
 
   private void setHashCode() {
     int result = Arrays.hashCode(this.regionName);
@@ -424,6 +425,13 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       this.encodedName = encodeRegionName(this.regionName);
     }
     return this.encodedName;
+  }
+
+  public synchronized byte [] getEncodedNameAsBytes() {
+    if (this.encodedNameAsBytes == null) {
+      this.encodedNameAsBytes = Bytes.toBytes(getEncodedName());
+    }
+    return this.encodedNameAsBytes;
   }
 
   /** @return the startKey */

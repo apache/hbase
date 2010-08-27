@@ -20,17 +20,30 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
- * Interface that defines all actions that can be listened to coming
- * from the HLog. The calls are done in sync with what happens over in the
- * HLog so make sure your implementation is fast.
+ * Get notification of {@link HLog}/WAL log events. The invocations are inline
+ * so make sure your implementation is fast else you'll slow hbase.
  */
-public interface LogActionsListener {
-
+public interface WALObserver {
   /**
-   * Notify the listener that a new file is available
+   * The WAL was rolled.
    * @param newFile the path to the new hlog
    */
   public void logRolled(Path newFile);
+
+  /**
+   * A request was made that the WAL be rolled.
+   */
+  public void logRollRequested();
+
+  /**
+  * Called before each write.
+  * @param info
+  * @param logKey
+  * @param logEdit
+  */
+ public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
+   WALEdit logEdit);
 }

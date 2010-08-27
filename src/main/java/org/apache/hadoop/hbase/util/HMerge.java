@@ -149,8 +149,7 @@ class HMerge {
       Path logdir = new Path(tabledir, "merge_" + System.currentTimeMillis() +
           HConstants.HREGION_LOGDIR_NAME);
       Path oldLogDir = new Path(tabledir, HConstants.HREGION_OLDLOGDIR_NAME);
-      this.hlog =
-        new HLog(fs, logdir, oldLogDir, conf, null);
+      this.hlog = new HLog(fs, logdir, oldLogDir, conf);
     }
 
     void process() throws IOException {

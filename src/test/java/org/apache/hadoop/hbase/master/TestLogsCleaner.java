@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 
 import java.net.URLEncoder;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -31,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeperWrapper;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -102,7 +100,7 @@ public class TestLogsCleaner {
         return this.stopped;
       }
     };
-    LogsCleaner cleaner  = new LogsCleaner(1000, stoppable,c, fs, oldLogDir);
+    LogCleaner cleaner  = new LogCleaner(1000, stoppable, c, fs, oldLogDir);
 
     // Create 2 invalid files, 1 "recent" file, 1 very new file and 30 old files
     long now = System.currentTimeMillis();

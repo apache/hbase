@@ -103,7 +103,7 @@ public class MetaUtils {
           HConstants.HREGION_LOGDIR_NAME + "_" + System.currentTimeMillis());
       Path oldLogDir = new Path(this.fs.getHomeDirectory(),
           HConstants.HREGION_OLDLOGDIR_NAME);
-      this.log = new HLog(this.fs, logdir, oldLogDir, this.conf, null);
+      this.log = new HLog(this.fs, logdir, oldLogDir, this.conf);
     }
     return this.log;
   }
