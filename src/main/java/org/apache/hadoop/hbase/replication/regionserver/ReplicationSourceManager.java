@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeperWrapper;
+import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 
@@ -64,7 +64,7 @@ public class ReplicationSourceManager {
   // Indicates if we are currently replicating
   private final AtomicBoolean replicating;
   // Helper for zookeeper
-  private final ReplicationZookeeperWrapper zkHelper;
+  private final ReplicationZookeeper zkHelper;
   // All about stopping
   private final Stoppable stopper;
   // All logs we are currently trackign
@@ -91,7 +91,7 @@ public class ReplicationSourceManager {
    * @param logDir the directory that contains all hlog directories of live RSs
    * @param oldLogDir the directory where old logs are archived
    */
-  public ReplicationSourceManager(final ReplicationZookeeperWrapper zkHelper,
+  public ReplicationSourceManager(final ReplicationZookeeper zkHelper,
                                   final Configuration conf,
                                   final Stoppable stopper,
                                   final FileSystem fs,
@@ -231,7 +231,7 @@ public class ReplicationSourceManager {
    * Get the ZK help of this manager
    * @return the helper
    */
-  public ReplicationZookeeperWrapper getRepZkWrapper() {
+  public ReplicationZookeeper getRepZkWrapper() {
     return zkHelper;
   }
 

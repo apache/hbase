@@ -443,6 +443,31 @@ public class ZKUtil {
   //
 
   /**
+   * Get znode data. Does not set a watcher.
+   * @return ZNode data
+   */
+  public static byte [] getData(ZooKeeperWatcher zkw, String znode)
+  throws KeeperException {
+    try {
+      byte [] data = zkw.getZooKeeper().getData(znode, null, null);
+      zkw.debug("Retrieved " + data.length + " bytes of data from znode " + znode);
+      return data;
+    } catch (KeeperException.NoNodeException e) {
+      zkw.debug("Unable to get data of znode " + znode + " " +
+          "because node does not exist (not an error)");
+      return null;
+    } catch (KeeperException e) {
+      zkw.warn("Unable to get data of znode " + znode, e);
+      zkw.keeperException(e);
+      return null;
+    } catch (InterruptedException e) {
+      zkw.warn("Unable to get data of znode " + znode, e);
+      zkw.interruptedException(e);
+      return null;
+    }
+  }
+
+  /**
    * Get the data at the specified znode and set a watch.
    *
    * Returns the data and sets a watch if the node exists.  Returns null and no

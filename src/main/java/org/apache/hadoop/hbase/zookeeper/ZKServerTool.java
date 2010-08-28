@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 
 /**
- * Tool for reading ZooKeeper servers from HBase XML configuation and producing
+ * Tool for reading ZooKeeper servers from HBase XML configuration and producing
  * a line-by-line list for use by bash scripts.
  */
 public class ZKServerTool {

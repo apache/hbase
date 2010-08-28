@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeperWrapper;
+import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -47,7 +47,7 @@ public class Replication implements WALObserver {
   private final ReplicationSourceManager replicationManager;
   private boolean replicationMaster;
   private final AtomicBoolean replicating = new AtomicBoolean(true);
-  private final ReplicationZookeeperWrapper zkHelper;
+  private final ReplicationZookeeper zkHelper;
   private final Configuration conf;
   private ReplicationSink replicationSink;
   // Hosting server
@@ -68,7 +68,7 @@ public class Replication implements WALObserver {
     this.conf = this.server.getConfiguration();
     this.replication = isReplication(this.conf);
     if (replication) {
-      this.zkHelper = new ReplicationZookeeperWrapper(server.getZooKeeper(),
+      this.zkHelper = new ReplicationZookeeper(server.getZooKeeper(),
         this.conf, this.replicating, this.server.getServerName());
       this.replicationMaster = zkHelper.isReplicationMaster();
       this.replicationManager = this.replicationMaster ?

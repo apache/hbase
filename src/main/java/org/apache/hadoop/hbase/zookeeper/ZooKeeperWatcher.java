@@ -38,11 +38,11 @@ import org.apache.zookeeper.ZooKeeper;
  * Acts as the single ZooKeeper Watcher.  One instance of this is instantiated
  * for each Master, RegionServer, and client process.
  *
- * This is the only class that implements {@link Watcher}.  Other internal
+ * <p>This is the only class that implements {@link Watcher}.  Other internal
  * classes which need to be notified of ZooKeeper events must register with
  * the local instance of this watcher via {@link #registerListener}.
  *
- * This class also holds and manages the connection to ZooKeeper.  Code to deal
+ * <p>This class also holds and manages the connection to ZooKeeper.  Code to deal
  * with connection related events and exceptions are handled here.
  */
 public class ZooKeeperWatcher implements Watcher {
