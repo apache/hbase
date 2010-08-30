@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -91,12 +93,16 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+
 
 /**
  * HMaster is the "master server" for HBase. An HBase cluster has one active
@@ -142,6 +148,7 @@ public class HMaster extends Thread implements HMasterInterface,
   private final Sleeper sleeper;
   // Keep around for convenience.
   private final FileSystem fs;
+  // Authenticated user
   // Is the fileystem ok?
   private volatile boolean fsOk = true;
   // The Path to the old logs dir
@@ -168,7 +175,7 @@ public class HMaster extends Thread implements HMasterInterface,
    */
   public HMaster(Configuration conf) throws IOException {
     this.conf = conf;
-    
+
     // Figure out if this is a fresh cluster start. This is done by checking the 
     // number of RS ephemeral nodes. RS ephemeral nodes are created only after 
     // the primary master has written the address to ZK. So this has to be done 
@@ -794,6 +801,7 @@ public class HMaster extends Thread implements HMasterInterface,
       } catch (TableExistsException e) {
         throw e;
       } catch (IOException e) {
+        LOG.warn("Couldn't create table", e);
         if (tries == this.numRetries - 1) {
           throw RemoteExceptionHandler.checkIOException(e);
         }
@@ -1217,17 +1225,46 @@ public class HMaster extends Thread implements HMasterInterface,
    * @param conf
    * @return HMaster instance.
    */
-  public static HMaster constructMaster(Class<? extends HMaster> masterClass,
+  public static HMaster constructMaster(
+      final Class<? extends HMaster> masterClass,
       final Configuration conf)  {
     try {
-      Constructor<? extends HMaster> c =
+      final Constructor<? extends HMaster> c =
         masterClass.getConstructor(Configuration.class);
-      return c.newInstance(conf);
+      UserGroupInformation ugi = loginFromKeytab(conf);
+      HMaster master = ugi.doAs(new PrivilegedExceptionAction<HMaster>() { 
+        public HMaster run() throws Exception {
+          return c.newInstance(conf);
+        }
+      });
+      return master;
     } catch (Exception e) {
       throw new RuntimeException("Failed construction of " +
         "Master: " + masterClass.toString() +
         ((e.getCause() != null)? e.getCause().getMessage(): ""), e);
     }
+  }
+  
+  private static UserGroupInformation loginFromKeytab(Configuration conf)
+    throws IOException {
+    String keytabFileKey = "hbase.master.keytab.file";
+    String userNameKey = "hbase.master.kerberos.principal";
+    
+    String keytabFilename = conf.get(keytabFileKey);
+    if (keytabFilename == null) {
+      if (UserGroupInformation.isSecurityEnabled()) {
+        LOG.warn("No keytab file '" + keytabFileKey + "' configured.");
+      }
+      return UserGroupInformation.getLoginUser();
+    }
+
+    String principalConfig = conf.get(userNameKey, System
+        .getProperty("user.name"));
+    String principalName = SecurityUtil.getServerPrincipal(principalConfig,
+        InetAddress.getLocalHost().getCanonicalHostName());
+
+    return UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+      principalName, keytabFilename);
   }
 
   public Map<String, Integer> getTableFragmentation() throws IOException {

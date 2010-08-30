@@ -20,13 +20,18 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.List;
+import com.google.common.base.Throwables;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Utility used running a cluster all in the one JVM.
@@ -34,15 +39,39 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 public class JVMClusterUtil {
   private static final Log LOG = LogFactory.getLog(JVMClusterUtil.class);
 
+  private final static UserGroupInformation UGI;
+  static {
+    try {
+      UGI = UserGroupInformation.getCurrentUser();
+    } catch (IOException ioe) {
+      throw new RuntimeException("Error getting current user", ioe);
+    }
+  }
+
+  private static UserGroupInformation getDifferentUser(final Configuration c,
+      int index)
+  throws IOException {
+    FileSystem currentfs = FileSystem.get(c);
+    if (!(currentfs instanceof DistributedFileSystem)) return UGI;
+    // Else distributed filesystem.  Make a new instance per daemon.  Below
+    // code is taken from the AppendTestUtil over in hdfs.
+    String username = UGI.getShortUserName() + ".hrs." + index;
+    return UserGroupInformation.createUserForTesting(username,
+        new String[]{"supergroup"});
+  }
+
   /**
    * Datastructure to hold RegionServer Thread and RegionServer instance
    */
   public static class RegionServerThread extends Thread {
     private final HRegionServer regionServer;
+    private final UserGroupInformation serverUser;
 
-    public RegionServerThread(final HRegionServer r, final int index) {
+    public RegionServerThread(final HRegionServer r,
+        final UserGroupInformation ugi, final int index) {
       super(r, "RegionServer:" + index);
       this.regionServer = r;
+      this.serverUser = ugi;
     }
 
     /** @return the region server */
@@ -82,15 +111,26 @@ public class JVMClusterUtil {
   public static JVMClusterUtil.RegionServerThread createRegionServerThread(final Configuration c,
     final Class<? extends HRegionServer> hrsc, final int index)
   throws IOException {
-      HRegionServer server;
-      try {
-        server = hrsc.getConstructor(Configuration.class).newInstance(c);
-      } catch (Exception e) {
-        IOException ioe = new IOException();
-        ioe.initCause(e);
-        throw ioe;
-      }
-      return new JVMClusterUtil.RegionServerThread(server, index);
+    HRegionServer server;
+    UserGroupInformation serverUser;
+    if (UserGroupInformation.isSecurityEnabled()) {
+      serverUser = HRegionServer.loginFromKeytab(c);
+    } else {
+      serverUser = getDifferentUser(c, index);
+    }
+
+    try {
+      server = serverUser.doAs( new PrivilegedExceptionAction<HRegionServer>(){
+        public HRegionServer run() throws Exception {
+          return hrsc.getConstructor(Configuration.class).newInstance(c);
+        }
+      });
+    } catch (Exception e) {
+      IOException ioe = new IOException();
+      ioe.initCause(e);
+      throw ioe;
+    }
+    return new JVMClusterUtil.RegionServerThread(server, serverUser, index);
   }
 
   /**

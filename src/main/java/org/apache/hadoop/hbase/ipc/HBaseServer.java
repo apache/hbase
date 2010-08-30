@@ -23,7 +23,6 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -61,6 +60,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.security.PrivilegedExceptionAction;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -944,7 +944,8 @@ public abstract class HBaseServer {
        */
       DataInputStream in =
         new DataInputStream(new ByteArrayInputStream(data.array()));
-      ticket = (UserGroupInformation) ObjectWritable.readObject(in, conf);
+      String username = WritableUtils.readString(in);
+      ticket = UserGroupInformation.createRemoteUser(username);
     }
 
     private void processData() throws  IOException, InterruptedException {
@@ -990,7 +991,7 @@ public abstract class HBaseServer {
       ByteArrayOutputStream buf = new ByteArrayOutputStream(buffersize);
       while (running) {
         try {
-          Call call = callQueue.take(); // pop the queue; maybe blocked here
+          final Call call = callQueue.take(); // pop the queue; maybe blocked here
 
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + ": has #" + call.id + " from " +
@@ -1001,16 +1002,25 @@ public abstract class HBaseServer {
           Writable value = null;
 
           CurCall.set(call);
-          UserGroupInformation previous = UserGroupInformation.getCurrentUGI();
-          UserGroupInformation.setCurrentUser(call.connection.ticket);
           try {
-            value = call(call.param, call.timestamp);             // make the call
+/*
+TODO: Currently we do not assume the context of the user who is
+requesting, since security hasn't been fully integrated in HBase.
+
+            value = call.connection.ticket.doAs(
+              new PrivilegedExceptionAction<Writable>() {
+                @Override
+                public Writable run() throws Exception {
+                  return call(call.param, call.timestamp);
+                }
+              });
+*/
+            value = call(call.param, call.timestamp);
           } catch (Throwable e) {
             LOG.debug(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           }
-          UserGroupInformation.setCurrentUser(previous);
           CurCall.set(null);
 
           if (buf.size() > buffersize) {

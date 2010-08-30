@@ -26,6 +26,7 @@ import java.lang.management.MemoryUsage;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.net.BindException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -49,6 +50,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.security.PrivilegedExceptionAction;
+import java.security.PrivilegedAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -106,6 +109,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.WatchedEvent;
@@ -241,12 +246,16 @@ public class HRegionServer implements HRegionInterface,
   private Replication replicationHandler;
   // End of replication
 
+  private final UserGroupInformation serverUser;
+
   /**
    * Starts a HRegionServer at the default location
    * @param conf
    * @throws IOException
    */
   public HRegionServer(Configuration conf) throws IOException {
+    serverUser = UserGroupInformation.getCurrentUser();
+
     machineName = DNS.getDefaultHost(
         conf.get("hbase.regionserver.dns.interface","default"),
         conf.get("hbase.regionserver.dns.nameserver","default"));
@@ -319,6 +328,7 @@ public class HRegionServer implements HRegionInterface,
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");
     }
+
     reinitializeThreads();
     reinitializeZooKeeper();
     int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
@@ -433,6 +443,15 @@ public class HRegionServer implements HRegionInterface,
    * load/unload instructions.
    */
   public void run() {
+    serverUser.doAs(new PrivilegedAction<Void>() {
+        public Void run() {
+          doRun();
+          return null;
+        }
+      });
+  }
+
+  private void doRun() {
     regionServerThread = Thread.currentThread();
     boolean quiesceRequested = false;
     try {
@@ -2434,6 +2453,7 @@ public class HRegionServer implements HRegionInterface,
   throws IOException {
     Thread t = new Thread(hrs);
     t.setName(name);
+
     t.start();
     // Install shutdown hook that will catch signals and run an orderly shutdown
     // of the hrs.
@@ -2451,14 +2471,47 @@ public class HRegionServer implements HRegionInterface,
   public static HRegionServer constructRegionServer(Class<? extends HRegionServer> regionServerClass,
       final Configuration conf2)  {
     try {
-      Constructor<? extends HRegionServer> c =
+      final Constructor<? extends HRegionServer> c =
         regionServerClass.getConstructor(Configuration.class);
-      return c.newInstance(conf2);
+      UserGroupInformation ugi = loginFromKeytab(conf2);
+      return ugi.doAs(new PrivilegedExceptionAction<HRegionServer>() {
+          public HRegionServer run() throws Exception {
+            return c.newInstance(conf2);
+          }
+        });
     } catch (Exception e) {
       throw new RuntimeException("Failed construction of " +
         "Master: " + regionServerClass.toString(), e);
     }
   }
+
+  /**
+   * TODO collapse with HMaster loginFromKeytab
+   * TODO also shouldn't really be public - JVMClusterUtil is painful.
+   * These will be resolved in trunk patch
+   */
+  public static UserGroupInformation loginFromKeytab(Configuration conf)
+    throws IOException {
+    String keytabFileKey = "hbase.regionserver.keytab.file";
+    String userNameKey = "hbase.regionserver.kerberos.principal";
+    
+    String keytabFilename = conf.get(keytabFileKey);
+    if (keytabFilename == null) {
+      if (UserGroupInformation.isSecurityEnabled()) {
+        throw new IOException("No keytab file '" + keytabFileKey + "' configured.");
+      }
+      return UserGroupInformation.getLoginUser();
+    }
+
+    String principalConfig = conf.get(userNameKey, System
+        .getProperty("user.name"));
+    String principalName = SecurityUtil.getServerPrincipal(principalConfig,
+        InetAddress.getLocalHost().getCanonicalHostName());
+
+    return UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+      principalName, keytabFilename);
+  }
+
 
   @Override
   public void replicateLogEntries(HLog.Entry[] entries) throws IOException {

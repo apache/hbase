@@ -65,7 +65,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.ZooKeeper;
 
@@ -916,20 +915,17 @@ public class HBaseTestingUtility {
    * @return A new configuration instance with a different user set into it.
    * @throws IOException
    */
-  public static Configuration setDifferentUser(final Configuration c,
+  public static UserGroupInformation getDifferentUser(final Configuration c,
     final String differentiatingSuffix)
   throws IOException {
     FileSystem currentfs = FileSystem.get(c);
     Preconditions.checkArgument(currentfs instanceof DistributedFileSystem);
     // Else distributed filesystem.  Make a new instance per daemon.  Below
     // code is taken from the AppendTestUtil over in hdfs.
-    Configuration c2 = new Configuration(c);
-    String username = UserGroupInformation.getCurrentUGI().getUserName() +
+    String username = UserGroupInformation.getCurrentUser().getUserName() +
       differentiatingSuffix;
-    UnixUserGroupInformation.saveToConf(c2,
-      UnixUserGroupInformation.UGI_PROPERTY_NAME,
-      new UnixUserGroupInformation(username, new String[]{"supergroup"}));
-    return c2;
+    return UserGroupInformation.createUserForTesting(username,
+        new String[]{"supergroup"});
   }
 
   /**
