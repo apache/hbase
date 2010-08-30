@@ -67,7 +67,7 @@ public class TestSplitTransaction {
     this.fs.delete(this.testdir, true);
     this.wal = new HLog(fs, new Path(this.testdir, "logs"),
       new Path(this.testdir, "archive"),
-      TEST_UTIL.getConfiguration(), null);
+      TEST_UTIL.getConfiguration());
     this.parent = createRegion(this.testdir, this.wal);
   }
 
@@ -174,7 +174,7 @@ public class TestSplitTransaction {
     // Start transaction.
     SplitTransaction st = prepareGOOD_SPLIT_ROW();
     SplitTransaction spiedUponSt = spy(st);
-    when(spiedUponSt.createDaughterRegion(spiedUponSt.getSecondDaughter())).
+    when(spiedUponSt.createDaughterRegion(spiedUponSt.getSecondDaughter(), null)).
       thenThrow(new MockedFailedDaughterCreation());
     // Run the execute.  Look at what it returns.
     boolean expectedException = false;

@@ -53,9 +53,11 @@ public interface RegionServerServices extends OnlineRegions {
    * regionserver
    * @param r Region to open.
    * @param ct Instance of {@link CatalogTracker}
+   * @param daughter True if this is daughter of a split
    * @throws KeeperException
    * @throws IOException
    */
-  public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
+  public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct,
+      final boolean daughter)
   throws KeeperException, IOException;
 }

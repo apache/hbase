@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
@@ -169,6 +170,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   private LoadBalancer balancer = new LoadBalancer();
   private Chore balancerChore;
+  private volatile boolean balance = true;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -538,6 +540,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * Run the balancer.
    */
   public void balance() {
+    // If balance not true, don't run balancer.
+    if (!this.balance) return;
     synchronized (this.balancer) {
       // Only allow one balance run at at time.
       if (this.assignmentManager.isRegionsInTransition()) {
@@ -561,6 +565,25 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         this.assignmentManager.balance(plan);
       }
     }
+  }
+
+  @Override
+  public boolean balance(final boolean b) {
+    boolean oldValue = this.balance;
+    this.balance = b;
+    LOG.info("Balance=" + b);
+    return oldValue;
+  }
+
+  @Override
+  public void move(final byte[] encodedRegionName, final byte[] destServerName)
+  throws UnknownRegionException {
+    Pair<HRegionInfo, HServerInfo> p =
+      this.assignmentManager.getAssignment(encodedRegionName);
+    if (p == null) throw new UnknownRegionException(Bytes.toString(encodedRegionName));
+    HServerInfo dest = this.serverManager.getServerInfo(new String(destServerName));
+    RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
+    this.assignmentManager.balance(rp);
   }
 
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)

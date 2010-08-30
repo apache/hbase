@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
@@ -1056,6 +1057,23 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     }
     return result;
+  }
+
+  /**
+   * @param encodedRegionName Region encoded name.
+   * @return Null or a {@link Pair} instance that holds the full {@link HRegionInfo}
+   * and the hosting servers {@link HServerInfo}.
+   */
+  Pair<HRegionInfo, HServerInfo> getAssignment(final byte [] encodedRegionName) {
+    String name = Bytes.toString(encodedRegionName);
+    synchronized(this.regions) {
+      for (Map.Entry<HRegionInfo, HServerInfo> e: this.regions.entrySet()) {
+        if (e.getKey().getEncodedName().equals(name)) {
+          return new Pair<HRegionInfo, HServerInfo>(e.getKey(), e.getValue());
+        }
+      }
+    }
+    return null;
   }
 
   /**

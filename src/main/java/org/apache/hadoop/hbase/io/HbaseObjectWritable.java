@@ -183,7 +183,6 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(HLog.Entry[].class, code++);
     addToMap(HLogKey.class, code++);
 
-    // List
     addToMap(List.class, code++);
 
     addToMap(NavigableSet.class, code++);

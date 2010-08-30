@@ -2422,11 +2422,23 @@ public class HRegion implements HeapSize { // , Writable{
       info.getTableDesc().getName());
     HRegion r = HRegion.newHRegion(dir, wal, FileSystem.get(conf), conf, info,
       flusher);
-    long seqid = r.initialize(reporter);
-    if (wal != null) {
-      wal.setSequenceNumber(seqid);
+    return r.openHRegion(reporter);
+  }
+
+  /**
+   * Open HRegion.
+   * Calls initialize and sets sequenceid.
+   * @param reporter
+   * @return Returns <code>this</code>
+   * @throws IOException
+   */
+  HRegion openHRegion(final Progressable reporter)
+  throws IOException {
+    long seqid = initialize(reporter);
+    if (this.log != null) {
+      this.log.setSequenceNumber(seqid);
     }
-    return r;
+    return this;
   }
 
   /**

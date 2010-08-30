@@ -290,3 +290,6 @@ Later:
 
  So on assign, if we fail -- say connection refused when we try open on the RS, regions state remains offline -- who comes along and finds all offline and assigns?
 
+
+TODO:
++ Add test to prove move region works.

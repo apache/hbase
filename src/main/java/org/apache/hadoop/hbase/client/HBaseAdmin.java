@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
@@ -851,6 +852,31 @@ public class HBaseAdmin implements Abortable {
   throws IOException {
     HRegionInterface rs = this.connection.getHRegionConnection(hsa);
     rs.compactRegion(hri, major);
+  }
+
+  /**
+   * Move the region <code>r</code> to <code>dest</code>.
+   * @param encodedRegionName The encoded region name.
+   * @param destServerName The servername of the destination regionserver
+   * @throws UnknownRegionException Thrown if we can't find a region named
+   * <code>encodedRegionName</code>
+   * @throws ZooKeeperConnectionException 
+   * @throws MasterNotRunningException 
+   */
+  public void move(final byte [] encodedRegionName, final byte [] destServerName)
+  throws UnknownRegionException, MasterNotRunningException, ZooKeeperConnectionException {
+    getMaster().move(encodedRegionName, destServerName);
+  }
+
+  /**
+   * @param b If true, enable balancer. If false, disable balancer.
+   * @return Previous balancer value
+   * @throws ZooKeeperConnectionException 
+   * @throws MasterNotRunningException 
+   */
+  public boolean balance(final boolean b)
+  throws MasterNotRunningException, ZooKeeperConnectionException {
+    return getMaster().balance(b);
   }
 
   /**

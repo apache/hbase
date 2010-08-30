@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -37,6 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -520,10 +523,11 @@ public class LoadBalancer {
    * information and not the source/dest server info.
    */
   public static class RegionPlan implements Comparable<RegionPlan> {
-
     private final HRegionInfo hri;
     private final HServerInfo source;
     private HServerInfo dest;
+
+    
 
     /**
      * Instantiate a plan for a region move, moving the specified region from

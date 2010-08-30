@@ -19,25 +19,6 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
-
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -53,6 +34,26 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * Class that handles the source of a replication stream.
@@ -88,7 +89,7 @@ public class ReplicationSource extends Thread
   // The manager of all sources to which we ping back our progress
   private ReplicationSourceManager manager;
   // Should we stop everything?
-  private AtomicBoolean stop;
+  private Stoppable stopper;
   // List of chosen sinks (region servers)
   private List<HServerAddress> currentPeers;
   // How long should we sleep for each retry
@@ -139,11 +140,11 @@ public class ReplicationSource extends Thread
   public void init(final Configuration conf,
                    final FileSystem fs,
                    final ReplicationSourceManager manager,
-                   final AtomicBoolean stopper,
+                   final Stoppable stopper,
                    final AtomicBoolean replicating,
                    final String peerClusterZnode)
       throws IOException {
-    this.stop = stopper;
+    this.stopper = stopper;
     this.conf = conf;
     this.replicationQueueSizeCapacity =
         this.conf.getLong("replication.source.size.capacity", 1024*1024*64);
@@ -160,7 +161,7 @@ public class ReplicationSource extends Thread
             conf.getInt("hbase.regionserver.maxlogs", 32),
             new LogsComparator());
     this.conn = HConnectionManager.getConnection(conf);
- // REENABLE   this.zkHelper = manager.getRepZkWrapper();
+    this.zkHelper = manager.getRepZkWrapper();
     this.ratio = this.conf.getFloat("replication.source.ratio", 0.1f);
     this.currentPeers = new ArrayList<HServerAddress>();
     this.random = new Random();
@@ -169,7 +170,7 @@ public class ReplicationSource extends Thread
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);
     this.fs = fs;
- // REENALBE   this.clusterId = Byte.valueOf(zkHelper.getClusterId());
+    this.clusterId = Byte.valueOf(zkHelper.getClusterId());
     this.metrics = new ReplicationSourceMetrics(peerClusterZnode);
 
     // Finally look if this is a recovered queue
@@ -195,24 +196,23 @@ public class ReplicationSource extends Thread
    * Select a number of peers at random using the ratio. Mininum 1.
    */
   private void chooseSinks() {
-    // REENABLE
-//    this.currentPeers.clear();
-//    List<HServerAddress> addresses =
-//        this.zkHelper.getPeersAddresses(peerClusterId);
-//    Set<HServerAddress> setOfAddr = new HashSet<HServerAddress>();
-//    int nbPeers = (int) (Math.ceil(addresses.size() * ratio));
-//    LOG.info("Getting " + nbPeers +
-//        " rs from peer cluster # " + peerClusterId);
-//    for (int i = 0; i < nbPeers; i++) {
-//      HServerAddress address;
-//      // Make sure we get one address that we don't already have
-//      do {
-//        address = addresses.get(this.random.nextInt(addresses.size()));
-//      } while (setOfAddr.contains(address));
-//      LOG.info("Choosing peer " + address);
-//      setOfAddr.add(address);
-//    }
-//    this.currentPeers.addAll(setOfAddr);
+    this.currentPeers.clear();
+    List<HServerAddress> addresses =
+        this.zkHelper.getPeersAddresses(peerClusterId);
+    Set<HServerAddress> setOfAddr = new HashSet<HServerAddress>();
+    int nbPeers = (int) (Math.ceil(addresses.size() * ratio));
+    LOG.info("Getting " + nbPeers +
+        " rs from peer cluster # " + peerClusterId);
+    for (int i = 0; i < nbPeers; i++) {
+      HServerAddress address;
+      // Make sure we get one address that we don't already have
+      do {
+        address = addresses.get(this.random.nextInt(addresses.size()));
+      } while (setOfAddr.contains(address));
+      LOG.info("Choosing peer " + address);
+      setOfAddr.add(address);
+    }
+    this.currentPeers.addAll(setOfAddr);
   }
 
   @Override
@@ -225,7 +225,7 @@ public class ReplicationSource extends Thread
   public void run() {
     connectToPeers();
     // We were stopped while looping to connect to sinks, just abort
-    if (this.stop.get()) {
+    if (this.stopper.isStopped()) {
       return;
     }
     // If this is recovered, the queue is already full and the first log
@@ -236,7 +236,7 @@ public class ReplicationSource extends Thread
     }
     int sleepMultiplier = 1;
     // Loop until we close down
-    while (!stop.get() && this.running) {
+    while (!stopper.isStopped() && this.running) {
       // Get a new path
       if (!getNextPath()) {
         if (sleepForRetries("No log to process", sleepMultiplier)) {
@@ -312,7 +312,7 @@ public class ReplicationSource extends Thread
       // If we didn't get anything to replicate, or if we hit a IOE,
       // wait a bit and retry.
       // But if we need to stop, don't bother sleeping
-      if (!stop.get() && (gotIOE || currentNbEntries == 0)) {
+      if (!stopper.isStopped() && (gotIOE || currentNbEntries == 0)) {
         if (sleepForRetries("Nothing to replicate", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -374,7 +374,7 @@ public class ReplicationSource extends Thread
 
   private void connectToPeers() {
     // Connect to peer cluster first, unless we have to stop
-    while (!this.stop.get() && this.currentPeers.size() == 0) {
+    while (!this.stopper.isStopped() && this.currentPeers.size() == 0) {
       try {
         chooseSinks();
         Thread.sleep(this.sleepForRetries);
@@ -407,58 +407,57 @@ public class ReplicationSource extends Thread
    * @return true if we should continue with that file, false if we are over with it
    */
   protected boolean openReader(int sleepMultiplier) {
-    // REENABLE
-//    try {
-//      LOG.info("Opening log for replication " + this.currentPath.getName() +
-//          " at " + this.position);
-//      try {
-//       this.reader = null;
-//       this.reader = HLog.getReader(this.fs, this.currentPath, this.conf);
-//      } catch (FileNotFoundException fnfe) {
-//        if (this.queueRecovered) {
-//          // We didn't find the log in the archive directory, look if it still
-//          // exists in the dead RS folder (there could be a chain of failures
-//          // to look at)
-//          for (int i = this.deadRegionServers.length - 1; i > 0; i--) {
-//            Path deadRsDirectory =
-//                new Path(this.manager.getLogDir(), this.deadRegionServers[i]);
-//            Path possibleLogLocation =
-//                new Path(deadRsDirectory, currentPath.getName());
-//            if (this.manager.getFs().exists(possibleLogLocation)) {
-//              // We found the right new location
-//              LOG.info("Log " + this.currentPath + " still exists at " +
-//                  possibleLogLocation);
-//              // Breaking here will make us sleep since reader is null
-//              break;
-//            }
-//          }
-//          // TODO What happens if the log was missing from every single location?
-//          // Although we need to check a couple of times as the log could have
-//          // been moved by the master between the checks
-//        } else {
-//          // If the log was archived, continue reading from there
-//          Path archivedLogLocation =
-//              new Path(manager.getOldLogDir(), currentPath.getName());
-//          if (this.manager.getFs().exists(archivedLogLocation)) {
-//            currentPath = archivedLogLocation;
-//            LOG.info("Log " + this.currentPath + " was moved to " +
-//                archivedLogLocation);
-//            // Open the log at the new location
-//            this.openReader(sleepMultiplier);
-//
-//          }
-//          // TODO What happens the log is missing in both places?
-//        }
-//      }
-//    } catch (IOException ioe) {
-//      LOG.warn(peerClusterZnode + " Got: ", ioe);
-//      // TODO Need a better way to determinate if a file is really gone but
-//      // TODO without scanning all logs dir
-//      if (sleepMultiplier == this.maxRetriesMultiplier) {
-//        LOG.warn("Waited too long for this file, considering dumping");
-//        return !processEndOfFile();
-//      }
-//    }
+    try {
+      LOG.info("Opening log for replication " + this.currentPath.getName() +
+          " at " + this.position);
+      try {
+       this.reader = null;
+       this.reader = HLog.getReader(this.fs, this.currentPath, this.conf);
+      } catch (FileNotFoundException fnfe) {
+        if (this.queueRecovered) {
+          // We didn't find the log in the archive directory, look if it still
+          // exists in the dead RS folder (there could be a chain of failures
+          // to look at)
+          for (int i = this.deadRegionServers.length - 1; i > 0; i--) {
+            Path deadRsDirectory =
+                new Path(this.manager.getLogDir(), this.deadRegionServers[i]);
+            Path possibleLogLocation =
+                new Path(deadRsDirectory, currentPath.getName());
+            if (this.manager.getFs().exists(possibleLogLocation)) {
+              // We found the right new location
+              LOG.info("Log " + this.currentPath + " still exists at " +
+                  possibleLogLocation);
+              // Breaking here will make us sleep since reader is null
+              break;
+            }
+          }
+          // TODO What happens if the log was missing from every single location?
+          // Although we need to check a couple of times as the log could have
+          // been moved by the master between the checks
+        } else {
+          // If the log was archived, continue reading from there
+          Path archivedLogLocation =
+              new Path(manager.getOldLogDir(), currentPath.getName());
+          if (this.manager.getFs().exists(archivedLogLocation)) {
+            currentPath = archivedLogLocation;
+            LOG.info("Log " + this.currentPath + " was moved to " +
+                archivedLogLocation);
+            // Open the log at the new location
+            this.openReader(sleepMultiplier);
+
+          }
+          // TODO What happens the log is missing in both places?
+        }
+      }
+    } catch (IOException ioe) {
+      LOG.warn(peerClusterZnode + " Got: ", ioe);
+      // TODO Need a better way to determinate if a file is really gone but
+      // TODO without scanning all logs dir
+      if (sleepMultiplier == this.maxRetriesMultiplier) {
+        LOG.warn("Waited too long for this file, considering dumping");
+        return !processEndOfFile();
+      }
+    }
     return true;
   }
 
@@ -518,47 +517,46 @@ public class ReplicationSource extends Thread
    * Do the shipping logic
    */
   protected void shipEdits() {
-    // REENABLE
-//    int sleepMultiplier = 1;
-//    while (!stop.get()) {
-//      try {
-//        HRegionInterface rrs = getRS();
-//        LOG.debug("Replicating " + currentNbEntries);
-//        rrs.replicateLogEntries(Arrays.copyOf(this.entriesArray, currentNbEntries));
-//        this.manager.logPositionAndCleanOldLogs(this.currentPath,
-//            this.peerClusterZnode, this.position, queueRecovered);
-//        this.totalReplicatedEdits += currentNbEntries;
-//        this.metrics.shippedBatchesRate.inc(1);
-//        this.metrics.shippedOpsRate.inc(
-//            this.currentNbOperations);
-//        this.metrics.setAgeOfLastShippedOp(
-//            this.entriesArray[this.entriesArray.length-1].getKey().getWriteTime());
-//        LOG.debug("Replicated in total: " + this.totalReplicatedEdits);
-//        break;
-//
-//      } catch (IOException ioe) {
-//        LOG.warn("Unable to replicate because ", ioe);
-//        try {
-//          boolean down;
-//          do {
-//            down = isSlaveDown();
-//            if (down) {
-//              LOG.debug("The region server we tried to ping didn't answer, " +
-//                  "sleeping " + sleepForRetries + " times " + sleepMultiplier);
-//              Thread.sleep(this.sleepForRetries * sleepMultiplier);
-//              if (sleepMultiplier < maxRetriesMultiplier) {
-//                sleepMultiplier++;
-//              } else {
-//                chooseSinks();
-//              }
-//            }
-//          } while (!stop.get() && down);
-//        } catch (InterruptedException e) {
-//          LOG.debug("Interrupted while trying to contact the peer cluster");
-//        }
-//
-//      }
-//    }
+    int sleepMultiplier = 1;
+    while (!this.stopper.isStopped()) {
+      try {
+        HRegionInterface rrs = getRS();
+        LOG.debug("Replicating " + currentNbEntries);
+        rrs.replicateLogEntries(Arrays.copyOf(this.entriesArray, currentNbEntries));
+        this.manager.logPositionAndCleanOldLogs(this.currentPath,
+            this.peerClusterZnode, this.position, queueRecovered);
+        this.totalReplicatedEdits += currentNbEntries;
+        this.metrics.shippedBatchesRate.inc(1);
+        this.metrics.shippedOpsRate.inc(
+            this.currentNbOperations);
+        this.metrics.setAgeOfLastShippedOp(
+            this.entriesArray[this.entriesArray.length-1].getKey().getWriteTime());
+        LOG.debug("Replicated in total: " + this.totalReplicatedEdits);
+        break;
+
+      } catch (IOException ioe) {
+        LOG.warn("Unable to replicate because ", ioe);
+        try {
+          boolean down;
+          do {
+            down = isSlaveDown();
+            if (down) {
+              LOG.debug("The region server we tried to ping didn't answer, " +
+                  "sleeping " + sleepForRetries + " times " + sleepMultiplier);
+              Thread.sleep(this.sleepForRetries * sleepMultiplier);
+              if (sleepMultiplier < maxRetriesMultiplier) {
+                sleepMultiplier++;
+              } else {
+                chooseSinks();
+              }
+            }
+          } while (!this.stopper.isStopped() && down);
+        } catch (InterruptedException e) {
+          LOG.debug("Interrupted while trying to contact the peer cluster");
+        }
+
+      }
+    }
   }
 
   /**
@@ -569,16 +567,15 @@ public class ReplicationSource extends Thread
    * continue trying to read from it
    */
   protected boolean processEndOfFile() {
-    // REENABLE
-//    if (this.queue.size() != 0) {
-//      this.currentPath = null;
-//      this.position = 0;
-//      return true;
-//    } else if (this.queueRecovered) {
-//      this.manager.closeRecoveredQueue(this);
-//      this.abort();
-//      return true;
-//    }
+    if (this.queue.size() != 0) {
+      this.currentPath = null;
+      this.position = 0;
+      return true;
+    } else if (this.queueRecovered) {
+      this.manager.closeRecoveredQueue(this);
+      this.abort();
+      return true;
+    }
     return false;
   }
 
@@ -692,5 +689,4 @@ public class ReplicationSource extends Thread
       return Long.parseLong(parts[parts.length-1]);
     }
   }
-
 }

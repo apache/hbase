@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.UnknownRegionException;
 
 /**
  * Clients interact with the HMasterInterface to gain access to meta-level
@@ -130,4 +131,21 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @return status object
    */
   public ClusterStatus getClusterStatus();
+
+
+  /**
+   * Move the region <code>r</code> to <code>dest</code>.
+   * @param encodedRegionName The encoded region name.
+   * @param destServerName The servername of the destination regionserver
+   * @throws UnknownRegionException Thrown if we can't find a region named
+   * <code>encodedRegionName</code>
+   */
+  public void move(final byte [] encodedRegionName, final byte [] destServerName)
+  throws UnknownRegionException;
+
+  /**
+   * @param b If true, enable balancer. If false, disable balancer.
+   * @return Previous balancer value
+   */
+  public boolean balance(final boolean b);
 }

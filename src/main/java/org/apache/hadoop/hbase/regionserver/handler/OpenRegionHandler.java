@@ -151,7 +151,7 @@ public class OpenRegionHandler extends EventHandler {
     // Update ZK, ROOT or META
     try {
       this.rsServices.postOpenDeployTasks(region,
-        this.server.getCatalogTracker());
+        this.server.getCatalogTracker(), false);
     } catch (IOException e) {
       // TODO: rollback the open?
       LOG.error("Error updating region location in catalog table", e);

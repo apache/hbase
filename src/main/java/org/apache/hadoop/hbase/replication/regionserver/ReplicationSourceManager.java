@@ -20,20 +20,6 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +28,16 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 
 /**
  * This class is responsible to manage all the replication
@@ -149,7 +145,7 @@ public class ReplicationSourceManager {
       ReplicationSourceInterface src = addSource(id);
       src.startup();
     }
-    List<String> currentReplicators = this.zkHelper.getListOfReplicators(null);
+    List<String> currentReplicators = this.zkHelper.getListOfReplicators();
     synchronized (otherRegionServers) {
       LOG.info("Current list of replicators: " + currentReplicators
           + " other RSs: " + otherRegionServers);
@@ -201,7 +197,7 @@ public class ReplicationSourceManager {
    * @return a sorted set of hlog names
    */
   protected SortedSet<String> getHLogs() {
-    return new TreeSet(this.hlogs);
+    return new TreeSet<String>(this.hlogs);
   }
 
   /**
@@ -255,6 +251,7 @@ public class ReplicationSourceManager {
       final String peerClusterId) throws IOException {
     ReplicationSourceInterface src;
     try {
+      @SuppressWarnings("rawtypes")
       Class c = Class.forName(conf.get("replication.replicationsource.implementation",
           ReplicationSource.class.getCanonicalName()));
       src = (ReplicationSourceInterface) c.newInstance();

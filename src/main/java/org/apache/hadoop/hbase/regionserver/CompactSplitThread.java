@@ -149,7 +149,7 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
     // the prepare call -- we are not ready to split just now.  Just return.
     if (!st.prepare()) return;
     try {
-      st.execute(this.server, this.server.getCatalogTracker());
+      st.execute(this.server, this.server);
     } catch (IOException ioe) {
       try {
         LOG.info("Running rollback of failed split of " +
@@ -172,8 +172,9 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
     this.server.reportSplit(parent.getRegionInfo(), st.getFirstDaughter(),
       st.getSecondDaughter());
     LOG.info("Region split, META updated, and report to master. Parent=" +
-      parent.getRegionInfo() + ", new regions: " +
-      st.getFirstDaughter() + ", " + st.getSecondDaughter() + ". Split took " +
+      parent.getRegionInfo().getRegionNameAsString() + ", new regions: " +
+      st.getFirstDaughter().getRegionNameAsString() + ", " +
+      st.getSecondDaughter().getRegionNameAsString() + ". Split took " +
       StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
   }
 

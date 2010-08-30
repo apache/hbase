@@ -905,8 +905,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     // Instantiate replication manager if replication enabled.  Pass it the
     // log directories.
-    this.replicationHandler = Replication.isReplication(this.conf)?
-      new Replication(this, this.fs, logdir, oldLogDir): null;
+    try {
+      this.replicationHandler = Replication.isReplication(this.conf)?
+        new Replication(this, this.fs, logdir, oldLogDir): null;
+    } catch (KeeperException e) {
+      throw new IOException("Failed replication handler create", e);
+    }
     return instantiateHLog(logdir, oldLogDir);
   }
 
@@ -1133,7 +1137,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
+  public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct,
+      final boolean daughter)
   throws KeeperException, IOException {
     // Do checks to see if we need to compact (references or too many files)
     if (r.hasReferences() || r.hasTooManyStoreFiles()) {
@@ -1147,11 +1152,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (r.getRegionInfo().isRootRegion()) {
       RootLocationEditor.setRootLocation(getZooKeeper(),
         getServerInfo().getServerAddress());
-    } else if(r.getRegionInfo().isMetaRegion()) {
+    } else if (r.getRegionInfo().isMetaRegion()) {
       // TODO: doh, this has weird naming between RootEditor/MetaEditor
       MetaEditor.updateMetaLocation(ct, r.getRegionInfo(), getServerInfo());
     } else {
-      MetaEditor.updateRegionLocation(ct, r.getRegionInfo(), getServerInfo());
+      if (daughter) {
+        // If daughter of a split, update whole row, not just location.
+        MetaEditor.addDaughter(ct, r.getRegionInfo(), getServerInfo());
+      } else {
+        MetaEditor.updateRegionLocation(ct, r.getRegionInfo(), getServerInfo());
+      }
     }
   }
 
@@ -2026,7 +2036,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     try {
       region = getOnlineRegion(regionName);
       if (region == null) {
-        throw new NotServingRegionException("Region is not online: " + regionName);
+        throw new NotServingRegionException("Region is not online: " +
+          Bytes.toStringBinary(regionName));
       }
       return region;
     } finally {

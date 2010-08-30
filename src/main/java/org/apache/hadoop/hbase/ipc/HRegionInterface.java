@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.NavigableSet;
 
@@ -36,7 +35,6 @@ import org.apache.hadoop.hbase.client.MultiPutResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 /**

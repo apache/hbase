@@ -37,10 +37,10 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.zookeeper.KeeperException;
 
 /**
- * Replication serves as an umbrella over the setup of replication and
- * is used by HRS.
+ * Gateway to Replication.  Used by {@link HRegionServer}.
  */
 public class Replication implements WALObserver {
   private final boolean replication;
@@ -60,16 +60,16 @@ public class Replication implements WALObserver {
    * @param logDir
    * @param oldLogDir directory where logs are archived
    * @throws IOException
+   * @throws KeeperException 
    */
   public Replication(final Server server, final FileSystem fs,
       final Path logDir, final Path oldLogDir)
-  throws IOException {
+  throws IOException, KeeperException {
     this.server = server;
     this.conf = this.server.getConfiguration();
     this.replication = isReplication(this.conf);
     if (replication) {
-      this.zkHelper = new ReplicationZookeeper(server.getZooKeeper(),
-        this.conf, this.replicating, this.server.getServerName());
+      this.zkHelper = new ReplicationZookeeper(server, this.replicating);
       this.replicationMaster = zkHelper.isReplicationMaster();
       this.replicationManager = this.replicationMaster ?
         new ReplicationSourceManager(zkHelper, conf, this.server,

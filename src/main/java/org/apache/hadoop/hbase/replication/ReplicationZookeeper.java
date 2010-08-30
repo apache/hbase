@@ -106,19 +106,15 @@ public class ReplicationZookeeper {
    * Constructor used by region servers, connects to the peer cluster right away.
    *
    * @param zookeeper
-   * @param conf             conf to use
    * @param replicating    atomic boolean to start/stop replication
-   * @param rsName      the name of this region server, null if
-   *                         using RZH only to use the helping methods
    * @throws IOException
    * @throws KeeperException 
    */
-  public ReplicationZookeeper(final Server server,
-      final Configuration conf, final AtomicBoolean replicating, String rsName)
+  public ReplicationZookeeper(final Server server, final AtomicBoolean replicating)
   throws IOException, KeeperException {
     this.abortable = server;
     this.zookeeper = server.getZooKeeper();
-    this.conf = conf;
+    this.conf = server.getConfiguration();
     String replicationZNodeName =
         conf.get("zookeeper.znode.replication", "replication");
     String peersZNodeName =
@@ -157,8 +153,8 @@ public class ReplicationZookeeper {
       (this.replicationMaster ? "master" : "slave") + " for replication" +
         ", compared with (" + address + ")");
 
-    if (rsName != null) {
-      this.rsServerNameZnode = ZKUtil.joinZNode(rsZNode, rsName);
+    if (server.getServerName() != null) {
+      this.rsServerNameZnode = ZKUtil.joinZNode(rsZNode, server.getServerName());
       // Set a tracker on replicationStateNodeNode
       ReplicationStatusTracker tracker =
         new ReplicationStatusTracker(this.zookeeper, getRepStateNode(), server);

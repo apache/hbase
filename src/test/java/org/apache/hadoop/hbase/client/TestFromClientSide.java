@@ -264,7 +264,8 @@ public class TestFromClientSide {
    * @throws InterruptedException 
    */
   @Test
-  public void testFilterAcrossMutlipleRegions() throws IOException, InterruptedException {
+  public void testFilterAcrossMultipleRegions()
+  throws IOException, InterruptedException {
     byte [] name = Bytes.toBytes("testFilterAcrossMutlipleRegions");
     HTable t = TEST_UTIL.createTable(name, FAMILY);
     int rowCount = TEST_UTIL.loadTable(t, FAMILY);

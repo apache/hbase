@@ -55,7 +55,7 @@ public class MetaEditor {
         Writables.getBytes(regionInfo));
     catalogTracker.waitForMetaServerConnectionDefault().put(
         CatalogTracker.META_REGION, put);
-    LOG.info("Added region " + regionInfo + " to META");
+    LOG.info("Added region " + regionInfo.getRegionNameAsString() + " to META");
   }
 
   /**
@@ -71,9 +71,11 @@ public class MetaEditor {
   public static void offlineParentInMeta(CatalogTracker catalogTracker,
       HRegionInfo parent, final HRegionInfo a, final HRegionInfo b)
   throws NotAllMetaRegionsOnlineException, IOException {
-    Put put = new Put(parent.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-      Writables.getBytes(parent));
+    HRegionInfo copyOfParent = new HRegionInfo(parent);
+    copyOfParent.setOffline(true);
+    copyOfParent.setSplit(true);
+    Put put = new Put(copyOfParent.getRegionName());
+    addRegionInfo(put, copyOfParent);
     put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
         HConstants.EMPTY_BYTE_ARRAY);
     put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
@@ -83,7 +85,23 @@ public class MetaEditor {
     put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,
       Writables.getBytes(b));
     catalogTracker.waitForMetaServerConnectionDefault().put(CatalogTracker.META_REGION, put);
-    LOG.info("Offlined parent region " + parent + " in META");
+    LOG.info("Offlined parent region " + parent.getRegionNameAsString() +
+      " in META");
+  }
+
+  public static void addDaughter(final CatalogTracker catalogTracker,
+      final HRegionInfo regionInfo, final HServerInfo serverInfo)
+  throws NotAllMetaRegionsOnlineException, IOException {
+    HRegionInterface server = catalogTracker.waitForRootServerConnectionDefault();
+    byte [] catalogRegionName = CatalogTracker.META_REGION;
+    Put put = new Put(regionInfo.getRegionName());
+    addRegionInfo(put, regionInfo);
+    addLocation(put, serverInfo);
+    server.put(catalogRegionName, put);
+    LOG.info("Added daughter " + regionInfo.getRegionNameAsString() +
+      " in region " + Bytes.toString(catalogRegionName) + " with " +
+      "server=" + serverInfo.getHostnamePort() + ", " +
+      "startcode=" + serverInfo.getStartCode());
   }
 
   /**
@@ -140,10 +158,7 @@ public class MetaEditor {
       byte [] catalogRegionName, HRegionInfo regionInfo, HServerInfo serverInfo)
   throws IOException {
     Put put = new Put(regionInfo.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-      Bytes.toBytes(serverInfo.getHostnamePort()));
-    put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-      Bytes.toBytes(serverInfo.getStartCode()));
+    addLocation(put, serverInfo);
     server.put(catalogRegionName, put);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
       " in region " + Bytes.toString(catalogRegionName) + " with " +
@@ -164,7 +179,7 @@ public class MetaEditor {
     catalogTracker.waitForMetaServerConnectionDefault().delete(
         CatalogTracker.META_REGION, delete);
 
-    LOG.info("Deleted region " + regionInfo + " from META");
+    LOG.info("Deleted region " + regionInfo.getRegionNameAsString() + " from META");
   }
 
   /**
@@ -177,10 +192,24 @@ public class MetaEditor {
       HRegionInfo regionInfo)
   throws IOException {
     Put put = new Put(regionInfo.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(regionInfo));
+    addRegionInfo(put, regionInfo);
     catalogTracker.waitForMetaServerConnectionDefault().put(
         CatalogTracker.META_REGION, put);
-    LOG.info("Updated region " + regionInfo + " in META");
+    LOG.info("Updated region " + regionInfo.getRegionNameAsString() + " in META");
+  }
+
+  private static Put addRegionInfo(final Put p, final HRegionInfo hri)
+  throws IOException {
+    p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(hri));
+    return p;
+  }
+
+  private static Put addLocation(final Put p, final HServerInfo hsi) {
+    p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+      Bytes.toBytes(hsi.getHostnamePort()));
+    p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+      Bytes.toBytes(hsi.getStartCode()));
+    return p;
   }
 }
