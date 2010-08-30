@@ -293,3 +293,4 @@ Later:
 
 TODO:
 + Add test to prove move region works.
++ Add test to prove enable/disable balancer works.
