@@ -5,48 +5,29 @@ implemented.
 remaining tasks before merge
 ---
 
-* finish baseline implementation of new splits
--- Basic split works now.  RS opens daughters on itself.
-I made the mistake of keeping up state
-in zk at first but thats not necessary; at moment if split fails
-we kill the regionserver rather than have a hole in our table.
-TODO: Come back and review after merge to make sure this jibes
-w/ new split transaction code.  St.Ack 20100823.
-
-* integrate load balancer
-- Looksee if we are still deleting location from meta; not needed any
-more and if we don't delete, then we can put region back on the server
-that used to be serving it; can add old location to new RegionPlan
--- St.Ack 08/21
-
-* ensure root/meta are last to close on cluster shutdown
-- Add asking RS what it has when only two servers remaining...
-and when only root or meta, then send explicit close of each.
-Do it this way to ensure correct shutdown order -- St.Ack 08/21
-
-
 ---
 tasks to complete post merge
 ---
 
 * move client to use CatalogTracker and add region admin methods
++ Yes.
 
 * bulletproof splits.  need to be recoverable from every point including
-  partial META edits over on RS.
+  partial META edits over on RS
++ Should be there.  Add more tests.  -- St.Ack 20100901
 
-  
 * review timeout semantics for client calls.  servers should generally wait
   forever on root/meta but client class need to eventually timeout.
   
   we need to document new configuration parameters as well since this will now
   be a 'timeout' rather than 'retries' and 'delay'.
 
+ TODO: Remove configs that no longer apply -- St.Ack 20100901
+
 * finish rewriting or making any existing failing unit tests pass
 
 * new master unit tests (failover, failing RS and Master during various points
   of regions in transition, etc)
-
-
 
 
 harder stuff
@@ -60,26 +41,8 @@ harder stuff
   -- Should never timeout IMO and we changed executors so root and meta are
   done separately so this should be ok? -- St.Ack 20100815
 
-* move splits to RS side, integrate new patch from stack on trunk
-  might need a new CREATED unassigned now, or new rpc, but get rid of sending
-  split notification on heartbeat?
-  how to handle splits concurrent with disable?
-
-  -- We need means of fixup if only one edit goes in.. the offlining of parent.
-  St.Ack 20100817
-  -- This should be in place; rs opens daughters on itself now.
-  St.Ack 20100823.
-
-* figure what to do with client table admin ops (flush, split, compact)
-  (direct to RS rpc calls are in place, need to update client)
-  
-  -- And then remove this stuff from HMsg -- St.Ack 20100815
-
 * on region open (and wherever split children notify master) should check if
   if the table is disabled and should close the regions... maybe.
-
-* there are some races with master wanting to connect for rpc
-  to regionserver and the rs starting its rpc server, need to address
 
 * figure how to handle the very rare but possible race condition where two
   RSs will update META and the later one can squash the valid one if there was
@@ -88,8 +51,8 @@ harder stuff
 * review synchronization in AssignmentManager
 
 * migrate TestMasterTransitions or make new?
-
-* fix or remove last couple master tests that used RSOQ
+  
+  Make a new one -- St.Ack 20100901
 
 * write new tests!!!
 
@@ -97,18 +60,12 @@ harder stuff
 somewhat easier stuff
 ---
 
-* regionserver exit and expiration need to be finished in ServerManager
-
-  -- Mostly done.  Need to also implement server shutdown again -- St.Ack 20100815
-  -- Whats missing is servershutdownhandler. St.Ack 20100817
-
-
 * jsp pages borked
 
 * make sync calls for enable/disable (check and verify methods?)
   this still needs some love and testing but should be much easier to control now
 
-* integrate load balancing
+* Add balancing unit tests (was integrate balancer -- done. St.Ack 20100901)
   implemented but need to start a thread or chore, each time, wait for no
   regions in transition, generate and iterate the plan, putting it in-memory
   and then triggering the assignment.  if the master crashes mid-balance,
@@ -121,16 +78,6 @@ somewhat easier stuff
 
 * update client to use new admin functions straight to rs
   possibly migrate client to use CatalogTracker?
-
-
-* Executor services need to be using a priority queue
-
-  >>  Done.  I think all stuff to set pool size and add priorities is in.
-  -- Interestingly, if we mess up transitions... shutdown can be hung as
-  executors that are outstanding without matching other-ends will be
-  stuck trying to remove elements from queue... server won't go down.
-  St.Ack 20100817
-
 
 
 St.Ack
@@ -294,3 +241,8 @@ Later:
 TODO:
 + Add test to prove move region works.
 + Add test to prove enable/disable balancer works.
++ Add test for fixup if daughter edits don't make it into .META. (should be fixed up as part of server shutdown processing).
++ ensure root/meta are last to close on cluster shutdown
+- Add asking RS what it has when only two servers remaining...
+and when only root or meta, then send explicit close of each.
+Do it this way to ensure correct shutdown order -- St.Ack 08/21

@@ -37,6 +37,8 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Test transitions of state across the master.  Sets up the cluster once and
@@ -187,9 +189,9 @@ public class TestMasterTransitions {
    * in.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2428">HBASE-2428</a> 
    */
-/*
-  @Test (timeout=300000) public void testRegionCloseWhenNoMetaHBase2428()
+  @Ignore @Test  (timeout=300000) public void testRegionCloseWhenNoMetaHBase2428()
   throws Exception {
+    /*
     LOG.info("Running testRegionCloseWhenNoMetaHBase2428");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     final HMaster master = cluster.getMaster();
@@ -233,17 +235,18 @@ public class TestMasterTransitions {
       master.getRegionServerOperationQueue().
         unregisterRegionServerOperationListener(listener);
     }
+    */
   }
-*/
+
   /**
    * Test adding in a new server before old one on same host+port is dead.
    * Make the test more onerous by having the server under test carry the meta.
    * If confusion between old and new, purportedly meta never comes back.  Test
    * that meta gets redeployed.
    */
-  /*
-  @Test (timeout=300000) public void testAddingServerBeforeOldIsDead2413()
+  @Ignore @Test (timeout=300000) public void testAddingServerBeforeOldIsDead2413()
   throws IOException {
+    /*
     LOG.info("Running testAddingServerBeforeOldIsDead2413");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     int count = count();
@@ -283,8 +286,8 @@ public class TestMasterTransitions {
     } finally {
       c.set(HConstants.REGIONSERVER_PORT, oldPort);
     }
+    */
   }
-*/
 
   /**
    * HBase2482 is about outstanding region openings.  If any are outstanding
@@ -368,8 +371,9 @@ public class TestMasterTransitions {
    * done.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2482">HBASE-2482</a> 
    */
-  /*@Test (timeout=300000) *//*public void testKillRSWithOpeningRegion2482()
+  @Ignore @Test (timeout=300000) public void testKillRSWithOpeningRegion2482()
   throws Exception {
+    /*
     LOG.info("Running testKillRSWithOpeningRegion2482");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     if (cluster.getLiveRegionServerThreads().size() < 2) {
@@ -413,8 +417,9 @@ public class TestMasterTransitions {
       m.getRegionServerOperationQueue().
         unregisterRegionServerOperationListener(listener);
     }
+    */
   }
-*/
+
   /*
    * @return Count of all non-catalog regions on the designated server
    */

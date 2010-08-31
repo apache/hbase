@@ -20,18 +20,23 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
-import java.util.NavigableSet;
+import java.util.Map;
+import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.zookeeper.KeeperException;
 
 
@@ -98,25 +103,58 @@ public class ServerShutdownHandler extends EventHandler {
       throw new IOException("Interrupted", e);
     }
 
-    NavigableSet<HRegionInfo> hris =
+    NavigableMap<HRegionInfo, Result> hris =
       MetaReader.getServerRegions(this.server.getCatalogTracker(), this.hsi);
     LOG.info("Reassigning the " + hris.size() + " region(s) that " + serverName +
       " was carrying.");
 
     // We should encounter -ROOT- and .META. first in the Set given how its
     // a sorted set.
-    for (HRegionInfo hri: hris) {
+    for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
       // If table is not disabled but the region is offlined,
+      HRegionInfo hri = e.getKey();
       boolean disabled = this.services.getAssignmentManager().
         isTableDisabled(hri.getTableDesc().getNameAsString());
       if (disabled) continue;
-      if (hri.isOffline()) {
-        LOG.warn("TODO: DO FIXUP ON OFFLINED PARENT? REGION OFFLINE -- IS THIS RIGHT?" + hri);
+      if (hri.isOffline() && hri.isSplit()) {
+        fixupDaughters(hris, e.getValue());
         continue;
       }
       this.services.getAssignmentManager().assign(hri);
     }
     this.deadServers.remove(serverName);
     LOG.info("Finished processing of shutdown of " + serverName);
+  }
+
+  /**
+   * Check that daughter regions are up in .META. and if not, add them.
+   * @param hris All regions for this server in meta.
+   * @param result The contents of the parent row in .META.
+   * @throws IOException
+   */
+  void fixupDaughters(final NavigableMap<HRegionInfo, Result> hris,
+      final Result result) throws IOException {
+    fixupDaughter(hris, result, HConstants.SPLITA_QUALIFIER);
+    fixupDaughter(hris, result, HConstants.SPLITB_QUALIFIER);
+  }
+
+  /**
+   * Check individual daughter is up in .META.; fixup if its not.
+   * @param hris All regions for this server in meta.
+   * @param result The contents of the parent row in .META.
+   * @param qualifier Which daughter to check for.
+   * @throws IOException
+   */
+  void fixupDaughter(final NavigableMap<HRegionInfo, Result> hris,
+      final Result result, final byte [] qualifier)
+  throws IOException {
+    byte [] bytes = result.getValue(HConstants.CATALOG_FAMILY, qualifier);
+    if (bytes == null || bytes.length <= 0) return;
+    HRegionInfo hri = Writables.getHRegionInfo(bytes);
+    if (!hris.containsKey(hri)) {
+      LOG.info("Fixup; missing daughter " + hri.getEncodedNameAsBytes());
+      MetaEditor.addDaughter(this.server.getCatalogTracker(), hri, null);
+      this.services.getAssignmentManager().assign(hri);
+    }
   }
 }

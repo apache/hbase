@@ -96,7 +96,7 @@ public class MetaEditor {
     byte [] catalogRegionName = CatalogTracker.META_REGION;
     Put put = new Put(regionInfo.getRegionName());
     addRegionInfo(put, regionInfo);
-    addLocation(put, serverInfo);
+    if (serverInfo != null) addLocation(put, serverInfo);
     server.put(catalogRegionName, put);
     LOG.info("Added daughter " + regionInfo.getRegionNameAsString() +
       " in region " + Bytes.toString(catalogRegionName) + " with " +

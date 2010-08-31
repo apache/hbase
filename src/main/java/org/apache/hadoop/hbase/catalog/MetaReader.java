@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -46,7 +47,6 @@ import org.apache.hadoop.hbase.util.Writables;
  * catalogs.
  */
 public class MetaReader {
-
   /**
    * Performs a full scan of <code>.META.</code>.
    * <p>
@@ -166,10 +166,9 @@ public class MetaReader {
   public static Pair<HRegionInfo, HServerAddress> metaRowToRegionPair(
       Result data) throws IOException {
     HRegionInfo info = Writables.getHRegionInfo(
-        data.getValue(HConstants.CATALOG_FAMILY,
-            HConstants.REGIONINFO_QUALIFIER));
+      data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
     final byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
-        HConstants.SERVER_QUALIFIER);
+      HConstants.SERVER_QUALIFIER);
     if (value != null && value.length > 0) {
       HServerAddress server = new HServerAddress(Bytes.toString(value));
       return new Pair<HRegionInfo,HServerAddress>(info, server);
@@ -283,23 +282,24 @@ public class MetaReader {
     }
   }
 
-  public static NavigableSet<HRegionInfo>
+  public static NavigableMap<HRegionInfo, Result>
   getServerRegions(CatalogTracker catalogTracker, final HServerInfo hsi)
   throws IOException {
     HRegionInterface metaServer =
       catalogTracker.waitForMetaServerConnectionDefault();
-    NavigableSet<HRegionInfo> hris = new TreeSet<HRegionInfo>();
+    NavigableMap<HRegionInfo, Result> hris = new TreeMap<HRegionInfo, Result>();
     Scan scan = new Scan();
     scan.addFamily(HConstants.CATALOG_FAMILY);
     long scannerid = metaServer.openScanner(
         HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), scan);
     try {
-      Result data;
-      while((data = metaServer.next(scannerid)) != null) {
-        if (data != null && data.size() > 0) {
-          Pair<HRegionInfo, HServerAddress> pair = metaRowToRegionPair(data);
-          if (!pair.getSecond().equals(hsi.getServerAddress())) continue;
-          hris.add(pair.getFirst());
+      Result result;
+      while((result = metaServer.next(scannerid)) != null) {
+        if (result != null && result.size() > 0) {
+          HRegionInfo hri = Writables.getHRegionInfo(
+            result.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.REGIONINFO_QUALIFIER));
+          hris.put(hri, result);
         }
       }
       return hris;
