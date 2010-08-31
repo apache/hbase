@@ -107,7 +107,6 @@ public class ThriftServer {
       protected Map<String, HTable> initialValue() {
         return new TreeMap<String, HTable>();
       }
-
     };
 
     /**
@@ -186,7 +185,12 @@ public class ThriftServer {
      */
     HBaseHandler()
     throws IOException {
-      conf = HBaseConfiguration.create();
+      this(HBaseConfiguration.create());
+    }
+
+    HBaseHandler(final Configuration c)
+    throws IOException {
+      this.conf = c;
       admin = new HBaseAdmin(conf);
       scannerMap = new HashMap<Integer, ResultScanner>();
     }
@@ -209,7 +213,7 @@ public class ThriftServer {
 
     public boolean isTableEnabled(final byte[] tableName) throws IOError {
       try {
-        return HTable.isTableEnabled(tableName);
+        return HTable.isTableEnabled(this.conf, tableName);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }

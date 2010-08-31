@@ -47,6 +47,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -80,7 +81,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.util.concurrent.NamingThreadFactory;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * HLog stores all the edits to the HStore.  Its the hbase write-ahead-log
@@ -443,7 +444,7 @@ public class HLog implements Syncable {
    *
    * @return If lots of logs, flush the returned regions so next time through
    * we can clean logs. Returns null if nothing to flush.  Names are actual
-   * region names as returned by {@link HRegionInfo#getRegionName()}
+   * region names as returned by {@link HRegionInfo#getEncodedName()}
    * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
    * @throws IOException
    */
@@ -779,7 +780,7 @@ public class HLog implements Syncable {
     final long now,
     final boolean isMetaRegion)
   throws IOException {
-    byte [] regionName = regionInfo.getRegionName();
+    byte [] regionName = regionInfo.getEncodedNameAsBytes();
     byte [] tableName = regionInfo.getTableDesc().getName();
     this.append(regionInfo, makeKey(regionName, tableName, -1, now), logEdit);
   }
@@ -1498,9 +1499,10 @@ public class HLog implements Syncable {
       conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
     boolean skipErrors = conf.getBoolean("hbase.skip.errors", false);
     HashMap<byte[], Future> writeFutureResult = new HashMap<byte[], Future>();
-    NamingThreadFactory f  = new NamingThreadFactory(
-            "SplitWriter-%1$d", Executors.defaultThreadFactory());
-    ThreadPoolExecutor threadPool = (ThreadPoolExecutor)Executors.newFixedThreadPool(logWriterThreads, f);
+    ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
+    builder.setNameFormat("SplitWriter-%1$d");
+    ThreadFactory factory = builder.build();
+    ThreadPoolExecutor threadPool = (ThreadPoolExecutor)Executors.newFixedThreadPool(logWriterThreads, factory);
     for (final byte [] region : splitLogsMap.keySet()) {
       Callable splitter = createNewSplitter(rootDir, logWriters, splitLogsMap, region, fs, conf);
       writeFutureResult.put(region, threadPool.submit(splitter));
@@ -1705,7 +1707,7 @@ public class HLog implements Syncable {
     Path tableDir = HTableDescriptor.getTableDir(rootDir,
       logEntry.getKey().getTablename());
     Path regiondir = HRegion.getRegionDir(tableDir,
-      HRegionInfo.encodeRegionName(logEntry.getKey().getEncodedRegionName()));
+      Bytes.toString(logEntry.getKey().getEncodedRegionName()));
     Path dir = getRegionDirRecoveredEditsDir(regiondir);
     if (!fs.exists(dir)) {
       if (!fs.mkdirs(dir)) LOG.warn("mkdir failed on " + dir);

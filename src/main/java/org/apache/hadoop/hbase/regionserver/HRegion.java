@@ -1831,7 +1831,7 @@ public class HRegion implements HeapSize { // , Writable{
         // Check this edit is for me. Also, guard against writing the special
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
         if (kv.matchingFamily(HLog.METAFAMILY) ||
-            !Bytes.equals(key.getEncodedRegionName(), this.regionInfo.getRegionName())) {
+            !Bytes.equals(key.getEncodedRegionName(), this.regionInfo.getEncodedNameAsBytes())) {
           skippedEdits++;
           continue;
         }

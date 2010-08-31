@@ -134,7 +134,7 @@ public class CloseRegionHandler extends EventHandler {
    */
   private void setClosedState(final int expectedVersion, final HRegion region) {
     try {
-      if(ZKAssign.transitionNodeClosed(server.getZooKeeper(), regionInfo,
+      if (ZKAssign.transitionNodeClosed(server.getZooKeeper(), regionInfo,
           server.getServerName(), expectedVersion) == FAILED) {
         LOG.warn("Completed the CLOSE of a region but when transitioning from " +
             " CLOSING to CLOSED got a version mismatch, someone else clashed " +
@@ -142,6 +142,9 @@ public class CloseRegionHandler extends EventHandler {
         region.close();
         return;
       }
+    } catch (NullPointerException e) {
+      // I've seen NPE when table was deleted while close was running in unit tests.
+      LOG.warn("NPE during close -- catching and continuing...", e);
     } catch (KeeperException e) {
       LOG.error("Failed transitioning node from CLOSING to CLOSED", e);
       return;

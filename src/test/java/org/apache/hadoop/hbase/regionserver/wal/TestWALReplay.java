@@ -328,7 +328,7 @@ public class TestWALReplay {
     HLog wal = createWAL(this.conf);
     final byte[] tableName = Bytes.toBytes(tableNameStr);
     final byte[] rowName = tableName;
-    final byte[] regionName = hri.getRegionName();
+    final byte[] regionName = hri.getEncodedNameAsBytes();
 
     // Add 1k to each family.
     final int countPerFamily = 1000;
@@ -359,7 +359,6 @@ public class TestWALReplay {
     // Set down maximum recovery so we dfsclient doesn't linger retrying something
     // long gone.
     HBaseTestingUtility.setMaxRecoveryErrorCount(wal.getOutputStream(), 1);
-
     // Make a new conf and a new fs for the splitter to run on so we can take
     // over old wal.
     Configuration newConf = HBaseTestingUtility.setDifferentUser(this.conf,
