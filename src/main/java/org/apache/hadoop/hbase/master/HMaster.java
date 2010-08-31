@@ -538,16 +538,17 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   /**
    * Run the balancer.
+   * @return True if balancer ran, false otherwise.
    */
-  public void balance() {
+  public boolean balance() {
     // If balance not true, don't run balancer.
-    if (!this.balance) return;
+    if (!this.balance) return false;
     synchronized (this.balancer) {
       // Only allow one balance run at at time.
       if (this.assignmentManager.isRegionsInTransition()) {
         LOG.debug("Not running balancer because regions in transition: " +
           this.assignmentManager.getRegionsInTransition());
-        return;
+        return false;
       }
       Map<HServerInfo, List<HRegionInfo>> assignments =
         this.assignmentManager.getAssignments();
@@ -560,11 +561,13 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         }
       }
       List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
-      if (plans == null || plans.isEmpty()) return;
-      for (RegionPlan plan: plans) {
-        this.assignmentManager.balance(plan);
+      if (plans != null && !plans.isEmpty()) {
+        for (RegionPlan plan: plans) {
+          this.assignmentManager.balance(plan);
+        }
       }
     }
+    return true;
   }
 
   @Override

@@ -261,6 +261,7 @@ public class TestLogRolling  {
       InvocationTargetException {
     assertTrue("This test requires HLog file replication.",
       fs.getDefaultReplication() > 1);
+    LOG.info("Replication=" + fs.getDefaultReplication());
     // When the META table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
 
@@ -302,8 +303,7 @@ public class TestLogRolling  {
     assertTrue("Log should have a timestamp older than now",
         curTime > oldFilenum && oldFilenum != -1);
 
-    assertTrue("The log shouldn't have rolled yet", oldFilenum == log
-        .getFilenum());
+    assertTrue("The log shouldn't have rolled yet", oldFilenum == log.getFilenum());
     DatanodeInfo[] pipeline = getPipeline(log);
     assertTrue(pipeline.length == fs.getDefaultReplication());
 

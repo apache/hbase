@@ -30,11 +30,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -267,8 +265,10 @@ class SplitTransaction {
     private final Server server;
     private final HRegion r;
 
-    DaughterOpener(final Server s, final RegionServerServices services, final HRegion r) {
+    DaughterOpener(final Server s, final RegionServerServices services,
+        final HRegion r) {
       super(s.getServerName() + "-daughterOpener=" + r.getRegionInfo().getEncodedName());
+      setDaemon(true);
       this.services = services;
       this.server = s;
       this.r = r;
@@ -432,28 +432,6 @@ class SplitTransaction {
       final Path splitdir, final HRegionInfo hri)
   throws IOException {
     return new Path(splitdir, hri.getEncodedName());
-  }
-
-  /*
-   * @param r Parent region we want to edit.
-   * @return An HTable instance against the meta table that holds passed
-   * <code>r</code>; it has autoFlush enabled so we immediately send puts (No
-   * buffering enabled).
-   * @throws IOException
-   */
-  private HTable getTable(final Configuration conf) throws IOException {
-    // When a region is split, the META table needs to updated if we're
-    // splitting a 'normal' region, and the ROOT table needs to be
-    // updated if we are splitting a META region.
-    HTable t = null;
-    if (this.parent.getRegionInfo().isMetaTable()) {
-      t = new HTable(conf, HConstants.ROOT_TABLE_NAME);
-    } else {
-      t = new HTable(conf, HConstants.META_TABLE_NAME);
-    }
-    // Flush puts as we send them -- no buffering.
-    t.setAutoFlush(true);
-    return t;
   }
 
   /**

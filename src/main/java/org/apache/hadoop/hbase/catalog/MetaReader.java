@@ -296,10 +296,9 @@ public class MetaReader {
       Result result;
       while((result = metaServer.next(scannerid)) != null) {
         if (result != null && result.size() > 0) {
-          HRegionInfo hri = Writables.getHRegionInfo(
-            result.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER));
-          hris.put(hri, result);
+          Pair<HRegionInfo, HServerAddress> pair = metaRowToRegionPair(result);
+          if (!pair.getSecond().equals(hsi.getServerAddress())) continue;
+          hris.put(pair.getFirst(), result);
         }
       }
       return hris;

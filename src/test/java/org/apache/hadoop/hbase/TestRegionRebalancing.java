@@ -104,31 +104,32 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
 
     LOG.debug("Adding 2nd region server.");
     // add a region server - total of 2
-    cluster.startRegionServer();
-    while (cluster.getMaster().getServerManager().getOnlineServers().size() < 2) {
-      Threads.sleep(100);
-    }
+    LOG.info("Started=" +
+      cluster.startRegionServer().getRegionServer().getServerName());
     cluster.getMaster().balance();
     assertRegionsAreBalanced();
 
     // add a region server - total of 3
     LOG.debug("Adding 3rd region server.");
-    cluster.startRegionServer();
+    LOG.info("Started=" +
+      cluster.startRegionServer().getRegionServer().getServerName());
     cluster.getMaster().balance();
     assertRegionsAreBalanced();
 
     // kill a region server - total of 2
     LOG.debug("Killing the 3rd region server.");
-    cluster.stopRegionServer(2, false);
+    LOG.info("Stopped=" + cluster.stopRegionServer(2, false));
     cluster.waitOnRegionServer(2);
     cluster.getMaster().balance();
     assertRegionsAreBalanced();
 
     // start two more region servers - total of 4
     LOG.debug("Adding 3rd region server");
-    cluster.startRegionServer();
+    LOG.info("Started=" +
+      cluster.startRegionServer().getRegionServer().getServerName());
     LOG.debug("Adding 4th region server");
-    cluster.startRegionServer();
+    LOG.info("Started=" +
+      cluster.startRegionServer().getRegionServer().getServerName());
     cluster.getMaster().balance();
     assertRegionsAreBalanced();
 
@@ -178,7 +179,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
         LOG.debug(server.getServerName() + " Avg: " + avg + " actual: " + serverLoad);
         if (!(avg > 2.0 && serverLoad <= avgLoadPlusSlop
             && serverLoad >= avgLoadMinusSlop)) {
-          LOG.debug(server.hashCode() + " Isn't balanced!!! Avg: " + avg +
+          LOG.debug(server.getServerName() + " Isn't balanced!!! Avg: " + avg +
               " actual: " + serverLoad + " slop: " + slop);
           success = false;
         }

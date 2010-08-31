@@ -74,9 +74,9 @@ import org.apache.zookeeper.ZooKeeper;
 import com.google.common.base.Preconditions;
 
 /**
- * Facility for testing HBase. Added as tool to abet junit4 testing.  Replaces
+ * Facility for testing HBase. Replacement for
  * old HBaseTestCase and HBaseCluserTestCase functionality.
- * Create an instance and keep it around doing HBase testing.  This class is
+ * Create an instance and keep it around testing HBase.  This class is
  * meant to be your one-stop shop for anything you might need testing.  Manages
  * one cluster at a time only.  Depends on log4j being on classpath and
  * hbase-site.xml for logging and test-run configuration.  It does not set

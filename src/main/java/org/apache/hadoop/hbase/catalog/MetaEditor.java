@@ -92,7 +92,7 @@ public class MetaEditor {
   public static void addDaughter(final CatalogTracker catalogTracker,
       final HRegionInfo regionInfo, final HServerInfo serverInfo)
   throws NotAllMetaRegionsOnlineException, IOException {
-    HRegionInterface server = catalogTracker.waitForRootServerConnectionDefault();
+    HRegionInterface server = catalogTracker.waitForMetaServerConnectionDefault();
     byte [] catalogRegionName = CatalogTracker.META_REGION;
     Put put = new Put(regionInfo.getRegionName());
     addRegionInfo(put, regionInfo);

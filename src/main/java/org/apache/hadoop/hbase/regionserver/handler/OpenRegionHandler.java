@@ -26,7 +26,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -45,24 +44,18 @@ public class OpenRegionHandler extends EventHandler {
 
   private final RegionServerServices rsServices;
 
-  private final CatalogTracker catalogTracker;
-
   private final HRegionInfo regionInfo;
 
   public OpenRegionHandler(final Server server,
-      final RegionServerServices rsServices,
-      CatalogTracker catalogTracker, HRegionInfo regionInfo) {
-    this(server, rsServices, catalogTracker, regionInfo,
-      EventType.M2RS_OPEN_REGION);
+      final RegionServerServices rsServices, HRegionInfo regionInfo) {
+    this(server, rsServices, regionInfo, EventType.M2RS_OPEN_REGION);
   }
 
   protected OpenRegionHandler(final Server server,
-      final RegionServerServices rsServices,
-      CatalogTracker catalogTracker, HRegionInfo regionInfo,
+      final RegionServerServices rsServices, final HRegionInfo regionInfo,
       EventType eventType) {
     super(server, eventType);
     this.rsServices = rsServices;
-    this.catalogTracker = catalogTracker;
     this.regionInfo = regionInfo;
   }
 

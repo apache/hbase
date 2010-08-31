@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Test the {@link SplitTransaction} class against an HRegion (as opposed to
@@ -69,6 +71,7 @@ public class TestSplitTransaction {
       new Path(this.testdir, "archive"),
       TEST_UTIL.getConfiguration());
     this.parent = createRegion(this.testdir, this.wal);
+    TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster", true);
   }
 
   @After public void teardown() throws IOException {
@@ -128,7 +131,9 @@ public class TestSplitTransaction {
     SplitTransaction st = prepareGOOD_SPLIT_ROW();
 
     // Run the execute.  Look at what it returns.
-    PairOfSameType<HRegion> daughters = st.execute(null, null);
+    Server mockServer = Mockito.mock(Server.class);
+    when(mockServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
+    PairOfSameType<HRegion> daughters = st.execute(mockServer, null);
     // Do some assertions about execution.
     assertTrue(this.fs.exists(st.getSplitDir()));
     // Assert the parent region is closed.
@@ -178,8 +183,10 @@ public class TestSplitTransaction {
       thenThrow(new MockedFailedDaughterCreation());
     // Run the execute.  Look at what it returns.
     boolean expectedException = false;
+    Server mockServer = Mockito.mock(Server.class);
+    when(mockServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
     try {
-      spiedUponSt.execute(null, null);
+      spiedUponSt.execute(mockServer, null);
     } catch (MockedFailedDaughterCreation e) {
       expectedException = true;
     }
@@ -198,7 +205,7 @@ public class TestSplitTransaction {
 
     // Now retry the split but do not throw an exception this time.
     assertTrue(st.prepare());
-    PairOfSameType<HRegion> daughters = st.execute(null, null);
+    PairOfSameType<HRegion> daughters = st.execute(mockServer, null);
     // Count rows.
     int daughtersRowCount = 0;
     for (HRegion r: daughters) {

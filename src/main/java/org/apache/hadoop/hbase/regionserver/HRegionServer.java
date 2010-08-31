@@ -936,6 +936,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     List<WALObserver> listeners = new ArrayList<WALObserver>();
     // Log roller.
     this.hlogRoller = new LogRoller(this, this);
+    listeners.add(this.hlogRoller);
     if (this.replicationHandler != null) {
       listeners = new ArrayList<WALObserver>();
       // Replication handler is an implementation of WALActionsListener.
@@ -1833,11 +1834,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
     if(region.isRootRegion()) {
-      this.service.submit(new OpenRootHandler(this, this, catalogTracker, region));
+      this.service.submit(new OpenRootHandler(this, this, region));
     } else if(region.isMetaRegion()) {
-      this.service.submit(new OpenMetaHandler(this, this, catalogTracker, region));
+      this.service.submit(new OpenMetaHandler(this, this, region));
     } else {
-      this.service.submit(new OpenRegionHandler(this, this, catalogTracker, region));
+      this.service.submit(new OpenRegionHandler(this, this, region));
     }
   }
 
