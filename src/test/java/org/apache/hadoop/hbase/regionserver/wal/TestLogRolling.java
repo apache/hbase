@@ -228,7 +228,6 @@ public class TestLogRolling  {
   /**
    * Give me the HDFS pipeline for this log file
    */
-  @SuppressWarnings("null")
   DatanodeInfo[] getPipeline(HLog log) throws IllegalArgumentException,
       IllegalAccessException, InvocationTargetException {
     OutputStream stm = log.getOutputStream();
@@ -260,8 +259,8 @@ public class TestLogRolling  {
   public void testLogRollOnDatanodeDeath() throws IOException,
       InterruptedException, IllegalArgumentException, IllegalAccessException,
       InvocationTargetException {
-    assertTrue("This test requires HLog file replication.", fs
-        .getDefaultReplication() > 1);
+    assertTrue("This test requires HLog file replication.",
+      fs.getDefaultReplication() > 1);
     // When the META table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
 
