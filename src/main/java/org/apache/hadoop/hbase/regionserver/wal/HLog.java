@@ -1785,9 +1785,54 @@ public class HLog implements Syncable {
     return this.actionListeners.remove(list);
   }
 
+  public static final long FIXED_OVERHEAD = ClassSize.align(
+    ClassSize.OBJECT + (5 * ClassSize.REFERENCE) +
+    ClassSize.ATOMIC_INTEGER + Bytes.SIZEOF_INT + (3 * Bytes.SIZEOF_LONG));
+
   private static void usage() {
-    System.err.println("Usage: java org.apache.hbase.HLog" +
-        " {--dump <logfile>... | --split <logdir>...}");
+    System.err.println("Usage: HLog <ARGS>");
+    System.err.println("Arguments:");
+    System.err.println(" --dump  Dump textual representation of passed one or more files");
+    System.err.println("         For example: HLog --dump hdfs://example.com:9000/hbase/.logs/MACHINE/LOGFILE");
+    System.err.println(" --split Split the passed directory of WAL logs");
+    System.err.println("         For example: HLog --split hdfs://example.com:9000/hbase/.logs/DIR");
+  }
+
+  private static void dump(final Configuration conf, final Path p)
+  throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    if (!fs.exists(p)) {
+      throw new FileNotFoundException(p.toString());
+    }
+    if (!fs.isFile(p)) {
+      throw new IOException(p + " is not a file");
+    }
+    Reader log = getReader(fs, p, conf);
+    try {
+      int count = 0;
+      HLog.Entry entry;
+      while ((entry = log.next()) != null) {
+        System.out.println("#" + count + ", pos=" + log.getPosition() + " " +
+          entry.toString());
+        count++;
+      }
+    } finally {
+      log.close();
+    }
+  }
+
+  private static void split(final Configuration conf, final Path p)
+  throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    if (!fs.exists(p)) {
+      throw new FileNotFoundException(p.toString());
+    }
+    final Path baseDir = new Path(conf.get(HConstants.HBASE_DIR));
+    final Path oldLogDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    if (!fs.getFileStatus(p).isDir()) {
+      throw new IOException(p + " is not a directory");
+    }
+    splitLog(baseDir, p, oldLogDir, fs, conf);
   }
 
   /**
@@ -1813,38 +1858,18 @@ public class HLog implements Syncable {
       }
     }
     Configuration conf = HBaseConfiguration.create();
-    FileSystem fs = FileSystem.get(conf);
-    final Path baseDir = new Path(conf.get(HConstants.HBASE_DIR));
-    final Path oldLogDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     for (int i = 1; i < args.length; i++) {
       Path logPath = new Path(args[i]);
-      if (!fs.exists(logPath)) {
-        throw new FileNotFoundException(args[i] + " does not exist");
-      }
-      if (dump) {
-        if (!fs.isFile(logPath)) {
-          throw new IOException(args[i] + " is not a file");
+      try {
+        if (dump) {
+          dump(conf, logPath);
+        } else {
+          split(conf, logPath);
         }
-        Reader log = getReader(fs, logPath, conf);
-        try {
-          HLog.Entry entry;
-          while ((entry = log.next()) != null) {
-            System.out.println(entry.toString());
-          }
-        } finally {
-          log.close();
-        }
-      } else {
-        if (!fs.getFileStatus(logPath).isDir()) {
-          throw new IOException(args[i] + " is not a directory");
-        }
-        splitLog(baseDir, logPath, oldLogDir, fs, conf);
+      } catch (Throwable t) {
+        t.printStackTrace();
+        System.exit(-1);
       }
     }
   }
-
-  public static final long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (5 * ClassSize.REFERENCE) +
-      ClassSize.ATOMIC_INTEGER + Bytes.SIZEOF_INT + (3 * Bytes.SIZEOF_LONG));
-
 }
