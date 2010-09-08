@@ -1867,7 +1867,7 @@ public class HLog implements Syncable {
           split(conf, logPath);
         }
       } catch (Throwable t) {
-        t.printStackTrace();
+        t.printStackTrace(System.err);
         System.exit(-1);
       }
     }
