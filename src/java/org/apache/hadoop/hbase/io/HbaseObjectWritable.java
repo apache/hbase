@@ -246,6 +246,11 @@ public class HbaseObjectWritable implements Writable, Configurable {
   throws IOException {
     Byte code = CLASS_TO_CODE.get(c);
     if (code == null) {
+      if (Writable.class.isAssignableFrom(c)) {
+        code = CLASS_TO_CODE.get(Writable.class);
+      }
+    }
+    if (code == null) {
       LOG.error("Unsupported type " + c);
       StackTraceElement[] els = new Exception().getStackTrace();
       for(StackTraceElement elem : els) {

@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -30,10 +32,14 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparator;
 
 public class TestHbaseObjectWritable extends TestCase {
@@ -85,6 +91,29 @@ public class TestHbaseObjectWritable extends TestCase {
       PrefixFilter.class);
     assertTrue(obj instanceof PrefixFilter);
   }
+
+  public void testCustomWritable() throws Exception {
+    HBaseConfiguration conf = new HBaseConfiguration();
+
+    // test proper serialization of un-encoded custom writables
+    CustomWritable custom = new CustomWritable("test phrase");
+    Object obj = doType(conf, custom, CustomWritable.class);
+    assertTrue(obj instanceof Writable);
+    assertTrue(obj instanceof CustomWritable);
+    assertEquals("test phrase", ((CustomWritable)obj).getValue());
+
+    // test proper serialization of a custom filter
+    CustomFilter filt = new CustomFilter("mykey");
+    FilterList filtlist = new FilterList(FilterList.Operator.MUST_PASS_ALL);
+    filtlist.addFilter(filt);
+    obj = doType(conf, filtlist, FilterList.class);
+    assertTrue(obj instanceof FilterList);
+    assertNotNull(((FilterList)obj).getFilters());
+    assertEquals(1, ((FilterList)obj).getFilters().size());
+    Filter child = ((FilterList)obj).getFilters().get(0);
+    assertTrue(child instanceof CustomFilter);
+    assertEquals("mykey", ((CustomFilter)child).getKey());
+  }
   
   private Object doType(final HBaseConfiguration conf, final Object value,
       final Class<?> clazz)
@@ -99,5 +128,66 @@ public class TestHbaseObjectWritable extends TestCase {
     Object product = HbaseObjectWritable.readObject(dis, conf);
     dis.close();
     return product;
+  }
+
+  public static class CustomWritable implements Writable {
+    private String value = null;
+
+    public CustomWritable() {
+    }
+
+    public CustomWritable(String val) {
+      this.value = val;
+    }
+
+    public String getValue() { return value; }
+
+    public void write(DataOutput out) throws IOException {
+      Text.writeString(out, this.value);
+    }
+
+    public void readFields(DataInput in) throws IOException {
+      this.value = Text.readString(in);
+    }
+  }
+
+  public static class CustomFilter implements Filter {
+    private String key = null;
+
+    public CustomFilter() {
+    }
+
+    public CustomFilter(String key) {
+      this.key = key;
+    }
+
+    public String getKey() { return key; }
+
+    public void write(DataOutput out) throws IOException {
+      Text.writeString(out, this.key);
+    }
+
+    public void readFields(DataInput in) throws IOException {
+      this.key = Text.readString(in);
+    }
+
+	public boolean filterAllRemaining() {
+		return false;
+	}
+
+	public ReturnCode filterKeyValue(KeyValue v) {
+		return null;
+	}
+
+	public boolean filterRow() {
+		return false;
+	}
+
+	public boolean filterRowKey(byte[] buffer, int offset, int length) {
+		return false;
+	}
+
+	public void reset() {
+	}
   }
 }
