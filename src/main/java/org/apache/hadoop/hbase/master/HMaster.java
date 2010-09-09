@@ -201,7 +201,8 @@ public class HMaster extends Thread implements HMasterInterface,
     // hack! Maps DFSClient => Master for logs.  HDFS made this 
     // config param for task trackers, but we can piggyback off of it.
     if (this.conf.get("mapred.task.id") == null) {
-      this.conf.set("mapred.task.id", "hb_m_" + this.address.toString());
+      this.conf.set("mapred.task.id", "hb_m_" + this.address.toString() +
+        "_" + System.currentTimeMillis());
     }
 
     // Set filesystem to be that of this.rootdir else we get complaints about

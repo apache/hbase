@@ -491,6 +491,7 @@ Release 0.89.20100830 - Mon Aug 30 13:03:51 PDT 2010
    HBASE-2961  Deadlock when RS tries to RPC to itself inside SplitTransaction
    HBASE-2967  Failed split: IOE 'File is Corrupt!' -- sync length not being
                written out to SequenceFile
+   HBASE-2975  DFSClient names in master and RS should be unique
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
