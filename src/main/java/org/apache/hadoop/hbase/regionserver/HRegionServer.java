@@ -733,7 +733,8 @@ public class HRegionServer implements HRegionInterface,
       // config param for task trackers, but we can piggyback off of it.
       if (this.conf.get("mapred.task.id") == null) {
         this.conf.set("mapred.task.id", 
-            "hb_rs_" + this.serverInfo.getServerName());
+            "hb_rs_" + this.serverInfo.getServerName() + "_" +
+            System.currentTimeMillis());
       }
       
       // Master sent us hbase.rootdir to use. Should be fully qualified
