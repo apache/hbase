@@ -53,7 +53,7 @@ public class OOMEHMaster extends HMaster {
   /**
    * @param args
    */
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
     doMain(args, OOMEHMaster.class);
   }
 }
