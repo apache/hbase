@@ -1,5 +1,5 @@
 HBase Change Log
-Release 0.89.20100830 - Mon Aug 30 13:03:51 PDT 2010
+Release 0.89.20100830 - Mon Sep 13 10:01:42 PDT 2010
   INCOMPATIBLE CHANGES
    HBASE-1822  Remove the deprecated APIs
    HBASE-1848  Fixup shell for HBASE-1822
