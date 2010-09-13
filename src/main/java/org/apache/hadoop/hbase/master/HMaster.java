@@ -1230,33 +1230,6 @@ public class HMaster extends Thread implements HMasterInterface,
     }
   }
 
-  /*
-   * Version of master that will shutdown the passed zk cluster on its way out.
-   */
-  static class LocalHMaster extends HMaster {
-    private MiniZooKeeperCluster zkcluster = null;
-
-    public LocalHMaster(Configuration conf) throws IOException {
-      super(conf);
-    }
-
-    @Override
-    public void run() {
-      super.run();
-      if (this.zkcluster != null) {
-        try {
-          this.zkcluster.shutdown();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-      }
-    }
-
-    void setZKCluster(final MiniZooKeeperCluster zkcluster) {
-      this.zkcluster = zkcluster;
-    }
-  }
-
   public Map<String, Integer> getTableFragmentation() throws IOException {
     long now = System.currentTimeMillis();
     // only check every two minutes by default
@@ -1268,22 +1241,10 @@ public class HMaster extends Thread implements HMasterInterface,
     return fragmentation;
   }
   
-  protected static void doMain(String [] args,
-      Class<? extends HMaster> masterClass) throws Exception {
-    int ret = ToolRunner.run(
-      HBaseConfiguration.create(),
-      new HMasterCommandLine(masterClass),
-      args);
-    if (ret != 0) {
-      System.exit(ret);
-    }
-  }
-
   /**
-   * Main program
-   * @param args
+   * @see org.apache.hadoop.hbase.master.HMasterCommandLine
    */
   public static void main(String [] args) throws Exception {
-    doMain(args, HMaster.class);
+    new HMasterCommandLine(HMaster.class).doMain(args);
   }
 }

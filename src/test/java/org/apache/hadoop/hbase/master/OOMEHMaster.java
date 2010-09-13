@@ -50,10 +50,7 @@ public class OOMEHMaster extends HMaster {
     return super.regionServerReport(serverInfo, msgs, mostLoadedRegions);
   }
 
-  /**
-   * @param args
-   */
   public static void main(String[] args) throws Exception {
-    doMain(args, OOMEHMaster.class);
+    new HMasterCommandLine(OOMEHMaster.class).doMain(args);
   }
 }
