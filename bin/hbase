@@ -262,6 +262,9 @@ elif [ "$COMMAND" = "zookeeper" ] ; then
   fi
 elif [ "$COMMAND" = "zkcli" ] ; then
   CLASS='org.apache.zookeeper.ZooKeeperMain'
+elif [ "$COMMAND" = "classpath" ] ; then
+  echo $CLASSPATH
+  exit 0
 else
   CLASS=$COMMAND
 fi
