@@ -138,7 +138,10 @@ public class Store implements HConstants, HeapSize {
   private final int compactionThreshold;
   private final int blocksize;
   private final boolean blockcache;
+  /** Compression algorithm for flush files and minor compaction */
   private final Compression.Algorithm compression;
+  /** Compression algorithm for major compaction */
+  private final Compression.Algorithm compactionCompression;
 
   // Comparing KeyValues
   final KeyValue.KVComparator comparator;
@@ -172,6 +175,11 @@ public class Store implements HConstants, HeapSize {
     this.blockcache = family.isBlockCacheEnabled();
     this.blocksize = family.getBlocksize();
     this.compression = family.getCompression();
+    // avoid overriding compression setting for major compactions if the user 
+    // has not specified it separately
+    this.compactionCompression =
+      (family.getCompactionCompression() != Compression.Algorithm.NONE) ? 
+        family.getCompactionCompression() : this.compression;
     this.comparator = info.getComparator();
     this.comparatorIgnoringType = this.comparator.getComparatorIgnoringType();
     // getTimeToLive returns ttl in seconds.  Convert to milliseconds.
@@ -587,6 +595,18 @@ public class Store implements HConstants, HeapSize {
   }
 
   /*
+   * @return Writer for this store.
+   * @param basedir Directory to put writer in.
+   * @param compression Compression algorithm.
+   * @throws IOException
+   */
+  private HFile.Writer getWriter(final Path basedir,
+      Compression.Algorithm compression) throws IOException {
+    return StoreFile.getWriter(this.fs, basedir, blocksize, compression,
+      this.comparator.getRawComparator());
+  }
+
+  /*
    * Change storefiles adding into place the Reader produced by this new flush.
    * @param logCacheFlushId
    * @param sf
@@ -903,7 +923,8 @@ public class Store implements HConstants, HeapSize {
           // output to writer:
           for (KeyValue kv : kvs) {
             if (writer == null) {
-              writer = getWriter(this.regionCompactionDir);
+              writer = getWriter(this.regionCompactionDir,
+                this.compactionCompression);
             }
             writer.append(kv);
           }

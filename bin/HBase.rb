@@ -225,7 +225,11 @@ module HBase
         else
           raise TypeError.new(arg.class.to_s + " of " + arg.to_s + " is not of Hash type") \
             unless arg.instance_of? Hash
-          htd.addFamily(hcd(arg))
+          descriptor = hcd(arg)
+          if arg[COMPRESSION_COMPACT]
+            descriptor.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT])
+          end
+          htd.addFamily(descriptor)
         end
       end
       @admin.createTable(htd)
@@ -253,7 +257,10 @@ module HBase
         end
         @admin.modifyTable(tableName.to_java_bytes, htd)
       else
-        descriptor = hcd(args) 
+        descriptor = hcd(args)
+        if args[COMPRESSION_COMPACT]
+          descriptor.setValue(COMPRESSION_COMPACT, args[COMPRESSION_COMPACT])
+        end
         if (htd.hasFamily(descriptor.getNameAsString().to_java_bytes))
           @admin.modifyColumn(tableName, descriptor.getNameAsString(), 
                               descriptor);

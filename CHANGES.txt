@@ -9,6 +9,7 @@ Release 0.20.7 - Unreleased
                HBaseObjectWritable (Gary Helmling via Andrew Purtell)
 
   IMPROVEMENTS
+   HBASE-2988  Support alternate compression for major compactions
 
 Release 0.20.6 - July 30, 2010
   BUG FIXES
