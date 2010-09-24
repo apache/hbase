@@ -397,7 +397,7 @@ public class MemStore implements HeapSize {
         KeyValue kv = it.next();
 
         // if this isnt the row we are interested in, then bail:
-        if (!firstKv.matchingRow(kv)) {
+        if (!firstKv.matchingColumn(family,qualifier) || !firstKv.matchingRow(kv) ) {
           break; // rows dont match, bail.
         }
 
@@ -430,7 +430,7 @@ public class MemStore implements HeapSize {
         }
 
         // if this isnt the row we are interested in, then bail:
-        if (!firstKv.matchingRow(kv)) {
+        if (!firstKv.matchingColumn(family,qualifier) || !firstKv.matchingRow(kv)) {
           break; // rows dont match, bail.
         }
 
@@ -439,7 +439,7 @@ public class MemStore implements HeapSize {
           // to be extra safe we only remove Puts that have a memstoreTS==0
           if (kv.getType() == KeyValue.Type.Put.getCode()) {
             // false means there was a change, so give us the size.
-            addedSize -= heapSizeChange(kv, false);
+            addedSize -= heapSizeChange(kv, true);
 
             it.remove();
           }

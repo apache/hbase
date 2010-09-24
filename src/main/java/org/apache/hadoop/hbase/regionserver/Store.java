@@ -635,7 +635,8 @@ public class Store implements HeapSize {
         // we'd end up with nothing to compact.  To protect against this, we'll
         // compact the tail -- up to the last 4 files -- of filesToCompact
         // regardless.
-        int tail = Math.min(countOfFiles, 4);
+        // BANDAID for HBASE-2990, setting to 2
+        int tail = Math.min(countOfFiles, 2);
         for (point = 0; point < (countOfFiles - tail); point++) {
           if (((fileSizes[point] < fileSizes[point + 1] * 2) &&
                (countOfFiles - point) <= maxFilesToCompact)) {

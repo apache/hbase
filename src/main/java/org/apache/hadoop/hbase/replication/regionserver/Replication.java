@@ -72,7 +72,7 @@ public class Replication implements LogEntryVisitor {
         conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false);
     if (replication) {
       this.zkHelper = new ReplicationZookeeperWrapper(
-        ZooKeeperWrapper.getInstance(conf, hsi.getServerName()), conf,
+        ZooKeeperWrapper.createInstance(conf, hsi.getServerName()), conf,
         this.replicating, hsi.getServerName());
       this.replicationMaster = zkHelper.isReplicationMaster();
       this.replicationManager = this.replicationMaster ?
