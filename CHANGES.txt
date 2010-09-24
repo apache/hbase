@@ -1,5 +1,5 @@
 HBase Change Log
-Release 0.89.20100830 - Mon Sep 13 10:01:42 PDT 2010
+Release 0.89.20100924 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-1822  Remove the deprecated APIs
    HBASE-1848  Fixup shell for HBASE-1822
@@ -492,6 +492,15 @@ Release 0.89.20100830 - Mon Sep 13 10:01:42 PDT 2010
    HBASE-2967  Failed split: IOE 'File is Corrupt!' -- sync length not being
                written out to SequenceFile
    HBASE-2975  DFSClient names in master and RS should be unique
+   HBASE-3008  Memstore.updateColumnValue passes wrong flag to heapSizeChange
+   HBASE-3035  Bandaid for HBASE-2990
+   HBASE-2643  Figure how to deal with eof splitting logs
+   HBASE-2941  port HADOOP-6713 - threading scalability for RPC reads - to HBase
+   HBASE-3006  Reading compressed HFile blocks causes way too many DFS RPC calls
+               severly impacting performance
+   HBASE-2989  [replication] RSM won't cleanup after locking if 0 peers
+   HBASE-2992  [replication] MalformedObjectNameException in ReplicationMetrics
+   HBASE-2889  Tool to look at HLogs -- parse and tail -f (patch #2 only)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
@@ -859,6 +868,8 @@ Release 0.89.20100830 - Mon Sep 13 10:01:42 PDT 2010
    HBASE-2904  Smart seeking using filters (Pranav via Ryan)
    HBASE-2922  HLog preparation and cleanup are done under the updateLock, 
                major slowdown
+   HBASE-3034  Revert the regions assignment part of HBASE-2694 (and pals) for 0.89
+   HBASE-3033  [replication] ReplicationSink.replicateEntries improvements
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
@@ -910,6 +921,7 @@ Release 0.89.20100830 - Mon Sep 13 10:01:42 PDT 2010
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
    HBASE-2041  Change WAL default configuration values
+   HBASE-2997  Performance fixes - profiler driven
 
 
 Release 0.20.0 - Tue Sep  8 12:53:05 PDT 2009

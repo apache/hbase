@@ -25,7 +25,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -41,7 +40,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -125,14 +123,6 @@ public class ZooKeeperWrapper implements Watcher {
    * State of the cluster - if up and running or shutting down
    */
   public final String clusterStateZNode;
-  /*
-   * Regions that are in transition
-   */
-  private final String rgnsInTransitZNode;
-  /*
-   * List of ZNodes in the unassgined region that are already being watched
-   */
-  private Set<String> unassignedZNodesWatched = new HashSet<String>();
 
   private List<Watcher> listeners = new ArrayList<Watcher>();
 
@@ -196,7 +186,6 @@ public class ZooKeeperWrapper implements Watcher {
 
     rootRegionZNode     = getZNode(parentZNode, rootServerZNodeName);
     rsZNode             = getZNode(parentZNode, rsZNodeName);
-    rgnsInTransitZNode  = getZNode(parentZNode, regionsInTransitZNodeName);
     masterElectionZNode = getZNode(parentZNode, masterAddressZNodeName);
     clusterStateZNode   = getZNode(parentZNode, stateZNodeName);
   }
@@ -402,9 +391,9 @@ public class ZooKeeperWrapper implements Watcher {
    * Watch the state of the cluster, up or down
    * @param watcher Watcher to set on cluster state node
    */
-  public void setClusterStateWatch() {
+  public void setClusterStateWatch(Watcher watcher) {
     try {
-      zooKeeper.exists(clusterStateZNode, this);
+      zooKeeper.exists(clusterStateZNode, watcher == null ? this : watcher);
     } catch (InterruptedException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to check on ZNode " + clusterStateZNode, e);
     } catch (KeeperException e) {
@@ -975,14 +964,6 @@ public class ZooKeeperWrapper implements Watcher {
   }
 
   /**
-   * Get the znode that has all the regions in transition.
-   * @return path to znode
-   */
-  public String getRegionInTransitionZNode() {
-    return this.rgnsInTransitZNode;
-  }
-
-  /**
    * Get the path of this region server's znode
    * @return path to znode
    */
@@ -1080,191 +1061,6 @@ public class ZooKeeperWrapper implements Watcher {
       }
     }
 
-  /**
-   * Given a region name and some data, this method creates a new the region
-   * znode data under the UNASSGINED znode with the data passed in. This method
-   * will not update data for existing znodes.
-   *
-   * @param regionName - encoded name of the region
-   * @param data - new serialized data to update the region znode
-   */
-  private void createUnassignedRegion(String regionName, byte[] data) {
-    String znode = getZNode(getRegionInTransitionZNode(), regionName);
-    if(LOG.isDebugEnabled()) {
-      // check if this node already exists -
-      //   - it should not exist
-      //   - if it does, it should be in the CLOSED state
-      if(exists(znode, true)) {
-        Stat stat = new Stat();
-        byte[] oldData = null;
-        try {
-          oldData = readZNode(znode, stat);
-        } catch (IOException e) {
-          LOG.error("Error reading data for " + znode);
-        }
-        if(oldData == null) {
-          LOG.debug("While creating UNASSIGNED region " + regionName + " exists with no data" );
-        }
-        else {
-          LOG.debug("While creating UNASSIGNED region " + regionName + " exists, state = " + (HBaseEventType.fromByte(oldData[0])));
-        }
-      }
-      else {
-        if(data == null) {
-          LOG.debug("Creating UNASSIGNED region " + regionName + " with no data" );
-        }
-        else {
-          LOG.debug("Creating UNASSIGNED region " + regionName + " in state = " + (HBaseEventType.fromByte(data[0])));
-        }
-      }
-    }
-    synchronized(unassignedZNodesWatched) {
-      unassignedZNodesWatched.add(znode);
-      createZNodeIfNotExists(znode, data, CreateMode.PERSISTENT, true);
-    }
-  }
-
-  /**
-   * Given a region name and some data, this method updates the region znode
-   * data under the UNASSGINED znode with the latest data. This method will
-   * update the znode data only if it already exists.
-   *
-   * @param regionName - encoded name of the region
-   * @param data - new serialized data to update the region znode
-   */
-  public void updateUnassignedRegion(String regionName, byte[] data) {
-    String znode = getZNode(getRegionInTransitionZNode(), regionName);
-    // this is an update - make sure the node already exists
-    if(!exists(znode, true)) {
-      LOG.error("Cannot update " + znode + " - node does not exist" );
-      return;
-    }
-
-    Stat stat = new Stat();
-    byte[] oldData = null;
-    try {
-      oldData = readZNode(znode, stat);
-    } catch (IOException e) {
-      LOG.error("Error reading data for " + znode);
-    }
-    // If there is no data in the ZNode, then update it
-    if(oldData == null) {
-      LOG.debug("While updating UNASSIGNED region " + regionName + " - node exists with no data" );
-    }
-    // If there is data in the ZNode, do not update if it is already correct
-    else {
-      HBaseEventType curState = HBaseEventType.fromByte(oldData[0]);
-      HBaseEventType newState = HBaseEventType.fromByte(data[0]);
-      // If the znode has the right state already, do not update it. Updating
-      // the znode again and again will bump up the zk version. This may cause
-      // the region server to fail. The RS expects that the znode is never
-      // updated by anyone else while it is opening/closing a region.
-      if(curState == newState) {
-        LOG.debug("No need to update UNASSIGNED region " + regionName +
-                  " as it already exists in state = " + curState);
-        return;
-      }
-
-      // If the ZNode is in another state, then update it
-      LOG.debug("UNASSIGNED region " + regionName + " is currently in state = " +
-                curState + ", updating it to " + newState);
-    }
-    // Update the ZNode
-    synchronized(unassignedZNodesWatched) {
-      unassignedZNodesWatched.add(znode);
-      try {
-        writeZNode(znode, data, -1, true);
-      } catch (IOException e) {
-        LOG.error("Error writing data for " + znode + ", could not update state to " + (HBaseEventType.fromByte(data[0])));
-      }
-    }
-  }
-
-  /**
-   * This method will create a new region in transition entry in ZK with the
-   * speficied data if none exists. If one already exists, it will update the
-   * data with whatever is passed in.
-   *
-   * @param regionName - encoded name of the region
-   * @param data - serialized data for the region znode
-   */
-  public void createOrUpdateUnassignedRegion(String regionName, byte[] data) {
-    String znode = getZNode(getRegionInTransitionZNode(), regionName);
-    if(exists(znode, true)) {
-      updateUnassignedRegion(regionName, data);
-    }
-    else {
-      createUnassignedRegion(regionName, data);
-    }
-  }
-
-  public void deleteUnassignedRegion(String regionName) {
-    String znode = getZNode(getRegionInTransitionZNode(), regionName);
-    try {
-      LOG.debug("Deleting ZNode " + znode + " in ZooKeeper as region is open...");
-      synchronized(unassignedZNodesWatched) {
-        unassignedZNodesWatched.remove(znode);
-        deleteZNode(znode);
-      }
-    } catch (KeeperException.SessionExpiredException e) {
-      LOG.error("Zookeeper session has expired", e);
-      // if the session has expired try to reconnect to ZK, then perform query
-      try {
-        // TODO: ZK-REFACTOR: should just quit on reconnect??
-        reconnectToZk();
-        synchronized(unassignedZNodesWatched) {
-          unassignedZNodesWatched.remove(znode);
-          deleteZNode(znode);
-        }
-      } catch (IOException e1) {
-        LOG.error("Error reconnecting to zookeeper", e1);
-        throw new RuntimeException("Error reconnecting to zookeeper", e1);
-      } catch (KeeperException.SessionExpiredException e1) {
-        LOG.error("Error reading after reconnecting to zookeeper", e1);
-        throw new RuntimeException("Error reading after reconnecting to zookeeper", e1);
-      } catch (KeeperException e1) {
-        LOG.error("Error reading after reconnecting to zookeeper", e1);
-      } catch (InterruptedException e1) {
-        LOG.error("Error reading after reconnecting to zookeeper", e1);
-      }
-    } catch (KeeperException e) {
-      LOG.error("Error deleting region " + regionName, e);
-    } catch (InterruptedException e) {
-      LOG.error("Error deleting region " + regionName, e);
-    }
-  }
-
-  /**
-   * Atomically adds a watch and reads data from the unwatched znodes in the
-   * UNASSGINED region. This works because the master is the only person
-   * deleting nodes.
-   * @param znode
-   * @return
-   */
-  public List<ZNodePathAndData> watchAndGetNewChildren(String znode) {
-    List<String> nodes = null;
-    List<ZNodePathAndData> newNodes = new ArrayList<ZNodePathAndData>();
-    try {
-      if (checkExistenceOf(znode)) {
-        synchronized(unassignedZNodesWatched) {
-          nodes = zooKeeper.getChildren(znode, this);
-          for (String node : nodes) {
-            String znodePath = joinPath(znode, node);
-            if(!unassignedZNodesWatched.contains(znodePath)) {
-              byte[] data = getDataAndWatch(znode, node, this);
-              newNodes.add(new ZNodePathAndData(znodePath, data));
-              unassignedZNodesWatched.add(znodePath);
-            }
-          }
-        }
-      }
-    } catch (KeeperException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to read " + znode + " znode in ZooKeeper: " + e);
-    } catch (InterruptedException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to read " + znode + " znode in ZooKeeper: " + e);
-    }
-    return newNodes;
-  }
 
   public static class ZNodePathAndData {
     private String zNodePath;

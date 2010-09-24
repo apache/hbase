@@ -30,9 +30,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventHandlerListener;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -89,7 +86,7 @@ public class TestMaster {
     CountDownLatch aboutToOpen = new CountDownLatch(1);
     CountDownLatch proceed = new CountDownLatch(1);
     RegionOpenListener list = new RegionOpenListener(aboutToOpen, proceed);
-    HBaseEventHandler.registerListener(list);
+    m.getRegionServerOperationQueue().registerRegionServerOperationListener(list);
 
     LOG.info("Splitting table");
     admin.split(TABLENAME);
@@ -112,7 +109,7 @@ public class TestMaster {
     }
   }
 
-  static class RegionOpenListener implements HBaseEventHandlerListener {
+  static class RegionOpenListener implements RegionServerOperationListener {
     CountDownLatch aboutToOpen, proceed;
 
     public RegionOpenListener(CountDownLatch aboutToOpen, CountDownLatch proceed)
@@ -122,9 +119,9 @@ public class TestMaster {
     }
 
     @Override
-    public void afterProcess(HBaseEventHandler event) {
-      if (event.getHBEvent() != HBaseEventType.RS2ZK_REGION_OPENED) {
-        return;
+    public boolean process(HServerInfo serverInfo, HMsg incomingMsg) {
+      if (!incomingMsg.isType(HMsg.Type.MSG_REPORT_OPEN)) {
+        return true;
       }
       try {
         aboutToOpen.countDown();
@@ -132,11 +129,16 @@ public class TestMaster {
       } catch (InterruptedException ie) {
         throw new RuntimeException(ie);
       }
-      return;
+      return true;
     }
 
     @Override
-    public void beforeProcess(HBaseEventHandler event) {
+    public boolean process(RegionServerOperation op) throws IOException {
+      return true;
+    }
+
+    @Override
+    public void processed(RegionServerOperation op) {
     }
   }
 
