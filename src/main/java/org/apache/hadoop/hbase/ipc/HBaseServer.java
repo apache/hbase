@@ -20,9 +20,12 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.common.base.Function;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -131,6 +134,7 @@ public abstract class HBaseServer {
   protected String bindAddress;
   protected int port;                             // port we listen on
   private int handlerCount;                       // number of handler threads
+  private int priorityHandlerCount;
   private int readThreads;                        // number of read threads
   protected Class<? extends Writable> paramClass; // class of call parameters
   protected int maxIdleTime;                      // the maximum idle time after
@@ -156,6 +160,9 @@ public abstract class HBaseServer {
 
   volatile protected boolean running = true;         // true while server runs
   protected BlockingQueue<Call> callQueue; // queued calls
+  protected BlockingQueue<Call> priorityCallQueue;
+
+  private int highPriorityLevel;  // what level a high priority call is at
 
   protected final List<Connection> connectionList =
     Collections.synchronizedList(new LinkedList<Connection>());
@@ -165,6 +172,7 @@ public abstract class HBaseServer {
   protected Responder responder = null;
   protected int numConnections = 0;
   private Handler[] handlers = null;
+  private Handler[] priorityHandlers = null;
   protected HBaseRPCErrorHandler errorHandler = null;
 
   /**
@@ -960,7 +968,12 @@ public abstract class HBaseServer {
       param.readFields(dis);
 
       Call call = new Call(id, param, this);
-      callQueue.put(call);              // queue the call; maybe blocked here
+
+      if (priorityCallQueue != null && getQosLevel(param) > highPriorityLevel) {
+        priorityCallQueue.put(call);
+      } else {
+        callQueue.put(call);              // queue the call; maybe blocked here
+      }
     }
 
     protected synchronized void close() {
@@ -978,9 +991,17 @@ public abstract class HBaseServer {
 
   /** Handles queued calls . */
   private class Handler extends Thread {
-    public Handler(int instanceNumber) {
+    private final BlockingQueue<Call> myCallQueue;
+    public Handler(final BlockingQueue<Call> cq, int instanceNumber) {
+      this.myCallQueue = cq;
       this.setDaemon(true);
-      this.setName("IPC Server handler "+ instanceNumber + " on " + port);
+
+      String threadName = "IPC Server handler " + instanceNumber + " on " + port;
+      if (cq == priorityCallQueue) {
+        // this is just an amazing hack, but it works.
+        threadName = "PRI " + threadName;
+      }
+      this.setName(threadName);
     }
 
     @Override
@@ -991,7 +1012,7 @@ public abstract class HBaseServer {
       ByteArrayOutputStream buf = new ByteArrayOutputStream(buffersize);
       while (running) {
         try {
-          final Call call = callQueue.take(); // pop the queue; maybe blocked here
+          final Call call = myCallQueue.take(); // pop the queue; maybe blocked here
 
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + ": has #" + call.id + " from " +
@@ -1068,33 +1089,58 @@ requesting, since security hasn't been fully integrated in HBase.
 
   }
 
-  protected HBaseServer(String bindAddress, int port,
-                  Class<? extends Writable> paramClass, int handlerCount,
-                  Configuration conf)
-    throws IOException
-  {
-    this(bindAddress, port, paramClass, handlerCount,  conf, Integer.toString(port));
+  /**
+   * Gets the QOS level for this call.  If it is higher than the highPriorityLevel and there
+   * are priorityHandlers available it will be processed in it's own thread set.
+   *
+   * @param param
+   * @return priority, higher is better
+   */
+  private Function<Writable,Integer> qosFunction = null;
+  public void setQosFunction(Function<Writable, Integer> newFunc) {
+    qosFunction = newFunc;
   }
+
+  protected int getQosLevel(Writable param) {
+    if (qosFunction == null) {
+      return 0;
+    }
+
+    Integer res = qosFunction.apply(param);
+    if (res == null) {
+      return 0;
+    }
+    return res;
+  }
+
   /* Constructs a server listening on the named port and address.  Parameters passed must
    * be of the named class.  The <code>handlerCount</handlerCount> determines
    * the number of handler threads that will be used to process calls.
    *
    */
   protected HBaseServer(String bindAddress, int port,
-                  Class<? extends Writable> paramClass, int handlerCount,
-                  Configuration conf, String serverName)
+                        Class<? extends Writable> paramClass, int handlerCount,
+                        int priorityHandlerCount, Configuration conf, String serverName,
+                        int highPriorityLevel)
     throws IOException {
     this.bindAddress = bindAddress;
     this.conf = conf;
     this.port = port;
     this.paramClass = paramClass;
     this.handlerCount = handlerCount;
+    this.priorityHandlerCount = priorityHandlerCount;
     this.socketSendBufferSize = 0;
     this.maxQueueSize = handlerCount * MAX_QUEUE_SIZE_PER_HANDLER;
      this.readThreads = conf.getInt(
         "ipc.server.read.threadpool.size",
         10);
     this.callQueue  = new LinkedBlockingQueue<Call>(maxQueueSize);
+    if (priorityHandlerCount > 0) {
+      this.priorityCallQueue = new LinkedBlockingQueue<Call>(maxQueueSize); // TODO hack on size
+    } else {
+      this.priorityCallQueue = null;
+    }
+    this.highPriorityLevel = highPriorityLevel;
     this.maxIdleTime = 2*conf.getInt("ipc.client.connection.maxidletime", 1000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
@@ -1131,8 +1177,16 @@ requesting, since security hasn't been fully integrated in HBase.
     handlers = new Handler[handlerCount];
 
     for (int i = 0; i < handlerCount; i++) {
-      handlers[i] = new Handler(i);
+      handlers[i] = new Handler(callQueue, i);
       handlers[i].start();
+    }
+
+    if (priorityHandlerCount > 0) {
+      priorityHandlers = new Handler[priorityHandlerCount];
+      for (int i = 0 ; i < priorityHandlerCount; i++) {
+        priorityHandlers[i] = new Handler(priorityCallQueue, i);
+        priorityHandlers[i].start();
+      }
     }
   }
 
@@ -1141,9 +1195,16 @@ requesting, since security hasn't been fully integrated in HBase.
     LOG.info("Stopping server on " + port);
     running = false;
     if (handlers != null) {
-      for (int i = 0; i < handlerCount; i++) {
-        if (handlers[i] != null) {
-          handlers[i].interrupt();
+      for (Handler handler : handlers) {
+        if (handler != null) {
+          handler.interrupt();
+        }
+      }
+    }
+    if (priorityHandlers != null) {
+      for (Handler handler : priorityHandlers) {
+        if (handler != null) {
+          handler.interrupt();
         }
       }
     }

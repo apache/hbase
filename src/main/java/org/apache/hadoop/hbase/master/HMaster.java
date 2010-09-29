@@ -188,9 +188,10 @@ public class HMaster extends Thread implements HMasterInterface,
     HServerAddress a = new HServerAddress(getMyAddress(this.conf));
     this.rpcServer = HBaseRPC.getServer(this,
       new Class<?>[]{HMasterInterface.class, HMasterRegionInterface.class},
-        a.getBindAddress(), a.getPort(),
-        conf.getInt("hbase.regionserver.handler.count", 10), false, conf);
-
+      a.getBindAddress(),
+      a.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
+      0,
+      false, conf, 0);
     this.address = new HServerAddress(this.rpcServer.getListenerAddress());
 
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
