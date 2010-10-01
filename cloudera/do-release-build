@@ -12,7 +12,7 @@ RELEASE_DIR=$BIN_DIR/..
 cd $RELEASE_DIR
 
 mvn -DskipTests clean
-mvn -DskipTests -Dhbase.version=${FULL_VERSION} install assembly:assembly 
+mvn -DskipTests -Dhbase.version=${FULL_VERSION} site install assembly:assembly 
 mkdir -p build
 for x in target/*.tar.gz ; do
   tar -C build -xzf $x
