@@ -100,7 +100,7 @@ cp *.txt $PREFIX/$DOC_DIR/
 cp -a hbase-webapps $PREFIX/$LIB_DIR
 
 cp -a conf $PREFIX/$ETC_DIR/conf
-cp bin/* $PREFIX/$BIN_DIR
+cp -a bin/* $PREFIX/$BIN_DIR/
 
 ln -s $ETC_DIR/conf $PREFIX/$LIB_DIR/conf
 
