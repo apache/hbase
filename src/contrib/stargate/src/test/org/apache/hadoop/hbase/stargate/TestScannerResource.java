@@ -48,20 +48,23 @@ import org.apache.hadoop.hbase.stargate.model.ScannerModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestScannerResource extends MiniClusterTestCase {
-  private static final String TABLE = "TestScannerResource";
-  private static final String COLUMN_1 = "a:";
-  private static final String COLUMN_2 = "b:";
+  static final String TABLE = "TestScannerResource";
+  static final String NONEXISTENT_TABLE = "ThisTableDoesNotExist";
+  static final String CFA = "a";
+  static final String CFB = "b";
+  static final String COLUMN_1 = CFA + ":1";
+  static final String COLUMN_2 = CFB + ":2";
 
-  private static int expectedRows1;
-  private static int expectedRows2;
+  static int expectedRows1;
+  static int expectedRows2;
 
-  private Client client;
-  private JAXBContext context;
-  private Marshaller marshaller;
-  private Unmarshaller unmarshaller;
-  private HBaseAdmin admin;
+  Client client;
+  JAXBContext context;
+  Marshaller marshaller;
+  Unmarshaller unmarshaller;
+  HBaseAdmin admin;
 
-  private int insertData(String tableName, String column, double prob)
+  int insertData(String tableName, String column, double prob)
       throws IOException {
     Random rng = new Random();
     int count = 0;
@@ -87,8 +90,9 @@ public class TestScannerResource extends MiniClusterTestCase {
     return count;
   }
 
-  public TestScannerResource() throws JAXBException {
-    super();
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
     context = JAXBContext.newInstance(
         CellModel.class,
         CellSetModel.class,
@@ -96,19 +100,14 @@ public class TestScannerResource extends MiniClusterTestCase {
         ScannerModel.class);
     marshaller = context.createMarshaller();
     unmarshaller = context.createUnmarshaller();
-  }
-
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
     client = new Client(new Cluster().add("localhost", testServletPort));
     admin = new HBaseAdmin(conf);
     if (admin.tableExists(TABLE)) {
       return;
     }
     HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(COLUMN_1));
-    htd.addFamily(new HColumnDescriptor(COLUMN_2));
+    htd.addFamily(new HColumnDescriptor(CFA));
+    htd.addFamily(new HColumnDescriptor(CFB));
     admin.createTable(htd);
     expectedRows1 = insertData(TABLE, COLUMN_1, 1.0);
     expectedRows2 = insertData(TABLE, COLUMN_2, 0.5);
@@ -120,7 +119,7 @@ public class TestScannerResource extends MiniClusterTestCase {
     super.tearDown();
   }
 
-  private int countCellSet(CellSetModel model) {
+  int countCellSet(CellSetModel model) {
     int count = 0;
     Iterator<RowModel> rows = model.getRows().iterator();
     while (rows.hasNext()) {
@@ -134,7 +133,7 @@ public class TestScannerResource extends MiniClusterTestCase {
     return count;
   }
 
-  public void testSimpleScannerXML() throws IOException, JAXBException {
+  void doTestSimpleScannerXML() throws IOException, JAXBException {
     final int BATCH_SIZE = 5;
     // new scanner
     ScannerModel model = new ScannerModel();
@@ -162,7 +161,7 @@ public class TestScannerResource extends MiniClusterTestCase {
     assertEquals(response.getCode(), 200);
   }
 
-  public void testSimpleScannerPB() throws IOException {
+  void doTestSimpleScannerPB() throws IOException {
     final int BATCH_SIZE = 10;
     // new scanner
     ScannerModel model = new ScannerModel();
@@ -187,7 +186,7 @@ public class TestScannerResource extends MiniClusterTestCase {
     assertEquals(response.getCode(), 200);
   }
 
-  public void testSimpleScannerBinary() throws IOException {
+  void doTestSimpleScannerBinary() throws IOException {
     // new scanner
     ScannerModel model = new ScannerModel();
     model.setBatch(1);
@@ -224,7 +223,7 @@ public class TestScannerResource extends MiniClusterTestCase {
     assertEquals(response.getCode(), 200);
   }
 
-  private int fullTableScan(ScannerModel model) throws IOException {
+  int fullTableScan(ScannerModel model) throws IOException {
     model.setBatch(100);
     Response response = client.put("/" + TABLE + "/scanner",
         MIMETYPE_PROTOBUF, model.createProtobufOutput());
@@ -257,7 +256,7 @@ public class TestScannerResource extends MiniClusterTestCase {
     return count;
   }
 
-  public void testFullTableScan() throws IOException {
+  void doTestFullTableScan() throws IOException {
     ScannerModel model = new ScannerModel();
     model.addColumn(Bytes.toBytes(COLUMN_1));
     assertEquals(fullTableScan(model), expectedRows1);
@@ -265,5 +264,23 @@ public class TestScannerResource extends MiniClusterTestCase {
     model = new ScannerModel();
     model.addColumn(Bytes.toBytes(COLUMN_2));
     assertEquals(fullTableScan(model), expectedRows2);
+  }
+
+  void doTestTableDoesNotExist() throws IOException, JAXBException {
+    ScannerModel model = new ScannerModel();
+    StringWriter writer = new StringWriter();
+    marshaller.marshal(model, writer);
+    byte[] body = Bytes.toBytes(writer.toString());
+    Response response = client.put("/" + NONEXISTENT_TABLE +
+      "/scanner", MIMETYPE_XML, body);
+    assertEquals(response.getCode(), 404);
+  }
+
+  public void testScannerResource() throws Exception {
+    doTestSimpleScannerXML();
+    doTestSimpleScannerPB();
+    doTestSimpleScannerBinary();
+    doTestFullTableScan();
+    doTestTableDoesNotExist();
   }
 }
