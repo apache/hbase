@@ -21,7 +21,6 @@
 package org.apache.hadoop.hbase.stargate;
 
 import java.io.IOException;
-import java.net.URLDecoder;
 import java.util.List;
 
 import javax.ws.rs.Consumes;
@@ -69,8 +68,11 @@ public class RowResource extends ResourceBase {
       throws IOException {
     super();
     this.tableName = table;
-    this.rowspec = new RowSpec(URLDecoder.decode(rowspec,
-      HConstants.UTF8_ENCODING));
+    this.rowspec = new RowSpec(rowspec);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("new RowResource: table=" + this.tableName + "rowspec=" +
+        this.rowspec);
+    }
     if (versions != null) {
       this.rowspec.setMaxVersions(Integer.valueOf(versions));
     }
