@@ -94,6 +94,7 @@ install -d -m 0755 $PREFIX/$BIN_DIR
 install -d -m 0755 $PREFIX/$ETC_DIR
 
 cp -ra lib/* ${PREFIX}/${LIB_DIR}/lib/
+cp -a cloudera ${PREFIX}/${LIB_DIR}/cloudera
 cp hbase*.jar $PREFIX/$LIB_DIR/
 
 # Make an unversioned jar symlink so that other
