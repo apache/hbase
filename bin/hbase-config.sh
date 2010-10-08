@@ -78,10 +78,15 @@ HBASE_REGIONSERVERS="${HBASE_REGIONSERVERS:-$HBASE_CONF_DIR/regionservers}"
 # List of hbase secondary masters.
 HBASE_BACKUP_MASTERS="${HBASE_BACKUP_MASTERS:-$HBASE_CONF_DIR/backup-masters}"
 
+
 # Source the hbase-env.sh.  Will have JAVA_HOME defined.
 if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
   . "${HBASE_CONF_DIR}/hbase-env.sh"
 fi
+
+# Set up dependency configuration dirs if they aren't already set
+ZOOKEEPER_CONF_DIR=${ZOOKEEPER_CONF_DIR-/etc/zookeeper}
+HADOOP_CONF_DIR=${HADOOP_CONF_DIR-/etc/hadoop-0.20/conf}
 
 if [ -z "$JAVA_HOME" ]; then
   for candidate in \

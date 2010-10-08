@@ -42,7 +42,7 @@
 #
 #   MAVEN_HOME       Where mvn is installed.
 #
-bin=`dirname "$0"`
+bin=`dirname "$BASH_SOURCE"`
 bin=`cd "$bin">/dev/null; pwd`
 
 # This will set HBASE_HOME, etc.
@@ -173,6 +173,16 @@ done
 # Add user-specified CLASSPATH last
 if [ "$HBASE_CLASSPATH" != "" ]; then
   CLASSPATH=${CLASSPATH}:${HBASE_CLASSPATH}
+fi
+
+# And very last, add other project configuration dirs - this
+# allows someone to override the hdfs config by putting an hdfs-site
+# in hbase's conf dir, for example
+if [ -n "$ZOOKEEPER_CONF_DIR" ]; then
+  CLASSPATH=${CLASSPATH}:${ZOOKEEPER_CONF_DIR}
+fi
+if [ -n "$HADOOP_CONF_DIR" ]; then
+  CLASSPATH=${CLASSPATH}:${HADOOP_CONF_DIR}
 fi
 
 # default log directory & file

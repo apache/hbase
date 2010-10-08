@@ -94,7 +94,13 @@ install -d -m 0755 $PREFIX/$BIN_DIR
 install -d -m 0755 $PREFIX/$ETC_DIR
 
 cp -ra lib/* ${PREFIX}/${LIB_DIR}/lib/
-cp hbase*.jar $PREFIX/$LIB_DIR
+cp hbase*.jar $PREFIX/$LIB_DIR/
+
+# Make an unversioned jar symlink so that other
+# packages that depend on us can link in.
+for x in $PREFIX/hbase*jar ; do
+  ln -s $(basename $x) $PREFIX/$LIB_DIR/hbase.jar
+done
 cp -a docs/* $PREFIX/$DOC_DIR
 cp *.txt $PREFIX/$DOC_DIR/
 cp -a hbase-webapps $PREFIX/$LIB_DIR
@@ -104,30 +110,11 @@ cp -a bin/* $PREFIX/$BIN_DIR/
 
 ln -s $ETC_DIR/conf $PREFIX/$LIB_DIR/conf
 
+install -d -m 0755 $PREFIX/usr/bin
+ 
 wrapper=$PREFIX/usr/bin/hbase
-mkdir -p `dirname $wrapper`
 cat > $wrapper <<EOF
 #!/bin/sh
-export ZOOKEEPER_CONF=\${ZOOKEEPER_CONF:-/etc/zookeeper}
-export HADOOP_CONF=\${HADOOP_CONF:-/etc/hadoop-0.20/conf}
-export ZOOKEEPER_HOME=\${ZOOKEEPER_HOME:-/usr/lib/zookeeper}
-export HADOOP_HOME=\${HADOOP_HOME:-/usr/lib/hadoop-0.20}
-export HBASE_CLASSPATH=\$ZOOKEEPER_CONF:\$HADOOP_CONF:\$HADOOP_HOME/*:\$HADOOP_HOME/lib/*:\$ZOOKEEPER_HOME/*:\$ZOOKEEPER_HOME/lib/*:\$HBASE_CLASSPATH
-export HBASE_PID_DIR=/var/run/hbase
 exec /usr/lib/hbase/bin/hbase "\$@"
-EOF
-chmod 755 $wrapper
-
-wrapper=$PREFIX/usr/bin/hbase-daemon.sh
-mkdir -p `dirname $wrapper`
-cat > $wrapper <<EOF
-#!/bin/sh
-export ZOOKEEPER_CONF=\${ZOOKEEPER_CONF:-/etc/zookeeper}
-export HADOOP_CONF=\${HADOOP_CONF:-/etc/hadoop-0.20/conf}
-export ZOOKEEPER_HOME=\${ZOOKEEPER_HOME:-/usr/lib/zookeeper}
-export HADOOP_HOME=\${HADOOP_HOME:-/usr/lib/hadoop-0.20}
-export HBASE_CLASSPATH=\$ZOOKEEPER_CONF:\$HADOOP_CONF:\$HADOOP_HOME/*:\$ZOOKEEPER_HOME/*:\$HBASE_CLASSPATH
-export HBASE_PID_DIR=/var/run/hbase
-exec /usr/lib/hbase/bin/hbase-daemon.sh "\$@"
 EOF
 chmod 755 $wrapper
