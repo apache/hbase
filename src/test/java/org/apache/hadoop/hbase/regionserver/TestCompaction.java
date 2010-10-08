@@ -61,7 +61,7 @@ public class TestCompaction extends HBaseTestCase {
 
     // Set cache flush size to 1MB
     conf.setInt("hbase.hregion.memstore.flush.size", 1024*1024);
-    conf.setInt("hbase.hregion.memstore.block.multiplier", 10);
+    conf.setInt("hbase.hregion.memstore.block.multiplier", 30);
     this.cluster = null;
   }
 
@@ -94,9 +94,9 @@ public class TestCompaction extends HBaseTestCase {
    * @throws IOException
    */
   public void testMajorCompactingToNoOutput() throws IOException {
-    createStoreFile(r);
+    createSmallerStoreFile(r);
     for (int i = 0; i < COMPACTION_THRESHOLD; i++) {
-      createStoreFile(r);
+      createSmallerStoreFile(r);
     }
     // Now delete everything.
     InternalScanner s = r.getScanner(new Scan());
