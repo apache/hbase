@@ -99,8 +99,10 @@ cp hbase*.jar $PREFIX/$LIB_DIR/
 
 # Make an unversioned jar symlink so that other
 # packages that depend on us can link in.
-for x in $PREFIX/hbase*jar ; do
-  ln -s $(basename $x) $PREFIX/$LIB_DIR/hbase.jar
+for x in $PREFIX/$LIB_DIR/hbase*jar ; do
+  JARNAME=$(basename $x)
+  VERSIONLESS_NAME=$(echo $JARNAME | sed -e 's,hbase-[0-9\+\-\.]*[0-9]\(-SNAPSHOT\)*,hbase,g')
+  ln -s $JARNAME $PREFIX/$LIB_DIR/$VERSIONLESS_NAME
 done
 cp -a docs/* $PREFIX/$DOC_DIR
 cp *.txt $PREFIX/$DOC_DIR/
