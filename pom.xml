@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.apache.hbase</groupId>
+  <groupId>com.cloudera.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
   <version>${hbase.version}</version>
@@ -496,7 +496,7 @@
     <junit.version>4.8.1</junit.version>
     <mockito-all.version>1.8.4</mockito-all.version>
     <log4j.version>1.2.15</log4j.version>
-    <zookeeper.version>3.3.1</zookeeper.version>
+    <zookeeper.version>3.3.1-10</zookeeper.version>
 
     <commons-httpclient.version>3.1</commons-httpclient.version>
     <commons-lang.version>2.5</commons-lang.version>
@@ -568,7 +568,7 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.apache.hadoop</groupId>
+        <groupId>com.cloudera.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
         <version>${zookeeper.version}</version>
       </dependency>
@@ -658,7 +658,7 @@
     </dependency>
 
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>com.cloudera.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
     </dependency>
 
@@ -826,9 +826,9 @@
   -->
   <distributionManagement>
     <repository>
-      <id>apache.releases.https</id>
-      <name>Apache Release Distribution Repository</name>
-      <url>https://repository.apache.org/service/local/staging/deploy/maven2</url>
+      <id>cloudera.releases.repo</id>
+      <name>Cloudera Releases Repository</name>
+      <url>https://repository.cloudera.com/content/repositories/releases</url>
     </repository>
     <snapshotRepository>
       <id>apache.snapshots.https</id>
