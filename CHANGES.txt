@@ -8,6 +8,8 @@ Release 0.20.7 - Unreleased
    HBASE-2942  Custom filters should not require registration in
                HBaseObjectWritable (Gary Helmling via Andrew Purtell)
    HBASE-2906  [rest/stargate] URI decoding in RowResource
+   HBASE-3121  [rest/stargate] Do not perform cache control when returning
+               results
 
   IMPROVEMENTS
    HBASE-2988  Support alternate compression for major compactions

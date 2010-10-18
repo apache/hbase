@@ -169,7 +169,6 @@ public class SchemaResource extends ResourceBase {
   private Response update(final TableSchemaModel model, final boolean replace,
       final UriInfo uriInfo) {
     try {
-      servlet.invalidateMaxAge(tableName);
       byte[] name = Bytes.toBytes(tableName);
       HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
       if (replace || !admin.tableExists(name)) {

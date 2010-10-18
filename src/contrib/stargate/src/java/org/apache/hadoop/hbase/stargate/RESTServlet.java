@@ -21,13 +21,9 @@
 package org.apache.hadoop.hbase.stargate;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.stargate.metrics.StargateMetrics;
@@ -42,8 +38,6 @@ public class RESTServlet implements Constants {
   HBaseConfiguration conf;
   HTablePool pool;
   AtomicBoolean stopping = new AtomicBoolean(false);
-  Map<String,Integer> maxAgeMap = 
-    Collections.synchronizedMap(new HashMap<String,Integer>());
   StargateMetrics metrics = new StargateMetrics();
 
   /**
@@ -76,45 +70,5 @@ public class RESTServlet implements Constants {
 
   StargateMetrics getMetrics() {
     return metrics;
-  }
-
-  /**
-   * @param tableName the table name
-   * @return the maximum cache age suitable for use with this table, in
-   *  seconds 
-   * @throws IOException
-   */
-  public int getMaxAge(String tableName) throws IOException {
-    Integer i = maxAgeMap.get(tableName);
-    if (i != null) {
-      return i.intValue();
-    }
-    HTable table = pool.getTable(tableName);
-    try {
-      int maxAge = DEFAULT_MAX_AGE;
-      for (HColumnDescriptor family : 
-          table.getTableDescriptor().getFamilies()) {
-        int ttl = family.getTimeToLive();
-        if (ttl < 0) {
-          continue;
-        }
-        if (ttl < maxAge) {
-          maxAge = ttl;
-        }
-      }
-      maxAgeMap.put(tableName, maxAge);
-      return maxAge;
-    } finally {
-      pool.putTable(table);
-    }
-  }
-
-  /**
-   * Signal that a previously calculated maximum cache age has been
-   * invalidated by a schema change.
-   * @param tableName the table name
-   */
-  public void invalidateMaxAge(String tableName) {
-    maxAgeMap.remove(tableName);
   }
 }
