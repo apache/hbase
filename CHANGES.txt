@@ -10,7 +10,8 @@ Release 0.20.7 - Unreleased
    HBASE-2906  [rest/stargate] URI decoding in RowResource
    HBASE-3121  [rest/stargate] Do not perform cache control when returning
                results
-
+   HBASE-3115  HBaseClient wastes 1 TCP packet per RPC
+ 
   IMPROVEMENTS
    HBASE-2988  Support alternate compression for major compactions
    HBASE-2907  [rest/stargate] Improve error response when trying to create a

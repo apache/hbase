@@ -49,6 +49,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -476,12 +477,14 @@ public class HBaseClient {
           //for serializing the
           //data to be written
           d = new DataOutputBuffer();
+          d.writeInt(0xdeadbeef); // placeholder for data length
           d.writeInt(call.id);
           call.param.write(d);
           byte[] data = d.getData();
           int dataLength = d.getLength();
-          out.writeInt(dataLength);      //first put the data length
-          out.write(data, 0, dataLength);//write the data
+          // fill in the placeholder
+          Bytes.putInt(data, 0, dataLength - 4);
+          out.write(data, 0, dataLength);
           out.flush();
         }
       } catch(IOException e) {
