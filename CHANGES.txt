@@ -11,6 +11,8 @@ Release 0.20.7 - Unreleased
    HBASE-3121  [rest/stargate] Do not perform cache control when returning
                results
    HBASE-3115  HBaseClient wastes 1 TCP packet per RPC
+   HBASE-3140  Rest schema modification throw null pointer exception
+               (David Worms via Andrew Purtell)
  
   IMPROVEMENTS
    HBASE-2988  Support alternate compression for major compactions
