@@ -82,6 +82,7 @@ for var in CLOUDERA_SOURCE_DIR PREFIX BUILD_DIR ; do
   fi
 done
 
+MAN_DIR=${MAN_DIR:-/usr/share/man/man1}
 DOC_DIR=${DOC_DIR:-/usr/share/doc/hbase}
 LIB_DIR=${LIB_DIR:-/usr/lib/hbase}
 BIN_DIR=${BIN_DIR:-/usr/lib/hbase/bin}
@@ -92,7 +93,9 @@ install -d -m 0755 $PREFIX/$LIB_DIR/lib
 install -d -m 0755 $PREFIX/$DOC_DIR
 install -d -m 0755 $PREFIX/$BIN_DIR
 install -d -m 0755 $PREFIX/$ETC_DIR
+install -d -m 0755 $PREFIX/$MAN_DIR
 
+gzip -c $CLOUDERA_SOURCE_DIR/hbase.1 > $PREFIX/$MAN_DIR/hbase.1.gz
 cp -ra lib/* ${PREFIX}/${LIB_DIR}/lib/
 cp -a cloudera ${PREFIX}/${LIB_DIR}/cloudera
 cp hbase*.jar $PREFIX/$LIB_DIR/
