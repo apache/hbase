@@ -680,6 +680,8 @@ Release 0.90.0 - Unreleased
    HBASE-3224  NPE in KeyValue$KVComparator.compare when compacting
    HBASE-3233  Fix Long Running Stats
    HBASE-3232  Fix KeyOnlyFilter + Add Value Length (Nicolas via Ryan)
+   HBASE-3235  Intermittent incrementColumnValue failure in TestHRegion 
+    	       (Gary via Ryan)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
