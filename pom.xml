@@ -395,6 +395,19 @@
           </execution>
         </executions>
       </plugin>
+        <plugin>
+            <groupId>com.cloudera.kitchen</groupId>
+            <artifactId>maven-build-repo-addto-plugin</artifactId>
+            <inherited>false</inherited>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>add</goal>
+                    </goals>
+                    <phase>compile</phase>
+                </execution>
+            </executions>
+        </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
