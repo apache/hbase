@@ -519,7 +519,7 @@
                     <goals>
                         <goal>add</goal>
                     </goals>
-                    <phase>test-compile</phase>
+                    <phase>package</phase>
                 </execution>
             </executions>
         </plugin>
