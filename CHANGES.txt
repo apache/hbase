@@ -692,8 +692,9 @@ Release 0.90.0 - Unreleased
                in test notification (Gary Helmling via Andrew Purtell)
    HBASE-3264  Remove unnecessary Guava Dependency
                (Nicolas Spiegelberg via Stack)
-
    HBASE-3172  Reverse order of AssignmentManager and MetaNodeTracker in
+   HBASE-3249  Typing 'help shutdown' in the shell shouldn't shutdown the cluster
+
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
    HBASE-1759  Ability to specify scanner caching on a per-scan basis
