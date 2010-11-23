@@ -694,6 +694,7 @@ Release 0.90.0 - Unreleased
                (Nicolas Spiegelberg via Stack)
    HBASE-3172  Reverse order of AssignmentManager and MetaNodeTracker in
    HBASE-3249  Typing 'help shutdown' in the shell shouldn't shutdown the cluster
+   HBASE-3262  TestHMasterRPCException uses non-ephemeral port for master
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
