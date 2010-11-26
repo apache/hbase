@@ -20,6 +20,9 @@ Release 0.20.7 - Unreleased
    HBASE-2988  Support alternate compression for major compactions
    HBASE-2907  [rest/stargate] Improve error response when trying to create a
                scanner on a nonexistant table
+   HBASE-3279  [rest] Filter for gzip content encoding that wraps both input
+               and output side.
+
 
 Release 0.20.6 - July 30, 2010
   BUG FIXES

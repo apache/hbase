@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.stargate.filter.GzipFilter;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.StringUtils;
@@ -170,6 +171,7 @@ public class MiniClusterTestCase extends TestCase {
       // set up context
     Context context = new Context(server, "/", Context.SESSIONS);
     context.addServlet(sh, "/*");
+    context.addFilter(GzipFilter.class, "/*", 0);
       // start the server
     server.start();
 

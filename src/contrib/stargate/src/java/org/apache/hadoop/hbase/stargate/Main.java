@@ -24,11 +24,11 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.hadoop.hbase.stargate.filter.GzipFilter;
 
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.servlet.GzipFilter;
 
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
