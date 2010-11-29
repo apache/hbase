@@ -703,7 +703,8 @@ Release 0.90.0 - Unreleased
    HBASE-3277  HBase Shell zk_dump command broken
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster
    HBASE-3267  close_region shell command breaks region
-
+   HBASE-3282  Need to retain DeadServers to ensure we don't allow
+               previously expired RS instances to rejoin cluster
 
 
   IMPROVEMENTS
