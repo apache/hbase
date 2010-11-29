@@ -705,6 +705,8 @@ Release 0.90.0 - Unreleased
    HBASE-3267  close_region shell command breaks region
    HBASE-3282  Need to retain DeadServers to ensure we don't allow
                previously expired RS instances to rejoin cluster
+   HBASE-3283  NPE in AssignmentManager if processing shutdown of RS who
+               doesn't have any regions assigned to it
 
 
   IMPROVEMENTS
