@@ -707,6 +707,7 @@ Release 0.90.0 - Unreleased
                previously expired RS instances to rejoin cluster
    HBASE-3283  NPE in AssignmentManager if processing shutdown of RS who
                doesn't have any regions assigned to it
+   HBASE-3265  Regionservers waiting for ROOT while Master waiting for RegionServers
 
 
   IMPROVEMENTS

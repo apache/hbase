@@ -550,8 +550,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             this.stopping = true;
           }
         }
-        // Try to get the root region location from zookeeper.
-        this.catalogTracker.waitForRoot();
         long now = System.currentTimeMillis();
         // Drop into the send loop if msgInterval has elapsed or if something
         // to send. If we fail talking to the master, then we'll sleep below
