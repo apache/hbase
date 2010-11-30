@@ -709,6 +709,7 @@ Release 0.90.0 - Unreleased
                doesn't have any regions assigned to it
    HBASE-3265  Regionservers waiting for ROOT while Master waiting for RegionServers
    HBASE-3263  Stack overflow in AssignmentManager
+   HBASE-3234  hdfs-724 "breaks" TestHBaseTestingUtility multiClusters
 
 
   IMPROVEMENTS
