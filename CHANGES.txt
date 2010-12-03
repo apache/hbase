@@ -722,6 +722,7 @@ Release 0.90.0 - Unreleased
    HBASE-3301  Treat java.net.SocketTimeoutException same as ConnectException
                assigning/unassigning region
    HBASE-3296  Newly created table ends up disabled instead of assigned
+   HBASE-3304  Get spurious master fails during bootup
 
 
   IMPROVEMENTS
