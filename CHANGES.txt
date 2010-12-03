@@ -1205,6 +1205,8 @@ Release 0.90.0 - Unreleased
    HBASE-3223  Get VersionInfo for Running HBase Process
                (Nicolas Spiegelberg via Stack)
    HBASE-3303  Lower hbase.regionserver.handler.count from 25 back to 10
+   HBASE-3292  Expose block cache hit/miss/evict counts into region server
+               metrics
 
 
   NEW FEATURES
