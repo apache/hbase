@@ -179,6 +179,9 @@ public class HRegion implements HeapSize { // , Writable{
   private volatile boolean forceMajorCompaction = false;
   private Pair<Long,Long> lastCompactInfo = null;
 
+  // Used to ensure only one thread closes region at a time.
+  private final Object closeLock = new Object();
+
   /*
    * Data structure of write state flags used coordinating flushes,
    * compactions and closes.
@@ -479,7 +482,15 @@ public class HRegion implements HeapSize { // , Writable{
    *
    * @throws IOException e
    */
-  public List<StoreFile> close(final boolean abort)
+  public List<StoreFile> close(final boolean abort) throws IOException {
+    // Only allow one thread to close at a time. Serialize them so dual
+    // threads attempting to close will run up against each other.
+    synchronized (closeLock) {
+      return doClose(abort);
+    }
+  }
+
+  private List<StoreFile> doClose(final boolean abort)
   throws IOException {
     if (isClosed()) {
       LOG.warn("Region " + this + " already closed");
