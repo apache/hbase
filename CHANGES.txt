@@ -727,6 +727,7 @@ Release 0.90.0 - Unreleased
    HBASE-3309  "Not running balancer because dead regionserver processing" is a lie
    HBASE-3310  Failing creating/altering table with compression agrument from 
                the HBase shell (Igor Ranitovic via Stack)
+   HBASE-3314  [shell] 'move' is broken
 
 
   IMPROVEMENTS
