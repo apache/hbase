@@ -1212,6 +1212,7 @@ Release 0.90.0 - Unreleased
    HBASE-3303  Lower hbase.regionserver.handler.count from 25 back to 10
    HBASE-3292  Expose block cache hit/miss/evict counts into region server
                metrics
+   HBASE-2467  Concurrent flushers in HLog sync using HDFS-895
 
 
   NEW FEATURES
