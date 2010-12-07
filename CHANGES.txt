@@ -730,6 +730,8 @@ Release 0.90.0 - Unreleased
    HBASE-3314  [shell] 'move' is broken
    HBASE-3315  Add debug output for when balancer makes bad balance
    HBASE-3278  AssertionError in LoadBalancer
+   HBASE-3173  HBase 2984 breaks ability to specify BLOOMFILTER & COMPRESSION
+               via shell
 
 
   IMPROVEMENTS
