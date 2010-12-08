@@ -732,6 +732,7 @@ Release 0.90.0 - Unreleased
    HBASE-3278  AssertionError in LoadBalancer
    HBASE-3173  HBase 2984 breaks ability to specify BLOOMFILTER & COMPRESSION
                via shell
+   HBASE-3318  Split rollback leaves parent with writesEnabled=false
 
 
   IMPROVEMENTS
