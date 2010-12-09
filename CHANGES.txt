@@ -1218,6 +1218,7 @@ Release 0.90.0 - Unreleased
    HBASE-3292  Expose block cache hit/miss/evict counts into region server
                metrics
    HBASE-2467  Concurrent flushers in HLog sync using HDFS-895
+   HBASE-3320  Compaction parameter minCompactSize should be configurable
 
 
   NEW FEATURES
