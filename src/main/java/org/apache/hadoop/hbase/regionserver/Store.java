@@ -197,7 +197,7 @@ public class Store implements HeapSize {
     this.majorCompactionTime = getNextMajorCompactTime();
 
     this.maxFilesToCompact = conf.getInt("hbase.hstore.compaction.max", 10);
-    this.minCompactSize = conf.getInt("hbase.hstore.compaction.min.size",
+    this.minCompactSize = conf.getLong("hbase.hstore.compaction.min.size",
         this.region.memstoreFlushSize);
     this.compactRatio = conf.getFloat("hbase.hstore.compaction.ratio", 1.2F);
 
