@@ -1219,6 +1219,7 @@ Release 0.90.0 - Unreleased
                metrics
    HBASE-2467  Concurrent flushers in HLog sync using HDFS-895
    HBASE-3320  Compaction parameter minCompactSize should be configurable
+   HBASE-3308  SplitTransaction.splitStoreFiles slows splits a lot
 
 
   NEW FEATURES
