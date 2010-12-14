@@ -745,6 +745,8 @@ Release 0.90.0 - Unreleased
    HBASE-3337  Restore HBCK fix of unassignment and dupe assignment for new
                master
    HBASE-3332  Regions stuck in transition after RS failure
+   HBASE-3355  Stopping a stopped cluster leaks an HMaster
+   HBASE-3356  Add more checks in replication if RS is stopped
 
 
   IMPROVEMENTS
