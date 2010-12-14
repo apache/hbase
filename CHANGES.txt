@@ -742,6 +742,8 @@ Release 0.90.0 - Unreleased
    HBASE-3351  ReplicationZookeeper goes to ZK every time a znode is modified
    HBASE-3326  Replication state's znode should be created else it
                defaults to false
+   HBASE-3337  Restore HBCK fix of unassignment and dupe assignment for new
+               master
 
 
   IMPROVEMENTS
