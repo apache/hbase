@@ -744,6 +744,7 @@ Release 0.90.0 - Unreleased
                defaults to false
    HBASE-3337  Restore HBCK fix of unassignment and dupe assignment for new
                master
+   HBASE-3332  Regions stuck in transition after RS failure
 
 
   IMPROVEMENTS
