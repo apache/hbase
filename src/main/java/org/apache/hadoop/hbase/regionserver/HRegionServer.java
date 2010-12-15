@@ -1099,7 +1099,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.hlogRoller = new LogRoller(this, this);
     listeners.add(this.hlogRoller);
     if (this.replicationHandler != null) {
-      listeners = new ArrayList<WALObserver>();
       // Replication handler is an implementation of WALActionsListener.
       listeners.add(this.replicationHandler);
     }
