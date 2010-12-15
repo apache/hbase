@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
@@ -201,6 +202,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     // set the thread name now we have an address
     setName(MASTER + "-" + this.address);
+
+    Replication.decorateMasterConfiguration(this.conf);
 
     this.rpcServer.startThreads();
 
