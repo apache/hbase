@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningException;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
@@ -1415,7 +1416,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             masterAddress.getInetSocketAddress(), this.conf, -1,
             this.rpcTimeout, this.rpcTimeout);
       } catch (IOException e) {
-        LOG.warn("Unable to connect to master. Retrying. Error was:", e);
+        e = e instanceof RemoteException ?
+            ((RemoteException)e).unwrapRemoteException() : e;
+        if (e instanceof ServerNotRunningException) {
+          LOG.info("Master isn't available yet, retrying");
+        } else {
+          LOG.warn("Unable to connect to master. Retrying. Error was:", e);
+        }
         sleeper.sleep();
       }
     }
