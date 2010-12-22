@@ -765,6 +765,7 @@ Release 0.90.0 - Unreleased
    HBASE-3374  Our jruby jar has *GPL jars in it; fix
    HBASE-3343  Server not shutting down after losing log lease
    HBASE-3381  Interrupt of a region open comes across as a successful open
+   HBASE-3380  Master failover can split logs of live servers
 
 
   IMPROVEMENTS

@@ -617,14 +617,31 @@ public class ServerManager {
   public int waitForRegionServers()
   throws InterruptedException {
     long interval = this.master.getConfiguration().
-      getLong("hbase.master.wait.on.regionservers.interval", 3000);
+      getLong("hbase.master.wait.on.regionservers.interval", 1500);
+    long timeout = this.master.getConfiguration().
+      getLong("hbase.master.wait.on.regionservers.timeout", 4500);
+    int minToStart = this.master.getConfiguration().
+      getInt("hbase.master.wait.on.regionservers.mintostart", 1);
+    int maxToStart = this.master.getConfiguration().
+      getInt("hbase.master.wait.on.regionservers.maxtostart", Integer.MAX_VALUE);
     // So, number of regionservers > 0 and its been n since last check in, break,
     // else just stall here
     int count = 0;
+    long slept = 0;
     for (int oldcount = countOfRegionServers(); !this.master.isStopped();) {
       Thread.sleep(interval);
+      slept += interval;
       count = countOfRegionServers();
-      if (count == oldcount && count > 0) break;
+      if (count == oldcount && count >= minToStart && slept >= timeout) {
+        LOG.info("Finished waiting for regionserver count to settle; " +
+            "count=" + count + ", sleptFor=" + slept);
+        break;
+      }
+      if (count >= maxToStart) {
+        LOG.info("At least the max configured number of regionserver(s) have " +
+            "checked in: " + count);
+        break;
+      }
       if (count == 0) {
         LOG.info("Waiting on regionserver(s) to checkin");
       } else {

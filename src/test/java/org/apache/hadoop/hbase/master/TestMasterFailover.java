@@ -69,8 +69,13 @@ public class TestMasterFailover {
     final int NUM_MASTERS = 3;
     final int NUM_RS = 3;
 
+    // Create config to use for this cluster
+    Configuration conf = HBaseConfiguration.create();
+    conf.setInt("hbase.master.wait.on.regionservers.mintostart", 3);
+    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", 3);
+
     // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
 
@@ -221,6 +226,8 @@ public class TestMasterFailover {
     // Need to drop the timeout much lower
     conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
     conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 4000);
+    conf.setInt("hbase.master.wait.on.regionservers.mintostart", 3);
+    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", 3);
 
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
@@ -525,6 +532,8 @@ public class TestMasterFailover {
     // Need to drop the timeout much lower
     conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
     conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 4000);
+    conf.setInt("hbase.master.wait.on.regionservers.mintostart", 1);
+    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", 2);
 
     // Create and start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
