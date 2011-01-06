@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
+import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -1331,6 +1332,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         MetaEditor.updateRegionLocation(ct, r.getRegionInfo(), getServerInfo());
       }
     }
+  }
+
+  /**
+   * Return a reference to the metrics instance used for counting RPC calls.
+   * @return
+   */
+  public HBaseRpcMetrics getRpcMetrics() {
+    return server.getRpcMetrics();
   }
 
   /**

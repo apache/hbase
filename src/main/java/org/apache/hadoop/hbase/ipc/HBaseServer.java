@@ -1304,6 +1304,13 @@ public abstract class HBaseServer {
   }
 
   /**
+   * Returns the metrics instance for reporting RPC call statistics
+   */
+  public HBaseRpcMetrics getRpcMetrics() {
+    return rpcMetrics;
+  }
+
+  /**
    * When the read or write buffer size is larger than this limit, i/o will be
    * done in chunks of this size. Most RPC requests and responses would be
    * be smaller.
