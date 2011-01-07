@@ -786,6 +786,7 @@ Release 0.90.0 - Unreleased
    HBASE-3401  Region IPC operations should be high priority
    HBASE-3418  Increment operations can break when qualifiers are split
                between memstore/snapshot and storefiles
+   HBASE-3403  Region orphaned after failure during split
 
 
   IMPROVEMENTS
