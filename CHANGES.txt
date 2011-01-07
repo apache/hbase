@@ -787,6 +787,7 @@ Release 0.90.0 - Unreleased
    HBASE-3418  Increment operations can break when qualifiers are split
                between memstore/snapshot and storefiles
    HBASE-3403  Region orphaned after failure during split
+   HBASE-3430  hbase-daemon.sh should clean up PID files on process stop
 
 
   IMPROVEMENTS
