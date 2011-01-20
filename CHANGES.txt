@@ -1,6 +1,8 @@
 HBase Change Log
 Release 0.90.1 - Unreleased
   BUG FIXES
+   HBASE-3387  Revert 'Pair does not deep check arrays for equality'
+
   IMPROVEMENTS
 
 Release 0.90.0 - January 19th, 2011
