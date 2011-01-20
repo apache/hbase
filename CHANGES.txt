@@ -1,7 +1,8 @@
 HBase Change Log
 Release 0.90.1 - Unreleased
   BUG FIXES
-   HBASE-3387  Revert 'Pair does not deep check arrays for equality'
+   HBASE-3387 Revert 'Pair does not deep check arrays for equality'
+   HBASE-3445 Master crashes on data that was moved from different host
 
   IMPROVEMENTS
 
