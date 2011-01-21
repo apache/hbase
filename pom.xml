@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
@@ -12,7 +11,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>0.90.1-SNAPSHOT</version>
+  <version>0.90.0</version>
   <name>HBase</name>
   <description>
     HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
@@ -23,9 +22,9 @@
   <url>http://hbase.apache.org</url>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/trunk</developerConnection>
-    <url>http://svn.apache.org/viewvc/hbase/trunk</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/tags/0.90.0</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/tags/0.90.0</developerConnection>
+    <url>http://svn.apache.org/viewvc/hbase/tags/0.90.0</url>
   </scm>
 
   <issueManagement>
@@ -356,39 +355,30 @@
             <phase>generate-sources</phase>
             <configuration>
               <tasks>
-                <property name="build.webapps"
-                          location="${project.build.directory}/hbase-webapps"/>
-                <property name="src.webapps"
-                          location="${basedir}/src/main/resources/hbase-webapps"/>
-                <property name="generated.sources"
-                          location="${project.build.directory}/generated-sources"/>
+                <property name="build.webapps" location="${project.build.directory}/hbase-webapps" />
+                <property name="src.webapps" location="${basedir}/src/main/resources/hbase-webapps" />
+                <property name="generated.sources" location="${project.build.directory}/generated-sources" />
 
-                <mkdir dir="${build.webapps}"/>
+                <mkdir dir="${build.webapps}" />
                 <copy todir="${build.webapps}">
                   <fileset dir="${src.webapps}">
-                    <exclude name="**/*.jsp"/>
-                    <exclude name="**/.*"/>
-                    <exclude name="**/*~"/>
+                    <exclude name="**/*.jsp" />
+                    <exclude name="**/.*" />
+                    <exclude name="**/*~" />
                   </fileset>
                 </copy>
 
                 <!--The compile.classpath is passed in by maven-->
-                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath"/>
+                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath" />
 
-                <mkdir dir="${build.webapps}/master/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/master"
-                             outputdir="${generated.sources}"
-                             package="org.apache.hadoop.hbase.generated.master"
-                             webxml="${build.webapps}/master/WEB-INF/web.xml"/>
+                <mkdir dir="${build.webapps}/master/WEB-INF" />
+                <jspcompiler uriroot="${src.webapps}/master" outputdir="${generated.sources}" package="org.apache.hadoop.hbase.generated.master" webxml="${build.webapps}/master/WEB-INF/web.xml" />
 
-                <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/regionserver"
-                             outputdir="${generated.sources}"
-                             package="org.apache.hadoop.hbase.generated.regionserver"
-                             webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
+                <mkdir dir="${build.webapps}/regionserver/WEB-INF" />
+                <jspcompiler uriroot="${src.webapps}/regionserver" outputdir="${generated.sources}" package="org.apache.hadoop.hbase.generated.regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml" />
 
                 <exec executable="sh">
-                  <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}"/>
+                  <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}" />
                 </exec>
               </tasks>
             </configuration>
