@@ -1288,6 +1288,7 @@ Release 0.90.0 - January 19th, 2011
    HBASE-3372  HRS shouldn't print a full stack for ServerNotRunningException
    HBASE-3377  Upgrade Jetty to 6.1.26
    HBASE-3405  Allow HBaseRpcMetrics to register custom interface methods
+   HBASE-3384  Move User-Triggered Compactions to Store
 
 
   NEW FEATURES
