@@ -408,6 +408,12 @@ be running to use Hadoop's scripts to manage remote Hadoop and HBase daemons.
       </para>
       <para>Be sure to restart your HDFS after making the above
       configuration.</para>
+      <para>Not having this configuration in place makes for strange looking
+          failures. Eventually you'll see a complain in the datanode logs
+          complaining about the xcievers exceeded, but on the run up to this
+          one manifestation is complaint about missing blocks.  For example:
+          <code>10/12/08 20:10:31 INFO hdfs.DFSClient: Could not obtain block blk_XXXXXXXXXXXXXXXXXXXXXX_YYYYYYYY from any node: java.io.IOException: No live nodes contain current block. Will get new block locations from namenode and retry...</code>
+      </para>
       </section>
 
 <section xml:id="windows">
@@ -1054,10 +1060,12 @@ to ensure well-formedness of your document after an edit session.
           HBase ships with a reasonable, conservative configuration that will
           work on nearly all
           machine types that people might want to test with. If you have larger
-          machines you might the following configuration options helpful.
+          machines -- HBase has 8G and larger heap -- you might the following configuration options helpful.
+          TODO.
         </para>
 
       </section>
+
       <section xml:id="lzo">
       <title>LZO compression</title>
       <para>You should consider enabling LZO compression.  Its
@@ -1078,7 +1086,72 @@ to ensure well-formedness of your document after an edit session.
       <link linkend="hbase.regionserver.codecs">hbase.regionserver.codecs</link>
       for a feature to help protect against failed LZO install</para></footnote>.
       </para>
+      <para>See also the <link linkend="compression">Compression Appendix</link>
+      at the tail of this book.</para>
       </section>
+      <section xml:id="bigger.regions">
+      <title>Bigger Regions</title>
+      <para>
+      Consider going to larger regions to cut down on the total number of regions
+      on your cluster. Generally less Regions to manage makes for a smoother running
+      cluster (You can always later manually split the big Regions should one prove
+      hot and you want to spread the request load over the cluster).  By default,
+      regions are 256MB in size.  You could run with
+      1G.  Some run with even larger regions; 4G or even larger.  Adjust
+      <code>hbase.hregion.max.filesize</code> in your <filename>hbase-site.xml</filename>.
+      </para>
+      </section>
+      <section xml:id="disable.splitting">
+      <title>Managed Splitting</title>
+      <para>
+      Rather than let HBase auto-split your Regions, manage the splitting manually
+      <footnote><para>What follows is taken from the javadoc at the head of
+      the <classname>org.apache.hadoop.hbase.util.RegionSplitter</classname> tool
+      added to HBase post-0.90.0 release.
+      </para>
+      </footnote>.
+ With growing amounts of data, splits will continually be needed. Since
+ you always know exactly what regions you have, long-term debugging and
+ profiling is much easier with manual splits. It is hard to trace the logs to
+ understand region level problems if it keeps splitting and getting renamed.
+ Data offlining bugs + unknown number of split regions == oh crap! If an
+ <classname>HLog</classname> or <classname>StoreFile</classname>
+ was mistakenly unprocessed by HBase due to a weird bug and
+ you notice it a day or so later, you can be assured that the regions
+ specified in these files are the same as the current regions and you have
+ less headaches trying to restore/replay your data.
+ You can finely tune your compaction algorithm. With roughly uniform data
+ growth, it's easy to cause split / compaction storms as the regions all
+ roughly hit the same data size at the same time. With manual splits, you can
+ let staggered, time-based major compactions spread out your network IO load.
+      </para>
+      <para>
+ How do I turn off automatic splitting? Automatic splitting is determined by the configuration value
+ <code>hbase.hregion.max.filesize</code>. It is not recommended that you set this
+ to <varname>Long.MAX_VALUE</varname> in case you forget about manual splits. A suggested setting
+ is 100GB, which would result in > 1hr major compactions if reached.
+ </para>
+ <para>What's the optimal number of pre-split regions to create?
+ Mileage will vary depending upon your application.
+ You could start low with 10 pre-split regions / server and watch as data grows
+ over time. It's better to err on the side of too little regions and rolling split later.
+ A more complicated answer is that this depends upon the largest storefile
+ in your region. With a growing data size, this will get larger over time. You
+ want the largest region to be just big enough that the <classname>Store</classname> compact
+ selection algorithm only compacts it due to a timed major. If you don't, your
+ cluster can be prone to compaction storms as the algorithm decides to run
+ major compactions on a large series of regions all at once. Note that
+ compaction storms are due to the uniform data growth, not the manual split
+ decision.
+ </para>
+<para> If you pre-split your regions too thin, you can increase the major compaction
+interval by configuring <varname>HConstants.MAJOR_COMPACTION_PERIOD</varname>. If your data size
+grows too large, use the (post-0.90.0 HBase) <classname>org.apache.hadoop.hbase.util.RegionSplitter</classname>
+script to perform a network IO safe rolling split
+of all regions.
+</para>
+      </section>
+
       </section>
 
       </section>
@@ -1814,19 +1887,21 @@ to ensure well-formedness of your document after an edit session.
         doing:<programlisting> $ ./<code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --split hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/</code></programlisting></para>
       </section>
     </section>
+    <section><title>Compression Tool</title>
+        <para>See <link linkend="compression.tool" >Compression Tool</link>.</para>
+    </section>
   </appendix>
-  <appendix xml:id="compression">
-    <title >Compression</title>
 
-    <para>TODO: Compression in hbase...</para>
-    <section>
-    <title>
-    LZO
-    </title>
+  <appendix xml:id="compression">
+
+    <title >Compression In HBase</title>
+
+    <section id="compression.test">
+    <title>CompressionTest Tool</title>
     <para>
-    Running with LZO enabled is recommended though HBase does not ship with
-    LZO because of licensing issues.  To install LZO and verify its installation
-    and that its available to HBase, do the following...
+    HBase includes a tool to test compression is set up properly.
+    To run it, type <code>/bin/hbase org.apache.hadoop.hbase.util.CompressionTest</code>. 
+    This will emit usage on how to run the tool.
     </para>
     </section>
 
@@ -1855,7 +1930,30 @@ to ensure well-formedness of your document after an edit session.
     the case where a new server is added to cluster but the cluster
     requires install of a particular coded.
     </para>
+    </section>
 
+    <section xml:id="lzo.compression">
+    <title>
+    LZO
+    </title>
+    <para>
+    See <link linkend="lzo">LZO Compression</link> above.
+    </para>
+    </section>
+
+    <section xml:id="gzip.compression">
+    <title>
+    GZIP
+    </title>
+    <para>
+    GZIP will generally compress better than LZO though slower.
+    For some setups, better compression may be preferred.
+    Java will use java's GZIP unless the native Hadoop libs are
+    available on the CLASSPATH; in this case it will use native
+    compressors instead (If the native libs are NOT present,
+    you will see lots of <emphasis>Got brand-new compressor</emphasis>
+    reports in your logs; TO BE FIXED).
+    </para>
     </section>
   </appendix>
 
@@ -1870,6 +1968,18 @@ to ensure well-formedness of your document after an edit session.
               See the FAQ that is up on the wiki, <link xlink:href="http://wiki.apache.org/hadoop/Hbase/FAQ">HBase Wiki FAQ</link>
               as well as the <link xlink:href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting">Troubleshooting</link> page and
               the <link xlink:href="http://wiki.apache.org/hadoop/Hbase/FrequentlySeenErrors">Frequently Seen Errors</link> page.
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry>
+            <question><para>Why are logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got
+            brand-new compressor' messages?</para></question>
+            <answer>
+                <para>
+                    Because we are not using the native versions of compression
+                    libraries.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-1900">HBASE-1900 Put back native support when hadoop 0.21 is released</link>.
+                    Copy the native libs from hadoop under hbase lib dir or
+                    symlink them into place and the message should go away.
                 </para>
             </answer>
         </qandaentry>
