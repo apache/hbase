@@ -5,6 +5,9 @@ Release 0.90.1 - Unreleased
    HBASE-3445  Master crashes on data that was moved from different host
    HBASE-3449  Server shutdown handlers deadlocked waiting for META
    HBASE-3456  Fix hardcoding of 20 second socket timeout down in HBaseClient
+   HBASE-3476  HFile -m option need not scan key values
+               (Prakash Khemani via Lars George)
+
 
   IMPROVEMENTS
 
