@@ -12,6 +12,9 @@ Release 0.90.1 - Unreleased
 
 
   IMPROVEMENTS
+   HBASE-3305  Allow round-robin distribution for table created with
+               multiple regions (ted yu via jgray)
+
 
 Release 0.90.0 - January 19th, 2011
   INCOMPATIBLE CHANGES
