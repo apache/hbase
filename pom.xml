@@ -11,7 +11,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>0.90.0</version>
+  <version>0.90.1-SNAPSHOT</version>
   <name>HBase</name>
   <description>
     HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
@@ -22,9 +22,9 @@
   <url>http://hbase.apache.org</url>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/tags/0.90.0</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/tags/0.90.0</developerConnection>
-    <url>http://svn.apache.org/viewvc/hbase/tags/0.90.0</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/trunk</developerConnection>
+    <url>http://svn.apache.org/viewvc/hbase/trunk</url>
   </scm>
 
   <issueManagement>
