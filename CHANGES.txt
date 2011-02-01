@@ -12,6 +12,8 @@ Release 0.90.1 - Unreleased
    HBASE-3493  HMaster sometimes hangs during initialization due to missing
                notify call (Bruno Dumon via Stack)
    HBASE-3483  Memstore lower limit should trigger asynchronous flushes
+   HBASE-3494  checkAndPut implementation doesnt verify row param and writable 
+   	       row are the same
 
   IMPROVEMENTS
    HBASE-3305  Allow round-robin distribution for table created with
