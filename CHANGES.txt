@@ -11,7 +11,7 @@ Release 0.90.1 - Unreleased
                value causing data loss during recovery
    HBASE-3493  HMaster sometimes hangs during initialization due to missing
                notify call (Bruno Dumon via Stack)
-
+   HBASE-3483  Memstore lower limit should trigger asynchronous flushes
 
   IMPROVEMENTS
    HBASE-3305  Allow round-robin distribution for table created with
