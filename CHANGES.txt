@@ -16,6 +16,7 @@ Release 0.90.1 - Unreleased
    	       row are the same
    HBASE-3416  For intra-row scanning, the update readers notification resets
                the query matcher and can lead to incorrect behavior
+   HBASE-3495  Shell is failing on subsequent split calls
 
 
   IMPROVEMENTS

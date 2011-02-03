@@ -1075,6 +1075,10 @@ public class HBaseAdmin implements Abortable {
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
           // May not be a server for a particular row
           if (pair.getSecond() == null) continue;
+          HRegionInfo r = pair.getFirst();
+          // check for parents
+          if (r.isSplitParent()) continue;
+          // call out to region server to do split now
           split(pair.getSecond(), pair.getFirst());
         }
       }
