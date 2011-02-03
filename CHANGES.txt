@@ -14,6 +14,9 @@ Release 0.90.1 - Unreleased
    HBASE-3483  Memstore lower limit should trigger asynchronous flushes
    HBASE-3494  checkAndPut implementation doesnt verify row param and writable 
    	       row are the same
+   HBASE-3416  For intra-row scanning, the update readers notification resets
+               the query matcher and can lead to incorrect behavior
+
 
   IMPROVEMENTS
    HBASE-3305  Allow round-robin distribution for table created with
