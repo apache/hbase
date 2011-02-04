@@ -19,6 +19,7 @@ Release 0.90.1 - Unreleased
    HBASE-3495  Shell is failing on subsequent split calls
    HBASE-3502  Can't open region because can't open .regioninfo because
                AlreadyBeingCreatedException
+   HBASE-3501  Remove the deletion limit in LogCleaner
 
 
   IMPROVEMENTS
