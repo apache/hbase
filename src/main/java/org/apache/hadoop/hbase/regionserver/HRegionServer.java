@@ -50,6 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -75,6 +76,7 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
@@ -134,7 +136,6 @@ import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 
 /**
  * HRegionServer makes a set of HRegions available to clients. It checks in with
@@ -838,7 +839,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   protected void handleReportForDutyResponse(final MapWritable c) throws IOException {
     try {
       for (Map.Entry<Writable, Writable> e : c.entrySet()) {
+
         String key = e.getKey().toString();
+        // Use the address the master passed us
+        if (key.equals("hbase.regionserver.address")) {
+          HServerAddress hsa = (HServerAddress) e.getValue();
+          LOG.info("Master passed us address to use. Was="
+            + this.serverInfo.getServerAddress() + ", Now=" + hsa.toString());
+          this.serverInfo.setServerAddress(hsa);
+          continue;
+        }
         String value = e.getValue().toString();
         if (LOG.isDebugEnabled()) {
           LOG.debug("Config from master: " + key + "=" + value);

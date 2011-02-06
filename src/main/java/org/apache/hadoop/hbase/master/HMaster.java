@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,8 +55,8 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -598,10 +599,23 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public MapWritable regionServerStartup(final HServerInfo serverInfo,
     final long serverCurrentTime)
   throws IOException {
+    // Set the ip into the passed in serverInfo.  Its ip is more than likely
+    // not the ip that the master sees here.  See at end of this method where
+    // we pass it back to the regionserver by setting "hbase.regionserver.address"
+    // Everafter, the HSI combination 'server name' is what uniquely identifies
+    // the incoming RegionServer.
+    InetSocketAddress address = new InetSocketAddress(
+        HBaseServer.getRemoteIp().getHostName(),
+        serverInfo.getServerAddress().getPort());
+    serverInfo.setServerAddress(new HServerAddress(address));
+
     // Register with server manager
     this.serverManager.regionServerStartup(serverInfo, serverCurrentTime);
     // Send back some config info
-    return createConfigurationSubset();
+    MapWritable mw = createConfigurationSubset();
+     mw.put(new Text("hbase.regionserver.address"),
+         serverInfo.getServerAddress());
+    return mw;
   }
 
   /**
