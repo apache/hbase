@@ -123,11 +123,10 @@ public class ServerManager {
     // is, reject the server and trigger its expiration. The next time it comes
     // in, it should have been removed from serverAddressToServerInfo and queued
     // for processing by ProcessServerShutdown.
-    HServerInfo info = new HServerInfo(serverInfo);
-    checkIsDead(info.getServerName(), "STARTUP");
-    checkAlreadySameHostPort(info);
-    checkClockSkew(info, serverCurrentTime);
-    recordNewServer(info, false, null);
+    checkIsDead(serverInfo.getServerName(), "STARTUP");
+    checkAlreadySameHostPort(serverInfo);
+    checkClockSkew(serverInfo, serverCurrentTime);
+    recordNewServer(serverInfo, false, null);
   }
 
   /**
@@ -240,24 +239,21 @@ public class ServerManager {
   HMsg [] regionServerReport(final HServerInfo serverInfo,
     final HMsg [] msgs, final HRegionInfo[] mostLoadedRegions)
   throws IOException {
-    // Be careful. This method does returns in the middle.
-    HServerInfo info = new HServerInfo(serverInfo);
-
     // Check if dead.  If it is, it'll get a 'You Are Dead!' exception.
-    checkIsDead(info.getServerName(), "REPORT");
+    checkIsDead(serverInfo.getServerName(), "REPORT");
 
     // If we don't know this server, tell it shutdown.
-    HServerInfo storedInfo = this.onlineServers.get(info.getServerName());
+    HServerInfo storedInfo = this.onlineServers.get(serverInfo.getServerName());
     if (storedInfo == null) {
       // Maybe we already have this host+port combo and its just different
       // start code?
-      checkAlreadySameHostPort(info);
+      checkAlreadySameHostPort(serverInfo);
       // Just let the server in. Presume master joining a running cluster.
       // recordNewServer is what happens at the end of reportServerStartup.
       // The only thing we are skipping is passing back to the regionserver
       // the HServerInfo to use. Here we presume a master has already done
       // that so we'll press on with whatever it gave us for HSI.
-      recordNewServer(info, true, null);
+      recordNewServer(serverInfo, true, null);
       // If msgs, put off their processing but this is not enough because
       // its possible that the next time the server reports in, we'll still
       // not be up and serving. For example, if a split, we'll need the
@@ -270,7 +266,7 @@ public class ServerManager {
     }
 
     // Check startcodes
-    if (raceThatShouldNotHappenAnymore(storedInfo, info)) {
+    if (raceThatShouldNotHappenAnymore(storedInfo, serverInfo)) {
       return HMsg.STOP_REGIONSERVER_ARRAY;
     }
 
@@ -299,7 +295,7 @@ public class ServerManager {
         reply = HMsg.STOP_REGIONSERVER_ARRAY;
       }
     }
-    return processRegionServerAllsWell(info, mostLoadedRegions, reply);
+    return processRegionServerAllsWell(serverInfo, mostLoadedRegions, reply);
   }
 
   private boolean raceThatShouldNotHappenAnymore(final HServerInfo storedInfo,
