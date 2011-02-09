@@ -1,5 +1,5 @@
 HBase Change Log
-Release 0.90.1 - Unreleased
+Release 0.90.1 - February 9th, 2011
 
   NEW FEATURES
    HBASE-3455  Add memstore-local allocation buffers to combat heap
