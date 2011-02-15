@@ -29,8 +29,6 @@ Release 0.90.1 - February 9th, 2011
    HBASE-3500  Documentation update for replicatio
    HBASE-3419  If re-transition to OPENING during log replay fails, server
                aborts. Instead, should just cancel region open.
-   HBASE-3515  [replication] ReplicationSource can miss a log after RS comes
-               out of GC
    HBASE-3517  Store build version in hbase-default.xml and verify at runtime
    HBASE-3524  NPE from CompactionChecker
    HBASE-3525  mvn assembly is over-filling the hbase lib dir
