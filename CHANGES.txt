@@ -1,4 +1,10 @@
 HBase Change Log
+Release 0.90.2 - February 9th, 2011
+  BUG FIXES
+   HBASE-3545  Possible liveness issue with MasterServerAddress in
+               HRegionServer getMaster (Greg Bowyer via Stack)
+    
+
 Release 0.90.1 - February 9th, 2011
 
   NEW FEATURES
