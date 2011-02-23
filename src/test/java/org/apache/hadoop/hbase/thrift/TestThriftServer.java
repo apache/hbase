@@ -184,7 +184,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
     // Apply an overlapping timestamped mutation to rowB
     handler.mutateRowTs(tableAname, rowBname, getMutations(), time2);
 
-    // the getVerTs is [inf, ts) so you need to increment one.
+    // the getVerTs is [-inf, ts) so you need to increment one.
     time1 += 1;
     time2 += 2;
 
@@ -214,6 +214,15 @@ public class TestThriftServer extends HBaseClusterTestCase {
     rowResult1 = handler.getRowWithColumnsTs(tableAname, rowAname, columns, time1).get(0);
     assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueBname));
     assertFalse(rowResult1.columns.containsKey(columnAname));
+
+    // query using the getRows() api:
+    List<byte[]> rows = new ArrayList<byte[]>();
+    rows.add(rowAname); rows.add(rowBname);
+    List<TRowResult> r = handler.getRows(tableAname, rows);
+    assertEquals(2, r.size());
+
+    r = handler.getRowsWithColumns(tableAname,  rows, columns);
+    assertEquals(2, r.size());
 
     // Apply some timestamped deletes
     // this actually deletes _everything_.
