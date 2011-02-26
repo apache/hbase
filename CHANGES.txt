@@ -7,6 +7,7 @@ Release 0.90.2 - February 9th, 2011
    HBASE-3553  HTable ThreadPoolExecutor does not properly initialize
                for hbase.htable.threads.max threads
                (Himanshu Vashishtha via garyh)
+   HBASE-3566  writeToWAL is not serialized for increment operation
   
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
