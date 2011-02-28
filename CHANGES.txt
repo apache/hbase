@@ -9,6 +9,7 @@ Release 0.90.2 - February 9th, 2011
                (Himanshu Vashishtha via garyh)
    HBASE-3566  writeToWAL is not serialized for increment operation
    HBASE-3576  MasterAddressTracker is registered to ZooKeeperWatcher twice
+   HBASE-3561  OPTS arguments are duplicated
   
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
