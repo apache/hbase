@@ -15,6 +15,7 @@ Release 0.90.2 - February 9th, 2011
                log4j.properties
    HBASE-3593  DemoClient.cpp is outdated
    HBASE-3591  completebulkload doesn't honor generic -D options 
+   HBASE-3594  Rest server fails because of missing asm jar
   
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
