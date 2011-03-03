@@ -52,7 +52,6 @@ Release 0.90.1 - February 9th, 2011
                aborts. Instead, should just cancel region open.
    HBASE-3517  Store build version in hbase-default.xml and verify at runtime
    HBASE-3524  NPE from CompactionChecker
-   HBASE-3525  mvn assembly is over-filling the hbase lib dir
    HBASE-3531  When under global memstore pressure, dont try to flush
                unflushable regions.
    HBASE-3550  FilterList reports false positives (Bill Graham via Andrew
