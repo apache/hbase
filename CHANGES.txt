@@ -21,6 +21,8 @@ Release 0.90.2 - February 9th, 2011
    HBASE-3542  MultiGet methods in Thrift
    HBASE-3586  Improve the selection of regions to balance (Ted Yu via Andrew
                Purtell)  
+   HBASE-3603  Remove -XX:+HeapDumpOnOutOfMemoryError autodump of heap option
+               on OOME
 
 
 Release 0.90.1 - February 9th, 2011
