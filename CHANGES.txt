@@ -25,6 +25,7 @@ Release 0.90.2 - February 9th, 2011
                Purtell)  
    HBASE-3603  Remove -XX:+HeapDumpOnOutOfMemoryError autodump of heap option
                on OOME
+   HBASE-3285  Hlog recovery takes too much time
 
 
 Release 0.90.1 - February 9th, 2011
