@@ -19,6 +19,8 @@ Release 0.90.2 - February 9th, 2011
    HBASE-3582  Allow HMaster and HRegionServer to login from keytab
                when on secure Hadoop
    HBASE-3608  MemstoreFlusher error message doesnt include exception!
+   HBASE-1960  Master should wait for DFS to come up when creating
+               hbase.version; use alternate strategy for waiting for DNs
   
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
