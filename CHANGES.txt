@@ -32,8 +32,9 @@ Release 0.90.2 - February 9th, 2011
                on OOME
    HBASE-3285  Hlog recovery takes too much time
    HBASE-3586  Improve the selection of regions to balance
-   HBASE-3623  Allow non-XML representable separator characters in the ImportTSV tool
-               (Harsh J Chouraria via Stack)
+   HBASE-3623  Allow non-XML representable separator characters in the
+               ImportTSV tool (Harsh J Chouraria via Stack)
+   HBASE-3620  Make HBCK utility faster
 
 
 Release 0.90.1 - February 9th, 2011
