@@ -24,6 +24,8 @@ Release 0.90.2 - February 9th, 2011
    HBASE-3612  HBaseAdmin::isTableAvailable returns true when the table does
                not exit
    HBASE-3626  Update instructions in thrift demo files (Moaz Reyad via Stack)
+   HBASE-3633  ZKUtil::createSetData should only create a node when it nonexists
+               (Guanpeng Xu via Stack)
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
