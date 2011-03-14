@@ -26,6 +26,8 @@ Release 0.90.2 - February 9th, 2011
    HBASE-3626  Update instructions in thrift demo files (Moaz Reyad via Stack)
    HBASE-3633  ZKUtil::createSetData should only create a node when it nonexists
                (Guanpeng Xu via Stack)
+   HBASE-3636  a bug about deciding whether this key is a new key for the
+               ROWCOL bloomfilter (Liyin Tang via Stack)
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
