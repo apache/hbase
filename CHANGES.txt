@@ -28,6 +28,7 @@ Release 0.90.2 - February 9th, 2011
                (Guanpeng Xu via Stack)
    HBASE-3636  a bug about deciding whether this key is a new key for the
                ROWCOL bloomfilter (Liyin Tang via Stack)
+   HBASE-3639  FSUtils.getRootDir should qualify path
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
