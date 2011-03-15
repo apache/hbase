@@ -29,6 +29,7 @@ Release 0.90.2 - February 9th, 2011
    HBASE-3636  a bug about deciding whether this key is a new key for the
                ROWCOL bloomfilter (Liyin Tang via Stack)
    HBASE-3639  FSUtils.getRootDir should qualify path
+   HBASE-3648  [replication] failover is sloppy with znodes
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
@@ -47,6 +48,7 @@ Release 0.90.2 - February 9th, 2011
    HBASE-3448  RegionSplitter, utility class to manually split tables
    HBASE-3610  Improve RegionSplitter performance
    HBASE-3496  HFile CLI Improvements
+   HBASE-3596  [replication] Wait a few seconds before transferring queues
 
 
 Release 0.90.1 - February 9th, 2011
