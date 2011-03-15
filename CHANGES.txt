@@ -46,6 +46,7 @@ Release 0.90.2 - February 9th, 2011
    HBASE-3437  Support Explict Split Points from the Shell
    HBASE-3448  RegionSplitter, utility class to manually split tables
    HBASE-3610  Improve RegionSplitter performance
+   HBASE-3496  HFile CLI Improvements
 
 
 Release 0.90.1 - February 9th, 2011
