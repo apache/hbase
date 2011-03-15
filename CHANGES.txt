@@ -43,6 +43,7 @@ Release 0.90.2 - February 9th, 2011
    HBASE-3620  Make HBCK utility faster
    HBASE-3625  improve/fix support excluding Tests via Maven -D property
                (Alejandro Abdelnur via todd)
+   HBASE-3437  Support Explict Split Points from the Shell
 
 
 Release 0.90.1 - February 9th, 2011

@@ -607,7 +607,7 @@ public class Store implements HeapSize {
    * @throws IOException
    */
   StoreSize compact(final boolean forceMajor) throws IOException {
-    boolean forceSplit = this.region.shouldSplit(false);
+    boolean forceSplit = this.region.shouldForceSplit();
     boolean majorcompaction = forceMajor;
     synchronized (compactLock) {
       this.lastCompactSize = 0;
@@ -1280,6 +1280,10 @@ public class Store implements HeapSize {
           maxSize = size;
           largestSf = sf;
         }
+      }
+      // if the user explicit set a split point, use that
+      if (this.region.getSplitPoint() != null) {
+        return new StoreSize(maxSize, this.region.getSplitPoint());
       }
       StoreFile.Reader r = largestSf.getReader();
       if (r == null) {

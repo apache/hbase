@@ -236,6 +236,7 @@ public class HRegion implements HeapSize { // , Writable{
   private final ReentrantReadWriteLock updatesLock =
     new ReentrantReadWriteLock();
   private boolean splitRequest;
+  private byte[] splitPoint = null;
 
   private final ReadWriteConsistencyControl rwcc =
       new ReadWriteConsistencyControl();
@@ -791,6 +792,10 @@ public class HRegion implements HeapSize { // , Writable{
           writestate.compacting = false;
           writestate.notifyAll();
         }
+      }
+      if (splitRow != null) {
+        assert splitPoint == null || Bytes.equals(splitRow, splitPoint);
+        this.splitPoint = null; // clear the split point (if set)
       }
       return splitRow;
     } finally {
@@ -3186,8 +3191,8 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      (4 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN +
-      (21 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
+      (4 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN + ClassSize.ARRAY +
+      (22 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       (ClassSize.OBJECT * 2) + (2 * ClassSize.ATOMIC_BOOLEAN) +
@@ -3279,15 +3284,21 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
-  /**
-   * For internal use in forcing splits ahead of file size limit.
-   * @param b
-   * @return previous value
-   */
-  public boolean shouldSplit(boolean b) {
-    boolean old = this.splitRequest;
-    this.splitRequest = b;
-    return old;
+  boolean shouldForceSplit() {
+    return this.splitRequest;
+  }
+
+  byte[] getSplitPoint() {
+    return this.splitPoint;
+  }
+
+  void forceSplit(byte[] sp) {
+    // NOTE : this HRegion will go away after the forced split is successfull
+    //        therefore, no reason to clear this value
+    this.splitRequest = true;
+    if (sp != null) {
+      this.splitPoint = sp;
+    }
   }
 
   /**
