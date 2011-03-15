@@ -878,6 +878,14 @@ public class HTable implements HTableInterface {
     );
   }
 
+  /**
+   * Explicitly clears the region cache to fetch the latest value from META.
+   * This is a power user function: avoid unless you know the ramifications.
+   */
+  public void clearRegionCache() {
+    this.connection.clearRegionCache();
+  }
+
   @Override
   public boolean isAutoFlush() {
     return autoFlush;
