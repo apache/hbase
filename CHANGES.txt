@@ -37,6 +37,7 @@ Release 0.90.2 - Unreleased
    HBASE-3595  get_counter broken in shell
    HBASE-3662  REST server does not respect client supplied max versions when
                creating scanner
+   HBASE-3664  [replication] Adding a slave when there's none may kill the cluster
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
