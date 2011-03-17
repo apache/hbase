@@ -102,6 +102,8 @@ public class TestHLog  {
     TEST_UTIL.getConfiguration().setInt("heartbeat.recheck.interval", 5000);
     TEST_UTIL.getConfiguration().setInt("dfs.heartbeat.interval", 1);
     TEST_UTIL.getConfiguration().setInt("dfs.socket.timeout", 5000);
+    TEST_UTIL.getConfiguration().setInt(
+      "ipc.client.connection.maxidletime", 500);
     // faster failover with cluster.shutdown();fs.close() idiom
     TEST_UTIL.getConfiguration()
         .setInt("ipc.client.connect.max.retries", 1);
@@ -365,6 +367,13 @@ public class TestHLog  {
         LOG.error("Waiting for cluster to go down");
         Thread.sleep(1000);
       }
+
+      // Workaround a strange issue with Hadoop's RPC system - if we don't
+      // sleep here, the new datanodes will pick up a cached IPC connection to
+      // the old (dead) NN and fail to start. Sleeping 2 seconds goes past
+      // the idle time threshold configured in the conf above
+      Thread.sleep(2000);
+
       cluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null, null, null, null);
       cluster.waitActive();
       fs = cluster.getFileSystem();
