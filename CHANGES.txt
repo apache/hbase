@@ -28,6 +28,7 @@ Release 0.90.2 - Unreleased
                (Guanpeng Xu via Stack)
    HBASE-3636  a bug about deciding whether this key is a new key for the
                ROWCOL bloomfilter (Liyin Tang via Stack)
+   HBASE-3665  tighten assertions for testBloomFilterSize
    HBASE-3639  FSUtils.getRootDir should qualify path
    HBASE-3648  [replication] failover is sloppy with znodes
    HBASE-3613  NPE in MemStoreFlusher
