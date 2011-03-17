@@ -41,7 +41,6 @@ Release 0.90.2 - Unreleased
    HBASE-3603  Remove -XX:+HeapDumpOnOutOfMemoryError autodump of heap option
                on OOME
    HBASE-3285  Hlog recovery takes too much time
-   HBASE-3586  Improve the selection of regions to balance
    HBASE-3623  Allow non-XML representable separator characters in the
                ImportTSV tool (Harsh J Chouraria via Stack)
    HBASE-3620  Make HBCK utility faster
@@ -64,7 +63,6 @@ Release 0.90.1 - February 9th, 2011
                by default in 0.90.1
 
   BUG FIXES
-   HBASE-3387  Revert 'Pair does not deep check arrays for equality'
    HBASE-3445  Master crashes on data that was moved from different host
    HBASE-3449  Server shutdown handlers deadlocked waiting for META
    HBASE-3456  Fix hardcoding of 20 second socket timeout down in HBaseClient
@@ -383,7 +381,7 @@ Release 0.90.0 - January 19th, 2011
                (Kannan Muthukkaruppan via Stack)
    HBASE-2410  spurious warnings from util.Sleeper
    HBASE-2335  mapred package docs don't say zookeeper jar is a dependent
-   HBASE-2416  HCM.locateRootRegion fails hard on "Connection refused"
+   HBASE-2417  HCM.locateRootRegion fails hard on "Connection refused"
    HBASE-2346  Usage of FilterList slows down scans
    HBASE-2341  ZK settings for initLimit/syncLimit should not have been removed
                from hbase-default.xml
