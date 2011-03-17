@@ -34,6 +34,7 @@ Release 0.90.2 - Unreleased
    HBASE-3613  NPE in MemStoreFlusher
    HBASE-3650  HBA.delete can return too fast
    HBASE-3659  Fix TestHLog to pass on newer versions of Hadoop
+   HBASE-3595  get_counter broken in shell
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
