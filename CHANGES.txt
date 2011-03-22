@@ -42,6 +42,8 @@ Release 0.90.2 - Unreleased
                till 0.92; Race between split and OPENED processing
    HBASE-3641  LruBlockCache.CacheStats.getHitCount() is not using the
                correct variable
+   HBASE-3674  Treat ChecksumException as we would a ParseException splitting
+               logs; else we replay split on every restart
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
