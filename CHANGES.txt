@@ -48,6 +48,7 @@ Release 0.90.2 - Unreleased
                holding lock on RIT; a big no-no (Ted Yu via Stack)
    HBASE-3575  Update rename table script
    HBASE-3687  Bulk assign on startup should handle a ServerNotRunningException
+   HBASE-3668  CatalogTracker.waitForMeta can wait forever and totally stall a RS
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
