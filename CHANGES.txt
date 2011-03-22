@@ -44,6 +44,8 @@ Release 0.90.2 - Unreleased
                correct variable
    HBASE-3674  Treat ChecksumException as we would a ParseException splitting
                logs; else we replay split on every restart
+   HBASE-3621  The timeout handler in AssignmentManager does an RPC while
+               holding lock on RIT; a big no-no (Ted Yu via Stack)
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
