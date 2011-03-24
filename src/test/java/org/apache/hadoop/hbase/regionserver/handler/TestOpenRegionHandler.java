@@ -171,16 +171,6 @@ public class TestOpenRegionHandler {
     public CompactionRequestor getCompactionRequester() {
       return null;
     }
-
-    @Override
-    public CatalogTracker getCatalogTracker() {
-      return null;
-    }
-
-    @Override
-    public ZooKeeperWatcher getZooKeeperWatcher() {
-      return null;
-    }
   };
 
   /**
