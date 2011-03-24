@@ -79,6 +79,7 @@ Release 0.90.2 - Unreleased
    HBASE-3600  Update our jruby to 1.6.0
    HBASE-3653  Parallelize Server Requests on HBase Client
    HBASE-3640  [replication] Transferring queues shouldn't be done inline with RS startup
+   HBASE-3683  NMapInputFormat should use a different config param for number of maps
 
 
 Release 0.90.1 - February 9th, 2011
