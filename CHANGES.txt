@@ -52,6 +52,7 @@ Release 0.90.2 - Unreleased
                a RS
    HBASE-3697  Admin actions that use MetaReader to iterate regions need to
                skip offline ones
+   HBASE-3627  NPE in EventHandler when region already reassigned
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
