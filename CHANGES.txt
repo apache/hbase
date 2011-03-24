@@ -65,7 +65,7 @@ Release 0.90.2 - Unreleased
    HBASE-3542  MultiGet methods in Thrift
    HBASE-3586  Improve the selection of regions to balance (Ted Yu via Andrew
                Purtell)  
-   HBASE-3603  Remove -XX:+HeapDumpOnOutOfMemoryError autodump of heap option
+   HBASE-3602  Remove -XX:+HeapDumpOnOutOfMemoryError autodump of heap option
                on OOME
    HBASE-3285  Hlog recovery takes too much time
    HBASE-3623  Allow non-XML representable separator characters in the
@@ -82,6 +82,7 @@ Release 0.90.2 - Unreleased
    HBASE-3653  Parallelize Server Requests on HBase Client
    HBASE-3640  [replication] Transferring queues shouldn't be done inline with RS startup
    HBASE-3683  NMapInputFormat should use a different config param for number of maps
+   HBASE-3658  Alert when heap is over committed (Subbu M Iyer via Stack)
 
 
 Release 0.90.1 - February 9th, 2011
