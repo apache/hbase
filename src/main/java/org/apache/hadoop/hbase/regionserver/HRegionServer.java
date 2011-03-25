@@ -1352,7 +1352,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   /**
    * Return a reference to the metrics instance used for counting RPC calls.
-   * @return
+   * @return Metrics instance.
    */
   public HBaseRpcMetrics getRpcMetrics() {
     return server.getRpcMetrics();
