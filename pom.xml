@@ -22,9 +22,9 @@
   <url>http://hbase.apache.org</url>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/trunk</developerConnection>
-    <url>http://svn.apache.org/viewvc/hbase/trunk</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/tags/0.90.2RC0</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/tags/0.90.2RC0</developerConnection>
+    <url>http://svn.apache.org/viewvc/hbase/tags/0.90.2RC0</url>
   </scm>
 
   <issueManagement>
@@ -393,8 +393,7 @@
             <phase>process-resources</phase>
             <configuration>
               <tasks>
-                <replace file="${project.build.outputDirectory}/hbase-default.xml"
-                  token="@@@VERSION@@@" value="${project.version}" />
+                <replace file="${project.build.outputDirectory}/hbase-default.xml" token="@@@VERSION@@@" value="${project.version}" />
               </tasks>
             </configuration>
             <goals>
@@ -471,7 +470,7 @@
     <zookeeper.version>3.3.2</zookeeper.version>
 
     <!-- For flaky tests exclusion -->
-    <test.exclude></test.exclude>
+    <test.exclude />
     <test.exclude.pattern>**/${test.exclude}.java</test.exclude.pattern>
   </properties>
 
