@@ -62,6 +62,7 @@ Release 0.90.2 - Unreleased
                method in TableOutputFormat
    HBASE-3686  ClientScanner skips too many rows on recovery if using scanner
                caching (Sean Sechrist via Stack)
+   HBASE-3709  HFile compression not sharing configuration
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
