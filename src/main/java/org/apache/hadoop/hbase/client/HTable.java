@@ -216,6 +216,7 @@ public class HTable implements HTableInterface {
 
   /**
    * Tells whether or not a table is enabled or not.
+   * Warning: use {@link HBaseAdmin#isTableEnabled(byte[])} instead.
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
@@ -226,6 +227,7 @@ public class HTable implements HTableInterface {
 
   /**
    * Tells whether or not a table is enabled or not.
+   * Warning: use {@link HBaseAdmin#isTableEnabled(byte[])} instead.
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
@@ -236,6 +238,7 @@ public class HTable implements HTableInterface {
 
   /**
    * Tells whether or not a table is enabled or not.
+   * Warning: use {@link HBaseAdmin#isTableEnabled(byte[])} instead.
    * @param conf The Configuration object to use.
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
