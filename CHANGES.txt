@@ -3,6 +3,9 @@ Release 0.90.3 - Unreleased
   BUG FIXES
     HBASE-3712  HTable.close() doesn't shutdown thread pool
                 (Ted Yu via Stack)
+    HBASE-3714  completebulkload does not use HBase configuration
+                (Nichole Treadway via Stack)
+
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin
                methods (David Butler via Stack)
