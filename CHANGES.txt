@@ -5,6 +5,8 @@ Release 0.90.3 - Unreleased
                 (Ted Yu via Stack)
     HBASE-3714  completebulkload does not use HBase configuration
                 (Nichole Treadway via Stack)
+    HBASE-3746  Clean up CompressionTest to not directly reference
+                DistributedFileSystem (todd)
 
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin
