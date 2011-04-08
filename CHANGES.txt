@@ -8,6 +8,7 @@ Release 0.90.3 - Unreleased
    HBASE-3746  Clean up CompressionTest to not directly reference
                DistributedFileSystem (todd)
    HBASE-3734  HBaseAdmin creates new configurations in getCatalogTracker
+   HBASE-3756  Can't move META or ROOT from shell
 
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin
