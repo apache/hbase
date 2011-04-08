@@ -19,7 +19,7 @@ Release 0.90.3 - Unreleased
   TASK
    HBASE-3748  Add rolling of thrift/rest daemons to graceful_stop.sh script
 
-Release 0.90.2 - Unreleased
+Release 0.90.2 - 20110408
   BUG FIXES
    HBASE-3545  Possible liveness issue with MasterServerAddress in
                HRegionServer getMaster (Greg Bowyer via Stack)
