@@ -403,7 +403,7 @@ public class LoadBalancer {
    * @return map of server to the regions it should take, or null if no
    *         assignment is possible (ie. no regions or no servers)
    */
-  public static Map<HServerInfo,List<HRegionInfo>> roundRobinAssignment(
+  public static Map<HServerInfo, List<HRegionInfo>> roundRobinAssignment(
       List<HRegionInfo> regions, List<HServerInfo> servers) {
     if(regions.size() == 0 || servers.size() == 0) {
       return null;
