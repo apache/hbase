@@ -12,6 +12,8 @@ Release 0.90.3 - Unreleased
    HBASE-3740  hbck doesn't reset the number of errors when retrying
    HBASE-3744  createTable blocks until all regions are out of transition
                (Ted Yu via Stack)
+   HBASE-3750  HTablePool.putTable() should call releaseHTableInterface()
+               for discarded tables (Ted Yu via garyh)
 
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin

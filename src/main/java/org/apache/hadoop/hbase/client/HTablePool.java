@@ -120,7 +120,11 @@ public class HTablePool {
   public void putTable(HTableInterface table) {
     LinkedList<HTableInterface> queue = tables.get(Bytes.toString(table.getTableName()));
     synchronized(queue) {
-      if(queue.size() >= maxSize) return;
+      if(queue.size() >= maxSize) {
+        // release table instance since we're not reusing it
+        this.tableFactory.releaseHTableInterface(table);
+        return;
+      }
       queue.add(table);
     }
   }
