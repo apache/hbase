@@ -22,6 +22,7 @@ Release 0.90.3 - Unreleased
    HBASE-3652  Speed up tests by lowering some sleeps
    HBASE-3578  TableInputFormat does not setup the configuration for HBase
                mapreduce jobs correctly (Dan Harvey via Stack)
+   HBASE-3773  Set ZK max connections much higher in 0.90
 
   TASK
    HBASE-3748  Add rolling of thrift/rest daemons to graceful_stop.sh script
