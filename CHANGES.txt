@@ -14,6 +14,8 @@ Release 0.90.3 - Unreleased
                (Ted Yu via Stack)
    HBASE-3750  HTablePool.putTable() should call releaseHTableInterface()
                for discarded tables (Ted Yu via garyh)
+   HBASE-3755  Catch zk's ConnectionLossException and augment error
+               message with more help
 
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin
