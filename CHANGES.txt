@@ -17,6 +17,7 @@ Release 0.90.3 - Unreleased
    HBASE-3755  Catch zk's ConnectionLossException and augment error
                message with more help
    HBASE-3722  A lot of data is lost when name node crashed (gaojinchao)
+   HBASE-3771  All jsp pages don't clean their HBA
 
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin
