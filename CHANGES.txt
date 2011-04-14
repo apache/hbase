@@ -22,6 +22,7 @@ Release 0.90.3 - Unreleased
                only one column is returned (Jerry Chen)
    HBASE-3708  createAndFailSilent is not so silent; leaves lots of logging in
                ensemble logs (Dmitriy Ryaboy)
+   HBASE-3783  hbase-0.90.2.jar exists in hbase root and in 'lib/'
 
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin
