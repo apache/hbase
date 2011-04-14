@@ -20,6 +20,8 @@ Release 0.90.3 - Unreleased
    HBASE-3771  All jsp pages don't clean their HBA
    HBASE-3685  when multiple columns are combined with TimestampFilter,
                only one column is returned (Jerry Chen)
+   HBASE-3708  createAndFailSilent is not so silent; leaves lots of logging in
+               ensemble logs (Dmitriy Ryaboy)
 
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin
