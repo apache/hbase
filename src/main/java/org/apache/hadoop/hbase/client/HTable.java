@@ -54,6 +54,8 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Used to communicate with a single HBase table.
@@ -192,6 +194,21 @@ public class HTable implements HTableInterface {
         new SynchronousQueue<Runnable>(),
         new DaemonThreadFactory());
     ((ThreadPoolExecutor)this.pool).allowCoreThreadTimeOut(true);
+  }
+
+  /**
+   * @return the number of region servers that are currently running
+   * @throws IOException if a remote or network exception occurs
+   */
+  public int getCurrentNrHRS() throws IOException {
+    try {
+      // We go to zk rather than to master to get count of regions to avoid
+      // HTable having a Master dependency.  See HBase-2828
+      return ZKUtil.getNumberOfChildren(this.connection.getZooKeeperWatcher(),
+          this.connection.getZooKeeperWatcher().rsZNode);
+    } catch (KeeperException ke) {
+      throw new IOException("Unexpected ZooKeeper exception", ke);
+    }
   }
 
   public Configuration getConfiguration() {
