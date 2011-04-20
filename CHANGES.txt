@@ -38,6 +38,7 @@ Release 0.90.3 - Unreleased
    HBASE-3767  Improve how HTable handles threads used for multi actions
    HBASE-3795  Remove the "Cache hit for row" message
    HBASE-3798  [REST] Allow representation to elide row key and column key
+   HBASE-3580  Remove RS from DeadServer when new instance checks in
 
   TASK
    HBASE-3748  Add rolling of thrift/rest daemons to graceful_stop.sh script
