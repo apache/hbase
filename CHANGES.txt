@@ -26,6 +26,8 @@ Release 0.90.3 - Unreleased
    HBASE-3781  hbase shell cannot start "NoMethodError: undefined method
                `close' for nil:NilClass" (Mikael Sitruk)
    HBASE-3800  HMaster is not able to start due to AlreadyCreatedException
+   HBASE-3817  HBase Shell has an issue accepting FILTER for the 'scan' command
+               (Harsh J Chouraria)
 
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin
