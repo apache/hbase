@@ -28,6 +28,8 @@ Release 0.90.3 - Unreleased
    HBASE-3800  HMaster is not able to start due to AlreadyCreatedException
    HBASE-3817  HBase Shell has an issue accepting FILTER for the 'scan' command
                (Harsh J Chouraria)
+   HBASE-3539  Improve shell help to reflect all possible options
+               (Harsh J Chouraria)
 
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin
