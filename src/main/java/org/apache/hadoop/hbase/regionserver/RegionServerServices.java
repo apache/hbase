@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.zookeeper.KeeperException;
+import java.util.Set;
 
 /**
  * Services provided by {@link HRegionServer}
@@ -72,4 +73,10 @@ public interface RegionServerServices extends OnlineRegions {
    * Returns a reference to the RPC server metrics.
    */
   public HBaseRpcMetrics getRpcMetrics();
+
+  /**
+   * Get the regions that are currently being opened or closed in the RS
+   * @return set of regions in transition in this RS
+   */
+  public Set<byte[]> getRegionsInTransitionInRS();
 }

@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -121,6 +123,7 @@ public class TestOpenRegionHandler {
   static class MockRegionServerServices implements RegionServerServices {
     final Map<String, HRegion> regions = new HashMap<String, HRegion>();
     boolean stopping = false;
+    Set<byte[]> rit = new HashSet<byte[]>();
 
     @Override
     public boolean removeFromOnlineRegions(String encodedRegionName) {
@@ -161,7 +164,12 @@ public class TestOpenRegionHandler {
     public HBaseRpcMetrics getRpcMetrics() {
       return null;
     }
-    
+
+    @Override
+    public Set<byte[]> getRegionsInTransitionInRS() {
+      return rit;
+    }
+
     @Override
     public FlushRequester getFlushRequester() {
       return null;
@@ -171,6 +179,7 @@ public class TestOpenRegionHandler {
     public CompactionRequestor getCompactionRequester() {
       return null;
     }
+
   };
 
   /**

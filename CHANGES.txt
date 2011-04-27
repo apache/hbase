@@ -35,6 +35,7 @@ Release 0.90.3 - Unreleased
                (Harsh J Chouraria)
    HBASE-3749  Master can't exit when open port failed (gaojinchao)
    HBASE-3794  TestRpcMetrics fails on machine where region server is running
+   HBASE-3741  Make HRegionServer aware of the regions it's opening/closing
 
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin
