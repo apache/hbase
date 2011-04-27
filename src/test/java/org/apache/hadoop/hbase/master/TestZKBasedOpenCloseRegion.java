@@ -60,6 +60,7 @@ public class TestZKBasedOpenCloseRegion {
   private static final String TABLENAME = "TestZKBasedOpenCloseRegion";
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a"),
     Bytes.toBytes("b"), Bytes.toBytes("c")};
+  private static int countOfRegions;
 
   @BeforeClass public static void beforeAllTests() throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
@@ -68,8 +69,8 @@ public class TestZKBasedOpenCloseRegion {
     TEST_UTIL.startMiniCluster(2);
     TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES);
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
-    int countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
-    waitUntilAllRegionsAssigned(countOfRegions);
+    countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
+    waitUntilAllRegionsAssigned();
     addToEachStartKey(countOfRegions);
   }
 
@@ -84,6 +85,7 @@ public class TestZKBasedOpenCloseRegion {
         TEST_UTIL.getHBaseCluster().startRegionServer());
 
     }
+    waitUntilAllRegionsAssigned();
   }
 
   /**
@@ -298,7 +300,7 @@ public class TestZKBasedOpenCloseRegion {
 
   }
 
-  private static void waitUntilAllRegionsAssigned(final int countOfRegions)
+  private static void waitUntilAllRegionsAssigned()
   throws IOException {
     HTable meta = new HTable(TEST_UTIL.getConfiguration(),
       HConstants.META_TABLE_NAME);
@@ -317,7 +319,7 @@ public class TestZKBasedOpenCloseRegion {
       }
       s.close();
       // If I get to here and all rows have a Server, then all have been assigned.
-      if (rows == countOfRegions) {
+      if (rows >= countOfRegions) {
         break;
       }
       LOG.info("Found=" + rows);
