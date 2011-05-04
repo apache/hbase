@@ -23,7 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.metrics.HBaseInfo;
-import org.apache.hadoop.hbase.metrics.MetricsRate;
 import org.apache.hadoop.hbase.metrics.PersistentMetricsTimeVaryingRate;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Pair;
@@ -112,10 +111,10 @@ public class RegionServerMetrics implements Updater {
    */
   public final MetricsIntValue blockCacheHitCachingRatio = new MetricsIntValue("blockCacheHitCachingRatio", registry);
 
-  /*
+  /**
    * Count of requests to the regionservers since last call to metrics update
    */
-  private final MetricsRate requests = new MetricsRate("requests", registry);
+  public final MetricsIntValue requests = new MetricsIntValue("requests", registry);
 
   /**
    * Count of stores open on the regionserver.
@@ -295,13 +294,6 @@ public class RegionServerMetrics implements Updater {
   }
 
   /**
-   * @return Count of requests.
-   */
-  public float getRequests() {
-    return this.requests.getPreviousIntervalValue();
-  }
-
-  /**
    * @param compact history in <time, size>
    */
   public synchronized void addCompaction(final Pair<Long,Long> compact) {
@@ -319,12 +311,6 @@ public class RegionServerMetrics implements Updater {
     }
   }
 
-  /**
-   * @param inc How much to add to requests.
-   */
-  public void incrementRequests(final int inc) {
-    this.requests.inc(inc);
-  }
 
   @Override
   public String toString() {
@@ -333,8 +319,8 @@ public class RegionServerMetrics implements Updater {
     if (seconds == 0) {
       seconds = 1;
     }
-    sb = Strings.appendKeyValue(sb, "request",
-      Float.valueOf(this.requests.getPreviousIntervalValue()));
+    sb = Strings.appendKeyValue(sb, "requests",
+        Integer.valueOf(this.requests.get()));
     sb = Strings.appendKeyValue(sb, "regions",
       Integer.valueOf(this.regions.get()));
     sb = Strings.appendKeyValue(sb, "stores",

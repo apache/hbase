@@ -40,6 +40,7 @@ Release 0.90.3 - Unreleased
                failures
    HBASE-3821  "NOT flushing memstore for region" keep on printing for half
                an hour (zhoushuaifeng)
+   HBASE-3848  request is always zero in WebUI for region server (gaojinchao)
 
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin

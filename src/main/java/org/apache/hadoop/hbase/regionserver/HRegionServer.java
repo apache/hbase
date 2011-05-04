@@ -1141,8 +1141,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   protected void metrics() {
+    int seconds = this.msgInterval / 1000;
+    if(0 == seconds){
+       seconds = 1;
+    }
     this.metrics.regions.set(this.onlineRegions.size());
-    this.metrics.incrementRequests(this.requestCount.get());
+    this.metrics.requests.set(this.requestCount.get()/seconds);
     // Is this too expensive every three seconds getting a lock on onlineRegions
     // and then per store carried? Can I make metrics be sloppier and avoid
     // the synchronizations?
