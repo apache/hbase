@@ -54,6 +54,8 @@ Release 0.90.3 - Unreleased
    HBASE-3798  [REST] Allow representation to elide row key and column key
    HBASE-3580  Remove RS from DeadServer when new instance checks in
    HBASE-3805  Log RegionState that are processed too late in the master
+   HBASE-3695  Some improvements to Hbck to test the entire region chain
+               in Meta and provide better error reporting (Marc Limotte)
 
   TASK
    HBASE-3748  Add rolling of thrift/rest daemons to graceful_stop.sh script

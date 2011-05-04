@@ -85,7 +85,7 @@ public class HBaseFsckRepair {
         region, HConstants.HBCK_CODE_NAME);
   }
 
-  private static void closeRegionSilentlyAndWait(Configuration conf,
+  protected static void closeRegionSilentlyAndWait(Configuration conf,
       HServerAddress server, HRegionInfo region)
   throws IOException, InterruptedException {
     HRegionInterface rs =
