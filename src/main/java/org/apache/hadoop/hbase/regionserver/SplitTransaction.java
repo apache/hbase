@@ -541,6 +541,7 @@ class SplitTransaction {
       JournalEntry je = iterator.previous();
       switch(je) {
       case CREATE_SPLIT_DIR:
+    	this.parent.writestate.writesEnabled = true;
         cleanupSplitDir(fs, this.splitdir);
         break;
 

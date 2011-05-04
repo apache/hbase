@@ -38,6 +38,8 @@ Release 0.90.3 - Unreleased
    HBASE-3741  Make HRegionServer aware of the regions it's opening/closing
    HBASE-3597  ageOfLastAppliedOp should update after cluster replication
                failures
+   HBASE-3821  "NOT flushing memstore for region" keep on printing for half
+               an hour (zhoushuaifeng)
 
   IMPROVEMENT
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of HBaseAdmin
