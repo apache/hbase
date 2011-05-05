@@ -482,8 +482,7 @@ public class HLog implements Syncable {
       long currentFilenum = this.filenum;
       this.filenum = System.currentTimeMillis();
       Path newPath = computeFilename();
-      HLog.Writer nextWriter = this.createWriterInstance(fs, newPath,
-          HBaseConfiguration.create(conf));
+      HLog.Writer nextWriter = this.createWriterInstance(fs, newPath, conf);
       int nextInitialReplication = fs.getFileStatus(newPath).getReplication();
       // Can we get at the dfsclient outputstream?  If an instance of
       // SFLW, it'll have done the necessary reflection to get at the
