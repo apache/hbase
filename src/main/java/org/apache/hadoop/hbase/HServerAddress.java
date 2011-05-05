@@ -187,6 +187,8 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     // Addresses as Strings may not compare though address is for the one
     // server with only difference being that one address has hostname
     // resolved whereas other only has IP.
+    if (this.address == null) return -1;
+    if (o.address == null) return 1;
     if (address.equals(o.address)) return 0;
     return toString().compareTo(o.toString());
   }
