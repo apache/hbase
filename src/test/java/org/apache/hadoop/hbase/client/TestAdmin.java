@@ -46,8 +46,9 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.EventHandler;
-import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -301,8 +302,21 @@ public class TestAdmin {
   }
 
   protected void verifyRoundRobinDistribution(HTable ht, int expectedRegions) throws IOException {
-    int numRS = ht.getCurrentNrHRS();
+    MasterServices services = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    AssignmentManager am = services.getAssignmentManager();
     Map<HRegionInfo,HServerAddress> regions = ht.getRegionsInfo();
+    for (HRegionInfo regionInfo : regions.keySet()) {
+      try {
+        am.waitForAssignment(regionInfo);
+      } catch (InterruptedException e) {
+        LOG.info("Interrupted waiting for region to be assigned during " +
+            "create table call", e);
+        Thread.currentThread().interrupt();
+        return;
+      }
+    }    
+    int numRS = ht.getCurrentNrHRS();
+    regions = ht.getRegionsInfo();
     Map<HServerAddress, List<HRegionInfo>> server2Regions = new HashMap<HServerAddress, List<HRegionInfo>>();
     for (Map.Entry<HRegionInfo,HServerAddress> entry : regions.entrySet()) {
       HServerAddress server = entry.getValue();
