@@ -3,6 +3,7 @@ Release 0.90.4 - Unreleased
   BUG FIXES
     HBASE-3617 NoRouteToHostException during balancing will cause Master abort
                (Ted Yu)
+    HBASE-3878 Hbase client throws NoSuchElementException (Ted Yu)
 
 Release 0.90.3 - Unreleased
   BUG FIXES
