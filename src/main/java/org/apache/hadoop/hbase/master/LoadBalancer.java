@@ -183,7 +183,7 @@ public class LoadBalancer {
       LOG.info("Skipping load balancing.  servers=" + numServers + " " +
           "regions=" + numRegions + " average=" + average + " " +
           "mostloaded=" + serversByLoad.lastKey().getLoad().getNumberOfRegions() +
-          " leastloaded=" + serversByLoad.lastKey().getLoad().getNumberOfRegions());
+          " leastloaded=" + serversByLoad.firstKey().getLoad().getNumberOfRegions());
       return null;
     }
     int min = numRegions / numServers;
