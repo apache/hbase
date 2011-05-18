@@ -1776,7 +1776,9 @@ public class AssignmentManager extends ZooKeeperListener {
       for (Iterator <Map.Entry<String, RegionPlan>> i =
           this.regionPlans.entrySet().iterator(); i.hasNext();) {
         Map.Entry<String, RegionPlan> e = i.next();
-        if (e.getValue().getDestination().equals(hsi)) {
+        HServerInfo otherHsi = e.getValue().getDestination();
+        // The HSI will be null if the region is planned for a random assign.
+        if (otherHsi != null && otherHsi.equals(hsi)) {
           // Use iterator's remove else we'll get CME
           i.remove();
         }
