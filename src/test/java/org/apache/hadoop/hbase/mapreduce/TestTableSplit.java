@@ -1,6 +1,4 @@
 /**
- * Copyright 2010 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,21 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.mapreduce;
 
-/**
- * Interface to support the aborting of a given server or client.
- * <p>
- * This is used primarily for ZooKeeper usage when we could get an unexpected
- * and fatal exception, requiring an abort.
- * <p>
- * Implemented by the Master, RegionServer, and TableServers (client).
- */
-public interface Abortable {
-  /**
-   * Abort the server or client.
-   * @param why Why we're aborting.
-   * @param e Throwable that caused abort. Can be null.
-   */
-  public void abort(String why, Throwable e);
+import org.junit.Test;
+
+import java.util.HashSet;
+
+import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class TestTableSplit {
+  @Test
+  public void testHashCode() {
+    TableSplit split1 = new TableSplit("table".getBytes(), "row-start".getBytes(), "row-end".getBytes(), "location");
+    TableSplit split2 = new TableSplit("table".getBytes(), "row-start".getBytes(), "row-end".getBytes(), "location");
+    assertEquals (split1, split2);
+    assertTrue   (split1.hashCode() == split2.hashCode());
+    HashSet<TableSplit> set = new HashSet<TableSplit>(2);
+    set.add(split1);
+    set.add(split2);
+    assertTrue(set.size() == 1);
+  }
 }
