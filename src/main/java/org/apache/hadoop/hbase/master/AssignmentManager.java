@@ -1724,7 +1724,11 @@ public class AssignmentManager extends ZooKeeperListener {
               case OPEN:
                 LOG.error("Region has been OPEN for too long, " +
                 "we don't know where region was opened so can't do anything");
+                synchronized(regionState) {
+                  regionState.update(regionState.getState());
+                }
                 break;
+
               case PENDING_CLOSE:
                 LOG.info("Region has been PENDING_CLOSE for too " +
                     "long, running forced unassign again on region=" +

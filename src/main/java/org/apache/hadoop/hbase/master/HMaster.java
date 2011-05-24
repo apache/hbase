@@ -805,8 +805,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
 
     // 5. Trigger immediate assignment of the regions in round-robin fashion
-    List<HServerInfo> servers = serverManager.getOnlineServersList();
-    this.assignmentManager.bulkAssignUserRegions(newRegions, servers, sync);
+    if (newRegions.length == 1) {
+      this.assignmentManager.assign(newRegions[0], true);
+    } else {
+      List<HServerInfo> servers = serverManager.getOnlineServersList();
+      this.assignmentManager.bulkAssignUserRegions(newRegions, servers, sync);
+    }
 
     // 6. If sync, wait for assignment of regions
     if (sync) {
