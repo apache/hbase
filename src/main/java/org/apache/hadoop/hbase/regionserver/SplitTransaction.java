@@ -151,7 +151,7 @@ class SplitTransaction {
     if (Bytes.equals(startKey, splitrow) ||
         !this.parent.getRegionInfo().containsRow(splitrow)) {
       LOG.info("Split row is not inside region key range or is equal to " +
-          "startkey: " + Bytes.toString(this.splitrow));
+          "startkey: " + Bytes.toStringBinary(this.splitrow));
       return false;
     }
     long rid = getDaughterRegionIdTimestamp(hri);

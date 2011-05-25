@@ -204,8 +204,8 @@ class HMerge {
               mergedRegion);
           break;
         }
-        LOG.info("not merging regions " + Bytes.toString(currentRegion.getRegionName())
-            + " and " + Bytes.toString(nextRegion.getRegionName()));
+        LOG.info("not merging regions " + Bytes.toStringBinary(currentRegion.getRegionName())
+            + " and " + Bytes.toStringBinary(nextRegion.getRegionName()));
         currentRegion.close();
         currentRegion = nextRegion;
         currentSize = nextSize;
@@ -277,7 +277,7 @@ class HMerge {
       Result currentRow = metaScanner.next();
       boolean foundResult = false;
       while (currentRow != null) {
-        LOG.info("Row: <" + Bytes.toString(currentRow.getRow()) + ">");
+        LOG.info("Row: <" + Bytes.toStringBinary(currentRow.getRow()) + ">");
         byte[] regionInfoValue = currentRow.getValue(HConstants.CATALOG_FAMILY,
             HConstants.REGIONINFO_QUALIFIER);
         if (regionInfoValue == null || regionInfoValue.length == 0) {
@@ -319,7 +319,7 @@ class HMerge {
         Delete delete = new Delete(regionsToDelete[r]);
         table.delete(delete);
         if(LOG.isDebugEnabled()) {
-          LOG.debug("updated columns in row: " + Bytes.toString(regionsToDelete[r]));
+          LOG.debug("updated columns in row: " + Bytes.toStringBinary(regionsToDelete[r]));
         }
       }
       newRegion.getRegionInfo().setOffline(true);
@@ -331,7 +331,7 @@ class HMerge {
 
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: "
-            + Bytes.toString(newRegion.getRegionName()));
+            + Bytes.toStringBinary(newRegion.getRegionName()));
       }
     }
   }
@@ -412,7 +412,7 @@ class HMerge {
         root.delete(delete, null, true);
 
         if(LOG.isDebugEnabled()) {
-          LOG.debug("updated columns in row: " + Bytes.toString(regionsToDelete[r]));
+          LOG.debug("updated columns in row: " + Bytes.toStringBinary(regionsToDelete[r]));
         }
       }
       HRegionInfo newInfo = newRegion.getRegionInfo();
@@ -422,7 +422,7 @@ class HMerge {
           Writables.getBytes(newInfo));
       root.put(put);
       if(LOG.isDebugEnabled()) {
-        LOG.debug("updated columns in row: " + Bytes.toString(newRegion.getRegionName()));
+        LOG.debug("updated columns in row: " + Bytes.toStringBinary(newRegion.getRegionName()));
       }
     }
   }

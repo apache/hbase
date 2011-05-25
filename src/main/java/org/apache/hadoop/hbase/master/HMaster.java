@@ -722,7 +722,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     Pair<HRegionInfo, HServerInfo> p =
       this.assignmentManager.getAssignment(encodedRegionName);
     if (p == null)
-      throw new UnknownRegionException(Bytes.toString(encodedRegionName));
+      throw new UnknownRegionException(Bytes.toStringBinary(encodedRegionName));
     HRegionInfo hri = p.getFirst();
     HServerInfo dest = null;
     if (destServerName == null || destServerName.length == 0) {
@@ -1039,7 +1039,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   throws IOException {
     Pair<HRegionInfo, HServerAddress> pair =
       MetaReader.getRegion(this.catalogTracker, regionName);
-    if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
+    if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
     HRegionInfo hri = pair.getFirst();
     if (force) this.assignmentManager.clearRegionFromTransition(hri);
     this.assignmentManager.unassign(hri, force);
