@@ -27,6 +27,8 @@ Release 0.90.4 - Unreleased
    HBASE-3920  HLog hbase.regionserver.flushlogentries no longer supported
                (Dave Latham)
    HBASE-3919  More places output binary data to text (Dave Latham)
+   HBASE-3906  When HMaster is running,there are a lot of RegionLoad instances
+               far greater than the regions）,it has risk of OOME (Jian Zhang)
 
 Release 0.90.3 - May 19th, 2011
   BUG FIXES

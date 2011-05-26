@@ -602,8 +602,12 @@ public class AssignmentManager extends ZooKeeperListener {
       HServerInfo hsi = this.regions.get(regionInfo);
       if (hsi != null) LOG.warn("Overwriting " + regionInfo.getEncodedName() +
         " on " + hsi);
-      this.regions.put(regionInfo, serverInfo);
-      addToServers(serverInfo, regionInfo);
+      
+      HServerInfo hsiWithoutLoad = new HServerInfo(
+        serverInfo.getServerAddress(), serverInfo.getStartCode(),
+        serverInfo.getInfoPort(), serverInfo.getHostname());
+      this.regions.put(regionInfo, hsiWithoutLoad);
+      addToServers(hsiWithoutLoad, regionInfo);
       this.regions.notifyAll();
     }
     // Remove plan if one.
