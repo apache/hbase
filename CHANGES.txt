@@ -20,6 +20,8 @@ Release 0.90.4 - Unreleased
                display issues
    HBASE-3914  ROOT region appeared in two regionserver's onlineRegions at
                the same time (Jieshan Bean)
+   HBASE-3934  MemStoreFlusher.getMemStoreLimit() doesn't honor defaultLimit
+               (Ted Yu)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
