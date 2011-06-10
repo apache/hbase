@@ -35,6 +35,8 @@ Release 0.90.4 - Unreleased
    HBASE-3919  More places output binary data to text (Dave Latham)
    HBASE-3906  When HMaster is running,there are a lot of RegionLoad instances
                far greater than the regions）,it has risk of OOME (Jian Zhang)
+   HBASE-3855  Performance degradation of memstore because reseek is linear
+               (dhruba borthakur)
 
 Release 0.90.3 - May 19th, 2011
   BUG FIXES
