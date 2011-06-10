@@ -27,6 +27,7 @@ Release 0.90.4 - Unreleased
    HBASE-3723  Major compact should be done when there is only one storefile
                and some keyvalue is outdated (Zhou Shuaifeng)
    HBASE-3976  Disable block cache on compactions (Karthik Sankarachary)
+   HBASE-3892  Table can't disable (Gao Jinchao)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

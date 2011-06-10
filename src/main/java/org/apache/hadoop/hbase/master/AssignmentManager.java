@@ -1851,6 +1851,15 @@ public class AssignmentManager extends ZooKeeperListener {
     } catch (KeeperException e) {
       LOG.warn("Exception while validating RIT during split report", e);
     }
+    synchronized (this.regions) {         
+      //one daughter is already online, do nothing
+      HServerInfo hsia = this.regions.get(a);
+      if (hsia != null){
+        LOG.warn("Trying to process the split of " +a.getEncodedName()+ ", " +
+          "but it was already done and one daughter is on region server " + hsia);
+        return;
+      }
+    }
 
     regionOnline(a, hsi);
     regionOnline(b, hsi);

@@ -736,6 +736,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           // This will be caught and handled as a fatal error in run()
           throw ioe;
         }
+        LOG.warn("RemoteException connecting to master", ioe);
         // Couldn't connect to the master, get location from zk and reconnect
         // Method blocks until new master is found or we are stopped
         getMaster();

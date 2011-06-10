@@ -172,6 +172,9 @@ public class TestSplitTransactionOnCluster {
       // Get daughters
       List<HRegion> daughters = cluster.getRegions(tableName);
       assertTrue(daughters.size() >= 2);
+      //Test repeating split message. HBASE-3892
+      server.reportSplit(hri, daughters.get(0).getRegionInfo(), daughters.get(1).getRegionInfo());
+      LOG.info("Repeating split message. HBASE-3892");      
       // Now split one of the daughters.
       regionCount = server.getOnlineRegions().size();
       split(daughters.get(0).getRegionInfo(), server, regionCount);
