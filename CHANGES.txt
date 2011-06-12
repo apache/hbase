@@ -26,7 +26,6 @@ Release 0.90.4 - Unreleased
                hmaster becomes the active one (Jieshan Bean)
    HBASE-3723  Major compact should be done when there is only one storefile
                and some keyvalue is outdated (Zhou Shuaifeng)
-   HBASE-3976  Disable block cache on compactions (Karthik Sankarachary)
    HBASE-3892  Table can't disable (Gao Jinchao)
    HBASE-3894  Thread contention over row locks set monitor (Dave Latham)
    HBASE-3794  Ability to Discard Bad HTable Puts
