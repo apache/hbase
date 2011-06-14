@@ -899,7 +899,7 @@ public class ThriftServer {
           printUsageAndExit(options, -1);
         }
       } else {
-        listenAddress = InetAddress.getLocalHost();
+        listenAddress = InetAddress.getByName("0.0.0.0");
       }
       TServerTransport serverTransport = new TServerSocket(new InetSocketAddress(listenAddress, listenPort));
 
