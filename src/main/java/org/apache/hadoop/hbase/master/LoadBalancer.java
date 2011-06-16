@@ -164,13 +164,21 @@ public class LoadBalancer {
       return null;
     }
     int numRegions = 0;
+    StringBuilder strBalanceParam = new StringBuilder("Server information: ");
+    
     // Iterate so we can count regions as we build the map
     for(Map.Entry<HServerInfo, List<HRegionInfo>> server:
         clusterState.entrySet()) {
       server.getKey().getLoad().setNumberOfRegions(server.getValue().size());
       numRegions += server.getKey().getLoad().getNumberOfRegions();
       serversByLoad.put(server.getKey(), server.getValue());
+      
+      strBalanceParam.append(server.getKey().getServerName()).append("=")
+          .append(server.getValue().size()).append(", ");
     }
+    strBalanceParam.delete(strBalanceParam.length() - 2,
+        strBalanceParam.length());
+    LOG.debug(strBalanceParam.toString());
 
     // Check if we even need to do any load balancing
     float average = (float)numRegions / numServers; // for logging
@@ -189,6 +197,13 @@ public class LoadBalancer {
     int min = numRegions / numServers;
     int max = numRegions % numServers == 0 ? min : min + 1;
 
+    // Using to check banance result.
+    strBalanceParam.delete(0, strBalanceParam.length());
+    strBalanceParam.append("Balance parameter: numRegions=").append(numRegions)
+        .append(", numServers=").append(numServers).append(", max=").append(max)
+        .append(", min=").append(min);
+    LOG.debug(strBalanceParam.toString());
+    
     // Balance the cluster
     // TODO: Look at data block locality or a more complex load to do this
     List<RegionPlan> regionsToMove = new ArrayList<RegionPlan>();
@@ -210,8 +225,8 @@ public class LoadBalancer {
       List<HRegionInfo> regions = randomize(server.getValue());
       int numToOffload = Math.min(regionCount - max, regions.size());
       int numTaken = 0;
-      for (int i = regions.size() - 1; i >= 0; i--) {
-        HRegionInfo hri = regions.get(i);
+      
+      for (HRegionInfo hri: regions) {
         // Don't rebalance meta regions.
         if (hri.isMetaRegion()) continue;
         regionsToMove.add(new RegionPlan(hri, serverInfo, null));
