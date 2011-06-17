@@ -1500,8 +1500,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     MapWritable result = null;
     long lastMsg = 0;
+    
+    //If some exception occured while reporting to Master, we should 
+    //recheck the master address to avoid the address has been updated
+    boolean recheckMasterAddr = false;
     while (!stopped) {
       try {
+        if (recheckMasterAddr) {
+          masterAddress = getMaster();
+        }  
         this.requestCount.set(0);
         lastMsg = System.currentTimeMillis();
         ZKUtil.setAddressAndWatch(zooKeeper,
@@ -1520,11 +1527,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           // Re-throw IOE will cause RS to abort
           throw ioe;
         } else {
+          recheckMasterAddr = true;
           LOG.warn("remote error telling master we are up", e);
         }
       } catch (IOException e) {
+        recheckMasterAddr = true;
         LOG.warn("error telling master we are up", e);
       } catch (KeeperException e) {
+        recheckMasterAddr = true;
         LOG.warn("error putting up ephemeral node in zookeeper", e);
       }
       sleeper.sleep(lastMsg);

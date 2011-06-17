@@ -38,6 +38,9 @@ Release 0.90.4 - Unreleased
    HBASE-3948  Improve split/compact result page for RegionServer status page
                (Li Pi)
    HBASE-3988  Infinite loop for secondary master (Liyin Tang)
+   HBASE-3989  Error occured while RegionServer report to Master "we are up"
+               should get master address again (Jieshan Bean)
+
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
