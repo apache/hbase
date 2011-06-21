@@ -784,7 +784,7 @@ public class HBaseAdmin implements Abortable {
     }
   }
 
-  private void closeRegion(final HServerAddress hsa, final HRegionInfo hri)
+  public void closeRegion(final HServerAddress hsa, final HRegionInfo hri)
   throws IOException {
     HRegionInterface rs = this.connection.getHRegionConnection(hsa);
     // Close the region without updating zk state.
