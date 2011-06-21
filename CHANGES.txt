@@ -41,6 +41,8 @@ Release 0.90.4 - Unreleased
    HBASE-3989  Error occured while RegionServer report to Master "we are up"
                should get master address again (Jieshan Bean)
    HBASE-3995  HBASE-3946 broke TestMasterFailover
+   HBASE-2077  NullPointerException with an open scanner that expired causing
+               an immediate region server shutdown -- part 2.
 
 
   IMPROVEMENT
