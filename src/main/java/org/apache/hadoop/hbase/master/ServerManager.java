@@ -277,8 +277,12 @@ public class ServerManager {
       // handleSplitReport will work. TODO: FIx!!
       if (msgs.length > 0)
         throw new PleaseHoldException("FIX! Putting off " +
-          "message processing because not yet rwady but possible we won't be " +
+          "message processing because not yet ready but possible we won't be " +
           "ready next on next report");
+
+      if (storedInfo == null) {
+        storedInfo = this.onlineServers.get(info.getServerName());
+      }
     }
 
     // Check startcodes

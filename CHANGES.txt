@@ -40,6 +40,7 @@ Release 0.90.4 - Unreleased
    HBASE-3988  Infinite loop for secondary master (Liyin Tang)
    HBASE-3989  Error occured while RegionServer report to Master "we are up"
                should get master address again (Jieshan Bean)
+   HBASE-3995  HBASE-3946 broke TestMasterFailover
 
 
   IMPROVEMENT
