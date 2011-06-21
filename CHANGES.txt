@@ -55,6 +55,8 @@ Release 0.90.4 - Unreleased
                far greater than the regions）,it has risk of OOME (Jian Zhang)
    HBASE-3855  Performance degradation of memstore because reseek is linear
                (dhruba borthakur)
+   HBASE-3994  SplitTransaction has a window where clients can
+               get RegionOfflineException
 
 Release 0.90.3 - May 19th, 2011
   BUG FIXES
