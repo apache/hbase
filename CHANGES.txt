@@ -58,6 +58,7 @@ Release 0.90.4 - Unreleased
                (dhruba borthakur)
    HBASE-3994  SplitTransaction has a window where clients can
                get RegionOfflineException
+   HBASE-3969  Outdated data can not be cleaned in time (Zhou Shuaifeng)
 
 Release 0.90.3 - May 19th, 2011
   BUG FIXES

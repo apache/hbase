@@ -277,6 +277,7 @@ public class AssignmentManager extends ZooKeeperListener {
     boolean intransistion =
       processRegionInTransition(hri.getEncodedName(), hri, null);
     if (!intransistion) return intransistion;
+    LOG.debug("Waiting on " + HRegionInfo.prettyPrint(hri.getEncodedName()));
     synchronized(this.regionsInTransition) {
       while (!this.master.isStopped() &&
           this.regionsInTransition.containsKey(hri.getEncodedName())) {
@@ -515,7 +516,7 @@ public class AssignmentManager extends ZooKeeperListener {
         case RS_ZK_REGION_OPENING:
           // Should see OPENING after we have asked it to OPEN or additional
           // times after already being in state of OPENING
-          if(regionState == null ||
+          if (regionState == null ||
               (!regionState.isPendingOpen() && !regionState.isOpening())) {
             LOG.warn("Received OPENING for region " +
                 prettyPrintedRegionName +
@@ -530,7 +531,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
         case RS_ZK_REGION_OPENED:
           // Should see OPENED after OPENING but possible after PENDING_OPEN
-          if(regionState == null ||
+          if (regionState == null ||
               (!regionState.isPendingOpen() && !regionState.isOpening())) {
             LOG.warn("Received OPENED for region " +
                 prettyPrintedRegionName +
