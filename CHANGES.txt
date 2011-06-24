@@ -44,6 +44,7 @@ Release 0.90.4 - Unreleased
    HBASE-2077  NullPointerException with an open scanner that expired causing
                an immediate region server shutdown -- part 2.
    HBASE-4005  close_region bugs
+   HBASE-3969  Outdated data can not be cleaned in time (zhoushuaifeng)
 
 
   IMPROVEMENT

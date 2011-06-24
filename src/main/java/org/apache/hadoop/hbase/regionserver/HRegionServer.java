@@ -1032,12 +1032,23 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   private static class MajorCompactionChecker extends Chore {
     private final HRegionServer instance;
+    private int majorCompactPriority;
+    private final static int DEFAULT_PRIORITY = Integer.MAX_VALUE;
+
 
     MajorCompactionChecker(final HRegionServer h, final int sleepTime,
         final Stoppable stopper) {
       super("MajorCompactionChecker", sleepTime, h);
       this.instance = h;
       LOG.info("Runs every " + sleepTime + "ms");
+
+      /*
+       * MajorCompactPriority is configurable.
+       * If not set, the compaction will use default priority.
+       */
+      majorCompactPriority = this.instance.conf.getInt(
+        "hbase.regionserver.compactionChecker.majorCompactPriority",
+        DEFAULT_PRIORITY);
     }
 
     @Override
@@ -1046,8 +1057,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         try {
           if (r != null && r.isMajorCompaction()) {
             // Queue a compaction. Will recognize if major is needed.
-            this.instance.compactSplitThread.requestCompaction(r, getName()
-              + " requests major compaction");
+        	if(majorCompactPriority == DEFAULT_PRIORITY || 
+        	    majorCompactPriority > r.getCompactPriority()){
+              this.instance.compactSplitThread.requestCompaction(r, getName()
+                + " requests major compaction use default priority");
+        	} else {
+        	  this.instance.compactSplitThread.requestCompaction(r, getName()
+                + " requests major compaction use configured priority",
+                this.majorCompactPriority);
+        	}
           }
         } catch (IOException e) {
           LOG.warn("Failed major compaction check on " + r, e);
