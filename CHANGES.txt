@@ -45,7 +45,7 @@ Release 0.90.4 - Unreleased
                an immediate region server shutdown -- part 2.
    HBASE-4005  close_region bugs
    HBASE-3969  Outdated data can not be cleaned in time (zhoushuaifeng)
-
+   HBASE-4028  Hmaster crashes caused by splitting log. (Gao jinchao)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
