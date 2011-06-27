@@ -2646,7 +2646,7 @@ public class TestHRegion extends HBaseTestCase {
    */
   public void testWritesWhileGetting()
     throws IOException, InterruptedException {
-    byte[] tableName = Bytes.toBytes("testWritesWhileScanning");
+    byte[] tableName = Bytes.toBytes("testWritesWhileGetting");
     int testCount = 100;
     int numRows = 1;
     int numFamilies = 10;
@@ -2662,7 +2662,7 @@ public class TestHRegion extends HBaseTestCase {
       qualifiers[i] = Bytes.toBytes("qual" + i);
     }
 
-    String method = "testWritesWhileScanning";
+    String method = "testWritesWhileGetting";
     initHRegion(tableName, method, families);
     PutThread putThread = new PutThread(numRows, families, qualifiers);
     putThread.start();
