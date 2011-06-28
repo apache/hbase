@@ -63,6 +63,7 @@ Release 0.90.4 - Unreleased
    HBASE-3994  SplitTransaction has a window where clients can
                get RegionOfflineException
    HBASE-3969  Outdated data can not be cleaned in time (Zhou Shuaifeng)
+   HBASE-3488  Add CellCounter to count multiple versions of rows (Subbu Iyer)
 
 Release 0.90.3 - May 19th, 2011
   BUG FIXES
