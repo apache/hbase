@@ -280,9 +280,7 @@ public class ServerManager {
           "message processing because not yet ready but possible we won't be " +
           "ready next on next report");
 
-      if (storedInfo == null) {
-        storedInfo = this.onlineServers.get(info.getServerName());
-      }
+      storedInfo = this.onlineServers.get(info.getServerName());
     }
 
     // Check startcodes
