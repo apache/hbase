@@ -220,16 +220,16 @@ public class ReplicationZookeeper {
   /**
    * Get the list of all the region servers from the specified peer
    * @param zkw zk connection to use
-   * @return list of region server addresses
+   * @return list of region server addresses or an empty list if the slave
+   * is unavailable
    */
   private List<HServerAddress> fetchSlavesAddresses(ZooKeeperWatcher zkw) {
-    List<HServerAddress> rss = null;
     try {
-      rss = ZKUtil.listChildrenAndGetAsAddresses(zkw, zkw.rsZNode);
+      return ZKUtil.listChildrenAndGetAsAddresses(zkw, zkw.rsZNode);
     } catch (KeeperException e) {
       LOG.warn("Cannot get peer's region server addresses", e);
+      return new ArrayList<HServerAddress>(0);
     }
-    return rss;
   }
 
   /**
