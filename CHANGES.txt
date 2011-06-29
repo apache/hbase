@@ -49,6 +49,8 @@ Release 0.90.4 - Unreleased
    HBASE-4035  Fix local-master-backup.sh - parameter order wrong (Lars George)
    HBASE-4020  "testWritesWhileGetting" unit test needs to be fixed.
                (Vandana Ayyalasomayajula)
+   HBASE-3984  CT.verifyRegionLocation isn't doing a very good check,
+               can delay cluster recovery
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

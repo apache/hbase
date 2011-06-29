@@ -1629,7 +1629,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   @QosPriority(priority=HIGH_QOS)
   public HRegionInfo getRegionInfo(final byte[] regionName)
-  throws NotServingRegionException {
+  throws NotServingRegionException, IOException {
+    checkOpen();
     requestCount.incrementAndGet();
     return getRegion(regionName).getRegionInfo();
   }
@@ -1945,9 +1946,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   public int delete(final byte[] regionName, final List<Delete> deletes)
       throws IOException {
+    checkOpen();
     // Count of Deletes processed.
     int i = 0;
-    checkOpen();
     HRegion region = null;
     try {
       boolean writeToWAL = true;
@@ -2068,6 +2069,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public void bulkLoadHFile(String hfilePath, byte[] regionName,
       byte[] familyName) throws IOException {
+    checkOpen();
     HRegion region = getRegion(regionName);
     region.bulkLoadHFile(hfilePath, familyName);
   }
@@ -2183,6 +2185,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @QosPriority(priority=HIGH_QOS)
   public void flushRegion(HRegionInfo regionInfo)
       throws NotServingRegionException, IOException {
+    checkOpen();
     LOG.info("Flushing " + regionInfo.getRegionNameAsString());
     HRegion region = getRegion(regionInfo.getRegionName());
     region.flushcache();
@@ -2198,6 +2201,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public void splitRegion(HRegionInfo regionInfo, byte[] splitPoint)
       throws NotServingRegionException, IOException {
+    checkOpen();
     HRegion region = getRegion(regionInfo.getRegionName());
     region.flushcache();
     region.forceSplit(splitPoint);
@@ -2212,6 +2216,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @QosPriority(priority=HIGH_QOS)
   public void compactRegion(HRegionInfo regionInfo, boolean major)
       throws NotServingRegionException, IOException {
+    checkOpen();
     HRegion region = getRegion(regionInfo.getRegionName());
     compactSplitThread.requestCompaction(region, major, "User-triggered "
         + (major ? "major " : "") + "compaction",
@@ -2514,13 +2519,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   @QosPriority(priority=HIGH_QOS)
   public HServerInfo getHServerInfo() throws IOException {
+    checkOpen();
     return serverInfo;
   }
 
   @SuppressWarnings("unchecked")
   @Override
   public MultiResponse multi(MultiAction multi) throws IOException {
-
+    checkOpen();
     MultiResponse response = new MultiResponse();
 
     for (Map.Entry<byte[], List<Action>> e : multi.actions.entrySet()) {
@@ -2615,6 +2621,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   @Override
   public MultiPutResponse multiPut(MultiPut puts) throws IOException {
+    checkOpen();
     MultiPutResponse resp = new MultiPutResponse();
 
     // do each region as it's own.
@@ -2716,6 +2723,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public void replicateLogEntries(final HLog.Entry[] entries)
   throws IOException {
+    checkOpen();
     if (this.replicationHandler == null) return;
     this.replicationHandler.replicateLogEntries(entries);
   }

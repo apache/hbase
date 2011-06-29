@@ -1042,7 +1042,8 @@ public class AssignmentManager extends ZooKeeperListener {
         // succeed anyways; we need a new plan!
         // Transition back to OFFLINE
         state.update(RegionState.State.OFFLINE);
-        // Force a new plan and reassign.  Will return null if no servers.
+        // Force a new plan and reassign.  Will return n
+        // ull if no servers.
         if (getRegionPlan(state, plan.getDestination(), true) == null) {
           LOG.warn("Unable to find a viable location to assign region " +
             state.getRegion().getRegionNameAsString());
