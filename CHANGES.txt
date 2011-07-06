@@ -57,6 +57,8 @@ Release 0.90.4 - Unreleased
    HBASE-3904  HBA.createTable(final HTableDescriptor desc, byte [][] splitKeys)
                should be synchronous
    HBASE-4053  Most of the regions were added into AssignmentManager#servers twice
+   HBASE-3867  when cluster is stopped and server which hosted meta region is
+               removed from cluster, master breaks down after restarting cluster.
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
