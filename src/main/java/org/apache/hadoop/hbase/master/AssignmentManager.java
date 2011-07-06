@@ -35,6 +35,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -122,8 +123,8 @@ public class AssignmentManager extends ZooKeeperListener {
    * with the other under a lock on {@link #regions}
    * @see #regions
    */
-  private final NavigableMap<HServerInfo, List<HRegionInfo>> servers =
-    new TreeMap<HServerInfo, List<HRegionInfo>>();
+  private final NavigableMap<HServerInfo, Set<HRegionInfo>> servers =
+    new TreeMap<HServerInfo, Set<HRegionInfo>>();
 
   /**
    * Region to server assignment map.
@@ -779,7 +780,7 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized (this.regions) {
       HServerInfo serverInfo = this.regions.remove(regionInfo);
       if (serverInfo == null) return;
-      List<HRegionInfo> serverRegions = this.servers.get(serverInfo);
+      Set<HRegionInfo> serverRegions = this.servers.get(serverInfo);
       if (!serverRegions.remove(regionInfo)) {
         LOG.warn("No " + regionInfo + " on " + serverInfo);
       }
@@ -1590,12 +1591,12 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param hri
    */
   private void addToServers(final HServerInfo hsi, final HRegionInfo hri) {
-    List<HRegionInfo> hris = servers.get(hsi);
+    Set<HRegionInfo> hris = servers.get(hsi);
     if (hris == null) {
-      hris = new ArrayList<HRegionInfo>();
+      hris = new ConcurrentSkipListSet<HRegionInfo>();
       servers.put(hsi, hris);
     }
-    hris.add(hri);
+    if (!hris.contains(hri)) hris.add(hri);
   }
 
   /**
@@ -1639,13 +1640,8 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     synchronized (this.regions) {
       this.regions.remove(hri);
-      for (List<HRegionInfo> regions : this.servers.values()) {
-        for (int i=0;i<regions.size();i++) {
-          if (regions.get(i).equals(hri)) {
-            regions.remove(i);
-            break;
-          }
-        }
+      for (Set<HRegionInfo> regions : this.servers.values()) {
+        regions.remove(hri);
       }
     }
     clearRegionPlan(hri);
@@ -1900,7 +1896,7 @@ public class AssignmentManager extends ZooKeeperListener {
     Set<HRegionInfo> deadRegions = null;
     List<RegionState> rits = new ArrayList<RegionState>();
     synchronized (this.regions) {
-      List<HRegionInfo> assignedRegions = this.servers.remove(hsi);
+      Set<HRegionInfo> assignedRegions = this.servers.remove(hsi);
       if (assignedRegions == null || assignedRegions.isEmpty()) {
         // No regions on this server, we are done, return empty list of RITs
         return rits;
@@ -1987,7 +1983,7 @@ public class AssignmentManager extends ZooKeeperListener {
     Map<HServerInfo, List<HRegionInfo>> result = null;
     synchronized (this.regions) {
       result = new HashMap<HServerInfo, List<HRegionInfo>>(this.servers.size());
-      for (Map.Entry<HServerInfo, List<HRegionInfo>> e: this.servers.entrySet()) {
+      for (Map.Entry<HServerInfo, Set<HRegionInfo>> e: this.servers.entrySet()) {
         List<HRegionInfo> shallowCopy = new ArrayList<HRegionInfo>(e.getValue());
         HServerInfo clone = new HServerInfo(e.getKey());
         // Set into server load the number of regions this server is carrying
