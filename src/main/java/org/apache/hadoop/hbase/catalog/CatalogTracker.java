@@ -395,7 +395,7 @@ public class CatalogTracker {
     } catch (SocketTimeoutException e) {
       LOG.debug("Timed out connecting to " + address);
     } catch (NoRouteToHostException e) {
-      LOG.debug("Connecting to " + sn, e);
+      LOG.debug("Connecting to " + address, e);
     } catch (SocketException e) {
       LOG.debug("Exception connecting to " + address);
     } catch (IOException ioe) {
