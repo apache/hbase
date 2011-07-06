@@ -54,6 +54,8 @@ Release 0.90.4 - Unreleased
    HBASE-4045  [replication] NPE in ReplicationSource when ZK is gone
    HBASE-4059  If a region is split during RS shutdown process, the daughter
                regions are NOT made online by master
+   HBASE-3904  HBA.createTable(final HTableDescriptor desc, byte [][] splitKeys)
+               should be synchronous
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
