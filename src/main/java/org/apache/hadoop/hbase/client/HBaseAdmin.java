@@ -306,7 +306,7 @@ public class HBaseAdmin implements Abortable {
                 rowResult.getValue(HConstants.CATALOG_FAMILY,
                     HConstants.REGIONINFO_QUALIFIER));
 
-            if (!(Bytes.equals(info.getTableName(), desc.getName()))) {
+            if (!(Bytes.equals(info.getTableDesc().getName(), desc.getName()))) {
               return false;
             }
 
