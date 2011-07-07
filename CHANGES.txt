@@ -63,6 +63,8 @@ Release 0.90.4 - Unreleased
                AssignmentManager.servers again (Jieshan Bean)
    HBASE-4074  When a RS has hostname with uppercase letter, there are two RS
                entries in master (Weihua Jiang via Ted Yu)
+   HBASE-4077  Deadlock if WrongRegionException is thrown from getLock in HRegion.delete
+               (Adam Warrington via Ted Yu)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
