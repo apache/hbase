@@ -61,7 +61,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     }
     String host = hostAndPort.substring(0, colonIndex);
     int port = Integer.parseInt(hostAndPort.substring(colonIndex + 1));
-    this.address = new InetSocketAddress(host, port);
+    this.address = getResolvedAddress(new InetSocketAddress(host, port));
     this.stringValue = address.getHostName() + ":" + port;
     checkBindAddressCanBeResolved();
   }
@@ -71,7 +71,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
    * @param port Port number
    */
   public HServerAddress(String bindAddress, int port) {
-    this.address = new InetSocketAddress(bindAddress, port);
+    this.address = getResolvedAddress(new InetSocketAddress(bindAddress, port));
     this.stringValue = address.getHostName() + ":" + port;
     checkBindAddressCanBeResolved();
   }
@@ -81,23 +81,31 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
    * @param other HServerAddress to copy from
    */
   public HServerAddress(HServerAddress other) {
-    String bindAddress = other.getBindAddress();
-    int port = other.getPort();
-    this.address = new InetSocketAddress(bindAddress, port);
+    this.address = getResolvedAddress(other.getInetSocketAddress());
     stringValue = other.stringValue;
     checkBindAddressCanBeResolved();
   }
 
   /** @return Bind address */
   public String getBindAddress() {
+    return getBindAddressInternal(address);
+  }
+  
+  private static String getBindAddressInternal(InetSocketAddress address) {
     final InetAddress addr = address.getAddress();
     if (addr != null) {
       return addr.getHostAddress();
     } else {
       LogFactory.getLog(HServerAddress.class).error("Could not resolve the"
-          + " DNS name of " + stringValue);
+          + " DNS name of " + address.getHostName());
       return null;
-    }
+    }    
+  }
+  
+  private static InetSocketAddress getResolvedAddress(InetSocketAddress address) {
+    String bindAddress = getBindAddressInternal(address);
+    int port = address.getPort();
+    return new InetSocketAddress(bindAddress, port);    
   }
 
   private void checkBindAddressCanBeResolved() {
@@ -163,7 +171,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
       address = null;
       stringValue = null;
     } else {
-      address = new InetSocketAddress(hostname, port);
+      address = getResolvedAddress(new InetSocketAddress(hostname, port));
       stringValue = hostname + ":" + port;
       checkBindAddressCanBeResolved();
     }
@@ -191,5 +199,5 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     if (o.address == null) return 1;
     if (address.equals(o.address)) return 0;
     return toString().compareTo(o.toString());
-  }
+  }  
 }
