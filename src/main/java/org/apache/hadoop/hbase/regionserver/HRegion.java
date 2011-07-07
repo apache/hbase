@@ -40,6 +40,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -166,6 +167,8 @@ public class HRegion implements HeapSize { // , Writable{
   final HLog log;
   final FileSystem fs;
   final Configuration conf;
+  final int rowLockWaitDuration;
+  static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
   final HRegionInfo regionInfo;
   final Path regiondir;
   KeyValue.KVComparator comparator;
@@ -251,6 +254,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.tableDir = null;
     this.blockingMemStoreSize = 0L;
     this.conf = null;
+    this.rowLockWaitDuration = DEFAULT_ROWLOCK_WAIT_DURATION;
     this.flushRequester = null;
     this.fs = null;
     this.memstoreFlushSize = 0L;
@@ -290,6 +294,8 @@ public class HRegion implements HeapSize { // , Writable{
     this.log = log;
     this.fs = fs;
     this.conf = conf;
+    this.rowLockWaitDuration = conf.getInt("hbase.rowlock.wait.duration",
+                    DEFAULT_ROWLOCK_WAIT_DURATION);
     this.regionInfo = regionInfo;
     this.flushRequester = flushRequester;
     this.threadWakeFrequency = conf.getLong(HConstants.THREAD_WAKE_FREQUENCY,
@@ -2106,7 +2112,10 @@ public class HRegion implements HeapSize { // , Writable{
             return null;
           }
           try {
-            existingLatch.await();
+            if (!existingLatch.await(this.rowLockWaitDuration,
+                            TimeUnit.MILLISECONDS)) {
+                return null;
+            }
           } catch (InterruptedException ie) {
             // Empty
           }
