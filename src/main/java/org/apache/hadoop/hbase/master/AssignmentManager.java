@@ -706,9 +706,16 @@ public class AssignmentManager extends ZooKeeperListener {
       HServerInfo hsiWithoutLoad = new HServerInfo(
         serverInfo.getServerAddress(), serverInfo.getStartCode(),
         serverInfo.getInfoPort(), serverInfo.getHostname());
-      this.regions.put(regionInfo, hsiWithoutLoad);
-      addToServers(hsiWithoutLoad, regionInfo);
-      this.regions.notifyAll();
+      
+      if (isServerOnline(hsiWithoutLoad.getServerName())) {
+        this.regions.put(regionInfo, hsiWithoutLoad);
+        addToServers(hsiWithoutLoad, regionInfo);
+        this.regions.notifyAll();
+      } else {
+        LOG.info("The server is not in online servers, ServerName=" + 
+          hsiWithoutLoad.getServerName() + ", region=" + 
+          regionInfo.getEncodedName());
+      }
     }
     // Remove plan if one.
     clearRegionPlan(regionInfo);
@@ -2151,5 +2158,12 @@ public class AssignmentManager extends ZooKeeperListener {
 
   public void stop() {
     this.timeoutMonitor.interrupt();
+  }
+  
+  /**
+   * Check whether the RegionServer is online.
+   */
+  public boolean isServerOnline(String serverName) {
+    return this.serverManager.isServerOnline(serverName);
   }
 }
