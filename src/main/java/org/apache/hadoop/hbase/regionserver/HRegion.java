@@ -3206,6 +3206,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + // this
       (4 * Bytes.SIZEOF_LONG) + // memstoreFlushSize, lastFlushTime, blockingMemStoreSize, threadWakeFrequency 
+      Bytes.SIZEOF_INT + // rowLockWaitDuration
       (2 * Bytes.SIZEOF_BOOLEAN) + // forceMajorCompaction, splitRequest 
       ClassSize.ARRAY + // splitPoint
       (23 * ClassSize.REFERENCE));
