@@ -67,6 +67,7 @@ Release 0.90.4 - Unreleased
                (Adam Warrington via Ted Yu)
    HBASE-3893  HRegion.internalObtainRowLock shouldn't wait forever
    HBASE-4088  npes in server shutdown
+   HBASE-4075  A bug in TestZKBasedOpenCloseRegion (Jieshan Bean)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

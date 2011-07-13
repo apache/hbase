@@ -188,6 +188,59 @@ public class TestZKBasedOpenCloseRegion {
     }
   }
 
+  /**
+   * This test shows how a region won't be able to be assigned to a RS
+   * if it's already "processing" it.
+   * @throws Exception
+   */
+  @Test
+  public void testRSAlreadyProcessingRegion() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+
+    HRegionServer hr0 =
+        cluster.getLiveRegionServerThreads().get(0).getRegionServer();
+    HRegionServer hr1 =
+        cluster.getLiveRegionServerThreads().get(1).getRegionServer();
+    HRegionInfo hri = getNonMetaRegion(hr0.getOnlineRegions());
+
+    // fake that hr1 is processing the region
+    hr1.getRegionsInTransitionInRS().add(hri.getEncodedNameAsBytes());
+
+    AtomicBoolean reopenEventProcessed = new AtomicBoolean(false);
+    EventHandlerListener openListener =
+      new ReopenEventListener(hri.getRegionNameAsString(),
+          reopenEventProcessed, EventType.RS_ZK_REGION_OPENED);
+    cluster.getMaster().executorService.
+      registerListener(EventType.RS_ZK_REGION_OPENED, openListener);
+
+    // now ask the master to move the region to hr1, will fail
+    TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
+        Bytes.toBytes(hr1.getServerName()));
+
+    while (!reopenEventProcessed.get()) {
+      Threads.sleep(100);
+    }
+
+    // make sure the region came back
+    assertTrue(hr1.getOnlineRegion(hri.getEncodedNameAsBytes()) == null);
+
+    // remove the block and reset the boolean
+    hr1.getRegionsInTransitionInRS().remove(hri.getEncodedNameAsBytes());
+    reopenEventProcessed.set(false);
+
+    // move the region again, but this time it will work
+    TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
+        Bytes.toBytes(hr1.getServerName()));
+
+    while (!reopenEventProcessed.get()) {
+      Threads.sleep(100);
+    }
+
+    // make sure the region has moved from the original RS
+    assertTrue(hr0.getOnlineRegion(hri.getEncodedNameAsBytes()) == null);
+
+  }
+
   @Test (timeout=300000) public void testCloseRegion()
   throws Exception {
     LOG.info("Running testCloseRegion");
@@ -247,58 +300,6 @@ public class TestZKBasedOpenCloseRegion {
     }
   }
 
-  /**
-   * This test shows how a region won't be able to be assigned to a RS
-   * if it's already "processing" it.
-   * @throws Exception
-   */
-  @Test
-  public void testRSAlreadyProcessingRegion() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-
-    HRegionServer hr0 =
-        cluster.getLiveRegionServerThreads().get(0).getRegionServer();
-    HRegionServer hr1 =
-        cluster.getLiveRegionServerThreads().get(1).getRegionServer();
-    HRegionInfo hri = getNonMetaRegion(hr0.getOnlineRegions());
-
-    // fake that hr1 is processing the region
-    hr1.getRegionsInTransitionInRS().add(hri.getEncodedNameAsBytes());
-
-    AtomicBoolean reopenEventProcessed = new AtomicBoolean(false);
-    EventHandlerListener openListener =
-      new ReopenEventListener(hri.getRegionNameAsString(),
-          reopenEventProcessed, EventType.RS_ZK_REGION_OPENED);
-    cluster.getMaster().executorService.
-      registerListener(EventType.RS_ZK_REGION_OPENED, openListener);
-
-    // now ask the master to move the region to hr1, will fail
-    TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
-        Bytes.toBytes(hr1.getServerName()));
-
-    while (!reopenEventProcessed.get()) {
-      Threads.sleep(100);
-    }
-
-    // make sure the region came back
-    assertTrue(hr1.getOnlineRegion(hri.getEncodedNameAsBytes()) == null);
-
-    // remove the block and reset the boolean
-    hr1.getRegionsInTransitionInRS().remove(hri.getEncodedNameAsBytes());
-    reopenEventProcessed.set(false);
-
-    // move the region again, but this time it will work
-    TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
-        Bytes.toBytes(hr1.getServerName()));
-
-    while (!reopenEventProcessed.get()) {
-      Threads.sleep(100);
-    }
-
-    // make sure the region has moved from the original RS
-    assertTrue(hr0.getOnlineRegion(hri.getEncodedNameAsBytes()) == null);
-
-  }
 
   private static void waitUntilAllRegionsAssigned()
   throws IOException {
