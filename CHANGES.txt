@@ -66,6 +66,7 @@ Release 0.90.4 - Unreleased
    HBASE-4077  Deadlock if WrongRegionException is thrown from getLock in HRegion.delete
                (Adam Warrington via Ted Yu)
    HBASE-3893  HRegion.internalObtainRowLock shouldn't wait forever
+   HBASE-4088  npes in server shutdown
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
