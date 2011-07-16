@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
+import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1248,6 +1249,22 @@ public class AssignmentManager extends ZooKeeperListener {
     } catch (Throwable t) {
       if (t instanceof RemoteException) {
         t = ((RemoteException)t).unwrapRemoteException();
+        if (t instanceof NotServingRegionException) {
+          if (checkIfRegionBelongsToDisabling(region)) {
+            // Remove from the regionsinTransition map
+            LOG.info("While trying to recover the table "
+                + region.getTableDesc().getNameAsString()
+                + " to DISABLED state the region " + region
+                + " was offlined but the table was in DISABLING state");
+            synchronized (this.regionsInTransition) {
+              this.regionsInTransition.remove(region.getEncodedName());
+            }
+            // Remove from the regionsMap
+            synchronized (this.regions) {
+              this.regions.remove(region);
+            }
+          }
+        }
       }
       LOG.info("Server " + server + " returned " + t + " for " +
         region.getEncodedName());
@@ -1516,14 +1533,17 @@ public class AssignmentManager extends ZooKeeperListener {
    * @return map of servers not online to their assigned regions, as stored
    *         in META
    * @throws IOException
+ * @throws KeeperException 
    */
   private Map<String, List<Pair<HRegionInfo,Result>>> rebuildUserRegions()
-  throws IOException {
+  throws IOException, KeeperException {
     // Region assignment from META
     List<Result> results = MetaReader.fullScanOfResults(catalogTracker);
     // Map of offline servers and their regions to be returned
     Map<String, List<Pair<HRegionInfo,Result>>> offlineServers =
       new TreeMap<String, List<Pair<HRegionInfo,Result>>>();
+    // store all the disabling state table names
+    Set<String> disablingTables = new HashSet<String>(1);
     // Iterate regions in META
     for (Result result : results) {
       Pair<HRegionInfo,HServerInfo> region =
@@ -1531,10 +1551,17 @@ public class AssignmentManager extends ZooKeeperListener {
       if (region == null) continue;
       HServerInfo regionLocation = region.getSecond();
       HRegionInfo regionInfo = region.getFirst();
+      String disablingTableName = regionInfo.getTableDesc().getNameAsString();
       if (regionLocation == null) {
         // Region not being served, add to region map with no assignment
         // If this needs to be assigned out, it will also be in ZK as RIT
-        this.regions.put(regionInfo, null);
+        // add if the table is not in disabled state
+        if (false == checkIfRegionBelongsToDisabled(regionInfo)) {
+          this.regions.put(regionInfo, null);
+        }
+        if (checkIfRegionBelongsToDisabling(regionInfo)) {
+          disablingTables.add(disablingTableName);
+        }
       } else if (!serverManager.isServerOnline(regionLocation.getServerName())) {
         // Region is located on a server that isn't online
         List<Pair<HRegionInfo,Result>> offlineRegions =
@@ -1546,11 +1573,43 @@ public class AssignmentManager extends ZooKeeperListener {
         offlineRegions.add(new Pair<HRegionInfo,Result>(regionInfo, result));
       } else {
         // Region is being served and on an active server
-        regions.put(regionInfo, regionLocation);
-        addToServers(regionLocation, regionInfo);
+        // add only if region not in disabled table
+        if (false == checkIfRegionBelongsToDisabled(regionInfo)) {
+          regions.put(regionInfo, regionLocation);
+          addToServers(regionLocation, regionInfo);
+        }
+        if (checkIfRegionBelongsToDisabling(regionInfo)) {
+          disablingTables.add(disablingTableName);
+        }
+      }
+    }
+    // Recover the tables that were not fully moved to DISABLED state.
+    // These tables are in DISABLING state when the master
+    // restarted/switched.
+    if (disablingTables.size() != 0) {
+      // Create a watcher on the zookeeper node
+      ZKUtil.listChildrenAndWatchForNewChildren(watcher,
+          watcher.assignmentZNode);
+      for (String tableName : disablingTables) {
+        // Recover by calling DisableTableHandler
+        LOG.info("The table " + tableName
+            + " is in DISABLING state.  Hence recovering by moving the table"
+            + " to DISABLED state.");
+        new DisableTableHandler(this.master, tableName.getBytes(),
+            catalogTracker, this).process();
       }
     }
     return offlineServers;
+  }
+  
+  private boolean checkIfRegionBelongsToDisabled(HRegionInfo regionInfo) {
+    String tableName = regionInfo.getTableDesc().getNameAsString();
+    return getZKTable().isDisabledTable(tableName);
+  }
+
+  private boolean checkIfRegionBelongsToDisabling(HRegionInfo regionInfo) {
+    String tableName = regionInfo.getTableDesc().getNameAsString();
+    return getZKTable().isDisablingTable(tableName);
   }
 
   /**
