@@ -112,7 +112,7 @@ public class TestCatalogTracker {
   @Test public void testThatIfMETAMovesWeAreNotified()
   throws IOException, InterruptedException, KeeperException {
     HConnection connection = Mockito.mock(HConnection.class);
-    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+    constructAndStartCatalogTracker(connection);
     try {
       RootLocationEditor.setRootLocation(this.watcher,
         new HServerAddress("example.com:1234"));

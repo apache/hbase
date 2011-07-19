@@ -76,6 +76,8 @@ Release 0.90.4 - Unreleased
    HBASE-4093  When verifyAndAssignRoot throws exception, the deadServers state cannot
                be changed (fulin wang via Ted Yu)
    HBASE-4101  Regionserver Deadlock (ramkrishna.s.vasudevan)
+   HBASE-3872  Hole in split transaction rollback; edits to .META. need to be rolled
+               back even if it seems like they didn't make it
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

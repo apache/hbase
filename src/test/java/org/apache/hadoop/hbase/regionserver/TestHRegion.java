@@ -1304,11 +1304,13 @@ public class TestHRegion extends HBaseTestCase {
         fs.delete(oldRegionPath, true);
         LOG.info("splitAndMerge completed.");
       } finally {
-        for (int i = 0; i < subregions.length; i++) {
-          try {
-            subregions[i].close();
-          } catch (IOException e) {
-            // Ignore.
+        if (subregions != null) {
+          for (int i = 0; i < subregions.length; i++) {
+            try {
+              subregions[i].close();
+            } catch (IOException e) {
+              // Ignore.
+            }
           }
         }
       }
@@ -1339,7 +1341,7 @@ public class TestHRegion extends HBaseTestCase {
       try {
         LOG.info("Running rollback of failed split of " +
           parent.getRegionNameAsString() + "; " + ioe.getMessage());
-        st.rollback(null);
+        st.rollback(null, null);
         LOG.info("Successful rollback of failed split of " +
           parent.getRegionNameAsString());
         return null;
