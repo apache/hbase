@@ -73,6 +73,8 @@ Release 0.90.4 - Unreleased
    HBASE-4112  Creating table may throw NullPointerException (Jinchao via Ted Yu)
    HBASE-4095  Hlog may not be rolled in a long time if checkLowReplication's request
                of LogRoll is blocked (Jieshan via Ted Yu)
+   HBASE-4093  When verifyAndAssignRoot throws exception, the deadServers state cannot
+               be changed (fulin wang via Ted Yu)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
