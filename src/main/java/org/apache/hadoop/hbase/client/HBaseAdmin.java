@@ -303,9 +303,13 @@ public class HBaseAdmin implements Abortable {
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
         @Override
         public boolean processRow(Result rowResult) throws IOException {
-          HRegionInfo info = Writables.getHRegionInfo(
-              rowResult.getValue(HConstants.CATALOG_FAMILY,
-                  HConstants.REGIONINFO_QUALIFIER));
+          HRegionInfo info = Writables.getHRegionInfoOrNull(rowResult.getValue(
+              HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
+          
+          //If regioninfo is null, skip this row
+          if (null == info) {
+            return true;
+          }
           if (!(Bytes.equals(info.getTableDesc().getName(), desc.getName()))) {
             return false;
           }
