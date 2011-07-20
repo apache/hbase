@@ -78,6 +78,8 @@ Release 0.90.4 - Unreleased
                back even if it seems like they didn't make it
    HBASE-4115  HBase shell assign and unassign unusable if region name includes
                binary-encoded data (Ryan Brush)
+   HBASE-4118  method regionserver.MemStore#updateColumnValue: the check for 
+               qualifier and family is missing (N Keywal via Ted Yu)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
