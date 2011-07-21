@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
@@ -457,8 +458,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private static String getMyAddress(final Configuration c)
   throws UnknownHostException {
     // Find out our address up in DNS.
-    String s = DNS.getDefaultHost(c.get("hbase.master.dns.interface","default"),
-      c.get("hbase.master.dns.nameserver","default"));
+    String s = Strings.domainNamePointerToHostName(DNS.getDefaultHost(c.get(
+        "hbase.master.dns.interface", "default"), c.get(
+        "hbase.master.dns.nameserver", "default")));
     s += ":" + c.get(HConstants.MASTER_PORT,
         Integer.toString(HConstants.DEFAULT_MASTER_PORT));
     return s;

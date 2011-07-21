@@ -58,4 +58,18 @@ public class Strings {
     }
     return sb.append(key).append(separator).append(value);
   }
+
+  /**
+   * Given a PTR string generated via reverse DNS lookup, return everything
+   * except the trailing period. Example for host.example.com., return
+   * host.example.com
+   * @param dnPtr a domain name pointer (PTR) string.
+   * @return Sanitized hostname with last period stripped off.
+   *
+   */
+  public static String domainNamePointerToHostName(String dnPtr) {
+    if (dnPtr == null)
+      return null;
+    return dnPtr.endsWith(".") ? dnPtr.substring(0, dnPtr.length()-1) : dnPtr;
+  }
 }

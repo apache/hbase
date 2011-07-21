@@ -125,6 +125,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -320,9 +321,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.stopped = false;
 
     // Server to handle client requests
-    String machineName = DNS.getDefaultHost(conf.get(
-        "hbase.regionserver.dns.interface", "default"), conf.get(
-        "hbase.regionserver.dns.nameserver", "default"));
+    String machineName = Strings.domainNamePointerToHostName(
+        DNS.getDefaultHost(conf.get("hbase.regionserver.dns.interface", "default")
+            , conf.get("hbase.regionserver.dns.nameserver", "default")));
     String addressStr = machineName + ":" +
       conf.get(HConstants.REGIONSERVER_PORT,
         Integer.toString(HConstants.DEFAULT_REGIONSERVER_PORT));

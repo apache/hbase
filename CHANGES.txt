@@ -80,6 +80,8 @@ Release 0.90.4 - Unreleased
                binary-encoded data (Ryan Brush)
    HBASE-4118  method regionserver.MemStore#updateColumnValue: the check for 
                qualifier and family is missing (N Keywal via Ted Yu)
+   HBASE-4109  Hostname returned via reverse dns lookup contains trailing period if
+               configured interface is not "default" (Shrijeet Paliwal)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
