@@ -173,6 +173,8 @@ Release 0.90.3 - May 19th, 2011
    HBASE-3813  Change RPC callQueue size from 'handlerCount *
                MAX_QUEUE_SIZE_PER_HANDLER;'
    HBASE-3860  HLog shouldn't create a new HBC when rolling
+   HBASE-1938  Make in-memory table scanning faster (nkeywal); only iterator
+               and benchmark changes applied
 
   TASK
    HBASE-3748  Add rolling of thrift/rest daemons to graceful_stop.sh script
