@@ -109,6 +109,8 @@ Release 0.90.4 - Unreleased
    HBASE-4142  Advise against large batches in javadoc for HTable#put(List<Put>)
    HBASE-4139  [stargate] Update ScannerModel with support for filter package
                 additions
+   HBASE-4143  HTable.doPut(List) should check the writebuffer length every so often
+               (Doug Meil via Ted Yu)
 
 Release 0.90.3 - May 19th, 2011
   BUG FIXES
