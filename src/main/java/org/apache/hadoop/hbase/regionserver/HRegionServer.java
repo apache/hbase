@@ -460,7 +460,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * @throws IOException
    * @throws InterruptedException
    */
-  private void initialize() throws IOException, InterruptedException {
+  private void initialize() {
     try {
       initializeZooKeeper();
       initializeThreads();
@@ -471,8 +471,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     } catch (Throwable t) {
       // Call stop if error or process will stick around for ever since server
       // puts up non-daemon threads.
-      LOG.error("Stopping HRS because failed initialize", t);
       this.server.stop();
+      abort("Initialization of RS failed.  Hence aborting RS.", t);
     }
   }
 
@@ -562,7 +562,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     try {
       // Initialize threads and wait for a master
       initialize();
-    } catch (Exception e) {
+    } catch (Throwable e) {
       abort("Fatal exception during initialization", e);
     }
 
