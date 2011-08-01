@@ -91,6 +91,7 @@ Release 0.90.4 - Unreleased
                does not exist' that is triggered though its often legit that daughter
                is not present
    HBASE-4144  RS does not abort if the initialization of RS fails (ramkrishna)
+   HBASE-4148  HFileOutputFormat doesn't fill in TIMERANGE_KEY metadata (Jonathan Hsieh)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
