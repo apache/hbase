@@ -275,7 +275,7 @@ public abstract class HBaseServer {
       readers = new Reader[readThreads];
       readPool = Executors.newFixedThreadPool(readThreads,
         new ThreadFactoryBuilder().setNameFormat(
-          "IPC Reader %d on port " + port).build());
+          "IPC Reader %d on port " + port).setDaemon(true).build());
       for (int i = 0; i < readThreads; ++i) {
         Selector readSelector = Selector.open();
         Reader reader = new Reader(readSelector);

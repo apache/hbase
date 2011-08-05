@@ -92,6 +92,8 @@ Release 0.90.4 - Unreleased
                is not present
    HBASE-4144  RS does not abort if the initialization of RS fails (ramkrishna)
    HBASE-4148  HFileOutputFormat doesn't fill in TIMERANGE_KEY metadata (Jonathan Hsieh)
+   HBASE-4159  HBaseServer - IPC Reader threads are not daemons (Douglas
+               Campbell)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
