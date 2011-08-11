@@ -5,6 +5,7 @@ Release 0.90.5 - Unreleased
                server includes binary-encoded data (Jonathan Hsieh)
    HBASE-4168  A client continues to try and connect to a powered down
                regionserver (Anirudh Todi)
+   HBASE-4186  No region is added to regionsInTransitionInRS
   
 Release 0.90.4 - August 10, 2011
   BUG FIXES
