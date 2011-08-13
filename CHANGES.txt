@@ -7,6 +7,7 @@ Release 0.90.5 - Unreleased
                regionserver (Anirudh Todi)
    HBASE-4186  No region is added to HRegionServer.regionsInTransitionInRS
    HBASE-4196  TableRecordReader may skip first row of region (Ming Ma)
+   HBASE-4170  createTable java doc needs to be improved (Mubarak Seyed)
   
 Release 0.90.4 - August 10, 2011
   BUG FIXES
