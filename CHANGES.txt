@@ -7,7 +7,11 @@ Release 0.90.5 - Unreleased
                regionserver (Anirudh Todi)
    HBASE-4186  No region is added to HRegionServer.regionsInTransitionInRS
    HBASE-4196  TableRecordReader may skip first row of region (Ming Ma)
-   HBASE-4170  createTable java doc needs to be improved(Mubarak Seyed)
+   HBASE-4170  createTable java doc needs to be improved (Mubarak Seyed)
+   HBASE-4144  RS does not abort if the initialization of RS fails (ramkrishna)
+   HBASE-4148  HFileOutputFormat doesn't fill in TIMERANGE_KEY metadata (Jonathan Hsieh)
+   HBASE-4159  HBaseServer - IPC Reader threads are not daemons (Douglas
+               Campbell)
   
 Release 0.90.4 - August 10, 2011
   BUG FIXES
@@ -100,10 +104,6 @@ Release 0.90.4 - August 10, 2011
    HBASE-4129  HBASE-3872 added a warn message 'CatalogJanitor: Daughter regiondir
                does not exist' that is triggered though its often legit that daughter
                is not present
-   HBASE-4144  RS does not abort if the initialization of RS fails (ramkrishna)
-   HBASE-4148  HFileOutputFormat doesn't fill in TIMERANGE_KEY metadata (Jonathan Hsieh)
-   HBASE-4159  HBaseServer - IPC Reader threads are not daemons (Douglas
-               Campbell)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
