@@ -1333,23 +1333,28 @@ public class HLog implements Syncable {
       final Path regiondir)
   throws IOException {
     Path editsdir = getRegionDirRecoveredEditsDir(regiondir);
-    FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
-      @Override
-      public boolean accept(Path p) {
-        boolean result = false;
-        try {
-          // Return files and only files that match the editfile names pattern.
-          // There can be other files in this directory other than edit files.
-          // In particular, on error, we'll move aside the bad edit file giving
-          // it a timestamp suffix.  See moveAsideBadEditsFile.
-          Matcher m = EDITFILES_NAME_PATTERN.matcher(p.getName());
-          result = fs.isFile(p) && m.matches();
-        } catch (IOException e) {
-          LOG.warn("Failed isFile check on " + p);
+
+    FileStatus [] files = null;
+    if (fs.exists(editsdir)) {
+      files = fs.listStatus(editsdir, new PathFilter () {
+        @Override
+        public boolean accept(Path p) {
+          boolean result = false;
+          try {
+            // Return files and only files that match the editfile names pattern.
+            // There can be other files in this directory other than edit files.
+            // In particular, on error, we'll move aside the bad edit file giving
+            // it a timestamp suffix.  See moveAsideBadEditsFile.
+            Matcher m = EDITFILES_NAME_PATTERN.matcher(p.getName());
+            result = fs.isFile(p) && m.matches();
+          } catch (IOException e) {
+            LOG.warn("Failed isFile check on " + p);
+          }
+          return result;
         }
-        return result;
-      }
-    });
+      });
+    }
+
     NavigableSet<Path> filesSorted = new TreeSet<Path>();
     if (files == null) return filesSorted;
     for (FileStatus status: files) {

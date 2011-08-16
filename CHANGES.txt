@@ -12,6 +12,8 @@ Release 0.90.5 - Unreleased
    HBASE-4148  HFileOutputFormat doesn't fill in TIMERANGE_KEY metadata (Jonathan Hsieh)
    HBASE-4159  HBaseServer - IPC Reader threads are not daemons (Douglas
                Campbell)
+   HBASE-4161  Incorrect use of listStatus() in HBase region initialization
+               (Pritam Damania)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
