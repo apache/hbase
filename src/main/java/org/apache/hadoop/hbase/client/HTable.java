@@ -58,10 +58,18 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Used to communicate with a single HBase table.
+ * <p>Used to communicate with a single HBase table.
  *
- * This class is not thread safe for updates; the underlying write buffer can
+ * <p>This class is not thread safe for reads nor write.
+ * 
+ * <p>In case of writes (Put, Delete), the underlying write buffer can
  * be corrupted if multiple threads contend over a single HTable instance.
+ * 
+ * <p>In case of reads, some fields used by a Scan are shared among all threads.
+ * The HTable implementation can either not contract to be safe in case of a Get
+ *
+ * <p>To access a table in a multi threaded environment, please consider
+ * using the {@link HTablePool} class to create your HTable instances.
  *
  * <p>Instances of HTable passed the same {@link Configuration} instance will
  * share connections to servers out on the cluster and to the zookeeper ensemble
