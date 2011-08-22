@@ -16,6 +16,8 @@ Release 0.90.5 - Unreleased
                (Pritam Damania)
    HBASE-4095  Hlog may not be rolled in a long time if checkLowReplication's
                request of LogRoll is blocked (Jieshan Bean)
+   HBASE-4065  TableOutputFormat ignores failure to create table instance  
+               (Brock Noland)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
