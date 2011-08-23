@@ -1345,13 +1345,14 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private static class BatchOperationInProgress<T> {
     T[] operations;
-    OperationStatusCode[] retCodes;
     int nextIndexToProcess = 0;
+    OperationStatus[] retCodeDetails;
 
     public BatchOperationInProgress(T[] operations) {
       this.operations = operations;
-      retCodes = new OperationStatusCode[operations.length];
-      Arrays.fill(retCodes, OperationStatusCode.NOT_RUN);
+      this.retCodeDetails = new OperationStatus[operations.length];
+      Arrays.fill(this.retCodeDetails, new OperationStatus(
+          OperationStatusCode.NOT_RUN));
     }
 
     public boolean isDone() {
@@ -1363,7 +1364,7 @@ public class HRegion implements HeapSize { // , Writable{
    * Perform a batch put with no pre-specified locks
    * @see HRegion#put(Pair[])
    */
-  public OperationStatusCode[] put(Put[] puts) throws IOException {
+  public OperationStatus[] put(Put[] puts) throws IOException {
     @SuppressWarnings("unchecked")
     Pair<Put, Integer> putsAndLocks[] = new Pair[puts.length];
 
@@ -1375,10 +1376,15 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * Perform a batch of puts.
-   * @param putsAndLocks the list of puts paired with their requested lock IDs.
+   * 
+   * @param putsAndLocks
+   *          the list of puts paired with their requested lock IDs.
+   * @return an array of OperationStatus which internally contains the
+   *         OperationStatusCode and the exceptionMessage if any.
    * @throws IOException
    */
-  public OperationStatusCode[] put(Pair<Put, Integer>[] putsAndLocks) throws IOException {
+  public OperationStatus[] put(
+      Pair<Put, Integer>[] putsAndLocks) throws IOException {
     BatchOperationInProgress<Pair<Put, Integer>> batchOp =
       new BatchOperationInProgress<Pair<Put,Integer>>(putsAndLocks);
 
@@ -1398,10 +1404,11 @@ public class HRegion implements HeapSize { // , Writable{
         requestFlush();
       }
     }
-    return batchOp.retCodes;
+    return batchOp.retCodeDetails;
   }
 
-  private long doMiniBatchPut(BatchOperationInProgress<Pair<Put, Integer>> batchOp) throws IOException {
+  private long doMiniBatchPut(
+      BatchOperationInProgress<Pair<Put, Integer>> batchOp) throws IOException {
     long now = EnvironmentEdgeManager.currentTimeMillis();
     byte[] byteNow = Bytes.toBytes(now);
     boolean locked = false;
@@ -1428,7 +1435,8 @@ public class HRegion implements HeapSize { // , Writable{
           checkFamilies(put.getFamilyMap().keySet());
         } catch (NoSuchColumnFamilyException nscf) {
           LOG.warn("No such column family in batch put", nscf);
-          batchOp.retCodes[lastIndexExclusive] = OperationStatusCode.BAD_FAMILY;
+          batchOp.retCodeDetails[lastIndexExclusive] = new OperationStatus(
+              OperationStatusCode.BAD_FAMILY, nscf.getMessage());
           lastIndexExclusive++;
           continue;
         }
@@ -1472,7 +1480,9 @@ public class HRegion implements HeapSize { // , Writable{
       WALEdit walEdit = new WALEdit();
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         // Skip puts that were determined to be invalid during preprocessing
-        if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
+        if (batchOp.retCodeDetails[i].getOperationStatusCode() != OperationStatusCode.NOT_RUN) {
+          continue;
+        }
 
         Put p = batchOp.operations[i].getFirst();
         if (!p.getWriteToWAL()) continue;
@@ -1488,11 +1498,14 @@ public class HRegion implements HeapSize { // , Writable{
       // ----------------------------------
       long addedSize = 0;
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
-        if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
+        if (batchOp.retCodeDetails[i].getOperationStatusCode() != OperationStatusCode.NOT_RUN) {
+          continue;
+        }
 
         Put p = batchOp.operations[i].getFirst();
         addedSize += applyFamilyMapToMemstore(p.getFamilyMap());
-        batchOp.retCodes[i] = OperationStatusCode.SUCCESS;
+        batchOp.retCodeDetails[i] = new OperationStatus(
+            OperationStatusCode.SUCCESS);
       }
       success = true;
       return addedSize;
@@ -1505,8 +1518,9 @@ public class HRegion implements HeapSize { // , Writable{
       }
       if (!success) {
         for (int i = firstIndex; i < lastIndexExclusive; i++) {
-          if (batchOp.retCodes[i] == OperationStatusCode.NOT_RUN) {
-            batchOp.retCodes[i] = OperationStatusCode.FAILURE;
+          if (batchOp.retCodeDetails[i].getOperationStatusCode() == OperationStatusCode.NOT_RUN) {
+            batchOp.retCodeDetails[i] = new OperationStatus(
+                OperationStatusCode.FAILURE);
           }
         }
       }

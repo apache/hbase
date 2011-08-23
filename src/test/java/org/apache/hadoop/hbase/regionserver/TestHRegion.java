@@ -362,10 +362,11 @@ public class TestHRegion extends HBaseTestCase {
       puts[i].add(cf, qual, val);
     }
 
-    OperationStatusCode[] codes = this.region.put(puts);
+    OperationStatus[] codes = this.region.put(puts);
     assertEquals(10, codes.length);
     for (int i = 0; i < 10; i++) {
-      assertEquals(OperationStatusCode.SUCCESS, codes[i]);
+      assertEquals(OperationStatusCode.SUCCESS, codes[i]
+          .getOperationStatusCode());
     }
     assertEquals(1, HLog.getSyncOps());
 
@@ -375,7 +376,7 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(10, codes.length);
     for (int i = 0; i < 10; i++) {
       assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
-        OperationStatusCode.SUCCESS, codes[i]);
+        OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
     }
     assertEquals(1, HLog.getSyncOps());
 
@@ -384,8 +385,8 @@ public class TestHRegion extends HBaseTestCase {
 
     MultithreadedTestUtil.TestContext ctx =
       new MultithreadedTestUtil.TestContext(HBaseConfiguration.create());
-    final AtomicReference<OperationStatusCode[]> retFromThread =
-      new AtomicReference<OperationStatusCode[]>();
+    final AtomicReference<OperationStatus[]> retFromThread =
+      new AtomicReference<OperationStatus[]>();
     TestThread putter = new TestThread(ctx) {
       @Override
       public void doWork() throws IOException {
@@ -413,7 +414,7 @@ public class TestHRegion extends HBaseTestCase {
     codes = retFromThread.get();
     for (int i = 0; i < 10; i++) {
       assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
-        OperationStatusCode.SUCCESS, codes[i]);
+        OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
     }
 
     LOG.info("Nexta, a batch put which uses an already-held lock");
@@ -430,7 +431,7 @@ public class TestHRegion extends HBaseTestCase {
     LOG.info("...performed put");
     for (int i = 0; i < 10; i++) {
       assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
-        OperationStatusCode.SUCCESS, codes[i]);
+        OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
     }
     // Make sure we didn't do an extra batch
     assertEquals(1, HLog.getSyncOps());

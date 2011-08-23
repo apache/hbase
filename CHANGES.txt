@@ -18,6 +18,8 @@ Release 0.90.5 - Unreleased
                request of LogRoll is blocked (Jieshan Bean)
    HBASE-4065  TableOutputFormat ignores failure to create table instance  
                (Brock Noland)
+   HBASE-4225  NoSuchColumnFamilyException in multi doesn't say which family
+               is bad (ramkrishna.s.vasudevan)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
