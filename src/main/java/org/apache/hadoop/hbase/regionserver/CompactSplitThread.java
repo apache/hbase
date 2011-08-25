@@ -156,11 +156,14 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
       st.execute(this.server, this.server);
     } catch (IOException ioe) {
       try {
-        LOG.info("Running rollback of failed split of " +
-          parent.getRegionNameAsString() + "; " + ioe.getMessage());
-        st.rollback(this.server, this.server);
-        LOG.info("Successful rollback of failed split of " +
-          parent.getRegionNameAsString());
+        LOG.info("Running rollback/cleanup of failed split of "
+            + parent.getRegionNameAsString() + "; " + ioe.getMessage());
+        if (st.rollback(this.server, this.server)) {
+          LOG.info("Successful rollback of failed split of "
+              + parent.getRegionNameAsString());
+        } else {
+          this.server.abort("Abort; we got an error after point-of-no-return");
+        }
       } catch (Exception ee) {
         // If failed rollback, kill this server to avoid having a hole in table.
         LOG.info("Failed rollback of failed split of " +

@@ -20,6 +20,8 @@ Release 0.90.5 - Unreleased
                (Brock Noland)
    HBASE-4225  NoSuchColumnFamilyException in multi doesn't say which family
                is bad (ramkrishna.s.vasudevan)
+   HBASE-4234  Let regionserver abort if rollback fail after point-of-no-return
+               on branch (Jieshan Bean)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
