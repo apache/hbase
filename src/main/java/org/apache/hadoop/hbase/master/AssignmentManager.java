@@ -326,7 +326,11 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized (regionsInTransition) {
       switch (data.getEventType()) {
       case RS_ZK_REGION_CLOSING:
-        if (isOnDeadServer(regionInfo, deadServers)) {
+        //If zk node of the region was updated by a live server, 
+        //we should skip this region and just add it into RIT. 
+        if (isOnDeadServer(regionInfo, deadServers) && 
+          (null == data.getServerName() ||
+            !serverManager.isServerOnline(data.getServerName()))){
           // If was on dead server, its closed now.  Force to OFFLINE and this
           // will get it reassigned if appropriate
           forceOffline(regionInfo, data);
@@ -372,7 +376,9 @@ public class AssignmentManager extends ZooKeeperListener {
             "; letting RIT timeout so will be assigned elsewhere");
           break;
         }
-        if (isOnDeadServer(regionInfo, deadServers)) {
+        if (isOnDeadServer(regionInfo, deadServers) && 
+            (null == data.getServerName() ||
+              !serverManager.isServerOnline(data.getServerName()))) {
           // If was on a dead server, then its not open any more; needs handling.
           forceOffline(regionInfo, data);
         } else {
@@ -1640,6 +1646,17 @@ public class AssignmentManager extends ZooKeeperListener {
           boolean assign =
             ServerShutdownHandler.processDeadRegion(regionInfo, result, this,
               this.catalogTracker);
+          RegionTransitionData data = ZKAssign.getData(watcher, regionInfo.getEncodedName()); 
+          
+          //If zk node of this region has been updated by a live server, 
+          //we consider that this region is being handled. 
+          //So we should skip it and process it in processRegionsInTransition.
+          if (data != null && data.getServerName() != null &&
+            serverManager.isServerOnline(data.getServerName())){
+              LOG.info("The region " + regionInfo.getEncodedName() +
+                "is being handled on " + data.getServerName());
+            continue;
+          }
           if (assign) {
             ZKAssign.createOrForceNodeOffline(watcher, regionInfo,
               master.getServerName()); 

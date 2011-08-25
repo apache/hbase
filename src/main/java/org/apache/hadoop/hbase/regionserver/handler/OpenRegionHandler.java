@@ -83,6 +83,10 @@ public class OpenRegionHandler extends EventHandler {
       if (region != null) {
         LOG.warn("Attempted open of " + name +
           " but already online on this server");
+          
+        //This region should be assigned to another region server by RIT,  
+        //so we need to close it.
+        cleanupFailedOpen(region);
         return;
       }
 

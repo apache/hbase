@@ -18,11 +18,12 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master;
-
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,9 +42,11 @@ import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.handler.TotesHRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -64,6 +67,10 @@ public class TestZKBasedOpenCloseRegion {
 
   @BeforeClass public static void beforeAllTests() throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
+    // Need to drop the timeout much lower
+    c.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
+    c.setInt("hbase.master.assignment.timeoutmonitor.timeout", 4000);
+    
     c.setBoolean("dfs.support.append", true);
     c.setInt("hbase.regionserver.info.port", 0);
     TEST_UTIL.startMiniCluster(2);
@@ -129,7 +136,30 @@ public class TestZKBasedOpenCloseRegion {
     while (!reopenEventProcessed.get()) {
       Threads.sleep(100);
     }
-
+    
+    //Test a region is reopened on a same region server.
+    reopenEventProcessed.set(false);    
+ 
+    List<MasterThread> masterThreads = cluster.getMasterThreads();
+    assertEquals(1, masterThreads.size());
+    
+    HMaster master = masterThreads.get(0).getMaster();
+    assertTrue(master.isActiveMaster());
+    
+    hri = getNonMetaRegion(regionServer.getOnlineRegions());
+    openListener =
+      new ReopenEventListener(hri.getRegionNameAsString(),
+          reopenEventProcessed, EventType.RS_ZK_REGION_OPENED);
+    cluster.getMaster().executorService.
+      registerListener(EventType.RS_ZK_REGION_OPENED, openListener);
+      
+    master.assignmentManager.regionPlans.put(hri.getEncodedName(),
+          new RegionPlan(hri, null, regionServer.getServerInfo()));
+    master.assignRegion(hri);
+    
+    while (!reopenEventProcessed.get()) {
+      Threads.sleep(100);
+    }
     LOG.info("Done with testReOpenRegion");
   }
 

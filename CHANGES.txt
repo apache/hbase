@@ -24,6 +24,8 @@ Release 0.90.5 - Unreleased
                on branch (Jieshan Bean)
    HBASE-4253  Intermittent test failure because of missing config parameter in new
                HTable(tablename) (Ramkrishna)
+   HBASE-4124  ZK restarted while a region is being assigned, new active HM re-assigns
+               it but the RS warns 'already online on this server'. (Gao Jinchao)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
