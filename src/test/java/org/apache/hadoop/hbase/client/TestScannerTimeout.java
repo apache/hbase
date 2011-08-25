@@ -147,7 +147,7 @@ public class TestScannerTimeout {
     Scan scan = new Scan();
     scan.setCaching(SCANNER_CACHING);
     
-    HTable table = new HTable(TABLE_NAME);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME);
     ResultScanner r = table.getScanner(scan);
     int count = 1;
     r.next();

@@ -22,6 +22,8 @@ Release 0.90.5 - Unreleased
                is bad (ramkrishna.s.vasudevan)
    HBASE-4234  Let regionserver abort if rollback fail after point-of-no-return
                on branch (Jieshan Bean)
+   HBASE-4253  Intermittent test failure because of missing config parameter in new
+               HTable(tablename) (Ramkrishna)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
