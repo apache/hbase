@@ -19,27 +19,37 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -112,6 +122,9 @@ public class TestLogRolling  {
     // We roll the log after every 32 writes
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.maxlogentries", 32);
 
+    TEST_UTIL.getConfiguration().setInt(
+        "hbase.regionserver.logroll.errors.tolerated", 2);
+
     // For less frequently updated regions flush after every 2 flushes
     TEST_UTIL.getConfiguration().setInt("hbase.hregion.memstore.optionalflushcount", 2);
 
@@ -148,7 +161,7 @@ public class TestLogRolling  {
   }
 
   @AfterClass
-  public  static void tearDownAfterClass() throws IOException  {
+  public static void tearDown() throws IOException  {
     TEST_UTIL.cleanupTestDir();
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -364,5 +377,145 @@ public class TestLogRolling  {
         log.isLowReplicationRollEnabled());
     assertTrue("New log file should have the default replication",
         log.getLogReplication() == fs.getDefaultReplication());
+  }
+
+  /**
+   * Test that HLog is rolled when all data nodes in the pipeline have been
+   * restarted.
+   * @throws Exception
+   */
+  @Test
+  public void testLogRollOnPipelineRestart() throws Exception {
+    assertTrue("This test requires HLog file replication.",
+      fs.getDefaultReplication() > 1);
+    LOG.info("Replication=" + fs.getDefaultReplication());
+    // When the META table can be opened, the region servers are running
+    new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
+
+    this.server = cluster.getRegionServer(0);
+    this.log = server.getWAL();
+
+    // Create the test table and open it
+    String tableName = getName();
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+
+    if (admin.tableExists(tableName)) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
+    admin.createTable(desc);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+
+    server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
+    this.log = server.getWAL();
+    final List<Path> paths = new ArrayList<Path>();
+    paths.add(log.computeFilename());
+    log.registerWALActionsListener(new WALObserver() {
+      @Override
+      public void logRolled(Path newFile) {
+        paths.add(newFile);
+      }
+      @Override
+      public void logRollRequested() {}
+      @Override
+      public void logCloseRequested() {}
+      @Override
+      public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
+          WALEdit logEdit) {}
+    });
+
+    assertTrue("Need HDFS-826 for this test", log.canGetCurReplicas());
+    // don't run this test without append support (HDFS-200 & HDFS-142)
+    assertTrue("Need append support for this test", FSUtils
+        .isAppendSupported(TEST_UTIL.getConfiguration()));
+
+    writeData(table, 2);
+
+    table.setAutoFlush(true);
+
+    long curTime = System.currentTimeMillis();
+    long oldFilenum = log.getFilenum();
+    assertTrue("Log should have a timestamp older than now",
+        curTime > oldFilenum && oldFilenum != -1);
+
+    assertTrue("The log shouldn't have rolled yet", oldFilenum == log.getFilenum());
+    DatanodeInfo[] pipeline = getPipeline(log);
+    assertTrue(pipeline.length == fs.getDefaultReplication());
+
+    // roll all datanodes in the pipeline
+    dfsCluster.restartDataNodes();
+    Thread.sleep(10000);
+    dfsCluster.waitActive();
+    LOG.info("Data Nodes restarted");
+
+    //this.log.sync();
+    // this write should succeed, but trigger a log roll
+    writeData(table, 3);
+    long newFilenum = log.getFilenum();
+
+    assertTrue("Missing datanode should've triggered a log roll",
+        newFilenum > oldFilenum && newFilenum > curTime);
+
+    //this.log.sync();
+    writeData(table, 4);
+
+    // roll all datanode again
+    dfsCluster.restartDataNodes();
+    Thread.sleep(10000);
+    dfsCluster.waitActive();
+    LOG.info("Data Nodes restarted");
+
+    // this write should succeed, but trigger a log roll
+    writeData(table, 5);
+
+    // force a log roll to read back and verify previously written logs
+    log.rollWriter(true);
+
+    // read back the data written
+    Set<String> loggedRows = new HashSet<String>();
+    for (Path p : paths) {
+      LOG.debug("Reading HLog "+FSUtils.getPath(p));
+      HLog.Reader reader = null;
+      try {
+        reader = HLog.getReader(fs, p, TEST_UTIL.getConfiguration());
+        HLog.Entry entry;
+        while ((entry = reader.next()) != null) {
+          LOG.debug("#"+entry.getKey().getLogSeqNum()+": "+entry.getEdit().getKeyValues());
+          for (KeyValue kv : entry.getEdit().getKeyValues()) {
+            loggedRows.add(Bytes.toStringBinary(kv.getRow()));
+          }
+        }
+      } catch (EOFException e) {
+        LOG.debug("EOF reading file "+FSUtils.getPath(p));
+      } finally {
+        if (reader != null) reader.close();
+      }
+    }
+
+    // verify the written rows are there
+    assertTrue(loggedRows.contains("row0002"));
+    assertTrue(loggedRows.contains("row0003"));
+    assertTrue(loggedRows.contains("row0004"));
+    assertTrue(loggedRows.contains("row0005"));
+
+    // flush all regions
+    List<HRegion> regions =
+        new ArrayList<HRegion>(server.getOnlineRegionsLocalContext());
+    for (HRegion r: regions) {
+      r.flushcache();
+    }
+
+    ResultScanner scanner = table.getScanner(new Scan());
+    try {
+      for (int i=2; i<=5; i++) {
+        Result r = scanner.next();
+        assertNotNull(r);
+        assertFalse(r.isEmpty());
+        assertEquals("row000"+i, Bytes.toString(r.getRow()));
+      }
+    } finally {
+      scanner.close();
+    }
   }
 }
