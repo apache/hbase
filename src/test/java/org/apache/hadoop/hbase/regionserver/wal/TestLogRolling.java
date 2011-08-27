@@ -19,7 +19,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -29,7 +32,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -376,14 +378,14 @@ public class TestLogRolling  {
     dfsCluster
         .startDataNodes(TEST_UTIL.getConfiguration(), 1, true, null, null);
     dfsCluster.waitActive();
-    // Force roll writer. The new log file will have the defalt replication,
-    // and the lowReplication roller will be enabled.
-    log.rollWriter();
-    batchWriteAndWait(table, 14, true, 10000);
-    assertTrue("LowReplication Roller should've been enabled",
-        log.isLowReplicationRollEnabled());
+    // Force roll writer. The new log file will have the default replications,
+    // and the LowReplication Roller will be enabled.
+    log.rollWriter(true);
+    batchWriteAndWait(table, 13, true, 10000);
     assertTrue("New log file should have the default replication",
         log.getLogReplication() == fs.getDefaultReplication());
+    assertTrue("LowReplication Roller should've been enabled",
+        log.isLowReplicationRollEnabled());
   }
 
   /**
