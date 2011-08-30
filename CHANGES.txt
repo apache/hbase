@@ -27,6 +27,8 @@ Release 0.90.5 - Unreleased
    HBASE-4124  ZK restarted while a region is being assigned, new active HM re-assigns
                it but the RS warns 'already online on this server'. (Gao Jinchao)
    HBASE-4252  TestLogRolling's low-probability failure (Jieshan Bean)
+   HBASE-4269  Add tests and restore semantics to TableInputFormat/TableRecordReader
+               (Jonathan Hsieh)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
