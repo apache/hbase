@@ -29,6 +29,7 @@ Release 0.90.5 - Unreleased
    HBASE-4252  TestLogRolling's low-probability failure (Jieshan Bean)
    HBASE-4269  Add tests and restore semantics to TableInputFormat/TableRecordReader
                (Jonathan Hsieh)
+   HBASE-4294  HLogSplitter sleeps with 1-second granularity (todd)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
