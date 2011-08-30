@@ -279,7 +279,7 @@ public class AssignmentManager extends ZooKeeperListener {
     boolean intransistion =
       processRegionInTransition(hri.getEncodedName(), hri, null);
     if (!intransistion) return intransistion;
-    LOG.debug("Waiting on " + HRegionInfo.prettyPrint(hri.getEncodedName()));
+    debugLog(hri, "Waiting on " + HRegionInfo.prettyPrint(hri.getEncodedName()));
     synchronized(this.regionsInTransition) {
       while (!this.master.isStopped() &&
           this.regionsInTransition.containsKey(hri.getEncodedName())) {
@@ -407,7 +407,7 @@ public class AssignmentManager extends ZooKeeperListener {
   throws KeeperException {
     // If was on dead server, its closed now.  Force to OFFLINE and then
     // handle it like a close; this will get it reassigned if appropriate
-    LOG.debug("RIT " + hri.getEncodedName() + " in state=" +
+    debugLog(hri, "RIT " + hri.getEncodedName() + " in state=" +
       oldData.getEventType() + " was on deadserver; forcing offline");
     ZKAssign.createOrForceNodeOffline(this.watcher, hri,
       this.master.getServerName());
@@ -1041,7 +1041,8 @@ public class AssignmentManager extends ZooKeeperListener {
       RegionPlan plan = getRegionPlan(state, forceNewPlan);
       if (plan == null) return; // Should get reassigned later when RIT times out.
       try {
-        LOG.debug("Assigning region " + state.getRegion().getRegionNameAsString() +
+        debugLog(state.getRegion(),
+          "Assigning region " + state.getRegion().getRegionNameAsString() +
           " to " + plan.getDestination().getServerName());
         // Transition RegionState to PENDING_OPEN
         state.update(RegionState.State.PENDING_OPEN);
@@ -1065,6 +1066,14 @@ public class AssignmentManager extends ZooKeeperListener {
           return;
         }
       }
+    }
+  }
+
+  private void debugLog(HRegionInfo region, String string) {
+    if (region.isMetaTable() || region.isRootRegion()) {
+      LOG.info(string);
+    } else {
+      LOG.debug(string);
     }
   }
 
@@ -1163,7 +1172,7 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     }
     if (newPlan) {
-      LOG.debug("No previous transition plan was found (or we are ignoring " +
+      debugLog(state.getRegion(), "No previous transition plan was found (or we are ignoring " +
         "an existing plan) for " + state.getRegion().getRegionNameAsString() +
         " so generated a random one; " + randomPlan + "; " +
         serverManager.countOfRegionServers() +
@@ -1171,7 +1180,7 @@ public class AssignmentManager extends ZooKeeperListener {
         ", exclude=" + serverToExclude + ") available servers");
         return randomPlan;
       }
-      LOG.debug("Using pre-existing plan for region " +
+      debugLog(state.getRegion(), "Using pre-existing plan for region " +
         state.getRegion().getRegionNameAsString() + "; plan=" + existingPlan);
       return existingPlan;
   }
@@ -1200,12 +1209,12 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param force if region should be closed even if already closing
    */
   public void unassign(HRegionInfo region, boolean force) {
-    LOG.debug("Starting unassignment of region " +
+    debugLog(region, "Starting unassignment of region " +
       region.getRegionNameAsString() + " (offlining)");
     synchronized (this.regions) {
       // Check if this region is currently assigned
       if (!regions.containsKey(region)) {
-        LOG.debug("Attempted to unassign region " +
+        debugLog(region, "Attempted to unassign region " +
           region.getRegionNameAsString() + " but it is not " +
           "currently assigned anywhere");
         return;
@@ -1220,12 +1229,12 @@ public class AssignmentManager extends ZooKeeperListener {
         state = new RegionState(region, RegionState.State.PENDING_CLOSE);
         regionsInTransition.put(encodedName, state);
       } else if (force && state.isPendingClose()) {
-        LOG.debug("Attempting to unassign region " +
+        debugLog(region, "Attempting to unassign region " +
             region.getRegionNameAsString() + " which is already pending close "
             + "but forcing an additional close");
         state.update(RegionState.State.PENDING_CLOSE);
       } else {
-        LOG.debug("Attempting to unassign region " +
+        debugLog(region, "Attempting to unassign region " +
           region.getRegionNameAsString() + " but it is " +
           "already in transition (" + state.getState() + ")");
         return;
@@ -1238,12 +1247,12 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     try {
       if (serverManager.sendRegionClose(server, state.getRegion())) {
-        LOG.debug("Sent CLOSE to " + server + " for region " +
+        debugLog(region, "Sent CLOSE to " + server + " for region " +
           region.getRegionNameAsString());
         return;
       }
       // This never happens. Currently regionserver close always return true.
-      LOG.debug("Server " + server + " region CLOSE RPC returned false for " +
+      LOG.warn("Server " + server + " region CLOSE RPC returned false for " +
         region.getEncodedName());
     } catch (NotServingRegionException nsre) {
       LOG.info("Server " + server + " returned " + nsre + " for " +
