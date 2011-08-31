@@ -28,6 +28,8 @@ Release 0.90.5 - Unreleased
                it but the RS warns 'already online on this server'. (Gao Jinchao)
    HBASE-4252  TestLogRolling's low-probability failure (Jieshan Bean)
    HBASE-4294  HLogSplitter sleeps with 1-second granularity (todd)
+   HBASE-4269  Add tests and restore semantics to TableInputFormat/TableRecordReader
+               (Jonathan Hsieh)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
