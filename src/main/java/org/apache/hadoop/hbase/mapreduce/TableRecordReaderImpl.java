@@ -23,7 +23,6 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -131,8 +130,6 @@ public class TableRecordReaderImpl {
     if (value == null) value = new Result();
     try {
       value = this.scanner.next();
-    } catch (DoNotRetryIOException e) {
-      throw e;
     } catch (IOException e) {
       LOG.debug("recovered from " + StringUtils.stringifyException(e));
       if (lastSuccessfulRow == null) {
