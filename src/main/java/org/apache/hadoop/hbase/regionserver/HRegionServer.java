@@ -34,7 +34,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -44,6 +43,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +51,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -138,6 +137,7 @@ import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 
 /**
  * HRegionServer makes a set of HRegions available to clients. It checks in with
@@ -670,7 +670,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Interrupt catalog tracker here in case any regions being opened out in
     // handlers are stuck waiting on meta or root.
     if (this.catalogTracker != null) this.catalogTracker.stop();
-    if (this.fsOk) waitOnAllRegionsToClose();
+    if (this.fsOk)
+      waitOnAllRegionsToClose(abortRequested);
 
     // Make sure the proxy is down.
     if (this.hbaseMaster != null) {
@@ -698,7 +699,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   /**
    * Wait on regions close.
    */
-  private void waitOnAllRegionsToClose() {
+  private void waitOnAllRegionsToClose(final boolean abort) {
     // Wait till all regions are closed before going out.
     int lastCount = -1;
     while (!isOnlineRegionsEmpty()) {
@@ -711,6 +712,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         // swamp the log.
         if (count < 10 && LOG.isDebugEnabled()) {
           LOG.debug(this.onlineRegions);
+        }
+      }
+      // Ensure all user regions have been sent to close. Use this to
+      // protect against the case where an open comes in after we start the
+      // iterator of onlineRegions to close all user regions.
+      for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
+        HRegionInfo hri = e.getValue().getRegionInfo();
+        if (!this.regionsInTransitionInRS.contains(hri.getEncodedNameAsBytes())) {
+          // Don't update zk with this close transition; pass false.
+          closeRegion(hri, abort, false);
         }
       }
       Threads.sleep(1000);

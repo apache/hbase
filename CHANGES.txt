@@ -30,6 +30,8 @@ Release 0.90.5 - Unreleased
    HBASE-4294  HLogSplitter sleeps with 1-second granularity (todd)
    HBASE-4269  Add tests and restore semantics to TableInputFormat/TableRecordReader
                (Jonathan Hsieh)
+   HBASE-4341  HRS#closeAllRegions should take care of HRS#onlineRegions's weak
+               consistency (Jieshan Bean)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
