@@ -34,6 +34,7 @@ Release 0.90.5 - Unreleased
                consistency (Jieshan Bean)
    HBASE-4340  Hbase can't balance if ServerShutdownHandler encountered
                exception (Jinchao)
+   HBASE-4270  IOE ignored during flush-on-close causes dataloss
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
