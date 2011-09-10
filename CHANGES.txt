@@ -32,6 +32,8 @@ Release 0.90.5 - Unreleased
                (Jonathan Hsieh)
    HBASE-4341  HRS#closeAllRegions should take care of HRS#onlineRegions's weak
                consistency (Jieshan Bean)
+   HBASE-4340  Hbase can't balance if ServerShutdownHandler encountered
+               exception (Jinchao)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

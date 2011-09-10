@@ -149,69 +149,73 @@ public class ServerShutdownHandler extends EventHandler {
     final String serverName = this.hsi.getServerName();
 
     LOG.info("Splitting logs for " + serverName);
-    this.services.getMasterFileSystem().splitLog(serverName);
-
-    // Clean out anything in regions in transition.  Being conservative and
-    // doing after log splitting.  Could do some states before -- OPENING?
-    // OFFLINE? -- and then others after like CLOSING that depend on log
-    // splitting.
-    List<RegionState> regionsInTransition =
-      this.services.getAssignmentManager().processServerShutdown(this.hsi);
-
-    // Assign root and meta if we were carrying them.
-    if (isCarryingRoot()) { // -ROOT-
-      LOG.info("Server " + serverName + " was carrying ROOT. Trying to assign.");
-      verifyAndAssignRootWithRetries();
-    }
-
-    // Carrying meta?
-    if (isCarryingMeta()) {
-      LOG.info("Server " + serverName + " was carrying META. Trying to assign.");
-      this.services.getAssignmentManager().assignMeta();
-    }
-
-    // Wait on meta to come online; we need it to progress.
-    // TODO: Best way to hold strictly here?  We should build this retry logic
-    //       into the MetaReader operations themselves.
-    NavigableMap<HRegionInfo, Result> hris = null;
-    while (!this.server.isStopped()) {
-      try {
-        this.server.getCatalogTracker().waitForMeta();
-        hris = MetaReader.getServerUserRegions(this.server.getCatalogTracker(),
-            this.hsi);
-        break;
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new IOException("Interrupted", e);
-      } catch (IOException ioe) {
-        LOG.info("Received exception accessing META during server shutdown of " +
-            serverName + ", retrying META read", ioe);
+    try {
+      this.services.getMasterFileSystem().splitLog(serverName);
+    
+      // Clean out anything in regions in transition.  Being conservative and
+      // doing after log splitting.  Could do some states before -- OPENING?
+      // OFFLINE? -- and then others after like CLOSING that depend on log
+      // splitting.
+      List<RegionState> regionsInTransition =
+        this.services.getAssignmentManager().processServerShutdown(this.hsi);
+    
+      // Assign root and meta if we were carrying them.
+      if (isCarryingRoot()) { // -ROOT-
+        LOG.info("Server " + serverName + " was carrying ROOT. Trying to assign.");
+        verifyAndAssignRootWithRetries();
       }
-    }
-
-    // Skip regions that were in transition unless CLOSING or PENDING_CLOSE
-    for (RegionState rit : regionsInTransition) {
-      if (!rit.isClosing() && !rit.isPendingClose()) {
-        LOG.debug("Removed " + rit.getRegion().getRegionNameAsString() +
-          " from list of regions to assign because in RIT");
-        hris.remove(rit.getRegion());
+    
+      // Carrying meta?
+      if (isCarryingMeta()) {
+        LOG.info("Server " + serverName + " was carrying META. Trying to assign.");
+        this.services.getAssignmentManager().assignMeta();
       }
-    }
-
-    LOG.info("Reassigning " + (hris == null? 0: hris.size()) +
-      " region(s) that " + serverName +
-      " was carrying (skipping " + regionsInTransition.size() +
-      " regions(s) that are already in transition)");
-
-    // Iterate regions that were on this server and assign them
-    for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
-      if (processDeadRegion(e.getKey(), e.getValue(),
-          this.services.getAssignmentManager(),
-          this.server.getCatalogTracker())) {
-        this.services.getAssignmentManager().assign(e.getKey(), true);
+    
+      // Wait on meta to come online; we need it to progress.
+      // TODO: Best way to hold strictly here?  We should build this retry logic
+      //       into the MetaReader operations themselves.
+      NavigableMap<HRegionInfo, Result> hris = null;
+      while (!this.server.isStopped()) {
+        try {
+          this.server.getCatalogTracker().waitForMeta();
+          hris = MetaReader.getServerUserRegions(this.server.getCatalogTracker(),
+              this.hsi);
+          break;
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new IOException("Interrupted", e);
+        } catch (IOException ioe) {
+          LOG.info("Received exception accessing META during server shutdown of " +
+              serverName + ", retrying META read", ioe);
+        }
       }
+    
+      // Skip regions that were in transition unless CLOSING or PENDING_CLOSE
+      for (RegionState rit : regionsInTransition) {
+        if (!rit.isClosing() && !rit.isPendingClose()) {
+          LOG.debug("Removed " + rit.getRegion().getRegionNameAsString() +
+            " from list of regions to assign because in RIT");
+          hris.remove(rit.getRegion());
+        }
+      }
+    
+      LOG.info("Reassigning " + (hris == null? 0: hris.size()) +
+        " region(s) that " + serverName +
+        " was carrying (skipping " + regionsInTransition.size() +
+        " regions(s) that are already in transition)");
+    
+      // Iterate regions that were on this server and assign them
+      for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
+        if (processDeadRegion(e.getKey(), e.getValue(),
+            this.services.getAssignmentManager(),
+            this.server.getCatalogTracker())) {
+          this.services.getAssignmentManager().assign(e.getKey(), true);
+        }
+      }
+    } finally {
+      this.deadServers.finish(serverName);
     }
-    this.deadServers.finish(serverName);
+    
     LOG.info("Finished processing of shutdown of " + serverName);
   }
 
