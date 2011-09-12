@@ -48,6 +48,8 @@ Release 0.90.5 - Unreleased
                for a region (todd)
    HBASE-4313  Refactor TestHBaseFsck to make adding individual hbck tests
                easier (Jonathan Hsieh)
+   HBASE-4325  Improve error message when using STARTROW for meta scans
+               (Jonathan Hsieh)
  
 Release 0.90.4 - August 10, 2011
   BUG FIXES
