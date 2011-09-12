@@ -35,6 +35,7 @@ Release 0.90.5 - Unreleased
    HBASE-4340  Hbase can't balance if ServerShutdownHandler encountered
                exception (Jinchao)
    HBASE-4270  IOE ignored during flush-on-close causes dataloss
+   HBASE-4180  HBase should check the isSecurityEnabled flag before login
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
