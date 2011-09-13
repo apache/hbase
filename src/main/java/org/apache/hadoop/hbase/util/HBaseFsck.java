@@ -88,6 +88,8 @@ public class HBaseFsck {
   private boolean fix = false; // do we want to try fixing the errors?
   private boolean rerun = false; // if we tried to fix something rerun hbck
   private static boolean summary = false; // if we want to print less output
+  private boolean checkMetaOnly = false;
+  
   // Empty regioninfo qualifiers in .META.
   private Set<Result> emptyRegionInfoQualifiers = new HashSet<Result>();
   private int numThreads = MAX_NUM_THREADS;
@@ -140,6 +142,7 @@ public class HBaseFsck {
       errors.reportError("Encountered fatal error. Exiting...");
       return -1;
     }
+    
     getMetaEntries();
 
     // Check if .META. is found only once and in the right place
@@ -150,20 +153,22 @@ public class HBaseFsck {
     }
 
     // get a list of all tables that have not changed recently.
-    AtomicInteger numSkipped = new AtomicInteger(0);
-    HTableDescriptor[] allTables = getTables(numSkipped);
-    errors.print("Number of Tables: " + allTables.length);
-    if (details) {
-      if (numSkipped.get() > 0) {
-        errors.detail("Number of Tables in flux: " + numSkipped.get());
-      }
-      for (HTableDescriptor td : allTables) {
-        String tableName = td.getNameAsString();
-        errors.detail("  Table: " + tableName + "\t" +
-                           (td.isReadOnly() ? "ro" : "rw") + "\t" +
-                           (td.isRootRegion() ? "ROOT" :
-                            (td.isMetaRegion() ? "META" : "    ")) + "\t" +
-                           " families: " + td.getFamilies().size());
+    if (!checkMetaOnly) {
+      AtomicInteger numSkipped = new AtomicInteger(0);
+      HTableDescriptor[] allTables = getTables(numSkipped);
+      errors.print("Number of Tables: " + allTables.length);
+      if (details) {
+        if (numSkipped.get() > 0) {
+          errors.detail("Number of Tables in flux: " + numSkipped.get());
+        }
+        for (HTableDescriptor td : allTables) {
+          String tableName = td.getNameAsString();
+          errors.detail("  Table: " + tableName + "\t" +
+                             (td.isReadOnly() ? "ro" : "rw") + "\t" +
+                             (td.isRootRegion() ? "ROOT" :
+                              (td.isMetaRegion() ? "META" : "    ")) + "\t" +
+                             " families: " + td.getFamilies().size());
+        }
       }
     }
 
@@ -260,10 +265,15 @@ public class HBaseFsck {
     boolean foundVersionFile = false;
     FileStatus[] files = fs.listStatus(rootDir);
     for (FileStatus file : files) {
-      if (file.getPath().getName().equals(HConstants.VERSION_FILE_NAME)) {
+      String dirName = file.getPath().getName();
+      if (dirName.equals(HConstants.VERSION_FILE_NAME)) {
         foundVersionFile = true;
       } else {
-        tableDirs.add(file);
+        if (!checkMetaOnly ||
+            dirName.equals("-ROOT-") ||
+            dirName.equals(".META.")) {
+          tableDirs.add(file);
+        }
       }
     }
 
@@ -777,8 +787,11 @@ public class HBaseFsck {
     MetaScanner.metaScan(conf, visitor, null, null,
       Integer.MAX_VALUE, HConstants.ROOT_TABLE_NAME);
 
-    // Scan .META. to pick up user regions
-    MetaScanner.metaScan(conf, visitor);
+    if (!checkMetaOnly) {
+      // Scan .META. to pick up user regions
+      MetaScanner.metaScan(conf, visitor);
+    }
+    
     errors.print("");
   }
 
@@ -1015,6 +1028,9 @@ public class HBaseFsck {
 
         // list all online regions from this region server
         List<HRegionInfo> regions = server.getOnlineRegions();
+        if (hbck.checkMetaOnly) {
+          regions = filterOnlyMetaRegions(regions);
+        }
         if (details) {
           errors.detail("RegionServer: " + rsinfo.getServerName() +
                            " number of regions: " + regions.size());
@@ -1039,6 +1055,16 @@ public class HBaseFsck {
         done = true;
         notifyAll(); // wakeup anybody waiting for this item to be done
       }
+    }
+
+    private List<HRegionInfo> filterOnlyMetaRegions(List<HRegionInfo> regions) {
+      List<HRegionInfo> ret = Lists.newArrayList();
+      for (HRegionInfo hri : regions) {
+        if (hri.isMetaRegion() || hri.isRootRegion()) {
+          ret.add(hri);
+        }
+      }
+      return ret;
     }
   }
 
@@ -1130,6 +1156,14 @@ public class HBaseFsck {
   }
 
   /**
+   * Set META check mode.
+   * Print only info about META table deployment/state
+   */
+  void setCheckMetaOnly() {
+    checkMetaOnly = true;
+  }
+
+  /**
    * Check if we should rerun fsck again. This checks if we've tried to
    * fix something and we should rerun fsck tool again.
    * Display the full report from fsck. This displays all live and dead
@@ -1175,7 +1209,7 @@ public class HBaseFsck {
     System.err.println("   -sleepBeforeRerun {timeInSeconds} Sleep this many seconds" +
                        " before checking if the fix worked if run with -fix");
     System.err.println("   -summary Print only summary of the tables and status.");
-
+    System.err.println("   -metaonly Only check the state of ROOT and META tables.");
     Runtime.getRuntime().exit(-2);
   }
 
@@ -1226,6 +1260,8 @@ public class HBaseFsck {
         fsck.setFixErrors(true);
       } else if (cmd.equals("-summary")) {
         fsck.setSummary();
+      } else if (cmd.equals("-metaonly")) {
+        fsck.setCheckMetaOnly();
       } else {
         String str = "Unknown command line option : " + cmd;
         LOG.info(str);

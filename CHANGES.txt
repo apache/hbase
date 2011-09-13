@@ -50,6 +50,8 @@ Release 0.90.5 - Unreleased
                easier (Jonathan Hsieh)
    HBASE-4325  Improve error message when using STARTROW for meta scans
                (Jonathan Hsieh)
+   HBASE-4272. Add -metaonly flag to hbck feature to only inspect and try
+               to repair META and ROOT. (todd)
  
 Release 0.90.4 - August 10, 2011
   BUG FIXES
