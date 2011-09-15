@@ -1041,8 +1041,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       MetaReader.getRegion(this.catalogTracker, regionName);
     if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
     HRegionInfo hri = pair.getFirst();
-    if (force) this.assignmentManager.clearRegionFromTransition(hri);
-    this.assignmentManager.unassign(hri, force);
+    if (force) {
+      this.assignmentManager.clearRegionFromTransition(hri);
+      assignRegion(hri);
+    } else {
+      this.assignmentManager.unassign(hri, force);
+    }
   }
 
   /**
