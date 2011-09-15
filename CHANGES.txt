@@ -44,6 +44,7 @@ Release 0.90.5 - Unreleased
                to contact the sink (JD and Lars Hofhansl)
    HBASE-4390  [replication] ReplicationSource's UncaughtExceptionHandler
                shouldn't join
+   HBASE-4395  EnableTableHandler races with itself
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
