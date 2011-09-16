@@ -573,7 +573,7 @@ public class HBaseFsck {
     }
 
     public int getNumRegions() {
-      return sc.getStarts().size();
+      return sc.getStarts().size() + backwards.size();
     }
 
     /**
