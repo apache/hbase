@@ -1254,6 +1254,7 @@ public class HBaseAdmin implements Abortable {
   throws MasterNotRunningException, ZooKeeperConnectionException {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
     copyOfConf.setInt("hbase.client.retries.number", 1);
-    new HBaseAdmin(copyOfConf);
+    HBaseAdmin admin = new HBaseAdmin(copyOfConf);
+    HConnectionManager.deleteConnection(admin.getConfiguration(), false);
   }
 }

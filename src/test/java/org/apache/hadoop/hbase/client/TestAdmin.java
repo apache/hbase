@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -829,4 +830,16 @@ public class TestAdmin {
       this.admin.deleteTable(tableName);
     }
   }
+  
+  /**
+   * HBASE-4417 HBA.checkHBaseAvailable() doesn't close ZooKeeper connections
+   */
+  @Test
+  public void testCheckHBaseAvailableClosesConnection() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    for(int i=0; i<1000;i++) {
+        HBaseAdmin.checkHBaseAvailable(conf);
+    }
+  }
+  
 }
