@@ -646,12 +646,15 @@ public class MemStore implements HeapSize {
     private KeyValue snapshotNextRow = null;
 
     // iterator based scanning.
-    Iterator<KeyValue> kvsetIt;
-    Iterator<KeyValue> snapshotIt;
+    private Iterator<KeyValue> kvsetIt;
+    private Iterator<KeyValue> snapshotIt;
 
     // number of iterations in this reseek operation
-    int numIterReseek;
-    
+    private int numIterReseek;
+
+    // the pre-calculated KeyValue to be returned by peek() or next()
+    private KeyValue theNext;
+
     /*
     Some notes...
 
@@ -721,14 +724,14 @@ public class MemStore implements HeapSize {
       //    snapshot.size() + " threadread = " + readPoint);
 
 
-      KeyValue lowest = getLowest();
+      theNext = getLowest();
 
-      // has data := (lowest != null)
-      return lowest != null;
+      // has data := (theNext != null)
+      return theNext != null;
     }
 
     @Override
-    public boolean reseek(KeyValue key) {
+    public synchronized boolean reseek(KeyValue key) {
       numIterReseek = reseekNumKeys;
       while (kvsetNextRow != null &&
           comparator.compare(kvsetNextRow, key) < 0) {
@@ -751,17 +754,21 @@ public class MemStore implements HeapSize {
           return seek(key);
         }
       }
-      return (kvsetNextRow != null || snapshotNextRow != null);
+
+      theNext = getLowest();
+
+      // has data := (theNext != null)
+      return theNext != null;
     }
 
+    @Override
     public synchronized KeyValue peek() {
       //DebugPrint.println(" MS@" + hashCode() + " peek = " + getLowest());
-      return getLowest();
+      return theNext;
     }
 
-
+    @Override
     public synchronized KeyValue next() {
-      KeyValue theNext = getLowest();
 
       if (theNext == null) {
           return null;
@@ -777,7 +784,13 @@ public class MemStore implements HeapSize {
       //long readpoint = ReadWriteConsistencyControl.getThreadReadPoint();
       //DebugPrint.println(" MS@" + hashCode() + " next: " + theNext + " next_next: " +
       //    getLowest() + " threadpoint=" + readpoint);
-      return theNext;
+
+
+      final KeyValue ret = theNext;
+
+      theNext = getLowest();
+
+      return ret;
     }
 
     protected KeyValue getLowest() {
@@ -801,6 +814,7 @@ public class MemStore implements HeapSize {
       return (first != null ? first : second);
     }
 
+    @Override
     public synchronized void close() {
       this.kvsetNextRow = null;
       this.snapshotNextRow = null;

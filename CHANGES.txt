@@ -49,6 +49,8 @@ Release 0.90.5 - Unreleased
                accurate region split problem summary (Jon Hsieh)
    HBASE-4417  HBaseAdmin.checkHBaseAvailable() doesn't close ZooKeeper connections
                (Stefan Seelmann)
+   HBASE-4423  HBASE-4238 broke TestCatalogJanitor#testCleanParent test
+               (ramkrishna.s.vasudevan)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
