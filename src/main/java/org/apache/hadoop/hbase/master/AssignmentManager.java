@@ -376,9 +376,9 @@ public class AssignmentManager extends ZooKeeperListener {
             "; letting RIT timeout so will be assigned elsewhere");
           break;
         }
-        if (isOnDeadServer(regionInfo, deadServers) && 
-            (null == data.getServerName() ||
-              !serverManager.isServerOnline(data.getServerName()))) {
+        if ((!serverManager.isServerOnline(sn) || (null == data.getServerName()))
+            && (isOnDeadServer(regionInfo, deadServers)
+                || regionInfo.isMetaRegion() || regionInfo.isRootRegion())) {
           // If was on a dead server, then its not open any more; needs handling.
           forceOffline(regionInfo, data);
         } else {

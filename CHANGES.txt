@@ -51,6 +51,8 @@ Release 0.90.5 - Unreleased
                (Stefan Seelmann)
    HBASE-4423  HBASE-4238 broke TestCatalogJanitor#testCleanParent test
                (ramkrishna.s.vasudevan)
+   HBASE-4400  .META. getting stuck if RS hosting it is dead and znode state is in
+               RS_ZK_REGION_OPENED (ramkrishna.s.vasudevan)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
