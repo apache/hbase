@@ -513,6 +513,7 @@ Release 0.91.0 - Unreleased
                (David Revell)
    HBASE-4424  Provide coprocessors access to createTable() via 
                MasterServices
+   HBASE-4432  Enable/Disable off heap cache with config (Li Pi)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
