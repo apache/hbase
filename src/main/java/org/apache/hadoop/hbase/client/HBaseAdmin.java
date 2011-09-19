@@ -715,12 +715,44 @@ public class HBaseAdmin implements Abortable {
    * Asynchronous operation.
    *
    * @param tableName name of table
+   * @param columnName name of column to be modified
+   * @param descriptor new column descriptor to use
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated The <code>columnName</code> is redundant. Use {@link #addColumn(String, HColumnDescriptor)}
+   */
+  public void modifyColumn(final String tableName, final String columnName,
+      HColumnDescriptor descriptor)
+  throws IOException {
+    modifyColumn(tableName,  descriptor);
+  }
+
+  /**
+   * Modify an existing column family on a table.
+   * Asynchronous operation.
+   *
+   * @param tableName name of table
    * @param descriptor new column descriptor to use
    * @throws IOException if a remote or network exception occurs
    */
   public void modifyColumn(final String tableName, HColumnDescriptor descriptor)
   throws IOException {
     modifyColumn(Bytes.toBytes(tableName), descriptor);
+  }
+
+  /**
+   * Modify an existing column family on a table.
+   * Asynchronous operation.
+   *
+   * @param tableName name of table
+   * @param columnName name of column to be modified
+   * @param descriptor new column descriptor to use
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated The <code>columnName</code> is redundant. Use {@link #modifyColumn(byte[], HColumnDescriptor)}
+   */
+  public void modifyColumn(final byte [] tableName, final byte [] columnName,
+    HColumnDescriptor descriptor)
+  throws IOException {
+    modifyColumn(tableName, descriptor);
   }
 
   /**
