@@ -536,6 +536,7 @@ Release 0.91.0 - Unreleased
    HBASE-4296  Deprecate HTable[Interface].getRowOrBefore(...) (Lars Hofhansl)
    HBASE-2195  Support cyclic replication (Lars Hofhansl)
    HBASE-2196  Support more than one slave cluster (Lars Hofhansl)
+   HBASE-4429  Provide synchronous balanceSwitch()
 
   NEW FEATURES
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via

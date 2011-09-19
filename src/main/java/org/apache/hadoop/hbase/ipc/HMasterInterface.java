@@ -231,6 +231,14 @@ public interface HMasterInterface extends VersionedProtocol {
   public boolean balanceSwitch(final boolean b);
 
   /**
+   * Turn the load balancer on or off.
+   * It waits until current balance() call, if outstanding, to return.
+   * @param b If true, enable balancer. If false, disable balancer.
+   * @return Previous balancer value
+   */
+  public boolean synchronousBalanceSwitch(final boolean b);
+
+  /**
    * Get array of all HTDs.
    * @return array of HTableDescriptor
    */

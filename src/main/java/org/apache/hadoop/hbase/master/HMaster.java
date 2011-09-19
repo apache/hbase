@@ -876,23 +876,48 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     return balancerRan;
   }
 
-  @Override
-  public boolean balanceSwitch(final boolean b) {
+  enum BalanceSwitchMode {
+    SYNC,
+    ASYNC
+  }
+  /**
+   * Assigns balancer switch according to BalanceSwitchMode
+   * @param b new balancer switch
+   * @param mode BalanceSwitchMode
+   * @return old balancer switch
+   */
+  public boolean switchBalancer(final boolean b, BalanceSwitchMode mode) {
     boolean oldValue = this.balanceSwitch;
     boolean newValue = b;
     try {
       if (this.cpHost != null) {
         newValue = this.cpHost.preBalanceSwitch(newValue);
       }
-      this.balanceSwitch = newValue;
-      LOG.info("Balance=" + newValue);
+      if (mode == BalanceSwitchMode.SYNC) {
+        synchronized (this.balancer) {        
+          this.balanceSwitch = newValue;
+        }
+      } else {
+        this.balanceSwitch = newValue;        
+      }
+      LOG.info("BalanceSwitch=" + newValue);
       if (this.cpHost != null) {
         this.cpHost.postBalanceSwitch(oldValue, newValue);
       }
     } catch (IOException ioe) {
       LOG.warn("Error flipping balance switch", ioe);
     }
-    return oldValue;
+    return oldValue;    
+  }
+  
+  @Override
+  public boolean synchronousBalanceSwitch(final boolean b) {
+    return switchBalancer(b, BalanceSwitchMode.SYNC);
+  }
+  
+  @Override
+  public boolean balanceSwitch(final boolean b) {
+    return switchBalancer(b, BalanceSwitchMode.ASYNC);
   }
 
   /**
