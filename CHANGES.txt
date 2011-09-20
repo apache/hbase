@@ -54,6 +54,7 @@ Release 0.90.5 - Unreleased
    HBASE-4400  .META. getting stuck if RS hosting it is dead and znode state is in
                RS_ZK_REGION_OPENED (ramkrishna.s.vasudevan)
    HBASE-4445  Not passing --config when checking if distributed mode or not
+   HBASE-3421  Very wide rows -- 30M plus -- cause us OOME (Nate Putnam)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
