@@ -133,9 +133,9 @@ class MockRegionServerServices implements RegionServerServices {
   public boolean isStopped() {
     return false;
   }
-}  @Override
+
+  @Override
   public boolean isAborted() {
-    // TODO Auto-generated method stub
     return false;
   }
   
