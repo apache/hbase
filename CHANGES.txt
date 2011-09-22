@@ -292,6 +292,9 @@ Release 0.91.0 - Unreleased
    HBASE-4153  Handle RegionAlreadyInTransitionException in AssignmentManager
                (Ramkrishna)
 
+  TESTS
+   HBASE-4450  test for number of blocks read: to serve as baseline for expected
+               blocks read and for catching regressions (Kannan)
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
    HBASE-3292  Expose block cache hit/miss/evict counts into region server
