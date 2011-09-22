@@ -271,13 +271,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       halfReader = new HalfStoreFileReader(fs, inFile, null, reference);
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
+      // We overestimate the number of entries in each split as the number
+      // of entries in the parent file.
+      int maxBloomEntries = halfReader.getFilterEntries();
+
       int blocksize = familyDescriptor.getBlocksize();
       Algorithm compression = familyDescriptor.getCompression();
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
 
       halfWriter = new StoreFile.Writer(
           fs, outFile, blocksize, compression, conf, KeyValue.COMPARATOR,
-          bloomFilterType, 0);
+          bloomFilterType, maxBloomEntries);
       HFileScanner scanner = halfReader.getScanner(false, false);
       scanner.seekTo();
       do {
