@@ -58,6 +58,8 @@ Release 0.90.5 - Unreleased
    HBASE-4453  TestReplication failing up on builds.a.o because already running
                zk with new format root servername
    HBASE-4449  LoadIncrementalHFiles can't handle CFs with blooms (David Revell)
+   HBASE-4452  Possibility of RS opening a region though tickleOpening fails due to
+               znode version mismatch (Ramkrishna)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
