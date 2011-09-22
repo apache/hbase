@@ -291,6 +291,8 @@ Release 0.91.0 - Unreleased
    HBASE-3421  Very wide rows -- 30M plus -- cause us OOME (Nate Putnam)
    HBASE-4153  Handle RegionAlreadyInTransitionException in AssignmentManager
                (Ramkrishna)
+   HBASE-4452  Possibility of RS opening a region though tickleOpening fails due to
+               znode version mismatch (Ramkrishna)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
