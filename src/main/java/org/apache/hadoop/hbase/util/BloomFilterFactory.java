@@ -164,6 +164,7 @@ public final class BloomFilterFactory {
     int maxFold = conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD,
         MAX_ALLOWED_FOLD_FACTOR);
 
+    // Do we support compound bloom filters?
     if (HFile.getFormatVersion(conf) > HFile.MIN_FORMAT_VERSION) {
       // In case of compound Bloom filters we ignore the maxKeys hint.
       CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(
