@@ -301,6 +301,7 @@ Release 0.92.0 - Unreleased
                (Ming Ma)
    HBASE-4468  Wrong resource name in an error massage: webapps instead of
                hbase-webapps (nkeywal)
+   HBASE-4472  MiniHBaseCluster.shutdown() doesn't work if no active master
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
