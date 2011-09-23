@@ -60,6 +60,8 @@ Release 0.90.5 - Unreleased
    HBASE-4449  LoadIncrementalHFiles can't handle CFs with blooms (David Revell)
    HBASE-4452  Possibility of RS opening a region though tickleOpening fails due to
                znode version mismatch (Ramkrishna)
+   HBASE-4387  Error while syncing: DFSOutputStream is closed
+               (Lars Hofhansl)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
