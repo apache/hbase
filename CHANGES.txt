@@ -296,7 +296,6 @@ Release 0.92.0 - Unreleased
                znode version mismatch (Ramkrishna)
    HBASE-4446  Rolling restart RSs scenario, regions could stay in OPENING state
                (Ming Ma)
-   HBASE-4387  Error while syncing: DFSOutputStream is closed
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
@@ -631,6 +630,8 @@ Release 0.90.5 - Unreleased
    HBASE-4445  Not passing --config when checking if distributed mode or not
    HBASE-4453  TestReplication failing up on builds.a.o because already
                running zk with new format root servername
+   HBASE-4387  Error while syncing: DFSOutputStream is closed
+               (Lars Hofhansl)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
