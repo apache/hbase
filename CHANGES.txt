@@ -536,6 +536,7 @@ Release 0.92.0 - Unreleased
    HBASE-4434  seek optimization: don't do eager HFile Scanner
                next() unless the next KV is needed
                (Kannan Muthukkaruppan)
+   HBASE-4280  [replication] ReplicationSink can deadlock itself via handlers
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
