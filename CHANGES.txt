@@ -86,6 +86,7 @@ Release 0.90.5 - Unreleased
                (Harsh J)
    HBASE-4375  [hbck] Add region coverage visualization to hbck
                (Jonathan Hsieh)
+   HBASE-4280  [replication] ReplicationSink can deadlock itself via handlers
  
 Release 0.90.4 - August 10, 2011
   BUG FIXES
