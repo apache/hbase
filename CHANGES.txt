@@ -301,6 +301,8 @@ Release 0.92.0 - Unreleased
                znode version mismatch (Ramkrishna)
    HBASE-4446  Rolling restart RSs scenario, regions could stay in OPENING state
                (Ming Ma)
+   HBASE-4468  Wrong resource name in an error massage: webapps instead of
+               hbase-webapps (nkeywal)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
