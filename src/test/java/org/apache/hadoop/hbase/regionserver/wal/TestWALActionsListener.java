@@ -108,8 +108,10 @@ public class TestWALActionsListener {
     hlog.close();
     hlog.closeAndDelete();
 
-    assertEquals(11, observer.logRollCounter);
-    assertEquals(5, laterobserver.logRollCounter);
+    assertEquals(11, observer.preLogRollCounter);
+    assertEquals(11, observer.postLogRollCounter);
+    assertEquals(5, laterobserver.preLogRollCounter);
+    assertEquals(5, laterobserver.postLogRollCounter);
     assertEquals(2, observer.closedCount);
   }
 
@@ -118,12 +120,28 @@ public class TestWALActionsListener {
    * Just counts when methods are called
    */
   static class DummyWALActionsListener implements WALActionsListener {
-    public int logRollCounter = 0;
+    public int preLogRollCounter = 0;
+    public int postLogRollCounter = 0;
     public int closedCount = 0;
 
     @Override
-    public void logRolled(Path newFile) {
-      logRollCounter++;
+    public void preLogRoll(Path oldFile, Path newFile) {
+      preLogRollCounter++;
+    }
+
+    @Override
+    public void postLogRoll(Path oldFile, Path newFile) {
+      postLogRollCounter++;
+    }
+
+    @Override
+    public void preLogArchive(Path oldFile, Path newFile) {
+      // Not interested
+    }
+
+    @Override
+    public void postLogArchive(Path oldFile, Path newFile) {
+      // Not interested
     }
 
     @Override

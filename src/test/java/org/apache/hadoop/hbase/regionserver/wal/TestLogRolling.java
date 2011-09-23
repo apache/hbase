@@ -416,12 +416,21 @@ public class TestLogRolling  {
     server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
     this.log = server.getWAL();
     final List<Path> paths = new ArrayList<Path>();
+    final List<Integer> preLogRolledCalled = new ArrayList<Integer>();
     paths.add(log.computeFilename());
     log.registerWALActionsListener(new WALActionsListener() {
       @Override
-      public void logRolled(Path newFile) {
+      public void preLogRoll(Path oldFile, Path newFile)  {
+        preLogRolledCalled.add(new Integer(1));
+      }
+      @Override
+      public void postLogRoll(Path oldFile, Path newFile) {
         paths.add(newFile);
       }
+      @Override
+      public void preLogArchive(Path oldFile, Path newFile) {}
+      @Override
+      public void postLogArchive(Path oldFile, Path newFile) {}
       @Override
       public void logRollRequested() {}
       @Override
@@ -478,6 +487,7 @@ public class TestLogRolling  {
 
     // force a log roll to read back and verify previously written logs
     log.rollWriter(true);
+    assertTrue(preLogRolledCalled.size() == 1);
 
     // read back the data written
     Set<String> loggedRows = new HashSet<String>();
