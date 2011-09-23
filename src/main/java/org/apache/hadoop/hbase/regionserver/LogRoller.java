@@ -154,7 +154,22 @@ class LogRoller extends Thread implements WALActionsListener {
   }
 
   @Override
-  public void logRolled(Path newFile) {
+  public void preLogRoll(Path oldPath, Path newPath) throws IOException {
+    // Not interested
+  }
+
+  @Override
+  public void postLogRoll(Path oldPath, Path newPath) throws IOException {
+    // Not interested
+  }
+
+  @Override
+  public void preLogArchive(Path oldPath, Path newPath) throws IOException {
+    // Not interested
+  }
+
+  @Override
+  public void postLogArchive(Path oldPath, Path newPath) throws IOException {
     // Not interested
   }
 

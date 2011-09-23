@@ -548,10 +548,21 @@ public class HLog implements Syncable {
       // Do all the preparation outside of the updateLock to block
       // as less as possible the incoming writes
       long currentFilenum = this.filenum;
+      Path oldPath = null;
+      if (currentFilenum > 0) {
+        oldPath = computeFilename(currentFilenum);
+      }
       this.filenum = System.currentTimeMillis();
       Path newPath = computeFilename();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Enabling new writer for "+FSUtils.getPath(newPath));
+      }
+
+      // Tell our listeners that a new log is about to be created
+      if (!this.listeners.isEmpty()) {
+        for (WALActionsListener i : this.listeners) {
+          i.preLogRoll(oldPath, newPath);
+        }
       }
       HLog.Writer nextWriter = this.createWriterInstance(fs, newPath, conf);
       // Can we get at the dfsclient outputstream?  If an instance of
@@ -564,7 +575,7 @@ public class HLog implements Syncable {
       // Tell our listeners that a new log was created
       if (!this.listeners.isEmpty()) {
         for (WALActionsListener i : this.listeners) {
-          i.logRolled(newPath);
+          i.postLogRoll(oldPath, newPath);
         }
       }
 
@@ -814,8 +825,21 @@ public class HLog implements Syncable {
     LOG.info("moving old hlog file " + FSUtils.getPath(p) +
       " whose highest sequenceid is " + seqno + " to " +
       FSUtils.getPath(newPath));
+
+    // Tell our listeners that a log is going to be archived.
+    if (!this.listeners.isEmpty()) {
+      for (WALActionsListener i : this.listeners) {
+        i.preLogArchive(p, newPath);
+      }
+    }
     if (!this.fs.rename(p, newPath)) {
       throw new IOException("Unable to rename " + p + " to " + newPath);
+    }
+    // Tell our listeners that a log has been archived.
+    if (!this.listeners.isEmpty()) {
+      for (WALActionsListener i : this.listeners) {
+        i.postLogArchive(p, newPath);
+      }
     }
   }
 
@@ -851,9 +875,23 @@ public class HLog implements Syncable {
     if (!fs.exists(this.dir)) return;
     FileStatus[] files = fs.listStatus(this.dir);
     for(FileStatus file : files) {
+
       Path p = getHLogArchivePath(this.oldLogDir, file.getPath());
+      // Tell our listeners that a log is going to be archived.
+      if (!this.listeners.isEmpty()) {
+        for (WALActionsListener i : this.listeners) {
+          i.preLogArchive(file.getPath(), p);
+        }
+      }
+
       if (!fs.rename(file.getPath(),p)) {
         throw new IOException("Unable to rename " + file.getPath() + " to " + p);
+      }
+      // Tell our listeners that a log was archived.
+      if (!this.listeners.isEmpty()) {
+        for (WALActionsListener i : this.listeners) {
+          i.postLogArchive(file.getPath(), p);
+        }
       }
     }
     LOG.debug("Moved " + files.length + " log files to " +

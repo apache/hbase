@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -28,11 +29,36 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  * so make sure your implementation is fast else you'll slow hbase.
  */
 public interface WALActionsListener {
+
   /**
-   * The WAL was rolled.
-   * @param newFile the path to the new hlog
+   * The WAL is going to be rolled. The oldPath can be null if this is
+   * the first log file from the regionserver.
+   * @param oldPath the path to the old hlog
+   * @param newPath the path to the new hlog
    */
-  public void logRolled(Path newFile);
+  public void preLogRoll(Path oldPath, Path newPath) throws IOException;
+
+  /**
+   * The WAL has been rolled. The oldPath can be null if this is
+   * the first log file from the regionserver.
+   * @param oldPath the path to the old hlog
+   * @param newPath the path to the new hlog
+   */
+  public void postLogRoll(Path oldPath, Path newPath) throws IOException;
+
+  /**
+   * The WAL is going to be archived.
+   * @param oldPath the path to the old hlog
+   * @param newPath the path to the new hlog
+   */
+  public void preLogArchive(Path oldPath, Path newPath) throws IOException;
+
+  /**
+   * The WAL has been archived.
+   * @param oldPath the path to the old hlog
+   * @param newPath the path to the new hlog
+   */
+  public void postLogArchive(Path oldPath, Path newPath) throws IOException;
 
   /**
    * A request was made that the WAL be rolled.

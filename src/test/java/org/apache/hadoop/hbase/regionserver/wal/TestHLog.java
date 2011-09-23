@@ -709,9 +709,23 @@ public class TestHLog  {
     }
 
     @Override
-    public void logRolled(Path newFile) {
+    public void preLogRoll(Path oldFile, Path newFile) {
       // TODO Auto-generated method stub
-      
+    }
+
+    @Override
+    public void postLogRoll(Path oldFile, Path newFile) {
+      // TODO Auto-generated method stub
+    }
+
+    @Override
+    public void preLogArchive(Path oldFile, Path newFile) {
+      // TODO Auto-generated method stub
+    }
+
+    @Override
+    public void postLogArchive(Path oldFile, Path newFile) {
+      // TODO Auto-generated method stub
     }
 
     @Override
