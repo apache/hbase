@@ -534,6 +534,9 @@ Release 0.92.0 - Unreleased
    HBASE-4424  Provide coprocessors access to createTable() via 
                MasterServices
    HBASE-4432  Enable/Disable off heap cache with config (Li Pi)
+   HBASE-4434  seek optimization: don't do eager HFile Scanner
+               next() unless the next KV is needed
+               (Kannan Muthukkaruppan)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
