@@ -1,6 +1,7 @@
 HBase Change Log
+Release 0.93.0 - Unreleased
 
-Release 0.91.0 - Unreleased
+Release 0.92.0 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-2002  Coprocessors: Client side support; Support RPC interface
                changes at runtime (Gary Helmling via Andrew Purtell)
@@ -293,6 +294,8 @@ Release 0.91.0 - Unreleased
                (Ramkrishna)
    HBASE-4452  Possibility of RS opening a region though tickleOpening fails due to
                znode version mismatch (Ramkrishna)
+   HBASE-4446  Rolling restart RSs scenario, regions could stay in OPENING state
+               (Ming Ma)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
