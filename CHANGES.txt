@@ -3,6 +3,7 @@ Release 0.93.0 - Unreleased
   IMPROVEMENT
    HBASE-4132  Extend the WALActionsListener API to accomodate log archival
                (dhruba borthakur)
+   HBASE-4461  Expose getRowOrBefore via Thrift (jgray)
 
 Release 0.92.0 - Unreleased
   INCOMPATIBLE CHANGES

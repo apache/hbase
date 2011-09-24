@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import static org.apache.hadoop.hbase.util.Bytes.getBytes;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -47,6 +49,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -56,9 +59,9 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
@@ -72,6 +75,7 @@ import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
@@ -86,8 +90,6 @@ import org.apache.thrift.transport.TNonblockingServerTransport;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportFactory;
-
-import static org.apache.hadoop.hbase.util.Bytes.getBytes;
 
 /**
  * ThriftServer - this class starts up a Thrift server which implements the
@@ -893,6 +895,60 @@ public class ThriftServer {
           columns.put(col.name, col);
         }
         return columns;
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
+    }
+
+    @Override
+    public List<TCell> getRowOrBefore(ByteBuffer tableName, ByteBuffer row, 
+        ByteBuffer family) throws IOError {
+      try {
+        HTable table = getTable(getBytes(tableName));
+        Result result = table.getRowOrBefore(getBytes(row), getBytes(family));
+        return ThriftUtilities.cellFromHBase(result.sorted());
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
+    }
+
+    @Override
+    public TRegionInfo getRegionInfo(ByteBuffer searchRow) throws IOError {
+      try {
+        HTable table = getTable(HConstants.META_TABLE_NAME);
+        Result startRowResult = table.getRowOrBefore(
+          searchRow.array(), HConstants.CATALOG_FAMILY);
+
+        if (startRowResult == null) {
+          throw new IOException("Cannot find row in .META., row="
+                                + Bytes.toString(searchRow.array()));
+        }
+
+        // find region start and end keys
+        byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
+                                               HConstants.REGIONINFO_QUALIFIER);
+        if (value == null || value.length == 0) {
+          throw new IOException("HRegionInfo REGIONINFO was null or " +
+                                " empty in Meta for row="
+                                + Bytes.toString(searchRow.array()));
+        }
+        HRegionInfo regionInfo = Writables.getHRegionInfo(value);
+        TRegionInfo region = new TRegionInfo();
+        region.setStartKey(regionInfo.getStartKey());
+        region.setEndKey(regionInfo.getEndKey());
+        region.id = regionInfo.getRegionId();
+        region.setName(regionInfo.getRegionName());
+        region.version = regionInfo.getVersion();
+
+        // find region assignment to server
+        value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
+                                        HConstants.SERVER_QUALIFIER);
+        if (value != null && value.length > 0) {
+          ServerName sn = new ServerName(value);
+          region.setServerName(Bytes.toBytes(sn.getHostname()));
+          region.port = sn.getPort();
+        }
+        return region;
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }

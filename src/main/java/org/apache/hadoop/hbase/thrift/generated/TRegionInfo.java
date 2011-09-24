@@ -31,12 +31,16 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
   private static final org.apache.thrift.protocol.TField ID_FIELD_DESC = new org.apache.thrift.protocol.TField("id", org.apache.thrift.protocol.TType.I64, (short)3);
   private static final org.apache.thrift.protocol.TField NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("name", org.apache.thrift.protocol.TType.STRING, (short)4);
   private static final org.apache.thrift.protocol.TField VERSION_FIELD_DESC = new org.apache.thrift.protocol.TField("version", org.apache.thrift.protocol.TType.BYTE, (short)5);
+  private static final org.apache.thrift.protocol.TField SERVER_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("serverName", org.apache.thrift.protocol.TType.STRING, (short)6);
+  private static final org.apache.thrift.protocol.TField PORT_FIELD_DESC = new org.apache.thrift.protocol.TField("port", org.apache.thrift.protocol.TType.I32, (short)7);
 
   public ByteBuffer startKey; // required
   public ByteBuffer endKey; // required
   public long id; // required
   public ByteBuffer name; // required
   public byte version; // required
+  public ByteBuffer serverName; // required
+  public int port; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -44,7 +48,9 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
     END_KEY((short)2, "endKey"),
     ID((short)3, "id"),
     NAME((short)4, "name"),
-    VERSION((short)5, "version");
+    VERSION((short)5, "version"),
+    SERVER_NAME((short)6, "serverName"),
+    PORT((short)7, "port");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -69,6 +75,10 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
           return NAME;
         case 5: // VERSION
           return VERSION;
+        case 6: // SERVER_NAME
+          return SERVER_NAME;
+        case 7: // PORT
+          return PORT;
         default:
           return null;
       }
@@ -111,7 +121,8 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
   // isset id assignments
   private static final int __ID_ISSET_ID = 0;
   private static final int __VERSION_ISSET_ID = 1;
-  private BitSet __isset_bit_vector = new BitSet(2);
+  private static final int __PORT_ISSET_ID = 2;
+  private BitSet __isset_bit_vector = new BitSet(3);
 
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
@@ -126,6 +137,10 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , "Text")));
     tmpMap.put(_Fields.VERSION, new org.apache.thrift.meta_data.FieldMetaData("version", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BYTE)));
+    tmpMap.put(_Fields.SERVER_NAME, new org.apache.thrift.meta_data.FieldMetaData("serverName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , "Text")));
+    tmpMap.put(_Fields.PORT, new org.apache.thrift.meta_data.FieldMetaData("port", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TRegionInfo.class, metaDataMap);
   }
@@ -138,7 +153,9 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
     ByteBuffer endKey,
     long id,
     ByteBuffer name,
-    byte version)
+    byte version,
+    ByteBuffer serverName,
+    int port)
   {
     this();
     this.startKey = startKey;
@@ -148,6 +165,9 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
     this.name = name;
     this.version = version;
     setVersionIsSet(true);
+    this.serverName = serverName;
+    this.port = port;
+    setPortIsSet(true);
   }
 
   /**
@@ -167,6 +187,10 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
       this.name = other.name;
     }
     this.version = other.version;
+    if (other.isSetServerName()) {
+      this.serverName = other.serverName;
+    }
+    this.port = other.port;
   }
 
   public TRegionInfo deepCopy() {
@@ -182,6 +206,9 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
     this.name = null;
     setVersionIsSet(false);
     this.version = 0;
+    this.serverName = null;
+    setPortIsSet(false);
+    this.port = 0;
   }
 
   public byte[] getStartKey() {
@@ -332,6 +359,63 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
     __isset_bit_vector.set(__VERSION_ISSET_ID, value);
   }
 
+  public byte[] getServerName() {
+    setServerName(org.apache.thrift.TBaseHelper.rightSize(serverName));
+    return serverName == null ? null : serverName.array();
+  }
+
+  public ByteBuffer bufferForServerName() {
+    return serverName;
+  }
+
+  public TRegionInfo setServerName(byte[] serverName) {
+    setServerName(serverName == null ? (ByteBuffer)null : ByteBuffer.wrap(serverName));
+    return this;
+  }
+
+  public TRegionInfo setServerName(ByteBuffer serverName) {
+    this.serverName = serverName;
+    return this;
+  }
+
+  public void unsetServerName() {
+    this.serverName = null;
+  }
+
+  /** Returns true if field serverName is set (has been assigned a value) and false otherwise */
+  public boolean isSetServerName() {
+    return this.serverName != null;
+  }
+
+  public void setServerNameIsSet(boolean value) {
+    if (!value) {
+      this.serverName = null;
+    }
+  }
+
+  public int getPort() {
+    return this.port;
+  }
+
+  public TRegionInfo setPort(int port) {
+    this.port = port;
+    setPortIsSet(true);
+    return this;
+  }
+
+  public void unsetPort() {
+    __isset_bit_vector.clear(__PORT_ISSET_ID);
+  }
+
+  /** Returns true if field port is set (has been assigned a value) and false otherwise */
+  public boolean isSetPort() {
+    return __isset_bit_vector.get(__PORT_ISSET_ID);
+  }
+
+  public void setPortIsSet(boolean value) {
+    __isset_bit_vector.set(__PORT_ISSET_ID, value);
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case START_KEY:
@@ -374,6 +458,22 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
       }
       break;
 
+    case SERVER_NAME:
+      if (value == null) {
+        unsetServerName();
+      } else {
+        setServerName((ByteBuffer)value);
+      }
+      break;
+
+    case PORT:
+      if (value == null) {
+        unsetPort();
+      } else {
+        setPort((Integer)value);
+      }
+      break;
+
     }
   }
 
@@ -393,6 +493,12 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
 
     case VERSION:
       return Byte.valueOf(getVersion());
+
+    case SERVER_NAME:
+      return getServerName();
+
+    case PORT:
+      return Integer.valueOf(getPort());
 
     }
     throw new IllegalStateException();
@@ -415,6 +521,10 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
       return isSetName();
     case VERSION:
       return isSetVersion();
+    case SERVER_NAME:
+      return isSetServerName();
+    case PORT:
+      return isSetPort();
     }
     throw new IllegalStateException();
   }
@@ -474,6 +584,24 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
       if (!(this_present_version && that_present_version))
         return false;
       if (this.version != that.version)
+        return false;
+    }
+
+    boolean this_present_serverName = true && this.isSetServerName();
+    boolean that_present_serverName = true && that.isSetServerName();
+    if (this_present_serverName || that_present_serverName) {
+      if (!(this_present_serverName && that_present_serverName))
+        return false;
+      if (!this.serverName.equals(that.serverName))
+        return false;
+    }
+
+    boolean this_present_port = true;
+    boolean that_present_port = true;
+    if (this_present_port || that_present_port) {
+      if (!(this_present_port && that_present_port))
+        return false;
+      if (this.port != that.port)
         return false;
     }
 
@@ -543,6 +671,26 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetServerName()).compareTo(typedOther.isSetServerName());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetServerName()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.serverName, typedOther.serverName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetPort()).compareTo(typedOther.isSetPort());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetPort()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.port, typedOther.port);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -597,6 +745,21 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
           }
           break;
+        case 6: // SERVER_NAME
+          if (field.type == org.apache.thrift.protocol.TType.STRING) {
+            this.serverName = iprot.readBinary();
+          } else { 
+            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 7: // PORT
+          if (field.type == org.apache.thrift.protocol.TType.I32) {
+            this.port = iprot.readI32();
+            setPortIsSet(true);
+          } else { 
+            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
         default:
           org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
       }
@@ -632,6 +795,14 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
     }
     oprot.writeFieldBegin(VERSION_FIELD_DESC);
     oprot.writeByte(this.version);
+    oprot.writeFieldEnd();
+    if (this.serverName != null) {
+      oprot.writeFieldBegin(SERVER_NAME_FIELD_DESC);
+      oprot.writeBinary(this.serverName);
+      oprot.writeFieldEnd();
+    }
+    oprot.writeFieldBegin(PORT_FIELD_DESC);
+    oprot.writeI32(this.port);
     oprot.writeFieldEnd();
     oprot.writeFieldStop();
     oprot.writeStructEnd();
@@ -672,6 +843,18 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
     if (!first) sb.append(", ");
     sb.append("version:");
     sb.append(this.version);
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("serverName:");
+    if (this.serverName == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.serverName);
+    }
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("port:");
+    sb.append(this.port);
     first = false;
     sb.append(")");
     return sb.toString();
