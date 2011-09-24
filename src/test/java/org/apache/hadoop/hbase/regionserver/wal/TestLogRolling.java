@@ -421,6 +421,7 @@ public class TestLogRolling  {
     log.registerWALActionsListener(new WALActionsListener() {
       @Override
       public void preLogRoll(Path oldFile, Path newFile)  {
+        LOG.debug("preLogRoll: oldFile="+oldFile+" newFile="+newFile);
         preLogRolledCalled.add(new Integer(1));
       }
       @Override
@@ -487,7 +488,8 @@ public class TestLogRolling  {
 
     // force a log roll to read back and verify previously written logs
     log.rollWriter(true);
-    assertTrue(preLogRolledCalled.size() == 1);
+    assertTrue("preLogRolledCalled has size of " + preLogRolledCalled.size(),
+        preLogRolledCalled.size() == 4);
 
     // read back the data written
     Set<String> loggedRows = new HashSet<String>();
