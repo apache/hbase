@@ -86,7 +86,9 @@ struct TRegionInfo {
   2:Text endKey,
   3:i64 id,
   4:Text name,
-  5:byte version 
+  5:byte version,
+  6:Text serverName,
+  7:i32 port
 }
 
 /**
@@ -778,4 +780,32 @@ service Hbase {
     /** id of a scanner returned by scannerOpen */
     1:ScannerID id
   ) throws (1:IOError io, 2:IllegalArgument ia)
+
+  /**
+   * Get the row just before the specified one.
+   *
+   * @return value for specified row/column
+   */
+  list<TCell> getRowOrBefore(
+    /** name of table */
+    1:Text tableName,
+
+    /** row key */
+    2:Text row,
+
+    /** column name */
+    3:Text family
+  ) throws (1:IOError io)
+
+  /**
+   * Get the regininfo for the specified row. It scans
+   * the metatable to find region's start and end keys.
+   *
+   * @return value for specified row/column
+   */
+  TRegionInfo getRegionInfo(
+    /** row key */
+    1:Text row,
+
+  ) throws (1:IOError io)
 }
