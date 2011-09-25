@@ -6,8 +6,6 @@ Release 0.93.0 - Unreleased
    HBASE-4461  Expose getRowOrBefore via Thrift (jgray)
 
   BUGS
-   HBASE-4014  Coprocessors: Flag the presence of coprocessors in logged
-               exceptions (Eugene Koontz)
 
 Release 0.92.0 - Unreleased
   INCOMPATIBLE CHANGES
@@ -542,6 +540,8 @@ Release 0.92.0 - Unreleased
                next() unless the next KV is needed
                (Kannan Muthukkaruppan)
    HBASE-4280  [replication] ReplicationSink can deadlock itself via handlers
+   HBASE-4014  Coprocessors: Flag the presence of coprocessors in logged
+               exceptions (Eugene Koontz)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
