@@ -120,6 +120,12 @@ mvn test
 mvn test -Dtest=TestXYZ
           </programlisting>
        </section>       
+       <section xml:id="maven.build.commands.unit.package"> 
+          <title>Run all Unit Tests for a Package</title>
+          <programlisting>
+mvn test -Dtest=org.apache.hadoop.hbase.client.*
+          </programlisting>
+       </section>       
            
     </section>
   
@@ -153,7 +159,18 @@ mvn test -Dtest=TestXYZ
                 </itemizedlist>  
              </para> 
         </section>
-       </section>
+        <section xml:id="submitting.patches.jira.code">
+          <title>Code Blocks in Jira Comments</title>
+          <para>A commonly used macro in Jira is {code}. If you do this in a Jira comment...
+<programlisting>
+{code}
+   code snippet
+{code}
+</programlisting>
+              ... Jira will format the code snippet like code, instead of a regular comment.  It improves readability.
+          </para>
+        </section>
+       </section>  <!--  jira -->
       </section>  <!--  getting involved -->
       
       <section xml:id="developing">
