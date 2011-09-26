@@ -1316,7 +1316,84 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
          </section>
        </section>
 
+     <section xml:id="block.cache">
+       <title>Block Cache</title>
+       <para>The Block Cache contains three levels of block priority to allow for scan-resistance and in-memory ColumnFamilies.  A block is added with an in-memory
+       flag if the containing ColumnFamily is defined in-memory, otherwise a block becomes a single access priority.  Once a block is accessed again, it changes to multiple access. 
+       This is used to prevent scans from thrashing the cache, adding a least-frequently-used element to the eviction algorithm.  Blocks from in-memory ColumnFamilies
+       are the last to be evicted.
+       </para>
+       <para>
+        For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/LruBlockCache.html">LruBlockCache source</link>
+        </para>
      </section>
+
+      <section xml:id="wal">
+       <title >Write Ahead Log (WAL)</title>
+
+       <section xml:id="purpose.wal">
+         <title>Purpose</title>
+
+        <para>Each RegionServer adds updates (Puts, Deletes) to its write-ahead log (WAL)
+            first, and then to the <xref linkend="store.memstore"/> for the affected <xref linkend="store" />.  
+        This ensures that HBase has durable writes. Without WAL, there is the possibility of data loss in the case of a RegionServer failure 
+        before each MemStore is flushed and new StoreFiles are written.  <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/wal/HLog.html">HLog</link> 
+        is the HBase WAL implementation, and there is one HLog instance per RegionServer.
+       </para>The WAL is in HDFS in <filename>/hbase/.logs/</filename> with subdirectories per region.
+       <para>
+        For more general information about the concept of write ahead logs, see the Wikipedia
+        <link xlink:href="http://en.wikipedia.org/wiki/Write-ahead_logging">Write-Ahead Log</link> article.
+       </para>
+       </section>
+       <section xml:id="wal_flush">
+        <title>WAL Flushing</title>
+          <para>TODO (describe).
+          </para>
+        </section>
+
+        <section xml:id="wal_splitting">
+         <title>WAL Splitting</title>
+
+        <section><title>How edits are recovered from a crashed RegionServer</title>
+         <para>When a RegionServer crashes, it will lose its ephemeral lease in
+         ZooKeeper...TODO</para>
+		 </section>
+         <section>
+         <title><varname>hbase.hlog.split.skip.errors</varname></title>
+
+        <para>When set to <constant>true</constant>, the default, any error
+        encountered splitting will be logged, the problematic WAL will be
+        moved into the <filename>.corrupt</filename> directory under the hbase
+        <varname>rootdir</varname>, and processing will continue. If set to
+        <constant>false</constant>, the exception will be propagated and the
+        split logged as failed.<footnote>
+            <para>See <link
+            xlink:href="https://issues.apache.org/jira/browse/HBASE-2958">HBASE-2958
+            When hbase.hlog.split.skip.errors is set to false, we fail the
+            split but thats it</link>. We need to do more than just fail split
+            if this flag is set.</para>
+          </footnote></para>
+      </section>
+
+      <section>
+        <title>How EOFExceptions are treated when splitting a crashed
+        RegionServers' WALs</title>
+
+        <para>If we get an EOF while splitting logs, we proceed with the split
+        even when <varname>hbase.hlog.split.skip.errors</varname> ==
+        <constant>false</constant>. An EOF while reading the last log in the
+        set of files to split is near-guaranteed since the RegionServer likely
+        crashed mid-write of a record. But we'll continue even if we got an
+        EOF reading other than the last file in the set.<footnote>
+            <para>For background, see <link
+            xlink:href="https://issues.apache.org/jira/browse/HBASE-2643">HBASE-2643
+            Figure how to deal with eof splitting logs</link></para>
+          </footnote></para>
+      </section>
+     </section>
+     </section>
+
+    </section>  <!--  regionserver -->
 
     <section xml:id="regions.arch">
     <title>Regions</title>
@@ -1499,83 +1576,6 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
      </section>   
      </section>   <!--  bloom  -->  
      
-  <section xml:id="block.cache">
-     <title>Block Cache</title>
-      <para>The Block Cache contains three levels of block priority to allow for scan-resistance and in-memory ColumnFamilies.  A block is added with an in-memory
-      flag if the containing ColumnFamily is defined in-memory, otherwise a block becomes a single access priority.  Once a block is accessed again, it changes to multiple access. 
-      This is used to prevent scans from thrashing the cache, adding a least-frequently-used element to the eviction algorithm.  Blocks from in-memory ColumnFamilies
-      are the last to be evicted.
-      </para>
-      <para>
-       For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/LruBlockCache.html">LruBlockCache source</link>
-       </para>
-  </section>
-
-  </section>
-      <section xml:id="wal">
-       <title >Write Ahead Log (WAL)</title>
-
-       <section xml:id="purpose.wal">
-         <title>Purpose</title>
-
-        <para>Each RegionServer adds updates (Puts, Deletes) to its write-ahead log (WAL)
-            first, and then to the <xref linkend="store.memstore"/> for the affected <xref linkend="store" />.  
-        This ensures that HBase has durable writes. Without WAL, there is the possibility of data loss in the case of a RegionServer failure 
-        before each MemStore is flushed and new StoreFiles are written.  <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/wal/HLog.html">HLog</link> 
-        is the HBase WAL implementation, and there is one HLog instance per RegionServer.
-       </para>The WAL is in HDFS in <filename>/hbase/.logs/</filename> with subdirectories per region.
-       <para>
-        For more general information about the concept of write ahead logs, see the Wikipedia
-        <link xlink:href="http://en.wikipedia.org/wiki/Write-ahead_logging">Write-Ahead Log</link> article.
-       </para>
-       </section>
-       <section xml:id="wal_flush">
-        <title>WAL Flushing</title>
-          <para>TODO (describe).
-          </para>
-        </section>
-
-        <section xml:id="wal_splitting">
-         <title>WAL Splitting</title>
-
-        <section><title>How edits are recovered from a crashed RegionServer</title>
-         <para>When a RegionServer crashes, it will lose its ephemeral lease in
-         ZooKeeper...TODO</para>
-		 </section>
-         <section>
-         <title><varname>hbase.hlog.split.skip.errors</varname></title>
-
-        <para>When set to <constant>true</constant>, the default, any error
-        encountered splitting will be logged, the problematic WAL will be
-        moved into the <filename>.corrupt</filename> directory under the hbase
-        <varname>rootdir</varname>, and processing will continue. If set to
-        <constant>false</constant>, the exception will be propagated and the
-        split logged as failed.<footnote>
-            <para>See <link
-            xlink:href="https://issues.apache.org/jira/browse/HBASE-2958">HBASE-2958
-            When hbase.hlog.split.skip.errors is set to false, we fail the
-            split but thats it</link>. We need to do more than just fail split
-            if this flag is set.</para>
-          </footnote></para>
-      </section>
-
-      <section>
-        <title>How EOFExceptions are treated when splitting a crashed
-        RegionServers' WALs</title>
-
-        <para>If we get an EOF while splitting logs, we proceed with the split
-        even when <varname>hbase.hlog.split.skip.errors</varname> ==
-        <constant>false</constant>. An EOF while reading the last log in the
-        set of files to split is near-guaranteed since the RegionServer likely
-        crashed mid-write of a record. But we'll continue even if we got an
-        EOF reading other than the last file in the set.<footnote>
-            <para>For background, see <link
-            xlink:href="https://issues.apache.org/jira/browse/HBASE-2643">HBASE-2643
-            Figure how to deal with eof splitting logs</link></para>
-          </footnote></para>
-      </section>
-    </section>
-
     </section>
   </chapter>
   
