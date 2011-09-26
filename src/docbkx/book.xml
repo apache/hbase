@@ -1247,9 +1247,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
 		</section>
 	</section>
  
-    <section xml:id="daemons">
-     <title>Daemons</title>
-     <section xml:id="master"><title>Master</title>
+    <section xml:id="master"><title>Master</title>
        <para><code>HMaster</code> is the implementation of the Master Server.  The Master server
        is responsible for monitoring all RegionServer instances in the cluster, and is
        the interface for all metadata changes.
@@ -1275,13 +1273,15 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
        </section>
        <section xml:id="master.processes"><title>Processes</title>
          <para>The Master runs several background threads:
-           <itemizedlist>
-             <listitem><code>LoadBalancer</code> periodically reassign regions in the cluster.
-             </listitem>
-             <listitem><code>CatalogJanitor</code> periodically checks and cleans up the .META. table. 
-             </listitem>
-           </itemizedlist>
          </para>
+         <section xml:id="master.processes.loadbalancer"><title>LoadBalancer</title>
+           <para>Periodically, and when there are not any regions in transition,
+             a load balancer will run and move regions around to balance cluster load.
+             See <xref linkend="balancer_config" /> for configuring this property.</para>
+         </section>
+         <section xml:id="master.processes.catalog"><title>CatalogJanitor</title>
+           <para>Periodically checks and cleans up the .META. table.  See <xref linkend="arch.catalog.meta" /> for more information on META.</para>
+         </section>
        </section>
 
      </section>
@@ -1302,24 +1302,25 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
        </section>
        <section xml:id="regionserver.arch.processes"><title>Processes</title>
          <para>The RegionServer runs a variety of background threads:</para>
-         <itemizedlist>
-            <listitem><code>CompactSplitThread</code> checks for splits and handle minor compactions.
-            </listitem>
-            <listitem><code>MajorCompactionChecker</code> checks for major compactions.
-            </listitem>
-            <listitem><code>MemStoreFlusher</code> periodically flushes in-memory writes in the MemStore to StoreFiles.
-            </listitem>
-            <listitem><code>LogRoller</code> periodically checks the RegionServer's HLog.
-            </listitem>
-         </itemizedlist>        
+         <section xml:id="regionserver.arch.processes.compactsplit"><title>CompactSplitThread</title>
+           <para>Checks for splits and handle minor compactions.</para>
+         </section>
+         <section xml:id="regionserver.arch.processes.majorcompact"><title>MajorCompactionChecker</title>
+           <para>Checks for major compactions.</para>
+         </section>
+         <section xml:id="regionserver.arch.processes.memstore"><title>MemStoreFlusher</title>
+           <para>Periodically flushes in-memory writes in the MemStore to StoreFiles.</para>
+         </section>
+         <section xml:id="regionserver.arch.processes.log"><title>LogRoller</title>
+           <para>Periodically checks the RegionServer's HLog.</para>
+         </section>
        </section>
 
      </section>
-    </section>
 
     <section xml:id="regions.arch">
     <title>Regions</title>
-    <para>This chapter is all about Regions.</para>
+    <para>This section is all about Regions.</para>
     <note>
         <para>Regions are comprised of a Store per Column Family.
         </para>
@@ -1379,14 +1380,13 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
         splits (and for why you might do this)</para>
       </section>
 
-      <section>
-        <title>Region Load Balancer</title>
+      <section xml:id="regions.arch.balancer">
+        <title>Region Load Balancing</title>
 
         <para>
-        Periodically, and when there are not any regions in transition,
-        a load balancer will run and move regions around to balance cluster load.
-        The period at which it runs can be configured.
+        Regions can be periodically moved by the <xref linkend="master.processes.loadbalancer" />.
         </para>
+       
       </section>
 
       <section xml:id="store">
