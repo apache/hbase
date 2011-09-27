@@ -68,7 +68,7 @@ do
     break
   fi
 done
- 
+
 # Allow alternate hbase conf dir location.
 HBASE_CONF_DIR="${HBASE_CONF_DIR:-$HBASE_HOME/conf}"
 # List of hbase regions servers.
@@ -121,6 +121,8 @@ HBASE_REGIONSERVER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port
 # LD_LIBRARY_PATH entry to their dir location. for example:
 # export LD_LIBRARY_PATH=/usr/local/hadoop/:$LD_LIBRARY_PATH
 HBASE_YOURKIT_PROFILE="-agentlib:yjpagent"
+
+HBASE_GC_OPTIONS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:$HBASE_HOME/logs/gc-hbase.log"
 
 # Java debugging options.
 # By default, local hbase instances are setup with the remote debugging
