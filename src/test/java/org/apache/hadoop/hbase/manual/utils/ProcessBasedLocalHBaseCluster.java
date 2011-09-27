@@ -222,7 +222,6 @@ public class ProcessBasedLocalHBaseCluster {
     executeCommand("mkdir -p " + dir);
 
     writeStringToFile(conf, dir + "/" + "hbase-site.xml");
-    executeCommand("cp " + hbaseHome_ + "/conf/hbase-default.xml " + dir);
 
     Map<String, String> envOverrides = new HashMap<String, String>();
     envOverrides.put("HBASE_LOG_DIR", dir);

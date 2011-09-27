@@ -124,12 +124,15 @@ HBASE_YOURKIT_PROFILE="-agentlib:yjpagent"
 
 HBASE_GC_OPTIONS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:$HBASE_HOME/logs/gc-hbase.log"
 
+HBASE_MASTER_JDWP_OPTIONS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8070"
+HBASE_REGIONSERVER_JDWP_OPTIONS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8071"
+
 # Java debugging options.
 # By default, local hbase instances are setup with the remote debugging
 # enabled for the HMaster (which also functions as regionserver) on port 1044
 # Zookeeper debug is configured on port 1045
-HBASE_MASTER_DBG_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8070 $HBASE_GC_OPTIONS"
-HBASE_REGIONSERVER_DBG_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8071 $HBASE_GC_OPTIONS"
+HBASE_MASTER_DBG_OPTS="$HBASE_MASTER_JDWP_OPTIONS $HBASE_GC_OPTIONS"
+HBASE_REGIONSERVER_DBG_OPTS="$HBASE_REGIONSERVER_JDWP_OPTIONS $HBASE_GC_OPTIONS"
 HBASE_ZOOKEEPER_DBG_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8072"
 
 export HBASE_MASTER_OPTS="$HBASE_MASTER_DBG_OPTS $HBASE_MASTER_JMX_OPTS"
