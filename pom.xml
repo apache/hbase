@@ -125,6 +125,18 @@
   </developers>
 
   <repositories>
+     <!-- temporary: should replace jgray.la with our internal mirror once that's setup -->
+     <repository>
+      <id>jgray.la</id>
+      <name>jgray mirror</name>
+      <url>http://jgray.la/maven/repository/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
     <repository>
       <id>ibiblio.org</id>
       <name>ibiblio mirror</name>
@@ -396,7 +408,7 @@
     <compileSource>1.6</compileSource>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <hadoop.version>0.20.2-with-200-826</hadoop.version>
+    <hadoop.version>0.20.1-dev</hadoop.version>
 
     <commons-cli.version>1.2</commons-cli.version>
     <commons-logging.version>1.1.1</commons-logging.version>
