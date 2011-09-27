@@ -455,7 +455,7 @@ public class HFile {
       appendFileInfo(this.fileinfo, k, v, true);
     }
 
-    FileInfo appendFileInfo(FileInfo fi, final byte [] k, final byte [] v,
+    static FileInfo appendFileInfo(FileInfo fi, final byte [] k, final byte [] v,
       final boolean checkPrefix)
     throws IOException {
       if (k == null || v == null) {
@@ -1122,7 +1122,7 @@ public class HFile {
       if (lastKey == null) return null;
       return KeyValue.createKeyValueFromKey(lastKey).getRow();
     }
-    
+
     /**
      * @return number of K entries in this HFile's filter.  Returns KV count if no filter.
      */
@@ -1162,6 +1162,10 @@ public class HFile {
         this.istream.close();
         this.istream = null;
       }
+    }
+
+    public String getName() {
+      return name;
     }
 
     /*
@@ -1245,11 +1249,6 @@ public class HFile {
 
         currKeyLen = block.getInt();
         currValueLen = block.getInt();
-        return true;
-      }
-
-      public boolean shouldSeek(final byte[] row,
-          final SortedSet<byte[]> columns) {
         return true;
       }
 

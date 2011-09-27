@@ -88,7 +88,7 @@ public class TestByteBloomFilter extends TestCase {
     for (int i = 0; i < 12; ++i) {
       b.add(Bytes.toBytes(i));
     }
-    b.finalize();
+    b.compactBloom();
     assertEquals(origSize>>2, b.getByteSize());
     int falsePositives = 0;
     for (int i = 0; i < 25; ++i) {
@@ -118,7 +118,7 @@ public class TestByteBloomFilter extends TestCase {
 
     // fold
     startTime = System.currentTimeMillis();
-    b.finalize();
+    b.compactBloom();
     endTime = System.currentTimeMillis();
     System.out.println("Total Fold time = " + (endTime - startTime) + "ms");
     assertTrue(origSize >= b.getByteSize()<<3);

@@ -94,16 +94,16 @@ import org.apache.hadoop.util.LineReader;
  * <p>If number of clients > 1, we start up a MapReduce job. Each map task
  * runs an individual client. Each client does about 1GB of data.
  */
-public class PerformanceEvaluation implements HConstants {
+public class PerformanceEvaluation {
   protected static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
 
   private static final int ROW_LENGTH = 1000;
   private static final int ONE_GB = 1024 * 1024 * 1000;
   private static final int ROWS_PER_GB = ONE_GB / ROW_LENGTH;
 
-  public static final byte [] TABLE_NAME = Bytes.toBytes("TestTable");
-  public static final byte [] FAMILY_NAME = Bytes.toBytes("info");
-  public static final byte [] QUALIFIER_NAME = Bytes.toBytes("data");
+  public static final byte[] TABLE_NAME = Bytes.toBytes("TestTable");
+  public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
+  public static final byte[] QUALIFIER_NAME = Bytes.toBytes("data");
 
   protected static final HTableDescriptor TABLE_DESCRIPTOR;
   static {
@@ -118,7 +118,7 @@ public class PerformanceEvaluation implements HConstants {
   private boolean nomapred = false;
   private int N = 1;
   private int R = ROWS_PER_GB;
-  private boolean flushCommits = false;
+  private boolean flushCommits = true;
   private boolean writeToWAL = true;
 
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
@@ -1250,7 +1250,7 @@ public class PerformanceEvaluation implements HConstants {
 
         final String writeToWAL = "--writeToWAL=";
         if (cmd.startsWith(writeToWAL)) {
-          this.flushCommits = Boolean.parseBoolean(cmd.substring(writeToWAL.length()));
+          this.writeToWAL = Boolean.parseBoolean(cmd.substring(writeToWAL.length()));
           continue;
         }
 

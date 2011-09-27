@@ -23,7 +23,9 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 
 import java.io.IOException;
 
@@ -31,8 +33,11 @@ import java.io.IOException;
  * Scanner class that contains the <code>.META.</code> table scanning logic
  * and uses a Retryable scanner. Provided visitors will be called
  * for each row.
+ *
+ * Although public visibility, this is not a public-facing API and may evolve in
+ * minor releases.
  */
-class MetaScanner implements HConstants {
+public class MetaScanner {
 
   /**
    * Scans the meta table and calls a visitor on each RowResult and uses a empty
@@ -45,7 +50,7 @@ class MetaScanner implements HConstants {
   public static void metaScan(Configuration configuration,
       MetaScannerVisitor visitor)
   throws IOException {
-    metaScan(configuration, visitor, EMPTY_START_ROW);
+    metaScan(configuration, visitor, HConstants.EMPTY_START_ROW);
   }
 
   /**
@@ -60,30 +65,97 @@ class MetaScanner implements HConstants {
   public static void metaScan(Configuration configuration,
       MetaScannerVisitor visitor, byte[] tableName)
   throws IOException {
+    metaScan(configuration, visitor, tableName, null, Integer.MAX_VALUE);
+  }
+
+  /**
+   * Scans the meta table and calls a visitor on each RowResult. Uses a table
+   * name and a row name to locate meta regions. And it only scans at most
+   * <code>rowLimit</code> of rows.
+   *
+   * @param configuration HBase configuration.
+   * @param visitor Visitor object.
+   * @param tableName User table name.
+   * @param row Name of the row at the user table. The scan will start from
+   * the region row where the row resides.
+   * @param rowLimit Max of processed rows. If it is less than 0, it
+   * will be set to default value <code>Integer.MAX_VALUE</code>.
+   * @throws IOException e
+   */
+  public static void metaScan(Configuration configuration,
+      MetaScannerVisitor visitor, byte[] tableName, byte[] row,
+      int rowLimit)
+  throws IOException {
+    int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
+
     HConnection connection = HConnectionManager.getConnection(configuration);
-    byte [] startRow = tableName == null || tableName.length == 0 ?
-        HConstants.EMPTY_START_ROW :
-          HRegionInfo.createRegionName(tableName, null, ZEROES, false);
+    // if row is not null, we want to use the startKey of the row's region as
+    // the startRow for the meta scan.
+    byte[] startRow;
+    if (row != null) {
+      // Scan starting at a particular row in a particular table
+      assert tableName != null;
+      byte[] searchRow =
+        HRegionInfo.createRegionName(tableName, row, HConstants.NINES,
+          false);
+
+      HTable metaTable = new HTable(configuration, HConstants.META_TABLE_NAME);
+      Result startRowResult = metaTable.getRowOrBefore(searchRow,
+          HConstants.CATALOG_FAMILY);
+      if (startRowResult == null) {
+        throw new TableNotFoundException("Cannot find row in .META. for table: "
+            + Bytes.toString(tableName) + ", row=" + Bytes.toString(searchRow));
+      }
+      byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.REGIONINFO_QUALIFIER);
+      if (value == null || value.length == 0) {
+        throw new IOException("HRegionInfo was null or empty in Meta for " +
+          Bytes.toString(tableName) + ", row=" + Bytes.toString(searchRow));
+      }
+      HRegionInfo regionInfo = Writables.getHRegionInfo(value);
+
+      byte[] rowBefore = regionInfo.getStartKey();
+      startRow = HRegionInfo.createRegionName(tableName, rowBefore,
+          HConstants.ZEROES, false);
+    } else if (tableName == null || tableName.length == 0) {
+      // Full META scan
+      startRow = HConstants.EMPTY_START_ROW;
+    } else {
+      // Scan META for an entire table
+      startRow = HRegionInfo.createRegionName(
+          tableName, HConstants.EMPTY_START_ROW, HConstants.ZEROES, false);
+    }
 
     // Scan over each meta region
     ScannerCallable callable;
-    int rows = configuration.getInt("hbase.meta.scanner.caching", 100);
+    int rows = Math.min(rowLimit,
+        configuration.getInt("hbase.meta.scanner.caching", 100));
     do {
-      Scan scan = new Scan(startRow).addFamily(CATALOG_FAMILY);
-      callable = new ScannerCallable(connection, META_TABLE_NAME, scan);
+      final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
+      callable = new ScannerCallable(connection, HConstants.META_TABLE_NAME,
+          scan);
       // Open scanner
       connection.getRegionServerWithRetries(callable);
+
+      int processedRows = 0;
       try {
         callable.setCaching(rows);
         done: do {
+          if (processedRows >= rowUpperLimit) {
+            break;
+          }
           //we have all the rows here
           Result [] rrs = connection.getRegionServerWithRetries(callable);
           if (rrs == null || rrs.length == 0 || rrs[0].size() == 0) {
             break; //exit completely
           }
           for (Result rr : rrs) {
+            if (processedRows >= rowUpperLimit) {
+              break done;
+            }
             if (!visitor.processRow(rr))
               break done; //exit completely
+            processedRows++;
           }
           //here, we didn't break anywhere. Check if we have more rows
         } while(true);
@@ -94,13 +166,13 @@ class MetaScanner implements HConstants {
         callable.setClose();
         connection.getRegionServerWithRetries(callable);
       }
-    } while (Bytes.compareTo(startRow, LAST_ROW) != 0);
+    } while (Bytes.compareTo(startRow, HConstants.LAST_ROW) != 0);
   }
 
   /**
    * Visitor class called to process each row of the .META. table
    */
-  interface MetaScannerVisitor {
+  public interface MetaScannerVisitor {
     /**
      * Visitor method that accepts a RowResult and the meta region location.
      * Implementations can return false to stop the region's loop if it becomes

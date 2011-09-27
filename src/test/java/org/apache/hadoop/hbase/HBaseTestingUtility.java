@@ -19,8 +19,12 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,13 +50,19 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.zookeeper.ZooKeeper;
-import static org.junit.Assert.*;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Facility for testing HBase. Added as tool to abet junit4 testing.  Replaces
@@ -64,7 +74,7 @@ import static org.junit.Assert.*;
  * logging levels nor make changes to configuration parameters.
  */
 public class HBaseTestingUtility {
-  private final Log LOG = LogFactory.getLog(getClass());
+  private final static Log LOG = LogFactory.getLog(HBaseTestingUtility.class);
   private final Configuration conf;
   private MiniZooKeeperCluster zkCluster = null;
   private MiniDFSCluster dfsCluster = null;
@@ -456,6 +466,7 @@ public class HBaseTestingUtility {
    * @throws IOException
    */
   public int loadTable(final HTable t, final byte[] f) throws IOException {
+    t.setAutoFlush(false);
     byte[] k = new byte[3];
     int rowCount = 0;
     for (byte b1 = 'a'; b1 <= 'z'; b1++) {
@@ -471,6 +482,7 @@ public class HBaseTestingUtility {
         }
       }
     }
+    t.flushCommits();
     return rowCount;
   }
 
@@ -697,7 +709,10 @@ public class HBaseTestingUtility {
   }
 
   public void expireSession(ZooKeeperWrapper nodeZK) throws Exception{
-    ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
+    ZooKeeperWrapper zkw =
+        ZooKeeperWrapper.createInstance(conf,
+            ZooKeeperWrapper.class.getName());
+    zkw.registerListener(EmptyWatcher.instance);
     String quorumServers = zkw.getQuorumServers();
     int sessionTimeout = 5 * 1000; // 5 seconds
 
@@ -809,6 +824,134 @@ public class HBaseTestingUtility {
       assertTrue("Timed out waiting for table " + Bytes.toStringBinary(table),
           System.currentTimeMillis() - startWait < timeoutMillis);
       Thread.sleep(500);
+    }
+  }
+
+  /**
+   * Make sure that at least the specified number of region servers
+   * are running
+   * @param num minimum number of region servers that should be running
+   * @throws IOException
+   */
+  public void ensureSomeRegionServersAvailable(final int num)
+      throws IOException {
+    if (this.getHBaseCluster().getLiveRegionServerThreads().size() < num) {
+      // Need at least "num" servers.
+      LOG.info("Started new server=" +
+        this.getHBaseCluster().startRegionServer());
+
+    }
+  }
+
+  /**
+   * This method clones the passed <code>c</code> configuration setting a new
+   * user into the clone.  Use it getting new instances of FileSystem.  Only
+   * works for DistributedFileSystem.
+   * @param c Initial configuration
+   * @param differentiatingSuffix Suffix to differentiate this user from others.
+   * @return A new configuration instance with a different user set into it.
+   * @throws IOException
+   */
+  public static Configuration setDifferentUser(final Configuration c,
+    final String differentiatingSuffix)
+  throws IOException {
+    FileSystem currentfs = FileSystem.get(c);
+    Preconditions.checkArgument(currentfs instanceof DistributedFileSystem);
+    // Else distributed filesystem.  Make a new instance per daemon.  Below
+    // code is taken from the AppendTestUtil over in hdfs.
+    Configuration c2 = new Configuration(c);
+    String username = UserGroupInformation.getCurrentUGI().getUserName() +
+      differentiatingSuffix;
+    UnixUserGroupInformation.saveToConf(c2,
+      UnixUserGroupInformation.UGI_PROPERTY_NAME,
+      new UnixUserGroupInformation(username, new String[]{"supergroup"}));
+    return c2;
+  }
+
+  /**
+   * Set soft and hard limits in namenode.
+   * You'll get a NPE if you call before you've started a minidfscluster.
+   * @param soft Soft limit
+   * @param hard Hard limit
+   * @throws NoSuchFieldException
+   * @throws SecurityException
+   * @throws IllegalAccessException
+   * @throws IllegalArgumentException
+   */
+  public void setNameNodeNameSystemLeasePeriod(final int soft, final int hard)
+  throws SecurityException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
+    // TODO: If 0.20 hadoop do one thing, if 0.21 hadoop do another.
+    // Not available in 0.20 hdfs.  Use reflection to make it happen.
+
+    // private NameNode nameNode;
+    Field field = this.dfsCluster.getClass().getDeclaredField("nameNode");
+    field.setAccessible(true);
+    NameNode nn = (NameNode)field.get(this.dfsCluster);
+    nn.namesystem.leaseManager.setLeasePeriod(100, 50000);
+  }
+
+  /**
+   * Set maxRecoveryErrorCount in DFSClient.  In 0.20 pre-append its hard-coded to 5 and
+   * makes tests linger.  Here is the exception you'll see:
+   * <pre>
+   * 2010-06-15 11:52:28,511 WARN  [DataStreamer for file /hbase/.logs/hlog.1276627923013 block blk_928005470262850423_1021] hdfs.DFSClient$DFSOutputStream(2657): Error Recovery for block blk_928005470262850423_1021 failed  because recovery from primary datanode 127.0.0.1:53683 failed 4 times.  Pipeline was 127.0.0.1:53687, 127.0.0.1:53683. Will retry...
+   * </pre>
+   * @param stream A DFSClient.DFSOutputStream.
+   * @param max
+   * @throws NoSuchFieldException
+   * @throws SecurityException
+   * @throws IllegalAccessException
+   * @throws IllegalArgumentException
+   */
+  public static void setMaxRecoveryErrorCount(final OutputStream stream,
+      final int max) {
+    try {
+      Class<?> [] clazzes = DFSClient.class.getDeclaredClasses();
+      for (Class<?> clazz: clazzes) {
+        String className = clazz.getSimpleName();
+        if (className.equals("DFSOutputStream")) {
+          if (clazz.isInstance(stream)) {
+            Field maxRecoveryErrorCountField =
+              stream.getClass().getDeclaredField("maxRecoveryErrorCount");
+            maxRecoveryErrorCountField.setAccessible(true);
+            maxRecoveryErrorCountField.setInt(stream, max);
+            break;
+          }
+        }
+      }
+    } catch (Exception e) {
+      LOG.info("Could not set max recovery field", e);
+    }
+  }
+
+
+  /**
+   * Wait until <code>countOfRegion</code> in .META. have a non-empty
+   * info:server.  This means all regions have been deployed, master has been
+   * informed and updated .META. with the regions deployed server.
+   * @param conf Configuration
+   * @param countOfRegions How many regions in .META.
+   * @throws IOException
+   */
+  public void waitUntilAllRegionsAssigned(final int countOfRegions)
+  throws IOException {
+    HTable meta = new HTable(getConfiguration(), HConstants.META_TABLE_NAME);
+    while (true) {
+      int rows = 0;
+      Scan scan = new Scan();
+      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+      ResultScanner s = meta.getScanner(scan);
+      for (Result r = null; (r = s.next()) != null;) {
+        byte [] b =
+          r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+        if (b == null || b.length <= 0) break;
+        rows++;
+      }
+      s.close();
+      // If I get to here and all rows have a Server, then all have been assigned.
+      if (rows == countOfRegions) break;
+      LOG.info("Found=" + rows);
+      Threads.sleep(1000);
     }
   }
 }

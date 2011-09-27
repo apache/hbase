@@ -35,13 +35,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -116,8 +117,9 @@ import com.google.common.util.concurrent.NamingThreadFactory;
  * org.apache.hadoop.fs.Path, org.apache.hadoop.conf.Configuration)}.
  *
  */
-public class HLog implements HConstants, Syncable {
+public class HLog implements Syncable {
   static final Log LOG = LogFactory.getLog(HLog.class);
+  private static final String HLOG_DATFILE = "hlog.dat.";
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
   static final byte [] METAROW = Bytes.toBytes("METAROW");
   private final FileSystem fs;
@@ -141,6 +143,11 @@ public class HLog implements HConstants, Syncable {
   private int initialReplication;    // initial replication factor of SequenceFile.writer
   private Method getNumCurrentReplicas; // refers to DFSOutputStream.getNumCurrentReplicas
   final static Object [] NO_ARGS = new Object []{};
+
+  /** Name of file that holds recovered edits written by the wal log splitting
+   * code, one per region
+   */
+  public static final String RECOVERED_EDITS = "recovered.edits";
 
   // used to indirectly tell syncFs to force the sync
   private boolean forceSync = false;
@@ -215,6 +222,9 @@ public class HLog implements HConstants, Syncable {
    */
   private final LogSyncer logSyncerThread;
 
+  private final List<LogEntryVisitor> logEntryVisitors =
+      new CopyOnWriteArrayList<LogEntryVisitor>();
+
   /**
    * Pattern used to validate a HLog file name
    */
@@ -223,7 +233,8 @@ public class HLog implements HConstants, Syncable {
   static byte [] COMPLETE_CACHE_FLUSH;
   static {
     try {
-      COMPLETE_CACHE_FLUSH = "HBASE::CACHEFLUSH".getBytes(UTF8_ENCODING);
+      COMPLETE_CACHE_FLUSH =
+        "HBASE::CACHEFLUSH".getBytes(HConstants.UTF8_ENCODING);
     } catch (UnsupportedEncodingException e) {
       assert(false);
     }
@@ -805,6 +816,8 @@ public class HLog implements HConstants, Syncable {
   public void append(HRegionInfo info, byte [] tableName, WALEdit edits,
     final long now)
   throws IOException {
+    if (edits.isEmpty()) return;
+
     byte[] regionName = info.getRegionName();
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
@@ -1021,6 +1034,11 @@ public class HLog implements HConstants, Syncable {
     if (!this.enabled) {
       return;
     }
+    if (!this.logEntryVisitors.isEmpty()) {
+      for (LogEntryVisitor visitor : this.logEntryVisitors) {
+        visitor.visitLogEntryBeforeWrite(info, logKey, logEdit);
+      }
+    }
     try {
       long now = System.currentTimeMillis();
       this.writer.append(new HLog.Entry(logKey, logEdit));
@@ -1172,8 +1190,16 @@ public class HLog implements HConstants, Syncable {
       srcDir.toString());
     splits = splitLog(rootDir, srcDir, oldLogDir, logfiles, fs, conf);
     try {
-      LOG.info("Spliting is done. Removing old log dir "+srcDir);
-      fs.delete(srcDir, false);
+      FileStatus[] files = fs.listStatus(srcDir);
+      for(FileStatus file : files) {
+        Path newPath = getHLogArchivePath(oldLogDir, file.getPath());
+        LOG.info("Moving " +  FSUtils.getPath(file.getPath()) + " to " +
+                   FSUtils.getPath(newPath));
+        fs.rename(file.getPath(), newPath);
+      }
+      LOG.debug("Moved " + files.length + " log files to " +
+        FSUtils.getPath(oldLogDir));
+      fs.delete(srcDir, true);
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       IOException io = new IOException("Cannot delete: " + srcDir);
@@ -1254,8 +1280,7 @@ public class HLog implements HConstants, Syncable {
     // Number of logs in a read batch
     // More means faster but bigger mem consumption
     //TODO make a note on the conf rename and update hbase-site.xml if needed
-    int logFilesPerStep =
-      conf.getInt("hbase.hlog.split.batch.size", 3);
+    int logFilesPerStep = conf.getInt("hbase.hlog.split.batch.size", 3);
      boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", false);
 
 
@@ -1599,7 +1624,7 @@ public class HLog implements HConstants, Syncable {
     final List<Path> processedLogs, final Path oldLogDir,
     final FileSystem fs, final Configuration conf)
   throws IOException{
-    final Path corruptDir = new Path(conf.get(HBASE_DIR),
+    final Path corruptDir = new Path(conf.get(HConstants.HBASE_DIR),
       conf.get("hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt"));
 
     fs.mkdirs(corruptDir);
@@ -1623,14 +1648,24 @@ public class HLog implements HConstants, Syncable {
       HTableDescriptor.getTableDir(rootDir, logEntry.getKey().getTablename());
     Path regionDir =
             HRegion.getRegionDir(tableDir, HRegionInfo.encodeRegionName(logEntry.getKey().getRegionName()));
-    return new Path(regionDir, HREGION_OLDLOGFILE_NAME);
+    return new Path(regionDir, RECOVERED_EDITS);
    }
 
+  /**
+   *
+   * @param visitor
+   */
+  public void addLogEntryVisitor(LogEntryVisitor visitor) {
+    this.logEntryVisitors.add(visitor);
+  }
 
-
-
-
-
+  /**
+   *
+   * @param visitor
+   */
+  public void removeLogEntryVisitor(LogEntryVisitor visitor) {
+    this.logEntryVisitors.remove(visitor);
+  }
 
 
   public void addLogActionsListerner(LogActionsListener list) {
@@ -1671,8 +1706,8 @@ public class HLog implements HConstants, Syncable {
     }
     Configuration conf = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(conf);
-    Path baseDir = new Path(conf.get(HBASE_DIR));
-    Path oldLogDir = new Path(baseDir, HREGION_OLDLOGDIR_NAME);
+    final Path baseDir = new Path(conf.get(HConstants.HBASE_DIR));
+    final Path oldLogDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     for (int i = 1; i < args.length; i++) {
       Path logPath = new Path(args[i]);
       if (!fs.exists(logPath)) {

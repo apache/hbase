@@ -43,7 +43,7 @@
 #   MAVEN_HOME       Where mvn is installed.
 #
 bin=`dirname "$0"`
-bin=`cd "$bin"; pwd`
+bin=`cd "$bin">/dev/null; pwd`
 
 # This will set HBASE_HOME, etc.
 . "$bin"/hbase-config.sh
@@ -70,8 +70,10 @@ if [ $# = 0 ]; then
   echo "  master           run an HBase HMaster node" 
   echo "  regionserver     run an HBase HRegionServer node" 
   echo "  thrift           run an HBase Thrift server" 
+  echo "  avro             run an HBase Avro server"
   echo "  zookeeper        run a Zookeeper server"
   echo "  migrate          upgrade an hbase.rootdir"
+  echo "  hbck             run the hbase 'fsck' tool"
   echo " or"
   echo "  CLASSNAME        run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
@@ -237,8 +239,15 @@ elif [ "$COMMAND" = "thrift" ] ; then
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_THRIFT_OPTS"
   fi
+elif [ "$COMMAND" = "avro" ] ; then
+  CLASS='org.apache.hadoop.hbase.avro.AvroServer'
+  if [ "$1" != "stop" ] ; then
+    HBASE_OPTS="$HBASE_OPTS $HBASE_AVRO_OPTS"
+  fi
 elif [ "$COMMAND" = "migrate" ] ; then
   CLASS='org.apache.hadoop.hbase.util.Migrate'
+elif [ "$COMMAND" = "hbck" ] ; then
+  CLASS='org.apache.hadoop.hbase.client.HBaseFsck'
 elif [ "$COMMAND" = "zookeeper" ] ; then
   CLASS='org.apache.hadoop.hbase.zookeeper.HQuorumPeer'
   if [ "$1" != "stop" ] ; then

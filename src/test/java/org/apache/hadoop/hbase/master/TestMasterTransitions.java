@@ -84,7 +84,7 @@ public class TestMasterTransitions {
     TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES);
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
     int countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
-    waitUntilAllRegionsAssigned(countOfRegions);
+    TEST_UTIL.waitUntilAllRegionsAssigned(countOfRegions);
     addToEachStartKey(countOfRegions);
   }
 
@@ -93,12 +93,7 @@ public class TestMasterTransitions {
   }
 
   @Before public void setup() throws IOException {
-    if (TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size() < 2) {
-      // Need at least two servers.
-      LOG.info("Started new server=" +
-        TEST_UTIL.getHBaseCluster().startRegionServer());
-      
-    }
+    TEST_UTIL.ensureSomeRegionServersAvailable(2);
   }
 
   /**
@@ -342,10 +337,10 @@ public class TestMasterTransitions {
       if (!incomingMsg.isType(HMsg.Type.MSG_REPORT_PROCESS_OPEN)) return true;
       // Save the region that is in transition so can test later it came back.
       this.regionToFind = incomingMsg.getRegionInfo();
-      LOG.info("ABORTING " + this.victim + " because got a " +
+      String msg = "ABORTING " + this.victim + " because got a " +
         HMsg.Type.MSG_REPORT_PROCESS_OPEN + " on this server for " +
-        incomingMsg.getRegionInfo().getRegionNameAsString());
-      this.victim.abort();
+        incomingMsg.getRegionInfo().getRegionNameAsString();
+      this.victim.abort(msg);
       this.abortSent = true;
       return true;
     }
@@ -459,36 +454,6 @@ public class TestMasterTransitions {
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
     Get g =  new Get(row);
     assertTrue((t.get(g)).size() > 0);
-  }
-
-  /*
-   * Wait until all rows in .META. have a non-empty info:server.  This means
-   * all regions have been deployed, master has been informed and updated
-   * .META. with the regions deployed server.
-   * @param countOfRegions How many regions in .META.
-   * @throws IOException
-   */
-  private static void waitUntilAllRegionsAssigned(final int countOfRegions)
-  throws IOException {
-    HTable meta = new HTable(TEST_UTIL.getConfiguration(),
-      HConstants.META_TABLE_NAME);
-    while (true) {
-      int rows = 0;
-      Scan scan = new Scan();
-      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-      ResultScanner s = meta.getScanner(scan);
-      for (Result r = null; (r = s.next()) != null;) {
-        byte [] b =
-          r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-        if (b == null || b.length <= 0) break;
-        rows++;
-      }
-      s.close();
-      // If I get to here and all rows have a Server, then all have been assigned.
-      if (rows == countOfRegions) break;
-      LOG.info("Found=" + rows);
-      Threads.sleep(1000); 
-    }
   }
 
   /*

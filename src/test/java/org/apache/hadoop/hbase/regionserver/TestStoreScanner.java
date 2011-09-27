@@ -25,6 +25,10 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.mockito.Mockito;
+import org.mockito.stubbing.OngoingStubbing;
+
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -105,7 +109,6 @@ public class TestStoreScanner extends TestCase {
     results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(3, results.size());
-
   }
 
   public void testScanSameTimestamp() throws IOException {
@@ -136,6 +139,7 @@ public class TestStoreScanner extends TestCase {
    * Test test shows exactly how the matcher's return codes confuses the StoreScanner
    * and prevent it from doing the right thing.  Seeking once, then nexting twice
    * should return R1, then R2, but in this case it doesnt.
+   * TODO this comment makes no sense above. Appears to do the right thing.
    * @throws IOException
    */
   public void testWontNextToNext() throws IOException {
@@ -252,7 +256,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R2", "cf", "z", now, KeyValue.Type.Put, "dont-care")
     };
     List<KeyValueScanner> scanners = scanFixture(kvs1, kvs2);
-    
+
     Scan scanSpec = new Scan(Bytes.toBytes("R1")).setMaxVersions(2);
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
@@ -280,6 +284,7 @@ public class TestStoreScanner extends TestCase {
     assertEquals(kvs[0], results.get(0));
     assertEquals(kvs[1], results.get(1));
   }
+
   public void testWildCardScannerUnderDeletes() throws IOException {
     KeyValue [] kvs = new KeyValue [] {
         KeyValueTestUtil.create("R1", "cf", "a", 2, KeyValue.Type.Put, "dont-care"), // inc
@@ -312,6 +317,7 @@ public class TestStoreScanner extends TestCase {
     assertEquals(kvs[6], results.get(3));
     assertEquals(kvs[7], results.get(4));
   }
+
   public void testDeleteFamily() throws IOException {
     KeyValue [] kvs = new KeyValue[] {
         KeyValueTestUtil.create("R1", "cf", "a", 100, KeyValue.Type.DeleteFamily, "dont-care"),
@@ -358,8 +364,7 @@ public class TestStoreScanner extends TestCase {
     assertEquals(kvs[3], results.get(0));
   }
 
-  public void testSkipColumn() throws IOException {
-    KeyValue [] kvs = new KeyValue[] {
+  private static final  KeyValue [] kvs = new KeyValue[] {
         KeyValueTestUtil.create("R1", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R1", "cf", "b", 11, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R1", "cf", "c", 11, KeyValue.Type.Put, "dont-care"),
@@ -371,6 +376,8 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "i", 11, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
     };
+
+  public void testSkipColumn() throws IOException {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
       new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
@@ -390,9 +397,9 @@ public class TestStoreScanner extends TestCase {
     results.clear();
     assertEquals(false, scan.next(results));
   }
-  
+
   /*
-   * Test expiration of KeyValues in combination with a configured TTL for 
+   * Test expiration of KeyValues in combination with a configured TTL for
    * a column family (as should be triggered in a major compaction).
    */
   public void testWildCardTtlScan() throws IOException {
@@ -429,5 +436,40 @@ public class TestStoreScanner extends TestCase {
     results.clear();
 
     assertEquals(false, scanner.next(results));
+  }
+
+  public void testScannerReseekDoesntNPE() throws Exception {
+    List<KeyValueScanner> scanners = scanFixture(kvs);
+    StoreScanner scan =
+        new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
+            getCols("a", "d"), scanners);
+
+
+    // Previously a updateReaders twice in a row would cause an NPE.  In test this would also
+    // normally cause an NPE because scan.store is null.  So as long as we get through these
+    // two calls we are good and the bug was quashed.
+
+    scan.updateReaders();
+
+    scan.updateReaders();
+
+    scan.peek();
+  }
+
+
+  /**
+   * TODO this fails, since we don't handle deletions, etc, in peek
+   */
+  public void SKIP_testPeek() throws Exception {
+    KeyValue [] kvs = new KeyValue [] {
+        KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Delete, "dont-care"),
+    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
+    Scan scanSpec = new Scan(Bytes.toBytes("R1"));
+    StoreScanner scan =
+      new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
+          getCols("a"), scanners);
+    assertNull(scan.peek());
   }
 }

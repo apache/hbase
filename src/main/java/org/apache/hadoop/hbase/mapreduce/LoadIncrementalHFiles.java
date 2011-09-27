@@ -265,7 +265,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   throws IOException {
     FileSystem fs = inFile.getFileSystem(conf);
     HalfStoreFileReader halfReader = null;
-    HFile.Writer halfWriter = null;
+    StoreFile.Writer halfWriter = null;
     try {
       halfReader = new HalfStoreFileReader(fs, inFile, null, reference);
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();

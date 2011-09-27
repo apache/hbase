@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -29,16 +30,23 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.executor.HBaseEventHandler;
+import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventHandlerListener;
+import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.google.common.base.Joiner;
+
 import static org.junit.Assert.*;
 
 public class TestMaster {
@@ -67,44 +75,56 @@ public class TestMaster {
     TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
     TEST_UTIL.loadTable(new HTable(TABLENAME), FAMILYNAME);
 
+    List<Pair<HRegionInfo, HServerAddress>> tableRegions =
+      m.getTableRegions(TABLENAME);
+    LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
+    assertEquals(1, tableRegions.size());
+    assertArrayEquals(HConstants.EMPTY_START_ROW,
+        tableRegions.get(0).getFirst().getStartKey());
+    assertArrayEquals(HConstants.EMPTY_END_ROW,
+        tableRegions.get(0).getFirst().getEndKey());
+
+    // Now trigger a split and stop when the split is in progress
+
     CountDownLatch aboutToOpen = new CountDownLatch(1);
     CountDownLatch proceed = new CountDownLatch(1);
     RegionOpenListener list = new RegionOpenListener(aboutToOpen, proceed);
-    m.getRegionServerOperationQueue().registerRegionServerOperationListener(list);
+    HBaseEventHandler.registerListener(list);
 
+    LOG.info("Splitting table");
     admin.split(TABLENAME);
+    LOG.info("Waiting for split result to be about to open");
     aboutToOpen.await(60, TimeUnit.SECONDS);
-
     try {
-      m.getTableRegions(TABLENAME);
+      LOG.info("Making sure we can call getTableRegions while opening");
+      tableRegions = m.getTableRegions(TABLENAME);
+      LOG.info("Regions: " + Joiner.on(',').join(tableRegions));
+      // We have three regions because one is split-in-progress
+      assertEquals(3, tableRegions.size());
+      LOG.info("Making sure we can call getTableRegionClosest while opening");
       Pair<HRegionInfo,HServerAddress> pair =
-        m.getTableRegionClosest(TABLENAME, Bytes.toBytes("cde"));
-      assertNull(pair);
-      /**
-       * TODO: these methods return null when the regions are not deployed.
-       * These tests should be uncommented after HBASE-2656.
-      assertNotNull(pair);
-      m.getTableRegionFromName(pair.getFirst().getRegionName());
-      */
+        m.getTableRegionForRow(TABLENAME, Bytes.toBytes("cde"));
+      LOG.info("Result is: " + pair);
+      Pair<HRegionInfo, HServerAddress> tableRegionFromName = m.getTableRegionFromName(pair.getFirst().getRegionName());
+      assertEquals(tableRegionFromName.getFirst(), pair.getFirst());
     } finally {
       proceed.countDown();
     }
   }
 
-  static class RegionOpenListener implements RegionServerOperationListener {
+  static class RegionOpenListener implements HBaseEventHandlerListener {
     CountDownLatch aboutToOpen, proceed;
 
-    public RegionOpenListener(
-      CountDownLatch aboutToOpen, CountDownLatch proceed)
+    public RegionOpenListener(CountDownLatch aboutToOpen, CountDownLatch proceed)
     {
       this.aboutToOpen = aboutToOpen;
       this.proceed = proceed;
     }
 
     @Override
-    public boolean process(HServerInfo serverInfo, HMsg incomingMsg) {
-      if (!incomingMsg.isType(HMsg.Type.MSG_REPORT_OPEN)) {
-        return true;
+    public void afterProcess(HBaseEventHandler event) {
+      if (event.getHBEvent() != HBaseEventType.RS2ZK_REGION_OPENED) {
+        return;
       }
       try {
         aboutToOpen.countDown();
@@ -112,16 +132,11 @@ public class TestMaster {
       } catch (InterruptedException ie) {
         throw new RuntimeException(ie);
       }
-      return true;
+      return;
     }
 
     @Override
-    public boolean process(RegionServerOperation op) throws IOException {
-      return true;
-    }
-
-    @Override
-    public void processed(RegionServerOperation op) {
+    public void beforeProcess(HBaseEventHandler event) {
     }
   }
 

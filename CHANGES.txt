@@ -24,6 +24,7 @@ Release 0.21.0 - Unreleased
    HBASE-2542  Fold stargate contrib into core
    HBASE-2565  Remove contrib module from hbase
    HBASE-2397  Bytes.toStringBinary escapes printable chars
+   HBASE-2771  Update our hadoop jar to be latest from 0.20-append branch
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
@@ -378,6 +379,61 @@ Release 0.21.0 - Unreleased
    HBASE-2615  M/R on bulk imported tables
    HBASE-2676  TestInfoServers should use ephemeral ports
    HBASE-2616  TestHRegion.testWritesWhileGetting flaky on trunk
+   HBASE-2684  TestMasterWrongRS flaky in trunk
+   HBASE-2691  LeaseStillHeldException totally ignored by RS, wrongly named
+   HBASE-2703  ui not working in distributed context
+   HBASE-2710  Shell should use default terminal width when autodetection fails
+               (Kannan Muthukkaruppan via Todd Lipcon)
+   HBASE-2712  Cached region location that went stale won't recover if
+               asking for first row
+   HBASE-2732  TestZooKeeper was broken, HBASE-2691 showed it
+   HBASE-2670  Provide atomicity for readers even when new insert has
+               same timestamp as current row.
+   HBASE-2733  Replacement of LATEST_TIMESTAMP with real timestamp was broken
+               by HBASE-2353.
+   HBASE-2734  TestFSErrors should catch all types of exceptions, not just RTE
+   HBASE-2738  TestTimeRangeMapRed updated now that we keep multiple cells with
+               same timestamp in MemStore
+   HBASE-2725  Shutdown hook management is gone in trunk; restore
+   HBASE-2740  NPE in ReadWriteConsistencyControl
+   HBASE-2752  Don't retry forever when waiting on too many store files
+   HBASE-2737  CME in ZKW introduced in HBASE-2694 (Karthik Ranganathan via JD)
+   HBASE-2756  MetaScanner.metaScan doesn't take configurations
+   HBASE-2656  HMaster.getRegionTableClosest should not return null for closed
+               regions
+   HBASE-2760  Fix MetaScanner TableNotFoundException when scanning starting at
+               the first row in a table.
+   HBASE-1025  Reconstruction log playback has no bounds on memory used
+   HBASE-2757  Fix flaky TestFromClientSide test by forcing region assignment
+   HBASE-2741  HBaseExecutorService needs to be multi-cluster friendly
+               (Karthik Ranganathan via JD)
+   HBASE-2769  Fix typo in warning message for HBaseConfiguration
+   HBASE-2768  Fix teardown order in TestFilter
+   HBASE-2763  Cross-port HADOOP-6833 IPC parameter leak bug
+   HBASE-2758  META region stuck in RS2ZK_REGION_OPENED state
+               (Karthik Ranganathan via jgray)
+   HBASE-2767  Fix reflection in tests that was made incompatible by HDFS-1209
+   HBASE-2617  Load balancer falls into pathological state if one server under
+               average - slop; endless churn
+   HBASE-2729  Interrupted or failed memstore flushes should not corrupt the
+               region
+   HBASE-2772  Scan doesn't recover from region server failure
+   HBASE-2775  Update of hadoop jar in HBASE-2771 broke TestMultiClusters
+   HBASE-2774  Spin in ReadWriteConsistencyControl eating CPU (load > 40) and
+               no progress running YCSB on clean cluster startup
+   HBASE-2785  TestScannerTimeout.test2772 is flaky
+   HBASE-2787  PE is confused about flushCommits
+   HBASE-2707  Can't recover from a dead ROOT server if any exceptions happens
+               during log splitting
+   HBASE-2501  Refactor StoreFile Code
+   HBASE-2806  DNS hiccups cause uncaught NPE in HServerAddress#getBindAddress
+               (Benoit Sigoure via Stack)
+   HBASE-2806  (small compile fix via jgray)
+   HBASE-2797  Another NPE in ReadWriteConsistencyControl
+   HBASE-2831  Fix '$bin' path duplication in setup scripts
+               (Nicolas Spiegelberg via Stack)
+   HBASE-2781  ZKW.createUnassignedRegion doesn't make sure existing znode is
+               in the right state (Karthik Ranganathan via JD)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
@@ -676,6 +732,38 @@ Release 0.21.0 - Unreleased
 	           setting (currentTimeMillis) (Daniel Ploeg via Ryan Rawson)
    HBASE-2558  Our javadoc overview -- "Getting Started", requirements, etc. --
                is not carried across by mvn javadoc:javadoc target
+   HBASE-2618  Don't inherit from HConstants (Benoit Sigoure via Stack)
+   HBASE-2208  TableServers # processBatchOfRows - converts from List to [ ]
+               - Expensive copy
+   HBASE-2694  Move RS to Master region open/close messaging into ZooKeeper
+   HBASE-2716  Make HBase's maven artifacts configurable with -D
+               (Alex Newman via Stack)
+   HBASE-2718  Update .gitignore for trunk after removal of contribs
+               (Lars Francke via Stack)
+   HBASE-2468  Improvements to prewarm META cache on clients
+               (Mingjie Lai via Stack)
+   HBASE-2353  Batch puts should sync HLog as few times as possible
+   HBASE-2726  Region Server should never abort without an informative log
+               message
+   HBASE-2724  Update to new release of Guava library
+   HBASE-2735  Make HBASE-2694 replication-friendly
+   HBASE-2683  Make it obvious in the documentation that ZooKeeper needs
+               permanent storage
+   HBASE-2764  Force all Chore tasks to have a thread name
+   HBASE-2762  Add warning to master if running without append enabled
+   HBASE-2779  Build a -src tgz to sit beside our -bin tgz when you call
+               maven assembly:assembly
+   HBASE-2783  Quick edit of 'Getting Started' for development release 0.89.x
+   HBASE-2345  Add Test in 0.20 to Check for proper HDFS-200 append/sync support
+               (Nicolas Spiegelberg via JD)
+   HBASE-2786  TestHLog.testSplit hangs (Nicolas Spiegelberg via JD)
+   HBASE-2790  Purge apache-forrest from TRUNK
+   HBASE-2793  Add ability to extract a specified list of versions of a column
+               in a single roundtrip (Kannan via Ryan)
+   HBASE-2828  HTable unnecessarily coupled with HMaster
+               (Nicolas Spiegelberg via Stack)
+   HBASE-2265  HFile and Memstore should maintain minimum and maximum timestamps
+	       (Pranav via Ryan)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
@@ -715,6 +803,11 @@ Release 0.21.0 - Unreleased
    HBASE-2588  Add easier way to ship HBase dependencies to MR cluster within Job
    HBASE-1923  Bulk incremental load into an existing table
    HBASE-2579  Add atomic checkAndDelete support (Michael Dalton via Stack)
+   HBASE-2400  new connector for Avro RPC access to HBase cluster
+               (Jeff Hammerbacher via Ryan Rawson)
+   HBASE-7     Provide a HBase checker and repair tool similar to fsck
+               (dhruba borthakur via Stack)
+   HBASE-2223  Handle 10min+ network partitions between clusters
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

@@ -76,7 +76,7 @@ public class TestFSErrorsExposed {
 
     StoreFile sf = new StoreFile(fs, writer.getPath(), false,
         util.getConfiguration(), StoreFile.BloomType.NONE, false);
-    HFile.Reader reader = sf.createReader();
+    StoreFile.Reader reader = sf.createReader();
     HFileScanner scanner = reader.getScanner(false, true);
 
     FaultyInputStream inStream = fs.inStreams.get(0).get();
@@ -111,7 +111,7 @@ public class TestFSErrorsExposed {
         HBaseTestingUtility.getTestDir("internalScannerExposesErrors"),
         "regionname"), "familyname");
     FaultyFileSystem fs = new FaultyFileSystem(util.getTestFileSystem());
-    HFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2 * 1024);
+    StoreFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2 * 1024);
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
@@ -176,11 +176,9 @@ public class TestFSErrorsExposed {
       try {
         util.countRows(table);
         fail("Did not fail to count after removing data");
-      } catch (RuntimeException rte) {
-        // We get RTE instead of IOE since java Iterable<?> doesn't throw
-        // IOE
-        LOG.info("Got expected error", rte);
-        assertTrue(rte.getMessage().contains("Could not seek"));
+      } catch (Exception e) {
+        LOG.info("Got expected error", e);
+        assertTrue(e.getMessage().contains("Could not seek"));
       }
 
     } finally {

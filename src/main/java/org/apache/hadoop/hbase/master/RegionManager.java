@@ -19,27 +19,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HMsg;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.util.Writables;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,10 +35,33 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
+import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
  */
-public class RegionManager implements HConstants {
+public class RegionManager {
   protected static final Log LOG = LogFactory.getLog(RegionManager.class);
 
   private AtomicReference<HServerAddress> rootRegionLocation =
@@ -95,6 +97,9 @@ public class RegionManager implements HConstants {
    final SortedMap<String, RegionState> regionsInTransition =
     Collections.synchronizedSortedMap(new TreeMap<String, RegionState>());
 
+   // regions in transition are also recorded in ZK using the zk wrapper
+   final ZooKeeperWrapper zkWrapper;
+
   // How many regions to assign a server at a time.
   private final int maxAssignInOneGo;
 
@@ -124,10 +129,12 @@ public class RegionManager implements HConstants {
   private final int zooKeeperNumRetries;
   private final int zooKeeperPause;
 
-  RegionManager(HMaster master) {
+  RegionManager(HMaster master) throws IOException {
     Configuration conf = master.getConfiguration();
 
     this.master = master;
+    this.zkWrapper =
+        ZooKeeperWrapper.getInstance(conf, HMaster.class.getName());
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
     this.loadBalancer = new LoadBalancer(conf);
 
@@ -137,8 +144,10 @@ public class RegionManager implements HConstants {
     // Scans the meta table
     metaScannerThread = new MetaScanner(master);
 
-    zooKeeperNumRetries = conf.getInt(ZOOKEEPER_RETRIES, DEFAULT_ZOOKEEPER_RETRIES);
-    zooKeeperPause = conf.getInt(ZOOKEEPER_PAUSE, DEFAULT_ZOOKEEPER_PAUSE);
+    zooKeeperNumRetries = conf.getInt(HConstants.ZOOKEEPER_RETRIES,
+        HConstants.DEFAULT_ZOOKEEPER_RETRIES);
+    zooKeeperPause = conf.getInt(HConstants.ZOOKEEPER_PAUSE,
+        HConstants.DEFAULT_ZOOKEEPER_PAUSE);
 
     reassignRootRegion();
   }
@@ -163,10 +172,18 @@ public class RegionManager implements HConstants {
     unsetRootRegion();
     if (!master.getShutdownRequested().get()) {
       synchronized (regionsInTransition) {
-        RegionState s = new RegionState(HRegionInfo.ROOT_REGIONINFO,
-            RegionState.State.UNASSIGNED);
-        regionsInTransition.put(
-            HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString(), s);
+        String regionName = HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString();
+        byte[] data = null;
+        try {
+          data = Writables.getBytes(new RegionTransitionEventData(HBaseEventType.M2ZK_REGION_OFFLINE, HMaster.MASTER));
+        } catch (IOException e) {
+          LOG.error("Error creating event data for " + HBaseEventType.M2ZK_REGION_OFFLINE, e);
+        }
+        zkWrapper.createOrUpdateUnassignedRegion(
+            HRegionInfo.ROOT_REGIONINFO.getEncodedName(), data);
+        LOG.debug("Created UNASSIGNED zNode " + regionName + " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
+        RegionState s = new RegionState(HRegionInfo.ROOT_REGIONINFO, RegionState.State.UNASSIGNED);
+        regionsInTransition.put(regionName, s);
         LOG.info("ROOT inserted into regionsInTransition");
       }
     }
@@ -228,51 +245,44 @@ public class RegionManager implements HConstants {
         isMetaAssign = true;
     }
     int nRegionsToAssign = regionsToAssign.size();
-    // Now many regions to assign this server.
-    int nregions = regionsPerServer(nRegionsToAssign, thisServersLoad);
-    LOG.debug("Assigning for " + info + ": total nregions to assign=" +
-      nRegionsToAssign + ", nregions to reach balance=" + nregions +
-      ", isMetaAssign=" + isMetaAssign);
-    if (nRegionsToAssign <= nregions) {
-      // I do not know whats supposed to happen in this case.  Assign one.
-      LOG.debug("Assigning one region only (playing it safe..)");
-      assignRegions(regionsToAssign, 1, info, returnMsgs);
-    } else {
-      nRegionsToAssign -= nregions;
-      if (nRegionsToAssign > 0 || isMetaAssign) {
-        // We still have more regions to assign. See how many we can assign
-        // before this server becomes more heavily loaded than the next
-        // most heavily loaded server.
-        HServerLoad heavierLoad = new HServerLoad();
-        int nservers = computeNextHeaviestLoad(thisServersLoad, heavierLoad);
-        nregions = 0;
-        // Advance past any less-loaded servers
-        for (HServerLoad load = new HServerLoad(thisServersLoad);
-        load.compareTo(heavierLoad) <= 0 && nregions < nRegionsToAssign;
-        load.setNumberOfRegions(load.getNumberOfRegions() + 1), nregions++) {
-          // continue;
-        }
-        LOG.debug("Doing for " + info + " nregions: " + nregions +
-            " and nRegionsToAssign: " + nRegionsToAssign);
-        if (nregions < nRegionsToAssign) {
-          // There are some more heavily loaded servers
-          // but we can't assign all the regions to this server.
-          if (nservers > 0) {
-            // There are other servers that can share the load.
-            // Split regions that need assignment across the servers.
-            nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/(1.0 * nservers));
-          } else {
-            // No other servers with same load.
-            // Split regions over all available servers
-            nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/
-                (1.0 * this.master.numServers()));
-          }
-        } else {
-          // Assign all regions to this server
-          nregions = nRegionsToAssign;
-        }
-        assignRegions(regionsToAssign, nregions, info, returnMsgs);
+    int otherServersRegionsCount =
+      regionsToGiveOtherServers(nRegionsToAssign, thisServersLoad);
+    nRegionsToAssign -= otherServersRegionsCount;
+    if (nRegionsToAssign > 0 || isMetaAssign) {
+      LOG.debug("Assigning for " + info + ": total nregions to assign=" +
+        nRegionsToAssign + ", regions to give other servers than this=" +
+        otherServersRegionsCount + ", isMetaAssign=" + isMetaAssign);
+
+      // See how many we can assign before this server becomes more heavily
+      // loaded than the next most heavily loaded server.
+      HServerLoad heavierLoad = new HServerLoad();
+      int nservers = computeNextHeaviestLoad(thisServersLoad, heavierLoad);
+      int nregions = 0;
+      // Advance past any less-loaded servers
+      for (HServerLoad load = new HServerLoad(thisServersLoad);
+      load.compareTo(heavierLoad) <= 0 && nregions < nRegionsToAssign;
+      load.setNumberOfRegions(load.getNumberOfRegions() + 1), nregions++) {
+        // continue;
       }
+      if (nregions < nRegionsToAssign) {
+        // There are some more heavily loaded servers
+        // but we can't assign all the regions to this server.
+        if (nservers > 0) {
+          // There are other servers that can share the load.
+          // Split regions that need assignment across the servers.
+          nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/(1.0 * nservers));
+        } else {
+          // No other servers with same load.
+          // Split regions over all available servers
+          nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/
+              (1.0 * master.getServerManager().numServers()));
+        }
+      } else {
+        // Assign all regions to this server
+        nregions = nRegionsToAssign;
+      }
+      LOG.debug("Assigning " + info + " " + nregions + " regions");
+      assignRegions(regionsToAssign, nregions, info, returnMsgs);
     }
   }
 
@@ -328,6 +338,15 @@ public class RegionManager implements HConstants {
     LOG.info("Assigning region " + regionName + " to " + sinfo.getServerName());
     rs.setPendingOpen(sinfo.getServerName());
     synchronized (this.regionsInTransition) {
+      byte[] data = null;
+      try {
+        data = Writables.getBytes(new RegionTransitionEventData(HBaseEventType.M2ZK_REGION_OFFLINE, HMaster.MASTER));
+      } catch (IOException e) {
+        LOG.error("Error creating event data for " + HBaseEventType.M2ZK_REGION_OFFLINE, e);
+      }
+      zkWrapper.createOrUpdateUnassignedRegion(
+          rs.getRegionInfo().getEncodedName(), data);
+      LOG.debug("Created UNASSIGNED zNode " + regionName + " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
       this.regionsInTransition.put(regionName, rs);
     }
 
@@ -337,9 +356,10 @@ public class RegionManager implements HConstants {
   /*
    * @param nRegionsToAssign
    * @param thisServersLoad
-   * @return How many regions we can assign to more lightly loaded servers
+   * @return How many regions should go to servers other than this one; i.e.
+   * more lightly loaded servers
    */
-  private int regionsPerServer(final int numUnassignedRegions,
+  private int regionsToGiveOtherServers(final int numUnassignedRegions,
     final HServerLoad thisServersLoad) {
     SortedMap<HServerLoad, Set<String>> lightServers =
       new TreeMap<HServerLoad, Set<String>>();
@@ -470,9 +490,8 @@ public class RegionManager implements HConstants {
   void unassignSomeRegions(final HServerInfo info,
       int numRegionsToClose, final HRegionInfo[] mostLoadedRegions,
       ArrayList<HMsg> returnMsgs) {
-    LOG.debug("Choosing to reassign " + numRegionsToClose
-      + " regions. mostLoadedRegions has " + mostLoadedRegions.length
-      + " regions in it.");
+    LOG.debug("Unassigning " + numRegionsToClose + " regions from " +
+      info.getServerName());
     int regionIdx = 0;
     int regionsClosed = 0;
     int skipped = 0;
@@ -501,20 +520,21 @@ public class RegionManager implements HConstants {
       // increment the count of regions we've marked
       regionsClosed++;
     }
-    LOG.info("Skipped " + skipped + " region(s) that are in transition states");
+    LOG.info("Skipped assigning " + skipped + " region(s) to " +
+      info.getServerName() + "because already in transition");
   }
 
   /*
    * PathFilter that accepts hbase tables only.
    */
   static class TableDirFilter implements PathFilter {
-    public boolean accept(Path path) {
+    public boolean accept(final Path path) {
       // skip the region servers' log dirs && version file
       // HBASE-1112 want to separate the log dirs from table's data dirs by a
       // special character.
-      String pathname = path.getName();
-      return !pathname.equals(HLog.HREGION_LOGDIR_NAME) &&
-        !pathname.equals(VERSION_FILE_NAME);
+      final String pathname = path.getName();
+      return (!pathname.equals(HConstants.HREGION_LOGDIR_NAME)
+              && !pathname.equals(HConstants.VERSION_FILE_NAME));
     }
 
   }
@@ -524,7 +544,7 @@ public class RegionManager implements HConstants {
    */
   static class RegionDirFilter implements PathFilter {
     public boolean accept(Path path) {
-      return !path.getName().equals(HREGION_COMPACTIONDIR_NAME);
+      return !path.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME);
     }
   }
 
@@ -727,7 +747,8 @@ public class RegionManager implements HConstants {
     byte [] regionName = region.getRegionName();
 
     Put put = new Put(regionName);
-    put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(info));
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(info));
     server.put(metaRegionName, put);
 
     // 4. Close the new region to flush it to disk.  Close its log file too.
@@ -966,6 +987,17 @@ public class RegionManager implements HConstants {
     synchronized(this.regionsInTransition) {
       s = regionsInTransition.get(info.getRegionNameAsString());
       if (s == null) {
+        byte[] data = null;
+        try {
+          data = Writables.getBytes(new RegionTransitionEventData(HBaseEventType.M2ZK_REGION_OFFLINE, HMaster.MASTER));
+        } catch (IOException e) {
+          // TODO: Review what we should do here.  If Writables work this
+          //       should never happen
+          LOG.error("Error creating event data for " + HBaseEventType.M2ZK_REGION_OFFLINE, e);
+        }
+        zkWrapper.createOrUpdateUnassignedRegion(info.getEncodedName(), data);
+        LOG.debug("Created/updated UNASSIGNED zNode " + info.getRegionNameAsString() +
+                  " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
         s = new RegionState(info, RegionState.State.UNASSIGNED);
         regionsInTransition.put(info.getRegionNameAsString(), s);
       }
@@ -1175,10 +1207,10 @@ public class RegionManager implements HConstants {
 
   private long getPauseTime(int tries) {
     int attempt = tries;
-    if (attempt >= RETRY_BACKOFF.length) {
-      attempt = RETRY_BACKOFF.length - 1;
+    if (attempt >= HConstants.RETRY_BACKOFF.length) {
+      attempt = HConstants.RETRY_BACKOFF.length - 1;
     }
-    return this.zooKeeperPause * RETRY_BACKOFF[attempt];
+    return this.zooKeeperPause * HConstants.RETRY_BACKOFF[attempt];
   }
 
   private void sleep(int attempt) {
@@ -1210,8 +1242,9 @@ public class RegionManager implements HConstants {
    */
   public void setRootRegionLocation(HServerAddress address) {
     writeRootRegionLocationToZooKeeper(address);
-
     synchronized (rootRegionLocation) {
+      // the root region has been assigned, remove it from transition in ZK
+      zkWrapper.deleteUnassignedRegion(HRegionInfo.ROOT_REGIONINFO.getEncodedName());
       rootRegionLocation.set(new HServerAddress(address));
       rootRegionLocation.notifyAll();
     }
@@ -1372,7 +1405,8 @@ public class RegionManager implements HConstants {
       }
 
       // check if current server is overloaded
-      int numRegionsToClose = balanceFromOverloaded(info, servLoad, avg);
+      int numRegionsToClose = balanceFromOverloaded(info.getServerName(),
+        servLoad, avg);
 
       // check if we can unload server by low loaded servers
       if(numRegionsToClose <= 0) {
@@ -1394,14 +1428,15 @@ public class RegionManager implements HConstants {
      * Check if server load is not overloaded (with load > avgLoadPlusSlop).
      * @return number of regions to unassign.
      */
-    private int balanceFromOverloaded(final HServerInfo info,
-        final HServerLoad srvLoad, final double avgLoad) {
+    private int balanceFromOverloaded(final String serverName,
+        HServerLoad srvLoad, double avgLoad) {
       int avgLoadPlusSlop = (int)Math.ceil(avgLoad * (1 + this.slop));
       int numSrvRegs = srvLoad.getNumberOfRegions();
       if (numSrvRegs > avgLoadPlusSlop) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Server " + info.getServerName() + " is overloaded: load=" +
-            numSrvRegs + ", avg=" + avgLoad + ", slop=" + this.slop);
+          LOG.debug("Server " + serverName + " is carrying more than its fair " +
+            "share of regions: " +
+            "load=" + numSrvRegs + ", avg=" + avgLoad + ", slop=" + this.slop);
         }
         return numSrvRegs - (int)Math.ceil(avgLoad);
       }
@@ -1438,10 +1473,10 @@ public class RegionManager implements HConstants {
       numRegionsToClose = numSrvRegs - (int)Math.ceil(avgLoad);
       numRegionsToClose = Math.min(numRegionsToClose, numMoveToLowLoaded);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Server " + srvName + " will be unloaded for " +
-            "balance. Server load: " + numSrvRegs + " avg: " +
-            avgLoad + ", regions can be moved: " + numMoveToLowLoaded +
-            ". Regions to close: " + numRegionsToClose);
+        LOG.debug("Server(s) are carrying only " + lowestLoad + " regions. " +
+          "Server " + srvName + " is most loaded (" + numSrvRegs +
+          "). Shedding " + numRegionsToClose + " regions to pass to " +
+          " least loaded (numMoveToLowLoaded=" + numMoveToLowLoaded +")");
       }
       return numRegionsToClose;
     }

@@ -19,12 +19,14 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
 import java.io.IOException;
 
@@ -33,7 +35,7 @@ import java.io.IOException;
  * serving a region. This applies to all meta and user regions except the
  * root region which is handled specially.
  */
-class ProcessRegionOpen extends ProcessRegionStatusChange {
+public class ProcessRegionOpen extends ProcessRegionStatusChange {
   protected final HServerInfo serverInfo;
 
   /**
@@ -73,9 +75,9 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
 
     // Register the newly-available Region's location.
     Put p = new Put(regionInfo.getRegionName());
-    p.add(CATALOG_FAMILY, SERVER_QUALIFIER,
+    p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
       Bytes.toBytes(serverInfo.getHostnamePort()));
-    p.add(CATALOG_FAMILY, STARTCODE_QUALIFIER,
+    p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
       Bytes.toBytes(serverInfo.getStartCode()));
     server.put(metaRegionName, p);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
@@ -113,6 +115,10 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
       } else {
         master.getRegionManager().removeRegion(regionInfo);
       }
+      ZooKeeperWrapper zkWrapper =
+          ZooKeeperWrapper.getInstance(master.getConfiguration(),
+              HMaster.class.getName());
+      zkWrapper.deleteUnassignedRegion(regionInfo.getEncodedName());
       return true;
     }
   }

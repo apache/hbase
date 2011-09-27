@@ -51,7 +51,7 @@ import java.util.Properties;
  * control over the process. Currently, this class allows us to parse the
  * zoo.cfg and inject variables from HBase's site.xml configuration in.
  */
-public class HQuorumPeer implements HConstants {
+public class HQuorumPeer {
   private static final Log LOG = LogFactory.getLog(HQuorumPeer.class);
 
   private static final String VARIABLE_START = "${";
@@ -171,12 +171,13 @@ public class HQuorumPeer implements HConstants {
     // First check if there is a zoo.cfg in the CLASSPATH. If so, simply read
     // it and grab its configuration properties.
     ClassLoader cl = HQuorumPeer.class.getClassLoader();
-    InputStream inputStream = cl.getResourceAsStream(ZOOKEEPER_CONFIG_NAME);
+    final InputStream inputStream =
+      cl.getResourceAsStream(HConstants.ZOOKEEPER_CONFIG_NAME);
     if (inputStream != null) {
       try {
         return parseZooCfg(conf, inputStream);
       } catch (IOException e) {
-        LOG.warn("Cannot read " + ZOOKEEPER_CONFIG_NAME +
+        LOG.warn("Cannot read " + HConstants.ZOOKEEPER_CONFIG_NAME +
                  ", loading from XML files", e);
       }
     }
@@ -200,14 +201,16 @@ public class HQuorumPeer implements HConstants {
 
     // If clientPort is not set, assign the default
     if (zkProperties.getProperty(ZK_CLIENT_PORT_KEY) == null) {
-      zkProperties.put(ZK_CLIENT_PORT_KEY, DEFAULT_ZOOKEPER_CLIENT_PORT);
+      zkProperties.put(ZK_CLIENT_PORT_KEY,
+                       HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT);
     }
 
     // Create the server.X properties.
     int peerPort = conf.getInt("hbase.zookeeper.peerport", 2888);
     int leaderPort = conf.getInt("hbase.zookeeper.leaderport", 3888);
 
-    String[] serverHosts = conf.getStrings(ZOOKEEPER_QUORUM, "localhost");
+    final String[] serverHosts = conf.getStrings(HConstants.ZOOKEEPER_QUORUM,
+                                                 "localhost");
     for (int i = 0; i < serverHosts.length; ++i) {
       String serverHost = serverHosts[i];
       String address = serverHost + ":" + peerPort + ":" + leaderPort;
@@ -216,6 +219,68 @@ public class HQuorumPeer implements HConstants {
     }
 
     return zkProperties;
+  }
+
+  /**
+   * Return the ZK Quorum servers string given zk properties returned by
+   * makeZKProps
+   * @param properties
+   * @return
+   */
+  public static String getZKQuorumServersString(Properties properties) {
+    String clientPort = null;
+    List<String> servers = new ArrayList<String>();
+
+    // The clientPort option may come after the server.X hosts, so we need to
+    // grab everything and then create the final host:port comma separated list.
+    boolean anyValid = false;
+    for (Entry<Object,Object> property : properties.entrySet()) {
+      String key = property.getKey().toString().trim();
+      String value = property.getValue().toString().trim();
+      if (key.equals("clientPort")) {
+        clientPort = value;
+      }
+      else if (key.startsWith("server.")) {
+        String host = value.substring(0, value.indexOf(':'));
+        servers.add(host);
+        try {
+          //noinspection ResultOfMethodCallIgnored
+          InetAddress.getByName(host);
+          anyValid = true;
+        } catch (UnknownHostException e) {
+          LOG.warn(StringUtils.stringifyException(e));
+        }
+      }
+    }
+
+    if (!anyValid) {
+      LOG.error("no valid quorum servers found in " + HConstants.ZOOKEEPER_CONFIG_NAME);
+      return null;
+    }
+
+    if (clientPort == null) {
+      LOG.error("no clientPort found in " + HConstants.ZOOKEEPER_CONFIG_NAME);
+      return null;
+    }
+
+    if (servers.isEmpty()) {
+      LOG.fatal("No server.X lines found in conf/zoo.cfg. HBase must have a " +
+                "ZooKeeper cluster configured for its operation.");
+      return null;
+    }
+
+    StringBuilder hostPortBuilder = new StringBuilder();
+    for (int i = 0; i < servers.size(); ++i) {
+      String host = servers.get(i);
+      if (i > 0) {
+        hostPortBuilder.append(',');
+      }
+      hostPortBuilder.append(host);
+      hostPortBuilder.append(':');
+      hostPortBuilder.append(clientPort);
+    }
+
+    return hostPortBuilder.toString();
   }
 
   /**
@@ -232,7 +297,8 @@ public class HQuorumPeer implements HConstants {
     try {
       properties.load(inputStream);
     } catch (IOException e) {
-      String msg = "fail to read properties from " + ZOOKEEPER_CONFIG_NAME;
+      final String msg = "fail to read properties from "
+        + HConstants.ZOOKEEPER_CONFIG_NAME;
       LOG.fatal(msg);
       throw new IOException(msg, e);
     }
@@ -269,8 +335,8 @@ public class HQuorumPeer implements HConstants {
       }
       // Special case for 'hbase.cluster.distributed' property being 'true'
       if (key.startsWith("server.")) {
-        if(conf.get(CLUSTER_DISTRIBUTED).equals(CLUSTER_IS_DISTRIBUTED) &&
-            value.startsWith("localhost")) {
+        if (conf.get(HConstants.CLUSTER_DISTRIBUTED).equals(HConstants.CLUSTER_IS_DISTRIBUTED)
+            && value.startsWith("localhost")) {
           String msg = "The server in zoo.cfg cannot be set to localhost " +
               "in a fully-distributed setup because it won't be reachable. " +
               "See \"Getting Started\" for more information.";

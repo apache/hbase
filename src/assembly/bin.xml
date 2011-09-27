@@ -9,10 +9,9 @@
   <fileSets>
     <fileSet>
       <includes>
-        <include>${basedir}/CHANGES*</include>
-        <include>${basedir}/README*</include>
-        <include>${basedir}/LICENSE*</include>
-        <include>${basedir}/NOTICE*</include>
+        <include>${basedir}/*.txt</include>
+        <!-- fb modification to include compression related jars and native libraries -->
+        <include>${basedir}/lib/**</include>
       </includes>
     </fileSet>
     <fileSet>
@@ -30,7 +29,8 @@
       <directory>target</directory>
       <outputDirectory>/</outputDirectory>
       <includes>
-        <include>*.jar</include>
+          <include>hbase-${project.version}.jar</include>
+          <include>hbase-${project.version}-tests.jar</include>
       </includes>
     </fileSet>
     <fileSet>

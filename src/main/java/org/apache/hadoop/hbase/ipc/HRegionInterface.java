@@ -30,8 +30,10 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Clients interact with HRegionServers using a handle to the HRegionInterface.
@@ -102,12 +104,12 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * Put an array of puts into the specified region
    *
    * @param regionName region name
-   * @param puts array of puts to execute
+   * @param puts List of puts to execute
    * @return The number of processed put's.  Returns -1 if all Puts
    * processed successfully.
    * @throws IOException e
    */
-  public int put(final byte[] regionName, final Put [] puts)
+  public int put(final byte[] regionName, final List<Put> puts)
   throws IOException;
 
   /**
@@ -125,12 +127,12 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * Put an array of deletes into the specified region
    *
    * @param regionName region name
-   * @param deletes delete array to execute
+   * @param deletes delete List to execute
    * @return The number of processed deletes.  Returns -1 if all Deletes
    * processed successfully.
    * @throws IOException e
    */
-  public int delete(final byte[] regionName, final Delete [] deletes)
+  public int delete(final byte[] regionName, final List<Delete> deletes)
   throws IOException;
 
   /**
@@ -284,4 +286,16 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    */
   public void bulkLoadHFile(String hfilePath,
       byte[] regionName, byte[] familyName) throws IOException;
+
+  /**
+   * Replicates the given entries. The guarantee is that the given entries
+   * will be durable on the slave cluster if this method returns without
+   * any exception.
+   * hbase.replication has to be set to true for this to work.
+   *
+   * @param entries entries to replicate
+   * @throws IOException
+   */
+  public void replicateLogEntries(HLog.Entry[] entries) throws IOException;
+
 }

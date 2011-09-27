@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -94,7 +95,7 @@ public class RegionServerOperationQueue {
   private final Sleeper sleeper;
 
   RegionServerOperationQueue(final Configuration c, final AtomicBoolean closed) {
-    this.threadWakeFrequency = c.getInt(HMaster.THREAD_WAKE_FREQUENCY, 10 * 1000);
+    this.threadWakeFrequency = c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.closed = closed;
     this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
   }
@@ -110,17 +111,16 @@ public class RegionServerOperationQueue {
 
   /**
    * Try to get an operation off of the queue and process it.
-   * @param rootRegionLocation Location of the root region.
    * @return {@link ProcessingResultCode#PROCESSED},
    * {@link ProcessingResultCode#REQUEUED},
    * {@link ProcessingResultCode#REQUEUED_BUT_PROBLEM}
    */
-  public synchronized ProcessingResultCode process(final HServerAddress rootRegionLocation) {
+  public synchronized ProcessingResultCode process() {
     RegionServerOperation op = null;
     // Only process the delayed queue if root region is online.  If offline,
     // the operation to put it online is probably in the toDoQueue.  Process
     // it first.
-    if (rootRegionLocation != null) {
+    if (toDoQueue.isEmpty()) {
       op = delayedToDoQueue.poll();
     }
     if (op == null) {

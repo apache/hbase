@@ -47,7 +47,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * if we are running on DistributedFilesystem, create a FileSystem instance
  * each and will close down their instance on the way out.
  */
-public class MiniHBaseCluster implements HConstants {
+public class MiniHBaseCluster {
   static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
   private Configuration conf;
   public LocalHBaseCluster hbaseCluster;
@@ -67,7 +67,7 @@ public class MiniHBaseCluster implements HConstants {
   public MiniHBaseCluster(Configuration conf, int numRegionServers)
   throws IOException {
     this.conf = conf;
-    conf.set(MASTER_PORT, "0");
+    conf.set(HConstants.MASTER_PORT, "0");
     init(numRegionServers);
   }
 
@@ -77,6 +77,9 @@ public class MiniHBaseCluster implements HConstants {
   public static class MiniHBaseClusterMaster extends HMaster {
     private final Map<HServerInfo, List<HMsg>> messages =
       new ConcurrentHashMap<HServerInfo, List<HMsg>>();
+
+    private final Map<HServerInfo, IOException> exceptions =
+      new ConcurrentHashMap<HServerInfo, IOException>();
 
     public MiniHBaseClusterMaster(final Configuration conf)
     throws IOException {
@@ -99,9 +102,26 @@ public class MiniHBaseCluster implements HConstants {
       }
     }
 
+    void addException(final HServerInfo hsi, final IOException ex) {
+      this.exceptions.put(hsi, ex);
+    }
+
+    /**
+     * This implementation is special, exceptions will be treated first and
+     * message won't be sent back to the region servers even if some are
+     * specified.
+     * @param hsi the rs
+     * @param msgs Messages to add to
+     * @return
+     * @throws IOException will be throw if any added for this region server
+     */
     @Override
     protected HMsg[] adornRegionServerAnswer(final HServerInfo hsi,
-        final HMsg[] msgs) {
+        final HMsg[] msgs) throws IOException {
+      IOException ex = this.exceptions.remove(hsi);
+      if (ex != null) {
+        throw ex;
+      }
       HMsg [] answerMsgs = msgs;
       synchronized (this.messages) {
         List<HMsg> hmsgs = this.messages.get(hsi);
@@ -123,7 +143,7 @@ public class MiniHBaseCluster implements HConstants {
   /**
    * Subclass so can get at protected methods (none at moment).  Also, creates
    * a FileSystem instance per instantiation.  Adds a shutdown own FileSystem
-   * on the way out. Shuts down own Filesystem only, not All filesystems as 
+   * on the way out. Shuts down own Filesystem only, not All filesystems as
    * the FileSystem system exit hook does.
    */
   public static class MiniHBaseClusterRegionServer extends HRegionServer {
@@ -179,7 +199,7 @@ public class MiniHBaseCluster implements HConstants {
         }
       }
     }
- 
+
     public void kill() {
       super.kill();
     }
@@ -254,7 +274,7 @@ public class MiniHBaseCluster implements HConstants {
   public String abortRegionServer(int serverNumber) {
     HRegionServer server = getRegionServer(serverNumber);
     LOG.info("Aborting " + server.toString());
-    server.abort();
+    server.abort("Aborting for tests", new Exception("Trace info"));
     return server.toString();
   }
 
@@ -366,15 +386,25 @@ public class MiniHBaseCluster implements HConstants {
 
   /**
    * @return Index into List of {@link MiniHBaseCluster#getRegionServerThreads()}
-   * of HRS carrying .META.  Returns -1 if none found.
+   * of HRS carrying regionName. Returns -1 if none found.
    */
   public int getServerWithMeta() {
+    return getServerWith(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+  }
+
+  /**
+   * Get the location of the specified region
+   * @param regionName Name of the region in bytes
+   * @return Index into List of {@link MiniHBaseCluster#getRegionServerThreads()}
+   * of HRS carrying .META.. Returns -1 if none found.
+   */
+  public int getServerWith(byte[] regionName) {
     int index = -1;
     int count = 0;
     for (JVMClusterUtil.RegionServerThread rst: getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
       HRegion metaRegion =
-        hrs.getOnlineRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+        hrs.getOnlineRegion(regionName);
       if (metaRegion != null) {
         index = count;
         break;
@@ -382,6 +412,31 @@ public class MiniHBaseCluster implements HConstants {
       count++;
     }
     return index;
+  }
+
+  /**
+   * Add an exception to send when a region server checks back in
+   * @param serverNumber Which server to send it to
+   * @param ex The exception that will be sent
+   * @throws IOException
+   */
+  public void addExceptionToSendRegionServer(final int serverNumber,
+      IOException ex) throws IOException {
+    MiniHBaseClusterRegionServer hrs =
+      (MiniHBaseClusterRegionServer)getRegionServer(serverNumber);
+    addExceptionToSendRegionServer(hrs, ex);
+  }
+
+  /**
+   * Add an exception to send when a region server checks back in
+   * @param hrs Which server to send it to
+   * @param ex The exception that will be sent
+   * @throws IOException
+   */
+  public void addExceptionToSendRegionServer(
+      final MiniHBaseClusterRegionServer hrs, IOException ex)
+      throws IOException {
+    ((MiniHBaseClusterMaster)getMaster()).addException(hrs.getHServerInfo(),ex);
   }
 
   /**

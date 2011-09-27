@@ -38,9 +38,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -54,8 +51,8 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.log4j.Level;
 
 /** JUnit test case for HLog */
-public class TestHLog extends HBaseTestCase implements HConstants {
-  static final Log LOG = LogFactory.getLog(TestHLog.class);
+public class TestHLog extends HBaseTestCase {
+  private static final Log LOG = LogFactory.getLog(TestHLog.class);
   {
     ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
@@ -139,14 +136,12 @@ public class TestHLog extends HBaseTestCase implements HConstants {
               System.currentTimeMillis());
           }
         }
-        log.hflush();
         log.rollWriter();
       }
-      Configuration new_conf = new Configuration(this.conf);
-      new_conf.setBoolean("dfs.support.append", false);
+      log.close();
       Path splitsdir = new Path(this.dir, "splits");
       List<Path> splits =
-        HLog.splitLog(splitsdir, logdir, this.oldLogDir, this.fs, new_conf);
+        HLog.splitLog(splitsdir, logdir, this.oldLogDir, this.fs, conf);
       verifySplits(splits, howmany);
       log = null;
     } finally {
@@ -528,6 +523,49 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       if (reader != null) {
         reader.close();
       }
+    }
+  }
+
+  /**
+   * Test that we can visit entries before they are appended
+   * @throws Exception
+   */
+  public void testVisitors() throws Exception {
+    final int COL_COUNT = 10;
+    final byte [] tableName = Bytes.toBytes("tablename");
+    final byte [] row = Bytes.toBytes("row");
+    this.conf.setBoolean("dfs.support.append", true);
+    HLog log = new HLog(this.fs, dir, this.oldLogDir, this.conf, null);
+    DumbLogEntriesVisitor visitor = new DumbLogEntriesVisitor();
+    log.addLogEntryVisitor(visitor);
+    long timestamp = System.currentTimeMillis();
+    HRegionInfo hri = new HRegionInfo(new HTableDescriptor(tableName),
+        HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    for (int i = 0; i < COL_COUNT; i++) {
+      WALEdit cols = new WALEdit();
+      cols.add(new KeyValue(row, Bytes.toBytes("column"),
+          Bytes.toBytes(Integer.toString(i)),
+          timestamp, new byte[]{(byte) (i + '0')}));
+      log.append(hri, tableName, cols, System.currentTimeMillis());
+    }
+    assertEquals(COL_COUNT, visitor.increments);
+    log.removeLogEntryVisitor(visitor);
+    WALEdit cols = new WALEdit();
+    cols.add(new KeyValue(row, Bytes.toBytes("column"),
+        Bytes.toBytes(Integer.toString(11)),
+        timestamp, new byte[]{(byte) (11 + '0')}));
+    log.append(hri, tableName, cols, System.currentTimeMillis());
+    assertEquals(COL_COUNT, visitor.increments);
+  }
+
+  static class DumbLogEntriesVisitor implements LogEntryVisitor {
+
+    int increments = 0;
+
+    @Override
+    public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
+                                         WALEdit logEdit) {
+      increments++;
     }
   }
 }

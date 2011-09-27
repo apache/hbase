@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.Leases;
-import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -58,7 +58,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * The ServerManager class manages info about region servers - HServerInfo,
  * load numbers, dying servers, etc.
  */
-public class ServerManager implements HConstants {
+public class ServerManager {
   private static final Log LOG =
     LogFactory.getLog(ServerManager.class.getName());
 
@@ -104,7 +104,7 @@ public class ServerManager implements HConstants {
    */
   class ServerMonitor extends Chore {
     ServerMonitor(final int period, final AtomicBoolean stop) {
-      super(period, stop);
+      super("ServerMonitor", period, stop);
     }
 
     @Override
@@ -177,13 +177,14 @@ public class ServerManager implements HConstants {
     String hostAndPort = info.getServerAddress().toString();
     HServerInfo existingServer = haveServerWithSameHostAndPortAlready(info.getHostnamePort());
     if (existingServer != null) {
-      LOG.info("Server start rejected; we already have " + hostAndPort +
-        " registered; existingServer=" + existingServer + ", newServer=" + info);
+      String message = "Server start rejected; we already have " + hostAndPort +
+        " registered; existingServer=" + existingServer + ", newServer=" + info;
+      LOG.info(message);
       if (existingServer.getStartCode() < info.getStartCode()) {
         LOG.info("Triggering server recovery; existingServer looks stale");
         expireServer(existingServer);
       }
-      throw new Leases.LeaseStillHeldException(hostAndPort);
+      throw new PleaseHoldException(message);
     }
     checkIsDead(info.getServerName(), "STARTUP");
     LOG.info("Received start message from: " + info.getServerName());
@@ -208,11 +209,12 @@ public class ServerManager implements HConstants {
    * @throws LeaseStillHeldException
    */
   private void checkIsDead(final String serverName, final String what)
-  throws LeaseStillHeldException {
+  throws YouAreDeadException {
     if (!isDead(serverName)) return;
-    LOG.debug("Server " + what + " rejected; currently processing " +
-      serverName + " as dead server");
-    throw new Leases.LeaseStillHeldException(serverName);
+    String message = "Server " + what + " rejected; currently processing " +
+      serverName + " as dead server";
+    LOG.debug(message);
+    throw new YouAreDeadException(message);
   }
 
   /**
@@ -562,7 +564,7 @@ public class ServerManager implements HConstants {
    * @param region
    * @param returnMsgs
    */
-  private void processRegionOpen(HServerInfo serverInfo,
+  public void processRegionOpen(HServerInfo serverInfo,
       HRegionInfo region, ArrayList<HMsg> returnMsgs) {
     boolean duplicateAssignment = false;
     synchronized (master.getRegionManager()) {
@@ -631,7 +633,7 @@ public class ServerManager implements HConstants {
    * @param region
    * @throws Exception
    */
-  private void processRegionClose(HRegionInfo region) {
+  public void processRegionClose(HRegionInfo region) {
     synchronized (this.master.getRegionManager()) {
       if (region.isRootRegion()) {
         // Root region

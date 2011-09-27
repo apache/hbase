@@ -20,23 +20,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import junit.framework.TestCase;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.Progressable;
-
 import java.io.IOException;
+import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -45,10 +30,41 @@ import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
+import junit.framework.TestCase;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.FilterFileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+
+import com.google.common.base.Joiner;
+
 /**
  * Test class fosr the Store
  */
 public class TestStore extends TestCase {
+  public static final Log LOG = LogFactory.getLog(TestStore.class);
+
   Store store;
   byte [] table = Bytes.toBytes("table");
   byte [] family = Bytes.toBytes("family");
@@ -91,15 +107,17 @@ public class TestStore extends TestCase {
   }
 
   private void init(String methodName) throws IOException {
+    init(methodName, HBaseConfiguration.create());
+  }
+
+  private void init(String methodName, Configuration conf)
+  throws IOException {
     //Setting up a Store
     Path basedir = new Path(DIR+methodName);
     Path logdir = new Path(DIR+methodName+"/logs");
     Path oldLogDir = new Path(basedir, HConstants.HREGION_OLDLOGDIR_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
-    HBaseConfiguration conf = new HBaseConfiguration();
     FileSystem fs = FileSystem.get(conf);
-    Path reconstructionLog = null;
-    Progressable reporter = null;
 
     fs.delete(logdir, true);
 
@@ -109,8 +127,7 @@ public class TestStore extends TestCase {
     HLog hlog = new HLog(fs, logdir, oldLogDir, conf, null);
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, null);
 
-    store = new Store(basedir, region, hcd, fs, reconstructionLog, conf,
-        reporter);
+    store = new Store(basedir, region, hcd, fs, conf);
   }
 
 
@@ -133,7 +150,7 @@ public class TestStore extends TestCase {
     StoreFile f = this.store.getStorefiles().get(0);
     Path storedir = f.getPath().getParent();
     long seqid = f.getMaxSequenceId();
-    HBaseConfiguration c = new HBaseConfiguration();
+    Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
     StoreFile.Writer w = StoreFile.createWriter(fs, storedir, 
         StoreFile.DEFAULT_BLOCKSIZE_SMALL);
@@ -143,7 +160,7 @@ public class TestStore extends TestCase {
     // Reopen it... should pick up two files
     this.store = new Store(storedir.getParent().getParent(),
       this.store.getHRegion(),
-      this.store.getFamily(), fs, null, c, null);
+      this.store.getFamily(), fs, c);
     System.out.println(this.store.getHRegionInfo().getEncodedName());
     assertEquals(2, this.store.getStorefilesCount());
     this.store.get(get, qualifiers, result);
@@ -312,10 +329,181 @@ public class TestStore extends TestCase {
 
   }
 
+  public void testHandleErrorsInFlush() throws Exception {
+    LOG.info("Setting up a faulty file system that cannot write");
+
+    Configuration conf = HBaseConfiguration.create();
+    // Set a different UGI so we don't get the same cached LocalFS instance
+    conf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME,
+        "testhandleerrorsinflush,foo");
+    // Inject our faulty LocalFileSystem
+    conf.setClass("fs.file.impl", FaultyFileSystem.class,
+        FileSystem.class);
+    // Make sure it worked (above is sensitive to caching details in hadoop core)
+    FileSystem fs = FileSystem.get(conf);
+    assertEquals(FaultyFileSystem.class, fs.getClass());
+
+    // Initialize region
+    init(getName(), conf);
+
+    LOG.info("Adding some data");
+    this.store.add(new KeyValue(row, family, qf1, null));
+    this.store.add(new KeyValue(row, family, qf2, null));
+    this.store.add(new KeyValue(row, family, qf3, null));
+
+    LOG.info("Before flush, we should have no files");
+    FileStatus[] files = fs.listStatus(store.getHomedir());
+    Path[] paths = FileUtil.stat2Paths(files);
+    System.err.println("Got paths: " + Joiner.on(",").join(paths));
+    assertEquals(0, paths.length);
+
+    //flush
+    try {
+      LOG.info("Flushing");
+      flush(1);
+      fail("Didn't bubble up IOE!");
+    } catch (IOException ioe) {
+      assertTrue(ioe.getMessage().contains("Fault injected"));
+    }
+
+    LOG.info("After failed flush, we should still have no files!");
+    files = fs.listStatus(store.getHomedir());
+    paths = FileUtil.stat2Paths(files);
+    System.err.println("Got paths: " + Joiner.on(",").join(paths));
+    assertEquals(0, paths.length);
+  }
+
+
+  static class FaultyFileSystem extends FilterFileSystem {
+    List<SoftReference<FaultyOutputStream>> outStreams =
+      new ArrayList<SoftReference<FaultyOutputStream>>();
+    private long faultPos = 200;
+
+    public FaultyFileSystem() {
+      super(new LocalFileSystem());
+      System.err.println("Creating faulty!");
+    }
+
+    @Override
+    public FSDataOutputStream create(Path p) throws IOException {
+      return new FaultyOutputStream(super.create(p), faultPos);
+    }
+
+  }
+
+  static class FaultyOutputStream extends FSDataOutputStream {
+    volatile long faultPos = Long.MAX_VALUE;
+
+    public FaultyOutputStream(FSDataOutputStream out,
+        long faultPos) throws IOException {
+      super(out, null);
+      this.faultPos = faultPos;
+    }
+
+    @Override
+    public void write(byte[] buf, int offset, int length) throws IOException {
+      System.err.println("faulty stream write at pos " + getPos());
+      injectFault();
+      super.write(buf, offset, length);
+    }
+
+    private void injectFault() throws IOException {
+      if (getPos() >= faultPos) {
+        throw new IOException("Fault injected");
+      }
+    }
+  }
+
+
+
   private static void flushStore(Store store, long id) throws IOException {
     StoreFlusher storeFlusher = store.getStoreFlusher(id);
     storeFlusher.prepare();
     storeFlusher.flushCache();
     storeFlusher.commit();
+  }
+
+
+
+  /**
+   * Generate a list of KeyValues for testing based on given parameters
+   * @param timestamps
+   * @param numRows
+   * @param qualifier
+   * @param family
+   * @return
+   */
+  List<KeyValue> getKeyValueSet(long[] timestamps, int numRows,
+      byte[] qualifier, byte[] family) {
+    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    for (int i=1;i<=numRows;i++) {
+      byte[] b = Bytes.toBytes(i);
+      for (long timestamp: timestamps) {
+        kvList.add(new KeyValue(b, family, qualifier, timestamp, b));
+      }
+    }
+    return kvList;
+  }
+
+  /**
+   * Test to ensure correctness when using Stores with multiple timestamps
+   * @throws IOException
+   */
+  public void testMultipleTimestamps() throws IOException {
+    int numRows = 1;
+    long[] timestamps1 = new long[] {1,5,10,20};
+    long[] timestamps2 = new long[] {30,80};
+
+    init(this.getName());
+
+    List<KeyValue> kvList1 = getKeyValueSet(timestamps1,numRows, qf1, family);
+    for (KeyValue kv : kvList1) {
+      this.store.add(kv);
+    }
+
+    this.store.snapshot();
+    flushStore(store, id++);
+
+    List<KeyValue> kvList2 = getKeyValueSet(timestamps2,numRows, qf1, family);
+    for(KeyValue kv : kvList2) {
+      this.store.add(kv);
+    }
+
+    NavigableSet<byte[]> columns = new ConcurrentSkipListSet<byte[]>(
+        Bytes.BYTES_COMPARATOR);
+    columns.add(qf1);
+    List<KeyValue> result;
+    Get get = new Get(Bytes.toBytes(1));
+    get.addColumn(family,qf1);
+
+    get.setTimeRange(0,15);
+    result = new ArrayList<KeyValue>();
+    this.store.get(get, columns, result);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(40,90);
+    result = new ArrayList<KeyValue>();
+    this.store.get(get, columns, result);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(10,45);
+    result = new ArrayList<KeyValue>();
+    this.store.get(get, columns, result);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(80,145);
+    result = new ArrayList<KeyValue>();
+    this.store.get(get, columns, result);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(1,2);
+    result = new ArrayList<KeyValue>();
+    this.store.get(get, columns, result);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(90,200);
+    result = new ArrayList<KeyValue>();
+    this.store.get(get, columns, result);
+    assertTrue(result.size()==0);
   }
 }
