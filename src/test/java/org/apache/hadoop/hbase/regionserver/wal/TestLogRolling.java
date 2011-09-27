@@ -261,7 +261,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
                 getPipeline != null);
     Object repl = getPipeline.invoke(stm, new Object []{} /*NO_ARGS*/);
     DatanodeInfo[] pipeline = (DatanodeInfo[]) repl;
-    assertTrue(pipeline.length == fs.getDefaultReplication());
+    assertEquals(fs.getDefaultReplication(), pipeline.length);
     DataNodeProperties dnprop = dfsCluster.stopDataNode(pipeline[0].getName());
     assertTrue(dnprop != null);
 
@@ -275,7 +275,6 @@ public class TestLogRolling extends HBaseClusterTestCase {
     writeData(table, 3);
     assertTrue("The log should not roll again.", 
               log.getFilenum() == newFilenum);
-    assertTrue("New log file should have the default replication",
-              log.getLogReplication() == fs.getDefaultReplication());
+    assertEquals(fs.getDefaultReplication(), log.getLogReplication());
   }
 }
