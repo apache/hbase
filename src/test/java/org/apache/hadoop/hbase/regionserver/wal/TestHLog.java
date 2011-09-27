@@ -27,6 +27,8 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,19 +38,30 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.log4j.Level;
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
   static final Log LOG = LogFactory.getLog(TestHLog.class);
+  {
+    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)HLog.LOG).getLogger().setLevel(Level.ALL);
+  }
 
   private Path dir;
   private Path oldLogDir;
@@ -59,7 +72,16 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     // Make block sizes small.
     this.conf.setInt("dfs.blocksize", 1024 * 1024);
     this.conf.setInt("hbase.regionserver.flushlogentries", 1);
-    //this.conf.setBoolean("dfs.support.append", true);
+    // needed for testAppendClose()
+    conf.setBoolean("dfs.support.append", true);
+    // quicker heartbeat interval for faster DN death notification
+    conf.setInt("heartbeat.recheck.interval", 5000);
+    conf.setInt("dfs.heartbeat.interval", 1);
+    conf.setInt("dfs.socket.timeout", 5000);
+    // faster failover with cluster.shutdown();fs.close() idiom
+    conf.setInt("ipc.client.connect.max.retries", 1);
+    conf.setInt("dfs.client.block.recovery.retries", 1);
+
     cluster = new MiniDFSCluster(conf, 3, true, (String[])null);
     // Set the hbase.rootdir to be the home directory in mini dfs.
     this.conf.set(HConstants.HBASE_DIR,
@@ -118,8 +140,10 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         log.hflush();
         log.rollWriter();
       }
+      Configuration new_conf = new Configuration(this.conf);
+      new_conf.setBoolean("dfs.support.append", false);
       List<Path> splits =
-        HLog.splitLog(this.testDir, this.dir, this.oldLogDir, this.fs, this.conf);
+        HLog.splitLog(this.testDir, this.dir, this.oldLogDir, this.fs, new_conf);
       verifySplits(splits, howmany);
       log = null;
     } finally {
