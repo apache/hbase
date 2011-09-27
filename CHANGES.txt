@@ -23,6 +23,7 @@ Release 0.21.0 - Unreleased
    HBASE-2541  Remove transactional contrib (Clint Morgan via Stack)
    HBASE-2542  Fold stargate contrib into core
    HBASE-2565  Remove contrib module from hbase
+   HBASE-2397  Bytes.toStringBinary escapes printable chars
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
@@ -348,6 +349,35 @@ Release 0.21.0 - Unreleased
    HBASE-2582  TestTableSchemaModel not passing after commit of blooms
    HBASE-2583  Make webapps work in distributed mode again and make webapps
                deploy at / instead of at /webapps/master/master.jsp
+   HBASE-2590  Failed parse of branch element in saveVersion.sh
+   HBASE-2591  HBASE-2587 hardcoded the port that dfscluster runs on
+   HBASE-2519  StoreFileScanner.seek swallows IOEs (Todd Lipcon via Stack)
+   HBASE-2516  Ugly IOE when region is being closed; rather, should NSRE
+               (Daniel Ploeg via Stack)
+   HBASE-2589  TestHRegion.testWritesWhileScanning flaky on trunk
+               (Todd Lipcon via Stack)
+   HBASE-2590  Failed parse of branch element in saveVersion.sh
+               (Benoît Sigoure via Stack)
+   HBASE-2586  Move hbase webapps to a hbase-webapps dir (Todd Lipcon via
+               Andrew Purtell)
+   HBASE-2610  ValueFilter copy pasted javadoc from QualifierFilter
+   HBASE-2619  HBase shell 'alter' command cannot set table properties to False
+               (Christo Wilson via Stack)
+   HBASE-2621  Fix bad link to HFile documentation in javadoc
+               (Jeff Hammerbacher via Todd Lipcon)
+   HBASE-2371  Fix 'list' command in shell (Alexey Kovyrin via Todd Lipcon)
+   HBASE-2620  REST tests don't use ephemeral ports
+   HBASE-2635  ImmutableBytesWritable ignores offset in several cases
+   HBASE-2654  Add additional maven repository temporarily to fetch Guava
+   HBASE-2560  Fix IllegalArgumentException when manually splitting table
+               from web UI
+   HBASE-2657  TestTableResource is broken in trunk
+   HBASE-2662  TestScannerResource.testScannerResource broke in trunk
+   HBASE-2667  TestHLog.testSplit failing in trunk (Cosmin and Stack)
+   HBASE-2614  killing server in TestMasterTransitions causes NPEs and test deadlock
+   HBASE-2615  M/R on bulk imported tables
+   HBASE-2676  TestInfoServers should use ephemeral ports
+   HBASE-2616  TestHRegion.testWritesWhileGetting flaky on trunk
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
@@ -623,6 +653,29 @@ Release 0.21.0 - Unreleased
                pulled from http://people.apache.org/~rawson/repo/....
    HBASE-2534  Recursive deletes and misc improvements to ZKW
    HBASE-2577  Remove 'core' maven module; move core up a level
+   HBASE-2587  Coral where tests write data when running and make sure clean
+               target removes all written
+   HBASE-2580  Make the hlog file names unique
+   HBASE-2594  Narrow pattern used finding unit tests to run -- make it same
+               was we had in 0.20
+   HBASE-2538  Work on repository order in pom (adding fbmirror to top,
+               ibiblio on bottom)
+   HBASE-2613  Remove the code around MSG_CALL_SERVER_STARTUP
+   HBASE-2599  BaseScanner says "Current assignment of X is not valid" over
+               and over for same region
+   HBASE-2630  HFile should use toStringBinary in various places
+   HBASE-2632  Shell should autodetect terminal width
+   HBASE-2636  Upgrade Jetty to 6.1.24
+   HBASE-2437  Refactor HLog splitLog (Cosmin Lehene via Stack)
+   HBASE-2638  Speed up REST tests
+   HBASE-2653  Remove unused DynamicBloomFilter (especially as its tests are
+               failing hudson on occasion)
+   HBASE-2651  Allow alternate column separators to be specified for ImportTsv
+   HBASE-2661  Add test case for row atomicity guarantee
+   HBASE-2578  Add ability for tests to override server-side timestamp
+	           setting (currentTimeMillis) (Daniel Ploeg via Ryan Rawson)
+   HBASE-2558  Our javadoc overview -- "Getting Started", requirements, etc. --
+               is not carried across by mvn javadoc:javadoc target
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
@@ -659,6 +712,9 @@ Release 0.21.0 - Unreleased
    HBASE-2527  Add the ability to easily extend some HLog actions
    HBASE-2559  Set hbase.hregion.majorcompaction to 0 to disable
    HBASE-1200  Add bloomfilters (Nicolas Spiegelberg via Stack)
+   HBASE-2588  Add easier way to ship HBase dependencies to MR cluster within Job
+   HBASE-1923  Bulk incremental load into an existing table
+   HBASE-2579  Add atomic checkAndDelete support (Michael Dalton via Stack)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
@@ -1000,6 +1056,11 @@ Release 0.20.0 - Tue Sep  8 12:53:05 PDT 2009
                (Mathias Herberts via Stack)
    HBASE-1804  Puts are permitted (and stored) when including an appended colon
    HBASE-1715  Compaction failure in ScanWildcardColumnTracker.checkColumn
+   HBASE-2352  Small values for hbase.client.retries.number and
+               ipc.client.connect.max.retries breaks long ops in hbase shell
+               (Alexey Kovyrin via Stack)
+   HBASE-2531  32-bit encoding of regionnames waaaaaaayyyyy too susceptible to
+               hash clashes (Kannan Muthukkaruppan via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
@@ -1234,6 +1295,8 @@ Release 0.20.0 - Tue Sep  8 12:53:05 PDT 2009
    HBASE-1743  [debug tool] Add regionsInTransition list to ClusterStatus
                detailed output
    HBASE-1772  Up the default ZK session timeout from 30seconds to 60seconds
+   HBASE-2625  Make testDynamicBloom()'s "randomness" deterministic
+               (Nicolas Spiegelberg via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

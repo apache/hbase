@@ -488,35 +488,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
               LOG.info(msgs[i].toString());
               this.connection.unsetRootRegionLocation();
               switch(msgs[i].getType()) {
-              case MSG_CALL_SERVER_STARTUP:
-                // We the MSG_CALL_SERVER_STARTUP on startup but we can also
-                // get it when the master is panicking because for instance
-                // the HDFS has been yanked out from under it.  Be wary of
-                // this message.
-                if (checkFileSystem()) {
-                  closeAllRegions();
-                  try {
-                    hlog.closeAndDelete();
-                  } catch (Exception e) {
-                    LOG.error("error closing and deleting HLog", e);
-                  }
-                  try {
-                    serverInfo.setStartCode(System.currentTimeMillis());
-                    hlog = setupHLog();
-                  } catch (IOException e) {
-                    this.abortRequested = true;
-                    this.stopRequested.set(true);
-                    e = RemoteExceptionHandler.checkIOException(e);
-                    LOG.fatal("error restarting server", e);
-                    break;
-                  }
-                  reportForDuty();
-                  restart = true;
-                } else {
-                  LOG.fatal("file system available check failed. " +
-                  "Shutting down server.");
-                }
-                break;
 
               case MSG_REGIONSERVER_STOP:
                 stopRequested.set(true);
@@ -624,8 +595,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         }
         closeAllRegions(); // Don't leave any open file handles
       }
-      LOG.info("aborting server at: " +
-        serverInfo.getServerAddress().toString());
+      LOG.info("aborting server at: " + this.serverInfo.getServerName());
     } else {
       ArrayList<HRegion> closedRegions = closeAllRegions();
       try {
@@ -647,14 +617,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
         }
 
         LOG.info("telling master that region server is shutting down at: " +
-            serverInfo.getServerAddress().toString());
+            serverInfo.getServerName());
         hbaseMaster.regionServerReport(serverInfo, exitMsg, (HRegionInfo[])null);
       } catch (Throwable e) {
         LOG.warn("Failed to send exiting message to master: ",
           RemoteExceptionHandler.checkThrowable(e));
       }
-      LOG.info("stopping server at: " +
-        serverInfo.getServerAddress().toString());
+      LOG.info("stopping server at: " + this.serverInfo.getServerName());
     }
 
     // Make sure the proxy is down.
@@ -921,8 +890,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     return isOnline;
   }
 
-  private HLog setupHLog() throws RegionServerRunningException,
-    IOException {
+  private HLog setupHLog() throws IOException {
     Path oldLogDir = new Path(rootDir, HREGION_OLDLOGDIR_NAME);
     Path logdir = new Path(rootDir, HLog.getHLogDirectoryName(this.serverInfo));
     if (LOG.isDebugEnabled()) {
@@ -930,7 +898,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
     if (fs.exists(logdir)) {
       throw new RegionServerRunningException("region server already " +
-        "running at " + this.serverInfo.getServerAddress().toString() +
+        "running at " + this.serverInfo.getServerName() +
         " because logdir " + logdir.toString() + " exists");
     }
     HLog newlog = instantiateHLog(logdir, oldLogDir);
@@ -939,7 +907,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   // instantiate
   protected HLog instantiateHLog(Path logdir, Path oldLogDir) throws IOException {
-    HLog newlog = new HLog(fs, logdir, oldLogDir, conf, hlogRoller);
+    HLog newlog = new HLog(fs, logdir, oldLogDir, conf, hlogRoller, null,
+        serverInfo.getServerAddress().toString());
     return newlog;
   }
 
@@ -1064,8 +1033,10 @@ public class HRegionServer implements HConstants, HRegionInterface,
           // auto bind enabled, try to use another port
           LOG.info("Failed binding http info server to port: " + port);
           port++;
-          // update HRS server info
-          this.serverInfo.setInfoPort(port);
+          // update HRS server info port.
+          this.serverInfo = new HServerInfo(this.serverInfo.getServerAddress(),
+            this.serverInfo.getStartCode(),  port,
+            this.serverInfo.getHostname());
         }
       }
     }
@@ -1150,7 +1121,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
   public void abort() {
     this.abortRequested = true;
     this.reservedSpace.clear();
-    LOG.info("Dump of metrics: " + this.metrics.toString());
+    if (this.metrics != null) {
+      LOG.info("Dump of metrics: " + this.metrics.toString());
+    }
     stop();
   }
 
@@ -1234,7 +1207,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         lastMsg = System.currentTimeMillis();
         boolean startCodeOk = false;
         while(!startCodeOk) {
-          serverInfo.setStartCode(System.currentTimeMillis());
+          this.serverInfo = createServerInfoWithNewStartCode(this.serverInfo);
           startCodeOk = zooKeeperWrapper.writeRSLocation(this.serverInfo);
           if(!startCodeOk) {
            LOG.debug("Start code already taken, trying another one");
@@ -1248,6 +1221,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
       sleeper.sleep(lastMsg);
     }
     return result;
+  }
+
+  private HServerInfo createServerInfoWithNewStartCode(final HServerInfo hsi) {
+    return new HServerInfo(hsi.getServerAddress(), hsi.getInfoPort(),
+      hsi.getHostname());
   }
 
   /* Add to the outbound message buffer */
@@ -1700,6 +1678,24 @@ public class HRegionServer implements HConstants, HRegionInterface,
     return -1;
   }
 
+  private boolean checkAndMutate(final byte[] regionName, final byte [] row,
+      final byte [] family, final byte [] qualifier, final byte [] value,
+      final Writable w, Integer lock) throws IOException {
+    checkOpen();
+    this.requestCount.incrementAndGet();
+    HRegion region = getRegion(regionName);
+    try {
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
+      return region.checkAndMutate(row, family, qualifier, value, w, lock,
+          true);
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
+    }
+  }
+
+
   /**
    *
    * @param regionName
@@ -1714,23 +1710,26 @@ public class HRegionServer implements HConstants, HRegionInterface,
   public boolean checkAndPut(final byte[] regionName, final byte [] row,
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Put put) throws IOException{
-    //Getting actual value
-    Get get = new Get(row);
-    get.addColumn(family, qualifier);
+    return checkAndMutate(regionName, row, family, qualifier, value, put,
+        getLockFromId(put.getLockId()));
+  }
 
-    checkOpen();
-    this.requestCount.incrementAndGet();
-    HRegion region = getRegion(regionName);
-    try {
-      if (!region.getRegionInfo().isMetaTable()) {
-        this.cacheFlusher.reclaimMemStoreMemory();
-      }
-      boolean retval = region.checkAndPut(row, family, qualifier, value, put,
-        getLockFromId(put.getLockId()), true);
-      return retval;
-    } catch (Throwable t) {
-      throw convertThrowableToIOE(cleanup(t));
-    }
+  /**
+   *
+   * @param regionName
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param value the expected value
+   * @param delete
+   * @throws IOException
+   * @return true if the new put was execute, false otherwise
+   */
+  public boolean checkAndDelete(final byte[] regionName, final byte [] row,
+      final byte [] family, final byte [] qualifier, final byte [] value,
+      final Delete delete) throws IOException{
+    return checkAndMutate(regionName, row, family, qualifier, value, delete,
+        getLockFromId(delete.getLockId()));
   }
 
   //
@@ -2001,6 +2000,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
+  }
+
+  @Override
+  public void bulkLoadHFile(
+      String hfilePath, byte[] regionName, byte[] familyName)
+  throws IOException {
+    HRegion region = getRegion(regionName);
+    region.bulkLoadHFile(hfilePath, familyName);
   }
 
   Map<String, Integer> rowlocks =
@@ -2452,4 +2459,5 @@ public class HRegionServer implements HConstants, HRegionInterface,
         HRegionServer.class);
     doMain(args, regionServerClass);
   }
+
 }

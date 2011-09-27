@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.net.BindException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +33,7 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -49,15 +49,14 @@ import org.apache.hadoop.security.UserGroupInformation;
  */
 public class MiniHBaseCluster implements HConstants {
   static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
+  private Configuration conf;
+  public LocalHBaseCluster hbaseCluster;
   // Cache this.  For some reason only works first time I get it.  TODO: Figure
   // out why.
   private final static UserGroupInformation UGI;
   static {
     UGI = UserGroupInformation.getCurrentUGI();
   }
-
-  private Configuration conf;
-  public LocalHBaseCluster hbaseCluster;
 
   /**
    * Start a MiniHBaseCluster.
@@ -134,6 +133,10 @@ public class MiniHBaseCluster implements HConstants {
     public MiniHBaseClusterRegionServer(Configuration conf)
         throws IOException {
       super(setDifferentUser(conf));
+    }
+
+    public void setHServerInfo(final HServerInfo hsi) {
+      this.serverInfo = hsi;
     }
 
     /*
@@ -346,6 +349,19 @@ public class MiniHBaseCluster implements HConstants {
    */
   public HRegionServer getRegionServer(int serverNumber) {
     return hbaseCluster.getRegionServer(serverNumber);
+  }
+
+  public List<HRegion> getRegions(byte[] tableName) {
+    List<HRegion> ret = new ArrayList<HRegion>();
+    for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
+      HRegionServer hrs = rst.getRegionServer();
+      for (HRegion region : hrs.getOnlineRegions()) {
+        if (Bytes.equals(region.getTableDesc().getName(), tableName)) {
+          ret.add(region);
+        }
+      }
+    }
+    return ret;
   }
 
   /**

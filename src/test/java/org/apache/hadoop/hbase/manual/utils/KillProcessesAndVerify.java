@@ -86,10 +86,6 @@ public class KillProcessesAndVerify extends Thread
         executeCommand(killCommand);
         LOG.debug("Killed " + (operateOnRS?"REGIONSERVER":"DATANODE") + " on node " + nodeName + ", waiting...");
 
-        if(true) {
-          break;
-        }
-
         // wait for a while
         Thread.sleep(TIME_INTERVAL_ONE_MIN/2);
 
@@ -134,7 +130,7 @@ public class KillProcessesAndVerify extends Thread
     String startCmd =
       rsCommand?
       clusterHBasePath_ +"/bin/hbase-daemon.sh start regionserver":
-      clusterHDFSPath_ + "/bin/hadoop-daemons.sh --config /usr/local/hadoop/HDFS-" + clusterHDFSPath_ + "/conf start datanode";
+      clusterHDFSPath_ + "/bin/hadoop-daemon.sh --config " + clusterHDFSPath_ + "/conf start datanode";
 
     // put the ssh call
     String remoteStartCmd = "ssh " + nodeName + " " + startCmd;

@@ -447,6 +447,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           if (this.serverManager.numServers() == 0) {
             startShutdown();
             break;
+          } else {
+            LOG.debug("Waiting on " +
+              this.serverManager.getServersToServerInfo().keySet().toString());
           }
         }
         final HServerAddress root = this.regionManager.getRootRegionLocation();
@@ -639,17 +642,18 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   public MapWritable regionServerStartup(final HServerInfo serverInfo)
   throws IOException {
-    // Set the address for now even tho it will not be persisted on HRS side
-    // If the address given is not the default one, use IP given by the user.
-    if (serverInfo.getServerAddress().getBindAddress().equals(DEFAULT_HOST)) {
-      String rsAddress = HBaseServer.getRemoteAddress();
-      serverInfo.setServerAddress(new HServerAddress(rsAddress,
-        serverInfo.getServerAddress().getPort()));
-    }
+    // Set the ip into the passed in serverInfo.  Its ip is more than likely
+    // not the ip that the master sees here.  See at end of this method where
+    // we pass it back to the regionserver by setting "hbase.regionserver.address"
+    String rsAddress = HBaseServer.getRemoteAddress();
+    serverInfo.setServerAddress(new HServerAddress(rsAddress,
+      serverInfo.getServerAddress().getPort()));
     // Register with server manager
     this.serverManager.regionServerStartup(serverInfo);
     // Send back some config info
-    return createConfigurationSubset();
+    MapWritable mw = createConfigurationSubset();
+     mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));
+    return mw;
   }
 
   /**
@@ -658,11 +662,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   protected MapWritable createConfigurationSubset() {
     MapWritable mw = addConfig(new MapWritable(), HConstants.HBASE_DIR);
-    // Get the real address of the HRS.
-    String rsAddress = HBaseServer.getRemoteAddress();
-    if (rsAddress != null) {
-      mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));
-    }
     return addConfig(mw, "fs.default.name");
   }
 
@@ -812,7 +811,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   // TODO: Redo so this method does not duplicate code with subsequent methods.
-  private List<Pair<HRegionInfo,HServerAddress>> getTableRegions(
+  List<Pair<HRegionInfo,HServerAddress>> getTableRegions(
       final byte [] tableName)
   throws IOException {
     List<Pair<HRegionInfo,HServerAddress>> result =
@@ -838,7 +837,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
               data.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
           if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
             byte [] value = data.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
-            if (value != null) {
+            if (value != null && value.length > 0) {
               HServerAddress server = new HServerAddress(Bytes.toString(value));
               result.add(new Pair<HRegionInfo,HServerAddress>(info, server));
             }
@@ -853,7 +852,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return result;
   }
 
-  private Pair<HRegionInfo,HServerAddress> getTableRegionClosest(
+  Pair<HRegionInfo,HServerAddress> getTableRegionClosest(
       final byte [] tableName, final byte [] rowKey)
   throws IOException {
     Set<MetaRegion> regions =
@@ -877,7 +876,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             if ((Bytes.compareTo(info.getStartKey(), rowKey) >= 0) &&
                 (Bytes.compareTo(info.getEndKey(), rowKey) < 0)) {
                 byte [] value = data.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
-                if (value != null) {
+                if (value != null && value.length > 0) {
                   HServerAddress server =
                     new HServerAddress(Bytes.toString(value));
                   return new Pair<HRegionInfo,HServerAddress>(info, server);
@@ -894,7 +893,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return null;
   }
 
-  private Pair<HRegionInfo,HServerAddress> getTableRegionFromName(
+  Pair<HRegionInfo,HServerAddress> getTableRegionFromName(
       final byte [] regionName)
   throws IOException {
     byte [] tableName = HRegionInfo.parseRegionName(regionName)[0];
@@ -910,7 +909,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       HRegionInfo info = Writables.getHRegionInfo(
           data.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
       byte [] value = data.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
-      if(value != null) {
+      if(value != null && value.length > 0) {
         HServerAddress server =
           new HServerAddress(Bytes.toString(value));
         return new Pair<HRegionInfo,HServerAddress>(info, server);
@@ -993,29 +992,26 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // Arguments are regionname and an optional server name.
       byte [] regionname = ((ImmutableBytesWritable)args[0]).get();
       LOG.debug("Attempting to close region: " + Bytes.toStringBinary(regionname));
-      String servername = null;
+      String hostnameAndPort = null;
       if (args.length == 2) {
-        servername = Bytes.toString(((ImmutableBytesWritable)args[1]).get());
+        hostnameAndPort = Bytes.toString(((ImmutableBytesWritable)args[1]).get());
       }
       // Need hri
       Result rr = getFromMETA(regionname, HConstants.CATALOG_FAMILY);
       HRegionInfo hri = getHRegionInfo(rr.getRow(), rr);
-      if (servername == null) {
+      if (hostnameAndPort == null) {
         // Get server from the .META. if it wasn't passed as argument
-        servername =
+        hostnameAndPort =
           Bytes.toString(rr.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
       }
       // Take region out of the intransistions in case it got stuck there doing
       // an open or whatever.
       this.regionManager.clearFromInTransition(regionname);
-      // If servername is still null, then none, exit.
-      if (servername == null) break;
-      // Need to make up a HServerInfo 'servername' for that is how
-      // items are keyed in regionmanager Maps.
-      HServerAddress addr = new HServerAddress(servername);
+      // If hostnameAndPort is still null, then none, exit.
+      if (hostnameAndPort == null) break;
       long startCode =
         Bytes.toLong(rr.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER));
-      String name = HServerInfo.getServerName(addr, startCode);
+      String name = HServerInfo.getServerName(hostnameAndPort, startCode);
       LOG.info("Marking " + hri.getRegionNameAsString() +
         " as closing on " + name + "; cleaning SERVER + STARTCODE; " +
           "master will tell regionserver to close region on next heartbeat");

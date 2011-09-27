@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
@@ -91,7 +92,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     if (fs.exists(dir)) {
       fs.delete(dir, true);
     }
-    this.oldLogDir = new Path("/hbase", HConstants.HREGION_OLDLOGDIR_NAME);
+    this.oldLogDir = new Path(this.dir, HConstants.HREGION_OLDLOGDIR_NAME);
 
   }
 
@@ -113,7 +114,8 @@ public class TestHLog extends HBaseTestCase implements HConstants {
 
     final byte [] tableName = Bytes.toBytes(getName());
     final byte [] rowName = tableName;
-    HLog log = new HLog(this.fs, this.dir, this.oldLogDir, this.conf, null);
+    Path logdir = new Path(this.dir, HConstants.HREGION_LOGDIR_NAME);
+    HLog log = new HLog(this.fs, logdir, this.oldLogDir, this.conf, null);
     final int howmany = 3;
     HRegionInfo[] infos = new HRegionInfo[3];
     for(int i = 0; i < howmany; i++) {
@@ -132,7 +134,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
             byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
             edit.add(new KeyValue(rowName, family, qualifier,
                 System.currentTimeMillis(), column));
-            System.out.println("Region " + i + ": " + edit);
+            LOG.info("Region " + i + ": " + edit);
             log.append(infos[i], tableName, edit,
               System.currentTimeMillis());
           }
@@ -142,8 +144,9 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       }
       Configuration new_conf = new Configuration(this.conf);
       new_conf.setBoolean("dfs.support.append", false);
+      Path splitsdir = new Path(this.dir, "splits");
       List<Path> splits =
-        HLog.splitLog(this.testDir, this.dir, this.oldLogDir, this.fs, new_conf);
+        HLog.splitLog(splitsdir, logdir, this.oldLogDir, this.fs, new_conf);
       verifySplits(splits, howmany);
       log = null;
     } finally {
@@ -187,7 +190,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     // gives you EOFE.
     wal.sync();
     // Open a Reader.
-    Path walPath = wal.computeFilename(wal.getFilenum());
+    Path walPath = wal.computeFilename();
     HLog.Reader reader = HLog.getReader(fs, walPath, conf);
     int count = 0;
     HLog.Entry entry = new HLog.Entry();
@@ -265,6 +268,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
   throws IOException {
     assertEquals(howmany, splits.size());
     for (int i = 0; i < splits.size(); i++) {
+      LOG.info("Verifying=" + splits.get(i));
       HLog.Reader reader = HLog.getReader(this.fs, splits.get(i), conf);
       try {
         int count = 0;
@@ -279,6 +283,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
           if (previousRegion != null) {
             assertEquals(previousRegion, region);
           }
+          LOG.info("oldseqno=" + seqno + ", newseqno=" + key.getLogSeqNum());
           assertTrue(seqno < key.getLogSeqNum());
           seqno = key.getLogSeqNum();
           previousRegion = region;
@@ -313,7 +318,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     }
     // Now call sync to send the data to HDFS datanodes
     wal.sync(true);
-    final Path walPath = wal.computeFilename(wal.getFilenum());
+    final Path walPath = wal.computeFilename();
 
     // Stop the cluster.  (ensure restart since we're sharing MiniDFSCluster)
     try {
@@ -351,12 +356,13 @@ public class TestHLog extends HBaseTestCase implements HConstants {
 
     // Now try recovering the log, like the HMaster would do
     final FileSystem recoveredFs = this.fs;
+    final Configuration rlConf = this.conf;
 
     class RecoverLogThread extends Thread {
       public Exception exception = null;
       public void run() {
           try {
-            HLog.recoverLog(recoveredFs, walPath, true);
+            FSUtils.recoverFileLease(recoveredFs, walPath, rlConf);
           } catch (IOException e) {
             exception = e;
           }
@@ -417,7 +423,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       long logSeqId = log.startCacheFlush();
       log.completeCacheFlush(regionName, tableName, logSeqId, info.isMetaRegion());
       log.close();
-      Path filename = log.computeFilename(log.getFilenum());
+      Path filename = log.computeFilename();
       log = null;
       // Now open a reader on the log and assert append worked.
       reader = HLog.getReader(fs, filename, conf);
@@ -485,7 +491,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       long logSeqId = log.startCacheFlush();
       log.completeCacheFlush(hri.getRegionName(), tableName, logSeqId, false);
       log.close();
-      Path filename = log.computeFilename(log.getFilenum());
+      Path filename = log.computeFilename();
       log = null;
       // Now open a reader on the log and assert append worked.
       reader = HLog.getReader(fs, filename, conf);

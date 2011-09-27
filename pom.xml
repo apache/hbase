@@ -7,10 +7,13 @@
   <packaging>jar</packaging>
   <version>0.21.0-SNAPSHOT</version>
   <name>HBase</name>
-  <description>HBase is the Hadoop database. Use it when you need random, realtime read/write access to your Big Data.
+  <!-- START SNIPPET: description -->
+  <description>
+  HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
     of commodity hardware.
   </description>
+  <!-- END SNIPPET: description -->
   <url>http://hbase.apache.org</url>
 
   <licenses>
@@ -21,6 +24,11 @@
       <comments>A business-friendly OSS license</comments>
     </license>
   </licenses>
+
+  <organization>
+    <name>Apache Software Foundation</name>
+    <url>http://www.apache.org</url>
+  </organization>
 
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
@@ -122,11 +130,31 @@
       <organization>StumbleUpon</organization>
       <organizationUrl>http://www.stumbleupon.com/</organizationUrl>
     </developer>
+    <developer>
+      <id>todd</id>
+      <name>Todd Lipcon</name>
+      <email>todd@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Cloudera</organization>
+      <organizationUrl>http://www.cloudera.com</organizationUrl>
+    </developer>
   </developers>
 
   <repositories>
-     <!-- temporary: should replace jgray.la with our internal mirror once that's setup -->
-     <repository>
+    <repository>
+      <id>mirror.facebook.net</id>
+      <name>facebook mirror</name>
+      <url>http://mirror.facebook.net/maven/repository/</url>
+      <snapshots>
+        <enabled>true</enabled>
+        </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+
+    <!-- temporary: should replace jgray.la with our internal mirror once that's setup -->
+    <repository>
       <id>jgray.la</id>
       <name>jgray mirror</name>
       <url>http://jgray.la/maven/repository/</url>
@@ -192,6 +220,30 @@
         <enabled>true</enabled>
       </releases>
     </repository>
+    <repository>
+      <!-- Guava on standard maven repos has a bad checksum, hosting
+           here temporarily -->
+      <id>temp-todd-for-guava</id>
+      <name>Todd Lipcon's repository on apache.org</name>
+      <url>http://people.apache.org/~todd/repo/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+    <repository>
+      <id>ibiblio.org</id>
+      <name>ibiblio mirror</name>
+      <url>http://mirrors.ibiblio.org/pub/mirrors/maven2/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
   </repositories>
 
 
@@ -239,6 +291,15 @@
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
           <version>2.4</version>
+            <configuration>
+              <filesets>
+                <fileset>
+                  <!--dfs tests have build dir hardcoded. Clean it as part of
+                      clean target-->
+                  <directory>build</directory>
+                </fileset>
+              </filesets>
+            </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.rat</groupId>
@@ -252,7 +313,7 @@
         <directory>src/main/resources</directory>
       </resource>
       <resource>
-        <directory>src/main/webapps</directory>
+        <directory>src/main/hbase-webapps</directory>
         <includes>
           <include>*/.gif</include>
           <include>*/.css</include>
@@ -341,14 +402,14 @@
             <configuration>
               <tasks>
                 <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath"/>
-                <jspcompiler uriroot="${basedir}/src/main/resources/webapps/master"
+                <jspcompiler uriroot="${basedir}/src/main/resources/hbase-webapps/master"
                              outputdir="${project.build.directory}/jspc"
                              package="org.apache.hadoop.hbase.generated.master"
-                             webxml="${basedir}/src/main/resources/webapps/master/WEB-INF/web.xml"/>
-                <jspcompiler uriroot="${basedir}/src/main/resources/webapps/regionserver"
+                             webxml="${basedir}/src/main/resources/hbase-webapps/master/WEB-INF/web.xml"/>
+                <jspcompiler uriroot="${basedir}/src/main/resources/hbase-webapps/regionserver"
                              outputdir="${project.build.directory}/jspc"
                              package="org.apache.hadoop.hbase.generated.regionserver"
-                             webxml="${basedir}/src/main/resources/webapps/regionserver/WEB-INF/web.xml"/>
+                             webxml="${basedir}/src/main/resources/hbase-webapps/regionserver/WEB-INF/web.xml"/>
               </tasks>
             </configuration>
             <goals>
@@ -412,8 +473,10 @@
 
     <commons-cli.version>1.2</commons-cli.version>
     <commons-logging.version>1.1.1</commons-logging.version>
-    <jetty.version>6.1.14</jetty.version>
+    <jetty.version>6.1.24</jetty.version>
+    <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <junit.version>4.8.1</junit.version>
+    <mockito-all.version>1.8.4</mockito-all.version>
     <log4j.version>1.2.15</log4j.version>
     <zookeeper.version>3.3.1</zookeeper.version>
 
@@ -429,6 +492,7 @@
     <slf4j.version>1.5.8</slf4j.version>
     <stax-api>1.0.1</stax-api>
     <thrift.version>0.2.0</thrift.version>
+    <guava.version>r03</guava.version>
   </properties>
 
   <dependencyManagement>
@@ -494,7 +558,7 @@
       <dependency>
         <groupId>org.mortbay.jetty</groupId>
         <artifactId>servlet-api-2.5</artifactId>
-        <version>${jetty.version}</version>
+        <version>${jetty.jspapi.version}</version>
       </dependency>
 
       <!-- Test dependencies -->
@@ -508,6 +572,12 @@
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-all</artifactId>
+        <version>${mockito-all.version}</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
@@ -574,6 +644,12 @@
     </dependency>
 
     <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>r03</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-core</artifactId>
     </dependency>
@@ -600,12 +676,12 @@
     <dependency>
       <groupId>org.mortbay.jetty</groupId>
       <artifactId>jsp-2.1</artifactId>
-      <version>${jetty.version}</version>
+      <version>${jetty.jspapi.version}</version>
     </dependency>
     <dependency>
       <groupId>org.mortbay.jetty</groupId>
       <artifactId>jsp-api-2.1</artifactId>
-      <version>${jetty.version}</version>
+      <version>${jetty.jspapi.version}</version>
     </dependency>
     <dependency>
       <groupId>tomcat</groupId>
@@ -673,14 +749,23 @@
       <artifactId>junit</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-math</artifactId>
       <version>${commons-math.version}</version>
       <scope>test</scope>
     </dependency>
-        <dependency>
+     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-test</artifactId>
+    </dependency>
+     <dependency>
+       <groupId>com.google.guava</groupId>
+       <artifactId>guava</artifactId>
+       <version>${guava.version}</version>
     </dependency>
   </dependencies>
 
@@ -826,10 +911,12 @@
         <artifactId>maven-surefire-report-plugin</artifactId>
         <version>2.5</version>
       </plugin>
+      <!--
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
         <version>2.1</version>
       </plugin>
+      -->
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>

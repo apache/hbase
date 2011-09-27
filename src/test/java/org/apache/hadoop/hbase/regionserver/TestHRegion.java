@@ -24,12 +24,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -45,6 +45,9 @@ import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
+import org.apache.hadoop.hbase.util.Threads;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -89,6 +92,12 @@ public class TestHRegion extends HBaseTestCase {
     super.setUp();
   }
 
+  @Override
+  protected void tearDown() throws Exception {
+    super.tearDown();
+    EnvironmentEdgeManagerTestHelper.reset();
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // New tests that doesn't spin up a mini cluster but rather just test the
   // individual code pieces in the HRegion. Putting files locally in
@@ -99,7 +108,7 @@ public class TestHRegion extends HBaseTestCase {
     HBaseConfiguration hc = initSplit();
     int numRows = 100;
     byte [][] families = {fam1, fam2, fam3};
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, hc, families);
@@ -320,9 +329,9 @@ public class TestHRegion extends HBaseTestCase {
   }
 
   //////////////////////////////////////////////////////////////////////////////
-  // checkAndPut tests
+  // checkAndMutate tests
   //////////////////////////////////////////////////////////////////////////////
-  public void testCheckAndPut_WithEmptyRowValue() throws IOException {
+  public void testCheckAndMutate_WithEmptyRowValue() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
     byte [] fam1 = Bytes.toBytes("fam1");
@@ -340,22 +349,40 @@ public class TestHRegion extends HBaseTestCase {
     put.add(fam1, qf1, val1);
 
     //checkAndPut with correct value
-    boolean res = region.checkAndPut(row1, fam1, qf1, emptyVal, put, lockId,
+    boolean res = region.checkAndMutate(row1, fam1, qf1, emptyVal, put, lockId,
         true);
     assertTrue(res);
 
     // not empty anymore
-    res = region.checkAndPut(row1, fam1, qf1, emptyVal, put, lockId, true);
+    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, put, lockId, true);
+    assertFalse(res);
+
+    Delete delete = new Delete(row1);
+    delete.deleteColumn(fam1, qf1);
+    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId,
+        true);
     assertFalse(res);
 
     put = new Put(row1);
     put.add(fam1, qf1, val2);
     //checkAndPut with correct value
-    res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
+    res = region.checkAndMutate(row1, fam1, qf1, val1, put, lockId, true);
+    assertTrue(res);
+
+    //checkAndDelete with correct value
+    delete = new Delete(row1);
+    delete.deleteColumn(fam1, qf1);
+    delete.deleteColumn(fam1, qf1);
+    res = region.checkAndMutate(row1, fam1, qf1, val2, delete, lockId, true);
+    assertTrue(res);
+
+    delete = new Delete(row1);
+    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId,
+        true);
     assertTrue(res);
   }
 
-  public void testCheckAndPut_WithWrongValue() throws IOException{
+  public void testCheckAndMutate_WithWrongValue() throws IOException{
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
     byte [] fam1 = Bytes.toBytes("fam1");
@@ -374,11 +401,17 @@ public class TestHRegion extends HBaseTestCase {
     region.put(put);
 
     //checkAndPut with wrong value
-    boolean res = region.checkAndPut(row1, fam1, qf1, val2, put, lockId, true);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, val2, put, lockId, true);
+    assertEquals(false, res);
+
+    //checkAndDelete with wrong value
+    Delete delete = new Delete(row1);
+    delete.deleteFamily(fam1);
+    res = region.checkAndMutate(row1, fam1, qf1, val2, delete, lockId, true);
     assertEquals(false, res);
   }
 
-  public void testCheckAndPut_WithCorrectValue() throws IOException{
+  public void testCheckAndMutate_WithCorrectValue() throws IOException{
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
     byte [] fam1 = Bytes.toBytes("fam1");
@@ -396,7 +429,13 @@ public class TestHRegion extends HBaseTestCase {
     region.put(put);
 
     //checkAndPut with correct value
-    boolean res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, val1, put, lockId, true);
+    assertEquals(true, res);
+
+    //checkAndDelete with correct value
+    Delete delete = new Delete(row1);
+    delete.deleteColumn(fam1, qf1);
+    res = region.checkAndMutate(row1, fam1, qf1, val1, put, lockId, true);
     assertEquals(true, res);
   }
 
@@ -431,7 +470,7 @@ public class TestHRegion extends HBaseTestCase {
     Store store = region.getStore(fam1);
     store.memstore.kvset.size();
 
-    boolean res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, val1, put, lockId, true);
     assertEquals(true, res);
     store.memstore.kvset.size();
 
@@ -446,6 +485,80 @@ public class TestHRegion extends HBaseTestCase {
       assertEquals(expected[i], actual[i]);
     }
 
+  }
+
+  public void testCheckAndDelete_ThatDeleteWasWritten() throws IOException{
+    byte [] tableName = Bytes.toBytes("testtable");
+    byte [] row1 = Bytes.toBytes("row1");
+    byte [] fam1 = Bytes.toBytes("fam1");
+    byte [] fam2 = Bytes.toBytes("fam2");
+    byte [] qf1  = Bytes.toBytes("qualifier1");
+    byte [] qf2  = Bytes.toBytes("qualifier2");
+    byte [] qf3  = Bytes.toBytes("qualifier3");
+    byte [] val1  = Bytes.toBytes("value1");
+    byte [] val2  = Bytes.toBytes("value2");
+    byte [] val3  = Bytes.toBytes("value3");
+    byte[] emptyVal = new byte[] { };
+    Integer lockId = null;
+
+    byte [][] families = {fam1, fam2};
+
+    //Setting up region
+    String method = this.getName();
+    initHRegion(tableName, method, families);
+
+    //Put content
+    Put put = new Put(row1);
+    put.add(fam1, qf1, val1);
+    region.put(put);
+    Threads.sleep(2);
+
+    put = new Put(row1);
+    put.add(fam1, qf1, val2);
+    put.add(fam2, qf1, val3);
+    put.add(fam2, qf2, val2);
+    put.add(fam2, qf3, val1);
+    put.add(fam1, qf3, val1);
+    region.put(put);
+
+    //Multi-column delete
+    Delete delete = new Delete(row1);
+    delete.deleteColumn(fam1, qf1);
+    delete.deleteColumn(fam2, qf1);
+    delete.deleteColumn(fam1, qf3);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, val2, delete, lockId,
+        true);
+    assertEquals(true, res);
+
+    Get get = new Get(row1);
+    get.addColumn(fam1, qf1);
+    get.addColumn(fam1, qf3);
+    get.addColumn(fam2, qf2);
+    Result r = region.get(get, null);
+    assertEquals(2, r.size());
+    assertEquals(val1, r.getValue(fam1, qf1));
+    assertEquals(val2, r.getValue(fam2, qf2));
+
+    //Family delete
+    delete = new Delete(row1);
+    delete.deleteFamily(fam2);
+    res = region.checkAndMutate(row1, fam2, qf1, emptyVal, delete, lockId,
+        true);
+    assertEquals(true, res);
+
+    get = new Get(row1);
+    r = region.get(get, null);
+    assertEquals(1, r.size());
+    assertEquals(val1, r.getValue(fam1, qf1));
+
+    //Row delete
+    delete = new Delete(row1);
+    res = region.checkAndMutate(row1, fam1, qf1, val1, delete, lockId,
+        true);
+    assertEquals(true, res);
+    get = new Get(row1);
+    r = region.get(get, null);
+    assertEquals(0, r.size());
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -524,6 +637,7 @@ public class TestHRegion extends HBaseTestCase {
     byte [][] families = {fam};
     String method = this.getName();
     initHRegion(tableName, method, families);
+    EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
 
     byte [] row = Bytes.toBytes("table_name");
     // column names
@@ -562,9 +676,6 @@ public class TestHRegion extends HBaseTestCase {
     result = region.get(get, null);
     assertEquals(1, result.size());
 
-    // Sleep to ensure timestamp of next Put is bigger than previous delete
-    Thread.sleep(10);
-    
     // Assert that after a delete, I can put.
     put = new Put(row);
     put.add(fam, splitA, Bytes.toBytes("reference_A"));
@@ -577,10 +688,7 @@ public class TestHRegion extends HBaseTestCase {
     delete = new Delete(row);
     region.delete(delete, null, false);
     assertEquals(0, region.get(get, null).size());
-    
-    // Sleep to ensure timestamp of next Put is bigger than previous delete
-    Thread.sleep(10);
-    
+
     region.put(new Put(row).add(fam, splitA, Bytes.toBytes("reference_A")));
     result = region.get(get, null);
     assertEquals(1, result.size());
@@ -676,16 +784,14 @@ public class TestHRegion extends HBaseTestCase {
   public void doTestDelete_AndPostInsert(Delete delete)
       throws IOException, InterruptedException {
     initHRegion(tableName, getName(), fam1);
+    EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
     Put put = new Put(row);
     put.add(fam1, qual1, value1);
     region.put(put);
 
-    Thread.sleep(10);
-
     // now delete the value:
     region.delete(delete, null, true);
 
-    Thread.sleep(10);
 
     // ok put data:
     put = new Put(row);
@@ -1118,21 +1224,49 @@ public class TestHRegion extends HBaseTestCase {
 
     Scan scan = null;
     HRegion.RegionScanner is = null;
-    
-    //Testing to see how many scanners that is produced by getScanner, starting 
+
+    //Testing to see how many scanners that is produced by getScanner, starting
     //with known number, 2 - current = 1
     scan = new Scan();
     scan.addFamily(fam2);
     scan.addFamily(fam4);
     is = (RegionScanner) region.getScanner(scan);
-    is.initHeap(); // i dont like this test
     assertEquals(1, ((RegionScanner)is).storeHeap.getHeap().size());
-    
+
     scan = new Scan();
     is = (RegionScanner) region.getScanner(scan);
-    is.initHeap();
-    assertEquals(families.length -1, 
+    assertEquals(families.length -1,
         ((RegionScanner)is).storeHeap.getHeap().size());
+  }
+
+  /**
+   * This method tests https://issues.apache.org/jira/browse/HBASE-2516.
+   */
+  public void testGetScanner_WithRegionClosed() {
+    byte[] tableName = Bytes.toBytes("testtable");
+    byte[] fam1 = Bytes.toBytes("fam1");
+    byte[] fam2 = Bytes.toBytes("fam2");
+
+    byte[][] families = {fam1, fam2};
+
+    //Setting up region
+    String method = this.getName();
+    try {
+      initHRegion(tableName, method, families);
+    } catch (IOException e) {
+      e.printStackTrace();
+      fail("Got IOException during initHRegion, " + e.getMessage());
+    }
+    region.closed.set(true);
+    try {
+      region.getScanner(null);
+      fail("Expected to get an exception during getScanner on a region that is closed");
+    } catch (org.apache.hadoop.hbase.NotServingRegionException e) {
+      //this is the correct exception that is expected
+    } catch (IOException e) {
+      fail("Got wrong type of exception - should be a NotServingRegionException, but was an IOException: "
+              + e.getMessage());
+    }
   }
 
   public void testRegionScanner_Next() throws IOException {
@@ -1609,7 +1743,7 @@ public class TestHRegion extends HBaseTestCase {
     assertTrue("ICV failed to upgrade timestamp",
         first.getTimestamp() != second.getTimestamp());
   }
-  
+
   public void testIncrementColumnValue_ConcurrentFlush() throws IOException {
     initHRegion(tableName, getName(), fam1);
 
@@ -2104,6 +2238,8 @@ public class TestHRegion extends HBaseTestCase {
     initHRegion(tableName, method, families);
     PutThread putThread = new PutThread(numRows, families, qualifiers);
     putThread.start();
+    putThread.waitForFirstPut();
+
     FlushThread flushThread = new FlushThread();
     flushThread.start();
 
@@ -2153,6 +2289,8 @@ public class TestHRegion extends HBaseTestCase {
 
   protected class PutThread extends Thread {
     private volatile boolean done;
+    private volatile int numPutsFinished = 0;
+
     private Throwable error = null;
     private int numRows;
     private byte[][] families;
@@ -2163,6 +2301,17 @@ public class TestHRegion extends HBaseTestCase {
       this.numRows = numRows;
       this.families = families;
       this.qualifiers = qualifiers;
+    }
+
+    /**
+     * Block until this thread has put at least one row.
+     */
+    public void waitForFirstPut() throws InterruptedException {
+      // wait until put thread actually puts some data
+      while (numPutsFinished == 0) {
+        checkNoError();
+        Thread.sleep(50);
+      }
     }
 
     public void done() {
@@ -2181,7 +2330,6 @@ public class TestHRegion extends HBaseTestCase {
     @Override
     public void run() {
       done = false;
-      int val = 0;
       while (!done) {
         try {
           for (int r = 0; r < numRows; r++) {
@@ -2189,18 +2337,19 @@ public class TestHRegion extends HBaseTestCase {
             Put put = new Put(row);
             for (byte[] family : families) {
               for (byte[] qualifier : qualifiers) {
-                put.add(family, qualifier, (long) val,
-                    Bytes.toBytes(val));
+                put.add(family, qualifier, (long) numPutsFinished,
+                    Bytes.toBytes(numPutsFinished));
               }
             }
 //            System.out.println("Putting of kvsetsize=" + put.size());
             region.put(put);
-            if (val > 0 && val % 47 == 0) {
-              System.out.println("put iteration = " + val);
-              Delete delete = new Delete(row, (long)val-30, null);
+            numPutsFinished++;
+            if (numPutsFinished > 0 && numPutsFinished % 47 == 0) {
+              System.out.println("put iteration = " + numPutsFinished);
+              Delete delete = new Delete(row, (long)numPutsFinished-30, null);
               region.delete(delete, null, true);
             }
-            val++;
+            numPutsFinished++;
           }
         } catch (IOException e) {
           LOG.error("error while putting records", e);
@@ -2244,6 +2393,8 @@ public class TestHRegion extends HBaseTestCase {
     initHRegion(tableName, method, families);
     PutThread putThread = new PutThread(numRows, families, qualifiers);
     putThread.start();
+    putThread.waitForFirstPut();
+
     FlushThread flushThread = new FlushThread();
     flushThread.start();
 
@@ -2292,7 +2443,7 @@ public class TestHRegion extends HBaseTestCase {
     }
 
     putThread.done();
-    
+
     region.flushcache();
 
     putThread.join();
@@ -2348,7 +2499,7 @@ public class TestHRegion extends HBaseTestCase {
   }
 
 
-  
+
   private void putData(int startRow, int numRows, byte [] qf,
       byte [] ...families)
   throws IOException {

@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.io;
 import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.io.BytesWritable;
@@ -83,7 +84,7 @@ implements WritableComparable<ImmutableBytesWritable> {
 
   /**
    * Get the data from the BytesWritable.
-   * @return The data is only valid between 0 and getSize() - 1.
+   * @return The data is only valid between offset and offset+length.
    */
   public byte [] get() {
     if (this.bytes == null) {
@@ -112,7 +113,7 @@ implements WritableComparable<ImmutableBytesWritable> {
   }
 
   /**
-   * @return the current size of the buffer.
+   * @return the number of valid bytes in the buffer
    */
   public int getSize() {
     if (this.bytes == null) {
@@ -123,7 +124,7 @@ implements WritableComparable<ImmutableBytesWritable> {
   }
 
   /**
-   * @return the current length of the buffer. same as getSize()
+   * @return the number of valid bytes in the buffer
    */
   //Should probably deprecate getSize() so that we keep the same calls for all
   //byte []
@@ -155,20 +156,24 @@ implements WritableComparable<ImmutableBytesWritable> {
   }
 
   // Below methods copied from BytesWritable
-
   @Override
   public int hashCode() {
-    return WritableComparator.hashBytes(bytes, this.length);
+    int hash = 1;
+    for (int i = offset; i < offset + length; i++)
+      hash = (31 * hash) + (int)bytes[i];
+    return hash;
   }
 
   /**
    * Define the sort order of the BytesWritable.
-   * @param right_obj The other bytes writable
+   * @param that The other bytes writable
    * @return Positive if left is bigger than right, 0 if they are equal, and
    *         negative if left is smaller than right.
    */
-  public int compareTo(ImmutableBytesWritable right_obj) {
-    return compareTo(right_obj.get());
+  public int compareTo(ImmutableBytesWritable that) {
+    return WritableComparator.compareBytes(
+      this.bytes, this.offset, this.length,
+      that.bytes, that.offset, that.length);
   }
 
   /**
@@ -178,8 +183,9 @@ implements WritableComparable<ImmutableBytesWritable> {
    *         negative if left is smaller than right.
    */
   public int compareTo(final byte [] that) {
-    return WritableComparator.compareBytes(this.bytes, 0, this.length, that,
-        0, that.length);
+    return WritableComparator.compareBytes(
+      this.bytes, this.offset, this.length,
+      that, 0, that.length);
   }
 
   /**
@@ -202,9 +208,9 @@ implements WritableComparable<ImmutableBytesWritable> {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(3*this.bytes.length);
-    for (int idx = 0; idx < this.bytes.length; idx++) {
+    for (int idx = offset; idx < offset + length; idx++) {
       // if not the first, put a blank separator in
-      if (idx != 0) {
+      if (idx != offset) {
         sb.append(' ');
       }
       String num = Integer.toHexString(bytes[idx]);
@@ -252,5 +258,12 @@ implements WritableComparable<ImmutableBytesWritable> {
       results[i] = array.get(i);
     }
     return results;
+  }
+
+  /**
+   * Returns a copy of the bytes referred to by this writable
+   */
+  public byte[] copyBytes() {
+    return Arrays.copyOfRange(bytes, offset, offset+length);
   }
 }

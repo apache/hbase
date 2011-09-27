@@ -65,9 +65,9 @@ import org.apache.hadoop.io.compress.Decompressor;
  * File format for hbase.
  * A file of sorted key/value pairs. Both keys and values are byte arrays.
  * <p>
- * The memory footprint of a HFile includes the following (below is taken from
+ * The memory footprint of a HFile includes the following (below is taken from the
  * <a
- * href=https://issues.apache.org/jira/browse/HADOOP-3315>Hadoop-3315 tfile</a>
+ * href=https://issues.apache.org/jira/browse/HADOOP-3315>TFile</a> documentation
  * but applies also to HFile):
  * <ul>
  * <li>Some constant overhead of reading or writing a compressed block.
@@ -107,7 +107,7 @@ import org.apache.hadoop.io.compress.Decompressor;
  * </ul>
  *
  * For more on the background behind HFile, see <a
- * href=https://issues.apache.org/jira/browse/HBASE-3315>HBASE-61</a>.
+ * href=https://issues.apache.org/jira/browse/HBASE-61>HBASE-61</a>.
  * <p>
  * File is made of data blocks followed by meta data blocks (if any), a fileinfo
  * block, data block index, meta data block index, and a fixed size trailer
@@ -462,7 +462,7 @@ public class HFile {
         throw new NullPointerException("Key nor value may be null");
       }
       if (checkPrefix &&
-          Bytes.toString(k).toLowerCase().startsWith(FileInfo.RESERVED_PREFIX)) {
+          Bytes.startsWith(k, FileInfo.RESERVED_PREFIX_BYTES)) {
         throw new IOException("Keys with a " + FileInfo.RESERVED_PREFIX +
           " are reserved");
       }
@@ -569,8 +569,8 @@ public class HFile {
             this.lastKeyLength, key, offset, length);
         if (keyComp > 0) {
           throw new IOException("Added a key not lexically larger than" +
-            " previous key=" + Bytes.toString(key, offset, length) +
-            ", lastkey=" + Bytes.toString(this.lastKeyBuffer, this.lastKeyOffset,
+            " previous key=" + Bytes.toStringBinary(key, offset, length) +
+            ", lastkey=" + Bytes.toStringBinary(this.lastKeyBuffer, this.lastKeyOffset,
                 this.lastKeyLength));
         } else if (keyComp == 0) {
           dupKey = true;
@@ -800,7 +800,7 @@ public class HFile {
      * See {@link Writer#appendFileInfo(byte[], byte[])}.
      * @throws IOException
      */
-    public Map<byte [], byte []> loadFileInfo() 
+    public Map<byte [], byte []> loadFileInfo()
     throws IOException {
       this.trailer = readTrailer();
 
@@ -895,7 +895,7 @@ public class HFile {
      * @return Block wrapped in a ByteBuffer
      * @throws IOException
      */
-    public ByteBuffer getMetaBlock(String metaBlockName, boolean cacheBlock) 
+    public ByteBuffer getMetaBlock(String metaBlockName, boolean cacheBlock)
     throws IOException {
       if (trailer.metaIndexCount == 0) {
         return null; // there are no meta blocks
@@ -903,7 +903,7 @@ public class HFile {
       if (metaIndex == null) {
         throw new IOException("Meta index not loaded");
       }
-      
+
       byte [] mbname = Bytes.toBytes(metaBlockName);
       int block = metaIndex.blockContainingKey(mbname, 0, mbname.length);
       if (block == -1)
@@ -924,34 +924,34 @@ public class HFile {
         if (cache != null) {
           ByteBuffer cachedBuf = cache.getBlock(name + "meta" + block);
           if (cachedBuf != null) {
-            // Return a distinct 'shallow copy' of the block, 
+            // Return a distinct 'shallow copy' of the block,
             // so pos doesnt get messed by the scanner
             cacheHits++;
             return cachedBuf.duplicate();
           }
           // Cache Miss, please load.
         }
-        
+
         ByteBuffer buf = decompress(metaIndex.blockOffsets[block],
           longToInt(blockSize), metaIndex.blockDataSizes[block], true);
         byte [] magic = new byte[METABLOCKMAGIC.length];
         buf.get(magic, 0, magic.length);
-  
+
         if (! Arrays.equals(magic, METABLOCKMAGIC)) {
           throw new IOException("Meta magic is bad in block " + block);
         }
-        
+
         // Create a new ByteBuffer 'shallow copy' to hide the magic header
         buf = buf.slice();
-  
+
         readTime += System.currentTimeMillis() - now;
         readOps++;
-  
+
         // Cache the block
         if(cacheBlock && cache != null) {
           cache.cacheBlock(name + "meta" + block, buf.duplicate(), inMemory);
         }
-  
+
         return buf;
       }
     }
@@ -983,7 +983,7 @@ public class HFile {
         if (cache != null) {
           ByteBuffer cachedBuf = cache.getBlock(name + block);
           if (cachedBuf != null) {
-            // Return a distinct 'shallow copy' of the block, 
+            // Return a distinct 'shallow copy' of the block,
             // so pos doesnt get messed by the scanner
             cacheHits++;
             return cachedBuf.duplicate();
@@ -1015,10 +1015,10 @@ public class HFile {
         }
 
         // 'shallow copy' to hide the header
-        // NOTE: you WILL GET BIT if you call buf.array() but don't start 
+        // NOTE: you WILL GET BIT if you call buf.array() but don't start
         //       reading at buf.arrayOffset()
         buf = buf.slice();
-        
+
         readTime += System.currentTimeMillis() - now;
         readOps++;
 
@@ -1069,12 +1069,25 @@ public class HFile {
 
     /**
      * @return First key in the file.  May be null if file has no entries.
+     * Note that this is not the first rowkey, but rather the byte form of
+     * the first KeyValue.
      */
     public byte [] getFirstKey() {
       if (blockIndex == null) {
         throw new RuntimeException("Block index not loaded");
       }
       return this.blockIndex.isEmpty()? null: this.blockIndex.blockKeys[0];
+    }
+
+    /**
+     * @return the first row key, or null if the file is empty.
+     * TODO move this to StoreFile after Ryan's patch goes in
+     * to eliminate KeyValue here
+     */
+    public byte[] getFirstRowKey() {
+      byte[] firstKey = getFirstKey();
+      if (firstKey == null) return null;
+      return KeyValue.createKeyValueFromKey(firstKey).getRow();
     }
 
     /**
@@ -1089,12 +1102,25 @@ public class HFile {
 
     /**
      * @return Last key in the file.  May be null if file has no entries.
+     * Note that this is not the last rowkey, but rather the byte form of
+     * the last KeyValue.
      */
     public byte [] getLastKey() {
       if (!isFileInfoLoaded()) {
         throw new RuntimeException("Load file info first");
       }
       return this.blockIndex.isEmpty()? null: this.lastkey;
+    }
+
+    /**
+     * @return the last row key, or null if the file is empty.
+     * TODO move this to StoreFile after Ryan's patch goes in
+     * to eliminate KeyValue here
+     */
+    public byte[] getLastRowKey() {
+      byte[] lastKey = getLastKey();
+      if (lastKey == null) return null;
+      return KeyValue.createKeyValueFromKey(lastKey).getRow();
     }
     
     /**
@@ -1222,7 +1248,7 @@ public class HFile {
         return true;
       }
 
-      public boolean shouldSeek(final byte[] row, 
+      public boolean shouldSeek(final byte[] row,
           final SortedSet<byte[]> columns) {
         return true;
       }
@@ -1367,6 +1393,11 @@ public class HFile {
             block.rewind();
           }
         }
+      }
+
+      @Override
+      public String toString() {
+        return "HFileScanner for reader " + String.valueOf(reader);
       }
     }
 
@@ -1620,7 +1651,7 @@ public class HFile {
       sb.append("size=" + count);
       for (int i = 0; i < count ; i++) {
         sb.append(", ");
-        sb.append("key=").append(Bytes.toString(blockKeys[i])).
+        sb.append("key=").append(Bytes.toStringBinary(blockKeys[i])).
           append(", offset=").append(blockOffsets[i]).
           append(", dataSize=" + blockDataSizes[i]);
       }
@@ -1659,6 +1690,7 @@ public class HFile {
    */
   static class FileInfo extends HbaseMapWritable<byte [], byte []> {
     static final String RESERVED_PREFIX = "hfile.";
+    static final byte[] RESERVED_PREFIX_BYTES = Bytes.toBytes(RESERVED_PREFIX);
     static final byte [] LASTKEY = Bytes.toBytes(RESERVED_PREFIX + "LASTKEY");
     static final byte [] AVG_KEY_LEN =
       Bytes.toBytes(RESERVED_PREFIX + "AVG_KEY_LEN");
@@ -1674,6 +1706,15 @@ public class HFile {
       super();
     }
   }
+
+  /**
+   * Return true if the given file info key is reserved for internal
+   * use by HFile.
+   */
+  public static boolean isReservedFileInfoKey(byte[] key) {
+    return Bytes.startsWith(key, FileInfo.RESERVED_PREFIX_BYTES);
+  }
+
 
   /**
    * Get names of supported compression algorithms. The names are acceptable by
@@ -1768,8 +1809,8 @@ public class HFile {
         byte[][] hri = HRegionInfo.parseRegionName(rn);
         Path rootDir = FSUtils.getRootDir(conf);
         Path tableDir = new Path(rootDir, Bytes.toString(hri[0]));
-        int enc = HRegionInfo.encodeRegionName(rn);
-        Path regionDir = new Path(tableDir, Integer.toString(enc));
+        String enc = HRegionInfo.encodeRegionName(rn);
+        Path regionDir = new Path(tableDir, enc);
         if (verbose) System.out.println("region dir -> " + regionDir);
         List<Path> regionFiles = getStoreFiles(fs, regionDir);
         if (verbose) System.out.println("Number of region files found -> " +
@@ -1856,5 +1897,4 @@ public class HFile {
       e.printStackTrace();
     }
   }
-
 }
