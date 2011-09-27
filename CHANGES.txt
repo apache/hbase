@@ -4,6 +4,8 @@ Release 0.93.0 - Unreleased
    HBASE-4132  Extend the WALActionsListener API to accomodate log archival
                (dhruba borthakur)
    HBASE-4461  Expose getRowOrBefore via Thrift (jgray)
+   HBASE-4433  avoid extra next (potentially a seek) if done with column/row
+               (kannan via jgray)
 
   BUGS
 
