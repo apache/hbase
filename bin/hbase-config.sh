@@ -108,3 +108,28 @@ EOF
     exit 1
   fi
 fi
+
+HBASE_JMX_OPTS="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false"
+HBASE_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.authenticate=false"
+# HBASE_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.password.file=$HBASE_HOME/conf/jmxremote.passwd"
+# HBASE_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.access.file=$HBASE_HOME/conf/jmxremote.access"
+HBASE_MASTER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8090"
+HBASE_REGIONSERVER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8091"
+
+# YourKit Java Profiling
+# Note that you need to have yjpagent.so & yjp.jar on your computer and have
+# LD_LIBRARY_PATH entry to their dir location. for example:
+# export LD_LIBRARY_PATH=/usr/local/hadoop/:$LD_LIBRARY_PATH
+HBASE_YOURKIT_PROFILE="-agentlib:yjpagent"
+
+# Java debugging options.
+# By default, local hbase instances are setup with the remote debugging
+# enabled for the HMaster (which also functions as regionserver) on port 1044
+# Zookeeper debug is configured on port 1045
+HBASE_MASTER_DBG_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8070 $HBASE_GC_OPTIONS"
+HBASE_REGIONSERVER_DBG_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8071 $HBASE_GC_OPTIONS"
+HBASE_ZOOKEEPER_DBG_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8072"
+
+export HBASE_MASTER_OPTS="$HBASE_MASTER_DBG_OPTS $HBASE_MASTER_JMX_OPTS"
+export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_DBG_OPTS $HBASE_REGIONSERVER_JMX_OPTS"
+export HBASE_ZOOKEEPER_OPTS="$HBASE_ZOOKEEPER_DBG_OPTS"
