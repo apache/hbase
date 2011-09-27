@@ -58,7 +58,7 @@ public class HBaseTest
   public static CommandLine cmd_;
 
   // table name for the test
-  public static byte[] tableName_ = Bytes.toBytes("test1");
+  public static byte[] tableName_;
   // column families used by the test
   public static byte[][] columnFamilies_ = { Bytes.toBytes("actions") };
   private static final Log LOG = LogFactory.getLog(HBaseTest.class);
@@ -172,6 +172,9 @@ public class HBaseTest
         configList_.add(conf);
       }
 
+      String tn = cmd_.getOptionValue(OPT_TABLE_NAME, "test1");
+      tableName_ = Bytes.toBytes(tn);
+
       // create tables if needed
       for(HBaseConfiguration conf : configList_) {
         HBaseUtils.createTableIfNotExists(conf, tableName_, columnFamilies_);
@@ -202,15 +205,18 @@ public class HBaseTest
   private static final String OPT_LOAD = "load";
   private static final String OPT_READ = "read";
   private static final String OPT_KILL = "kill";
+  private static final String OPT_TABLE_NAME = "tn";
   static void initAndParseArgs(String[] args) throws ParseException {
     // set the usage object
     USAGE =  "bin/hbase org.apache.hadoop.hbase.manual.HBaseTest "
             + "  -" + OPT_ZKNODE   + " <Zookeeper node>"
+            + "  _" + OPT_TABLE_NAME + " <Table name>"
             + "  -" + OPT_LOAD     + OPT_USAGE_LOAD
             + "  -" + OPT_READ     + OPT_USAGE_READ
             + "  -" + OPT_KILL     + OPT_USAGE_KILL;
     // add options
     options_.addOption(OPT_ZKNODE    , true, "Zookeeper node in the HBase cluster");
+    options_.addOption(OPT_TABLE_NAME, true, "The name of the table to be read or write");
     options_.addOption(OPT_LOAD      , true, OPT_USAGE_LOAD);
     options_.addOption(OPT_READ      , true, OPT_USAGE_READ);
     options_.addOption(OPT_KILL      , true, OPT_USAGE_KILL);
