@@ -54,6 +54,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -285,7 +286,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private ExecutorService service;
 
   // Replication services. If no replication, this handler will be null.
-  private Replication replicationHandler;
+  private ReplicationSourceService replicationSourceHandler;
+  private ReplicationSinkService replicationSinkHandler;
 
   private final RegionServerAccounting regionServerAccounting;
 
@@ -1177,12 +1179,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     // Instantiate replication manager if replication enabled.  Pass it the
     // log directories.
-    try {
-      this.replicationHandler = Replication.isReplication(this.conf)?
-        new Replication(this, this.fs, logdir, oldLogDir): null;
-    } catch (KeeperException e) {
-      throw new IOException("Failed replication handler create", e);
-    }
+    createNewReplicationInstance(conf, this, this.fs, logdir, oldLogDir);
     return instantiateHLog(logdir, oldLogDir);
   }
 
@@ -1209,9 +1206,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Log roller.
     this.hlogRoller = new LogRoller(this, this);
     listeners.add(this.hlogRoller);
-    if (this.replicationHandler != null) {
+    if (this.replicationSourceHandler != null &&
+        this.replicationSourceHandler.getWALActionsListener() != null) {
       // Replication handler is an implementation of WALActionsListener.
-      listeners.add(this.replicationHandler);
+      listeners.add(this.replicationSourceHandler.getWALActionsListener());
     }
     return listeners;
   }
@@ -1359,8 +1357,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // that port is occupied. Adjust serverInfo if this is the case.
     this.webuiport = putUpWebUI();
 
-    if (this.replicationHandler != null) {
-      this.replicationHandler.startReplicationServices();
+    if (this.replicationSourceHandler == this.replicationSinkHandler &&
+        this.replicationSourceHandler != null) {
+      this.replicationSourceHandler.startReplicationService();
+    } else if (this.replicationSourceHandler != null) {
+      this.replicationSourceHandler.startReplicationService();
+    } else if (this.replicationSinkHandler != null) {
+      this.replicationSinkHandler.startReplicationService();
     }
 
     // Start Server.  This service is like leases in that it internally runs
@@ -1570,9 +1573,30 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       this.compactSplitThread.join();
     }
     if (this.service != null) this.service.shutdown();
-    if (this.replicationHandler != null) {
-      this.replicationHandler.join();
+    if (this.replicationSourceHandler != null &&
+        this.replicationSourceHandler == this.replicationSinkHandler) {
+      this.replicationSourceHandler.stopReplicationService();
+    } else if (this.replicationSourceHandler != null) {
+      this.replicationSourceHandler.stopReplicationService();
+    } else if (this.replicationSinkHandler != null) {
+      this.replicationSinkHandler.stopReplicationService();
     }
+  }
+
+  /**
+   * @return Return the object that implements the replication
+   * source service.
+   */
+  ReplicationSourceService getReplicationSourceService() {
+    return replicationSourceHandler;
+  }
+
+  /**
+   * @return Return the object that implements the replication
+   * sink service.
+   */
+  ReplicationSinkService getReplicationSinkService() {
+    return replicationSinkHandler;
   }
 
   /**
@@ -3077,6 +3101,63 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   //
 
   /**
+   * Load the replication service objects, if any
+   */
+  static private void createNewReplicationInstance(Configuration conf,
+    HRegionServer server, FileSystem fs, Path logDir, Path oldLogDir) throws IOException{
+
+    // If replication is not enabled, then return immediately.
+    if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false)) {
+      return;
+    }
+
+    // read in the name of the source replication class from the config file.
+    String sourceClassname = conf.get(HConstants.REPLICATION_SOURCE_SERVICE_CLASSNAME,
+                               HConstants.REPLICATION_SERVICE_CLASSNAME_DEFAULT);
+    
+    // read in the name of the sink replication class from the config file.
+    String sinkClassname = conf.get(HConstants.REPLICATION_SINK_SERVICE_CLASSNAME,
+                             HConstants.REPLICATION_SERVICE_CLASSNAME_DEFAULT);
+
+    // If both the sink and the source class names are the same, then instantiate
+    // only one object.
+    if (sourceClassname.equals(sinkClassname)) {
+      server.replicationSourceHandler = (ReplicationSourceService)
+                                         newReplicationInstance(sourceClassname,
+                                         conf, server, fs, logDir, oldLogDir);
+      server.replicationSinkHandler = (ReplicationSinkService)
+                                         server.replicationSourceHandler;
+    }
+    else {
+      server.replicationSourceHandler = (ReplicationSourceService)
+                                         newReplicationInstance(sourceClassname,
+                                         conf, server, fs, logDir, oldLogDir);
+      server.replicationSinkHandler = (ReplicationSinkService)
+                                         newReplicationInstance(sinkClassname,
+                                         conf, server, fs, logDir, oldLogDir);
+    }
+  }
+
+  static private ReplicationService newReplicationInstance(String classname,
+    Configuration conf, HRegionServer server, FileSystem fs, Path logDir, 
+    Path oldLogDir) throws IOException{
+
+    Class<?> clazz = null;
+    try {
+      ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+      clazz = Class.forName(classname, true, classLoader);
+    } catch (java.lang.ClassNotFoundException nfe) {
+      throw new IOException("Cound not find class for " + classname);
+    }
+
+    // create an instance of the replication object.
+    ReplicationService service = (ReplicationService)
+                              ReflectionUtils.newInstance(clazz, conf);
+    service.initialize(server, fs, logDir, oldLogDir);
+    return service;
+  }
+
+  /**
    * @param hrs
    * @return Thread the RegionServer is running in correctly named.
    * @throws IOException
@@ -3129,8 +3210,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public void replicateLogEntries(final HLog.Entry[] entries)
   throws IOException {
     checkOpen();
-    if (this.replicationHandler == null) return;
-    this.replicationHandler.replicateLogEntries(entries);
+    if (this.replicationSinkHandler == null) return;
+    this.replicationSinkHandler.replicateLogEntries(entries);
   }
 
   /**
