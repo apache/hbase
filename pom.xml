@@ -176,6 +176,14 @@
       <organization>Cloudera</organization>
       <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
+    <developer>
+      <id>ramkrishna</id>
+      <name>Ramkrishna S Vasudevan</name>
+      <email>ramkrishna@apache.org</email>
+      <timezone>+5</timezone>
+      <organization>Huawei</organization>
+      <organizationUrl>http://www.huawei.com</organizationUrl>
+    </developer>
   </developers>
 
   <repositories>
