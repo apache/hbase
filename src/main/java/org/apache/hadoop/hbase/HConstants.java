@@ -473,8 +473,17 @@ public final class HConstants {
    */
   public static int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
 
+  /*
+   * cluster replication constants.
+   */
   public static final String
       REPLICATION_ENABLE_KEY = "hbase.replication";
+  public static final String 
+      REPLICATION_SOURCE_SERVICE_CLASSNAME = "hbase.replication.source.service";
+  public static final String 
+      REPLICATION_SINK_SERVICE_CLASSNAME = "hbase.replication.sink.service";
+  public static final String REPLICATION_SERVICE_CLASSNAME_DEFAULT =
+    "org.apache.hadoop.hbase.replication.regionserver.Replication";
 
   /** HBCK special code name used as server name when manipulating ZK nodes */
   public static final String HBCK_CODE_NAME = "HBCKServerName";

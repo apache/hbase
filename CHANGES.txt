@@ -6,6 +6,8 @@ Release 0.93.0 - Unreleased
    HBASE-4461  Expose getRowOrBefore via Thrift (jgray)
    HBASE-4433  avoid extra next (potentially a seek) if done with column/row
                (kannan via jgray)
+   HBASE-4131  Make the Replication Service pluggable via a standard
+               interface definition (dhruba via jgray)
 
   BUG FIXES
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)
