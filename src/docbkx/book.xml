@@ -1236,16 +1236,139 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
            see the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">batch</link> methods on HTable.
 	   </para>
 	   </section>
-	   <section xml:id="client.filter"><title>Filters</title>
-           <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link> and <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link> instances can be
-           optionally configured with <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html">filters</link> which are applied on the RegionServer. 
-    	   </para>
-		</section>
 	   <section xml:id="client.external"><title>External Clients</title>
            <para>Information on non-Java clients and custom protocols is covered in <xref linkend="external_apis" />
            </para>
 		</section>
 	</section>
+	
+    <section xml:id="client.filter"><title>Client Filters</title>
+      <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link> and <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link> instances can be
+       optionally configured with <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html">filters</link> which are applied on the RegionServer. 
+      </para>
+      <para>Filters can be confusing because there are many different types, and it is best to approach them by understanding the groups
+      of Filter functionality.
+      </para>
+      <section xml:id="client.filter.structural"><title>Structural</title>
+        <para>Structural Filters contain other Filters.</para>
+        <section xml:id="client.filter.structural.fl"><title>FilterList</title>
+          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FilterList.html">FilterList</link>
+          represents a list of Filters with a relationship of <code>FilterList.Operator.MUST_PASS_ALL</code> or 
+          <code>FilterList.Operator.MUST_PASS_ONE</code> between the Filters.  The following example shows an 'or' between two 
+          Filters (checking for either 'my value' or 'my other value' on the same attribute).
+<programlisting>
+FilterList list = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+SingleColumnValueFilter filter1 = new SingleColumnValueFilter(
+	cf,
+	column,
+	CompareOp.EQUAL,
+	Bytes.toBytes("my value")
+	);
+list.add(filter1);
+SingleColumnValueFilter filter2 = new SingleColumnValueFilter(
+	cf,
+	column,
+	CompareOp.EQUAL,
+	Bytes.toBytes("my other value")
+	);
+list.add(filter2);
+scan.setFilter(list);
+</programlisting>
+          </para>
+        </section>
+      </section>
+      <section xml:id="client.filter.cv"><title>Column Value</title>
+        <section xml:id="client.filter.cv.scvf"><title>SingleColumnValueFilter</title>
+          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html">SingleColumnValueFilter</link>
+          can be used to test column values for equivalence (<code><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/CompareFilter.CompareOp.html">CompareOp.EQUAL</link>
+          </code>), inequality (<code>CompareOp.NOT_EQUAL</code>), or ranges
+          (e.g., <code>CompareOp.GREATER</code>).  The folowing is example of testing equivalence a column to a String value "my value"...
+<programlisting>
+SingleColumnValueFilter filter = new SingleColumnValueFilter(
+	cf,
+	column,
+	CompareOp.EQUAL,
+	Bytes.toBytes("my value")
+	);
+scan.setFilter(filter);
+</programlisting>
+          </para>
+        </section>
+      </section>
+      <section xml:id="client.filter.cvp"><title>Column Value Comparators</title>
+        <para>There are several Comparator classes in the Filter package that deserve special mention.
+        These Comparators are used in concert with other Filters, such as  <xref linkend="client.filter.cv.scvf" />.
+        </para>
+        <section xml:id="client.filter.cvp.rcs"><title>RegexStringComparator</title>
+          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RegexStringComparator.html">RegexStringComparator</link>
+          supports regular expressions for value comparisons. 
+<programlisting>
+RegexStringComparator comp = new RegexStringComparator("my.");   // any value that starts with 'my'
+SingleColumnValueFilter filter = new SingleColumnValueFilter(
+	cf,
+	column,
+	CompareOp.EQUAL,
+	comp
+	);
+scan.setFilter(filter);
+</programlisting>
+          See the Oracle JavaDoc for <link xlink:href="http://download.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html">supported RegEx patterns in Java</link>. 
+          </para>
+        </section>
+        <section xml:id="client.filter.cvp.rcs"><title>SubstringComparator</title>
+          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SubstringComparator.html">SubstringComparator</link>
+          can be used to determine if a given substring exists in a value.  The comparison is case-insensitive.
+          </para>
+<programlisting>
+SubstringComparator comp = new SubstringComparator("y val");   // looking for 'my value'
+SingleColumnValueFilter filter = new SingleColumnValueFilter(
+	cf,
+	column,
+	CompareOp.EQUAL,
+	comp
+	);
+scan.setFilter(filter);
+</programlisting>
+        </section>
+        <section xml:id="client.filter.cvp.bfp"><title>BinaryPrefixComparator</title>
+          <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryPrefixComparator.html">BinaryPrefixComparator</link>.</para>
+        </section>
+        <section xml:id="client.filter.cvp.bc"><title>BinaryComparator</title>
+          <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComparator.html">BinaryComparator</link>.</para>
+        </section>
+      </section>
+      <section xml:id="client.filter.kvm"><title>KeyValue Metadata</title>
+        <para>As HBase stores data internally as KeyValue pairs, KeyValue Metadata Filters evaluate the existence of keys (i.e., ColumnFamily:Column qualifiers)
+        for a row, as opposed to values the previous section.
+        </para>
+        <section xml:id="client.filter.kvm.ff"><title>FamilyFilter</title>
+          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FamilyFilter.html">FamilyFilter</link> can be used
+          to filter on the ColumnFamily.  It is generally a better idea to select ColumnFamilies in the Scan than to do it with a Filter.</para>
+        </section>
+        <section xml:id="client.filter.kvm.qf"><title>QualifierFilter</title>
+          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/QualifierFilter.html">QualifierFilter</link> can be used
+          to filter based on Column (aka Qualifier) name.
+          </para>
+        </section>
+        <section xml:id="client.filter.kvm.cpf"><title>ColumnPrefixFilter</title>
+          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnPrefixFilter.html">ColumnPrefixFilter</link> can be used
+          to filter based on the lead portion of Column (aka Qualifier) names.
+          </para>
+        </section>
+      </section>
+      <section xml:id="client.filter.row"><title>RowKey</title>
+        <section xml:id="client.filter.row.rf"><title>RowFilter</title>
+          <para>It is generally a better idea to use the startRow/stopRow methods on Scan for row selection, however 
+          <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RowFilter.html">RowFilter</link> can also be used.</para>
+        </section>
+      </section>
+      <section xml:id="client.filter.utility"><title>Utility</title>
+        <section xml:id="client.filter.utility.fkof"><title>FirstKeyOnlyFilter</title>
+          <para>This is primarily used for rowcount jobs.  
+          See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html">FirstKeyOnlyFilter</link>.</para>
+        </section>
+      </section>
+	</section>  <!--  client.filter -->
  
     <section xml:id="master"><title>Master</title>
        <para><code>HMaster</code> is the implementation of the Master Server.  The Master server
