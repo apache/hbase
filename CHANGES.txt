@@ -7,7 +7,9 @@ Release 0.93.0 - Unreleased
    HBASE-4433  avoid extra next (potentially a seek) if done with column/row
                (kannan via jgray)
 
-  BUGS
+  BUG FIXES
+   HBASE-4488  Store could miss rows during flush (Lars H via jgray)
+
 
 Release 0.92.0 - Unreleased
   INCOMPATIBLE CHANGES
