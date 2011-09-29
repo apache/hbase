@@ -316,6 +316,8 @@ Release 0.92.0 - Unreleased
    HBASE-4455  Rolling restart RSs scenario, -ROOT-, .META. regions are lost in
                AssignmentManager (Ming Ma)
    HBASE-4513  NOTICES.txt refers to Facebook for Thrift
+   HBASE-3130  [replication] ReplicationSource can't recover from session
+               expired on remote clusters (Chris Trezzo via JD)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
@@ -558,6 +560,8 @@ Release 0.92.0 - Unreleased
                (David Revell)
    HBASE-4454  Add failsafe plugin to build and rename integration tests
                (Jesse Yates)
+   HBASE-4499  [replication] Source shouldn't update ZK if it didn't progress
+               (Chris Trezzo via JD)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
