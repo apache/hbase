@@ -8,6 +8,8 @@ Release 0.93.0 - Unreleased
                (kannan via jgray)
    HBASE-4131  Make the Replication Service pluggable via a standard
                interface definition (dhruba via jgray)
+   HBASE-4477  Ability for an application to store metadata into the        
+               transaction log (dhruba via jgray)
 
   BUG FIXES
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)
