@@ -203,6 +203,12 @@ mvn test -Dtest=org.apache.hadoop.hbase.client.*
               </programlisting>
            </para>
          </section>
+        <section xml:id="integration.tests"> 
+          <title>Integration Tests</title>
+          <para>HBase 0.92 added a <varname>verify</varname> maven target.  Invocation will
+          run a suite of long-running tests via the maven <link xlink:href="http://maven.apache.org/plugins/maven-failsafe-plugin/">failsafe plugin</link>.
+          </para>
+         </section>
           <section xml:id="code.standards">
            <title>Code Standards</title>
            <para>See <xref linkend="eclipse.code.formatting"/> and <xref linkend="common.patch.feedback"/>.

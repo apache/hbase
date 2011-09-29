@@ -317,8 +317,7 @@ Release 0.92.0 - Unreleased
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
                blocks read and for catching regressions (Kannan)
-   HBASE-4449  LoadIncrementalHFiles should be able to handle CFs with blooms
-               (David Revell)
+
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
    HBASE-3292  Expose block cache hit/miss/evict counts into region server
@@ -550,6 +549,10 @@ Release 0.92.0 - Unreleased
    HBASE-4280  [replication] ReplicationSink can deadlock itself via handlers
    HBASE-4014  Coprocessors: Flag the presence of coprocessors in logged
                exceptions (Eugene Koontz)
+   HBASE-4449  LoadIncrementalHFiles should be able to handle CFs with blooms
+               (David Revell)
+   HBASE-4454  Add failsafe plugin to build and rename integration tests
+               (Jesse Yates)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
