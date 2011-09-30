@@ -10,6 +10,7 @@ Release 0.93.0 - Unreleased
                interface definition (dhruba via jgray)
    HBASE-4477  Ability for an application to store metadata into the        
                transaction log (dhruba via jgray)
+   HBASE-4145  Provide metrics for hbase client (Ming Ma)
 
   BUG FIXES
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)

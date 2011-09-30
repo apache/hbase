@@ -68,6 +68,9 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -4151,13 +4154,13 @@ public class TestFromClientSide {
     }
     executorService.shutdownNow();
   }
-  
-  
+
+
   @Test
   public void testCheckAndPut() throws IOException {
     final byte [] anotherrow = Bytes.toBytes("anotherrow");
     final byte [] value2 = Bytes.toBytes("abcd");
-    
+
     HTable table = TEST_UTIL.createTable(Bytes.toBytes("testCheckAndPut"),
       new byte [][] {FAMILY});
     Put put1 = new Put(ROW);
@@ -4166,7 +4169,7 @@ public class TestFromClientSide {
     // row doesn't exist, so using non-null value should be considered "not match".
     boolean ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, VALUE, put1);
     assertEquals(ok, false);
-    
+
     // row doesn't exist, so using "null" to check for existence should be considered "match".
     ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, null, put1);
     assertEquals(ok, true);
@@ -4174,24 +4177,67 @@ public class TestFromClientSide {
     // row now exists, so using "null" to check for existence should be considered "not match".
     ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, null, put1);
     assertEquals(ok, false);
-    
+
     Put put2 = new Put(ROW);
     put2.add(FAMILY, QUALIFIER, value2);
-    
+
     // row now exists, use the matching value to check
     ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, VALUE, put2);
     assertEquals(ok, true);
 
     Put put3 = new Put(anotherrow);
     put3.add(FAMILY, QUALIFIER, VALUE);
-    
-    // try to do CheckAndPut on different rows       
+
+    // try to do CheckAndPut on different rows
     try {
         ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, value2, put3);
         fail("trying to check and modify different rows should have failed.");
-      } catch(Exception e) {}      
-    
-  }  
-  
+    } catch(Exception e) {}
+
+  }
+
+  /**
+  * Test ScanMetrics
+  * @throws Exception
+  */
+  @Test
+  public void testScanMetrics() throws Exception {
+    byte [] TABLENAME = Bytes.toBytes("testScanMetrics");
+
+    Configuration conf = TEST_UTIL.getConfiguration();
+    TEST_UTIL.createTable(TABLENAME, FAMILY);
+
+    // Set up test table:
+    // Create table:
+    HTable ht = new HTable(conf, TABLENAME);
+
+    // Create multiple regions for this table
+    int numOfRegions = TEST_UTIL.createMultiRegions(ht, FAMILY);
+
+    Scan scan1 = new Scan();
+    for(Result result : ht.getScanner(scan1)) {
+    }
+
+    // by default, scan metrics collection is turned off
+    assertEquals(null, scan1.getAttribute(
+      Scan.SCAN_ATTRIBUTES_METRICS_DATA));
+
+    // turn on scan metrics
+    Scan scan = new Scan();
+    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE,
+      Bytes.toBytes(Boolean.TRUE));
+    for(Result result : ht.getScanner(scan)) {
+    }
+
+    byte[] serializedMetrics = scan.getAttribute(
+      Scan.SCAN_ATTRIBUTES_METRICS_DATA);
+
+    DataInputBuffer in = new DataInputBuffer();
+    in.reset(serializedMetrics, 0, serializedMetrics.length);
+    ScanMetrics scanMetrics = new ScanMetrics();
+    scanMetrics.readFields(in);
+    assertEquals(numOfRegions, scanMetrics.countOfRegions.getCurrentIntervalValue());
+  }
+
 }
 

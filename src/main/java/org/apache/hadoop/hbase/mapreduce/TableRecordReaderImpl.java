@@ -1,6 +1,4 @@
 /**
- * Copyright 2010 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +18,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,7 +27,14 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -40,12 +46,18 @@ public class TableRecordReaderImpl {
 
   static final Log LOG = LogFactory.getLog(TableRecordReader.class);
 
+  // HBASE_COUNTER_GROUP_NAME is the name of mapreduce counter group for HBase
+  private static final String HBASE_COUNTER_GROUP_NAME =
+    "HBase Counters";
   private ResultScanner scanner = null;
   private Scan scan = null;
+  private Scan currentScan = null;
   private HTable htable = null;
   private byte[] lastSuccessfulRow = null;
   private ImmutableBytesWritable key = null;
   private Result value = null;
+  private TaskAttemptContext context = null;
+  private Method getCounter = null;
 
   /**
    * Restart from survivable exceptions by creating a new scanner.
@@ -54,18 +66,31 @@ public class TableRecordReaderImpl {
    * @throws IOException When restarting fails.
    */
   public void restart(byte[] firstRow) throws IOException {
-    Scan newScan = new Scan(scan);
-    newScan.setStartRow(firstRow);
-    this.scanner = this.htable.getScanner(newScan);
+    currentScan = new Scan(scan);
+    currentScan.setStartRow(firstRow);
+    currentScan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE,
+      Bytes.toBytes(Boolean.TRUE));
+    this.scanner = this.htable.getScanner(currentScan);
   }
 
   /**
-   * Build the scanner. Not done in constructor to allow for extension.
-   *
-   * @throws IOException When restarting the scan fails.
+   * In new mapreduce APIs, TaskAttemptContext has two getCounter methods
+   * Check if getCounter(String, String) method is available.
+   * @return The getCounter method or null if not available.
+   * @throws IOException
    */
-  public void init() throws IOException {
-    restart(scan.getStartRow());
+  private Method retrieveGetCounterWithStringsParams(TaskAttemptContext context)
+  throws IOException {
+    Method m = null;
+    try {
+      m = context.getClass().getMethod("getCounter",
+        new Class [] {String.class, String.class});
+    } catch (SecurityException e) {
+      throw new IOException("Failed test for getCounter", e);
+    } catch (NoSuchMethodException e) {
+      // Ignore
+    }
+    return m;
   }
 
   /**
@@ -84,6 +109,21 @@ public class TableRecordReaderImpl {
    */
   public void setScan(Scan scan) {
     this.scan = scan;
+  }
+
+  /**
+   * Build the scanner. Not done in constructor to allow for extension.
+   *
+   * @throws IOException, InterruptedException
+   */
+  public void initialize(InputSplit inputsplit,
+      TaskAttemptContext context) throws IOException,
+      InterruptedException {
+    if (context != null) {
+      this.context = context;
+      getCounter = retrieveGetCounterWithStringsParams(context);
+    }
+    restart(scan.getStartRow());
   }
 
   /**
@@ -154,7 +194,46 @@ public class TableRecordReaderImpl {
       lastSuccessfulRow = key.get();
       return true;
     }
+
+    updateCounters();
     return false;
+  }
+
+  /**
+   * If hbase runs on new version of mapreduce, RecordReader has access to
+   * counters thus can update counters based on scanMetrics.
+   * If hbase runs on old version of mapreduce, it won't be able to get
+   * access to counters and TableRecorderReader can't update counter values.
+   * @throws IOException
+   */
+  private void updateCounters() throws IOException {
+    // we can get access to counters only if hbase uses new mapreduce APIs
+    if (this.getCounter == null) {
+      return;
+    }
+
+    byte[] serializedMetrics = currentScan.getAttribute(
+        Scan.SCAN_ATTRIBUTES_METRICS_DATA);
+    if (serializedMetrics == null || serializedMetrics.length == 0 ) {
+      return;
+    }
+
+    DataInputBuffer in = new DataInputBuffer();
+    in.reset(serializedMetrics, 0, serializedMetrics.length);
+    ScanMetrics scanMetrics = new ScanMetrics();
+    scanMetrics.readFields(in);
+    MetricsTimeVaryingLong[] mlvs =
+      scanMetrics.getMetricsTimeVaryingLongArray();
+
+    try {
+      for (MetricsTimeVaryingLong mlv : mlvs) {
+        Counter ct = (Counter)this.getCounter.invoke(context,
+          HBASE_COUNTER_GROUP_NAME, mlv.getName());
+        ct.increment(mlv.getCurrentIntervalValue());
+      }
+    } catch (Exception e) {
+      LOG.debug("can't update counter." + StringUtils.stringifyException(e));
+    }
   }
 
   /**

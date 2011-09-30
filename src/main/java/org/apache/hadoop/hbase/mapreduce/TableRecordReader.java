@@ -1,5 +1,5 @@
 /**
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -48,14 +48,6 @@ extends RecordReader<ImmutableBytesWritable, Result> {
     this.recordReaderImpl.restart(firstRow);
   }
 
-  /**
-   * Build the scanner. Not done in constructor to allow for extension.
-   *
-   * @throws IOException When restarting the scan fails.
-   */
-  public void init() throws IOException {
-    this.recordReaderImpl.init();
-  }
 
   /**
    * Sets the HBase table.
@@ -127,6 +119,7 @@ extends RecordReader<ImmutableBytesWritable, Result> {
   public void initialize(InputSplit inputsplit,
       TaskAttemptContext context) throws IOException,
       InterruptedException {
+    this.recordReaderImpl.initialize(inputsplit, context);
   }
 
   /**

@@ -88,6 +88,13 @@ public class Scan extends OperationWithAttributes implements Writable {
   private int maxVersions = 1;
   private int batch = -1;
 
+  // If application wants to collect scan metrics, it needs to
+  // call scan.setAttribute(SCAN_ATTRIBUTES_ENABLE, Bytes.toBytes(Boolean.TRUE))
+  static public String SCAN_ATTRIBUTES_METRICS_ENABLE =
+    "scan.attributes.metrics.enable";
+  static public String SCAN_ATTRIBUTES_METRICS_DATA =
+    "scan.attributes.metrics.data";
+
   /*
    * -1 means no caching
    */
