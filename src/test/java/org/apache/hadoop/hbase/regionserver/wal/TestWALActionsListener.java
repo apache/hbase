@@ -96,7 +96,7 @@ public class TestWALActionsListener {
       htd.addFamily(new HColumnDescriptor(b));
 
       HLogKey key = new HLogKey(b,b, 0, 0, HConstants.DEFAULT_CLUSTER_ID);
-      hlog.append(hri, key, edit, htd);
+      hlog.append(hri, key, edit, htd, true);
       if (i == 10) {
         hlog.registerWALActionsListener(laterobserver);
       }

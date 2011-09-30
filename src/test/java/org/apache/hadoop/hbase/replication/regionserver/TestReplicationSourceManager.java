@@ -174,7 +174,7 @@ public class TestReplicationSourceManager {
       LOG.info(i);
       HLogKey key = new HLogKey(hri.getRegionName(), test, seq++,
           System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
-      hlog.append(hri, key, edit, htd);
+      hlog.append(hri, key, edit, htd, true);
     }
 
     // Simulate a rapid insert that's followed
@@ -187,7 +187,7 @@ public class TestReplicationSourceManager {
     for (int i = 0; i < 3; i++) {
       HLogKey key = new HLogKey(hri.getRegionName(), test, seq++,
           System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
-      hlog.append(hri, key, edit, htd);
+      hlog.append(hri, key, edit, htd, true);
     }
 
     assertEquals(6, manager.getHLogs().get(slaveId).size());
@@ -199,7 +199,7 @@ public class TestReplicationSourceManager {
 
     HLogKey key = new HLogKey(hri.getRegionName(), test, seq++,
         System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
-    hlog.append(hri, key, edit, htd);
+    hlog.append(hri, key, edit, htd, true);
 
     assertEquals(1, manager.getHLogs().size());
 
