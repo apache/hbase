@@ -430,6 +430,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (!catalogTracker.verifyRootRegionLocation(timeout)) {
       this.assignmentManager.assignRoot();
       this.catalogTracker.waitForRoot();
+      //This guarantees that the transition has completed
+      this.assignmentManager.waitForAssignment(HRegionInfo.ROOT_REGIONINFO);
       assigned++;
     }
     LOG.info("-ROOT- assigned=" + assigned + ", rit=" + rit +
