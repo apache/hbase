@@ -169,7 +169,7 @@ public class TestTableInputFormat {
     trr.setScan(s);
     trr.setHTable(table);
 
-    trr.init();
+    trr.initialize(null, null);
     Result r = new Result();
     ImmutableBytesWritable key = new ImmutableBytesWritable();
 
