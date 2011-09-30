@@ -74,6 +74,10 @@
         and the master cluster will do its “best effort” to balance the stream
         of replication on the slave clusters by relying on randomization.
       </p>
+      <p>
+        As of version 0.92 HBase supports master/master and cyclic replication as
+        well as replication to multiple slaves.
+      </p>
       <img src="images/replication_overview.png"/>
     </section>
     <section name="Enabling replication">
@@ -104,10 +108,14 @@
         <p>
           In a separate thread, the edit is read from the log (as part of a batch)
           and only the KVs that are replicable are kept (that is, that they are part
-          of a family scoped GLOBAL in the family's schema and non-catalog so not
-          .META. or -ROOT-). When the buffer is filled, or the reader hits the
-          end of the file, the buffer is sent to a random region server on the
-          slave cluster.
+          of a family scoped GLOBAL in the family's schema, non-catalog so not
+          .META. or -ROOT-, and did not originate in the target slave cluster - in
+          case of cyclic replication).
+        </p>
+        <p>
+          The edit is then tagged with the master's cluster UUID.
+          When the buffer is filled, or the reader hits the end of the file,
+          the buffer is sent to a random region server on the slave cluster.
         </p>
         <p>
           Synchronously, the region server that receives the edits reads them
@@ -115,6 +123,8 @@
           Once all edits are read, each buffer is flushed using the normal HBase
           client (HTables managed by a HTablePool). This is done in order to
           leverage parallel insertion (MultiPut).
+          The master's cluster UUID is retained in the edits applied at the
+          slave cluster in order to allow cyclic replication.
         </p>
         <p>
           Back in the master cluster's region server, the offset for the current
@@ -393,18 +403,6 @@
             HBASE-2611, basically if a region server dies while recovering the
             queues of another dead RS, we will miss the data from the queues
             that weren't copied.
-        </li>
-        <li>
-            HBASE-2196, a master cluster can only support a single slave, some
-            refactoring is needed to support this.
-        </li>
-        <li>
-            HBASE-2195, edits are applied disregard their home cluster, it should
-            carry that data and check it.
-        </li>
-        <li>
-            HBASE-3130, the master cluster needs to be restarted if its region
-            servers lose their session with a slave cluster.
         </li>
       </ol>
     </section>
