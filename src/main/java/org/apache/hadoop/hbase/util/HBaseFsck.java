@@ -69,6 +69,7 @@ import org.apache.zookeeper.KeeperException;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.TreeMultimap;
 
 /**
  * Check consistency among the in-memory states of the master and the
@@ -103,6 +104,7 @@ public class HBaseFsck {
   // Empty regioninfo qualifiers in .META.
   private Set<Result> emptyRegionInfoQualifiers = new HashSet<Result>();
   private int numThreads = MAX_NUM_THREADS;
+  private HBaseAdmin admin;
 
   ThreadPoolExecutor executor; // threads to retrieve data from regionservers
 
@@ -113,18 +115,20 @@ public class HBaseFsck {
    * @throws MasterNotRunningException if the master is not running
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
-  public HBaseFsck(Configuration conf)
-    throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
+  public HBaseFsck(Configuration conf) throws MasterNotRunningException,
+      ZooKeeperConnectionException, IOException {
     this.conf = conf;
-
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    status = admin.getMaster().getClusterStatus();
-    connection = admin.getConnection();
-
     numThreads = conf.getInt("hbasefsck.numthreads", numThreads);
     executor = new ThreadPoolExecutor(0, numThreads,
-          THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
-          new LinkedBlockingQueue<Runnable>());
+        THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<Runnable>());
+  }
+
+  public void connect() throws MasterNotRunningException,
+      ZooKeeperConnectionException {
+    admin = new HBaseAdmin(conf);
+    status = admin.getMaster().getClusterStatus();
+    connection = admin.getConnection();
   }
 
   /**
@@ -536,6 +540,10 @@ public class HBaseFsck {
     final List<HbckInfo> backwards = new ArrayList<HbckInfo>();
     final RegionSplitCalculator<HbckInfo> sc = new RegionSplitCalculator<HbckInfo>(cmp);
 
+    // key = start split, values = set of splits in problem group
+    final Multimap<byte[], HbckInfo> overlapGroups = 
+      TreeMultimap.create(RegionSplitCalculator.BYTES_COMPARATOR, cmp);
+
     TInfo(String name) {
       this.tableName = name;
       deployedOn = new TreeSet <HServerAddress>();
@@ -582,26 +590,44 @@ public class HBaseFsck {
      * @return false if there are errors
      */
     public boolean checkRegionChain() {
-      
       int originalErrorsCount = errors.getErrorList().size();
       Multimap<byte[], HbckInfo> regions = sc.calcCoverage();
       SortedSet<byte[]> splits = sc.getSplits();
 
       byte[] prevKey = null;
-      for (byte[] key: splits) {
+      byte[] problemKey = null;
+      for (byte[] key : splits) {
         Collection<HbckInfo> ranges = regions.get(key);
         if (prevKey == null && !Bytes.equals(key, HConstants.EMPTY_BYTE_ARRAY)) {
           for (HbckInfo rng : ranges) {
+            // TODO offline fix region hole.
+
             errors.reportError(ERROR_CODE.FIRST_REGION_STARTKEY_NOT_EMPTY,
-                "First region should start with an empty key.",
+                "First region should start with an empty key. When HBase is "
+                + "online, create a new regio to plug the hole using hbck -fix",
                 this, rng);
           }
         }
-        
-        // Check if the startkeys are different
-        if (ranges.size() > 1) {
+
+        if (ranges.size() == 1) {
+          // this split key is ok -- no overlap, not a hole.
+          if (problemKey != null) {
+            LOG.warn("reached end of problem group: " + Bytes.toStringBinary(key));
+          }
+          problemKey = null; // fell through, no more problem.
+        } else if (ranges.size() > 1) {
+          // set the new problem key group name, if already have problem key, just
+          // keep using it.
+          if (problemKey == null) {
+            // only for overlap regions.
+            LOG.warn("Naming new problem group: " + Bytes.toStringBinary(key));
+            problemKey = key;
+          }
+          overlapGroups.putAll(problemKey, ranges);
+
+          // record errors
           ArrayList<HbckInfo> subRange = new ArrayList<HbckInfo>(ranges);
-          // this dumb and n^2 but this shouldn't happen often
+          //  this dumb and n^2 but this shouldn't happen often
           for (HbckInfo r1 : ranges) {
             subRange.remove(r1);
             for (HbckInfo r2 : subRange) {
@@ -614,30 +640,42 @@ public class HBaseFsck {
                 "Multiple regions have the same startkey: "
                     + Bytes.toStringBinary(key), this, r2);
               } else {
-            // overlap
-            errors.reportError(ERROR_CODE.OVERLAP_IN_REGION_CHAIN,
-                "There is an overlap in the region chain.",
-                this, r1);
+                // overlap
+                errors.reportError(ERROR_CODE.OVERLAP_IN_REGION_CHAIN,
+                    "There is an overlap in the region chain.",
+                    this, r1);
               }
             }
           }
-        }
-        
-        if (ranges.size() == 0) {
+
+        } else if (ranges.size() == 0) {
+          if (problemKey != null) {
+            LOG.warn("reached end of problem group: " + Bytes.toStringBinary(key));
+          }
+          problemKey = null;
+
           byte[] holeStopKey = sc.getSplits().higher(key);
           // if higher key is null we reached the top.
           if (holeStopKey != null) {
             // hole
             errors.reportError(ERROR_CODE.HOLE_IN_REGION_CHAIN,
-                "There is a hole in the region chain between "
-                + Bytes.toString(key) + " and " + Bytes.toString(holeStopKey));
+                "There is a hole in the region chain between " 
+                + Bytes.toStringBinary(key) + " and "
+                + Bytes.toStringBinary(holeStopKey)
+                + ".  When HBase is online, create a new regioninfo and region " 
+                + "dir to plug the hole.");
           }
-        }
+        } 
         prevKey = key;
       }
+
       if (details) {
         // do full region split map dump
-        dump(sc.getSplits(), regions);
+        dump(splits, regions);
+        dumpOverlapProblems(overlapGroups);
+        System.out.println("There are " + overlapGroups.keySet().size()
+            + " problem groups with " + overlapGroups.size()
+            + " problem regions");
       }
       return errors.getErrorList().size() == originalErrorsCount;
     }
@@ -648,7 +686,7 @@ public class HBaseFsck {
      * @param splits
      * @param regions
      */
-    void dump(TreeSet<byte[]> splits, Multimap<byte[], HbckInfo> regions) {
+    void dump(SortedSet<byte[]> splits, Multimap<byte[], HbckInfo> regions) {
       // we display this way because the last end key should be displayed as well.
       for (byte[] k : splits) {
         System.out.print(Bytes.toString(k) + ":\t");
@@ -659,7 +697,23 @@ public class HBaseFsck {
         System.out.println();
       }
     }
-    
+  }
+
+  public void dumpOverlapProblems(Multimap<byte[], HbckInfo> regions) {
+    // we display this way because the last end key should be displayed as
+    // well.
+    for (byte[] k : regions.keySet()) {
+      System.out.print(Bytes.toStringBinary(k) + ":\n");
+      for (HbckInfo r : regions.get(k)) {
+        System.out.print("[ " + r.toString() + ", "
+            + Bytes.toStringBinary(r.getEndKey()) + "]\n");
+      }
+      System.out.println("----");
+    }
+  }
+
+  public Multimap<byte[], HbckInfo> getOverlapGroups(String table) {
+    return tablesInfo.get(table).overlapGroups;
   }
 
   /**
@@ -857,7 +911,7 @@ public class HBaseFsck {
   /**
    * Maintain information about a particular region.
    */
-  static class HbckInfo implements KeyRange {
+  public static class HbckInfo implements KeyRange {
     boolean onlyEdits = false;
     MetaEntry metaEntry = null;
     FileStatus foundRegionDir = null;
@@ -1299,11 +1353,11 @@ public class HBaseFsck {
    * @param args
    * @throws Exception
    */
-  public static void main(String [] args) throws Exception {
+  public static void main(String[] args) throws Exception {
 
     // create a fsck object
     Configuration conf = HBaseConfiguration.create();
-    conf.set("fs.defaultFS", conf.get("hbase.rootdir"));
+    conf.set("fs.defaultFS", conf.get(HConstants.HBASE_DIR));
     HBaseFsck fsck = new HBaseFsck(conf);
     long sleepBeforeRerun = DEFAULT_SLEEP_BEFORE_RERUN;
 
@@ -1351,6 +1405,7 @@ public class HBaseFsck {
       }
     }
     // do the real work of fsck
+    fsck.connect();
     int code = fsck.doWork();
     // If we have changed the HBase state it is better to run fsck again
     // to see if we haven't broken something else in the process.
