@@ -267,15 +267,18 @@ false
         <para>
         </para>
       </section>
-      <section xml:id="ops.backup.fullshutdown.nn"><title>Backup NameNode</title>
-        <para>
-        </para>
-      </section>
       <section xml:id="ops.backup.fullshutdown.distcp"><title>Distcp</title>
-        <para>Distcp could be used to either copy the contents of the hbase directory in HDFS to either the same cluster, or do a different cluster.
+        <para>Distcp could be used to either copy the contents of the HBase directory in HDFS to either the same cluster in another directory, or 
+        to a different cluster.
         </para>
         <para>Note:  Distcp works in this situation because the cluster is down and there are no in-flight edits to files.  
-        This is not recommended on a live cluster.
+        Distcp-ing of files in the HBase directory is not generally recommended on a live cluster.
+        </para>
+      </section>
+      <section xml:id="ops.backup.fullshutdown.distcp"><title>Restore (if needed)</title>
+        <para>The backup of the hbase directory from HDFS is copied onto the 'real' hbase directory via distcp.  The act of copying these files 
+        creates new HDFS metadata, which is why a restore of the NameNode edits from the time of the HBase backup isn't required for this kind of
+        restore, because it's a restore (via distcp) of a specific HDFS directory (i.e., the HBase part) not the entire HDFS file-system.
         </para>
       </section>
     </section>
