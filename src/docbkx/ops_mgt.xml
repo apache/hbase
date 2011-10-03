@@ -89,13 +89,26 @@
 --peer.adr=server1,server2,server3:2181:/hbase TestTable</programlisting>
         </para>
     </section>
+    <section xml:id="export">
+       <title>Export</title>
+       <para>Export is a utility that will dump the contents of table to HDFS in a sequence file.  Invoke via:
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.Export &lt;tablename&gt; &lt;outputdir&gt; [&lt;versions&gt; [&lt;starttime&gt; [&lt;endtime&gt;]]]
+</programlisting>
+       </para>
+    </section>
+    <section xml:id="import">
+       <title>Import</title>
+       <para>Import is a utility that will load data that has been exported back into HBase.  Invoke via:
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.Import &lt;tablename&gt; &lt;inputdir&gt;
+</programlisting>
+       </para>
+    </section>
     <section xml:id="rowcounter">
        <title>RowCounter</title>
        <para>RowCounter is a utility that will count all the rows of a table.  This is a good utility to use
        as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
-<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter &lt;tablename&gt; [&lt;column1&gt; &lt;column2&gt;...]
 </programlisting>
-
        </para>
     </section>
            
@@ -240,8 +253,51 @@ false
   </section>
   <section xml:id="ops.backup">
     <title >HBase Backup</title>
-    <para>See <link xlink:href="http://blog.sematext.com/2011/03/11/hbase-backup-options/">HBase Backup Options</link> over on the Sematext Blog.
+    <para>There are two broad strategies for performing HBase backups: backing up with a full cluster shutdown, and backing up on a live cluster. 
+    Each approach has pros and cons.   
     </para>
+    <para>For additional information, see <link xlink:href="http://blog.sematext.com/2011/03/11/hbase-backup-options/">HBase Backup Options</link> over on the Sematext Blog.
+    </para>
+    <section xml:id="ops.backup.fullshutdown"><title>Full Shutdown Backup</title>
+      <para>Some environments can tolerate a periodic full shutdown of their HBase cluster, for example if it is being used a back-end analytic capacity
+      and not serving front-end web-pages.  The benefits are that the NameNode/Master are RegionServers are down, so there is no chance of missing
+      any in-flight changes to either StoreFiles or metadata.  The obvious con is that the cluster is down.  The steps include:
+      </para>
+      <section xml:id="ops.backup.fullshutdown.stop"><title>Stop HBase</title>
+        <para>
+        </para>
+      </section>
+      <section xml:id="ops.backup.fullshutdown.nn"><title>Backup NameNode</title>
+        <para>
+        </para>
+      </section>
+      <section xml:id="ops.backup.fullshutdown.distcp"><title>Distcp</title>
+        <para>Distcp could be used to either copy the contents of the hbase directory in HDFS to either the same cluster, or do a different cluster.
+        </para>
+        <para>Note:  Distcp works in this situation because the cluster is down and there are no in-flight edits to files.  
+        This is not recommended on a live cluster.
+        </para>
+      </section>
+    </section>
+    <section xml:id="ops.backup.live.replication"><title>Live Cluster Backup - Replication</title>
+      <para>This approach assumes that there is a second cluster.  
+      See the HBase page on <link xlink:href="http://hbase.apache.org/replication.html">replication</link> for more information.
+      </para>
+    </section>
+    <section xml:id="ops.backup.live.copytable"><title>Live Cluster Backup - CopyTable</title>
+      <para>The <xref linkend="copytable" /> utility could either be used to copy data from one table to another on the 
+      same cluster, or to copy data to another table on another cluster.
+      </para>
+      <para>Since the cluster is up, there is a risk that edits could be missed in the copy process.
+      </para>
+    </section>
+    <section xml:id="ops.backup.live.export"><title>Live Cluster Backup - Export</title>
+      <para>The <xref linkend="export" /> approach dumps the content of a table to HDFS on the same cluster.  To restore the data, the
+      <xref linkend="import" /> utility would be used.
+      </para>
+      <para>Since the cluster is up, there is a risk that edits could be missed in the export process.
+      </para>
+    </section>
   </section>
 
 </chapter>
