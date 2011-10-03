@@ -576,6 +576,9 @@ Release 0.92.0 - Unreleased
                are requested in a Get (Mikhail Bautin)
    HBASE-4487  The increment operation can release the rowlock before sync-ing
                the Hlog (dhruba borthakur)
+   HBASE-4526  special case for stopping master in hbase-daemon.sh is no longer
+               required (Roman Shaposhnik)
+       
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
