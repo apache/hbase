@@ -114,6 +114,13 @@ public class TestExecutorService {
     // Make sure threads are still around even after their timetolive expires.
     Thread.sleep(executor.keepAliveTimeInMillis * 2);
     assertEquals(maxThreads, pool.getPoolSize());
+
+    executorService.shutdown();
+
+    // Test that submit doesn't throw NPEs
+    executorService.submit(
+      new TestEventHandler(mockedServer, EventType.M_SERVER_SHUTDOWN,
+            lock, counter));
   }
 
   public static class TestEventHandler extends EventHandler {

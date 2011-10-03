@@ -67,6 +67,7 @@ Release 0.90.5 - Unreleased
    HBASE-4512  JVMClusterUtil throwing wrong exception when master thread cannot be created (Ram)
    HBASE-4212  TestMasterFailover fails occasionally (Gao Jinchao)
    HBASE-4515  User.getCurrent() can fail to initialize the current user
+   HBASE-4473  NPE when executors are down but events are still coming in
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
