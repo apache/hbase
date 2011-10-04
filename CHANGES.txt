@@ -15,6 +15,10 @@ Release 0.93.0 - Unreleased
   BUG FIXES
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)
 
+  TESTS
+   HBASE-4534  A new unit test for lazy seek and StoreScanner in general
+               (mikhail via jgray)
+
 
 Release 0.92.0 - Unreleased
   INCOMPATIBLE CHANGES
