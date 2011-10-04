@@ -581,6 +581,8 @@ Release 0.92.0 - Unreleased
                the Hlog (dhruba borthakur)
    HBASE-4526  special case for stopping master in hbase-daemon.sh is no longer
                required (Roman Shaposhnik)
+   HBASE-4520  Better handling of Bloom filter type discrepancy between HFile
+               and CF config (Mikhail Bautin)
        
 
   TASKS
