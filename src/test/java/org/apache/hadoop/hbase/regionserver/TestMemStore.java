@@ -533,6 +533,7 @@ public class TestMemStore extends TestCase {
    * @throws InterruptedException
    */
   public void testGetNextRow() throws Exception {
+    ReadWriteConsistencyControl.resetThreadReadPoint();
     addRows(this.memstore);
     // Add more versions to make it a little more interesting.
     Thread.sleep(1);
