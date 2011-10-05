@@ -70,6 +70,8 @@ Release 0.90.5 - Unreleased
    HBASE-4473  NPE when executors are down but events are still coming in
    HBASE-4537  TestUser imports breaking build against secure Hadoop
    HBASE-4481  TestMergeTool failed in 0.92 build 20
+   HBASE-4501  [replication] Shutting down a stream leaves recovered
+               sources running
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

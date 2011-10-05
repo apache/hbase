@@ -345,6 +345,7 @@ public class ReplicationSourceManager {
     LOG.info("Closing the following queue " + id + ", currently have "
         + sources.size() + " and another "
         + oldsources.size() + " that were recovered");
+    String terminateMessage = "Replication stream was removed by a user";
     ReplicationSourceInterface srcToRemove = null;
     List<ReplicationSourceInterface> oldSourcesToDelete =
         new ArrayList<ReplicationSourceInterface>();
@@ -355,6 +356,7 @@ public class ReplicationSourceManager {
       }
     }
     for (ReplicationSourceInterface src : oldSourcesToDelete) {
+      src.terminate(terminateMessage);
       closeRecoveredQueue((src));
     }
     LOG.info("Number of deleted recovered sources for " + id + ": "
@@ -370,7 +372,7 @@ public class ReplicationSourceManager {
       LOG.error("The queue we wanted to close is missing " + id);
       return;
     }
-    srcToRemove.terminate("Replication stream was removed by a user");
+    srcToRemove.terminate(terminateMessage);
     this.sources.remove(srcToRemove);
     this.zkHelper.deleteSource(id, true);
   }
