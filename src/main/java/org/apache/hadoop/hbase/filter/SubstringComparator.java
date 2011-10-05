@@ -26,7 +26,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * This comparator is for use with ColumnValueFilter, for filtering based on
+ * This comparator is for use with SingleColumnValueFilter, for filtering based on
  * the value of a given column. Use it to test if a given substring appears
  * in a cell value in the column. The comparison is case insensitive.
  * <p>
@@ -35,8 +35,8 @@ import java.io.IOException;
  * For example:
  * <p>
  * <pre>
- * ColumnValueFilter cvf =
- *   new ColumnValueFilter("col", ColumnValueFilter.CompareOp.EQUAL,
+ * SingleColumnValueFilter scvf =
+ *   new SingleColumnValueFilter("col", CompareOp.EQUAL,
  *     new SubstringComparator("substr"));
  * </pre>
  */
