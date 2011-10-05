@@ -106,16 +106,4 @@ public class ColumnCount {
     this.count = count;
   }
 
-
-  /**
-   * Check to see if needed to fetch more versions
-   * @param max
-   * @return true if more versions are needed, false otherwise
-   */
-  public boolean needMore(int max) {
-    if(this.count < max) {
-      return true;
-    }
-    return false;
-  }
 }

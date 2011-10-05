@@ -59,12 +59,6 @@ public class ScanQueryMatcher {
 
   /** Row the query is on */
   protected byte [] row;
-  
-  /** 
-   * True if we are only interested in the given exact set of columns. In that
-   * case we can use Bloom filters to avoid unnecessary disk seeks.
-   */
-  private boolean exactColumnQuery;
 
   /**
    * Constructs a ScanQueryMatcher for a Scan.
@@ -95,7 +89,6 @@ public class ScanQueryMatcher {
       // between rows, not between storefiles.
       this.columns = new ExplicitColumnTracker(columns, minVersions, maxVersions,
           ttl);
-      exactColumnQuery = true;
     }
   }
 
@@ -311,10 +304,6 @@ public class ScanQueryMatcher {
         kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
         null, 0, 0,
         null, 0, 0);
-  }
-
-  public boolean isExactColumnQuery() {
-    return exactColumnQuery;
   }
 
   /**

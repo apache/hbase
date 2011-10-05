@@ -21,13 +21,35 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.hbase.KeyValue;
 
-public abstract class AbstractKeyValueScanner implements KeyValueScanner {
+/**
+ * A "non-lazy" scanner which always does a real seek operation. Most scanners
+ * are inherited from this class.
+ */
+public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
 
   @Override
-  public boolean seekExactly(KeyValue kv, boolean forward) throws IOException {
-    return forward ? reseek(kv) : seek(kv);
+  public boolean requestSeek(KeyValue kv, boolean forward, boolean useBloom)
+      throws IOException {
+    return doRealSeek(this, kv, forward);
+  }
+
+  @Override
+  public boolean realSeekDone() {
+    return true;
+  }
+
+  @Override
+  public void enforceSeek() throws IOException {
+    throw new NotImplementedException("enforceSeek must not be called on a " +
+        "non-lazy scanner");
+  }
+
+  public static boolean doRealSeek(KeyValueScanner scanner,
+      KeyValue kv, boolean forward) throws IOException {
+    return forward ? scanner.reseek(kv) : scanner.seek(kv);
   }
 
 }

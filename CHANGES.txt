@@ -11,6 +11,7 @@ Release 0.93.0 - Unreleased
    HBASE-4477  Ability for an application to store metadata into the        
                transaction log (dhruba via jgray)
    HBASE-4145  Provide metrics for hbase client (Ming Ma)
+   HBASE-4465  Lazy-seek optimization for StoreFile scanners (mikhail/liyin)
 
   BUG FIXES
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)

@@ -26,14 +26,13 @@ import java.util.List;
 import java.util.SortedSet;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.AbstractKeyValueScanner;
-import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.NonLazyKeyValueScanner;
 
 /**
  * Utility scanner that wraps a sortable collection and serves
  * as a KeyValueScanner.
  */
-public class CollectionBackedScanner extends AbstractKeyValueScanner {
+public class CollectionBackedScanner extends NonLazyKeyValueScanner {
   final private Iterable<KeyValue> data;
   final KeyValue.KVComparator comparator;
   private Iterator<KeyValue> iter;
