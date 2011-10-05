@@ -445,24 +445,26 @@ admin.enableTable(table);
   <title>
   Number of Versions
   </title>
-  <para>The number of row versions to store is configured per column
+     <section xml:id="schema.versions.max"><title>Maximum Number of Versions</title>
+      <para>The maximum number of row versions to store is configured per column
       family via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>.
-      The default is 3.
+      The default for max versions is 3.
       This is an important parameter because as described in <xref linkend="datamodel" />
       section HBase does <emphasis>not</emphasis> overwrite row values, but rather
       stores different values per row by time (and qualifier).  Excess versions are removed during major
-      compactions.  The number of versions may need to be increased or decreased depending on application needs.
-  </para>
-  <para>It is not recommended setting the number of versions to an exceedingly high level (e.g., hundreds or more) unless those old values are 
-  very dear to you because this will greatly increase StoreFile size. 
-  </para>
+      compactions.  The number of max versions may need to be increased or decreased depending on application needs.
+      </para>
+      <para>It is not recommended setting the number of max versions to an exceedingly high level (e.g., hundreds or more) unless those old values are 
+      very dear to you because this will greatly increase StoreFile size. 
+      </para>
+     </section>
     <section xml:id="schema.minversions">
     <title>
     Minimum Number of Versions
     </title>
-    <para>Like number of row versions, the minimum number of row versions to keep is configured per column
+    <para>Like number of max row versions, the minimum number of row versions to keep is configured per column
       family via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>.
-      The default is 0, which means the feature is disabled.
+      The default for min versions is 0, which means the feature is disabled.
       The minimum number of row versions parameter is used together with the time-to-live parameter and can be combined with the
       number of row versions parameter to allow configurations such as
       "keep the last T minutes worth of data, at most N versions, <emphasis>but keep at least M versions around</emphasis>"
