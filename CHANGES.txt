@@ -19,6 +19,7 @@ Release 0.93.0 - Unreleased
   TESTS
    HBASE-4534  A new unit test for lazy seek and StoreScanner in general
                (mikhail via jgray)
+   HBASE-4545  TestHLog doesn't clean up after itself
 
 
 Release 0.92.0 - Unreleased
