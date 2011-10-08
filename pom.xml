@@ -137,6 +137,14 @@
       <organizationUrl>http://www.cloudera.com/</organizationUrl>
     </developer>
     <developer>
+      <id>larsh</id>
+      <name>Lars Hofhansl</name>
+      <email>larsh@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Salesforce.com</organization>
+      <organizationUrl>http://www.salesforce.com/</organizationUrl>
+    </developer>
+    <developer>
       <id>nspiegelberg</id>
       <name>Nicolas Spiegelberg</name>
       <email>nspiegelberg@fb.com</email>
