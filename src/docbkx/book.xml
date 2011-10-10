@@ -312,7 +312,7 @@ public static class MyReducer extends TableReducer&lt;Text, IntWritable, Immutab
       <para>A good general introduction on the strength and weaknesses modelling on
           the various non-rdbms datastores is Ian Varleys' Master thesis,
           <link xlink:href="http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf">No Relation: The Mixed Blessings of Non-Relational Databases</link>.
-          Recommended.
+          Recommended.  Also, read <xref linkend="keyvalue"/> for how HBase stores data internally.
       </para>
   <section xml:id="schema.creation">
   <title>
@@ -400,7 +400,7 @@ admin.enableTable(table);
        </para>
        <para>Most of the time small inefficiencies don't matter all that much.  Unfortunately,
          this is a case where they do.  Whatever patterns are selected for ColumnFamilies, attributes, and rowkeys they could be repeated
-       several billion times in your data</para>
+       several billion times in your data.  See <xref linkend="keyvalue"/> for more information on HBase stores data internally.</para>
        <section xml:id="keysize.cf"><title>Column Families</title>
          <para>Try to keep the ColumnFamily names as small as possible, preferably one character (e.g. "d" for data/default).
          </para> 
@@ -1615,6 +1615,8 @@ scan.setFilter(filter);
               Schubert Zhang's blog post on <link xlink:ref="http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html">HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs</link> makes for a thorough introduction to HBase's hfile.  Matteo Bertozzi has also put up a
               helpful description, <link xlink:href="http://th30z.blogspot.com/2011/02/hbase-io-hfile.html?spref=tw">HBase I/O: HFile</link>.
           </para>
+          <para>For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFile.html">HFile source code</link>.
+          </para>
       </section>
 
       <section xml:id="hfile_tool">
@@ -1630,6 +1632,40 @@ scan.setFilter(filter);
         usage for other things to do with the <classname>HFile</classname>
         tool.</para>
       </section>
+      </section>
+      <section xml:id="hfile.blocks">
+        <title>Blocks</title>
+        <para>StoreFiles are composed of blocks.  The blocksize is configured on a per-ColumnFamily basis.
+        </para>
+        <para>For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFileBlock.html">HFileBlock source code</link>.
+        </para>
+      </section>
+      <section xml:id="keyvalue">
+        <title>KeyValue</title>
+        <para>The KeyValue class is the heart of data storage in HBase.  KeyValue wraps a byte array and takes offsets and lengths into passed array
+         at where to start interpreting the content as KeyValue.
+        </para>
+        <para>The KeyValue format inside a byte array is:
+           <itemizedlist>
+             <listitem>keylength</listitem>
+             <listitem>valuelength</listitem>
+             <listitem>key</listitem>
+             <listitem>value</listitem>
+           </itemizedlist>
+        </para>
+        <para>The Key is further decomposed as:
+           <itemizedlist>
+             <listitem>rowlength</listitem>
+             <listitem>row (i.e., the rowkey)</listitem>
+             <listitem>columnfamilylength</listitem>
+             <listitem>columnfamily</listitem>
+             <listitem>columnqualifier</listitem>
+             <listitem>timestamp</listitem>
+             <listitem>keytype (e.g., Put, Delete)</listitem>
+           </itemizedlist>
+        </para>
+        <para>For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/KeyValue.html">KeyValue source code</link>.
+        </para>
       </section>
       <section xml:id="compaction">
         <title>Compaction</title>
