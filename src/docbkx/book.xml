@@ -1022,6 +1022,8 @@ long explicitTimeInMs = 555;  // just an example
 put.add(Bytes.toBytes("cf"), Bytes.toBytes("attr1"), explicitTimeInMs, Bytes.toBytes(data));
 htable.put(put);
 </programlisting>
+          Caution:  the version timestamp is internally by HBase for things like time-to-live calculations.  
+          It's usually best to avoid setting the timestamp yourself.
           </para>
           </section>
           
@@ -1121,7 +1123,8 @@ htable.put(put);
 
 	<section xml:id="arch.catalog">
 	 <title>Catalog Tables</title>
-	  <para>
+	  <para>The catalog tables -ROOT- and .META. exist as HBase tables.  They are are filtered out 
+	  of the HBase shell's <code>list</code> command, but they are in fact tables just like any other.
      </para>
 	  <section xml:id="arch.catalog.root">
 	   <title>ROOT</title>
