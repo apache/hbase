@@ -120,6 +120,12 @@ mvn test
 mvn test -Dtest=TestXYZ
           </programlisting>
        </section>       
+       <section xml:id="maven.build.commands.unit2"> 
+          <title>Run a Few Unit Tests</title>
+          <programlisting>
+mvn test -Dtest=TestXYZ,TestABC
+          </programlisting>
+       </section>       
        <section xml:id="maven.build.commands.unit.package"> 
           <title>Run all Unit Tests for a Package</title>
           <programlisting>
@@ -376,6 +382,9 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
          <section xml:id="reviewboard">
             <title>ReviewBoard</title>
           <para>Larger patches should go through <link xlink:href="http://reviews.apache.org">ReviewBoard</link>.
+          </para>
+          <para>For more information on how to use ReviewBoard, see
+           <link xlink:href="http://www.reviewboard.org/docs/manual/1.5/">the ReviewBoard documentation</link>.
           </para>
         </section> 
         <section xml:id="committing.patches">
