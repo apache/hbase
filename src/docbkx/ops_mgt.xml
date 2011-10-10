@@ -301,6 +301,32 @@ false
       <para>Since the cluster is up, there is a risk that edits could be missed in the export process.
       </para>
     </section>
+  </section>  <!--  backup -->
+  <section xml:id="ops.capacity"><title>Capacity Planning</title>
+    <section xml:id="ops.capacity.storage"><title>Storage</title>
+      <para>A common question for HBase administrators is estimating how much storage will be required for an HBase cluster.
+      There are several apsects to consider, the most important of which is what data load into the cluster.  Start
+      with a solid understanding of how HBase handles data internally (KeyValue).
+      </para>
+      <section xml:id="ops.capacity.storage.kv"><title>KeyValue</title>
+        <para>HBase storage will be dominated by KeyValues.  See <xref linkend="keyvalue" /> and <xref linkend="keysize" /> for 
+        how HBase stores data internally.  
+        </para>
+        <para>It is critical to understand that there is a KeyValue instance for every attribute stored in a row, and the 
+        rowkey-length, ColumnFamily name-length and attribute lengths will drive the size of the database more than any other
+        factor.
+        </para>
+      </section>
+      <section xml:id="ops.capacity.storage.sf"><title>StoreFiles and Blocks</title>
+        <para>KeyValue instances are aggregated into blocks, and the blocksize is configurable on a per-ColumnFamily basis.
+        Blocks are aggregated into StoreFile's.  See <xref linkend="regions.arch" />.
+        </para>
+      </section>
+      <section xml:id="ops.capacity.storage.hdfs"><title>HDFS Block Replication</title>
+        <para>Because HBase runs on top of HDFS, factor in HDFS block replication into storage calculations.
+        </para>
+      </section>
+    </section>
   </section>
 
 </chapter>
