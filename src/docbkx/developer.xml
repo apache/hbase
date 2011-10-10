@@ -100,7 +100,7 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
        <title>Maven Build Commands</title>
        <para>All commands executed from the local HBase project directory.
        </para>
-       <para>Note:  use Maven 2, not Maven 3.
+       <para>Note: use Maven 3 (Maven 2 may work but we suggest you use Maven 3).
        </para>
        <section xml:id="maven.build.commands.compile"> 
           <title>Compile</title>
@@ -125,8 +125,15 @@ mvn test -Dtest=TestXYZ
           <programlisting>
 mvn test -Dtest=org.apache.hadoop.hbase.client.*
           </programlisting>
-       </section>       
-           
+       </section>
+       <section xml:id="maven.build.commanas.integration.tests"> 
+          <title>Integration Tests</title>
+          <para>HBase 0.92 added a <varname>verify</varname> maven target. Invoking it with run all the phases up to and including the verify phase via the maven <link xlink:href="http://maven.apache.org/plugins/maven-failsafe-plugin/">failsafe plugin</link>, running all the unit tests as well as the long running unit and integration tests.
+          </para>
+          <programlisting>
+mvn verify
+          </programlisting>
+      </section>
     </section>
   
     <section xml:id="getting.involved"> 
@@ -202,12 +209,6 @@ mvn test -Dtest=org.apache.hadoop.hbase.client.*
               TODO...
               </programlisting>
            </para>
-         </section>
-        <section xml:id="integration.tests"> 
-          <title>Integration Tests</title>
-          <para>HBase 0.92 added a <varname>verify</varname> maven target.  Invocation will
-          run a suite of long-running tests via the maven <link xlink:href="http://maven.apache.org/plugins/maven-failsafe-plugin/">failsafe plugin</link>.
-          </para>
          </section>
           <section xml:id="code.standards">
            <title>Code Standards</title>
