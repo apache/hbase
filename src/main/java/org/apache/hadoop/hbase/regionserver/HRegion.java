@@ -1109,7 +1109,7 @@ public class HRegion implements HeapSize { // , Writable{
    * because a Snapshot was not properly persisted.
    */
   public boolean flushcache() throws IOException {
-    MonitoredTask status = TaskMonitor.get().createStatus("Flushing" + this);
+    MonitoredTask status = TaskMonitor.get().createStatus("Flushing " + this);
     try {
       if (this.closed.get()) {
         status.abort("Skipped: closed");
