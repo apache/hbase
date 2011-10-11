@@ -172,6 +172,9 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     // List
     addToMap(List.class, code++);
     addToMap(ColumnPrefixFilter.class, code++);
+
+    addToMap(KeyOnlyFilter.class, code++);
+
   }
 
   private Class<?> declaredClass;
