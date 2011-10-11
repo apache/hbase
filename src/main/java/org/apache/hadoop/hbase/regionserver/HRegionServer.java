@@ -1009,7 +1009,8 @@ public class HRegionServer implements HRegionInterface,
       this.metrics.blockCacheCount.set(lruBlockCache.size());
       this.metrics.blockCacheFree.set(lruBlockCache.getFreeSize());
       this.metrics.blockCacheSize.set(lruBlockCache.getCurrentSize());
-      double ratio = lruBlockCache.getStats().getHitRatio();
+
+      double ratio = lruBlockCache.getStats().getIncrementalHitRatio();
       int percent = (int) (ratio * 100);
       this.metrics.blockCacheHitRatio.set(percent);
     }

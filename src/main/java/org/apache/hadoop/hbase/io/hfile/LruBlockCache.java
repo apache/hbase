@@ -587,6 +587,9 @@ public class LruBlockCache implements BlockCache, HeapSize {
     private final AtomicLong evictionCount = new AtomicLong(0);
     private final AtomicLong evictedCount = new AtomicLong(0);
 
+    private long lastHitCount = 0;
+    private long lastRqCount = 0;
+
     public void miss() {
       missCount.incrementAndGet();
       accessCount.incrementAndGet();
@@ -627,6 +630,19 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
     public double getHitRatio() {
       return ((float)getHitCount()/(float)getRequestCount());
+    }
+
+    public synchronized double getIncrementalHitRatio() {
+      long curHitCount = getHitCount();
+      long curRqCount = getRequestCount();
+      double hitRatio = 0;
+      if (curRqCount >= lastRqCount) {
+        hitRatio = (double) (curHitCount - lastHitCount)
+            / (double) (curRqCount - lastRqCount);
+      }
+      lastHitCount = curHitCount;
+      lastRqCount = curRqCount;
+      return hitRatio;
     }
 
     public double getMissRatio() {
