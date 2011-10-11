@@ -547,6 +547,11 @@ public class HMaster extends Thread implements HMasterInterface,
       this.closed.set(true);
     }
 
+    if (!this.shutdownRequested.get()) {  // shutdown not by request
+      shutdown();  // indicated that master is shutting down
+      startShutdown();  // get started with shutdown: stop scanners etc.
+    }
+
     // Wait for all the remaining region servers to report in.
     this.serverManager.letRegionServersShutdown();
 
