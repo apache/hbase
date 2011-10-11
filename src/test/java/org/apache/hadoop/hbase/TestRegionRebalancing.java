@@ -144,6 +144,13 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     float slop = conf.getFloat("hbase.regions.slop", (float)0.1);
     if (slop <= 0) slop = 1;
 
+    // waiting for load balancer running
+    try {
+      Thread.sleep(MiniHBaseCluster.WAIT_FOR_LOADBALANCER);
+    } catch (InterruptedException e1) {
+      LOG.error("Got InterruptedException when waiting for load balance " + e1);
+    }
+
     for (int i = 0; i < 5; i++) {
       success = true;
       // make sure all the regions are reassigned before we test balance

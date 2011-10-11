@@ -58,6 +58,8 @@ public class MiniHBaseCluster {
     UGI = UserGroupInformation.getCurrentUGI();
   }
 
+  static long PREFERRED_ASSIGNMENT = 1000L;
+  static long WAIT_FOR_LOADBALANCER = 2000L;
   /**
    * Start a MiniHBaseCluster.
    * @param conf Configuration to be used for cluster
@@ -68,7 +70,10 @@ public class MiniHBaseCluster {
   throws IOException {
     this.conf = conf;
     conf.set(HConstants.MASTER_PORT, "0");
-    conf.setLong("hbase.master.applyPreferredAssignment.period", 0);
+    conf.setLong("hbase.master.applyPreferredAssignment.period",
+        PREFERRED_ASSIGNMENT);
+    conf.setLong("hbase.master.holdRegionForBestLocality.period",
+        PREFERRED_ASSIGNMENT / 5);
     init(numRegionServers);
   }
 

@@ -607,12 +607,14 @@ public class RegionManager {
           String preferredHost =
             this.master.getPreferredRegionToRegionServerMapping().get(name);
 
-          if (preferredHost != null && hostName.startsWith(preferredHost)) {
-            LOG.debug("Doing Preferred Region Assignment for : " + name +
-                " to the " + hostName);
-          } else if (holdRegionForBestRegionserver ||
-              quickStartRegionServerSet.contains(preferredHost)) {
-            continue;
+          if (preferredHost != null) {
+            if (hostName.startsWith(preferredHost)) {
+              LOG.debug("Doing Preferred Region Assignment for : " + name +
+                  " to the " + hostName);
+            } else if (holdRegionForBestRegionserver ||
+                quickStartRegionServerSet.contains(preferredHost)) {
+              continue;
+            }
           }
         }
 
