@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -48,9 +49,7 @@ import org.apache.hadoop.hbase.util.ByteBloomFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
-import org.codehaus.jettison.json.JSONArray;
-import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
+import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * Implements pretty-printing functionality for {@link HFile}s.
@@ -74,6 +73,9 @@ public class HFilePrettyPrinter {
 
   private List<Path> files = new ArrayList<Path>();
   private int count;
+
+  // JSON encoder
+  private ObjectMapper mapper = new ObjectMapper();
 
   private static final String FOUR_SPACES = "    ";
 
@@ -256,24 +258,19 @@ public class HFilePrettyPrinter {
       // dump key value
       if (printKey) {
         if (outputJSON) {
-          JSONObject jsonKv = new JSONObject();
+          Map<String, Object> jsonKv = new HashMap<String, Object>();
           // dump key value
-          try {
-            if (printKey) {
-              jsonKv.put("key", kv);
-              if (printValue) {
-                jsonKv.put("value", Bytes.toStringBinary(kv.getValue()));
-              }
-            }
-          } catch (JSONException e) {
-            e.printStackTrace();
+          jsonKv.put("key", kv.toStringMap());
+          if (printValue) {
+            jsonKv.put("value", Bytes.toStringBinary(kv.getValue()));
           }
           if (first) {
             first = false;
           } else {
             System.out.print(",");
           }
-          System.out.print(jsonKv);
+          // encode and print JSON
+          System.out.print(mapper.writeValueAsString(jsonKv));
         } else {
           // normal, "pretty string" output
           System.out.print("K: " + kv);
