@@ -290,6 +290,7 @@ public class RegionSplitter {
         // sort the RS by the number of regions they have
         List<HServerAddress> serversLeft = Lists.newArrayList(daughterRegions
             .keySet());
+        Preconditions.checkState(rsSizes.keySet().containsAll(serversLeft));
         Collections.sort(serversLeft, new Comparator<HServerAddress>() {
           public int compare(HServerAddress o1, HServerAddress o2) {
             return rsSizes.get(o1).compareTo(rsSizes.get(o2));
