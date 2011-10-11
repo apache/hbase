@@ -45,7 +45,7 @@ public class HBaseTest
 {
   static {
       // make the root logger display only errors
-      Logger.getRootLogger().setLevel(Level.ERROR);
+      Logger.getRootLogger().setLevel(Level.DEBUG);
       // enable debugging for our package
       Logger.getLogger("org.apache.hadoop.hbase.manual").setLevel(Level.DEBUG);
       Logger.getLogger("org.apache.hadoop.hbase.client").setLevel(Level.INFO);
