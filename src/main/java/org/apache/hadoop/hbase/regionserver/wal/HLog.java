@@ -33,6 +33,7 @@ import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -1922,30 +1923,25 @@ public class HLog implements Syncable {
       usage();
       System.exit(-1);
     }
-    boolean dump = true;
-    if (args[0].compareTo("--dump") != 0) {
-      if (args[0].compareTo("--split") == 0) {
-        dump = false;
-
-      } else {
-        usage();
-        System.exit(-1);
+    // either dump using the HLogPrettyPrinter or split, depending on args
+    if (args[0].compareTo("--dump") == 0) {
+      HLogPrettyPrinter.run(Arrays.copyOfRange(args, 1, args.length));
+    } else if (args[0].compareTo("--split") == 0) {
+      Configuration conf = HBaseConfiguration.create();
+      for (int i = 1; i < args.length; i++) {
+        try {
+          conf.set("fs.default.name", args[i]);
+          conf.set("fs.defaultFS", args[i]);
+          Path logPath = new Path(args[i]);
+          split(conf, logPath);
+        } catch (Throwable t) {
+          t.printStackTrace(System.err);
+          System.exit(-1);
+        }
       }
-    }
-    Configuration conf = HBaseConfiguration.create();
-    for (int i = 1; i < args.length; i++) {
-      try {
-      Path logPath = new Path(args[i]);
-      if (dump) {
-        dump(conf, logPath);
-      } else {
-        split(conf, logPath);
-      }
-      } catch (Throwable t) {
-        t.printStackTrace();
-        System.exit(-1);
-      }
+    } else {
+      usage();
+      System.exit(-1);
     }
   }
-
 }

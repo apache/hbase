@@ -24,6 +24,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.google.common.primitives.Longs;
 import org.apache.commons.logging.Log;
@@ -624,6 +626,23 @@ public class KeyValue implements Writable, HeapSize {
     return row + "/" + family +
       (family != null && family.length() > 0? ":" :"") +
       qualifier + "/" + timestamp + "/" + Type.codeToType(type);
+  }
+
+  /**
+   * Produces a string map for this key/value pair. Useful for programmatic use
+   * and manipulation of the data stored in an HLogKey, for example, printing
+   * as JSON. Values are left out due to their tendency to be large. If needed,
+   * they can be added manually.
+   *
+   * @return the Map<String,?> containing data from this key
+   */
+  public Map<String, Object> toStringMap() {
+    Map<String, Object> stringMap = new HashMap<String, Object>();
+    stringMap.put("row", Bytes.toStringBinary(getRow()));
+    stringMap.put("family", Bytes.toStringBinary(getFamily()));
+    stringMap.put("qualifier", Bytes.toStringBinary(getQualifier()));
+    stringMap.put("timestamp", getTimestamp());
+    return stringMap;
   }
 
   //---------------------------------------------------------------------------
