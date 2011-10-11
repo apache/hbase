@@ -2678,13 +2678,14 @@ public class TestHRegion extends HBaseTestCase {
     int num_unique_rows = 10;
     int duplicate_multiplier =2;
     int num_storefiles = 4;
+    int version = 0;
 
     for (int f =0 ; f < num_storefiles; f++) {
 	for (int i = 0; i < duplicate_multiplier; i ++) {
 		for (int j = 0; j < num_unique_rows; j++) {
 			Put put = new Put(Bytes.toBytes("row" + j));
-			put.add(fam1, qf1, val1);
-			region.put(put);
+			put.add(fam1, qf1, version++, val1);
+          region.put(put);
 		}
 	    }
 	    region.flushcache();
@@ -2696,6 +2697,7 @@ public class TestHRegion extends HBaseTestCase {
 	StoreFile.Reader reader = storefile.getReader();
 	reader.loadFileInfo();
       reader.loadBloomfilter();
+      assertEquals(num_unique_rows * duplicate_multiplier, reader.getEntries());
 	assertEquals(num_unique_rows, reader.getFilterEntries());
     }
 
@@ -2707,7 +2709,9 @@ public class TestHRegion extends HBaseTestCase {
 	StoreFile.Reader reader = storefile.getReader();
 	reader.loadFileInfo();
       reader.loadBloomfilter();
-	assertEquals(num_unique_rows, reader.getFilterEntries());
+	assertEquals(num_unique_rows * duplicate_multiplier * num_storefiles,
+          reader.getEntries());
+      assertEquals(num_unique_rows, reader.getFilterEntries());
     }
 
   }
