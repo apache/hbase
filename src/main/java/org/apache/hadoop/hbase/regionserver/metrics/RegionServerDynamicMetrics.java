@@ -20,10 +20,13 @@
 
 package org.apache.hadoop.hbase.regionserver.metrics;
 
+import java.lang.reflect.Method;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -51,6 +54,9 @@ public class RegionServerDynamicMetrics implements Updater {
   private MetricsRecord metricsRecord;
   private MetricsContext context;
   private final RegionServerDynamicStatistics rsDynamicStatistics;
+  private Method updateMbeanInfoIfMetricsListChanged = null;
+  private static final Log LOG =
+    LogFactory.getLog(RegionServerDynamicStatistics.class);
 
   /**
    * The metrics variables are public:
@@ -65,6 +71,15 @@ public class RegionServerDynamicMetrics implements Updater {
                             this.context,
                             "RegionServerDynamicStatistics");
     this.rsDynamicStatistics = new RegionServerDynamicStatistics(this.registry);
+    try {
+      updateMbeanInfoIfMetricsListChanged =
+        this.rsDynamicStatistics.getClass().getSuperclass()
+        .getDeclaredMethod("updateMbeanInfoIfMetricsListChanged",
+            new Class[]{});
+      updateMbeanInfoIfMetricsListChanged.setAccessible(true);
+    } catch (Exception e) {
+      LOG.error(e);
+    }
   }
 
   public static RegionServerDynamicMetrics newInstance() {
@@ -78,6 +93,14 @@ public class RegionServerDynamicMetrics implements Updater {
     MetricsLongValue m = (MetricsLongValue)registry.get(name);
     if (m == null) {
       m = new MetricsLongValue(name, this.registry);
+      try {
+        if (updateMbeanInfoIfMetricsListChanged != null) {
+          updateMbeanInfoIfMetricsListChanged.invoke(this.rsDynamicStatistics,
+              new Object[]{});
+        }
+      } catch (Exception e) {
+        LOG.error(e);
+      }
     }
     m.set(amt);
   }
@@ -89,6 +112,14 @@ public class RegionServerDynamicMetrics implements Updater {
     MetricsTimeVaryingRate m = (MetricsTimeVaryingRate)registry.get(name);
     if (m == null) {
       m = new MetricsTimeVaryingRate(name, this.registry);
+      try {
+        if (updateMbeanInfoIfMetricsListChanged != null) {
+          updateMbeanInfoIfMetricsListChanged.invoke(this.rsDynamicStatistics,
+              new Object[]{});
+        }
+      } catch (Exception e) {
+        LOG.error(e);
+      }
     }
     if (numOps > 0) {
       m.inc(numOps, amt);
