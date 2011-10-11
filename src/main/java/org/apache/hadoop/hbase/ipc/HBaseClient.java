@@ -537,6 +537,8 @@ public class HBaseClient {
         }
       } catch (IOException e) {
         markClosed(e);
+      } catch (Throwable te) {
+        markClosed((IOException)new IOException().initCause(te));
       }
     }
 
