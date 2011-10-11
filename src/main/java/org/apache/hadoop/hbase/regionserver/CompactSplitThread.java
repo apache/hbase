@@ -31,9 +31,6 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -51,10 +48,36 @@ class CompactSplitThread extends Thread {
   private final HRegionServer server;
   private final Configuration conf;
 
-  private final BlockingQueue<HRegion> compactionQueue =
-    new LinkedBlockingQueue<HRegion>();
+  private final PriorityCompactionQueue compactionQueue =
+    new PriorityCompactionQueue();
 
-  private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
+  /** The priorities for a compaction request. */
+  public enum Priority implements Comparable<Priority> {
+    //NOTE: All priorities should be numbered consecutively starting with 1.
+    //The highest priority should be 1 followed by all lower priorities.
+    //Priorities can be changed at anytime without requiring any changes to the
+    //queue.
+
+    /** HIGH_BLOCKING should only be used when an operation is blocked until a
+     * compact / split is done (e.g. a MemStore can't flush because it has
+     * "too many store files" and is blocking until a compact / split is done)
+     */
+    HIGH_BLOCKING(1),
+    /** A normal compaction / split request */
+    NORMAL(2),
+    /** A low compaction / split request -- not currently used */
+    LOW(3);
+
+    int value;
+
+    Priority(int value) {
+      this.value = value;
+    }
+
+    int getInt() {
+      return value;
+    }
+  }
 
   /** @param server */
   public CompactSplitThread(HRegionServer server) {
@@ -73,9 +96,6 @@ class CompactSplitThread extends Thread {
       try {
         r = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
         if (r != null && !this.server.isStopRequested()) {
-          synchronized (regionsInQueue) {
-            regionsInQueue.remove(r);
-          }
           lock.lock();
           try {
             // Don't interrupt us while we are working
@@ -108,7 +128,6 @@ class CompactSplitThread extends Thread {
         }
       }
     }
-    regionsInQueue.clear();
     compactionQueue.clear();
     LOG.info(getName() + " exiting");
   }
@@ -117,18 +136,29 @@ class CompactSplitThread extends Thread {
    * @param r HRegion store belongs to
    * @param why Why compaction requested -- used in debug messages
    */
-  public synchronized void compactionRequested(final HRegion r,
+  public synchronized void requestCompaction(final HRegion r,
       final String why) {
-    compactionRequested(r, false, why);
+    requestCompaction(r, false, why, Priority.NORMAL);
   }
+
+  public synchronized void requestCompaction(final HRegion r,
+      final String why, Priority p) {
+    requestCompaction(r, false, why, p);
+  }
+
+  public synchronized void requestCompaction(final HRegion r,
+      final boolean force, final String why) {
+    requestCompaction(r, force, why, Priority.NORMAL);
+  }
+
 
   /**
    * @param r HRegion store belongs to
    * @param force Whether next compaction should be major
    * @param why Why compaction requested -- used in debug messages
    */
-  public synchronized void compactionRequested(final HRegion r,
-      final boolean force, final String why) {
+  public synchronized void requestCompaction(final HRegion r,
+      final boolean force, final String why, Priority priority) {
 
     boolean addedToQueue = false;
 
@@ -137,21 +167,16 @@ class CompactSplitThread extends Thread {
     }
 
     r.setForceMajorCompaction(force);
-    synchronized (regionsInQueue) {
-      if (!regionsInQueue.contains(r)) {
-        compactionQueue.add(r);
-        regionsInQueue.add(r);
-        addedToQueue = true;
-      }
-    }
 
     // only log if actually added to compaction queue...
     if (addedToQueue && LOG.isDebugEnabled()) {
       LOG.debug("Compaction " + (force? "(major) ": "") +
         "requested for region " + r.getRegionNameAsString() +
         "/" + r.getRegionInfo().getEncodedName() +
-        (why != null && !why.isEmpty()? " because: " + why: ""));
+        (why != null && !why.isEmpty()? " because: " + why: "") +
+        "; Priority: " + priority + "; Compaction queue size: " + compactionQueue.size());
     }
+    compactionQueue.add(r, priority);
   }
 
   private void split(final HRegion region, final byte [] midKey)

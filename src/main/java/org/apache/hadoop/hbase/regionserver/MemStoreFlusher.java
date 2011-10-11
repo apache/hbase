@@ -212,7 +212,8 @@ class MemStoreFlusher extends Thread implements FlushRequester {
           LOG.warn("Region " + region.getRegionNameAsString() + " has too many " +
             "store files; delaying flush up to " + this.blockingWaitTime + "ms");
         }
-        this.server.compactSplitThread.compactionRequested(region, getName());
+        this.server.compactSplitThread.requestCompaction(region, getName(),
+          CompactSplitThread.Priority.HIGH_BLOCKING);
         // Put back on the queue.  Have it come back out of the queue
         // after a delay of this.blockingWaitTime / 100 ms.
         this.flushQueue.add(fqe.requeue(this.blockingWaitTime / 100));
@@ -247,7 +248,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     }
     try {
       if (region.flushcache()) {
-        server.compactSplitThread.compactionRequested(region, getName());
+        server.compactSplitThread.requestCompaction(region, getName());
       }
     } catch (DroppedSnapshotException ex) {
       // Cache flush can fail in a few places. If it fails in a critical
@@ -325,7 +326,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
       regionsToCompact.add(biggestMemStoreRegion);
     }
     for (HRegion region : regionsToCompact) {
-      server.compactSplitThread.compactionRequested(region, getName());
+      server.compactSplitThread.requestCompaction(region, getName());
     }
   }
 

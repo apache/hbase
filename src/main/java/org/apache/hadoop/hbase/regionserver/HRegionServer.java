@@ -889,7 +889,7 @@ public class HRegionServer implements HRegionInterface,
           if (r != null && r.isMajorCompaction()) {
             // Queue a compaction.  Will recognize if major is needed.
             this.instance.compactSplitThread.
-              compactionRequested(r, getName() + " requests major compaction");
+              requestCompaction(r, getName() + " requests major compaction");
           }
         } catch (IOException e) {
           LOG.warn("Failed major compaction check on " + r, e);
@@ -1349,7 +1349,7 @@ public class HRegionServer implements HRegionInterface,
               region.flushcache();
               region.shouldSplit(true);
               // force a compaction; split will be side-effect.
-              compactSplitThread.compactionRequested(region,
+              compactSplitThread.requestCompaction(region,
                 e.msg.getType().name());
               break;
 
@@ -1357,7 +1357,7 @@ public class HRegionServer implements HRegionInterface,
             case MSG_REGION_COMPACT:
               // Compact a region
               region = getRegion(info.getRegionName());
-              compactSplitThread.compactionRequested(region,
+              compactSplitThread.requestCompaction(region,
                 e.msg.isType(Type.MSG_REGION_MAJOR_COMPACT),
                 e.msg.getType().name());
               break;
@@ -1427,7 +1427,7 @@ public class HRegionServer implements HRegionInterface,
         // Startup a compaction early if one is needed, if region has references
         // or if a store has too many store files
         if (region.hasReferences() || region.hasTooManyStoreFiles()) {
-          this.compactSplitThread.compactionRequested(region,
+          this.compactSplitThread.requestCompaction(region,
             region.hasReferences() ? "Region has references on open" :
                                      "Region has too many store files");
         }

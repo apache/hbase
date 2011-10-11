@@ -787,6 +787,8 @@ Release 0.21.0 - Unreleased
                and other helper classes
    HBASE-2845  Small edit of shell main help page cutting down some on white
                space and text
+   HBASE-2646  Compaction requests should be prioritized to prevent blocking
+               (Jeff Whiting via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
