@@ -515,10 +515,15 @@ public class HMaster extends Thread implements HMasterInterface,
   /** Main processing loop */
   @Override
   public void run() {
-    joinCluster();
-    startServiceThreads();
-    /* Main processing loop */
+   try {
+     joinCluster();
+     startServiceThreads();
+   }catch (IOException e) {
+     LOG.fatal("Unhandled exception. Master quits.", e);
+     return;
+   }
     try {
+      /* Main processing loop */
       FINISHED: while (!this.closed.get()) {
         // check if we should be shutting down
         if (this.shutdownRequested.get()) {
@@ -582,56 +587,58 @@ public class HMaster extends Thread implements HMasterInterface,
    * master was started following a failover. In the second case, it inspects
    * the region server directory and gets their regions assignment.
    */
-  private void joinCluster()  {
-      LOG.debug("Checking cluster state...");
-      HServerAddress rootLocation =
-        this.zooKeeperWrapper.readRootRegionLocation();
-      List<HServerAddress> addresses = this.zooKeeperWrapper.scanRSDirectory();
-      // Check if this is a fresh start of the cluster
-      if (addresses.isEmpty()) {
-        LOG.debug("Master fresh start, proceeding with normal startup");
-        splitLogAfterStartup();
-        return;
-      }
-      // Failover case.
-      LOG.info("Master failover, ZK inspection begins...");
-      boolean isRootRegionAssigned = false;
-      Map <byte[], HRegionInfo> assignedRegions =
-        new HashMap<byte[], HRegionInfo>();
-      // We must:
-      // - contact every region server to add them to the regionservers list
-      // - get their current regions assignment
-      // TODO: Run in parallel?
-      for (HServerAddress address : addresses) {
-        HRegionInfo[] regions = null;
-        try {
-          HRegionInterface hri =
-            this.connection.getHRegionConnection(address, false);
-          HServerInfo info = hri.getHServerInfo();
-          LOG.debug("Inspection found server " + info.getServerName());
-          this.serverManager.recordNewServer(info, true);
-          regions = hri.getRegionsAssignment();
-        } catch (IOException e) {
-          LOG.error("Failed contacting " + address.toString(), e);
-          continue;
-        }
-        for (HRegionInfo r: regions) {
-          if (r.isRootRegion()) {
-            this.connection.setRootRegionLocation(new HRegionLocation(r, rootLocation));
-            this.regionManager.setRootRegionLocation(rootLocation);
-            // Undo the unassign work in the RegionManager constructor
-            this.regionManager.removeRegion(r);
-            isRootRegionAssigned = true;
-          } else if (r.isMetaRegion()) {
-            MetaRegion m = new MetaRegion(new HServerAddress(address), r);
-            this.regionManager.addMetaRegionToScan(m);
-          }
-          assignedRegions.put(r.getRegionName(), r);
-        }
-      }
-      LOG.info("Inspection found " + assignedRegions.size() + " regions, " +
-        (isRootRegionAssigned ? "with -ROOT-" : "but -ROOT- was MIA"));
+  private void joinCluster() throws IOException  {
+    LOG.debug("Checking cluster state...");
+
+    List<HServerAddress> addresses = this.zooKeeperWrapper.scanRSDirectory();
+    // Check if this is a fresh start of the cluster
+    if (addresses.isEmpty()) {
+      LOG.debug("Master fresh start, proceeding with normal startup");
       splitLogAfterStartup();
+      return;
+    }
+    // Failover case.
+    LOG.info("Master failover, ZK inspection begins...");
+    // only read the rootlocation if it is failover
+    HServerAddress rootLocation =
+      this.zooKeeperWrapper.readRootRegionLocation();
+    boolean isRootRegionAssigned = false;
+    Map <byte[], HRegionInfo> assignedRegions =
+      new HashMap<byte[], HRegionInfo>();
+    // We must:
+    // - contact every region server to add them to the regionservers list
+    // - get their current regions assignment
+    // TODO: Run in parallel?
+    for (HServerAddress address : addresses) {
+      HRegionInfo[] regions = null;
+      try {
+        HRegionInterface hri =
+          this.connection.getHRegionConnection(address, false);
+        HServerInfo info = hri.getHServerInfo();
+        LOG.debug("Inspection found server " + info.getServerName());
+        this.serverManager.recordNewServer(info, true);
+        regions = hri.getRegionsAssignment();
+      } catch (IOException e) {
+        LOG.error("Failed contacting " + address.toString(), e);
+        continue;
+      }
+      for (HRegionInfo r: regions) {
+        if (r.isRootRegion()) {
+          this.connection.setRootRegionLocation(new HRegionLocation(r, rootLocation));
+          this.regionManager.setRootRegionLocation(rootLocation);
+          // Undo the unassign work in the RegionManager constructor
+          this.regionManager.removeRegion(r);
+          isRootRegionAssigned = true;
+        } else if (r.isMetaRegion()) {
+          MetaRegion m = new MetaRegion(new HServerAddress(address), r);
+          this.regionManager.addMetaRegionToScan(m);
+        }
+        assignedRegions.put(r.getRegionName(), r);
+      }
+    }
+    LOG.info("Inspection found " + assignedRegions.size() + " regions, " +
+      (isRootRegionAssigned ? "with -ROOT-" : "but -ROOT- was MIA"));
+    splitLogAfterStartup();
   }
 
   /*

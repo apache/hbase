@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.zookeeper;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
@@ -111,7 +112,7 @@ public class ZooKeeperWrapper implements Watcher {
 
   private String quorumServers = null;
   private final int sessionTimeout;
-  private ZooKeeper zooKeeper;
+  private RecoverableZooKeeper recoverableZK;
 
   /*
    * All the HBase directories are hosted under this parent
@@ -151,21 +152,17 @@ public class ZooKeeperWrapper implements Watcher {
     return INSTANCES.get(name);
   }
   // creates only one instance
-  public static ZooKeeperWrapper createInstance(Configuration conf, String name) {
+  public static ZooKeeperWrapper createInstance(Configuration conf, String name)
+  throws IOException {
     if (getInstance(conf, name) != null) {
       return getInstance(conf, name);
     }
     ZooKeeperWrapper.createLock.lock();
     try {
       if (getInstance(conf, name) == null) {
-        try {
-          String fullname = getZookeeperClusterKey(conf, name);
-          ZooKeeperWrapper instance = new ZooKeeperWrapper(conf, fullname);
-          INSTANCES.put(fullname, instance);
-        }
-        catch (Exception e) {
-          LOG.error("<" + name + ">" + "Error creating a ZooKeeperWrapper " + e);
-        }
+        String fullname = getZookeeperClusterKey(conf, name);
+        ZooKeeperWrapper instance = new ZooKeeperWrapper(conf, fullname);
+        INSTANCES.put(fullname, instance);
       }
     }
     finally {
@@ -207,44 +204,40 @@ public class ZooKeeperWrapper implements Watcher {
     rgnsInTransitZNode  = getZNode(parentZNode, regionsInTransitZNodeName);
     masterElectionZNode = getZNode(parentZNode, masterAddressZNodeName);
     clusterStateZNode   = getZNode(parentZNode, stateZNodeName);
-
-    connectToZk();
+    int retryNum = conf.getInt("zookeeper.connection.retry.num",3);
+    int retryFreq = conf.getInt("zookeeper.connection.retry.freq",1000);
+    connectToZk(retryNum,retryFreq);
   }
 
-  public void connectToZk() throws IOException {
+  public void connectToZk(int retryNum, int retryFreq)
+  throws IOException {
     try {
       LOG.info("Connecting to zookeeper");
-      if(zooKeeper != null) {
-        zooKeeper.close();
+      if(recoverableZK != null) {
+        recoverableZK.close();
         LOG.error("<" + instanceName + ">" + " Closed existing zookeeper client");
       }
-      zooKeeper = new ZooKeeper(quorumServers, sessionTimeout, this);
+      recoverableZK = new RecoverableZooKeeper(quorumServers, sessionTimeout, this,
+          retryNum, retryFreq);
       LOG.debug("<" + instanceName + ">" + " Connected to zookeeper");
       // Ensure we are actually connected
-      ensureZkAvailable(10);
+      ensureZkAvailable();
     } catch (IOException e) {
       LOG.error("<" + instanceName + "> " + "Failed to create ZooKeeper object: " + e);
-      throw new IOException(e);
+      throw e;
     } catch (InterruptedException e) {
       LOG.error("<" + instanceName + " >" + "Error closing ZK connection: " + e);
-      throw new IOException(e);
+      throw new InterruptedIOException();
     }
   }
 
-  private void ensureZkAvailable(int maxRetries)
-  throws IOException, InterruptedException {
-    while (maxRetries-- > 0) {
-      try {
-        zooKeeper.exists(parentZNode, false);
-        return;
-      } catch(KeeperException.ConnectionLossException cle) {
-        LOG.info("Received ZK ConnectionLossException, ZK not done initializing"
-            + ", retrying connect to ZK after 1 second sleep");
-        Thread.sleep(1000);
-      } catch(KeeperException ke) {
-        LOG.error("Received abnormal ZK exception, aborting", ke);
-        throw new IOException(ke);
-      }
+  private void ensureZkAvailable() throws IOException, InterruptedException {
+    try {
+      recoverableZK.exists(parentZNode, false);
+      return;
+    } catch(KeeperException ke) {
+      LOG.error("Received ZK exception. ZK is not available", ke);
+      throw new IOException(ke);
     }
   }
 
@@ -437,7 +430,7 @@ public class ZooKeeperWrapper implements Watcher {
    * is up-to-date from when we begin the operation.
    */
   public void sync(String path) {
-    this.zooKeeper.sync(path, null, null);
+    this.recoverableZK.sync(path, null, null);
   }
 
   /**
@@ -449,7 +442,7 @@ public class ZooKeeperWrapper implements Watcher {
    */
   public boolean exists(String znode, boolean watch) {
     try {
-      return zooKeeper.exists(getZNode(parentZNode, znode), watch ? this : null)
+      return recoverableZK.exists(getZNode(parentZNode, znode), watch ? this : null)
              != null;
     } catch (KeeperException e) {
       LOG.error("Received KeeperException on exists() call, aborting", e);
@@ -462,7 +455,7 @@ public class ZooKeeperWrapper implements Watcher {
 
   /** @return ZooKeeper used by this wrapper. */
   public ZooKeeper getZooKeeper() {
-    return zooKeeper;
+    return recoverableZK.getZooKeeper();
   }
 
   /**
@@ -471,7 +464,7 @@ public class ZooKeeperWrapper implements Watcher {
    * @return long session ID of this ZooKeeper session.
    */
   public long getSessionID() {
-    return zooKeeper.getSessionId();
+    return recoverableZK.getSessionId();
   }
 
   /**
@@ -480,7 +473,7 @@ public class ZooKeeperWrapper implements Watcher {
    * @return byte[] password of this ZooKeeper session.
    */
   public byte[] getSessionPassword() {
-    return zooKeeper.getSessionPasswd();
+    return recoverableZK.getSessionPassword();
   }
 
   /** @return host:port list of quorum servers. */
@@ -490,7 +483,7 @@ public class ZooKeeperWrapper implements Watcher {
 
   /** @return true if currently connected to ZooKeeper, false otherwise. */
   public boolean isConnected() {
-    return zooKeeper.getState() == States.CONNECTED;
+    return recoverableZK.getState() == States.CONNECTED;
   }
 
   /**
@@ -518,7 +511,7 @@ public class ZooKeeperWrapper implements Watcher {
    */
   public void setClusterStateWatch() {
     try {
-      zooKeeper.exists(clusterStateZNode, this);
+      recoverableZK.exists(clusterStateZNode, this);
     } catch (InterruptedException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to check on ZNode " + clusterStateZNode, e);
     } catch (KeeperException e) {
@@ -538,11 +531,11 @@ public class ZooKeeperWrapper implements Watcher {
     try {
       if(up) {
         byte[] data = Bytes.toBytes("up");
-        zooKeeper.create(clusterStateZNode, data,
+        recoverableZK.create(clusterStateZNode, data,
             Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         LOG.debug("<" + instanceName + ">" + "State node wrote in ZooKeeper");
       } else {
-        zooKeeper.delete(clusterStateZNode, -1);
+        recoverableZK.delete(clusterStateZNode, -1);
         LOG.debug("<" + instanceName + ">" + "State node deleted in ZooKeeper");
       }
       return true;
@@ -570,7 +563,7 @@ public class ZooKeeperWrapper implements Watcher {
   public boolean watchMasterAddress(Watcher watcher)
   throws KeeperException {
     try {
-      Stat s = zooKeeper.exists(masterElectionZNode, watcher);
+      Stat s = recoverableZK.exists(masterElectionZNode, watcher);
       LOG.debug("<" + instanceName + ">" + " Set watcher on master address ZNode " + masterElectionZNode);
       return s != null;
     } catch (KeeperException e) {
@@ -611,7 +604,7 @@ public class ZooKeeperWrapper implements Watcher {
   throws KeeperException {
     byte[] data;
     try {
-      data = zooKeeper.getData(znode, watcher, null);
+      data = recoverableZK.getData(znode, watcher, null);
     } catch (InterruptedException e) {
       // This should not happen
       return null;
@@ -631,11 +624,11 @@ public class ZooKeeperWrapper implements Watcher {
    */
   public boolean ensureExists(final String znode) {
     try {
-      Stat stat = zooKeeper.exists(znode, false);
+      Stat stat = recoverableZK.exists(znode, false);
       if (stat != null) {
         return true;
       }
-      zooKeeper.create(znode, new byte[0],
+      recoverableZK.create(znode, new byte[0],
                        Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
       LOG.debug("<" + instanceName + ">" + "Created ZNode " + znode);
       return true;
@@ -706,7 +699,7 @@ public class ZooKeeperWrapper implements Watcher {
     throws KeeperException, InterruptedException {
     if (recursive) {
       LOG.info("<" + instanceName + ">" + "deleteZNode get children for " + znode);
-      List<String> znodes = this.zooKeeper.getChildren(znode, false);
+      List<String> znodes = this.recoverableZK.getChildren(znode, false);
       if (znodes != null && znodes.size() > 0) {
         for (String child : znodes) {
           String childFullPath = getZNode(znode, child);
@@ -715,14 +708,14 @@ public class ZooKeeperWrapper implements Watcher {
         }
       }
     }
-    this.zooKeeper.delete(znode, -1);
+    this.recoverableZK.delete(znode, -1);
     LOG.debug("<" + instanceName + ">" + "Deleted ZNode " + znode);
   }
 
   private boolean createRootRegionLocation(String address) {
     byte[] data = Bytes.toBytes(address);
     try {
-      zooKeeper.create(rootRegionZNode, data, Ids.OPEN_ACL_UNSAFE,
+      recoverableZK.create(rootRegionZNode, data, Ids.OPEN_ACL_UNSAFE,
                        CreateMode.PERSISTENT);
       LOG.debug("<" + instanceName + ">" + "Created ZNode " + rootRegionZNode + " with data " + address);
       return true;
@@ -738,7 +731,7 @@ public class ZooKeeperWrapper implements Watcher {
   private boolean updateRootRegionLocation(String address) {
     byte[] data = Bytes.toBytes(address);
     try {
-      zooKeeper.setData(rootRegionZNode, data, -1);
+      recoverableZK.setData(rootRegionZNode, data, -1);
       LOG.debug("<" + instanceName + ">" + "SetData of ZNode " + rootRegionZNode + " with " + address);
       return true;
     } catch (KeeperException e) {
@@ -789,7 +782,7 @@ public class ZooKeeperWrapper implements Watcher {
     String addressStr = address.toString();
     byte[] data = Bytes.toBytes(addressStr);
     try {
-      zooKeeper.create(masterElectionZNode, data, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+      recoverableZK.create(masterElectionZNode, data, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
       LOG.debug("<" + instanceName + ">" + "Wrote master address " + address + " to ZooKeeper");
       return true;
     } catch (InterruptedException e) {
@@ -812,7 +805,7 @@ public class ZooKeeperWrapper implements Watcher {
     byte[] data = Bytes.toBytes(info.getServerAddress().toString());
     String znode = joinPath(rsZNode, info.getServerName());
     try {
-      zooKeeper.create(znode, data, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+      recoverableZK.create(znode, data, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
       LOG.debug("<" + instanceName + ">" + "Created ZNode " + znode
           + " with data " + info.getServerAddress().toString());
       return true;
@@ -834,10 +827,10 @@ public class ZooKeeperWrapper implements Watcher {
     byte[] data = Bytes.toBytes(info.getServerAddress().toString());
     String znode = rsZNode + ZNODE_PATH_SEPARATOR + info.getServerName();
     try {
-      zooKeeper.setData(znode, data, -1);
+      recoverableZK.setData(znode, data, -1);
       LOG.debug("<" + instanceName + ">" + "Updated ZNode " + znode
           + " with data " + info.getServerAddress().toString());
-      zooKeeper.getData(znode, watcher, null);
+      recoverableZK.getData(znode, watcher, null);
       return true;
     } catch (KeeperException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to update " + znode + " znode in ZooKeeper: " + e);
@@ -871,10 +864,10 @@ public class ZooKeeperWrapper implements Watcher {
    */
   public void clearRSDirectory() {
     try {
-      List<String> nodes = zooKeeper.getChildren(rsZNode, false);
+      List<String> nodes = recoverableZK.getChildren(rsZNode, false);
       for (String node : nodes) {
         LOG.debug("<" + instanceName + ">" + "Deleting node: " + node);
-        zooKeeper.delete(joinPath(this.rsZNode, node), -1);
+        recoverableZK.delete(joinPath(this.rsZNode, node), -1);
       }
     } catch (KeeperException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to delete " + rsZNode + " znodes in ZooKeeper: " + e);
@@ -889,7 +882,7 @@ public class ZooKeeperWrapper implements Watcher {
   public int getRSDirectoryCount() {
     Stat stat = null;
     try {
-      stat = zooKeeper.exists(rsZNode, false);
+      stat = recoverableZK.exists(rsZNode, false);
     } catch (KeeperException e) {
       LOG.warn("Problem getting stats for " + rsZNode, e);
     } catch (InterruptedException e) {
@@ -901,7 +894,7 @@ public class ZooKeeperWrapper implements Watcher {
   private boolean checkExistenceOf(String path) {
     Stat stat = null;
     try {
-      stat = zooKeeper.exists(path, false);
+      stat = recoverableZK.exists(path, false);
     } catch (KeeperException e) {
       LOG.warn("<" + instanceName + ">" + "checking existence of " + path, e);
     } catch (InterruptedException e) {
@@ -916,7 +909,7 @@ public class ZooKeeperWrapper implements Watcher {
    */
   public void close() {
     try {
-      zooKeeper.close();
+      recoverableZK.close();
       INSTANCES.remove(instanceName);
       LOG.debug("<" + instanceName + ">" + "Closed connection with ZooKeeper; " + this.rootRegionZNode);
     } catch (InterruptedException e) {
@@ -995,7 +988,7 @@ public class ZooKeeperWrapper implements Watcher {
     }
     try {
       if (checkExistenceOf(znode)) {
-        nodes = zooKeeper.getChildren(znode, this);
+        nodes = recoverableZK.getChildren(znode, this);
         for (String node : nodes) {
           getDataAndWatch(znode, node, this);
         }
@@ -1019,7 +1012,7 @@ public class ZooKeeperWrapper implements Watcher {
       String path = joinPath(parentZNode, znode);
       // TODO: ZK-REFACTOR: remove existance check?
       if (checkExistenceOf(path)) {
-        data = zooKeeper.getData(path, watcher, null);
+        data = recoverableZK.getData(path, watcher, null);
       }
     } catch (KeeperException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to read " + znode + " znode in ZooKeeper: " + e);
@@ -1060,13 +1053,13 @@ public class ZooKeeperWrapper implements Watcher {
       LOG.error("<" + instanceName + ">" + "unable to ensure parent exists: " + parentPath);
     }
     byte[] data = Bytes.toBytes(strData);
-    Stat stat = this.zooKeeper.exists(path, false);
+    Stat stat = this.recoverableZK.exists(path, false);
     if (failOnWrite || stat == null) {
-      this.zooKeeper.create(path, data,
+      this.recoverableZK.create(path, data,
           Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
       LOG.debug("<" + instanceName + ">" + "Created " + path + " with data " + strData);
     } else {
-      this.zooKeeper.setData(path, data, -1);
+      this.recoverableZK.setData(path, data, -1);
       LOG.debug("<" + instanceName + ">" + "Updated " + path + " with data " + strData);
     }
   }
@@ -1121,7 +1114,7 @@ public class ZooKeeperWrapper implements Watcher {
     String fullyQualifiedZNodeName = getZNode(parentZNode, zNodeName);
     try
     {
-      zooKeeper.delete(fullyQualifiedZNodeName, version);
+      recoverableZK.delete(fullyQualifiedZNodeName, version);
     }
     catch (InterruptedException e)
     {
@@ -1141,9 +1134,9 @@ public class ZooKeeperWrapper implements Watcher {
     String fullyQualifiedZNodeName = getZNode(parentZNode, zNodeName);
 
     try {
-      zooKeeper.exists(fullyQualifiedZNodeName, this);
-      zooKeeper.getData(fullyQualifiedZNodeName, this, null);
-      zooKeeper.getChildren(fullyQualifiedZNodeName, this);
+      recoverableZK.exists(fullyQualifiedZNodeName, this);
+      recoverableZK.getData(fullyQualifiedZNodeName, this, null);
+      recoverableZK.getChildren(fullyQualifiedZNodeName, this);
     } catch (InterruptedException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to create ZNode " + fullyQualifiedZNodeName + " in ZooKeeper", e);
     } catch (KeeperException e) {
@@ -1160,7 +1153,7 @@ public class ZooKeeperWrapper implements Watcher {
 
     try {
       // create the znode
-      zooKeeper.create(fullyQualifiedZNodeName, data, Ids.OPEN_ACL_UNSAFE, createMode);
+      recoverableZK.create(fullyQualifiedZNodeName, data, Ids.OPEN_ACL_UNSAFE, createMode);
       LOG.debug("<" + instanceName + ">" + "Created ZNode " + fullyQualifiedZNodeName + " in ZooKeeper");
     } catch (KeeperException.NodeExistsException nee) {
       LOG.debug("<" + instanceName + "> " + "ZNode " + fullyQualifiedZNodeName + " already exists, still setting watch");
@@ -1183,7 +1176,7 @@ public class ZooKeeperWrapper implements Watcher {
     byte[] data;
     try {
       String fullyQualifiedZNodeName = getZNode(parentZNode, znodeName);
-      data = zooKeeper.getData(fullyQualifiedZNodeName, this, stat);
+      data = recoverableZK.getData(fullyQualifiedZNodeName, this, stat);
     } catch (InterruptedException e) {
       throw new IOException(e);
     } catch (KeeperException e) {
@@ -1196,9 +1189,9 @@ public class ZooKeeperWrapper implements Watcher {
   public boolean writeZNode(String znodeName, byte[] data, int version, boolean watch) throws IOException {
       try {
         String fullyQualifiedZNodeName = getZNode(parentZNode, znodeName);
-        zooKeeper.setData(fullyQualifiedZNodeName, data, version);
+        recoverableZK.setData(fullyQualifiedZNodeName, data, version);
         if(watch) {
-          zooKeeper.getData(fullyQualifiedZNodeName, this, null);
+          recoverableZK.getData(fullyQualifiedZNodeName, this, null);
         }
         return true;
       } catch (InterruptedException e) {
@@ -1359,7 +1352,7 @@ public class ZooKeeperWrapper implements Watcher {
     try {
       if (checkExistenceOf(znode)) {
         synchronized(unassignedZNodesWatched) {
-          nodes = zooKeeper.getChildren(znode, this);
+          nodes = recoverableZK.getChildren(znode, this);
           for (String node : nodes) {
             String znodePath = joinPath(znode, node);
             if(!unassignedZNodesWatched.contains(znodePath)) {
