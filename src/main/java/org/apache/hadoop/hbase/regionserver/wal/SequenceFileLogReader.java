@@ -21,6 +21,9 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.lang.Class;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -29,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.io.SequenceFile;
+import org.mortbay.log.Log;
 
 public class SequenceFileLogReader implements HLog.Reader {
 
@@ -93,6 +97,10 @@ public class SequenceFileLogReader implements HLog.Reader {
 
   Configuration conf;
   WALReader reader;
+  // Needed logging exceptions
+  Path path;
+  int edit = 0;
+  long entryStart = 0;
 
   public SequenceFileLogReader() { }
 
@@ -100,12 +108,17 @@ public class SequenceFileLogReader implements HLog.Reader {
   public void init(FileSystem fs, Path path, Configuration conf)
       throws IOException {
     this.conf = conf;
+    this.path = path;
     reader = new WALReader(fs, path, conf);
   }
 
   @Override
   public void close() throws IOException {
-    reader.close();
+    try {
+      reader.close();
+    } catch (IOException ioe) {
+      throw addFileInfoToException(ioe);
+    }
   }
 
   @Override
@@ -115,21 +128,30 @@ public class SequenceFileLogReader implements HLog.Reader {
 
   @Override
   public HLog.Entry next(HLog.Entry reuse) throws IOException {
-    if (reuse == null) {
+    this.entryStart = this.reader.getPosition();
+    HLog.Entry e = reuse;
+    if (e == null) {
       HLogKey key = HLog.newKey(conf);
       WALEdit val = new WALEdit();
-      if (reader.next(key, val)) {
-        return new HLog.Entry(key, val);
-      }
-    } else if (reader.next(reuse.getKey(), reuse.getEdit())) {
-      return reuse;
+      e = new HLog.Entry(key, val);
     }
-    return null;
+    boolean b = false;
+    try {
+      b = this.reader.next(e.getKey(), e.getEdit());
+    } catch (IOException ioe) {
+      throw addFileInfoToException(ioe);
+    }
+    edit++;
+    return b? e: null;
   }
 
   @Override
   public void seek(long pos) throws IOException {
-    reader.seek(pos);
+    try {
+      reader.seek(pos);
+    } catch (IOException ioe) {
+      throw addFileInfoToException(ioe);
+    }
   }
 
   @Override
@@ -137,4 +159,36 @@ public class SequenceFileLogReader implements HLog.Reader {
     return reader.getPosition();
   }
 
+  private IOException addFileInfoToException(final IOException ioe)
+  throws IOException {
+    long pos = -1;
+    try {
+      pos = getPosition();
+    } catch (IOException e) {
+      Log.warn("Failed getting position to add to throw", e);
+    }
+
+    // See what SequenceFile.Reader thinks is the end of the file
+    long end = Long.MAX_VALUE;
+    try {
+      Field fEnd = SequenceFile.Reader.class.getDeclaredField("end");
+      fEnd.setAccessible(true);
+      end = fEnd.getLong(this.reader);
+    } catch(Exception e) { /* reflection fail. keep going */ }
+
+    String msg = (this.path == null? "": this.path.toString()) +
+      ", entryStart=" + entryStart + ", pos=" + pos +
+      ((end == Long.MAX_VALUE) ? "" : ", end=" + end) +
+      ", edit=" + this.edit;
+
+    // Enhance via reflection so we don't change the original class type
+    try {
+      return (IOException) ioe.getClass()
+        .getConstructor(String.class)
+        .newInstance(msg)
+        .initCause(ioe);
+    } catch(Exception e) { /* reflection fail. keep going */ }
+
+    return ioe;
+  }
 }
