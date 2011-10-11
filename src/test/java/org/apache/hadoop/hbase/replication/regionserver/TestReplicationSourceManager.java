@@ -107,6 +107,10 @@ public class TestReplicationSourceManager {
           conf.get(HConstants.ZOOKEEPER_QUORUM)+":" +
           conf.get("hbase.zookeeper.property.clientPort")+":/1");
 
+    // set port to 0 so that RS picks a port dynamically to
+    // avoid clash over the default port in unit test runs.
+    conf.set(HConstants.REGIONSERVER_PORT, "0");
+
     HRegionServer server = new HRegionServer(conf);
     ReplicationZookeeperWrapper helper = new ReplicationZookeeperWrapper(
         server.getZooKeeperWrapper(), conf,
