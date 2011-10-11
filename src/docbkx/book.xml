@@ -609,8 +609,8 @@ admin.enableTable(table);
       <para>Another common question is whether one should prefer rows or columns.  The context is typically in extreme cases of wide
       tables, such as having 1 row with 1 million attributes, or 1 million rows with 1 columns apiece.  
       </para>
-      <para>Winner:  Rows (generally speaking).  To be clear, this guideline is in the context is in extremely wide cases, not where 
-      one needs to store a few dozen or hundred columns.
+      <para>Winner:  Rows (generally speaking).  To be clear, this guideline is in the context is in extremely wide cases, not in the 
+      standard use-case where one needs to store a few dozen or hundred columns.
       </para>
     </section>
   </section>
@@ -1687,6 +1687,38 @@ scan.setFilter(filter);
         </para>
         <para>For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/KeyValue.html">KeyValue source code</link>.
         </para>
+        <section xml:id="keyvalue.example"><title>Example</title>
+          <para>To emphasize the points above, examine what happens with two Puts for two different columns for the same row:</para>
+           <itemizedlist>
+             <listitem>Put #1:  <code>rowkey=row1, cf:attr1=value1</code></listitem>
+             <listitem>Put #2:  <code>rowkey=row1, cf:attr2=value2</code></listitem>
+             </itemizedlist>
+          <para>Even though these are for the same row, a KeyValue is created for each column:</para>
+          <para>Key portion for Put #1:
+           <itemizedlist>
+             <listitem>rowlength (4)</listitem>
+             <listitem>row (row1)</listitem>
+             <listitem>columnfamilylength (2)</listitem>
+             <listitem>columnfamily (cf)</listitem>
+             <listitem>columnqualifier (attr1)</listitem>
+             <listitem>timestamp (server time of Put)</listitem>
+             <listitem>keytype (Put)</listitem>
+           </itemizedlist>
+          </para>
+          <para>Key portion for Put #2:
+           <itemizedlist>
+             <listitem>rowlength (4)</listitem>
+             <listitem>row (row1)</listitem>
+             <listitem>columnfamilylength (2)</listitem>
+             <listitem>columnfamily (cf)</listitem>
+             <listitem>columnqualifier (attr2)</listitem>
+             <listitem>timestamp (server time of Put)</listitem>
+             <listitem>keytype (Put)</listitem>
+           </itemizedlist>
+          </para>
+        </section>
+       <para>It is critical to understand that the rowkey, ColumnFamily, and column (aka columnqualifier) are embedded within
+       the KeyValue instance.  The longer these identifiers are, the bigger the KeyValue is.</para>
       </section>
       <section xml:id="compaction">
         <title>Compaction</title>
