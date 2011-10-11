@@ -610,6 +610,7 @@ public class FSUtils {
     if (!(fs instanceof DistributedFileSystem)) {
       return;
     }
+    DistributedFileSystem dfs = (DistributedFileSystem)fs;
     LOG.info("Recovering file" + p);
     long startWaiting = System.currentTimeMillis();
 
@@ -617,8 +618,7 @@ public class FSUtils {
     boolean recovered = false;
     while (!recovered) {
       try {
-        FSDataOutputStream out = fs.append(p);
-        out.close();
+        dfs.recoverLease(p);
         recovered = true;
       } catch (IOException e) {
         e = RemoteExceptionHandler.checkIOException(e);

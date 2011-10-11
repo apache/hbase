@@ -596,7 +596,7 @@ public class TestHLogSplit {
           assertTrue("Failed to list status ", false);
         }
         flushToConsole("Juliet: split not started, sleeping a bit...");
-        Threads.sleep(100);
+        Threads.sleep(10);
       }
 
       Path julietLog = new Path(hlogDir, HLOG_FILE_PREFIX + ".juliet");
