@@ -71,17 +71,21 @@ import java.util.TreeSet;
  * To limit the maximum number of values returned for each call to next(),
  * execute {@link #setBatch(int) setBatch}.
  * <p>
+ * To limit the maximum number of values returned per row per Column Family,
+ * execute {@link #setMaxResultsPerColumnFamily(int) setMaxResultsPerColumnFamily}.
+ * <p>
  * To add a filter, execute {@link #setFilter(org.apache.hadoop.hbase.filter.Filter) setFilter}.
  * <p>
  * Expert: To explicitly disable server-side block caching for this scan,
  * execute {@link #setCacheBlocks(boolean)}.
  */
 public class Scan implements Writable {
-  private static final byte SCAN_VERSION = (byte)1;
+  private static final byte SCAN_VERSION = (byte)2;
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
   private int batch = -1;
+  private int storeLimit = -1;
   private int caching = -1;
   private boolean cacheBlocks = true;
   private Filter filter = null;
@@ -131,6 +135,7 @@ public class Scan implements Writable {
     stopRow  = scan.getStopRow();
     maxVersions = scan.getMaxVersions();
     batch = scan.getBatch();
+    storeLimit = scan.getMaxResultsPerColumnFamily();
     caching = scan.getCaching();
     cacheBlocks = scan.getCacheBlocks();
     filter = scan.getFilter(); // clone?
@@ -159,6 +164,7 @@ public class Scan implements Writable {
     this.stopRow = get.getRow();
     this.filter = get.getFilter();
     this.maxVersions = get.getMaxVersions();
+    this.storeLimit = get.getMaxResultsPerColumnFamily();
     this.tr = get.getTimeRange();
     this.familyMap = get.getFamilyMap();
   }
@@ -290,6 +296,14 @@ public class Scan implements Writable {
   }
 
   /**
+   * Set the maximum number of values to return per row per Column Family
+   * @param limit the maximum number of values returned / row / CF
+   */
+  public void setMaxResultsPerColumnFamily(int limit) {
+    this.storeLimit = limit;
+  }
+
+  /**
    * Set the number of rows for caching that will be passed to scanners.
    * If not set, the default setting from {@link HTable#getScannerCaching()} will apply.
    * Higher caching values will enable faster scanners but will use more memory.
@@ -383,6 +397,13 @@ public class Scan implements Writable {
   }
 
   /**
+   * @return maximum number of values to return per row per CF
+   */
+  public int getMaxResultsPerColumnFamily() {
+    return this.storeLimit;
+  }
+
+  /**
    * @return caching the number of rows fetched when calling next on a scanner
    */
   public int getCaching() {
@@ -447,6 +468,8 @@ public class Scan implements Writable {
     sb.append(this.maxVersions);
     sb.append(", batch=");
     sb.append(this.batch);
+    sb.append(", storeLimit=");
+    sb.append(this.storeLimit);
     sb.append(", caching=");
     sb.append(this.caching);
     sb.append(", cacheBlocks=");
@@ -512,6 +535,9 @@ public class Scan implements Writable {
     this.stopRow = Bytes.readByteArray(in);
     this.maxVersions = in.readInt();
     this.batch = in.readInt();
+    if (version > 1) {
+      this.storeLimit = in.readInt();
+    }
     this.caching = in.readInt();
     this.cacheBlocks = in.readBoolean();
     if(in.readBoolean()) {
@@ -537,11 +563,18 @@ public class Scan implements Writable {
 
   public void write(final DataOutput out)
   throws IOException {
-    out.writeByte(SCAN_VERSION);
+    if (this.storeLimit != -1) {
+      out.writeByte(SCAN_VERSION);
+    } else {
+      out.writeByte((byte)1);
+    }
     Bytes.writeByteArray(out, this.startRow);
     Bytes.writeByteArray(out, this.stopRow);
     out.writeInt(this.maxVersions);
     out.writeInt(this.batch);
+    if (this.storeLimit != -1) {
+      out.writeInt(this.storeLimit);
+    }
     out.writeInt(this.caching);
     out.writeBoolean(this.cacheBlocks);
     if(this.filter == null) {

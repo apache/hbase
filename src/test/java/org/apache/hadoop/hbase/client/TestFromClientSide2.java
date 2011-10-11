@@ -141,6 +141,175 @@ public class TestFromClientSide2 {
 
   }
 
+  /**
+   * Test from client side for get with maxResultPerCF set
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testGetMaxResults() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testGetMaxResults");
+    byte [][] FAMILIES = makeNAscii(FAMILY, 3);
+    byte [][] QUALIFIERS = makeNAscii(QUALIFIER, 20);
+
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+
+    Get get;
+    Put put;
+    Result result;
+    boolean toLog = true;
+    List<KeyValue> kvListExp;
+
+    kvListExp = new ArrayList<KeyValue>();
+    // Insert one CF for row[0]
+    put = new Put(ROW);
+    for (int i=0; i < 10; i++) {
+      KeyValue kv = new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE);
+      put.add(kv);
+      kvListExp.add(kv);
+    }
+    ht.put(put);
+
+    get = new Get(ROW);
+    result = ht.get(get);
+    verifyResult(result, kvListExp, toLog, "Testing without setting maxResults");
+
+    get = new Get(ROW);
+    get.setMaxResultsPerColumnFamily(2);
+    result = ht.get(get);
+    kvListExp = new ArrayList<KeyValue>();
+    kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[0], 1, VALUE));
+    kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[1], 1, VALUE));
+    verifyResult(result, kvListExp, toLog, "Testing basic setMaxResults");
+
+    // Filters: ColumnRangeFiltero
+    get = new Get(ROW);
+    get.setMaxResultsPerColumnFamily(5);
+    get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, QUALIFIERS[5], true));
+    result = ht.get(get);
+    kvListExp = new ArrayList<KeyValue>();
+    kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[2], 1, VALUE));
+    kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[3], 1, VALUE));
+    kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[4], 1, VALUE));
+    kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[5], 1, VALUE));
+    verifyResult(result, kvListExp, toLog, "Testing single CF with CRF");
+
+    // Insert two more CF for row[0]
+    // 20 columns for CF2, 10 columns for CF1
+    put = new Put(ROW);
+    for (int i=0; i < QUALIFIERS.length; i++) {
+      KeyValue kv = new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE);
+      put.add(kv);
+    }
+    ht.put(put);
+
+    put = new Put(ROW);
+    for (int i=0; i < 10; i++) {
+      KeyValue kv = new KeyValue(ROW, FAMILIES[1], QUALIFIERS[i], 1, VALUE);
+      put.add(kv);
+    }
+    ht.put(put);
+
+    get = new Get(ROW);
+    get.setMaxResultsPerColumnFamily(12);
+    get.addFamily(FAMILIES[1]);
+    get.addFamily(FAMILIES[2]);
+    result = ht.get(get);
+    kvListExp = new ArrayList<KeyValue>();
+    //Exp: CF1:q0, ..., q9, CF2: q0, q1, q10, q11, ..., q19
+    for (int i=0; i < 10; i++) {
+      kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[i], 1, VALUE));
+    }
+    for (int i=0; i < 2; i++) {
+        kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
+      }
+    for (int i=10; i < 20; i++) {
+      kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
+    }
+    verifyResult(result, kvListExp, toLog, "Testing multiple CFs");
+
+    // Filters: ColumnRangeFilter and ColumnPrefixFilter
+    get = new Get(ROW);
+    get.setMaxResultsPerColumnFamily(3);
+    get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, null, true));
+    result = ht.get(get);
+    kvListExp = new ArrayList<KeyValue>();
+    for (int i=2; i < 5; i++) {
+      kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE));
+    }
+    for (int i=2; i < 5; i++) {
+      kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[i], 1, VALUE));
+    }
+    for (int i=2; i < 5; i++) {
+      kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
+    }
+    verifyResult(result, kvListExp, toLog, "Testing multiple CFs + CRF");
+
+    get = new Get(ROW);
+    get.setMaxResultsPerColumnFamily(7);
+    get.setFilter(new ColumnPrefixFilter(QUALIFIERS[1]));
+    result = ht.get(get);
+    kvListExp = new ArrayList<KeyValue>();
+    kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[1], 1, VALUE));
+    kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[1], 1, VALUE));
+    kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[1], 1, VALUE));
+    for (int i=10; i < 16; i++) {
+      kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
+    }
+    verifyResult(result, kvListExp, toLog, "Testing multiple CFs + PFF");
+
+  }
+
+  /**
+   * Test from client side for scan with maxResultPerCF set
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testScanMaxResults() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testScanLimit");
+    byte [][] ROWS= makeNAscii(ROW, 2);
+    byte [][] FAMILIES = makeNAscii(FAMILY, 3);
+    byte [][] QUALIFIERS = makeNAscii(QUALIFIER, 10);
+
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+
+    Put put;
+    Scan scan;
+    Result result;
+    boolean toLog = true;
+    List<KeyValue> kvListExp, kvListScan;
+
+    kvListExp = new ArrayList<KeyValue>();
+
+    for (int r=0; r < ROWS.length; r++) {
+      put = new Put(ROWS[r]);
+      for (int c=0; c < FAMILIES.length; c++) {
+        for (int q=0; q < QUALIFIERS.length; q++) {
+          KeyValue kv = new KeyValue(ROWS[r], FAMILIES[c], QUALIFIERS[q], 1, VALUE);
+          put.add(kv);
+          if (q < 4) {
+            kvListExp.add(kv);
+          }
+        }
+      }
+      ht.put(put);
+    }
+
+    scan = new Scan();
+    scan.setMaxResultsPerColumnFamily(4);
+    ResultScanner scanner = ht.getScanner(scan);
+    kvListScan = new ArrayList<KeyValue>();
+    while ((result = scanner.next()) != null) {
+      for (KeyValue kv : result.list()) {
+        kvListScan.add(kv);
+      }
+    }
+    result = new Result(kvListScan);
+    verifyResult(result, kvListExp, toLog, "Testing scan with maxResults");
+
+  }
+
   private void verifyResult(Result result, List<KeyValue> kvList, boolean toLog, String msg) {
     int i =0;
 
@@ -152,8 +321,8 @@ public class TestFromClientSide2 {
     for (KeyValue kv : result.sorted()) {
       KeyValue kvExp = kvList.get(i++);
       if (toLog) {
-	LOG.info("get kv is: " + kv.toString());
-	LOG.info("exp kv is: " + kvExp.toString());
+        LOG.info("get kv is: " + kv.toString());
+        LOG.info("exp kv is: " + kvExp.toString());
       }
       assertTrue("Not equal", kvExp.equals(kv));
     }

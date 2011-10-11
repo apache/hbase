@@ -58,14 +58,18 @@ import java.util.TreeSet;
  * To limit the number of versions of each column to be returned, execute
  * {@link #setMaxVersions(int) setMaxVersions}.
  * <p>
+ * To limit the number of values of each column family to be returned, execute
+ * {@link #setMaxResultsPerColumnFamily(int) setMaxResultsPerColumnFamily}.
+ * <p>
  * To add a filter, execute {@link #setFilter(Filter) setFilter}.
  */
 public class Get implements Writable {
-  private static final byte GET_VERSION = (byte)1;
+  private static final byte GET_VERSION = (byte)2;
 
   private byte [] row = null;
   private long lockId = -1L;
   private int maxVersions = 1;
+  private int storeLimit = -1;
   private Filter filter = null;
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
@@ -183,6 +187,16 @@ public class Get implements Writable {
   }
 
   /**
+   * Set the maximum number of values to return per row per Column Family
+   * @param limit the maximum number of values returned / row / CF
+   * @return this for invocation chaining
+   */
+  public Get setMaxResultsPerColumnFamily(int limit) {
+    this.storeLimit = limit;
+    return this;
+  }
+
+  /**
    * Apply the specified server-side filter when performing the Get.
    * Only {@link Filter#filterKeyValue(KeyValue)} is called AFTER all tests
    * for ttl, column match, deletes and max versions have been run.
@@ -236,6 +250,15 @@ public class Get implements Writable {
   }
 
   /**
+   * Method for retrieving the get's maximum number of values
+   * to return per Column Family
+   * @return the maximum number of values to fetch per CF
+   */
+  public int getMaxResultsPerColumnFamily() {
+    return this.storeLimit;
+  }
+
+  /**
    * Method for retrieving the get's TimeRange
    * @return timeRange
    */
@@ -285,6 +308,8 @@ public class Get implements Writable {
     sb.append(Bytes.toString(this.row));
     sb.append(", maxVersions=");
     sb.append("").append(this.maxVersions);
+    sb.append(", storeLimit=");
+    sb.append("").append(this.storeLimit);
     sb.append(", timeRange=");
     sb.append("[").append(this.tr.getMin()).append(",");
     sb.append(this.tr.getMax()).append(")");
@@ -335,6 +360,9 @@ public class Get implements Writable {
     this.row = Bytes.readByteArray(in);
     this.lockId = in.readLong();
     this.maxVersions = in.readInt();
+    if (version > 1) {
+      this.storeLimit = in.readInt();
+    }
     boolean hasFilter = in.readBoolean();
     if (hasFilter) {
       this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
@@ -363,10 +391,17 @@ public class Get implements Writable {
 
   public void write(final DataOutput out)
   throws IOException {
-    out.writeByte(GET_VERSION);
+    if (this.storeLimit != -1) {
+      out.writeByte(GET_VERSION);
+    } else {
+      out.writeByte((byte)1);
+    }
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.lockId);
     out.writeInt(this.maxVersions);
+    if (this.storeLimit != -1) {
+      out.writeInt(this.storeLimit);
+    }
     if(this.filter == null) {
       out.writeBoolean(false);
     } else {

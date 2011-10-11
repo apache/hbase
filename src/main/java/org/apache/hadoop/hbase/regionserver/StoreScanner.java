@@ -40,6 +40,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   private ScanQueryMatcher matcher;
   private KeyValueHeap heap;
   private boolean cacheBlocks;
+  private int countPerRow = 0;
+  private int storeLimit;
 
   // Used to indicate that the scanner has closed (see HBASE-1107)
   // Doesnt need to be volatile because it's always accessed via synchronized methods
@@ -75,6 +77,9 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     for(KeyValueScanner scanner : scanners) {
       scanner.seek(matcher.getStartKey());
     }
+
+    // set storeLimit
+    this.storeLimit = scan.getMaxResultsPerColumnFamily();
 
     // Combine all seeked scanners with a heap
     heap = new KeyValueHeap(scanners, store.comparator);
@@ -236,6 +241,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     }
 
     if ((matcher.row == null) || !peeked.matchingRow(matcher.row)) {
+	this.countPerRow = 0;
 	matcher.setRow(peeked.getRow());
     }
     KeyValue kv;
@@ -247,6 +253,17 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       //DebugPrint.println("SS peek kv = " + kv + " with qcode = " + qcode);
       switch(qcode) {
         case INCLUDE:
+          this.countPerRow++;
+          if (storeLimit > 0 && this.countPerRow > storeLimit) {
+            // do what SEEK_NEXT_ROW does.
+            if (!matcher.moreRowsMayExistAfter(kv)) {
+              outResult.addAll(results);
+              return false;
+            }
+            reseek(matcher.getKeyForNextRow(kv));
+            break LOOP;
+          }
+
           results.add(copyKv);
           this.heap.next();
           if (limit > 0 && (results.size() == limit)) {
@@ -371,6 +388,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
 	kv = lastTopKey;
     }
     if ((matcher.row == null) || !kv.matchingRow(matcher.row)) {
+	this.countPerRow = 0;
 	matcher.reset();
 	matcher.setRow(kv.getRow());
     }
