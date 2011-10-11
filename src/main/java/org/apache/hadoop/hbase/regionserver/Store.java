@@ -95,7 +95,7 @@ public class Store implements HeapSize {
   private long majorCompactionTime;
   private int maxFilesToCompact;
   /* how many bytes to write between status checks */
-  int closeCheckInterval;
+  static int closeCheckInterval = 0;
   private final long desiredMaxFileSize;
   private volatile long storeSize = 0L;
   private final Object flushLock = new Object();
@@ -190,8 +190,10 @@ public class Store implements HeapSize {
     }
 
     this.maxFilesToCompact = conf.getInt("hbase.hstore.compaction.max", 10);
-    this.closeCheckInterval = conf.getInt(
-        "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
+    if (Store.closeCheckInterval == 0) {
+      Store.closeCheckInterval = conf.getInt(
+          "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
+    }
     this.storefiles = sortAndClone(loadStoreFiles());
   }
 
@@ -820,9 +822,9 @@ public class Store implements HeapSize {
               writer.append(kv);
 
               // check periodically to see if a system stop is requested
-              if (this.closeCheckInterval > 0) {
+              if (Store.closeCheckInterval > 0) {
                 bytesWritten += kv.getLength();
-                if (bytesWritten > this.closeCheckInterval) {
+                if (bytesWritten > Store.closeCheckInterval) {
                   bytesWritten = 0;
                   if (!this.region.areWritesEnabled()) {
                     writer.close();
@@ -855,9 +857,9 @@ public class Store implements HeapSize {
             writer.append(kv);
 
             // check periodically to see if a system stop is requested
-            if (this.closeCheckInterval > 0) {
+            if (Store.closeCheckInterval > 0) {
               bytesWritten += kv.getLength();
-              if (bytesWritten > this.closeCheckInterval) {
+              if (bytesWritten > Store.closeCheckInterval) {
                 bytesWritten = 0;
                 if (!this.region.areWritesEnabled()) {
                   writer.close();

@@ -248,9 +248,8 @@ public class TestCompaction extends HBaseTestCase {
     assertEquals(0, count());
 
     // lower the polling interval for this test
-    Store s = r.stores.get(COLUMN_FAMILY);
-    int origWI = s.closeCheckInterval;
-    s.closeCheckInterval = 10*1000; // 10 KB
+    int origWI = Store.closeCheckInterval;
+    Store.closeCheckInterval = 10*1000; // 10 KB
 
     try {
       // Create a couple store files w/ 15KB (over 10KB interval)
@@ -279,6 +278,7 @@ public class TestCompaction extends HBaseTestCase {
       spyR.compactStores();
 
       // ensure that the compaction stopped, all old files are intact,
+      Store s = r.stores.get(COLUMN_FAMILY);
       assertEquals(COMPACTION_THRESHOLD, s.getStorefilesCount());
       assertTrue(s.getStorefilesSize() > 15*1000);
       // and no new store files persisted past compactStores()
@@ -288,7 +288,7 @@ public class TestCompaction extends HBaseTestCase {
     } finally {
       // don't mess up future tests
       r.writestate.writesEnabled = true;
-      s.closeCheckInterval = origWI;
+      Store.closeCheckInterval = origWI;
 
       // Delete all Store information once done using
       for (int i = 0; i < COMPACTION_THRESHOLD; i++) {

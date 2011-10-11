@@ -95,16 +95,18 @@ class CompactSplitThread extends Thread {
       HRegion r = null;
       try {
         r = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
-        if (r != null && !this.server.isStopRequested()) {
+        if (r != null) {
           lock.lock();
           try {
-            // Don't interrupt us while we are working
-            byte [] midKey = r.compactStores();
-            LOG.debug("Just finished a compaction. " +
-                      " Current Compaction Queue Size: " +
-                      getCompactionQueueSize());
-            if (midKey != null && !this.server.isStopRequested()) {
-              split(r, midKey);
+            if(!this.server.isStopRequested()) {
+              // Don't interrupt us while we are working
+              byte [] midKey = r.compactStores();
+              LOG.debug("Just finished a compaction. " +
+                        " Current Compaction Queue Size: " +
+                        getCompactionQueueSize());
+              if (midKey != null && !this.server.isStopRequested()) {
+                split(r, midKey);
+              }
             }
           } finally {
             lock.unlock();
