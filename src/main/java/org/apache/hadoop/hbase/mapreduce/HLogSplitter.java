@@ -92,30 +92,6 @@ public class HLogSplitter {
   }
 
 
-  /**
-   * Sets up the actual job.
-   *
-   * @param conf  The current configuration.
-   * @param args  The command line parameters.
-   * @return The newly created job.
-   * @throws IOException When setting up the job fails.
-   */
-  public static Job createSubmittableJob(
-      Configuration conf, String jobInputDir, String jobOutputDir)
-  throws IOException {
-    Path outputDir = new Path(jobOutputDir);
-    Job job = new Job(conf, NAME + "_" + inputWithRSLogDirs);
-    job.setJobName(NAME + "_" + jobInputDir);
-    job.setJarByClass(HLogSpliterMap.class);
-    job.setMapperClass(HLogSpliterMap.class);
-    job.setNumReduceTasks(0);
-    job.setInputFormatClass(TextInputFormat.class);
-    FileInputFormat.setInputPaths(job, jobInputDir);
-    FileOutputFormat.setOutputPath(job, outputDir);
-
-    return job;
-  }
-
   /*
    * @param errorMsg Error message.  Can be null.
    */
@@ -162,8 +138,9 @@ public class HLogSplitter {
     // write the list of RS directories to a temp file in HDFS. This will be the
     // input to the mapper.
     String jobInputFile = "/" + NAME + "_" + System.currentTimeMillis();
-    String jobOutputPath = jobInputPath + "-output";
+    String jobOutputDir = jobInputFile + "-output";
     Path jobInputPath = new Path(jobInputFile);
+    Path jobOutputPath = new Path(jobOutputDir);
     FSDataOutputStream dos = fs.create(jobInputPath);
     PrintWriter out = new PrintWriter(dos);
     for (FileStatus status : logFolders) {
@@ -173,7 +150,6 @@ public class HLogSplitter {
     dos.close();
 
     // create the job that will do the distributed log splitting
-    Path outputDir = new Path(jobOutputDir);
     Job job = new Job(conf, NAME + "_" + logsDirPath);
     job.setJobName(NAME + "_" + logsDirPath);
     job.setJarByClass(HLogSpliterMap.class);
@@ -181,7 +157,7 @@ public class HLogSplitter {
     job.setNumReduceTasks(0);
     job.setInputFormatClass(TextInputFormat.class);
     FileInputFormat.setInputPaths(job, jobInputFile);
-    FileOutputFormat.setOutputPath(job, jobOutputDir);
+    FileOutputFormat.setOutputPath(job, jobOutputPath);
 
     // submit the job
     boolean status = job.waitForCompletion(true);
