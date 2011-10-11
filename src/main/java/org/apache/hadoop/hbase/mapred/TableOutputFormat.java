@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.FileOutputFormat;
@@ -96,7 +95,7 @@ FileOutputFormat<ImmutableBytesWritable, Put> {
 
   @Override
   public void checkOutputSpecs(FileSystem ignored, JobConf job)
-  throws FileAlreadyExistsException, InvalidJobConfException, IOException {
+  throws IOException {
 
     String tableName = job.get(OUTPUT_TABLE);
     if(tableName == null) {
