@@ -39,7 +39,7 @@
 <h2>Region Server Attributes</h2>
 <table>
 <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
-<tr><td>HBase Version</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<%= org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and svn revision</td></tr>
+<tr><td>HBase Version</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, <%= org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and branch@revision</td></tr>
 <tr><td>HBase Compiled</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
 <tr><td>Metrics</td><td><%= metrics.toString() %></td><td>RegionServer Metrics; file and heap sizes are in megabytes</td></tr>
 <tr><td>Zookeeper Quorum</td><td><%= regionServer.getZooKeeperWrapper().getQuorumServers() %></td><td>Addresses of all registered ZK servers</td></tr>

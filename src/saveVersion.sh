@@ -26,15 +26,29 @@ user=`whoami`
 date=`date`
 cwd=`pwd`
 if [ -d .svn ]; then
-  revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
+  svn_revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
   url=`svn info | sed -n -e 's/URL: \(.*\)/\1/p'`
+	branch=`echo $url | cut -f7 -d\/`
+  revision= $branch@$svn_revision
 elif [ -d .git ]; then
   revision=`git log -1 --pretty=format:"%H"`
   hostname=`hostname`
   url="git://${hostname}${cwd}"
 else
-  revision="Unknown"
-  url="file://$cwd"
+	which git  > /dev/null
+	if [ $? == 0 ]; then
+   revision=`git log -1 | grep "git-svn-id:" | awk '{print $2}' | cut -f7 -d\/`
+		hostname=`hostname`
+		if [ "$revision" == "" ]; then
+			git_revision=`git log -1 --pretty=format:"%H"`
+			git_branch=`git branch 2> /dev/null | grep -e '\* ' | sed 's/^..\(.*\)/\1/'`
+			revision="LocalCommit: $git_branch@$git_revision"
+		fi
+		url="git://${hostname}${cwd}"
+	else
+		revision="Unknown"
+		url="file://$cwd"
+	fi
 fi
 mkdir -p "$outputDirectory/org/apache/hadoop/hbase"
 cat >"$outputDirectory/org/apache/hadoop/hbase/package-info.java" <<EOF
