@@ -400,6 +400,7 @@ public class StoreFile {
         }
       }
     }
+    this.reader.setSequenceID(this.sequenceid);
 
     b = metadataMap.get(MAJOR_COMPACTION_KEY);
     if (b != null) {
@@ -868,6 +869,7 @@ public class StoreFile {
     protected BloomType bloomFilterType;
     private final HFile.Reader reader;
     protected TimeRangeTracker timeRangeTracker = null;
+    protected long sequenceID = -1;
 
     public Reader(FileSystem fs, Path path, BlockCache blockCache, boolean inMemory)
         throws IOException {
@@ -1049,6 +1051,14 @@ public class StoreFile {
 
     public BloomType getBloomFilterType() {
       return this.bloomFilterType;
+    }
+
+    public long getSequenceID() {
+      return sequenceID;
+    }
+
+    public void setSequenceID(long sequenceID) {
+      this.sequenceID = sequenceID;
     }
   }
 
