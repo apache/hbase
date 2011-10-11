@@ -24,6 +24,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.WritableWithSize;
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
@@ -758,6 +760,10 @@ public abstract class HBaseServer {
       return hostAddress;
     }
 
+    public int getRemotePort() {
+      return remotePort;
+    }
+
     public void setLastContact(long lastContact) {
       this.lastContact = lastContact;
     }
@@ -892,18 +898,27 @@ public abstract class HBaseServer {
   /** Handles queued calls . */
   private class Handler extends Thread {
     static final int BUFFER_INITIAL_SIZE = 1024;
+    private MonitoredRPCHandler status;
+
     public Handler(int instanceNumber) {
       this.setDaemon(true);
-      this.setName("IPC Server handler "+ instanceNumber + " on " + port);
+      String name = "IPC Server handler "+ instanceNumber + " on " + port;
+      this.setName(name);
+      this.status = TaskMonitor.get().createRPCStatus(name);
     }
 
     @Override
     public void run() {
       LOG.info(getName() + ": starting");
+      status.setStatus("starting");
       SERVER.set(HBaseServer.this);
       while (running) {
         try {
+          status.pause("Waiting for a call");
           Call call = callQueue.take(); // pop the queue; maybe blocked here
+          status.setStatus("Setting up call");
+          status.setConnection(call.connection.getHostAddress(),
+              call.connection.getRemotePort());
 
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + ": has #" + call.id + " from " +
@@ -916,7 +931,8 @@ public abstract class HBaseServer {
           UserGroupInformation previous = UserGroupInformation.getCurrentUGI();
           UserGroupInformation.setCurrentUser(call.connection.ticket);
           try {
-            value = call(call.param, call.timestamp);             // make the call
+            // make the call
+            value = call(call.param, call.timestamp, status);
           } catch (Throwable e) {
             LOG.info(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();
@@ -1089,11 +1105,12 @@ public abstract class HBaseServer {
   /** Called for each call.
    * @param param writable parameter
    * @param receiveTime time
+   * @param status The task monitor for the associated handler.
    * @return Writable
    * @throws IOException e
    */
-  public abstract Writable call(Writable param, long receiveTime)
-                                                throws IOException;
+  public abstract Writable call(Writable param, long receiveTime,
+      MonitoredRPCHandler status) throws IOException;
 
   /**
    * The number of open RPC conections

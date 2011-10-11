@@ -18,6 +18,11 @@ tr.task-monitor-COMPLETE td {
   background-color: #afa;
 }
 
+tr.task-monitor-WAITING td {
+  background-color: #ccc;
+  font-style: italic;
+}
+
 tr.task-monitor-IDLE td {
   background-color: #ccc;
   font-style: italic;
