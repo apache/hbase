@@ -19,10 +19,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.io.WritableComparable;
+
 /**
  * Has a row.
  */
-interface Row {
+public interface Row extends WritableComparable<Row> {
   /**
    * @return The row.
    */

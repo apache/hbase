@@ -46,11 +46,17 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Row;
+
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.RowMutation;
+
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
@@ -124,7 +130,6 @@ public class TestHFileOutputFormat  {
                ImmutableBytesWritable,KeyValue>.Context context)
         throws java.io.IOException ,InterruptedException
     {
-
       byte keyBytes[] = new byte[keyLength];
       byte valBytes[] = new byte[valLength];
 
@@ -154,12 +159,109 @@ public class TestHFileOutputFormat  {
     util.cleanupTestDir();
   }
 
-
   private void setupRandomGeneratorMapper(Job job) {
     job.setInputFormatClass(NMapInputFormat.class);
     job.setMapperClass(RandomKVGeneratingMapper.class);
     job.setMapOutputKeyClass(ImmutableBytesWritable.class);
     job.setMapOutputValueClass(KeyValue.class);
+  }
+
+  static class RowSorterMapper
+  extends Mapper<NullWritable, NullWritable, ImmutableBytesWritable, RowMutation> {
+    @Override
+    protected void map(
+        NullWritable n1, NullWritable n2,
+        Mapper<NullWritable, NullWritable,
+               ImmutableBytesWritable, RowMutation>.Context context)
+    throws IOException ,InterruptedException
+    {
+      byte[] row = Bytes.toBytes("row1");
+
+      // need one for every task...
+      byte[] key = Bytes.toBytes("key");
+
+      byte[] col1 = Bytes.toBytes("col1");
+      byte[] col2 = Bytes.toBytes("col2");
+      byte[] col3 = Bytes.toBytes("col3");
+
+      // PUT cf=info-A
+      Row put1 = new Put(row).add(
+          TestHFileOutputFormat.FAMILIES[0], col1, 10, Bytes.toBytes("val10"));
+      Row put2 = new Put(row).add(
+          TestHFileOutputFormat.FAMILIES[0], col2, 11, Bytes.toBytes("val11"));
+
+      // PUT cf=info-B
+      Row put3 = new Put(row).add(
+          TestHFileOutputFormat.FAMILIES[1], col1, 20, Bytes.toBytes("val20"));
+      Row put4 = new Put(row).add(
+          TestHFileOutputFormat.FAMILIES[1], col2, 21, Bytes.toBytes("val21"));
+
+      // PUT new column
+      Row put5 = new Put(row).add(
+          TestHFileOutputFormat.FAMILIES[1], col3, 30, Bytes.toBytes("val30"));
+      Row put6 = new Put(row).add(
+          TestHFileOutputFormat.FAMILIES[1], col3, 31, Bytes.toBytes("val31"));
+      Row put7 = new Put(row).add(
+          TestHFileOutputFormat.FAMILIES[1], col3, 32, Bytes.toBytes("val32"));
+
+      // DELETEs
+      Row del1 = new Delete(row).deleteColumn(
+          TestHFileOutputFormat.FAMILIES[1], col2, 21);
+
+      Row del2 = new Delete(row).deleteFamily(
+          TestHFileOutputFormat.FAMILIES[0]);
+
+      Row del3 = new Delete(row).deleteColumns(
+          TestHFileOutputFormat.FAMILIES[1], col3);
+
+      context.write(new ImmutableBytesWritable(key), new RowMutation(put1));
+      context.write(new ImmutableBytesWritable(key), new RowMutation(put2));
+
+      context.write(new ImmutableBytesWritable(key), new RowMutation(put3));
+      context.write(new ImmutableBytesWritable(key), new RowMutation(put4));
+      context.write(new ImmutableBytesWritable(key), new RowMutation(put5));
+      context.write(new ImmutableBytesWritable(key), new RowMutation(put6));
+      context.write(new ImmutableBytesWritable(key), new RowMutation(put7));
+
+      context.write(new ImmutableBytesWritable(key), new RowMutation(del1));
+      context.write(new ImmutableBytesWritable(key), new RowMutation(del2));
+      context.write(new ImmutableBytesWritable(key), new RowMutation(del3));
+    }
+  }
+
+  /**
+   * Test for the union style MR jobs that runs both Put and Delete requests
+   * @throws Exception on job, sorting, IO or fs errors
+   */
+  @Test
+  public void testRowSortReducer()
+  throws Exception {
+    Configuration conf = new Configuration(this.util.getConfiguration());
+    conf.setInt("io.sort.mb", 20);
+
+    Path dir = HBaseTestingUtility.getTestDir("testRowSortReducer");
+
+    try {
+      Job job = new Job(conf);
+
+      job.setInputFormatClass(NMapInputFormat.class);
+      job.setOutputFormatClass(HFileOutputFormat.class);
+
+      job.setMapperClass(RowSorterMapper.class); // local
+      job.setReducerClass(RowMutationSortReducer.class);
+
+      job.setOutputKeyClass(ImmutableBytesWritable.class);
+      job.setOutputValueClass(KeyValue.class);
+
+      job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+      job.setMapOutputValueClass(RowMutation.class);
+
+      FileOutputFormat.setOutputPath(job, dir);
+
+      assertTrue(job.waitForCompletion(false));
+    } finally {
+//      dir.getFileSystem(conf).delete(dir, true);
+    }
   }
 
   /**
@@ -366,8 +468,6 @@ public class TestHFileOutputFormat  {
       util.shutdownMiniCluster();
     }
   }
-
-
 
   private void runIncrementalPELoad(
       Configuration conf, HTable table, Path outDir)

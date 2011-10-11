@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -307,6 +308,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       job.setReducerClass(KeyValueSortReducer.class);
     } else if (Put.class.equals(job.getMapOutputValueClass())) {
       job.setReducerClass(PutSortReducer.class);
+    } else if (RowMutation.class.equals(job.getMapOutputValueClass())) {
+      job.setReducerClass(RowMutationSortReducer.class);
     } else {
       LOG.warn("Unknown map output value type:" + job.getMapOutputValueClass());
     }
