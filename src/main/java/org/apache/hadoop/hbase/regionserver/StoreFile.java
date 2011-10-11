@@ -693,6 +693,9 @@ public class StoreFile {
 
       this.kvComparator = comparator;
 
+      BloomFilter bloom = null;
+      BloomType bt = BloomType.NONE;
+
       if (bloomType != BloomType.NONE && conf != null) {
         float err = conf.getFloat(IO_STOREFILE_BLOOM_ERROR_RATE, (float)0.01);
         // Since in row+col blooms we have 2 calls to shouldSeek() instead of 1
@@ -704,14 +707,22 @@ public class StoreFile {
         }
         int maxFold = conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD, 7);
 
-        this.bloomFilter = new ByteBloomFilter(maxKeys, err,
-            Hash.getHashType(conf), maxFold);
-        this.bloomFilter.allocBloom();
-        this.bloomType = bloomType;
-      } else {
-        this.bloomFilter = null;
-        this.bloomType = BloomType.NONE;
+        try {
+          bloom = new ByteBloomFilter(maxKeys, err,
+              Hash.getHashType(conf), maxFold);
+          bloom.allocBloom();
+          bt = bloomType;
+        } catch (IllegalArgumentException iae) {
+          LOG.error(String.format(
+            "Parse error while creating bloom for %s (%d, %d)",
+            path, maxKeys, err), iae);
+          bloom = null;
+          bt = BloomType.NONE;
+        }
       }
+
+      this.bloomFilter = bloom;
+      this.bloomType = bt;
     }
 
     /**

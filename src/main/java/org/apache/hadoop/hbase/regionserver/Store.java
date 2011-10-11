@@ -636,6 +636,11 @@ public class Store implements HeapSize {
         totalSize += len;
       }
 
+      // never run major compaction if we have too many files to avoid OOM
+      if (countOfFiles > this.maxFilesToCompact) {
+        majorcompaction = false;
+      }
+
       if (!majorcompaction && !references) {
         // Here we select files for incremental compaction.
         // The rule is: if the largest(oldest) one is more than twice the
