@@ -768,13 +768,6 @@ public class FSUtils {
       }
       String name = tableName + ":" + regionName;
       regionToBestLocalityRSMapping.put(name,hostToRun);
-      LOG.debug("[ Best Locality Mapping ] Name: " + name+
-          " Region Server: " + hostToRun) ;
-
-      float rate = largestBlkCount / (float)totalBlkCount * 100;
-      String msg = "Host : " + hostToRun + " has "+largestBlkCount+" / "+
-        totalBlkCount+" ("+rate +"%) blocks for the < "+ name + " >";
-      LOG.info(msg);
 
     }
     long overhead = System.currentTimeMillis() - startTime;
