@@ -501,17 +501,38 @@ public class HFileReaderV2 extends AbstractHFileReader implements
       return seekTo(key, 0, key.length);
     }
 
-    @Override
-    public int seekTo(byte[] key, int offset, int length) throws IOException {
+    /**
+     * An internal API function. Seek to the given key, optionally rewinding to
+     * the first key of the block before doing the seek.
+     *
+     * @param key key byte array
+     * @param offset key offset in the key byte array
+     * @param length key length
+     * @param rewind whether to rewind to the first key of the block before
+     *        doing the seek. If this is false, we are assuming we never go
+     *        back, otherwise the result is undefined.
+     * @return -1 if the key is earlier than the first key of the file,
+     *         0 if we are at the given key, and 1 if we are past the given key
+     * @throws IOException
+     */
+    private int seekTo(byte[] key, int offset, int length, boolean rewind)
+        throws IOException {
       HFileBlock seekToBlock =
-          ((HFileReaderV2) reader).getDataBlockIndexReader().seekToDataBlock(
-              key, offset, length, block);
+        ((HFileReaderV2) reader).getDataBlockIndexReader().seekToDataBlock(
+            key, offset, length, block);
       if (seekToBlock == null) {
         // This happens if the key e.g. falls before the beginning of the file.
         return -1;
       }
-      return loadBlockAndSeekToKey(seekToBlock, true, key, offset, length,
+      return loadBlockAndSeekToKey(seekToBlock, rewind, key, offset, length,
           false);
+    }
+
+    @Override
+    public int seekTo(byte[] key, int offset, int length) throws IOException {
+      // Always rewind to the first key of the block, because the given key
+      // might be before or after the current key.
+      return seekTo(key, offset, length, true);
     }
 
     @Override
@@ -531,7 +552,10 @@ public class HFileReaderV2 extends AbstractHFileReader implements
           return compared;
         }
       }
-      return seekTo(key, offset, length);
+
+      // Don't rewind on a reseek operation, because reseek implies that we are
+      // always going forward in the file.
+      return seekTo(key, offset, length, false);
     }
 
     private int loadBlockAndSeekToKey(HFileBlock seekToBlock, boolean rewind,
