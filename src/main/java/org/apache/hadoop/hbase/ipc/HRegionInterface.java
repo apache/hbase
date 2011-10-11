@@ -73,6 +73,12 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    */
   public HRegion [] getOnlineRegionsAsArray();
 
+  /**
+   * Flush the given region
+   */
+  public void flushRegion(byte[] regionName)
+    throws IllegalArgumentException, IOException;
+
   public List<String> getStoreFileList(byte[] regionName, byte[] columnFamily)
     throws IllegalArgumentException;
 

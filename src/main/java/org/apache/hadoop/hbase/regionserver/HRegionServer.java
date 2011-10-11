@@ -2221,6 +2221,18 @@ public class HRegionServer implements HRegionInterface,
   }
 
   /**
+  * Flushes the given region
+  */
+  public void flushRegion(byte[] regionName)
+    throws IllegalArgumentException, IOException {
+    HRegion region = getOnlineRegion(regionName);
+    if (region == null) {
+      throw new IllegalArgumentException("No region : " + new String(regionName)
+      + " available");
+    }
+    region.flushcache();
+  }
+  /**
    * @return The HRegionInfos from online regions sorted
    */
   public SortedSet<HRegionInfo> getSortedOnlineRegionInfos() {
