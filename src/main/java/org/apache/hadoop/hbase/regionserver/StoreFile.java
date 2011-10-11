@@ -868,7 +868,7 @@ public class StoreFile {
           int k = this.bloomFilter.getKeyCount();
           int m = this.bloomFilter.getMaxKeys();
           StoreFile.LOG.info("Bloom added to HFile ("
-              + getPath() + "): " + b + "B, " +
+              + getPath() + "): " + StringUtils.humanReadableInt(b) + ", " +
               k + "/" + m + " (" + NumberFormat.getPercentInstance().format(
                 ((double)k) / ((double)m)) + ")");
         }
