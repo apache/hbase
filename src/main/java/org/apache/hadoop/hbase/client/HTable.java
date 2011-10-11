@@ -1131,7 +1131,7 @@ public class HTable implements HTableInterface {
             SecurityManager s = System.getSecurityManager();
             group = (s != null)? s.getThreadGroup() :
                                  Thread.currentThread().getThreadGroup();
-            namePrefix = "pool-" +
+            namePrefix = "hbase-table-pool" +
                           poolNumber.getAndIncrement() +
                          "-thread-";
         }
