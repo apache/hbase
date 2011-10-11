@@ -61,7 +61,8 @@ public class RowMutationSortReducer extends
       long curSize = 0;
       // stop at the end or the RAM threshold
       while (iter.hasNext() && curSize < threshold) {
-        Row r = iter.next().getInstance();
+        RowMutation rm = iter.next();
+        Row r = rm.getInstance();
         Map< byte[], List<KeyValue> > familyMap;
         if (r instanceof Put) {
           familyMap = ((Put) r).getFamilyMap();
@@ -74,6 +75,7 @@ public class RowMutationSortReducer extends
         if (null != familyMap) {
           for (List<KeyValue> kvs : familyMap.values()) {
             for (KeyValue kv : kvs) {
+              kv.setMemstoreTS(rm.getOrderNumber());
               map.add(kv);
               curSize += kv.getValueLength();
             }

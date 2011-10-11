@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.io.WritableComparable;
 
@@ -58,38 +59,37 @@ public class RowMutation implements Row {
   private Row row = null;
 
   /**
+   * Global counter for internal ordering of mutations
+   */
+  private static AtomicLong globalOrderCounter = new AtomicLong(0);
+
+  /**
+   * Field to keep track of the internal ordering of mutations
+   */
+  private long orderNumber;
+
+  /**
    * To be used for Writable.
    * DO NOT USE!!!
    */
   public RowMutation() {}
 
   /**
-   * Copy constructor
-   * @param r the item to copy
-   * @throws IOException if passed parameter is not of required type
-   */
-  public RowMutation(final RowMutation r)
-  throws IOException {
-    if (null == r) {
-      throw new IOException("Cannot pass a null object to constructor");
-    }
-
-    row = r.getInstance();
-  }
-
-  /**
    * Constructor to set the inner union style field.
-   * @param request -- the Put or Delete to be executed
-   * @throws IOException if passed parameter is not of required type
+   *
+   * @param request
+   *          the Put or Delete to be executed
+   * @throws IOException
+   *           if the passed parameter is not of the supported type
    */
-  public RowMutation(final WritableComparable<Row> request)
-  throws IOException {
-    if(request instanceof Put) {
-      row = new Put((Put)request);
-    } else if(request instanceof Delete) {
-      row = new Delete((Delete)request);
+  public RowMutation(final WritableComparable<Row> request) throws IOException {
+    if (request instanceof Put) {
+      row = new Put((Put) request);
+    } else if (request instanceof Delete) {
+      row = new Delete((Delete) request);
     } else {
-      throw new IOException("Must pass either a Delete or a Put");
+      throw new IOException("Type currently not supported: "
+          + request.getClass().getName());
     }
   }
 
@@ -116,14 +116,15 @@ public class RowMutation implements Row {
   throws IOException {
     byte b = in.readByte();
 
-    if(Type.Put.getCode() == b) {
+    if (Type.Put.getCode() == b) {
       row = new Put();
-    } else if(Type.Delete.getCode() == b) {
+    } else if (Type.Delete.getCode() == b) {
       row = new Delete();
     } else {
       throw new IOException("Tried to read an invalid type of serialized object!");
     }
 
+    this.orderNumber = in.readLong();
     row.readFields(in);
   }
 
@@ -132,16 +133,26 @@ public class RowMutation implements Row {
   throws IOException {
     byte b = 0;
 
-    if(row instanceof Put) {
+    if (row instanceof Put) {
       b = Type.Put.getCode();
-    } else if(row instanceof Delete) {
+    } else if (row instanceof Delete) {
       b = Type.Delete.getCode();
     } else {
       throw new IOException("Tried to write an invalid type of object to serialize!");
     }
 
     out.write(b);
+    out.writeLong(RowMutation.globalOrderCounter.incrementAndGet());
+
     row.write(out);
+  }
+
+  /**
+   *
+   * @return
+   */
+  public long getOrderNumber() {
+    return this.orderNumber;
   }
 
 }
