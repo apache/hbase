@@ -62,23 +62,25 @@ if [ "$distMode" == 'false' ]; then
   "$bin"/hbase-daemon.sh restart master
 else
   # stop all masters before re-start to avoid races for master znode
-  "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" stop master
+  # TODO: Ideally, we should find out who the actual primary is
+  # dynamically and kill everyone else first.
+  echo "Backup master(s):"
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
-    --hosts "${HBASE_BACKUP_MASTERS}" stop master-backup
+       --hosts "${HBASE_BACKUP_MASTERS}" stop master-backup
 
-  # make sure the master znode has been deleted before continuing
-  zparent=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool zookeeper.znode.parent`
-  if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
-  zmaster=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool zookeeper.znode.master`
-  if [ "$zmaster" == "null" ]; then zmaster="master"; fi
-  zmaster=$zparent/$zmaster
-  echo -n "Waiting for Master ZNode to expire"
-  while bin/hbase zkcli stat $zmaster >/dev/null 2>&1; do
-    echo -n "."
-    sleep 1
+  echo "Primary master:"
+  "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" stop master
+
+  echo "Sleeping 120 seconds (for /hbase/master znode expiration)..."
+
+  for ((i = 5; i <= 120; i+=5))
+  do
+    sleep 5
+    echo -n $i "sec.."
   done
-  echo #force a newline
+  echo ""
 
+  echo "Starting master and backup master(s)..."
   # all masters are down, now restart
   "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" start master
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \

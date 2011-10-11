@@ -230,22 +230,24 @@ public class HMaster extends Thread implements HMasterInterface,
     zooKeeperWrapper.registerListener(zkMasterAddressWatcher);
 
     // if we're a backup master, stall until a primary to writes his address
-    if(conf.getBoolean(HConstants.MASTER_TYPE_BACKUP, HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
-      LOG.debug("HMaster started in backup mode.  " +
-                "Stalling until master znode is written.");
-      // this will only be a minute or so while the cluster starts up,
-      // so don't worry about setting watches on the parent znode
-      while (!zooKeeperWrapper.masterAddressExists()) {
-        try {
-          LOG.debug("Waiting for master address ZNode to be written " +
-            "(Also watching cluster state node)");
-          Thread.sleep(conf.getInt("zookeeper.session.timeout", 60 * 1000));
-        } catch (InterruptedException e) {
-          // interrupted = user wants to kill us.  Don't continue
-          throw new IOException("Interrupted waiting for master address");
-        }
+    if (conf.getBoolean(HConstants.MASTER_TYPE_BACKUP, HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
+
+      // ephemeral node expiry will be detected between about 40 to 60 seconds;
+      // plus add a little extra since only ZK leader can expire nodes, and
+      // leader maybe a little  bit delayed in getting info about the pings.
+      // Conservatively, just double the time.
+      int stallTime = conf.getInt("zookeeper.session.timeout", 60 * 1000) * 2;
+
+      LOG.debug("HMaster started in backup mode. Stall " + stallTime +
+          "ms giving primary master a fair chance to be the master...");
+      try {
+          Thread.sleep(stallTime);
+      } catch (InterruptedException e) {
+        // interrupted = user wants to kill us.  Don't continue
+        throw new IOException("Interrupted waiting for master address");
       }
     }
+
     this.zkMasterAddressWatcher.writeAddressToZooKeeper(this.address, true);
     this.regionServerOperationQueue =
       new RegionServerOperationQueue(this.conf, this.closed);
