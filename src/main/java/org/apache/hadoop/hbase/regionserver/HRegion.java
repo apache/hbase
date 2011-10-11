@@ -157,8 +157,9 @@ public class HRegion implements HeapSize { // , Writable{
   // private int [] storeSize = null;
   // private byte [] name = null;
 
-  final AtomicLong memstoreSize = new AtomicLong(0);
-  static final AtomicLong globalMemstoreSize = new AtomicLong(0);
+  protected final AtomicLong memstoreSize = new AtomicLong(0);
+
+  private HRegionServer regionServer = null;
 
   /**
    * The directory for the table this region is part of.
@@ -442,6 +443,19 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
+  public AtomicLong getMemstoreSize() {
+    return memstoreSize;
+  }
+
+  public HRegionServer getRegionServer() {
+    return regionServer;
+  }
+
+  public void setRegionServer(HRegionServer regionServer) {
+    this.regionServer = regionServer;
+    regionServer.getGlobalMemstoreSize().getAndAdd(this.memstoreSize.get());
+  }
+
   /**
    * Increase the size of mem store in this region and the sum of global mem
    * stores' size
@@ -449,13 +463,9 @@ public class HRegion implements HeapSize { // , Writable{
    * @return the size of memstore in this region
    */
   public long incMemoryUsage(long memStoreSize) {
-    globalMemstoreSize.addAndGet(memStoreSize);
+    if (this.regionServer != null)
+      this.regionServer.getGlobalMemstoreSize().addAndGet(memStoreSize);
     return this.memstoreSize.addAndGet(memStoreSize);
-  }
-
-  /** @return the sum of global mem store size */
-  public static long getGlobalMemstoreSize() {
-    return globalMemstoreSize.get();
   }
 
   /** @return a HRegionInfo object for this region */

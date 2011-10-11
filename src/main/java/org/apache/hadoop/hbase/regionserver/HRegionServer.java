@@ -48,6 +48,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.cli.CommandLine;
@@ -246,6 +247,8 @@ public class HRegionServer implements HRegionInterface,
   // Replication-related attributes
   private Replication replicationHandler;
   // End of replication
+
+  private final AtomicLong globalMemstoreSize = new AtomicLong(0);
 
   /**
    * Starts a HRegionServer at the default location
@@ -746,6 +749,10 @@ public class HRegionServer implements HRegionInterface,
       throw convertThrowableToIOE(cleanup(e, "Failed init"),
         "Region server startup failed");
     }
+  }
+
+  public AtomicLong getGlobalMemstoreSize() {
+    return globalMemstoreSize;
   }
 
   /*
@@ -1456,6 +1463,7 @@ public class HRegionServer implements HRegionInterface,
       this.lock.writeLock().lock();
       try {
         this.onlineRegions.put(mapKey, region);
+        region.setRegionServer(this);
       } finally {
         this.lock.writeLock().unlock();
       }
