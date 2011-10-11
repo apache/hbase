@@ -263,6 +263,7 @@ public class RegionServerMetrics implements Updater {
       // push the result
       this.fsReadLatency.pushMetric(this.metricsRecord);
       this.fsWriteLatency.pushMetric(this.metricsRecord);
+      this.fsWriteSize.pushMetric(this.metricsRecord);
       this.fsSyncLatency.pushMetric(this.metricsRecord);
       this.fsGroupSyncLatency.pushMetric(this.metricsRecord);
       this.compactionTime.pushMetric(this.metricsRecord);
@@ -289,6 +290,7 @@ public class RegionServerMetrics implements Updater {
     this.atomicIncrementTime.resetMinMax();
     this.fsReadLatency.resetMinMax();
     this.fsWriteLatency.resetMinMax();
+    this.fsWriteSize.resetMinMax();
     this.fsSyncLatency.resetMinMax();
     this.fsGroupSyncLatency.resetMinMax();
   }
