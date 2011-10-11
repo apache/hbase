@@ -249,17 +249,18 @@ public class HLog implements Syncable {
   }
 
   // For measuring latency of writes
-  private static volatile long writeOps;
+  private static volatile int writeOps;
   private static volatile long writeTime;
+  private static volatile long writeSize;
   // For measuring latency of syncs
-  private static volatile long syncOps;
+  private static volatile int syncOps;
   private static volatile long syncTime;
 
   public static volatile long lastSplitTime = 0;
   public static volatile long lastSplitSize = 0;
 
-  public static long getWriteOps() {
-    long ret = writeOps;
+  public static int getWriteOps() {
+    int ret = writeOps;
     writeOps = 0;
     return ret;
   }
@@ -270,8 +271,14 @@ public class HLog implements Syncable {
     return ret;
   }
 
-  public static long getSyncOps() {
-    long ret = syncOps;
+  public static long getWriteSize() {
+    long ret = writeSize;
+    writeSize = 0;
+    return ret;
+  }
+
+  public static int getSyncOps() {
+    int ret = syncOps;
     syncOps = 0;
     return ret;
   }
@@ -1056,11 +1063,12 @@ public class HLog implements Syncable {
       long took = System.currentTimeMillis() - now;
       writeTime += took;
       writeOps++;
+      long len = 0;
+      for(KeyValue kv : logEdit.getKeyValues()) {
+        len += kv.getLength();
+      }
+      writeSize += len;
       if (took > 1000) {
-        long len = 0;
-        for(KeyValue kv : logEdit.getKeyValues()) {
-          len += kv.getLength();
-        }
         LOG.warn(String.format(
           "%s took %d ms appending an edit to hlog; editcount=%d, len~=%s",
           Thread.currentThread().getName(), took, this.numEntries.get(),
@@ -1134,6 +1142,11 @@ public class HLog implements Syncable {
         this.writer.append(new Entry(key, edit));
         writeTime += System.currentTimeMillis() - now;
         writeOps++;
+        long len = 0;
+        for(KeyValue kv : edit.getKeyValues()) {
+          len += kv.getLength();
+        }
+        writeSize += len;
         this.numEntries.incrementAndGet();
         Long seq = this.lastSeqWritten.get(regionName);
         if (seq != null && logSeqId >= seq.longValue()) {

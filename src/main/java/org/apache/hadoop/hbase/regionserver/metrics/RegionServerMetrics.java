@@ -137,6 +137,12 @@ public class RegionServerMetrics implements Updater {
     new MetricsTimeVaryingRate("fsWriteLatency", registry);
 
   /**
+   * size (in bytes) of data in HLog append calls
+   */
+  public final MetricsTimeVaryingRate fsWriteSize =
+    new MetricsTimeVaryingRate("fsWriteSize", registry);
+
+  /**
    * filesystem sync latency
    */
   public final MetricsTimeVaryingRate fsSyncLatency =
@@ -222,7 +228,6 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheCount.pushMetric(this.metricsRecord);
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
 
-      // Mix in HFile and HLog metrics
       // Be careful. Here is code for MTVR from up in hadoop:
       // public synchronized void inc(final int numOps, final long time) {
       //   currentData.numOperations += numOps;
@@ -231,15 +236,23 @@ public class RegionServerMetrics implements Updater {
       //    minMax.update(timePerOps);
       // }
       // Means you can't pass a numOps of zero or get a ArithmeticException / by zero.
-      int ops = (int)HFile.getReadOps();
-      if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTime());
-      ops = (int)HFile.getWriteOps();
-      if (ops != 0) this.fsWriteLatency.inc(ops, HFile.getWriteTime());
-      // mix in HLog metrics
-      ops = (int)HLog.getWriteOps();
-      if (ops != 0) this.fsWriteLatency.inc(ops, HLog.getWriteTime());
-      ops = (int)HLog.getSyncOps();
+      // HLog metrics
+      int ops = HLog.getWriteOps();
+      if (ops != 0) {
+        this.fsWriteLatency.inc(ops, HLog.getWriteTime());
+        this.fsWriteSize.inc(ops, HLog.getWriteSize());
+      }
+      ops = HLog.getSyncOps();
       if (ops != 0) this.fsSyncLatency.inc(ops, HLog.getSyncTime());
+      // HFile metrics
+      ops = HFile.getReadOps();
+      if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTime());
+      /* NOTE: removed HFile write latency.  2 reasons:
+       * 1) Mixing HLog latencies are far higher priority since they're
+       *      on-demand and HFile is used in background (compact/flush)
+       * 2) HFile metrics are being handled at a higher level
+       *      by compaction & flush metrics.
+       */
 
       // push the result
       this.fsReadLatency.pushMetric(this.metricsRecord);

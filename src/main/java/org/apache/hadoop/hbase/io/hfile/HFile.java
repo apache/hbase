@@ -170,13 +170,13 @@ public class HFile {
     DEFAULT_COMPRESSION_ALGORITHM.getName();
 
   // For measuring latency of "typical" reads and writes
-  private static volatile long readOps;
+  private static volatile int readOps;
   private static volatile long readTime;
-  private static volatile long writeOps;
+  private static volatile int writeOps;
   private static volatile long writeTime;
 
-  public static final long getReadOps() {
-    long ret = readOps;
+  public static final int getReadOps() {
+    int ret = readOps;
     readOps = 0;
     return ret;
   }
@@ -187,8 +187,8 @@ public class HFile {
     return ret;
   }
 
-  public static final long getWriteOps() {
-    long ret = writeOps;
+  public static final int getWriteOps() {
+    int ret = writeOps;
     writeOps = 0;
     return ret;
   }
