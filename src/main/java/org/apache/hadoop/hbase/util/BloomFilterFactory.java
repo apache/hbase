@@ -121,8 +121,49 @@ public final class BloomFilterFactory {
     return conf.getBoolean(IO_STOREFILE_BLOOM_ENABLED, true);
   }
 
+  /**
+   * @return the Bloom filter error rate in the given configuration
+   */
   public static float getErrorRate(Configuration conf) {
     return conf.getFloat(IO_STOREFILE_BLOOM_ERROR_RATE, (float) 0.01);
+  }
+
+  /**
+   * @return the value for Bloom filter max fold in the given configuration
+   */
+  public static int getMaxFold(Configuration conf) {
+    return conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD, MAX_ALLOWED_FOLD_FACTOR);
+  }
+
+  /** @return the compound Bloom filter block size from the configuration */
+  public static int getBloomBlockSize(Configuration conf) {
+    return conf.getInt(IO_STOREFILE_BLOOM_BLOCK_SIZE, 128 * 1024);
+  }
+
+  /** @return whether to cache compound Bloom filter chunks on write */
+  public static boolean cacheChunksOnWrite(Configuration conf) {
+    return conf.getBoolean(IO_STOREFILE_BLOOM_CACHE_ON_WRITE, false);
+  }
+
+  /**
+  * @return max key for the Bloom filter from the configuration
+  */
+  public static int getMaxKeys(Configuration conf) {
+    return conf.getInt(IO_STOREFILE_BLOOM_MAX_KEYS, 128 * 1000 * 1000);
+  }
+
+   /**
+   * Copy the BloomFilter related configuration from fromConf to toConf
+   * @param fromConf conf we will copy from
+   * @param toConf conf we will copy to
+   */
+  public static void copyBloomFilterConf(Configuration fromConf, Configuration toConf) {
+    toConf.setBoolean(IO_STOREFILE_BLOOM_ENABLED, isBloomEnabled(fromConf));
+    toConf.setFloat(IO_STOREFILE_BLOOM_ERROR_RATE, getErrorRate(fromConf));
+    toConf.setInt(IO_STOREFILE_BLOOM_MAX_FOLD, getMaxFold(fromConf));
+    toConf.setInt(IO_STOREFILE_BLOOM_BLOCK_SIZE, getBloomBlockSize(fromConf));
+    toConf.setBoolean(IO_STOREFILE_BLOOM_CACHE_ON_WRITE, cacheChunksOnWrite(fromConf));
+    toConf.setInt(IO_STOREFILE_BLOOM_MAX_KEYS, getMaxKeys(fromConf));
   }
 
   /**
@@ -161,8 +202,7 @@ public final class BloomFilterFactory {
       err = (float) (1 - Math.sqrt(1 - err));
     }
 
-    int maxFold = conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD,
-        MAX_ALLOWED_FOLD_FACTOR);
+    int maxFold = getMaxFold(conf);
 
     if (HFile.getFormatVersion(conf) > HFile.MIN_FORMAT_VERSION) {
       // In case of compound Bloom filters we ignore the maxKeys hint.
@@ -175,8 +215,7 @@ public final class BloomFilterFactory {
     } else {
       // A single-block Bloom filter. Only used when testing HFile format
       // version 1.
-      int tooBig = conf.getInt(IO_STOREFILE_BLOOM_MAX_KEYS,
-          128 * 1000 * 1000);
+      int tooBig = getMaxKeys(conf);
 
       if (maxKeys <= 0) {
         LOG.warn("Invalid maximum number of keys specified: " + maxKeys
@@ -195,14 +234,5 @@ public final class BloomFilterFactory {
     return null;
   }
 
-  /** @return the compound Bloom filter block size from the configuration */
-  public static int getBloomBlockSize(Configuration conf) {
-    return conf.getInt(IO_STOREFILE_BLOOM_BLOCK_SIZE, 128 * 1024);
-  }
-
-  /** @return whether to cache compound Bloom filter chunks on write */
-  public static boolean cacheChunksOnWrite(Configuration conf) {
-    return conf.getBoolean(IO_STOREFILE_BLOOM_CACHE_ON_WRITE, false);
-  }
 
 };

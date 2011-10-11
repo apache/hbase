@@ -47,6 +47,8 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mapreduce.hadoopbackport.TotalOrderPartitioner;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -70,6 +72,9 @@ import org.apache.commons.logging.LogFactory;
 public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, KeyValue> {
   static Log LOG = LogFactory.getLog(HFileOutputFormat.class);
   static final String COMPRESSION_CONF_KEY = "hbase.hfileoutputformat.families.compression";
+  //This stores a string in the format family1=bloomType1&family2=bloomType2&...&familyN=bloomTypeN
+  static final String BLOOMFILTER_TYPE_PER_CF_KEY =
+    "hbase.hfileoutputformat.families.bloomfilter.typePerCF";
 
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(final TaskAttemptContext context)
   throws IOException, InterruptedException {
@@ -90,7 +95,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     // create a map from column family to the compression algorithm
     final Map<byte[], String> compressionMap = createFamilyCompressionMap(conf);
 
-    final int bytesPerChecksum = HFile.getBytesPerChecksum(conf, conf);
+    final Map<byte[], BloomType> bloomTypeMap = createFamilyBloomTypeMap(conf);
 
     return new RecordWriter<ImmutableBytesWritable, KeyValue>() {
       // Map of families to writers and how much has been output on the writer.
@@ -102,6 +107,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
 
       public void write(ImmutableBytesWritable row, KeyValue kv)
       throws IOException {
+
         // null input == user explicitly wants to flush
         if (row == null && kv == null) {
           rollWriters();
@@ -167,21 +173,35 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
         Path familydir = new Path(outputdir, Bytes.toString(family));
         String compression = compressionMap.get(family);
         compression = compression == null ? defaultCompression : compression;
-        wl.writer = HFile.getWriterFactory(conf).createWriter(fs,
-          StoreFile.getUniqueFile(fs, familydir), blocksize,
-          bytesPerChecksum, compression, KeyValue.KEY_COMPARATOR);
+        Compression.Algorithm compressionAlgo =
+          Compression.getCompressionAlgorithmByName(compression);
+
+        BloomType bloomType = bloomTypeMap.get(family);
+        if (bloomType == null) {
+          bloomType = BloomType.NONE;
+        }
+
+        /* new bloom filter does not require maxKeys. */
+        int maxKeys = 0;
+        wl.writer = StoreFile.createWriter(fs, familydir, blocksize,
+            compressionAlgo, KeyValue.COMPARATOR, conf, bloomType, maxKeys);
         this.writers.put(family, wl);
         return wl;
       }
 
-      private void close(final HFile.Writer w) throws IOException {
+      private void close(final StoreFile.Writer w) throws IOException {
         if (w != null) {
           w.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY,
               Bytes.toBytes(System.currentTimeMillis()));
           w.appendFileInfo(StoreFile.BULKLOAD_TASK_KEY,
               Bytes.toBytes(context.getTaskAttemptID().toString()));
-          w.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY, 
-              Bytes.toBytes(true));
+
+          /* Set maxSequenceId to be 0 for bulk imported files since
+           * these files do not correspond to any edit log items.
+           *
+           * Set majorCompaction flag to be false for bulk import file.
+           */
+          w.appendMetadata(0, false);
           w.close();
         }
       }
@@ -200,7 +220,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    */
   static class WriterLength {
     long written = 0;
-    HFile.Writer writer = null;
+    StoreFile.Writer writer = null;
   }
 
   /**
@@ -317,6 +337,10 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     // Set compression algorithms based on column families
     configureCompression(table, conf);
 
+    // Set BloomFilter type based on column families and
+    // relevant parameters.
+    configureBloomFilter(table, conf);
+
     LOG.info("Incremental table output configured.");
   }
 
@@ -378,5 +402,67 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     }
     // Get rid of the last ampersand
     conf.set(COMPRESSION_CONF_KEY, compressionConfigValue.toString());
+  }
+
+  private static void configureBloomFilter(HTable table, Configuration conf)
+  throws IOException {
+    // get conf information needed by BloomFilter
+    Configuration tableConf = table.getConfiguration();
+
+    // Now go through the column family and save the BloomFilter setting for
+    // each column family
+    HTableDescriptor tableDescriptor = table.getTableDescriptor();
+    if (tableDescriptor == null){
+      return;
+    }
+
+    if (tableConf != null) {
+      // copying Bloom filter related configuration to conf.
+      BloomFilterFactory.copyBloomFilterConf(tableConf, conf);
+    }
+
+    StringBuilder bloomfilterTypePerCFConfigValue = new StringBuilder();
+    Collection<HColumnDescriptor> families = tableDescriptor.getFamilies();
+    int i = 0;
+    for (HColumnDescriptor familyDescriptor : families) {
+      if (i++ > 0) {
+        bloomfilterTypePerCFConfigValue.append('&');
+      }
+
+      bloomfilterTypePerCFConfigValue.append(
+          URLEncoder.encode(familyDescriptor.getNameAsString(), "UTF-8"));
+      bloomfilterTypePerCFConfigValue.append('=');
+      bloomfilterTypePerCFConfigValue.append(
+          URLEncoder.encode(familyDescriptor.getBloomFilterType().toString(),
+          "UTF-8"));
+    }
+
+    conf.set(BLOOMFILTER_TYPE_PER_CF_KEY, bloomfilterTypePerCFConfigValue.toString());
+  }
+
+  static Map<byte[], BloomType> createFamilyBloomTypeMap(Configuration conf) {
+    Map<byte[], BloomType> bloomTypeMap =
+      new TreeMap<byte[], BloomType >(Bytes.BYTES_COMPARATOR);
+    String bloomFilterTypeConf = conf.get(BLOOMFILTER_TYPE_PER_CF_KEY, "");
+
+    if (bloomFilterTypeConf.isEmpty()) {
+      return bloomTypeMap;
+    }
+
+    for (String familyConf : bloomFilterTypeConf.split("&")) {
+      String[] familySplit = familyConf.split("=");
+      if (familySplit.length != 2) {
+        throw new AssertionError("invalid bloomfilter type configuration");
+      }
+
+      try {
+        bloomTypeMap.put(URLDecoder.decode(familySplit[0], "UTF-8").getBytes(),
+            BloomType.valueOf(URLDecoder.decode(familySplit[1], "UTF-8")));
+      } catch (UnsupportedEncodingException e) {
+        // will not happen with UTF-8 encoding
+        throw new AssertionError(e);
+      }
+    }
+    return bloomTypeMap;
   }
 }

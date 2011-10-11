@@ -116,7 +116,7 @@ public class StoreFile {
   private static final byte[] LAST_BLOOM_KEY = Bytes.toBytes("LAST_BLOOM_KEY");
 
   /** Key for Timerange information in metadata*/
-  static final byte[] TIMERANGE_KEY = Bytes.toBytes("TIMERANGE");
+  public static final byte[] TIMERANGE_KEY = Bytes.toBytes("TIMERANGE");
 
   // Make default block size for StoreFiles 8k while testing.  TODO: FIX!
   // Need to make it 8k for testing.

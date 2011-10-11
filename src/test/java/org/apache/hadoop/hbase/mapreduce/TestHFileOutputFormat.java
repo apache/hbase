@@ -56,6 +56,9 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
@@ -82,7 +85,8 @@ public class TestHFileOutputFormat  {
 
   private static final byte[][] FAMILIES
     = { Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-A"))
-      , Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-B"))};
+      , Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-B"))
+      , Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-C"))};
   private static final byte[] TABLE_NAME = Bytes.toBytes("TestTable");
 
   private HBaseTestingUtility util = new HBaseTestingUtility();
@@ -550,6 +554,105 @@ public class TestHFileOutputFormat  {
     }
 
     return supportedAlgos.toArray(new Compression.Algorithm[0]);
+  }
+
+  private void setupColumnFamiliesBloomType(HTable table,
+    Map<String, BloomType> familyToBloom) throws IOException
+  {
+    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
+    for (Entry<String, BloomType> entry : familyToBloom.entrySet()) {
+      mockTableDescriptor.addFamily(
+          new HColumnDescriptor(entry.getKey().getBytes(), 1,
+              Compression.Algorithm.NONE.getName(), false,
+              false, 0, entry.getValue().toString()));
+    }
+    Mockito.doReturn(mockTableDescriptor).when(table).getTableDescriptor();
+  }
+
+  /**
+   * Test that {@link HFileOutputFormat} RecordWriter uses bloomfilter settings
+   * from the column family descriptor
+   */
+  @Test
+  public void testColumnFamilyBloomFilter()
+      throws IOException, InterruptedException {
+    Configuration conf = new Configuration(this.util.getConfiguration());
+    RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
+    TaskAttemptContext context = null;
+    Path dir =
+        HBaseTestingUtility.getTestDir("testColumnFamilyBloomFilter");
+
+    HTable table = Mockito.mock(HTable.class);
+
+    Map<String, BloomType> configuredBloomFilter =
+      new HashMap<String, BloomType>();
+    BloomType [] bloomTypeValues = BloomType.values();
+
+    int familyIndex = 0;
+    for (byte[] family : FAMILIES) {
+      configuredBloomFilter.put(Bytes.toString(family),
+        bloomTypeValues[familyIndex++ % bloomTypeValues.length]);
+    }
+
+    setupColumnFamiliesBloomType(table, configuredBloomFilter);
+
+    // set up the table to return some mock keys
+    setupMockStartKeys(table);
+
+    try {
+      // partial map red setup to get an operational writer for testing
+      Job job = new Job(conf, "testLocalMRIncrementalLoad");
+      setupRandomGeneratorMapper(job);
+      HFileOutputFormat.configureIncrementalLoad(job, table);
+      FileOutputFormat.setOutputPath(job, dir);
+      context = new TaskAttemptContext(job.getConfiguration(),
+          new TaskAttemptID());
+      HFileOutputFormat hof = new HFileOutputFormat();
+      writer = hof.getRecordWriter(context);
+
+      // write out random rows
+      writeRandomKeyValues(writer, context, ROWSPERSPLIT);
+      writer.close(context);
+
+      // Make sure that a directory was created for every CF
+      FileSystem fileSystem = dir.getFileSystem(conf);
+
+      // commit so that the filesystem has one directory per column family
+      hof.getOutputCommitter(context).commitTask(context);
+      for (byte[] family : FAMILIES) {
+        String familyStr = new String(family);
+        boolean found = false;
+        for (FileStatus f : fileSystem.listStatus(dir)) {
+
+          if (Bytes.toString(family).equals(f.getPath().getName())) {
+            // we found a matching directory
+            found = true;
+
+            // verify that the bloomfilter type on this file matches the
+            // configured bloom type.
+            Path dataFilePath = fileSystem.listStatus(f.getPath())[0].getPath();
+            StoreFile.Reader reader = new StoreFile.Reader(fileSystem,
+                dataFilePath, null, false, true);
+            Map<byte[], byte[]> metadataMap = reader.loadFileInfo();
+
+            assertTrue("timeRange is not set",
+			metadataMap.get(StoreFile.TIMERANGE_KEY) != null);
+            assertEquals("Incorrect bloom type used for column family " +
+			     familyStr + "(reader: " + reader + ")",
+                         configuredBloomFilter.get(familyStr),
+                         reader.getBloomFilterType());
+            break;
+          }
+        }
+
+        if (!found) {
+          fail("HFile for column family " + familyStr + " not found");
+        }
+      }
+
+    } finally {
+      dir.getFileSystem(conf).delete(dir, true);
+    }
   }
 
 
