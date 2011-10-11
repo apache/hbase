@@ -29,7 +29,7 @@ if [ -d .svn ]; then
   svn_revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
   url=`svn info | sed -n -e 's/URL: \(.*\)/\1/p'`
 	branch=`echo $url | cut -f7 -d\/`
-  revision= $branch@$svn_revision
+  revision=$branch@$svn_revision
 elif [ -d .git ]; then
   revision=`git log -1 --pretty=format:"%H"`
   hostname=`hostname`
