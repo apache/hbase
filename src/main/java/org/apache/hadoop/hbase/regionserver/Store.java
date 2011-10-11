@@ -1760,4 +1760,9 @@ public class Store implements HeapSize {
   public long heapSize() {
     return DEEP_OVERHEAD + this.memstore.heapSize();
   }
+
+  public KeyValue.KVComparator getComparator() {
+    return comparator;
+  }
+
 }

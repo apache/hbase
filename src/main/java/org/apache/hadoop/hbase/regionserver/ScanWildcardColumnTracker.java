@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -62,7 +64,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    */
   @Override
   public MatchCode checkColumn(byte[] bytes, int offset, int length,
-      long timestamp) {
+      long timestamp) throws IOException {
     if (columnBuffer == null) {
       // first iteration.
       columnBuffer = bytes;
@@ -106,23 +108,13 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     }
 
     // new col < oldcol
-    // if (cmp < 0) {
     // WARNING: This means that very likely an edit for some other family
-    // was incorrectly stored into the store for this one. Continue, but
-    // complain.
-    LOG.error("ScanWildcardColumnTracker.checkColumn ran " +
-  		"into a column actually smaller than the previous column: " +
-      Bytes.toStringBinary(bytes, offset, length));
-    // switched columns
-    columnBuffer = bytes;
-    columnOffset = offset;
-    columnLength = length;
-    currentCount = 0;
-    if (++currentCount > maxVersions) {
-      return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
-    }
-    setTS(timestamp);
-    return ScanQueryMatcher.MatchCode.INCLUDE;
+    // was incorrectly stored into the store for this one. Throw an exception,
+    // because this might lead to data corruption.
+    throw new IOException(
+        "ScanWildcardColumnTracker.checkColumn ran into a column actually " +
+        "smaller than the previous column: " +
+        Bytes.toStringBinary(bytes, offset, length));
   }
 
   @Override

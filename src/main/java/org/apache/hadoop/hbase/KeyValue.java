@@ -577,6 +577,17 @@ public class KeyValue implements Writable, HeapSize {
     return ret;
   }
 
+  /**
+   * Creates a shallow copy of this KeyValue, reusing the data byte buffer.
+   * http://en.wikipedia.org/wiki/Object_copy
+   * @return Shallow copy of this KeyValue
+   */
+  public KeyValue shallowCopy() {
+    KeyValue shallowCopy = new KeyValue(this.bytes, this.offset, this.length);
+    shallowCopy.setMemstoreTS(this.memstoreTS);
+    return shallowCopy;
+  }
+
   //---------------------------------------------------------------------------
   //
   //  String representation

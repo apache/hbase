@@ -19,6 +19,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+
+import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
+
 /**
  * Implementing classes of this interface will be used for the tracking
  * and enforcement of columns and numbers of versions during the course of a
@@ -44,9 +48,11 @@ public interface ColumnTracker {
    * @param length
    * @param timestamp
    * @return The match code instance.
+   * @throws IOException in case there is an internal consistency problem
+   *      caused by a data corruption.
    */
   public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset,
-      int length, long timestamp);
+      int length, long ttl) throws IOException;
 
   /**
    * Updates internal variables in between files
