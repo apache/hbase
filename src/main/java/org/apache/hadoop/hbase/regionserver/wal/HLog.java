@@ -569,20 +569,20 @@ public class HLog implements Syncable {
    */
   private byte [][] cleanOldLogs() throws IOException {
     Long oldestOutstandingSeqNum = getOldestOutstandingSeqNum();
-    // Get the set of all log files whose final ID is older than or
-    // equal to the oldest pending region operation
+    // Get the set of all log files whose last sequence number is smaller than
+    // the oldest edit's sequence number.
     TreeSet<Long> sequenceNumbers =
       new TreeSet<Long>(this.outputfiles.headMap(
-        (Long.valueOf(oldestOutstandingSeqNum.longValue() + 1L))).keySet());
+        (Long.valueOf(oldestOutstandingSeqNum.longValue()))).keySet());
     // Now remove old log files (if any)
     int logsToRemove = sequenceNumbers.size();
     if (logsToRemove > 0) {
       if (LOG.isDebugEnabled()) {
         // Find associated region; helps debugging.
         byte [] oldestRegion = getOldestRegion(oldestOutstandingSeqNum);
-        LOG.debug("Found " + logsToRemove + " hlogs to remove " +
-          " out of total " + this.outputfiles.size() + "; " +
-          "oldest outstanding seqnum is " + oldestOutstandingSeqNum +
+        LOG.debug("Found " + logsToRemove + " hlogs to remove" +
+          " out of total " + this.outputfiles.size() + ";" +
+          " oldest outstanding sequenceid is " + oldestOutstandingSeqNum +
           " from region " + Bytes.toString(oldestRegion));
       }
       for (Long seq : sequenceNumbers) {
@@ -595,7 +595,7 @@ public class HLog implements Syncable {
     int logCount = this.outputfiles.size() - logsToRemove;
     if (logCount > this.maxLogs && this.outputfiles != null &&
         this.outputfiles.size() > 0) {
-      regions = findMemstoresWithEditsOlderThan(this.outputfiles.firstKey(),
+      regions = findMemstoresWithEditsEqualOrOlderThan(this.outputfiles.firstKey(),
         this.lastSeqWritten);
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < regions.length; i++) {
@@ -610,19 +610,19 @@ public class HLog implements Syncable {
   }
 
   /**
-   * Return regions (memstores) that have edits that are less than the passed
-   * <code>oldestWALseqid</code>.
+   * Return regions (memstores) that have edits that are equal or less than
+   * the passed <code>oldestWALseqid</code>.
    * @param oldestWALseqid
    * @param regionsToSeqids
    * @return All regions whose seqid is < than <code>oldestWALseqid</code> (Not
    * necessarily in order).  Null if no regions found.
    */
-  static byte [][] findMemstoresWithEditsOlderThan(final long oldestWALseqid,
+  static byte [][] findMemstoresWithEditsEqualOrOlderThan(final long oldestWALseqid,
       final Map<byte [], Long> regionsToSeqids) {
     //  This method is static so it can be unit tested the easier.
     List<byte []> regions = null;
     for (Map.Entry<byte [], Long> e: regionsToSeqids.entrySet()) {
-      if (e.getValue().longValue() < oldestWALseqid) {
+      if (e.getValue().longValue() <= oldestWALseqid) {
         if (regions == null) regions = new ArrayList<byte []>();
         regions.add(e.getKey());
       }
@@ -673,7 +673,7 @@ public class HLog implements Syncable {
       }
       if (currentfilenum >= 0) {
         oldFile = computeFilename();
-        this.outputfiles.put(Long.valueOf(this.logSeqNum.get() - 1), oldFile);
+        this.outputfiles.put(Long.valueOf(this.logSeqNum.get()), oldFile);
       }
     }
     return oldFile;

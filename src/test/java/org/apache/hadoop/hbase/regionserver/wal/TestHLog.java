@@ -257,28 +257,30 @@ public class TestHLog  {
   }
 
   /**
-   * Test the findMemstoresWithEditsOlderThan method.
+   * Test the findMemstoresWithEditsEqualOrOlderThan method.
    * @throws IOException
    */
   @Test
-  public void testFindMemstoresWithEditsOlderThan() throws IOException {
+  public void testFindMemstoresWithEditsEqualOrOlderThan() throws IOException {
     Map<byte [], Long> regionsToSeqids = new HashMap<byte [], Long>();
     for (int i = 0; i < 10; i++) {
       Long l = Long.valueOf(i);
       regionsToSeqids.put(l.toString().getBytes(), l);
     }
     byte [][] regions =
-      HLog.findMemstoresWithEditsOlderThan(1, regionsToSeqids);
-    assertEquals(1, regions.length);
-    assertTrue(Bytes.equals(regions[0], "0".getBytes()));
-    regions = HLog.findMemstoresWithEditsOlderThan(3, regionsToSeqids);
-    int count = 3;
+      HLog.findMemstoresWithEditsEqualOrOlderThan(1, regionsToSeqids);
+    assertEquals(2, regions.length);
+    assertTrue(Bytes.equals(regions[0], "0".getBytes()) ||
+        Bytes.equals(regions[0], "1".getBytes()));
+    regions = HLog.findMemstoresWithEditsEqualOrOlderThan(3, regionsToSeqids);
+    int count = 4;
     assertEquals(count, regions.length);
     // Regions returned are not ordered.
     for (int i = 0; i < count; i++) {
       assertTrue(Bytes.equals(regions[i], "0".getBytes()) ||
         Bytes.equals(regions[i], "1".getBytes()) ||
-        Bytes.equals(regions[i], "2".getBytes()));
+        Bytes.equals(regions[i], "2".getBytes()) ||
+        Bytes.equals(regions[i], "3".getBytes()));
     }
   }
 
@@ -585,6 +587,64 @@ public class TestHLog  {
         timestamp, new byte[]{(byte) (11 + '0')}));
     log.append(hri, tableName, cols, System.currentTimeMillis());
     assertEquals(COL_COUNT, visitor.increments);
+  }
+
+  @Test
+  public void testLogCleaning() throws Exception {
+    LOG.info("testLogCleaning");
+    final byte [] tableName = Bytes.toBytes("testLogCleaning");
+    final byte [] tableName2 = Bytes.toBytes("testLogCleaning2");
+
+    HLog log = new HLog(fs, dir, oldLogDir, conf, null);
+    HRegionInfo hri = new HRegionInfo(new HTableDescriptor(tableName),
+        HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    HRegionInfo hri2 = new HRegionInfo(new HTableDescriptor(tableName2),
+        HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+
+    // Add a single edit and make sure that rolling won't remove the file
+    // Before HBASE-3198 it used to delete it
+    addEdits(log, hri, tableName, 1);
+    log.rollWriter();
+    assertEquals(1, log.getNumLogFiles());
+
+    // See if there's anything wrong with more than 1 edit
+    addEdits(log, hri, tableName, 2);
+    log.rollWriter();
+    assertEquals(2, log.getNumLogFiles());
+
+    // Now mix edits from 2 regions, still no flushing
+    addEdits(log, hri, tableName, 1);
+    addEdits(log, hri2, tableName2, 1);
+    addEdits(log, hri, tableName, 1);
+    addEdits(log, hri2, tableName2, 1);
+    log.rollWriter();
+    assertEquals(3, log.getNumLogFiles());
+
+    // Flush the first region, we expect to see the first two files getting
+    // archived
+    long seqId = log.startCacheFlush();
+    log.completeCacheFlush(hri.getRegionName(), tableName, seqId, false);
+    log.rollWriter();
+    assertEquals(2, log.getNumLogFiles());
+
+    // Flush the second region, which removes all the remaining output files
+    // since the oldest was completely flushed and the two others only contain
+    // flush information
+    seqId = log.startCacheFlush();
+    log.completeCacheFlush(hri2.getRegionName(), tableName2, seqId, false);
+    log.rollWriter();
+    assertEquals(0, log.getNumLogFiles());
+  }
+
+  private void addEdits(HLog log, HRegionInfo hri, byte [] tableName,
+                        int times) throws IOException {
+    final byte [] row = Bytes.toBytes("row");
+    for (int i = 0; i < times; i++) {
+      long timestamp = System.currentTimeMillis();
+      WALEdit cols = new WALEdit();
+      cols.add(new KeyValue(row, row, row, timestamp, row));
+      log.append(hri, tableName, cols, timestamp);
+    }
   }
 
   static class DumbLogEntriesVisitor implements LogEntryVisitor {
