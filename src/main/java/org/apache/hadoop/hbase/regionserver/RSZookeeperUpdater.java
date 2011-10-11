@@ -92,6 +92,7 @@ public class RSZookeeperUpdater {
    * @param updatePeriodically - if true, periodically updates the state in ZK
    */
   public void startRegionOpenEvent(HMsg hmsg, boolean updatePeriodically) throws IOException {
+    zkWrapper.sync(regionZNode);
     Stat stat = new Stat();
     byte[] data = zkWrapper.readZNode(regionZNode, stat);
     // if there is no ZNode for this region, something is wrong
