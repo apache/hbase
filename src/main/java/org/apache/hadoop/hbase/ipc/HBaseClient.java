@@ -79,6 +79,7 @@ public class HBaseClient {
   protected final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
   protected final boolean tcpKeepAlive; // if T then use keepalives
   protected int pingInterval; // how often sends ping to the server in msecs
+  private final int connectionTimeOutMillSec; // the connection time out
 
   protected final SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
@@ -306,8 +307,9 @@ public class HBaseClient {
             this.socket = socketFactory.createSocket();
             this.socket.setTcpNoDelay(tcpNoDelay);
             this.socket.setKeepAlive(tcpKeepAlive);
-            // connection time out is 20s
-            NetUtils.connect(this.socket, remoteId.getAddress(), 20000);
+
+            NetUtils.connect(this.socket, remoteId.getAddress(),
+			connectionTimeOutMillSec);
             if (remoteId.rpcTimeout > 0) {
               pingInterval = remoteId.rpcTimeout; // overwrite pingInterval
             }
@@ -658,6 +660,8 @@ public class HBaseClient {
     this.tcpNoDelay = conf.getBoolean("hbase.ipc.client.tcpnodelay", false);
     this.tcpKeepAlive = conf.getBoolean("hbase.ipc.client.tcpkeepalive", true);
     this.pingInterval = getPingInterval(conf);
+    connectionTimeOutMillSec =
+	conf.getInt("hbase.client.connection.timeout.millsec", 5000);
     if (LOG.isDebugEnabled()) {
       LOG.debug("The ping interval is" + this.pingInterval + "ms.");
     }
