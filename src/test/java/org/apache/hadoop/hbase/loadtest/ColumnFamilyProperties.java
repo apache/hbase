@@ -44,7 +44,7 @@ public class ColumnFamilyProperties {
     "\nBulkLoad=true" +
     "\nRegionsPerServer=7" +
     "\n" +
-    "\nCF1_Name=Actions" +
+    "\nCF1_Name=ActionLog" +
     "\nCF1_StartTimestamp=10" +
     "\nCF1_EndTimestamp=1000" +
     "\nCF1_MinDataSize=1" +
@@ -97,7 +97,7 @@ ClusterTestTime=120
 BulkLoad=true
 RegionsPerServer=7
 
-CF1_Name=Actions
+CF1_Name=ActionLog
 CF1_StartTimestamp=10
 CF1_EndTimestamp=1000
 CF1_MinDataSize=1
