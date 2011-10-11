@@ -173,8 +173,8 @@ public class Store implements HeapSize {
 
     // By default, we compact if an HStore has more than
     // MIN_COMMITS_FOR_COMPACTION map files
-    this.compactionThreshold =
-      conf.getInt("hbase.hstore.compactionThreshold", 3);
+    this.compactionThreshold = Math.max(2,
+      conf.getInt("hbase.hstore.compactionThreshold", 3));
 
     // Check if this is in-memory store
     this.inMemory = family.isInMemory();
@@ -589,13 +589,13 @@ public class Store implements HeapSize {
    * <p>We don't want to hold the structureLock for the whole time, as a compact()
    * can be lengthy and we want to allow cache-flushes during this period.
    *
-   * @param mc True to force a major compaction regardless of thresholds
+   * @param forceMajor True to force a major compaction regardless of thresholds
    * @return row to split around if a split is needed, null otherwise
    * @throws IOException
    */
-  StoreSize compact(final boolean mc) throws IOException {
+  StoreSize compact(final boolean forceMajor) throws IOException {
     boolean forceSplit = this.region.shouldSplit(false);
-    boolean majorcompaction = mc;
+    boolean majorcompaction = forceMajor;
     synchronized (compactLock) {
       this.lastCompactSize = 0;
 
@@ -619,8 +619,8 @@ public class Store implements HeapSize {
         return checkSplit(forceSplit);
       }
 
-      // get store file sizes for incremental compacting selection.
-      /* normal skew:
+      /* get store file sizes for incremental compacting selection.
+       * normal skew:
        *
        *         older ----> newer
        *     _
@@ -631,10 +631,10 @@ public class Store implements HeapSize {
        *    | |  | |  | |  | | | | | |
        *    | |  | |  | |  | | | | | |
        */
-      boolean normalSkew = true;
       int countOfFiles = filesToCompact.size();
       long [] fileSizes = new long[countOfFiles];
-      for (int i = 0; i < countOfFiles; i++) {
+      long [] sumSize = new long[countOfFiles];
+      for (int i = countOfFiles-1; i >= 0; --i) {
         StoreFile file = filesToCompact.get(i);
         Path path = file.getPath();
         if (path == null) {
@@ -647,11 +647,11 @@ public class Store implements HeapSize {
           return null;
         }
         fileSizes[i] = file.getReader().length();
-
-        // normal case: file[i] < file[i-1] unless they unconditionally compact
-        if (normalSkew && i > 0) {
-          normalSkew = fileSizes[i] < Math.max(fileSizes[i-1],minCompactSize);
-        }
+        // calculate the sum of fileSizes[i,i+maxFilesToCompact-1) for algo
+        int tooFar = i + this.maxFilesToCompact - 1;
+        sumSize[i] = fileSizes[i]
+                   + ((i+1    < countOfFiles) ? sumSize[i+1]      : 0)
+                   - ((tooFar < countOfFiles) ? fileSizes[tooFar] : 0);
       }
 
       // never run major compaction if we have too many files to avoid OOM
@@ -662,47 +662,30 @@ public class Store implements HeapSize {
       long totalSize = 0;
       if (!majorcompaction && !references) {
         // we're doing a minor compaction, let's see what files are applicable
-        int start = countOfFiles;
-        int end = countOfFiles;
-        if (normalSkew) {
-          // Start at the newest file
-          while (start > 0) {
-            /* Stop when you find a file too big to consider for compaction.
-             * This means it is:
-             *   (1) an already-compacted, large file (i.e. > minCompactSize)
-             *   (2) compactRatio times larger than sum(other_compact_files)
-             * Given normal skew, any older files will also be too large
-             */
-            if (fileSizes[start-1] >
-                Math.max(minCompactSize, (long)(totalSize * compactRatio))) {
-              break;
-            }
-            // Include the tested file
-            --start;
-            totalSize += fileSizes[start];
+        int start = 0;
+        double r = this.compactRatio;
 
-            // Only allow a certain number of files.
-            if (end - start > this.maxFilesToCompact) {
-              /* If fileSizes.size() >> maxFilesToCompact, we will recurse on
-               * compact().  First consider to oldest files to avoid a
-               * situation where we always compact the last X and the last file
-               * becomes an aggregate of the previous compactions.
-               */
-              --end;
-              totalSize -= fileSizes[end-1];
-            }
-          }
-        } else {
-          // our normal operation skew is off. probably because someone
-          // imported a StoreFile.  unconditionally compact to restore order
-          start = Math.max(end - this.maxFilesToCompact, 0);
-          for (int pos = start; pos < end; ++pos) {
-            totalSize += fileSizes[pos];
-          }
-          LOG.info("StoreFiles in " + this.storeNameStr
-              + " do not follow normal operational skew.  "
-              + "Unconditionally compacting to restore order.");
+        /* Start at the oldest file and stop when you find the first file that
+         * meets compaction criteria:
+         *   (1) a recently-flushed, small file (i.e. <= minCompactSize)
+         *      OR
+         *   (2) within the compactRatio of sum(newer_files)
+         * Given normal skew, any newer files will also meet this criteria
+         *
+         * Additional Note:
+         * If fileSizes.size() >> maxFilesToCompact, we will recurse on
+         * compact().  Consider the oldest files first to avoid a
+         * situation where we always compact [end-threshold,end).  Then, the
+         * last file becomes an aggregate of the previous compactions.
+         */
+        while(countOfFiles - start >= this.compactionThreshold &&
+              fileSizes[start] >
+                Math.max(minCompactSize, (long)(sumSize[start+1] * r))) {
+          ++start;
         }
+        int end = Math.min(countOfFiles, start + this.maxFilesToCompact);
+        totalSize = fileSizes[start]
+                  + ((start+1 < countOfFiles) ? sumSize[start+1] : 0);
 
         // if we don't have enough files to compact, just wait
         if (end - start < this.compactionThreshold) {
@@ -856,7 +839,10 @@ public class Store implements HeapSize {
         long keyCount = (r.getBloomFilterType() == family.getBloomFilterType())
             ? r.getFilterEntries() : r.getEntries();
         maxKeyCount += keyCount;
-        LOG.info("Compacting: " + file + "; keyCount = " + keyCount + "; Bloom Type = " + r.getBloomFilterType().toString());
+        LOG.info("Compacting: " + file +
+          "; keyCount = " + keyCount +
+          "; Bloom Type = " + r.getBloomFilterType().toString() +
+          "; Size = " + StringUtils.humanReadableInt(r.length()) );
       }
     }
     LOG.info("Estimated total keyCount for output of compaction = " + maxKeyCount);
