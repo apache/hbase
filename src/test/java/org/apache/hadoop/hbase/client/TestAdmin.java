@@ -92,6 +92,19 @@ public class TestAdmin {
   }
 
   @Test
+  public void testGetTableRegions() throws IOException {
+    TEST_UTIL.createTable(Bytes.toBytes("testCreateNormalTable"),
+      HConstants.CATALOG_FAMILY);
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    List<Pair<HRegionInfo,HServerAddress>>  tableRegions =
+        master.getTableRegions(Bytes.toBytes("testCreateTable"));
+    assertTrue(tableRegions.size() != 0);
+    List<Pair<HRegionInfo,HServerAddress>>  metaRegions =
+        master.getTableRegions(HConstants.META_TABLE_NAME);
+    assertTrue(metaRegions.size() != 0);
+  }
+
+  @Test
   public void testCreateTableWithRegions() throws IOException {
 
     byte[] tableName = Bytes.toBytes("testCreateTableWithRegions");

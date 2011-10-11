@@ -1143,25 +1143,37 @@ public class HMaster extends Thread implements HMasterInterface,
   throws IOException {
     final ArrayList<Pair<HRegionInfo, HServerAddress>> result =
       Lists.newArrayList();
-    MetaScannerVisitor visitor =
-      new MetaScannerVisitor() {
-        @Override
-        public boolean processRow(Result data) throws IOException {
-          if (data == null || data.size() <= 0)
-            return true;
-          Pair<HRegionInfo, HServerAddress> pair =
-            metaRowToRegionPair(data);
-          if (pair == null) return false;
-          if (!Bytes.equals(pair.getFirst().getTableDesc().getName(),
-                tableName)) {
-            return false;
-          }
-          result.add(pair);
-          return true;
-        }
-    };
 
-    MetaScanner.metaScan(conf, visitor, tableName);
+    if (!Bytes.equals(HConstants.META_TABLE_NAME, tableName)) {
+      MetaScannerVisitor visitor =
+        new MetaScannerVisitor() {
+          @Override
+          public boolean processRow(Result data) throws IOException {
+            if (data == null || data.size() <= 0)
+              return true;
+            Pair<HRegionInfo, HServerAddress> pair =
+              metaRowToRegionPair(data);
+            if (pair == null) return false;
+            if (!Bytes.equals(pair.getFirst().getTableDesc().getName(),
+                  tableName)) {
+              return false;
+            }
+            result.add(pair);
+            return true;
+          }
+      };
+
+      MetaScanner.metaScan(conf, visitor, tableName);
+    }
+    else {
+      List<MetaRegion> metaRegions = regionManager.getListOfOnlineMetaRegions();
+	for (MetaRegion mRegion: metaRegions) {
+		if (Bytes.equals(mRegion.getRegionInfo().getTableDesc().getName(), tableName)) {
+			result.add(new Pair<HRegionInfo, HServerAddress>
+              (mRegion.getRegionInfo(), mRegion.getServer()));
+		}
+	}
+    }
     return result;
   }
 
