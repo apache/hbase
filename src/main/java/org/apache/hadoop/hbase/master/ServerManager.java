@@ -330,7 +330,7 @@ public class ServerManager {
       }
 
       synchronized (this.serversToServerInfo) {
-        removeServerInfo(info.getServerName());
+        processServerInfoOnShutdown(info.getServerName(), true);
         notifyServers();
       }
 
@@ -388,7 +388,7 @@ public class ServerManager {
     synchronized (this.serversToServerInfo) {
       // This method removes ROOT/META from the list and marks them to be
       // reassigned in addition to other housework.
-      if (removeServerInfo(serverInfo.getServerName())) {
+      if (processServerInfoOnShutdown(serverInfo.getServerName(), false)) {
         // Only process the exit message if the server still has registered info.
         // Otherwise we could end up processing the server exit twice.
         LOG.info("Region server " + serverInfo.getServerName() +
@@ -424,6 +424,8 @@ public class ServerManager {
           master.getRegionManager().setUnassigned(entry.getValue().getRegionInfo(),
               true);
         }
+        LOG.info("Removing server's info " + serverInfo.getServerName());
+        this.serversToServerInfo.remove(serverInfo.getServerName());
       }
     }
   }
@@ -711,13 +713,16 @@ public class ServerManager {
   }
 
   /** Update a server load information because it's shutting down*/
-  private boolean removeServerInfo(final String serverName) {
+  private boolean processServerInfoOnShutdown(final String serverName, boolean toRemove) {
     boolean infoUpdated = false;
-    HServerInfo info = this.serversToServerInfo.remove(serverName);
+    HServerInfo info = this.serversToServerInfo.get(serverName);
     // Only update load information once.
     // This method can be called a couple of times during shutdown.
     if (info != null) {
-      LOG.info("Removing server's info " + serverName);
+      if (toRemove) {
+        this.serversToServerInfo.remove(serverName);
+        LOG.info("Removing server's info " + serverName);
+      }
       this.master.getRegionManager().offlineMetaServer(info.getServerAddress());
 
       //HBASE-1928: Check whether this server has been transitioning the ROOT table
