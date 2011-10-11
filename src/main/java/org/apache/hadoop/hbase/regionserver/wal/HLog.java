@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.util.concurrent.NamingThreadFactory;
 
@@ -1061,8 +1062,9 @@ public class HLog implements Syncable {
           len += kv.getLength();
         }
         LOG.warn(String.format(
-          "%s took %d ms appending an edit to hlog; editcount=%d, len~=%d",
-          Thread.currentThread().getName(), took, this.numEntries.get(), len));
+          "%s took %d ms appending an edit to hlog; editcount=%d, len~=%s",
+          Thread.currentThread().getName(), took, this.numEntries.get(),
+          StringUtils.humanReadableInt(len)));
       }
     } catch (IOException e) {
       LOG.fatal("Could not append. Requesting close of hlog", e);
