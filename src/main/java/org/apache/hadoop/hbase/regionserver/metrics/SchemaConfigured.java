@@ -44,9 +44,7 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
 
   /** A helper constructor that configures the "use table name" flag. */
   private SchemaConfigured(Configuration conf) {
-    if (conf != null) {
       SchemaMetrics.configureGlobally(conf);
-    }
   }
 
   /**
