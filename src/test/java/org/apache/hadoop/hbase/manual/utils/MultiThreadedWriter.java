@@ -155,7 +155,7 @@ public class MultiThreadedWriter extends MultiThreadedAction
 
     public void insert(long rowKey, long col) {
       Put put = new Put(longToByteArrayKey(rowKey));
-      put.add(columnFamily_, ("" + col).getBytes(), dataGenerator_.getDataInSize(rowKey));
+      put.add(columnFamily_, ("" + col).getBytes(), dataGenerator_.getDataInSize(rowKey, "" + col));
       try {
         long start = System.currentTimeMillis();
         putIntoTables(put);
@@ -183,7 +183,7 @@ public class MultiThreadedWriter extends MultiThreadedAction
       byte[] columnQualifier;
       byte[] value;
       for(long i = startCol; i < endCol; ++i) {
-        value = dataGenerator_.getDataInSize(rowKey);
+        value = dataGenerator_.getDataInSize(rowKey, "" + i);
         columnQualifier = ("" + i).getBytes();
         put.add(columnFamily_, columnQualifier, value);
       }

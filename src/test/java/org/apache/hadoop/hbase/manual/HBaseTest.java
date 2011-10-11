@@ -74,6 +74,7 @@ public class HBaseTest
 
   // usage string for loading data
   static final String OPT_USAGE_LOAD = " <num keys>:<average cols per key>:<avg data size>[:<num threads = 20>]";
+  static final String OPT_USAGE_LOAD_START_KEY = " <start key>";
   /**
    * Reads the following params from the command line:
    *  <Number of keys to load>:<Average columns per key>:<Average data size per column>[:<num threads = 20>]
@@ -83,6 +84,10 @@ public class HBaseTest
     String[] cols = cmd_.getOptionValue(OPT_LOAD).split(":");
     long startKey = 0;
     long endKey = Long.parseLong(cols[0]);
+    if (cmd_.hasOption(OPT_LOAD_START_KEY)) {
+      startKey = Long.parseLong(cmd_.getOptionValue(OPT_LOAD_START_KEY));
+      endKey += startKey;
+    }
     long minColsPerKey = 1;
     long maxColsPerKey = 2 * Long.parseLong(cols[1]);
     int minColDataSize = Integer.parseInt(cols[2])/2;
@@ -269,6 +274,7 @@ public class HBaseTest
   private static final String FOOTER = "";
   private static final String OPT_ZKNODE = "zk";
   private static final String OPT_LOAD = "load";
+  private static final String OPT_LOAD_START_KEY = "load_start_key";
   private static final String OPT_READ = "read";
   private static final String OPT_KILL = "kill";
   private static final String OPT_APPEND = "append";
@@ -281,12 +287,14 @@ public class HBaseTest
             + "  -" + OPT_ZKNODE   + " <Zookeeper node>"
             + "  _" + OPT_TABLE_NAME + " <Table name>"
             + "  -" + OPT_LOAD     + OPT_USAGE_LOAD
+            + "  -" + OPT_LOAD_START_KEY + OPT_USAGE_LOAD_START_KEY
             + "  -" + OPT_READ     + OPT_USAGE_READ
             + "  -" + OPT_KILL     + OPT_USAGE_KILL;
     // add options
     options_.addOption(OPT_ZKNODE    , true, "Zookeeper node in the HBase cluster");
     options_.addOption(OPT_TABLE_NAME, true, "The name of the table to be read or write");
     options_.addOption(OPT_LOAD      , true, OPT_USAGE_LOAD);
+    options_.addOption(OPT_LOAD_START_KEY, true, OPT_USAGE_LOAD_START_KEY);
     options_.addOption(OPT_READ      , true, OPT_USAGE_READ);
     options_.addOption(OPT_KILL      , true, OPT_USAGE_KILL);
     options_.addOption(OPT_APPEND    , true, OPT_USAGE_APPEND);

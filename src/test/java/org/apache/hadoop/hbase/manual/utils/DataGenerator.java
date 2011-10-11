@@ -43,23 +43,23 @@ public class DataGenerator {
     maxDataSize_ = maxDataSize;
   }
 
-  private static byte[] getDataForKey(String rowKey, int dataSize) {
+  private static byte[] getDataForKeyColumn(String rowKey, String column, int dataSize) {
     // Need a different local random object since multiple threads might invoke
     // this method at the same time.
-    Random random = new Random(rowKey.hashCode());
+    Random random = new Random(rowKey.hashCode() + column.hashCode());
     byte[] rbytes = new byte[dataSize];
     random.nextBytes(rbytes);
     return rbytes;
   }
 
-  public byte[] getDataInSize(long key) {
+  public byte[] getDataInSize(long key, String column) {
     String rowKey = DataGenerator.md5PrefixedKey(key);
     int dataSize = minDataSize_ + random_.nextInt(Math.abs(maxDataSize_ - minDataSize_));
-    return getDataForKey(rowKey, dataSize);
+    return getDataForKeyColumn(rowKey, column, dataSize);
   }
 
   public static boolean verify(String rowKey, String actionId, byte[] data) {
-    byte[] expectedData = getDataForKey(rowKey, data.length);
+    byte[] expectedData = getDataForKeyColumn(rowKey, actionId, data.length);
     return (Bytes.equals(expectedData, data));
   }
 }
