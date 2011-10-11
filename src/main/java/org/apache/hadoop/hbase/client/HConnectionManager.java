@@ -275,7 +275,7 @@ public class HConnectionManager {
     private final long pause;
     private final int numRetries;
     private final int maxRPCAttempts;
-    private final long rpcTimeout;
+    private final int rpcTimeout;
     private final int prefetchRegionLimit;
 
     private final Object masterLock = new Object();
@@ -331,9 +331,9 @@ public class HConnectionManager {
       this.pause = conf.getLong("hbase.client.pause", 1000);
       this.numRetries = conf.getInt("hbase.client.retries.number", 10);
       this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
-      this.rpcTimeout = conf.getLong(
-          HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
-          HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
+      this.rpcTimeout = conf.getInt(
+          HConstants.HBASE_RPC_TIMEOUT_KEY,
+          HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 
       this.prefetchRegionLimit = conf.getInt("hbase.client.prefetch.limit",
           10);

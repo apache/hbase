@@ -230,7 +230,7 @@ public class HRegionServer implements HRegionInterface,
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
 
-  private final long rpcTimeout;
+  private final int rpcTimeout;
 
   // Address passed in to constructor.  This is not always the address we run
   // with.  For example, if passed port is 0, then we are to pick a port.  The
@@ -290,9 +290,9 @@ public class HRegionServer implements HRegionInterface,
     this.numRegionsToReport =
       conf.getInt("hbase.regionserver.numregionstoreport", 10);
 
-    this.rpcTimeout =
-      conf.getLong(HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
-          HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
+    this.rpcTimeout = conf.getInt(
+        HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 
     reinitialize();
   }
@@ -1210,7 +1210,7 @@ public class HRegionServer implements HRegionInterface,
         master = (HMasterRegionInterface)HBaseRPC.waitForProxy(
           HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
           masterAddress.getInetSocketAddress(), this.conf, -1,
-          (int)this.rpcTimeout, this.rpcTimeout);
+          this.rpcTimeout, this.rpcTimeout);
       } catch (IOException e) {
         LOG.warn("Unable to connect to master. Retrying. Error was:", e);
         sleeper.sleep();
