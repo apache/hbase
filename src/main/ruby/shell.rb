@@ -217,6 +217,8 @@ Shell.load_command_group(
     enable
     exists
     list
+    locate_regionservers
+    show_filters
   ]
 )
 

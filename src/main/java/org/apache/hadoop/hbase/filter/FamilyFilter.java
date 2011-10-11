@@ -25,41 +25,44 @@ import org.apache.hadoop.hbase.KeyValue;
 import java.util.ArrayList;
 
 /**
- * This filter is used to filter based on column value. It takes an
+ * This filter is used to filter based on the column family. It takes an
  * operator (equal, greater, not equal, etc) and a byte [] comparator for the
- * cell value.
- * <p>
- * This filter can be wrapped with {@link WhileMatchFilter} and {@link SkipFilter}
+ * column family portion of a key.
+ * <p/>
+ * This filter can be wrapped with {@link org.apache.hadoop.hbase.filter.WhileMatchFilter} and {@link org.apache.hadoop.hbase.filter.SkipFilter}
  * to add more control.
- * <p>
- * Multiple filters can be combined using {@link FilterList}.
- * <p>
- * To test the value of a single qualifier when scanning multiple qualifiers,
- * use {@link SingleColumnValueFilter}.
+ * <p/>
+ * Multiple filters can be combined using {@link org.apache.hadoop.hbase.filter.FilterList}.
+ * <p/>
+ * If an already known column family is looked for, use {@link org.apache.hadoop.hbase.client.Get#addFamily(byte[])}
+ * directly rather than a filter.
  */
-public class ValueFilter extends CompareFilter {
-
+public class FamilyFilter extends CompareFilter {
   /**
    * Writable constructor, do not use.
    */
-  public ValueFilter() {
+  public FamilyFilter() {
   }
 
   /**
    * Constructor.
-   * @param valueCompareOp the compare op for value matching
-   * @param valueComparator the comparator for value matching
+   *
+   * @param familyCompareOp  the compare op for column family matching
+   * @param familyComparator the comparator for column family matching
    */
-  public ValueFilter(final CompareOp valueCompareOp,
-      final WritableByteArrayComparable valueComparator) {
-    super(valueCompareOp, valueComparator);
+  public FamilyFilter(final CompareOp familyCompareOp,
+                      final WritableByteArrayComparable familyComparator) {
+      super(familyCompareOp, familyComparator);
   }
 
   @Override
   public ReturnCode filterKeyValue(KeyValue v) {
-    if (doCompare(this.compareOp, this.comparator, v.getBuffer(),
-        v.getValueOffset(), v.getValueLength())) {
-      return ReturnCode.SKIP;
+    int familyLength = v.getFamilyLength();
+    if (familyLength > 0) {
+      if (doCompare(this.compareOp, this.comparator, v.getBuffer(),
+          v.getFamilyOffset(), familyLength)) {
+        return ReturnCode.SKIP;
+      }
     }
     return ReturnCode.INCLUDE;
   }
@@ -68,6 +71,6 @@ public class ValueFilter extends CompareFilter {
     ArrayList arguments = CompareFilter.extractArguments(filterArguments);
     CompareOp compareOp = (CompareOp)arguments.get(0);
     WritableByteArrayComparable comparator = (WritableByteArrayComparable)arguments.get(1);
-    return new ValueFilter(compareOp, comparator);
+    return new FamilyFilter(compareOp, comparator);
   }
 }

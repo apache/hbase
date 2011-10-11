@@ -25,6 +25,9 @@ import org.apache.hadoop.hbase.KeyValue;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Simple filter that returns first N columns on row only.
@@ -66,6 +69,13 @@ public class ColumnCountGetFilter extends FilterBase {
   @Override
   public void reset() {
     this.count = 0;
+  }
+
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 1,
+                                "Expected 1 but got: %s", filterArguments.size());
+    int limit = ParseFilter.convertByteArrayToInt(filterArguments.get(0));
+    return new ColumnCountGetFilter(limit);
   }
 
   @Override

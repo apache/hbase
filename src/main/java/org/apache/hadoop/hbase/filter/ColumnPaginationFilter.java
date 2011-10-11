@@ -23,8 +23,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
+import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.KeyValue;
+import com.google.common.base.Preconditions;
 
 /**
  * A filter, based on the ColumnCountGetFilter, takes two arguments: limit and offset.
@@ -47,6 +49,8 @@ public class ColumnPaginationFilter extends FilterBase
 
   public ColumnPaginationFilter(final int limit, final int offset)
   {
+    Preconditions.checkArgument(limit >= 0, "limit must be positive %s", limit);
+    Preconditions.checkArgument(offset >= 0, "offset must be positive %s", offset);
     this.limit = limit;
     this.offset = offset;
   }
@@ -68,6 +72,22 @@ public class ColumnPaginationFilter extends FilterBase
   public void reset()
   {
     this.count = 0;
+  }
+
+  public int getLimit() {
+    return this.limit;
+  }
+
+  public int getOffset() {
+    return this.offset;
+  }
+
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 2,
+                                "Expected 2 but got: %s", filterArguments.size());
+    int limit = ParseFilter.convertByteArrayToInt(filterArguments.get(0));
+    int offset = ParseFilter.convertByteArrayToInt(filterArguments.get(1));
+    return new ColumnPaginationFilter(limit, offset);
   }
 
   public void readFields(DataInput in) throws IOException

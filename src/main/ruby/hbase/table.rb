@@ -32,6 +32,7 @@ java_import org.apache.hadoop.hbase.client.Delete
 
 java_import org.apache.hadoop.hbase.client.Scan
 java_import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter
+java_import org.apache.hadoop.hbase.filter.ParseFilter
 
 # Wrapper for org.apache.hadoop.hbase.client.HTable
 
@@ -240,7 +241,13 @@ module Hbase
         end
 
         columns.each { |c| scan.addColumns(c) }
-        scan.setFilter(filter) if filter
+
+        unless filter.class == String
+          scan.setFilter(filter)
+        else
+          scan.setFilter(ParseFilter.new.parseFilterString(filter))
+        end
+
         scan.setTimeStamp(timestamp) if timestamp
         scan.setCacheBlocks(cache)
         scan.setMaxVersions(versions) if versions > 1
