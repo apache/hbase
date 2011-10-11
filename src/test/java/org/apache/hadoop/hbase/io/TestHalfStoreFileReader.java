@@ -92,7 +92,7 @@ public class TestHalfStoreFileReader {
     final HalfStoreFileReader halfreader =
         new HalfStoreFileReader(fs, p, null, bottom);
     halfreader.loadFileInfo();
-    final HFileScanner scanner = halfreader.getScanner(false, false);
+    final HFileScanner scanner = halfreader.getScanner(false, false, false);
 
     scanner.seekTo();
     KeyValue curr;

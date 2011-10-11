@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.ByteBloomFilter;
@@ -778,6 +779,55 @@ public class HFile {
     // file Path plus metadata key/value pairs.
     protected String name;
 
+    // table qualified cfName for this HFile.
+    // This is used to report stats on a per-table/CF basis
+    public String cfName = "";
+
+    // various metrics that we want to track on a per-cf basis
+    public String fsReadTimeMetric = "";
+    public String compactionReadTimeMetric = "";
+
+    public String fsBlockReadCntMetric = "";
+    public String compactionBlockReadCntMetric = "";
+
+    public String fsBlockReadCacheHitCntMetric = "";
+    public String compactionBlockReadCacheHitCntMetric = "";
+
+    public String fsMetaBlockReadCntMetric = "";
+    public String fsMetaBlockReadCacheHitCntMetric = "";
+
+    /*
+     * Parse the HFile path to figure out which table and column family
+     * it belongs to. This is used to maintain read statistics on a
+     * per-column-family basis.
+     *
+     * @param path HFile path name
+     */
+    public void parsePath(String path) {
+      String splits[] = path.split("/");
+      this.cfName = "cf." + splits[splits.length - 2];
+
+      this.fsReadTimeMetric =
+        this.cfName + ".fsRead";
+      this.compactionReadTimeMetric =
+        this.cfName + ".compactionRead";
+
+      this.fsBlockReadCntMetric =
+        this.cfName + ".fsBlockReadCnt";
+      this.fsBlockReadCacheHitCntMetric =
+        this.cfName + ".fsBlockReadCacheHitCnt";
+
+      this.compactionBlockReadCntMetric =
+        this.cfName + ".compactionBlockReadCnt";
+      this.compactionBlockReadCacheHitCntMetric =
+        this.cfName + ".compactionBlockReadCacheHitCnt";
+
+      this.fsMetaBlockReadCntMetric =
+        this.cfName + ".fsMetaBlockReadCnt";
+      this.fsMetaBlockReadCacheHitCntMetric =
+        this.cfName + "fsMetaBlockReadCacheHitCnt";
+    }
+
     /**
      * Opens a HFile.  You must load the file info before you can
      * use it by calling {@link #loadFileInfo()}.
@@ -792,6 +842,7 @@ public class HFile {
       this(fs.open(path), fs.getFileStatus(path).getLen(), cache, inMemory);
       this.closeIStream = true;
       this.name = path.toString();
+      this.parsePath(this.name);
     }
 
     /**
@@ -941,13 +992,15 @@ public class HFile {
      * Call {@link HFileScanner#seekTo(byte[])} to position an start the read.
      * There is nothing to clean up in a Scanner. Letting go of your references
      * to the scanner is sufficient.
+     * @param cacheBlocks True if we should cache blocks read in by this scanner.
      * @param pread Use positional read rather than seek+read if true (pread is
      * better for random reads, seek+read is better scanning).
-     * @param cacheBlocks True if we should cache blocks read in by this scanner.
+     * @param isCompaction is scanner being used for a compaction?
      * @return Scanner on this file.
      */
-    public HFileScanner getScanner(boolean cacheBlocks, final boolean pread) {
-      return new Scanner(this, cacheBlocks, pread);
+    public HFileScanner getScanner(boolean cacheBlocks, final boolean pread,
+                                  final boolean isCompaction) {
+      return new Scanner(this, cacheBlocks, pread, isCompaction);
     }
 
     /**
@@ -992,6 +1045,7 @@ public class HFile {
       // Per meta key from any given file, synchronize reads for said block
       synchronized (metaIndex.blockKeys[block]) {
         metaLoads++;
+        HRegion.incrNumericMetric(this.fsMetaBlockReadCntMetric, 1);
         // Check cache for block.  If found return.
         if (cache != null) {
           ByteBuffer cachedBuf = cache.getBlock(name + "meta" + block);
@@ -999,6 +1053,7 @@ public class HFile {
             // Return a distinct 'shallow copy' of the block,
             // so pos doesnt get messed by the scanner
             cacheHits++;
+            HRegion.incrNumericMetric(this.fsMetaBlockReadCacheHitCntMetric, 1);
             return cachedBuf.duplicate();
           }
           // Cache Miss, please load.
@@ -1016,7 +1071,9 @@ public class HFile {
         // Create a new ByteBuffer 'shallow copy' to hide the magic header
         buf = buf.slice();
 
-        readTime += System.currentTimeMillis() - now;
+        long delta = System.currentTimeMillis() - now;
+        HRegion.incrTimeVaryingMetric(this.fsReadTimeMetric, delta);
+        readTime += delta;
         readOps++;
 
         // Cache the block
@@ -1033,10 +1090,12 @@ public class HFile {
      * @param block Index of block to read.
      * @param pread Use positional read instead of seek+read (positional is
      * better doing random reads whereas seek+read is better scanning).
+     * @param isCompaction is this block being read as part of a compaction
      * @return Block wrapped in a ByteBuffer.
      * @throws IOException
      */
-    ByteBuffer readBlock(int block, boolean cacheBlock, final boolean pread)
+    ByteBuffer readBlock(int block, boolean cacheBlock, final boolean pread,
+                         final boolean isCompaction)
     throws IOException {
       if (blockIndex == null) {
         throw new IOException("Block index not loaded");
@@ -1051,6 +1110,13 @@ public class HFile {
       // the other choice is to duplicate work (which the cache would prevent you from doing).
       synchronized (blockIndex.blockKeys[block]) {
         blockLoads++;
+
+        if (isCompaction) {
+          HRegion.incrNumericMetric(this.compactionBlockReadCntMetric, 1);
+        } else {
+          HRegion.incrNumericMetric(this.fsBlockReadCntMetric, 1);
+        }
+
         // Check cache for block.  If found return.
         if (cache != null) {
           ByteBuffer cachedBuf = cache.getBlock(name + block);
@@ -1058,6 +1124,15 @@ public class HFile {
             // Return a distinct 'shallow copy' of the block,
             // so pos doesnt get messed by the scanner
             cacheHits++;
+
+            if (isCompaction) {
+              HRegion.incrNumericMetric(
+                  this.compactionBlockReadCacheHitCntMetric, 1);
+            } else {
+              HRegion.incrNumericMetric(
+                  this.fsBlockReadCacheHitCntMetric, 1);
+            }
+
             return cachedBuf.duplicate();
           }
           // Carry on, please load.
@@ -1091,8 +1166,15 @@ public class HFile {
         //       reading at buf.arrayOffset()
         buf = buf.slice();
 
-        readTime += System.currentTimeMillis() - now;
+        long delta = System.currentTimeMillis() - now;
+        readTime += delta;
         readOps++;
+        if (isCompaction) {
+          HRegion.incrTimeVaryingMetric(this.compactionReadTimeMetric, delta);
+        } else {
+          HRegion.incrTimeVaryingMetric(this.fsReadTimeMetric, delta);
+        }
+
 
         // Cache the block
         if(cacheBlock && cache != null) {
@@ -1252,16 +1334,19 @@ public class HFile {
 
       private final boolean cacheBlocks;
       private final boolean pread;
+      private final boolean isCompaction;
 
       private int currKeyLen = 0;
       private int currValueLen = 0;
 
       public int blockFetches = 0;
 
-      public Scanner(Reader r, boolean cacheBlocks, final boolean pread) {
+      public Scanner(Reader r, boolean cacheBlocks, final boolean pread,
+                    final boolean isCompaction) {
         this.reader = r;
         this.cacheBlocks = cacheBlocks;
         this.pread = pread;
+        this.isCompaction = isCompaction;
       }
 
       public KeyValue getKeyValue() {
@@ -1322,7 +1407,8 @@ public class HFile {
             block = null;
             return false;
           }
-          block = reader.readBlock(this.currBlock, this.cacheBlocks, this.pread);
+          block = reader.readBlock(this.currBlock, this.cacheBlocks,
+                                   this.pread, this.isCompaction);
           currKeyLen = block.getInt();
           currValueLen = block.getInt();
           blockFetches++;
@@ -1478,7 +1564,8 @@ public class HFile {
           return true;
         }
         currBlock = 0;
-        block = reader.readBlock(this.currBlock, this.cacheBlocks, this.pread);
+        block = reader.readBlock(this.currBlock, this.cacheBlocks,
+                                 this.pread, this.isCompaction);
         currKeyLen = block.getInt();
         currValueLen = block.getInt();
         blockFetches++;
@@ -1487,12 +1574,14 @@ public class HFile {
 
       private void loadBlock(int bloc, boolean rewind) throws IOException {
         if (block == null) {
-          block = reader.readBlock(bloc, this.cacheBlocks, this.pread);
+          block = reader.readBlock(bloc, this.cacheBlocks,
+                                   this.pread, this.isCompaction);
           currBlock = bloc;
           blockFetches++;
         } else {
           if (bloc != currBlock) {
-            block = reader.readBlock(bloc, this.cacheBlocks, this.pread);
+            block = reader.readBlock(bloc, this.cacheBlocks,
+                                     this.pread, this.isCompaction);
             currBlock = bloc;
             blockFetches++;
           } else {
@@ -1962,7 +2051,7 @@ public class HFile {
         int count = 0;
         if (printKey || checkRow || checkFamily) {
           // scan over file and read key/value's and check if requested
-          HFileScanner scanner = reader.getScanner(false, false);
+          HFileScanner scanner = reader.getScanner(false, false, false);
           scanner.seekTo();
           KeyValue pkv = null;
           do {

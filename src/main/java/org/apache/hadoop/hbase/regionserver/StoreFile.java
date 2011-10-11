@@ -915,10 +915,16 @@ public class StoreFile {
     private final HFile.Reader reader;
     protected TimeRangeTracker timeRangeTracker = null;
     protected long sequenceID = -1;
+    private final String bloomAccessedMetric;
+    private final String bloomSkippedMetric;
 
     public Reader(FileSystem fs, Path path, BlockCache blockCache, boolean inMemory)
         throws IOException {
       reader = new HFile.Reader(fs, path, blockCache, inMemory);
+
+      // prepare the text (key) for the metrics
+      bloomAccessedMetric = reader.cfName + ".keyMaybeInBloomCnt";
+      bloomSkippedMetric = reader.cfName + ".keyNotInBloomCnt";
       bloomFilterType = BloomType.NONE;
     }
 
@@ -927,6 +933,8 @@ public class StoreFile {
      */
     Reader() {
       this.reader = null;
+      bloomAccessedMetric = "";
+      bloomSkippedMetric = "";
     }
 
     public RawComparator<byte []> getComparator() {
@@ -938,10 +946,15 @@ public class StoreFile {
      *
      * @param cacheBlocks should this scanner cache blocks?
      * @param pread use pread (for highly concurrent small readers)
+     * @param isCompaction is scanner being used for compaction?
      * @return a scanner
      */
-    public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread) {
-      return new StoreFileScanner(this, getScanner(cacheBlocks, pread));
+    public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
+                                               boolean pread,
+                                               boolean isCompaction) {
+      return new StoreFileScanner(this,
+                                 getScanner(cacheBlocks, pread,
+                                            isCompaction));
     }
 
     /**
@@ -951,11 +964,13 @@ public class StoreFile {
      *
      * @param cacheBlocks should we cache the blocks?
      * @param pread use pread (for concurrent small readers)
+     * @param isCompaction is scanner being used for compaction?
      * @return the underlying HFileScanner
      */
     @Deprecated
-    public HFileScanner getScanner(boolean cacheBlocks, boolean pread) {
-      return reader.getScanner(cacheBlocks, pread);
+    public HFileScanner getScanner(boolean cacheBlocks, boolean pread,
+                                  boolean isCompaction) {
+      return reader.getScanner(cacheBlocks, pread, isCompaction);
     }
 
     public void close() throws IOException {
@@ -1003,17 +1018,23 @@ public class StoreFile {
       try {
         ByteBuffer bloom = reader.getMetaBlock(BLOOM_FILTER_DATA_KEY, true);
         if (bloom != null) {
+          boolean exists;
           if (this.bloomFilterType == BloomType.ROWCOL) {
             // Since a Row Delete is essentially a DeleteFamily applied to all
             // columns, a file might be skipped if using row+col Bloom filter.
             // In order to ensure this file is included an additional check is
             // required looking only for a row bloom.
-            return this.bloomFilter.contains(key, bloom) ||
-                this.bloomFilter.contains(row, bloom);
+            exists = this.bloomFilter.contains(key, bloom) ||
+                     this.bloomFilter.contains(row, bloom);
+          } else {
+            exists = this.bloomFilter.contains(key, bloom);
           }
-          else {
-            return this.bloomFilter.contains(key, bloom);
-          }
+
+          if (exists)
+            HRegion.incrNumericMetric(bloomAccessedMetric, 1);
+          else
+            HRegion.incrNumericMetric(bloomSkippedMetric, 1);
+          return exists;
         }
       } catch (IOException e) {
         LOG.error("Error reading bloom filter data -- proceeding without",

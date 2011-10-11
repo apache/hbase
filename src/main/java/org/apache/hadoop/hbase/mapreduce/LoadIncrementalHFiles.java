@@ -277,7 +277,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       halfWriter = new StoreFile.Writer(
           fs, outFile, blocksize, compression, conf, KeyValue.COMPARATOR,
           bloomFilterType, 0);
-      HFileScanner scanner = halfReader.getScanner(false, false);
+      HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();
       do {
         KeyValue kv = scanner.getKeyValue();

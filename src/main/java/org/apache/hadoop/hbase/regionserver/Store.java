@@ -964,7 +964,7 @@ public class Store implements HeapSize {
 
     // For each file, obtain a scanner:
     List<StoreFileScanner> scanners = StoreFileScanner
-      .getScannersForStoreFiles(filesToCompact, false, false);
+      .getScannersForStoreFiles(filesToCompact, false, false, true);
 
     // Make the instantiation lazy in case compaction produces no product; i.e.
     // where all source cells are expired or deleted.
@@ -1212,7 +1212,7 @@ public class Store implements HeapSize {
       firstOnRow = new KeyValue(lastKV.getRow(), HConstants.LATEST_TIMESTAMP);
     }
     // Get a scanner that caches blocks and that uses pread.
-    HFileScanner scanner = r.getScanner(true, true);
+    HFileScanner scanner = r.getScanner(true, true, false);
     // Seek scanner.  If can't seek it, return.
     if (!seekToScanner(scanner, firstOnRow, firstKV)) return;
     // If we found candidate on firstOnRow, just return. THIS WILL NEVER HAPPEN!

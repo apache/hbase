@@ -78,8 +78,9 @@ public class HalfStoreFileReader extends StoreFile.Reader {
   }
 
   @Override
-  public HFileScanner getScanner(final boolean cacheBlocks, final boolean pread) {
-    final HFileScanner s = super.getScanner(cacheBlocks, pread);
+  public HFileScanner getScanner(final boolean cacheBlocks, final boolean pread,
+                                final boolean isCompaction) {
+    final HFileScanner s = super.getScanner(cacheBlocks, pread, isCompaction);
     return new HFileScanner() {
       final HFileScanner delegate = s;
       public boolean atEnd = false;
@@ -252,7 +253,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       return super.getLastKey();
     }
     // Get a scanner that caches the block and that uses pread.
-    HFileScanner scanner = getScanner(true, true);
+    HFileScanner scanner = getScanner(true, true, false);
     try {
       if (scanner.seekBefore(this.splitkey)) {
         return Bytes.toBytes(scanner.getKey());

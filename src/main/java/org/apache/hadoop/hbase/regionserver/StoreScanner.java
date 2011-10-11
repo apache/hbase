@@ -140,7 +140,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     // but now we get them in ascending order, which I think is
     // actually more correct, since memstore get put at the end.
     List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks, isGet);
+      .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks,
+                                isGet, false);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
     scanners.addAll(sfScanners);
@@ -156,7 +157,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       final NavigableSet<byte[]> columns) throws IOException {
     // First the store file scanners
     List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks, isGet);
+      .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks,
+                                isGet, false);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
 

@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
@@ -205,6 +206,7 @@ public class HRegionServer implements HRegionInterface,
   private final LinkedList<byte[]> reservedSpace = new LinkedList<byte []>();
 
   private RegionServerMetrics metrics;
+  private RegionServerDynamicMetrics dynamicMetrics;
 
   // Compactions
   CompactSplitThread compactSplitThread;
@@ -741,6 +743,7 @@ public class HRegionServer implements HRegionInterface,
       this.hlog = setupHLog();
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
+      this.dynamicMetrics = RegionServerDynamicMetrics.newInstance();
       startServiceThreads();
       isOnline = true;
     } catch (Throwable e) {

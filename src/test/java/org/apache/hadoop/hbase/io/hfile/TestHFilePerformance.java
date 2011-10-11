@@ -245,7 +245,7 @@ public class TestHFilePerformance extends TestCase {
           case 1:
           default:
             {
-              HFileScanner scanner = reader.getScanner(false, false);
+              HFileScanner scanner = reader.getScanner(false, false, false);
               scanner.seekTo();
               for (long l=0 ; l<rows ; l++ ) {
                 key = scanner.getKey();

@@ -38,8 +38,11 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -240,6 +243,41 @@ public class HRegion implements HeapSize { // , Writable{
   public static volatile AtomicLong rowLockTime = new AtomicLong(0);
   public static volatile AtomicLong rwccWaitTime = new AtomicLong(0);
   public static volatile AtomicLong memstoreInsertTime = new AtomicLong(0);
+
+  // for simple numeric metrics (# of blocks read from block cache)
+  public static final ConcurrentMap<String, AtomicLong>
+    numericMetrics = new ConcurrentHashMap<String, AtomicLong>();
+
+  // Used for metrics where we want track a metrics (such as latency)
+  // over a number of operations.
+  public static final ConcurrentMap<String,
+                                  Pair<AtomicLong, AtomicInteger>>
+    timeVaryingMetrics =
+      new ConcurrentHashMap<String,
+                            Pair<AtomicLong, AtomicInteger>>();
+
+  public static void incrNumericMetric(String key, long amount) {
+    AtomicLong oldVal = numericMetrics.get(key);
+    if (oldVal == null) {
+      oldVal = numericMetrics.putIfAbsent(key, new AtomicLong(amount));
+      if (oldVal == null)
+        return;
+    }
+    oldVal.addAndGet(amount);
+  }
+
+  public static void incrTimeVaryingMetric(String key, long amount) {
+    Pair<AtomicLong, AtomicInteger> oldVal = timeVaryingMetrics.get(key);
+    if (oldVal == null) {
+      oldVal = timeVaryingMetrics.putIfAbsent(key,
+           new Pair<AtomicLong, AtomicInteger>(new AtomicLong(amount),
+                                              new AtomicInteger(1)));
+      if (oldVal == null)
+        return;
+    }
+    oldVal.getFirst().addAndGet(amount);  // total time
+    oldVal.getSecond().incrementAndGet(); // increment ops by 1
+  }
 
   public static final long getWriteOps() {
     return writeOps.getAndSet(0);

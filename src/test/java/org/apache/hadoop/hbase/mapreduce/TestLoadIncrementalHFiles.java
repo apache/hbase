@@ -152,7 +152,7 @@ public class TestLoadIncrementalHFiles {
     HFile.Reader reader = new HFile.Reader(
         p.getFileSystem(conf), p, null, false);
     reader.loadFileInfo();
-    HFileScanner scanner = reader.getScanner(false, false);
+    HFileScanner scanner = reader.getScanner(false, false, false);
     scanner.seekTo();
     int count = 0;
     do {

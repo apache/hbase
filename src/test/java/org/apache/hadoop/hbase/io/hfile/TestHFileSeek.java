@@ -161,7 +161,7 @@ public class TestHFileSeek extends TestCase {
     KeySampler kSampler =
         new KeySampler(rng, reader.getFirstKey(), reader.getLastKey(),
             keyLenGen);
-    HFileScanner scanner = reader.getScanner(false, false);
+    HFileScanner scanner = reader.getScanner(false, false, false);
     BytesWritable key = new BytesWritable();
     timer.reset();
     timer.start();

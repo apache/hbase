@@ -145,7 +145,7 @@ public class TestHFile extends HBaseTestCase {
     // Load up the index.
     reader.loadFileInfo();
     // Get a scanner that caches and that does not use pread.
-    HFileScanner scanner = reader.getScanner(true, false);
+    HFileScanner scanner = reader.getScanner(true, false, false);
     // Align scanner at start of the file.
     scanner.seekTo();
     readAllRecords(scanner);
@@ -219,7 +219,7 @@ public class TestHFile extends HBaseTestCase {
         .getLen(), null, false);
     reader.loadFileInfo();
     // No data -- this should return false.
-    assertFalse(reader.getScanner(false, false).seekTo());
+    assertFalse(reader.getScanner(false, false, false).seekTo());
     someReadingWithMetaBlock(reader);
     fs.delete(mFile, true);
     reader.close();
