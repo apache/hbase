@@ -21,6 +21,9 @@ package org.apache.hadoop.hbase.manual.utils;
 
 import java.util.Random;
 
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MD5Hash;
+
 public class DataGenerator {
   static Random random_ = new Random();
   /* one byte fill pattern */
@@ -38,12 +41,12 @@ public class DataGenerator {
   int minDataSize_ = 0;
   int maxDataSize_ = 0;
 
-  static public String paddedKey(long key) {
-      // left-pad key with zeroes to 10 decimal places.
-      String paddedKey = String.format("%010d", key);
+  static public String md5PrefixedKey(long key) {
+    String stringKey = Long.toString(key);
+    String md5hash = MD5Hash.getMD5AsHex(Bytes.toBytes(stringKey));
 
-      // flip the key to randomize
-      return (new StringBuffer(paddedKey)).reverse().toString();
+    // flip the key to randomize
+    return md5hash + ":" + stringKey;
   }
 
   public DataGenerator(int minDataSize, int maxDataSize) {
@@ -57,7 +60,7 @@ public class DataGenerator {
 
     // write the key first
     int sizeLeft = dataSize;
-    String keyAsString = DataGenerator.paddedKey(key);
+    String keyAsString = DataGenerator.md5PrefixedKey(key);
     sb.append(keyAsString);
     sizeLeft -= keyAsString.length();
 

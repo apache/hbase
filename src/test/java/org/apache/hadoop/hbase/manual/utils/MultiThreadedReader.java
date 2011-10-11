@@ -121,7 +121,7 @@ public class MultiThreadedReader extends MultiThreadedAction
           } else {
             curKey = startKey_ + Math.abs(reader_.random_.nextLong())%(endKey_ - startKey_);
           }
-          get = new Get(DataGenerator.paddedKey(curKey).getBytes());
+          get = new Get(DataGenerator.md5PrefixedKey(curKey).getBytes());
           get.addFamily(columnFamily_);
           // get.addColumn(columnFamily_, Bytes.toBytes("0"));
         }

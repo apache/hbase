@@ -150,7 +150,7 @@ public class MultiThreadedWriter extends MultiThreadedAction
     }
 
     public static byte[] longToByteArrayKey(long rowKey) {
-      return DataGenerator.paddedKey(rowKey).getBytes();
+      return DataGenerator.md5PrefixedKey(rowKey).getBytes();
     }
 
     public void insert(long rowKey, long col) {
@@ -179,7 +179,7 @@ public class MultiThreadedWriter extends MultiThreadedAction
       if(startCol >= endCol) {
         return;
       }
-      Put put = new Put(DataGenerator.paddedKey(rowKey).getBytes());
+      Put put = new Put(DataGenerator.md5PrefixedKey(rowKey).getBytes());
       byte[] columnQualifier;
       byte[] value;
       for(long i = startCol; i < endCol; ++i) {

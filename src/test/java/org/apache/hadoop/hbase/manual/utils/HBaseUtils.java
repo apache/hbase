@@ -37,9 +37,18 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
+import java.math.BigInteger;
+
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.commons.lang.StringUtils;
+
 public class HBaseUtils
 {
   private static final Log LOG = LogFactory.getLog(HBaseUtils.class);
+
+  private final static String MAXMD5 = "FFFFFFFF";
+  private final static int rowComparisonLength = MAXMD5.length();
+  private static int DEFAULT_REGIONS_PER_SERVER = 5;
 
   public static void sleep(int millisecs) {
     try {
@@ -61,6 +70,7 @@ public class HBaseUtils
     return table;
   }
 
+  // the table will be pre-split assuming a MD5 prefixed key space.
   public static void createTableIfNotExists(HBaseConfiguration conf, byte[] tableName, byte[][] columnFamilies) {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     for(byte[] cfName : columnFamilies) {
@@ -69,7 +79,14 @@ public class HBaseUtils
     try
     {
       HBaseAdmin admin = new HBaseAdmin(conf);
-      admin.createTable(desc);
+
+      // create a table a pre-splits regions.
+      // The number of splits is set as:
+      //    region servers * regions per region server).
+      int numberOfServers = admin.getClusterStatus().getServers();
+      int totalNumberOfRegions = numberOfServers * DEFAULT_REGIONS_PER_SERVER;
+      byte[][] splits =splitKeysMD5(totalNumberOfRegions);
+      admin.createTable(desc, splits);
     }
     catch(MasterNotRunningException e) {
       LOG.error("Master not running.");
@@ -97,4 +114,57 @@ public class HBaseUtils
     return new HBaseConfiguration(c);
   }
 
+  /**
+   * Creates splits for MD5 hashing.
+   * @param numberOfSplits
+   * @return Byte array of size (numberOfSplits-1) corresponding to the
+   * boundaries between splits.
+   */
+  private static byte[][] splitKeysMD5(int numberOfSplits) {
+    BigInteger max = new BigInteger(MAXMD5, 16);
+    BigInteger[] bigIntegerSplits = split(max, numberOfSplits);
+    byte[][] byteSplits = convertToBytes(bigIntegerSplits);
+    return byteSplits;
+  }
+
+  /**
+   * Splits the given BigInteger into numberOfSplits parts
+   * @param maxValue
+   * @param numberOfSplits
+   * @return array of BigInteger which is of size (numberOfSplits-1)
+   */
+  private static BigInteger[] split(BigInteger maxValue, int numberOfSplits) {
+    BigInteger[] splits = new BigInteger[numberOfSplits-1];
+    BigInteger sizeOfEachSplit = maxValue.divide(BigInteger.
+        valueOf(numberOfSplits));
+    for (int i = 1; i < numberOfSplits; i++) {
+      splits[i-1] = sizeOfEachSplit.multiply(BigInteger.valueOf(i));
+    }
+    return splits;
+  }
+
+  /**
+   * Returns the bytes corresponding to the BigInteger
+   * @param bigInteger
+   * @return byte corresponding to input BigInteger
+   */
+  private static byte[] convertToByte(BigInteger bigInteger) {
+    String bigIntegerString = bigInteger.toString(16);
+    bigIntegerString = StringUtils.leftPad(bigIntegerString,
+        rowComparisonLength, '0');
+    return Bytes.toBytes(bigIntegerString);
+  }
+
+  /**
+   * Returns an array of bytes corresponding to an array of BigIntegers
+   * @param bigIntegers
+   * @return bytes corresponding to the bigIntegers
+   */
+  private static byte[][] convertToBytes(BigInteger[] bigIntegers) {
+    byte[][] returnBytes = new byte[bigIntegers.length][];
+    for (int i = 0; i < bigIntegers.length; i++) {
+      returnBytes[i] = convertToByte(bigIntegers[i]);
+    }
+    return returnBytes;
+  }
 }
