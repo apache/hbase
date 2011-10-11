@@ -900,6 +900,11 @@ public class StoreFile {
     public void appendFileInfo(byte[] key, byte[] value) throws IOException {
       writer.appendFileInfo(key, value);
     }
+
+    /** For use in testing, e.g. {@link CreateRandomStoreFile} */
+    HFile.Writer getHFileWriter() {
+      return writer;
+    }
   }
 
   /**
