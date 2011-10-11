@@ -20,8 +20,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.hadoop.hbase.io.hfile.BlockType;
-import org.apache.hadoop.hbase.io.hfile.HFileBlock.Writer;
-import org.apache.hadoop.hbase.io.HeapSize;
 
 /**
  * An interface that exposes methods to retrieve the column type and BlockType

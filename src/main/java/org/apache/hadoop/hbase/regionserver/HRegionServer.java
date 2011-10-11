@@ -95,6 +95,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
@@ -1140,8 +1141,18 @@ public class HRegionServer implements HRegionInterface,
       this.metrics.blockCacheCount.set(lruBlockCache.size());
       this.metrics.blockCacheFree.set(lruBlockCache.getFreeSize());
       this.metrics.blockCacheSize.set(lruBlockCache.getCurrentSize());
+      CacheStats cacheStats = lruBlockCache.getStats();
+      this.metrics.blockCacheHitCount.set(cacheStats.getHitCount());
+      this.metrics.blockCacheMissCount.set(cacheStats.getMissCount());
+      this.metrics.blockCacheEvictedCount.set(lruBlockCache.getEvictedCount());
+      this.metrics.blockCacheEvictedSingleCount.set(
+          cacheStats.getEvictedSingleCount());
+      this.metrics.blockCacheEvictedMultiCount.set(
+          cacheStats.getEvictedMultiCount());
+      this.metrics.blockCacheEvictedMemoryCount.set(
+          cacheStats.getEvictedMemoryCount());
 
-      double ratio = lruBlockCache.getStats().getIncrementalHitRatio();
+      double ratio = cacheStats.getIncrementalHitRatio();
       int percent = (int) (ratio * 100);
       this.metrics.blockCacheHitRatio.set(percent);
     }

@@ -223,7 +223,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
       HRegion.incrNumericMetric(this.fsMetaBlockReadCntMetric, 1);
       // Check cache for block.  If found return.
       if (blockCache != null) {
-        HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey);
+        HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey,
+            cacheBlock);
         if (cachedBlock != null) {
           cacheHits++;
           HRegion.incrNumericMetric(this.fsMetaBlockReadCacheHitCntMetric, 1);
@@ -290,7 +291,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
       // Check cache for block.  If found return.
       if (blockCache != null) {
-        HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey);
+        HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey,
+            cacheBlock);
         if (cachedBlock != null) {
           cacheHits++;
 

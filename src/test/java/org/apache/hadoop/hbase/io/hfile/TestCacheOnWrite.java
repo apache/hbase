@@ -163,7 +163,7 @@ public class TestCacheOnWrite {
       HFileBlock block = reader.readBlockData(offset, prevBlock == null ? -1
           : prevBlock.getNextBlockOnDiskSizeWithHeader(), -1, false);
       String blockCacheKey = HFile.getBlockCacheKey(reader.getName(), offset);
-      boolean isCached = blockCache.getBlock(blockCacheKey) != null;
+      boolean isCached = blockCache.getBlock(blockCacheKey, true) != null;
       boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
       assertEquals(testName + " " + block, shouldBeCached, isCached);
       prevBlock = block;

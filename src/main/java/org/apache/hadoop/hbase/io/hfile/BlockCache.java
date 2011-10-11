@@ -45,9 +45,10 @@ public interface BlockCache {
   /**
    * Fetch block from cache.
    * @param blockName Block number to fetch.
+   * @param caching true if the caller caches blocks on a miss
    * @return Block or null if block is not in the cache.
    */
-  public HeapSize getBlock(String blockName);
+  public HeapSize getBlock(String blockName, boolean caching);
 
   /**
    * Evict block from cache.

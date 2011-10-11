@@ -111,8 +111,12 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   public String fsBlockReadCacheHitCntMetric = "";
   public String compactionBlockReadCacheHitCntMetric = "";
 
+  public String fsBlockReadCacheMissCntMetric = "";
+  public String compactionBlockReadCacheMissCntMetric = "";
+
   public String fsMetaBlockReadCntMetric = "";
   public String fsMetaBlockReadCacheHitCntMetric = "";
+  public String fsMetaBlockReadCacheMissCntMetric = "";
 
   protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long fileSize,
@@ -169,13 +173,18 @@ public abstract class AbstractHFileReader implements HFile.Reader {
 
     fsBlockReadCntMetric = cfName + ".fsBlockReadCnt";
     fsBlockReadCacheHitCntMetric = cfName + ".fsBlockReadCacheHitCnt";
+    fsBlockReadCacheMissCntMetric = cfName + ".fsBlockReadCacheMissCnt";
 
     compactionBlockReadCntMetric = cfName + ".compactionBlockReadCnt";
     compactionBlockReadCacheHitCntMetric = cfName
         + ".compactionBlockReadCacheHitCnt";
+    compactionBlockReadCacheMissCntMetric = cfName
+        + ".compactionBlockReadCacheMissCnt";
 
     fsMetaBlockReadCntMetric = cfName + ".fsMetaBlockReadCnt";
     fsMetaBlockReadCacheHitCntMetric = cfName + ".fsMetaBlockReadCacheHitCnt";
+    fsMetaBlockReadCacheMissCntMetric = cfName
+        + ".fsMetaBlockReadCacheMissCnt";
   }
 
   public abstract boolean isFileInfoLoaded();
