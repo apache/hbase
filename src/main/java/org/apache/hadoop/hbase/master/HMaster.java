@@ -231,6 +231,8 @@ public class HMaster extends Thread implements HMasterInterface,
 
     // if we're a backup master, stall until a primary to writes his address
     if(conf.getBoolean(HConstants.MASTER_TYPE_BACKUP, HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
+      LOG.debug("HMaster started in backup mode.  " +
+                "Stalling until master znode is written.");
       // this will only be a minute or so while the cluster starts up,
       // so don't worry about setting watches on the parent znode
       while (!zooKeeperWrapper.masterAddressExists()) {
