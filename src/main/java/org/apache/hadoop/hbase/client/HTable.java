@@ -152,13 +152,15 @@ public class HTable implements HTableInterface {
       nrHRS = 10;
     }
     int nrThreads = conf.getInt("hbase.htable.threads.max", nrHRS);
-    int corePools = conf.getInt("hbase.htable.threads.corePool", 0);
     // Unfortunately Executors.newCachedThreadPool does not allow us to
     // set the maximum size of the pool, so we have to do it ourselves.
-    this.pool = new ThreadPoolExecutor(corePools, nrThreads,
+    this.pool = new ThreadPoolExecutor(nrThreads, nrThreads,
         60, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(),
         new DaemonThreadFactory());
+
+    // allow the core pool threads timeout and terminate
+    ((ThreadPoolExecutor)this.pool).allowCoreThreadTimeOut(true);
   }
 
   public Configuration getConfiguration() {
