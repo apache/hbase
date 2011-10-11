@@ -86,7 +86,9 @@ struct TRegionInfo {
   2:Text endKey,
   3:i64 id,
   4:Text name,
-  5:byte version
+  5:byte version,
+  6:Text serverName,
+  7:i32 port
 }
 
 /**
@@ -98,7 +100,6 @@ struct Mutation {
   3:Text value
 }
 
-
 /**
  * A BatchMutation object is used to apply a number of Mutations to a single row.
  */
@@ -106,7 +107,6 @@ struct BatchMutation {
   1:Text row,
   2:list<Mutation> mutations
 }
-
 
 /**
  * Holds row name and then a map of columns to cells.
@@ -373,6 +373,54 @@ service Hbase {
 
     /** List of columns to return, null for all columns */
     3:list<Text> columns,
+    4:i64 timestamp
+  ) throws (1:IOError io)
+
+  /**
+   * Get the columns with the specified prefix for the specified table and
+   * row at the latest timestamp. Returns an empty list if the row does not
+   * exist.
+   *
+   * @return TRowResult containing the row and map of columns to TCells
+   */
+  list<TRowResult> getRowWithColumnPrefix(
+    /** name of table */
+    1:Text tableName,
+
+    /** row key */
+    2:Text row,
+
+    /**
+     * column prefix, null for all columns
+     * family name can be specified as <family>:<qualifier prefix>
+     * If only <qualifier prefix> provided then all families are
+     * searched
+     */
+    3:Text prefix
+  ) throws (1:IOError io)
+
+  /**
+   * Get the columns with the specified prefix for the specified table and
+   * row at the specified timestamp. Returns an empty list if the row does not
+   * exist.
+   *
+   * @return TRowResult containing the row and map of columns to TCells
+   */
+  list<TRowResult> getRowWithColumnPrefixTs(
+    /** name of table */
+    1:Text tableName,
+
+    /** row key */
+    2:Text row,
+
+    /**
+     * column prefix, null for all columns
+     * family name can be specified as <family>:<qualifier prefix>
+     * If only <qualifier prefix> provided then all families are
+     * searched
+     */
+    3:Text prefix
+
     4:i64 timestamp
   ) throws (1:IOError io)
 
@@ -918,4 +966,16 @@ service Hbase {
     /** id of a scanner returned by scannerOpen */
     1:ScannerID id
   ) throws (1:IOError io, 2:IllegalArgument ia)
+
+  /**
+   * Get the regininfo for the specified row. It scans
+   * the metatable to find region's start and end keys.
+   *
+   * @return value for specified row/column
+   */
+  TRegionInfo getRegionInfo(
+    /** row key */
+    1:Text row,
+
+  ) throws (1:IOError io)
 }

@@ -263,6 +263,9 @@ public class HRegionServer implements HRegionInterface,
 
   private final AtomicLong globalMemstoreSize = new AtomicLong(0);
 
+  // reference to the Thrift Server.
+  volatile private HRegionThriftServer thriftServer;
+
   /**
    * Starts a HRegionServer at the default location
    * @param conf
@@ -589,6 +592,10 @@ public class HRegionServer implements HRegionInterface,
         abort("Unhandled exception", t);
       }
     }
+    // shutdown thriftserver
+    if (thriftServer != null) {
+      thriftServer.shutdown();
+    }
     this.leases.closeAfterLeasesExpire();
     this.worker.stop();
     this.server.stop();
@@ -764,6 +771,14 @@ public class HRegionServer implements HRegionInterface,
       this.dynamicMetrics = RegionServerDynamicMetrics.newInstance();
       startServiceThreads();
       isOnline = true;
+
+      // Create the thread for the ThriftServer.
+      // NOTE this defaults to FALSE so you have to enable it in conf
+      if (conf.getBoolean("hbase.regionserver.export.thrift", false)) {
+        thriftServer = new HRegionThriftServer(this, conf);
+        thriftServer.start();
+        LOG.info("Started Thrift API from Region Server.");
+      }
     } catch (Throwable e) {
       this.isOnline = false;
       this.stopRequested.set(true);

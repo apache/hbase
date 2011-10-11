@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
@@ -186,10 +188,14 @@ public class ThriftServer {
     /**
      * Constructs an HBaseHandler object.
      *
-     * @throws MasterNotRunningException
+     * @throws IOException
      */
-    HBaseHandler() throws MasterNotRunningException {
-      conf = HBaseConfiguration.create();
+    protected HBaseHandler() throws IOException {
+      this(HBaseConfiguration.create());
+    }
+
+    protected HBaseHandler(final Configuration c) throws IOException {
+      this.conf = c;
       admin = new HBaseAdmin(conf);
       scannerMap = new HashMap<Integer, ResultScanner>();
     }
@@ -261,6 +267,12 @@ public class ThriftServer {
           region.id = regionInfo.getRegionId();
           region.name = regionInfo.getRegionName();
           region.version = regionInfo.getVersion();
+          HServerAddress server = regionsInfo.get(regionInfo);
+          if (server != null) {
+            byte[] hostname = Bytes.toBytes(server.getHostname());
+            region.serverName = hostname;
+            region.port = server.getPort();
+          }
           regions.add(region);
         }
         return regions;
@@ -384,6 +396,40 @@ public class ThriftServer {
           } else {
               get.addColumn(famAndQf[0], famAndQf[1]);
           }
+        }
+        get.setTimeRange(Long.MIN_VALUE, timestamp);
+        Result result = table.get(get);
+        return ThriftUtilities.rowResultFromHBase(result);
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
+    }
+
+    @Override
+    public List<TRowResult> getRowWithColumnPrefix(byte[] tableName,
+                                                   byte[] row, byte[] prefix) throws IOError {
+      return (getRowWithColumnPrefixTs(tableName, row, prefix,
+                                       HConstants.LATEST_TIMESTAMP));
+    }
+
+    @Override
+    public List<TRowResult> getRowWithColumnPrefixTs(byte[] tableName,
+                                                     byte[] row, byte[] prefix, long timestamp) throws IOError {
+      try {
+        HTable table = getTable(tableName);
+        if (prefix == null) {
+          Get get = new Get(row);
+          get.setTimeRange(Long.MIN_VALUE, timestamp);
+          Result result = table.get(get);
+          return ThriftUtilities.rowResultFromHBase(result);
+        }
+        Get get = new Get(row);
+        byte [][] famAndPrefix = KeyValue.parseColumn(prefix);
+        if (famAndPrefix.length == 2) {
+          get.addFamily(famAndPrefix[0]);
+          get.setFilter(new ColumnPrefixFilter(famAndPrefix[1]));
+        } else {
+          get.setFilter(new ColumnPrefixFilter(famAndPrefix[0]));
         }
         get.setTimeRange(Long.MIN_VALUE, timestamp);
         Result result = table.get(get);
@@ -944,6 +990,51 @@ public class ThriftServer {
         throw new IOError(e.getMessage());
       }
     }
+
+    @Override
+    public TRegionInfo getRegionInfo(byte[] searchRow) throws IOError,
+        TException {
+      try {
+        HTable table = getTable(HConstants.META_TABLE_NAME);
+        Result startRowResult = table.getRowOrBefore(searchRow,
+            HConstants.CATALOG_FAMILY);
+
+        if (startRowResult == null) {
+          throw new IOException("Cannot find row in .META., row="
+              + Bytes.toString(searchRow));
+        }
+
+        // find region start and end keys
+        byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.REGIONINFO_QUALIFIER);
+        if (value == null || value.length == 0) {
+          throw new IOException("HRegionInfo REGIONINFO was null or "
+              + " empty in Meta for row=" + Bytes.toString(searchRow));
+        }
+        HRegionInfo regionInfo = Writables.getHRegionInfo(value);
+        TRegionInfo region = new TRegionInfo();
+        region.setStartKey(regionInfo.getStartKey());
+        region.setEndKey(regionInfo.getEndKey());
+        region.id = regionInfo.getRegionId();
+        region.setName(regionInfo.getRegionName());
+        region.version = regionInfo.getVersion();
+
+        // find region assignment to server
+        value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.SERVER_QUALIFIER);
+        if (value != null && value.length > 0) {
+          String address = Bytes.toString(value);
+          HServerAddress server = new HServerAddress(address);
+          byte[] hostname = Bytes.toBytes(server.getHostname());
+          region.serverName = hostname;
+          region.port = server.getPort();
+        }
+        return region;
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
+    }
+
   }
 
   //

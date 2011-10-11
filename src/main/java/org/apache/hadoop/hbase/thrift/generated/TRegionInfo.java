@@ -35,12 +35,16 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
   private static final TField ID_FIELD_DESC = new TField("id", TType.I64, (short)3);
   private static final TField NAME_FIELD_DESC = new TField("name", TType.STRING, (short)4);
   private static final TField VERSION_FIELD_DESC = new TField("version", TType.BYTE, (short)5);
+  private static final TField SERVER_NAME_FIELD_DESC = new TField("serverName", TType.STRING, (short)6);
+  private static final TField PORT_FIELD_DESC = new TField("port", TType.I32, (short)7);
 
   public byte[] startKey;
   public byte[] endKey;
   public long id;
   public byte[] name;
   public byte version;
+  public byte[] serverName;
+  public int port;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
@@ -48,7 +52,9 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
     END_KEY((short)2, "endKey"),
     ID((short)3, "id"),
     NAME((short)4, "name"),
-    VERSION((short)5, "version");
+    VERSION((short)5, "version"),
+    SERVER_NAME((short)6, "serverName"),
+    PORT((short)7, "port");
 
     private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
@@ -104,7 +110,8 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
   // isset id assignments
   private static final int __ID_ISSET_ID = 0;
   private static final int __VERSION_ISSET_ID = 1;
-  private BitSet __isset_bit_vector = new BitSet(2);
+  private static final int __PORT_ISSET_ID = 2;
+  private BitSet __isset_bit_vector = new BitSet(3);
 
   public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
     put(_Fields.START_KEY, new FieldMetaData("startKey", TFieldRequirementType.DEFAULT,
@@ -117,6 +124,10 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
         new FieldValueMetaData(TType.STRING)));
     put(_Fields.VERSION, new FieldMetaData("version", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.BYTE)));
+    put(_Fields.SERVER_NAME, new FieldMetaData("serverName", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.STRING)));
+    put(_Fields.PORT, new FieldMetaData("port", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.I32)));
   }});
 
   static {
@@ -131,7 +142,9 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
     byte[] endKey,
     long id,
     byte[] name,
-    byte version)
+    byte version,
+    byte[] serverName,
+    int port)
   {
     this();
     this.startKey = startKey;
@@ -141,6 +154,9 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
     this.name = name;
     this.version = version;
     setVersionIsSet(true);
+    this.serverName = serverName;
+    this.port = port;
+    setPortIsSet(true);
   }
 
   /**
@@ -160,6 +176,10 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
       this.name = other.name;
     }
     this.version = other.version;
+    if (other.isSetServerName()) {
+      this.serverName = other.serverName;
+    }
+    this.port = other.port;
   }
 
   public TRegionInfo deepCopy() {
@@ -289,6 +309,53 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
     __isset_bit_vector.set(__VERSION_ISSET_ID, value);
   }
 
+  public byte[] getServerName() {
+    return this.serverName;
+  }
+
+  public TRegionInfo setServerName(byte[] serverName) {
+    this.serverName = serverName;
+    return this;
+  }
+
+  public void unsetServerName() {
+    this.serverName = null;
+  }
+
+  /** Returns true if field serverName is set (has been asigned a value) and false otherwise */
+  public boolean isSetServerName() {
+    return this.serverName != null;
+  }
+
+  public void setServerNameIsSet(boolean value) {
+    if (!value) {
+      this.serverName = null;
+    }
+  }
+
+  public int getPort() {
+    return this.port;
+  }
+
+  public TRegionInfo setPort(int port) {
+    this.port = port;
+    setPortIsSet(true);
+    return this;
+  }
+
+  public void unsetPort() {
+    __isset_bit_vector.clear(__PORT_ISSET_ID);
+  }
+
+  /** Returns true if field port is set (has been asigned a value) and false otherwise */
+  public boolean isSetPort() {
+    return __isset_bit_vector.get(__PORT_ISSET_ID);
+  }
+
+  public void setPortIsSet(boolean value) {
+    __isset_bit_vector.set(__PORT_ISSET_ID, value);
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case START_KEY:
@@ -331,6 +398,22 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
       }
       break;
 
+    case SERVER_NAME:
+      if (value == null) {
+        unsetServerName();
+      } else {
+        setServerName((byte[])value);
+      }
+      break;
+
+    case PORT:
+      if (value == null) {
+        unsetPort();
+      } else {
+        setPort((Integer)value);
+      }
+      break;
+
     }
   }
 
@@ -355,6 +438,12 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
     case VERSION:
       return new Byte(getVersion());
 
+    case SERVER_NAME:
+      return getServerName();
+
+    case PORT:
+      return new Integer(getPort());
+
     }
     throw new IllegalStateException();
   }
@@ -376,6 +465,10 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
       return isSetName();
     case VERSION:
       return isSetVersion();
+    case SERVER_NAME:
+      return isSetServerName();
+    case PORT:
+      return isSetPort();
     }
     throw new IllegalStateException();
   }
@@ -442,6 +535,24 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
         return false;
     }
 
+    boolean this_present_serverName = true && this.isSetServerName();
+    boolean that_present_serverName = true && that.isSetServerName();
+    if (this_present_serverName || that_present_serverName) {
+      if (!(this_present_serverName && that_present_serverName))
+        return false;
+      if (!java.util.Arrays.equals(this.serverName, that.serverName))
+        return false;
+    }
+
+    boolean this_present_port = true;
+    boolean that_present_port = true;
+    if (this_present_port || that_present_port) {
+      if (!(this_present_port && that_present_port))
+        return false;
+      if (this.port != that.port)
+        return false;
+    }
+
     return true;
   }
 
@@ -473,6 +584,16 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
     builder.append(present_version);
     if (present_version)
       builder.append(version);
+
+    boolean present_serverName = true && (isSetServerName());
+    builder.append(present_serverName);
+    if (present_serverName)
+      builder.append(serverName);
+
+    boolean present_port = true;
+    builder.append(present_port);
+    if (present_port)
+      builder.append(port);
 
     return builder.toHashCode();
   }
@@ -522,6 +643,22 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
       return lastComparison;
     }
     lastComparison = TBaseHelper.compareTo(version, typedOther.version);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = Boolean.valueOf(isSetServerName()).compareTo(isSetServerName());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(serverName, typedOther.serverName);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = Boolean.valueOf(isSetPort()).compareTo(isSetPort());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(port, typedOther.port);
     if (lastComparison != 0) {
       return lastComparison;
     }
@@ -579,6 +716,21 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case SERVER_NAME:
+            if (field.type == TType.STRING) {
+              this.serverName = iprot.readBinary();
+            } else {
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case PORT:
+            if (field.type == TType.I32) {
+              this.port = iprot.readI32();
+              setPortIsSet(true);
+            } else {
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
         }
         iprot.readFieldEnd();
       }
@@ -613,6 +765,14 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
     }
     oprot.writeFieldBegin(VERSION_FIELD_DESC);
     oprot.writeByte(this.version);
+    oprot.writeFieldEnd();
+    if (this.serverName != null) {
+      oprot.writeFieldBegin(SERVER_NAME_FIELD_DESC);
+      oprot.writeBinary(this.serverName);
+      oprot.writeFieldEnd();
+    }
+    oprot.writeFieldBegin(PORT_FIELD_DESC);
+    oprot.writeI32(this.port);
     oprot.writeFieldEnd();
     oprot.writeFieldStop();
     oprot.writeStructEnd();
@@ -653,6 +813,18 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
     if (!first) sb.append(", ");
     sb.append("version:");
     sb.append(this.version);
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("serverName:");
+    if (this.serverName == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.serverName);
+    }
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("port:");
+    sb.append(this.port);
     first = false;
     sb.append(")");
     return sb.toString();
