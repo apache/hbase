@@ -101,6 +101,10 @@ class CompactSplitThread extends Thread {
             if(!this.server.isStopRequested()) {
               // Don't interrupt us while we are working
               byte [] midKey = r.compactStores();
+              long lastCompactPeriod = r.getLastCompactPeriod();
+              if (lastCompactPeriod > 0) {  // 0 == compaction aborted
+                this.server.getMetrics().addCompaction(lastCompactPeriod);
+              }
               LOG.debug("Just finished a compaction. " +
                         " Current Compaction Queue Size: " +
                         getCompactionQueueSize());

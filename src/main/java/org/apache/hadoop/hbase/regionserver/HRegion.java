@@ -177,6 +177,7 @@ public class HRegion implements HeapSize { // , Writable{
    * major compaction.  Cleared each time through compaction code.
    */
   private volatile boolean forceMajorCompaction = false;
+  private long lastCompactPeriod = 0;
 
   /*
    * Data structure of write state flags used coordinating flushes,
@@ -606,6 +607,11 @@ public class HRegion implements HeapSize { // , Writable{
     return this.fs;
   }
 
+  /** @return how long the last compaction took */
+  public long getLastCompactPeriod() {
+    return this.lastCompactPeriod;
+  }
+
   /** @return the last time the region was flushed */
   public long getLastFlushTime() {
     return this.lastFlushTime;
@@ -847,6 +853,7 @@ public class HRegion implements HeapSize { // , Writable{
           LOG.info(((completed) ? "completed" : "aborted")
               + " compaction on region " + this
               + " after " + StringUtils.formatTimeDiff(now, startTime));
+          this.lastCompactPeriod = (completed) ? (now - startTime) / 1000 : 0;
         }
       } finally {
         synchronized (writestate) {

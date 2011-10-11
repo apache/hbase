@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Strings;
+import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -35,6 +36,7 @@ import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 
@@ -50,6 +52,8 @@ public class RegionServerMetrics implements Updater {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private final MetricsRecord metricsRecord;
   private long lastUpdate = System.currentTimeMillis();
+  private long lastMarathon = System.currentTimeMillis();
+  private long marathonPeriod = 0;
   private static final int MB = 1024*1024;
   private MetricsRegistry registry = new MetricsRegistry();
   private final RegionServerStatistics statistics;
@@ -134,6 +138,12 @@ public class RegionServerMetrics implements Updater {
   public final MetricsTimeVaryingRate fsSyncLatency =
     new MetricsTimeVaryingRate("fsSyncLatency", registry);
 
+  /**
+   * time each scheduled compaction takes
+   */
+  public final MetricsTimeVaryingRate compaction =
+    new MetricsTimeVaryingRate("compaction", registry);
+
   public RegionServerMetrics() {
     MetricsContext context = MetricsUtil.getContext("hbase");
     metricsRecord = MetricsUtil.createRecord(context, "regionserver");
@@ -146,6 +156,16 @@ public class RegionServerMetrics implements Updater {
     // export for JMX
     statistics = new RegionServerStatistics(this.registry, name);
 
+    // get custom attributes
+    try {
+      Object m = ContextFactory.getFactory().getAttribute("hbase.marathon");
+      if (m instanceof String) {
+        this.marathonPeriod = Long.parseLong((String) m)*1000;
+      }
+    } catch (IOException ioe) {
+      LOG.info("Couldn't load ContextFactory for Metrics config info");
+    }
+
     LOG.info("Initialized");
   }
 
@@ -157,10 +177,20 @@ public class RegionServerMetrics implements Updater {
   /**
    * Since this object is a registered updater, this method will be called
    * periodically, e.g. every 5 seconds.
-   * @param unused unused argument
+   * @param caller the metrics context that this responsible for calling us
    */
-  public void doUpdates(MetricsContext unused) {
+  public void doUpdates(MetricsContext caller) {
     synchronized (this) {
+      this.lastUpdate = System.currentTimeMillis();
+
+      // has the marathon period for long-living stats elapsed?
+      boolean marathonExpired = (this.marathonPeriod > 0) &&
+          (this.lastUpdate - this.lastMarathon >= this.marathonPeriod);
+      if (marathonExpired) {
+        this.lastMarathon = this.lastUpdate;
+        this.resetAllMinMax();
+      }
+
       this.stores.pushMetric(this.metricsRecord);
       this.storefiles.pushMetric(this.metricsRecord);
       this.storefileIndexSizeMB.pushMetric(this.metricsRecord);
@@ -196,15 +226,39 @@ public class RegionServerMetrics implements Updater {
       this.fsReadLatency.pushMetric(this.metricsRecord);
       this.fsWriteLatency.pushMetric(this.metricsRecord);
       this.fsSyncLatency.pushMetric(this.metricsRecord);
+      this.compaction.pushMetric(this.metricsRecord);
+
+      if (!marathonExpired) {
+        maintainStats(this.compaction);
+      }
     }
     this.metricsRecord.update();
-    this.lastUpdate = System.currentTimeMillis();
+  }
+
+  /* MetricsTimeVaryingRate will reset every time pushMetric() is called
+   * This is annoying for long-running stats that might not get a single
+   * operation in the polling period.  This function ensures that values
+   * for those stat entries don't get reset.
+   */
+  protected void maintainStats(MetricsTimeVaryingRate stat) {
+    int curOps = stat.getPreviousIntervalNumOps();
+    if (curOps > 0) {
+      long curTime = stat.getPreviousIntervalAverageTime();
+      long totalTime = curTime * curOps;
+      if (totalTime / curTime == curOps) {
+        stat.inc(curOps, totalTime);
+      } else {
+        LOG.info("Stats for " + stat.getName() + " overflowed! resetting");
+      }
+    }
   }
 
   public void resetAllMinMax() {
     this.atomicIncrementTime.resetMinMax();
     this.fsReadLatency.resetMinMax();
     this.fsWriteLatency.resetMinMax();
+    this.fsSyncLatency.resetMinMax();
+    this.compaction.resetMinMax();
   }
 
   /**
@@ -212,6 +266,15 @@ public class RegionServerMetrics implements Updater {
    */
   public float getRequests() {
     return this.requests.getPreviousIntervalValue();
+  }
+
+  /**
+   * @param periodSec seconds that last compaction took
+   */
+  public void addCompaction(final long periodSec) {
+    synchronized (this) {
+      this.compaction.inc(periodSec);
+    }
   }
 
   /**
