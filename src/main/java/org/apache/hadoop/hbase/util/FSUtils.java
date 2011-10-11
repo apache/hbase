@@ -612,35 +612,14 @@ public class FSUtils {
     }
     DistributedFileSystem dfs = (DistributedFileSystem)fs;
     LOG.info("Recovering file" + p);
-    long startWaiting = System.currentTimeMillis();
 
     // Trying recovery
-    boolean recovered = false;
-    while (!recovered) {
+    while (!dfs.recoverLease(p)) {
       try {
-        dfs.recoverLease(p);
-        recovered = true;
-      } catch (IOException e) {
-        e = RemoteExceptionHandler.checkIOException(e);
-        if (e instanceof AlreadyBeingCreatedException) {
-          // We expect that we'll get this message while the lease is still
-          // within its soft limit, but if we get it past that, it means
-          // that the RS is holding onto the file even though it lost its
-          // znode. We could potentially abort after some time here.
-          long waitedFor = System.currentTimeMillis() - startWaiting;
-          if (waitedFor > FSConstants.LEASE_SOFTLIMIT_PERIOD) {
-            LOG.warn("Waited " + waitedFor + "ms for lease recovery on " + p +
-              ":" + e.getMessage());
-          }
-          try {
-            Thread.sleep(1000);
-          } catch (InterruptedException ex) {
-            throw (InterruptedIOException)
-              new InterruptedIOException().initCause(ex);
-          }
-        } else {
-          throw new IOException("Failed to open " + p + " for append", e);
-        }
+        Thread.sleep(1000);
+      } catch (InterruptedException ex) {
+        throw (InterruptedIOException)
+        new InterruptedIOException().initCause(ex);
       }
     }
     LOG.info("Finished lease recover attempt for " + p);

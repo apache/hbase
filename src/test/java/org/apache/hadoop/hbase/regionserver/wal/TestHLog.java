@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -380,7 +381,7 @@ public class TestHLog  {
     }
 
     // Now try recovering the log, like the HMaster would do
-    final FileSystem recoveredFs = fs;
+    final DistributedFileSystem recoveredFs = (DistributedFileSystem)fs;
     final Configuration rlConf = conf;
 
     class RecoverLogThread extends Thread {
@@ -388,6 +389,7 @@ public class TestHLog  {
       public void run() {
           try {
             FSUtils.recoverFileLease(recoveredFs, walPath, rlConf);
+            assertTrue(recoveredFs.recoverLease(walPath));
           } catch (IOException e) {
             exception = e;
           }
