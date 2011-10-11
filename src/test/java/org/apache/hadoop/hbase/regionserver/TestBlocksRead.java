@@ -112,7 +112,7 @@ public class TestBlocksRead extends HBaseTestCase {
     KeyValue[] kvs = region.get(get, null).raw();
     long blocksEnd = getBlkAccessCount(cf);
     if (expBlocks != -1) {
-      assertEquals("Blocks Read Check", expBlocks, blocksEnd - blocksStart);
+        assertEquals("Blocks Read Check", expBlocks, blocksEnd - blocksStart);
     }
     System.out.println("Blocks Read = " + (blocksEnd - blocksStart) +
                        "Expected = " + expBlocks);
@@ -155,14 +155,12 @@ public class TestBlocksRead extends HBaseTestCase {
   }
 
   /**
-   *
-   * Test from client side for get with maxResultPerCF set
-   *
+   * Test # of blocks read for some simple seek cases.
    * @throws Exception
    */
   @Test
   public void testBlocksRead() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testLazySeek");
+    byte [] TABLE = Bytes.toBytes("testBlocksRead");
     byte [] FAMILY = Bytes.toBytes("cf1");
     byte [][] FAMILIES = new byte[][] { FAMILY };
     KeyValue kvs[];
@@ -219,5 +217,139 @@ public class TestBlocksRead extends HBaseTestCase {
     kvs = getData(FAMILY, "row", Arrays.asList("col5"), 3);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col5", 5);
+  }
+
+  /**
+   * Test # of blocks read (targetted at some of the cases Lazy Seek optimizes).
+   * @throws Exception
+   */
+  @Test
+  public void testLazySeekBlocksRead() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testLazySeekBlocksRead");
+    byte [] FAMILY = Bytes.toBytes("cf1");
+    byte [][] FAMILIES = new byte[][] { FAMILY };
+    KeyValue kvs[];
+
+    HBaseConfiguration conf = getConf();
+    initHRegion(TABLE, getName(), conf, FAMILIES);
+
+    // File 1
+    putData(FAMILY, "row", "col1", 1);
+    putData(FAMILY, "row", "col2", 2);
+    region.flushcache();
+
+    // File 2
+    putData(FAMILY, "row", "col1", 3);
+    putData(FAMILY, "row", "col2", 4);
+    region.flushcache();
+
+    // Expected blocks read: 2.
+    //
+    // We still visit all files for top of the row delete
+    // marker. File 2's top block is also the KV we are
+    // interested. When lazy seek is further optimized
+    // the number of read blocks should drop to 1.
+    //
+    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 2);
+    assertEquals(1, kvs.length);
+    verifyData(kvs[0], "row", "col1", 3);
+
+    // Expected blocks read: 3
+    //
+    // We still visit all files for top of the row delete
+    // marker. File 2's top block has the "col1" KV we are
+    // interested. We also need "col2" which is in a block
+    // of its own. So, we need that block as well.
+    //
+    // When lazy seek is further optimized the number of blocks
+    // read for this case should drop to 2.
+    //
+    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2"), 3);
+    assertEquals(2, kvs.length);
+    verifyData(kvs[0], "row", "col1", 3);
+    verifyData(kvs[1], "row", "col2", 4);
+
+    // File 3: Add another column
+    putData(FAMILY, "row", "col3", 5);
+    region.flushcache();
+
+    // Expected blocks read: 3
+    //
+    // We still visit all files for top of the row delete
+    // marker. File 3's top block has the "col3" KV we are
+    // interested.
+    //
+    // When lazy seek is further optimized the number of
+    // read blocks should drop to 1.
+    //
+    kvs = getData(FAMILY, "row", "col3", 3);
+    assertEquals(1, kvs.length);
+    verifyData(kvs[0], "row", "col3", 5);
+
+    // Get a column from older file.
+    // Expected blocks read: 3
+    //
+    // We still visit all files for top of the row delete
+    // marker. File 2's top block has the "col1" KV we are
+    // interested.
+    //
+    // When lazy seek is further optimized the number of
+    // read blocks should drop to 2. [We only need to
+    // consult File 2 & File 3.]
+    //
+    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 3);
+    assertEquals(1, kvs.length);
+    verifyData(kvs[0], "row", "col1", 3);
+
+    // File 4: Delete the entire row.
+    deleteFamily(FAMILY, "row", 6);
+    region.flushcache();
+
+    // Expected blocks read: 6. Why? [TODO]
+    // With lazy seek, would have expected this to be lower.
+    // At least is shouldn't be worse than before.
+    kvs = getData(FAMILY, "row", "col1", 6);
+    assertEquals(0, kvs.length);
+    kvs = getData(FAMILY, "row", "col2", 6);
+    assertEquals(0, kvs.length);
+    kvs = getData(FAMILY, "row", "col3", 6);
+    assertEquals(0, kvs.length);
+    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 6);
+    assertEquals(0, kvs.length);
+
+    // File 5: Delete with post data timestamp and insert some older
+    // date in new files.
+    deleteFamily(FAMILY, "row", 10);
+    region.flushcache();
+    putData(FAMILY, "row", "col1", 7);
+    putData(FAMILY, "row", "col2", 8);
+    putData(FAMILY, "row", "col3", 9);
+    region.flushcache();
+
+    // Expected blocks read: 10. Why? [TODO]
+    // With lazy seek, would have expected this to be lower.
+    // At least is shouldn't be worse than before.
+    //
+    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 10);
+    assertEquals(0, kvs.length);
+
+    // File 6: Put back new data
+    putData(FAMILY, "row", "col1", 11);
+    putData(FAMILY, "row", "col2", 12);
+    putData(FAMILY, "row", "col3", 13);
+    region.flushcache();
+
+    // Expected blocks read: 9. Why? [TOD0]
+    //
+    // [Would have expected this to be 8.
+    //  Six to go to the top of each file for delete marker. On file 6, the
+    //  top block would serve "col1". And we should need two more to
+    //  serve col2 and col3 from file 6.
+    //
+    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 9);
+    assertEquals(3, kvs.length);
+    verifyData(kvs[0], "row", "col1", 11);
+    verifyData(kvs[1], "row", "col2", 12);
+    verifyData(kvs[2], "row", "col3", 13);
   }
 }
