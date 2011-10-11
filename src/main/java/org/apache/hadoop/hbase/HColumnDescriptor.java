@@ -554,6 +554,46 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     return s.toString();
   }
 
+  public String toStringCustomizedValues() {
+    Map<String, String> defaults = getDefaultValues();
+    StringBuilder s = new StringBuilder();
+    s.append('{');
+    s.append(HConstants.NAME);
+    s.append(" => '");
+    s.append(Bytes.toString(name));
+    s.append("'");
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+        values.entrySet()) {
+      String key = Bytes.toString(e.getKey().get());
+      String value = Bytes.toString(e.getValue().get());
+      if(defaults.get(key) == null || !defaults.get(key).equalsIgnoreCase(value)) {
+        s.append(", ");
+        s.append(key);
+        s.append(" => '");
+        s.append(value);
+        s.append("'");
+      }
+    }
+    s.append('}');
+    return s.toString();
+  }
+
+
+  public static Map<String, String>getDefaultValues() {
+    Map<String, String> defaultValues = new HashMap<String, String>();
+
+    defaultValues.put(BLOOMFILTER, DEFAULT_BLOOMFILTER);
+    defaultValues.put(REPLICATION_SCOPE, String.valueOf(DEFAULT_REPLICATION_SCOPE));
+    defaultValues.put(HConstants.VERSIONS, String.valueOf(DEFAULT_VERSIONS));
+    defaultValues.put(COMPRESSION, DEFAULT_COMPRESSION);
+    defaultValues.put(TTL, String.valueOf(DEFAULT_TTL));
+    defaultValues.put(BLOCKSIZE, String.valueOf(DEFAULT_BLOCKSIZE));
+    defaultValues.put(HConstants.IN_MEMORY, String.valueOf(DEFAULT_IN_MEMORY));
+    defaultValues.put(BLOOMFILTER_ERRORRATE, String.valueOf(DEFAULT_BLOOMFILTER_ERROR_RATE));
+    defaultValues.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
+    return defaultValues;
+  }
+
   /**
    * @see java.lang.Object#equals(java.lang.Object)
    */

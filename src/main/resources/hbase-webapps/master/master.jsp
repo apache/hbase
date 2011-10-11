@@ -10,7 +10,8 @@
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
-  import="org.apache.hadoop.hbase.HTableDescriptor" %><%
+  import="org.apache.hadoop.hbase.HTableDescriptor"
+  import="org.apache.hadoop.hbase.HColumnDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
   HServerAddress rootLocation = master.getRegionManager().getRootRegionLocation();
@@ -123,11 +124,11 @@
 <%  if (showFragmentation) { %>
         <td align="center"><%= frags.get(htDesc.getNameAsString()) != null ? frags.get(htDesc.getNameAsString()).intValue() + "%" : "n/a" %></td>
 <%  } %>
-    <td><%= htDesc.toString() %></td>
+    <td><%= htDesc.toStringCustomizedValues() %></td>
 </tr>
 <%   }  %>
 
-<p> <%= tables.length %> table(s) in set.</p>
+<p> <%= tables.length %> table(s) in set. [<a href=tablesDetailed.jsp>Details</a>]</p>
 </table>
 <% } %>
 
