@@ -192,6 +192,13 @@ public class RegionServerOperationQueue {
   }
 
   /**
+   * @return if the RSO queue has any entries
+   */
+  public boolean isEmpty() {
+    return this.toDoQueue.isEmpty() && this.delayedToDoQueue.isEmpty();
+  }
+
+  /**
    * Clean up the queues.
    */
   public synchronized void shutdown() {

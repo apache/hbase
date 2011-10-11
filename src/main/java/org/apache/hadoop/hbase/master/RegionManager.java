@@ -310,9 +310,10 @@ public class RegionManager {
         holdRegionForBestRegionServer,
         quickStartRegionServerSet);
 
-    if (regionsToAssign.size() == 0) {
+    if (regionsToAssign.isEmpty()) {
       // There are no regions waiting to be assigned.
-      if (!assignmentByLocality) {
+      if (!assignmentByLocality
+          && master.getRegionServerOperationQueue().isEmpty()) {
         // load balance as before
         this.loadBalancer.loadBalancing(info, mostLoadedRegions, returnMsgs);
       }
@@ -697,7 +698,7 @@ public class RegionManager {
       regionsClosed++;
     }
     LOG.info("Skipped assigning " + skipped + " region(s) to " +
-      info.getServerName() + "because already in transition");
+      info.getServerName() + " because already in transition");
   }
 
   /*

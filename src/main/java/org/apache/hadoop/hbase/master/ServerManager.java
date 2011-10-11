@@ -131,7 +131,7 @@ public class ServerManager {
       }
       LOG.info(numServers + " region servers, " + numDeadServers +
         " dead, average load " + averageLoad +
-        (deadServersList != null? deadServers: ""));
+        (deadServersList != null? deadServersList: ""));
     }
   }
 
