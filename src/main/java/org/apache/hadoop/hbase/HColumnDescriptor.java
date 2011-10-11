@@ -77,6 +77,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String LENGTH = "LENGTH";
   public static final String TTL = "TTL";
   public static final String BLOOMFILTER = "BLOOMFILTER";
+  public static final String BLOOMFILTER_ERRORRATE = "BLOOMFILTER_ERRORRATE";
   public static final String FOREVER = "FOREVER";
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
 
@@ -117,6 +118,12 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * Default setting for whether or not to use bloomfilters.
    */
   public static final String DEFAULT_BLOOMFILTER = StoreFile.BloomType.NONE.toString();
+
+  /**
+   * Default value for bloom filter error rate.
+   */
+  public static final float DEFAULT_BLOOMFILTER_ERROR_RATE = 0.01f;
+
 
   /**
    * Default time to live of cell contents.
@@ -205,6 +212,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
    */
+
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
       final String compression, final boolean inMemory,
       final boolean blockCacheEnabled,
@@ -213,6 +221,14 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       DEFAULT_BLOCKSIZE, timeToLive, bloomFilter, DEFAULT_REPLICATION_SCOPE);
   }
 
+  public HColumnDescriptor(final byte [] familyName, final int maxVersions,
+	      final String compression, final boolean inMemory,
+	      final boolean blockCacheEnabled, final int blocksize,
+	      final int timeToLive, final String bloomFilter, final int scope) {
+
+	  this(familyName, maxVersions, compression, inMemory, blockCacheEnabled,
+			  blocksize, timeToLive, bloomFilter, scope, DEFAULT_BLOOMFILTER_ERROR_RATE);
+   }
   /**
    * Constructor
    * @param familyName Column family name. Must be 'printable' -- digit or
@@ -227,16 +243,17 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * (use HConstants.FOREVER for unlimited TTL)
    * @param bloomFilter Bloom filter type for this column
    * @param scope The scope tag for this column
-   *
+   * @param bloomErrorRate Bloom filter error rate for this column
    * @throws IllegalArgumentException if passed a family name that is made of
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
    * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
    */
+
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
       final String compression, final boolean inMemory,
       final boolean blockCacheEnabled, final int blocksize,
-      final int timeToLive, final String bloomFilter, final int scope) {
+      final int timeToLive, final String bloomFilter, final int scope, float bloomErrorRate) {
     isLegalFamilyName(familyName);
     this.name = familyName;
 
@@ -253,6 +270,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       valueOf(compression.toUpperCase()));
     setBloomFilterType(StoreFile.BloomType.
       valueOf(bloomFilter.toUpperCase()));
+    setBloomFilterErrorRate(bloomErrorRate);
     setBlocksize(blocksize);
     setScope(scope);
   }
@@ -484,6 +502,14 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public void setBloomFilterType(final StoreFile.BloomType bt) {
     setValue(BLOOMFILTER, bt.toString());
   }
+
+   public void setBloomFilterErrorRate(float bloomErrorRate) {
+	   setValue(BLOOMFILTER_ERRORRATE, Float.toString(bloomErrorRate));
+   }
+   public float getBloomFilterErrorRate() {
+	    String value = getValue(BLOOMFILTER_ERRORRATE);
+	    return (value != null)? Float.valueOf(value).floatValue() : DEFAULT_BLOOMFILTER_ERROR_RATE;
+	  }
 
    /**
     * @return the scope tag

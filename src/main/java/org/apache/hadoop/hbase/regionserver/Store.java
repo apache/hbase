@@ -523,7 +523,7 @@ public class Store implements HeapSize {
   throws IOException {
     return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
         this.compression, this.comparator, this.conf,
-        this.family.getBloomFilterType(), maxKeyCount);
+        this.family.getBloomFilterType(), this.family.getBloomFilterErrorRate(), maxKeyCount);
   }
 
   /*

@@ -538,7 +538,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   // Writable
 
   public void readFields(DataInput in) throws IOException {
-    int version = in.readInt();
+	int version = in.readInt();
     if (version < 3)
       throw new IOException("versions < 3 are not supported (and never existed!?)");
     // version 3+

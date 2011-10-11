@@ -344,6 +344,7 @@ module Hbase
 
       family.setBlockCacheEnabled(JBoolean.valueOf(arg[HColumnDescriptor::BLOCKCACHE])) if arg.include?(HColumnDescriptor::BLOCKCACHE)
       family.setBloomFilterType(StoreFile::BloomType.valueOf(arg[HColumnDescriptor::BLOOMFILTER])) if arg.include?(HColumnDescriptor::BLOOMFILTER)
+      family.setBloomFilterErrorRate(JFloat.valueOf(arg[HColumnDescriptor::BLOOMFILTER_ERRORRATE])) if arg.include?(HColumnDescriptor::BLOOMFILTER_ERRORRATE)
       family.setScope(JInteger.valueOf(arg[REPLICATION_SCOPE])) if arg.include?(HColumnDescriptor::REPLICATION_SCOPE)
       family.setInMemory(JBoolean.valueOf(arg[IN_MEMORY])) if arg.include?(HColumnDescriptor::IN_MEMORY)
       family.setTimeToLive(JInteger.valueOf(arg[HColumnDescriptor::TTL])) if arg.include?(HColumnDescriptor::TTL)

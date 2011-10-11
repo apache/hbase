@@ -35,6 +35,7 @@ java_import org.apache.hadoop.hbase.HTableDescriptor
 include_class('java.lang.Integer') {|package,name| "J#{name}" }
 include_class('java.lang.Long') {|package,name| "J#{name}" }
 include_class('java.lang.Boolean') {|package,name| "J#{name}" }
+include_class('java.lang.Float') {|package,name| "J#{name}" }
 
 module HBaseConstants
   COLUMN = "COLUMN"

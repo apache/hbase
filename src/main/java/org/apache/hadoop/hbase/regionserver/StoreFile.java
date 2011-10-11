@@ -49,10 +49,12 @@ import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -553,6 +555,19 @@ public class StoreFile {
     return createWriter(fs, dir, blocksize, null, null, conf, BloomType.NONE,
         0);
   }
+  public static StoreFile.Writer createWriter(final FileSystem fs,
+          final Path dir,
+          final int blocksize,
+          final Compression.Algorithm algorithm,
+          final KeyValue.KVComparator c,
+          final Configuration conf,
+          BloomType bloomType,
+          long maxKeyCount)
+  throws IOException {
+	  return createWriter(fs, dir, blocksize, null, null, conf, BloomType.NONE,
+			  BloomFilterFactory.getErrorRate(conf), 0);
+
+  }
 
   /**
    * Create a store file writer. Client is responsible for closing file when done.
@@ -565,6 +580,7 @@ public class StoreFile {
    * @param c Pass null to get default.
    * @param conf HBase system configuration. used with bloom filters
    * @param bloomType column family setting for bloom filters
+   * @param bloomErrorRate column family setting for bloom filter error rate
    * @param maxKeyCount estimated maximum number of keys we expect to add
    * @return HFile.Writer
    * @throws IOException
@@ -576,6 +592,7 @@ public class StoreFile {
                                               final KeyValue.KVComparator c,
                                               final Configuration conf,
                                               BloomType bloomType,
+                                              float bloomErrorRate,
                                               long maxKeyCount)
       throws IOException {
 
@@ -589,7 +606,7 @@ public class StoreFile {
 
     return new Writer(fs, path, blocksize,
         algorithm == null? HFile.DEFAULT_COMPRESSION_ALGORITHM: algorithm,
-        conf, c == null ? KeyValue.COMPARATOR: c, bloomType, maxKeyCount);
+        conf, c == null ? KeyValue.COMPARATOR: c, bloomType, bloomErrorRate, maxKeyCount);
   }
 
   /**
@@ -690,6 +707,15 @@ public class StoreFile {
     boolean isTimeRangeTrackerSet = false;
 
     protected HFile.Writer writer;
+
+    public Writer(FileSystem fs, Path path, int blocksize,
+            Compression.Algorithm compress, final Configuration conf,
+            final KVComparator comparator, BloomType bloomType,  long maxKeys)
+            throws IOException {
+	this(fs, path, blocksize, compress, conf, comparator, bloomType,
+			BloomFilterFactory.getErrorRate(conf), maxKeys);
+    }
+
     /**
      * Creates an HFile.Writer that also write helpful meta data.
      * @param fs file system to write to
@@ -699,13 +725,14 @@ public class StoreFile {
      * @param conf user configuration
      * @param comparator key comparator
      * @param bloomType bloom filter setting
+     * @param bloomErrorRate error rate for bloom filter
      * @param maxKeys the expected maximum number of keys to be added. Was used
      *        for Bloom filter size in {@link HFile} format version 1.
      * @throws IOException problem writing to FS
      */
     public Writer(FileSystem fs, Path path, int blocksize,
         Compression.Algorithm compress, final Configuration conf,
-        final KVComparator comparator, BloomType bloomType, long maxKeys)
+        final KVComparator comparator, BloomType bloomType, float bloomErrorRate, long maxKeys)
         throws IOException {
 
       writer = HFile.getWriterFactory(conf).createWriter(
@@ -715,7 +742,7 @@ public class StoreFile {
       this.kvComparator = comparator;
 
       bloomFilterWriter = BloomFilterFactory.createBloomAtWrite(conf,
-          bloomType, (int) Math.min(maxKeys, Integer.MAX_VALUE), writer);
+          bloomType, (int) Math.min(maxKeys, Integer.MAX_VALUE), writer, bloomErrorRate);
       if (bloomFilterWriter != null) {
         this.bloomType = bloomType;
         LOG.info("Bloom filter type for " + path + ": " + this.bloomType +
@@ -726,7 +753,8 @@ public class StoreFile {
       }
     }
 
-    /**
+
+	/**
      * Writes meta data.
      * Call before {@link #close()} since its written as meta data to this file.
      * @param maxSequenceId Maximum sequence id.

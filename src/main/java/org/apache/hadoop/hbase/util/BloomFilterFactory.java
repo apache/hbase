@@ -181,7 +181,7 @@ public final class BloomFilterFactory {
    *         or when failed to create one.
    */
   public static BloomFilterWriter createBloomAtWrite(Configuration conf,
-      BloomType bloomType, int maxKeys, HFile.Writer writer) {
+      BloomType bloomType, int maxKeys, HFile.Writer writer, float bloomErrorRate) {
     if (!isBloomEnabled(conf)) {
       LOG.info("Bloom filters are disabled by configuration for "
           + writer.getPath()
@@ -192,14 +192,12 @@ public final class BloomFilterFactory {
       return null;
     }
 
-    float err = getErrorRate(conf);
-
     // In case of row/column Bloom filter lookups, each lookup is an OR if two
     // separate lookups. Therefore, if each lookup's false positive rate is p,
     // the resulting false positive rate is err = 1 - (1 - p)^2, and
     // p = 1 - sqrt(1 - err).
     if (bloomType == BloomType.ROWCOL) {
-      err = (float) (1 - Math.sqrt(1 - err));
+      bloomErrorRate = (float) (1 - Math.sqrt(1 - bloomErrorRate));
     }
 
     int maxFold = getMaxFold(conf);
@@ -207,7 +205,7 @@ public final class BloomFilterFactory {
     if (HFile.getFormatVersion(conf) > HFile.MIN_FORMAT_VERSION) {
       // In case of compound Bloom filters we ignore the maxKeys hint.
       CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(
-          getBloomBlockSize(conf), err, Hash.getHashType(conf), maxFold,
+          getBloomBlockSize(conf), bloomErrorRate, Hash.getHashType(conf), maxFold,
           cacheChunksOnWrite(conf), bloomType == BloomType.ROWCOL
               ? KeyValue.KEY_COMPARATOR : Bytes.BYTES_RAWCOMPARATOR);
       writer.addInlineBlockWriter(bloomWriter);
@@ -222,7 +220,7 @@ public final class BloomFilterFactory {
             + ", not using Bloom filter");
         return null;
       } else if (maxKeys < tooBig) {
-        BloomFilterWriter bloom = new ByteBloomFilter((int) maxKeys, err,
+        BloomFilterWriter bloom = new ByteBloomFilter((int) maxKeys, bloomErrorRate,
             Hash.getHashType(conf), maxFold);
         bloom.allocBloom();
         return bloom;
