@@ -61,6 +61,8 @@ implements Configurable {
   public static final String SCAN_CACHEBLOCKS = "hbase.mapreduce.scan.cacheblocks";
   /** The number of rows for caching that will be passed to scanners. */
   public static final String SCAN_CACHEDROWS = "hbase.mapreduce.scan.cachedrows";
+  /** The number of mappers that should be assigned to each region. */
+  public static final String MAPPERS_PER_REGION = "hbase.mapreduce.mappersperregion";
 
   /** The configuration. */
   private Configuration conf = null;
@@ -137,6 +139,10 @@ implements Configurable {
       } catch (Exception e) {
           LOG.error(StringUtils.stringifyException(e));
       }
+    }
+
+    if (conf.get(MAPPERS_PER_REGION) != null) {
+      setNumMapperPerRegion(Integer.parseInt(conf.get(MAPPERS_PER_REGION)));
     }
 
     setScan(scan);

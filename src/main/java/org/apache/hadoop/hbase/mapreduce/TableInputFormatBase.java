@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -78,7 +79,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   private HTable table = null;
   /** The reader scanning the table, can be a custom one. */
   private TableRecordReader tableRecordReader = null;
-
+  /** The number of mappers to assign to each region. */
+  private int numMappersPerRegion = 1;
 
   /**
    * Builds a TableRecordReader. If no TableRecordReader was provided, uses
@@ -131,33 +133,85 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     if (table == null) {
       throw new IOException("No table was provided.");
     }
-    int count = 0;
-    List<InputSplit> splits = new ArrayList<InputSplit>(keys.getFirst().length);
-    for (int i = 0; i < keys.getFirst().length; i++) {
-      if ( !includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
+    Pair<byte[][], byte[][]> splitKeys = null;
+    int numRegions = keys.getFirst().length;
+    //TODO: Can anything else be done when there are less than 3 regions?
+    if ((numMappersPerRegion == 1) || (numRegions < 3)) {
+      numMappersPerRegion = 1;
+      splitKeys = keys;
+    } else {
+      byte[][] startKeys = new byte[numRegions * numMappersPerRegion][];
+      byte[][] stopKeys = new byte[numRegions * numMappersPerRegion][];
+      // Insert null keys at edges
+      startKeys[0] = HConstants.EMPTY_START_ROW;
+      stopKeys[numRegions * numMappersPerRegion - 1] = HConstants.EMPTY_END_ROW;
+      // Split the second region
+      byte[][] dividingKeys = Bytes.split(keys.getFirst()[1],
+          keys.getSecond()[1], numMappersPerRegion - 1);
+      int count = numMappersPerRegion - 1;
+      stopKeys[count] = keys.getSecond()[0];
+      // Use the interval between these splits to calculate the approximate
+        // dividing keys of the first region
+      for (byte[] approxKey : Bytes.arithmeticProgSeq(dividingKeys[1], dividingKeys[0],
+          numMappersPerRegion - 1)) {
+        startKeys[count--] = approxKey;
+        stopKeys[count] = approxKey;
+      }
+      // Add the second region dividing keys
+      for (int i = 0; i < numMappersPerRegion; i++) {
+        startKeys[numMappersPerRegion + i] = dividingKeys[i];
+        stopKeys[numMappersPerRegion + i] = dividingKeys[i + 1];
+      }
+      // Fill out all the split keys for center regions (3rd...(n-1)th)
+      for (int i = 2; i < numRegions - 1; i++) {
+        dividingKeys = Bytes.split(keys.getFirst()[i],
+            keys.getSecond()[i], numMappersPerRegion - 1);
+        for (int j = 0; j < numMappersPerRegion; j++) {
+          startKeys[i * numMappersPerRegion + j] = dividingKeys[j];
+          stopKeys[i * numMappersPerRegion + j] = dividingKeys[j + 1];
+        }
+      }
+      // Use the previous intervals to calc dividing keys of the last region
+      count = numMappersPerRegion * (numRegions - 1);
+      startKeys[count] = keys.getFirst()[numRegions - 1];
+      for (byte[] approxKey : Bytes.arithmeticProgSeq(dividingKeys[numMappersPerRegion - 1],
+          dividingKeys[numMappersPerRegion], numMappersPerRegion - 1)) {
+        stopKeys[count++] = approxKey;
+        startKeys[count] = approxKey;
+      }
+      splitKeys = new Pair<byte[][], byte[][]>();
+      splitKeys.setFirst(startKeys);
+      splitKeys.setSecond(stopKeys);
+    }
+    List<InputSplit> splits =
+        new ArrayList<InputSplit>(numRegions * numMappersPerRegion);
+    byte[] startRow = scan.getStartRow();
+    byte[] stopRow = scan.getStopRow();
+    int numSplits = 0;
+    for (int i = 0; i < numRegions * numMappersPerRegion; i++) {
+      if (!includeRegionInSplit(keys.getFirst()[i / numMappersPerRegion],
+          keys.getSecond()[i / numMappersPerRegion])) {
         continue;
       }
-      String regionLocation = table.getRegionLocation(keys.getFirst()[i]).
+      String regionLocation = table.getRegionLocation(splitKeys.getFirst()[i]).
         getServerAddress().getHostname();
-      byte[] startRow = scan.getStartRow();
-      byte[] stopRow = scan.getStopRow();
       // determine if the given start an stop key fall into the region
-      if ((startRow.length == 0 || keys.getSecond()[i].length == 0 ||
-           Bytes.compareTo(startRow, keys.getSecond()[i]) < 0) &&
+      if ((startRow.length == 0 || splitKeys.getSecond()[i].length == 0 ||
+          Bytes.compareTo(startRow, splitKeys.getSecond()[i]) < 0) &&
           (stopRow.length == 0 ||
-           Bytes.compareTo(stopRow, keys.getFirst()[i]) > 0)) {
+          Bytes.compareTo(stopRow, splitKeys.getFirst()[i]) > 0)) {
         byte[] splitStart = startRow.length == 0 ||
-          Bytes.compareTo(keys.getFirst()[i], startRow) >= 0 ?
-            keys.getFirst()[i] : startRow;
+            Bytes.compareTo(splitKeys.getFirst()[i], startRow) >= 0 ?
+                splitKeys.getFirst()[i] : startRow;
         byte[] splitStop = (stopRow.length == 0 ||
-          Bytes.compareTo(keys.getSecond()[i], stopRow) <= 0) &&
-          keys.getSecond()[i].length > 0 ?
-            keys.getSecond()[i] : stopRow;
+            Bytes.compareTo(splitKeys.getSecond()[i], stopRow) <= 0) &&
+            splitKeys.getSecond()[i].length > 0 ?
+                splitKeys.getSecond()[i] : stopRow;
         InputSplit split = new TableSplit(table.getTableName(),
-          splitStart, splitStop, regionLocation);
+            splitStart, splitStop, regionLocation);
         splits.add(split);
         if (LOG.isDebugEnabled())
-          LOG.debug("getSplits: split -> " + (count++) + " -> " + split);
+          LOG.debug("getSplits: split -> " + (numSplits++) + " -> " + split);
       }
     }
     return splits;
@@ -236,4 +290,17 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     this.tableRecordReader = tableRecordReader;
   }
 
+  /**
+   * Sets the number of mappers assigned to each region.
+   *
+   * @param num
+   * @throws IllegalArgumentException When <code>num</code> <= 0.
+   */
+  public void setNumMapperPerRegion(int num) throws IllegalArgumentException {
+    if (num <= 0) {
+      throw new IllegalArgumentException("Expecting at least 1 mapper " +
+		"per region; instead got: " + num);
+    }
+    numMappersPerRegion = num;
+  }
 }

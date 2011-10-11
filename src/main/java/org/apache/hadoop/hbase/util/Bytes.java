@@ -1064,7 +1064,7 @@ public class Bytes {
     if (compareTo(aPadded,bPadded) >= 0) {
       throw new IllegalArgumentException("b <= a");
     }
-    if (num <= 0) {
+    if (num < 0) {
       throw new IllegalArgumentException("num cannot be < 0");
     }
     byte [] prependHeader = {1, 0};
@@ -1085,6 +1085,7 @@ public class Bytes {
 
     final Iterator<byte[]> iterator = new Iterator<byte[]>() {
       private int i = -1;
+      private BigInteger curBI = startBI;
 
       @Override
       public boolean hasNext() {
@@ -1097,7 +1098,7 @@ public class Bytes {
         if (i == 0) return a;
         if (i == num + 1) return b;
 
-        BigInteger curBI = startBI.add(intervalBI.multiply(BigInteger.valueOf(i)));
+        curBI = curBI.add(intervalBI);
         byte [] padded = curBI.toByteArray();
         if (padded[1] == 0)
           padded = tail(padded, padded.length - 2);
@@ -1119,6 +1120,53 @@ public class Bytes {
         return iterator;
       }
     };
+  }
+
+  /**
+   * Calculate the next <code>num</code> elements in arithemetic
+   * progression sequence.
+   *
+   * @param a First element.
+   * @param b Second element.
+   * @param num Number of next elements to find.
+   * @return <code>num</code> byte arrays each having the same interval
+   *         from <code>a</code> to <code>b</code>, starting from b. In
+   *         other words, it returns an array consists of b+(b-a)*(i+1),
+   *         where i is the index of the resulting array of size <code>
+   *         num</code>. Uses BigInteger math.
+   */
+  public static byte[][] arithmeticProgSeq(byte[] a, byte[] b, int num) {
+    byte [][] result = new byte[num][];
+    byte [] aPadded;
+    byte [] bPadded;
+    if (a.length < b.length) {
+      aPadded = padTail(a, b.length - a.length);
+      bPadded = b;
+    } else if (b.length < a.length) {
+      aPadded = a;
+      bPadded = padTail(b, a.length - b.length);
+    } else {
+      aPadded = a;
+      bPadded = b;
+    }
+    if (num < 0) {
+      throw new IllegalArgumentException("num cannot be < 0");
+    }
+    byte [] prependHeader = {1, 0};
+    BigInteger startBI = new BigInteger(add(prependHeader, aPadded));
+    BigInteger stopBI = new BigInteger(add(prependHeader, bPadded));
+    BigInteger diffBI = stopBI.subtract(startBI);
+    BigInteger curBI = stopBI;
+    for (int i = 0; i < num; i++) {
+      curBI = curBI.add(diffBI);
+      byte [] padded = curBI.toByteArray();
+      if (padded[1] == 0)
+        padded = tail(padded, padded.length - 2);
+      else
+        padded = tail(padded, padded.length - 1);
+      result[i] = padded;
+    }
+    return result;
   }
 
   /**
