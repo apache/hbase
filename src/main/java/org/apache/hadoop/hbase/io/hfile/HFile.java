@@ -1767,12 +1767,12 @@ public class HFile {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
-      sb.append("size=" + count);
+      sb.append("size=" + count).append("\n");
       for (int i = 0; i < count ; i++) {
-        sb.append(", ");
-        sb.append("key=").append(Bytes.toStringBinary(blockKeys[i])).
-          append(", offset=").append(blockOffsets[i]).
-          append(", dataSize=" + blockDataSizes[i]);
+        sb.append("key=").append(KeyValue.keyToString(blockKeys[i])).
+          append("\n  offset=").append(blockOffsets[i]).
+          append(", dataSize=" + blockDataSizes[i]).
+          append("\n");
       }
       return sb.toString();
     }
@@ -1893,7 +1893,9 @@ public class HFile {
       Options options = new Options();
       options.addOption("v", "verbose", false, "Verbose output; emits file and meta data delimiters");
       options.addOption("p", "printkv", false, "Print key/value pairs");
+      options.addOption("e", "printkey", false, "Print keys");
       options.addOption("m", "printmeta", false, "Print meta data of file");
+      options.addOption("b", "printblocks", false, "Print block index meta data");
       options.addOption("k", "checkrow", false,
         "Enable row order check; looks for out-of-order keys");
       options.addOption("a", "checkfamily", false, "Enable family check");
@@ -1910,15 +1912,15 @@ public class HFile {
       CommandLine cmd = parser.parse(options, args);
       boolean verbose = cmd.hasOption("v");
       boolean printValue = cmd.hasOption("p");
-      boolean printKey = cmd.hasOption("pk") || printValue;
+      boolean printKey = cmd.hasOption("e") || printValue;
       boolean printMeta = cmd.hasOption("m");
+      boolean printBlocks = cmd.hasOption("b");
       boolean checkRow = cmd.hasOption("k");
       boolean checkFamily = cmd.hasOption("a");
       // get configuration, file system and get list of files
       Configuration conf = HBaseConfiguration.create();
       conf.set("fs.defaultFS",
         conf.get(org.apache.hadoop.hbase.HConstants.HBASE_DIR));
-      FileSystem fs = FileSystem.get(conf);
       ArrayList<Path> files = new ArrayList<Path>();
       if (cmd.hasOption("f")) {
         files.add(new Path(cmd.getOptionValue("f")));
@@ -1932,7 +1934,8 @@ public class HFile {
         String enc = HRegionInfo.encodeRegionName(rn);
         Path regionDir = new Path(tableDir, enc);
         if (verbose) System.out.println("region dir -> " + regionDir);
-        List<Path> regionFiles = getStoreFiles(fs, regionDir);
+        List<Path> regionFiles =
+          getStoreFiles(FileSystem.get(conf), regionDir);
         if (verbose) System.out.println("Number of region files found -> " +
           regionFiles.size());
         if (verbose) {
@@ -1947,6 +1950,7 @@ public class HFile {
       // iterate over all files found
       for (Path file : files) {
         if (verbose) System.out.println("Scanning -> " + file);
+        FileSystem fs = file.getFileSystem(conf);
         if (!fs.exists(file)) {
           System.err.println("ERROR, file doesnt exist: " + file);
           continue;
@@ -2041,6 +2045,10 @@ public class HFile {
           } else {
             System.out.println("Could not get bloom data from meta block");
           }
+        }
+        if (printBlocks) {
+          System.out.println("Block Index:");
+          System.out.println(reader.blockIndex);
         }
         reader.close();
       }
