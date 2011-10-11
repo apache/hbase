@@ -182,11 +182,6 @@ case $startStop in
     # stop the command
     $thiscmd --config "${HBASE_CONF_DIR}" stop $command $args &
     wait_until_done $!
-    # wait a user-specified sleep period
-    sp=${HBASE_RESTART_SLEEP:-3}
-    if [ $sp -gt 0 ]; then
-      sleep $sp
-    fi
     # start the command
     $thiscmd --config "${HBASE_CONF_DIR}" start $command $args &
     wait_until_done $!
