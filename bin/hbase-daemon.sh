@@ -183,7 +183,7 @@ case $startStop in
     case $command in
       (regionserver)
         echo -n "Stopping regionserver for a restart"
-        $bin/hbase org.jruby.Main $bin/restart_regionserver.rb &
+        $bin/hbase org.jruby.Main $bin/stop_regionserver_for_restart.rb &
         while kill -0 `cat $pid` > /dev/null 2>&1; do
           echo -n "."
           sleep 1;

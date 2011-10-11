@@ -514,9 +514,16 @@ public class RegionManager {
     // regionsInTransition
     Set<HRegionInfo> regions = unholdRestartingServer(addr);
     if (null != regions) {
+      StringBuilder regionNames = new StringBuilder();
+      regionNames.append("[ ");
+      for (HRegionInfo region : regions) {
+        regionNames.append(region.getRegionNameAsString());
+        regionNames.append(" , ");
+      }
+      regionNames.append(" ]");
       restaringServerAndOnTime.setValue(true);
       LOG.debug("RegionServer " + addr.getHostname()
-          + " should receive regions " + regions
+          + " should receive regions " + regionNames.toString()
           + " coming back from restart");
       // One could use regionsInTransition.keySet().containsAll(regions) but
       // this provides more control and probably the same complexity. Also, this
