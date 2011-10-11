@@ -246,17 +246,12 @@ public class RegionServerMetrics implements Updater {
       // }
       // Means you can't pass a numOps of zero or get a ArithmeticException / by zero.
       // HLog metrics
-      int ops = HLog.getWriteOps();
-      if (ops != 0) {
-        this.fsWriteLatency.inc(ops, HLog.getWriteTime());
-        this.fsWriteSize.inc(ops, HLog.getWriteSize());
-      }
-      ops = HLog.getSyncOps();
-      if (ops != 0) this.fsSyncLatency.inc(ops, HLog.getSyncTime());
-      ops = HLog.getGSyncOps();
-      if (ops != 0) this.fsGroupSyncLatency.inc(ops, HLog.getGSyncTime());
+      addHLogMetric(HLog.getWriteTime(), this.fsWriteLatency);
+      addHLogMetric(HLog.getWriteSize(), this.fsWriteSize);
+      addHLogMetric(HLog.getSyncTime(), this.fsSyncLatency);
+      addHLogMetric(HLog.getGSyncTime(), this.fsGroupSyncLatency);
       // HFile metrics
-      ops = HFile.getReadOps();
+      int ops = HFile.getReadOps();
       if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTime());
       /* NOTE: removed HFile write latency.  2 reasons:
        * 1) Mixing HLog latencies are far higher priority since they're
@@ -276,6 +271,18 @@ public class RegionServerMetrics implements Updater {
       this.flushSize.pushMetric(this.metricsRecord);
     }
     this.metricsRecord.update();
+  }
+
+  private void addHLogMetric(HLog.Metric logMetric,
+      MetricsTimeVaryingRate hadoopMetric) {
+    if (logMetric.count > 0)
+      hadoopMetric.inc(logMetric.min);
+    if (logMetric.count > 1)
+      hadoopMetric.inc(logMetric.max);
+    if (logMetric.count > 2) {
+      int ops = logMetric.count - 2;
+      hadoopMetric.inc(ops, logMetric.total - logMetric.max - logMetric.min);
+    }
   }
 
   public void resetAllMinMax() {

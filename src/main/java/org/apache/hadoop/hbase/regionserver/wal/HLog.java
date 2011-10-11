@@ -249,60 +249,59 @@ public class HLog implements Syncable {
     }
   }
 
+  public static class Metric {
+    public long min = Long.MAX_VALUE;
+    public long max = 0;
+    public long total = 0;
+    public int count = 0;
+
+    synchronized void inc(final long val) {
+      min = Math.min(min, val);
+      max = Math.max(max, val);
+      total += val;
+      ++count;
+    }
+
+    synchronized Metric get() {
+      Metric copy = new Metric();
+      copy.min = min;
+      copy.max = max;
+      copy.total = total;
+      copy.count = count;
+      this.min = Long.MAX_VALUE;
+      this.max = 0;
+      this.total = 0;
+      this.count = 0;
+      return copy;
+    }
+  }
+
   // For measuring latency of writes
-  private static volatile int writeOps = 0;
-  private static volatile long writeTime = 0;
-  private static volatile long writeSize = 0;
+  private static Metric writeTime = new Metric();
+  private static Metric writeSize = new Metric();
   // For measuring latency of syncs
-  private static volatile int syncOps = 0;
-  private static volatile long syncTime = 0;
-  private static volatile int gsyncOps = 0;
-  private static volatile long gsyncTime = 0;
+  private static Metric syncTime = new Metric();
+  private static Metric gsyncTime = new Metric();
 
   public static volatile long lastSplitTime = 0;
   public static volatile long lastSplitSize = 0;
 
-  public static int getWriteOps() {
-    int ret = writeOps;
-    writeOps = 0;
-    return ret;
+  public static Metric getWriteTime() {
+    return writeTime.get();
   }
 
-  public static long getWriteTime() {
-    long ret = writeTime;
-    writeTime = 0;
-    return ret;
+  public static Metric getWriteSize() {
+    return writeSize.get();
   }
 
-  public static long getWriteSize() {
-    long ret = writeSize;
-    writeSize = 0;
-    return ret;
+  public static Metric getSyncTime() {
+    return syncTime.get();
   }
 
-  public static int getSyncOps() {
-    int ret = syncOps;
-    syncOps = 0;
-    return ret;
+  public static Metric getGSyncTime() {
+    return gsyncTime.get();
   }
 
-  public static long getSyncTime() {
-    long ret = syncTime;
-    syncTime = 0;
-    return ret;
-  }
-
-  public static int getGSyncOps() {
-    int ret = gsyncOps;
-    gsyncOps = 0;
-    return ret;
-  }
-
-  public static long getGSyncTime() {
-    long ret = gsyncTime;
-    gsyncTime = 0;
-    return ret;
-  }
 
   /**
    * HLog creating with a null actions listener.
@@ -878,14 +877,12 @@ public class HLog implements Syncable {
       // Only count 1 row as an unflushed entry.
       txid = this.unflushedEntries.incrementAndGet();
     }
-    writeTime += System.currentTimeMillis() - start;
-    writeOps++;
+    writeTime.inc(System.currentTimeMillis() - start);
 
     // sync txn to file system
     start = System.currentTimeMillis();
     this.sync(info.isMetaRegion(), txid);
-    gsyncTime += System.currentTimeMillis() - start;
-    gsyncOps++;
+    gsyncTime.inc(System.currentTimeMillis() - start);
 
   }
 
@@ -1028,8 +1025,7 @@ public class HLog implements Syncable {
           long doneUpto = this.unflushedEntries.get();
           this.writer.sync();
           this.syncTillHere = doneUpto;
-          syncTime += System.currentTimeMillis() - now;
-          syncOps++;
+          syncTime.inc(System.currentTimeMillis() - now);
           this.forceSync = false;
 
           // if the number of replicas in HDFS has fallen below the initial
@@ -1114,7 +1110,7 @@ public class HLog implements Syncable {
       for(KeyValue kv : logEdit.getKeyValues()) {
         len += kv.getLength();
       }
-      writeSize += len;
+      writeSize.inc(len);
       if (took > 1000) {
         LOG.warn(String.format(
           "%s took %d ms appending an edit to hlog; editcount=%d, len~=%s",

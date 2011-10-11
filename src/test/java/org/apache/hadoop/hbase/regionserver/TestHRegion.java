@@ -345,8 +345,8 @@ public class TestHRegion extends HBaseTestCase {
     byte[] val = Bytes.toBytes("val");
     initHRegion(b, getName(), cf);
 
-    HLog.getSyncOps(); // clear counter from prior tests
-    assertEquals(0, HLog.getSyncOps());
+    HLog.getSyncTime(); // clear counter from prior tests
+    assertEquals(0, HLog.getSyncTime().count);
 
     LOG.info("First a batch put with all valid puts");
     final Put[] puts = new Put[10];
@@ -360,7 +360,7 @@ public class TestHRegion extends HBaseTestCase {
     for (int i = 0; i < 10; i++) {
       assertEquals(OperationStatusCode.SUCCESS, codes[i]);
     }
-    assertEquals(1, HLog.getSyncOps());
+    assertEquals(1, HLog.getSyncTime().count);
 
     LOG.info("Next a batch put with one invalid family");
     puts[5].add(Bytes.toBytes("BAD_CF"), qual, val);
@@ -370,7 +370,7 @@ public class TestHRegion extends HBaseTestCase {
       assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
         OperationStatusCode.SUCCESS, codes[i]);
     }
-    assertEquals(1, HLog.getSyncOps());
+    assertEquals(1, HLog.getSyncTime().count);
 
     LOG.info("Next a batch put that has to break into two batches to avoid a lock");
     Integer lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
@@ -391,7 +391,7 @@ public class TestHRegion extends HBaseTestCase {
 
     LOG.info("...waiting for put thread to sync first time");
     long startWait = System.currentTimeMillis();
-    while (HLog.getSyncOps() == 0) {
+    while (HLog.getSyncTime().count == 0) {
       Thread.sleep(100);
       if (System.currentTimeMillis() - startWait > 10000) {
         fail("Timed out waiting for thread to sync first minibatch");
@@ -402,7 +402,7 @@ public class TestHRegion extends HBaseTestCase {
     LOG.info("...joining on thread");
     ctx.stop();
     LOG.info("...checking that next batch was synced");
-    assertEquals(1, HLog.getSyncOps());
+    assertEquals(1, HLog.getSyncTime().count);
     codes = retFromThread.get();
     for (int i = 0; i < 10; i++) {
       assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
@@ -426,7 +426,7 @@ public class TestHRegion extends HBaseTestCase {
         OperationStatusCode.SUCCESS, codes[i]);
     }
     // Make sure we didn't do an extra batch
-    assertEquals(1, HLog.getSyncOps());
+    assertEquals(1, HLog.getSyncTime().count);
 
     // Make sure we still hold lock
     assertTrue(region.isRowLocked(lockedRow));
