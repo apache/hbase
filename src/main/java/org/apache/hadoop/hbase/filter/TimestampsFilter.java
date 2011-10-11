@@ -67,7 +67,7 @@ public class TimestampsFilter extends FilterBase {
       // to be lesser than all of the other values.
       return ReturnCode.NEXT_COL;
     }
-    return ReturnCode.SKIP;
+    return ReturnCode.SEEK_NEXT_USING_HINT;
   }
 
   @Override
@@ -87,5 +87,15 @@ public class TimestampsFilter extends FilterBase {
     for (Long timestamp : this.timestamps) {
       out.writeLong(timestamp);
     }
+  }
+
+  @Override
+  public KeyValue getNextKeyHint(KeyValue kv) {
+    Long nextTimestampObject = timestamps.lower(kv.getTimestamp());
+    long nextTimestamp = nextTimestampObject != null ? nextTimestampObject : 0;
+    return KeyValue.createFirstOnRow(kv.getBuffer(), kv.getRowOffset(), kv
+        .getRowLength(), kv.getBuffer(), kv.getFamilyOffset(), kv
+        .getFamilyLength(), kv.getBuffer(), kv.getQualifierOffset(), kv
+        .getQualifierLength(), nextTimestamp);
   }
 }

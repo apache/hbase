@@ -1606,6 +1606,32 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * Create a KeyValue for the specified row, family, qualifier, timestamp that
+   * would be smaller than or equal to all other possible KeyValues that have
+   * the same row, family, qualifier, timestamp.
+   * Used for seeking.
+   * @param row row key
+   * @param roffset row offset
+   * @param rlength row length
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   * @param timestamp timestamp
+   * @return First possible key on passed row, family, qualifier, timestamp
+   */
+  public static KeyValue createFirstOnRow(final byte [] row,
+      final int roffset, final int rlength, final byte [] family,
+      final int foffset, final int flength, final byte [] qualifier,
+      final int qoffset, final int qlength, long timestamp) {
+    return new KeyValue(row, roffset, rlength, family,
+        foffset, flength, qualifier, qoffset, qlength,
+        timestamp, Type.Maximum, null, 0, 0);
+  }
+
+  /**
    * @param b
    * @return A KeyValue made of a byte array that holds the key-only part.
    * Needed to convert hfile index members to KeyValues.
