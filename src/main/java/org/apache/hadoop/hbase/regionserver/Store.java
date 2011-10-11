@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -655,25 +656,27 @@ public class Store implements HeapSize {
       StoreFile.Writer writer = compactStores(filesToCompact, cr.isMajor(), maxId);
       // Move the compaction into place.
       sf = completeCompaction(filesToCompact, writer);
+
+      // Report that the compaction is complete.
+      status.markComplete("Completed compaction");
+      LOG.info("Completed" + (cr.isMajor() ? " major " : " ") + "compaction of "
+          + filesToCompact.size() + " file(s) in " + this.storeNameStr + " of "
+          + this.region.getRegionInfo().getRegionNameAsString()
+          + "; new storefile name=" + (sf == null ? "none" : sf.toString())
+          + ", size=" + (sf == null ? "none" :
+            StringUtils.humanReadableInt(sf.getReader().length()))
+          + "; total size for store is "
+          + StringUtils.humanReadableInt(storeSize));
     } catch (IOException ioe) {
       // rather than leak the status, we abort here, then rethrow the exception
-      status.abort("IOException thrown");
+      status.abort(StringUtils.stringifyException(ioe));
       throw ioe;
     } finally {
       synchronized (filesCompacting) {
         filesCompacting.removeAll(filesToCompact);
       }
+      status.cleanup();
     }
-
-    status.markComplete("Completed compaction");
-    LOG.info("Completed" + (cr.isMajor() ? " major " : " ") + "compaction of "
-        + filesToCompact.size() + " file(s) in " + this.storeNameStr + " of "
-        + this.region.getRegionInfo().getRegionNameAsString()
-        + "; new storefile name=" + (sf == null ? "none" : sf.toString())
-        + ", size=" + (sf == null ? "none" :
-          StringUtils.humanReadableInt(sf.getReader().length()))
-        + "; total size for store is "
-        + StringUtils.humanReadableInt(storeSize));
   }
 
   /*

@@ -1309,45 +1309,51 @@ public class HLog implements Syncable {
   throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Splitting logs in " + srcDir);
-    long startTime = System.currentTimeMillis();
-    List<Path> splits = null;
-    status.setStatus("Determining files to split");
-    if (!fs.exists(srcDir)) {
-      // Nothing to do
-      status.markComplete("No log directory existed to split.");
-      return splits;
-    }
-    FileStatus [] logfiles = fs.listStatus(srcDir);
-    if (logfiles == null || logfiles.length == 0) {
-      // Nothing to do
-      return splits;
-    }
-    LOG.info("Splitting " + logfiles.length + " hlog(s) in " +
-      srcDir.toString());
-    status.setStatus("Performing split");
-    splits = splitLog(rootDir, srcDir, oldLogDir, logfiles, fs, conf);
     try {
-      FileStatus[] files = fs.listStatus(srcDir);
-      for(FileStatus file : files) {
-        Path newPath = getHLogArchivePath(oldLogDir, file.getPath());
-        LOG.info("Moving " +  FSUtils.getPath(file.getPath()) + " to " +
-                   FSUtils.getPath(newPath));
-        fs.rename(file.getPath(), newPath);
+      long startTime = System.currentTimeMillis();
+      List<Path> splits = null;
+      status.setStatus("Determining files to split");
+      if (!fs.exists(srcDir)) {
+        // Nothing to do
+        status.markComplete("No log directory existed to split.");
+        return splits;
       }
-      LOG.debug("Moved " + files.length + " log files to " +
-        FSUtils.getPath(oldLogDir));
-      fs.delete(srcDir, true);
-    } catch (IOException e) {
-      e = RemoteExceptionHandler.checkIOException(e);
-      IOException io = new IOException("Cannot delete: " + srcDir);
-      io.initCause(e);
-      throw io;
+      FileStatus [] logfiles = fs.listStatus(srcDir);
+      if (logfiles == null || logfiles.length == 0) {
+        // Nothing to do
+        status.markComplete("No log files existed to split.");
+        return splits;
+      }
+      LOG.info("Splitting " + logfiles.length + " hlog(s) in " +
+        srcDir.toString());
+      status.setStatus("Performing split");
+      splits = splitLog(rootDir, srcDir, oldLogDir, logfiles, fs, conf);
+      try {
+        FileStatus[] files = fs.listStatus(srcDir);
+        for(FileStatus file : files) {
+          Path newPath = getHLogArchivePath(oldLogDir, file.getPath());
+          LOG.info("Moving " +  FSUtils.getPath(file.getPath()) + " to " +
+                     FSUtils.getPath(newPath));
+          fs.rename(file.getPath(), newPath);
+        }
+        LOG.debug("Moved " + files.length + " log files to " +
+          FSUtils.getPath(oldLogDir));
+        fs.delete(srcDir, true);
+      } catch (IOException e) {
+        e = RemoteExceptionHandler.checkIOException(e);
+        IOException io = new IOException("Cannot delete: " + srcDir);
+        io.initCause(e);
+        throw io;
+      }
+      lastSplitTime = System.currentTimeMillis() - startTime;
+      status.markComplete("Log splits complete.");
+      LOG.info("hlog file splitting completed in " + lastSplitTime +
+          " ms for " + srcDir.toString());
+      return splits;
+    } finally {
+      // prevent MonitoredTask leaks due to thrown exceptions
+      status.cleanup();
     }
-    lastSplitTime = System.currentTimeMillis() - startTime;
-    status.markComplete("Log splits complete.");
-    LOG.info("hlog file splitting completed in " + lastSplitTime +
-        " ms for " + srcDir.toString());
-    return splits;
   }
 
   // Private immutable datastructure to hold Writer and its Path.
@@ -1417,79 +1423,87 @@ public class HLog implements Syncable {
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Splitting logs in " + srcDir);
 
-    // Number of logs in a read batch
-    // More means faster but bigger mem consumption
-    //TODO make a note on the conf rename and update hbase-site.xml if needed
-    int logFilesPerStep = conf.getInt("hbase.hlog.split.batch.size", 3);
-    boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", false);
-
-    lastSplitSize = 0;
-
-    status.setStatus("Performing split");
     try {
-      int i = -1;
-      while (i < logfiles.length) {
-        final Map<byte[], LinkedList<Entry>> editsByRegion =
-          new TreeMap<byte[], LinkedList<Entry>>(Bytes.BYTES_COMPARATOR);
-        for (int j = 0; j < logFilesPerStep; j++) {
-          i++;
-          if (i == logfiles.length) {
-            break;
-          }
-          FileStatus log = logfiles[i];
-          Path logPath = log.getPath();
-          long logLength = log.getLen();
-          lastSplitSize += logLength;
-          LOG.debug("Splitting hlog " + (i + 1) + " of " + logfiles.length +
-            ": " + logPath + ", length=" + logLength );
-          try {
-            recoverFileLease(fs, logPath, conf);
-            parseHLog(log, editsByRegion, fs, conf);
-            processedLogs.add(logPath);
-          } catch (EOFException eof) {
-            // truncated files are expected if a RS crashes (see HBASE-2643)
-            LOG.warn("EOF from hlog " + logPath + ".  continuing");
-            processedLogs.add(logPath);
-          } catch (InterruptedIOException iioe) {
-            status.abort(StringUtils.stringifyException(iioe));
-            throw iioe;
-          } catch (IOException e) {
-            // If the IOE resulted from bad file format,
-            // then this problem is idempotent and retrying won't help
-            if (e.getCause() instanceof ParseException) {
-              LOG.warn("ParseException from hlog " + logPath + ".  continuing");
+      // Number of logs in a read batch
+      // More means faster but bigger mem consumption
+      //TODO make a note on the conf rename and update hbase-site.xml if needed
+      int logFilesPerStep = conf.getInt("hbase.hlog.split.batch.size", 3);
+      boolean skipErrors =
+        conf.getBoolean("hbase.hlog.split.skip.errors", false);
+
+      lastSplitSize = 0;
+
+      status.setStatus("Performing split");
+      try {
+        int i = -1;
+        while (i < logfiles.length) {
+          final Map<byte[], LinkedList<Entry>> editsByRegion =
+            new TreeMap<byte[], LinkedList<Entry>>(Bytes.BYTES_COMPARATOR);
+          for (int j = 0; j < logFilesPerStep; j++) {
+            i++;
+            if (i == logfiles.length) {
+              break;
+            }
+            FileStatus log = logfiles[i];
+            Path logPath = log.getPath();
+            long logLength = log.getLen();
+            lastSplitSize += logLength;
+            LOG.debug("Splitting hlog " + (i + 1) + " of " + logfiles.length +
+              ": " + logPath + ", length=" + logLength );
+            try {
+              recoverFileLease(fs, logPath, conf);
+              parseHLog(log, editsByRegion, fs, conf);
               processedLogs.add(logPath);
-            } else {
-              if (skipErrors) {
-                LOG.info("Got while parsing hlog " + logPath +
-                  ". Marking as corrupted", e);
-                corruptedLogs.add(logPath);
+            } catch (EOFException eof) {
+              // truncated files are expected if a RS crashes (see HBASE-2643)
+              LOG.warn("EOF from hlog " + logPath + ".  continuing");
+              processedLogs.add(logPath);
+            } catch (InterruptedIOException iioe) {
+              status.abort(StringUtils.stringifyException(iioe));
+              throw iioe;
+            } catch (IOException e) {
+              // If the IOE resulted from bad file format,
+              // then this problem is idempotent and retrying won't help
+              if (e.getCause() instanceof ParseException) {
+                LOG.warn("ParseException from hlog " +
+                    logPath + ".  continuing");
+                processedLogs.add(logPath);
               } else {
-                status.abort(StringUtils.stringifyException(e));
-                throw e;
+                if (skipErrors) {
+                  LOG.info("Got while parsing hlog " + logPath +
+                    ". Marking as corrupted", e);
+                  corruptedLogs.add(logPath);
+                } else {
+                  status.abort(StringUtils.stringifyException(e));
+                  throw e;
+                }
               }
             }
           }
+          writeEditsBatchToRegions(editsByRegion, logWriters,
+              rootDir, fs, conf);
         }
-        writeEditsBatchToRegions(editsByRegion, logWriters, rootDir, fs, conf);
+        if (fs.listStatus(srcDir).length > processedLogs.size() +
+            corruptedLogs.size()) {
+          status.abort("Discovered orphan hlog after split");
+          throw new IOException("Discovered orphan hlog after split. Maybe " +
+            "HRegionServer was not dead when we started");
+        }
+      } finally {
+        splits = new ArrayList<Path>(logWriters.size());
+        for (WriterAndPath wap : logWriters.values()) {
+          wap.w.close();
+          splits.add(wap.p);
+          LOG.debug("Closed " + wap.p);
+        }
       }
-      if (fs.listStatus(srcDir).length > processedLogs.size() + corruptedLogs.size()) {
-        status.abort("Discovered orphan hlog after split");
-        throw new IOException("Discovered orphan hlog after split. Maybe " +
-          "HRegionServer was not dead when we started");
-      }
+      status.setStatus("Archiving logs after completed split");
+      archiveLogs(corruptedLogs, processedLogs, oldLogDir, fs, conf);
+      status.markComplete("Split completed");
+      return splits;
     } finally {
-      splits = new ArrayList<Path>(logWriters.size());
-      for (WriterAndPath wap : logWriters.values()) {
-        wap.w.close();
-        splits.add(wap.p);
-        LOG.debug("Closed " + wap.p);
-      }
+      status.cleanup();
     }
-    status.setStatus("Archiving logs after completed split");
-    archiveLogs(corruptedLogs, processedLogs, oldLogDir, fs, conf);
-    status.markComplete("Split completed");
-    return splits;
   }
 
 

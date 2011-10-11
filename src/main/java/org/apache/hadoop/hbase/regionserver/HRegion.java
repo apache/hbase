@@ -475,49 +475,54 @@ public class HRegion implements HeapSize { // , Writable{
   throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Initializing region " + this);
-    // Write HRI to a file in case we need to recover .META.
-    status.setStatus("Writing region info on filesystem");
-    checkRegioninfoOnFilesystem();
+    try {
+      // Write HRI to a file in case we need to recover .META.
+      status.setStatus("Writing region info on filesystem");
+      checkRegioninfoOnFilesystem();
 
-    // Remove temporary data left over from old regions
-    status.setStatus("Cleaning up temporary data from old regions");
-    cleanupTmpDir();
+      // Remove temporary data left over from old regions
+      status.setStatus("Cleaning up temporary data from old regions");
+      cleanupTmpDir();
 
-    // Load in all the HStores.  Get maximum seqid.
-    long maxSeqId = -1;
-    for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
-      status.setStatus("Instantiating store for column family " + c);
-      Store store = instantiateHStore(this.tableDir, c);
-      this.stores.put(c.getName(), store);
-      long storeSeqId = store.getMaxSequenceId();
-      if (storeSeqId > maxSeqId) {
-        maxSeqId = storeSeqId;
+      // Load in all the HStores.  Get maximum seqid.
+      long maxSeqId = -1;
+      for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
+        status.setStatus("Instantiating store for column family " + c);
+        Store store = instantiateHStore(this.tableDir, c);
+        this.stores.put(c.getName(), store);
+        long storeSeqId = store.getMaxSequenceId();
+        if (storeSeqId > maxSeqId) {
+          maxSeqId = storeSeqId;
+        }
       }
+      // Recover any edits if available.
+      maxSeqId = replayRecoveredEditsIfAny(
+          this.regiondir, maxSeqId, reporter, status);
+
+      // Get rid of any splits or merges that were lost in-progress.  Clean out
+      // these directories here on open.  We may be opening a region that was
+      // being split but we crashed in the middle of it all.
+      status.setStatus("Cleaning up detritus from prior splits");
+      FSUtils.deleteDirectory(this.fs, new Path(regiondir, SPLITDIR));
+      FSUtils.deleteDirectory(this.fs, new Path(regiondir, MERGEDIR));
+
+      // See if region is meant to run read-only.
+      if (this.regionInfo.getTableDesc().isReadOnly()) {
+        this.writestate.setReadOnly(true);
+      }
+
+      this.writestate.compacting = 0;
+      this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
+      // Use maximum of log sequenceid or that which was found in stores
+      // (particularly if no recovered edits, seqid will be -1).
+      long nextSeqid = maxSeqId + 1;
+      LOG.info("Onlined " + this.toString() + "; next sequenceid=" + nextSeqid);
+      status.markComplete("Region opened successfully");
+      return nextSeqid;
+    } finally {
+      // prevent MonitoredTask leaks due to thrown exceptions
+      status.cleanup();
     }
-    // Recover any edits if available.
-    maxSeqId = replayRecoveredEditsIfAny(
-        this.regiondir, maxSeqId, reporter, status);
-
-    // Get rid of any splits or merges that were lost in-progress.  Clean out
-    // these directories here on open.  We may be opening a region that was
-    // being split but we crashed in the middle of it all.
-    status.setStatus("Cleaning up detritus from prior splits");
-    FSUtils.deleteDirectory(this.fs, new Path(regiondir, SPLITDIR));
-    FSUtils.deleteDirectory(this.fs, new Path(regiondir, MERGEDIR));
-
-    // See if region is meant to run read-only.
-    if (this.regionInfo.getTableDesc().isReadOnly()) {
-      this.writestate.setReadOnly(true);
-    }
-
-    this.writestate.compacting = 0;
-    this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
-    // Use maximum of log sequenceid or that which was found in stores
-    // (particularly if no recovered edits, seqid will be -1).
-    long nextSeqid = maxSeqId + 1;
-    LOG.info("Onlined " + this.toString() + "; next sequenceid=" + nextSeqid);
-    status.markComplete("Region opened successfully");
-    return nextSeqid;
   }
 
   /*
@@ -725,6 +730,8 @@ public class HRegion implements HeapSize { // , Writable{
         }
       } finally {
         newScannerLock.writeLock().unlock();
+        // prevent MonitoredTask leaks due to thrown exceptions
+        status.cleanup();
       }
     }
   }
@@ -1103,43 +1110,47 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public boolean flushcache() throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus("Flushing" + this);
-    if (this.closed.get()) {
-      status.abort("Skipped: closed");
-      return false;
-    }
-    synchronized (writestate) {
-      if (!writestate.flushing && writestate.writesEnabled) {
-        this.writestate.flushing = true;
-      } else {
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("NOT flushing memstore for region " + this +
-            ", flushing=" +
-              writestate.flushing + ", writesEnabled=" +
-              writestate.writesEnabled);
-        }
-        status.abort("Not flushing since " + (writestate.flushing ?
-              "already flushing" : "writes not enabled"));
+    try {
+      if (this.closed.get()) {
+        status.abort("Skipped: closed");
         return false;
       }
-    }
-    try {
-      // Prevent splits and closes
-      status.setStatus("Acquiring readlock on region");
-      splitsAndClosesLock.readLock().lock();
+      synchronized (writestate) {
+        if (!writestate.flushing && writestate.writesEnabled) {
+          this.writestate.flushing = true;
+        } else {
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("NOT flushing memstore for region " + this +
+              ", flushing=" +
+                writestate.flushing + ", writesEnabled=" +
+                writestate.writesEnabled);
+          }
+          status.abort("Not flushing since " + (writestate.flushing ?
+                "already flushing" : "writes not enabled"));
+          return false;
+        }
+      }
       try {
-        boolean result = internalFlushcache(status);
-        status.markComplete("Flush successful");
-        return result;
+        // Prevent splits and closes
+        status.setStatus("Acquiring readlock on region");
+        splitsAndClosesLock.readLock().lock();
+        try {
+          boolean result = internalFlushcache(status);
+          status.markComplete("Flush successful");
+          return result;
+        } finally {
+          splitsAndClosesLock.readLock().unlock();
+        }
       } finally {
-        splitsAndClosesLock.readLock().unlock();
+        synchronized (writestate) {
+          writestate.flushing = false;
+          this.writestate.flushRequested = false;
+          writestate.notifyAll();
+        }
       }
     } finally {
-      synchronized (writestate) {
-        writestate.flushing = false;
-        this.writestate.flushRequested = false;
-        writestate.notifyAll();
-        status.cleanup();
-      }
+      // prevent MonitoredTask leaks due to thrown exceptions
+      status.cleanup();
     }
   }
 
