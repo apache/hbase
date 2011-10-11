@@ -1517,6 +1517,7 @@ public class HRegion implements HeapSize { // , Writable{
   private long doMiniBatchPut(BatchOperationInProgress<Pair<Put, Integer>> batchOp) throws IOException {
     long now = EnvironmentEdgeManager.currentTimeMillis();
     byte[] byteNow = Bytes.toBytes(now);
+    boolean locked = false;
 
     /** Keep track of the locks we hold so we can release them in finally clause */
     List<Integer> acquiredLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
@@ -1563,6 +1564,10 @@ public class HRegion implements HeapSize { // , Writable{
       // We've now grabbed as many puts off the list as we can
       assert numReadyToWrite > 0;
 
+
+      this.updatesLock.readLock().lock();
+      locked = true;
+
       // ------------------------------------
       // STEP 2. Update any LATEST_TIMESTAMP timestamps
       // ----------------------------------
@@ -1603,6 +1608,9 @@ public class HRegion implements HeapSize { // , Writable{
       success = true;
       return addedSize;
     } finally {
+      if (locked)
+        this.updatesLock.readLock().unlock();
+
       for (Integer toRelease : acquiredLocks) {
         releaseRowLock(toRelease);
       }
@@ -3072,6 +3080,7 @@ public class HRegion implements HeapSize { // , Writable{
     boolean flush = false;
     // Lock row
     Integer lid = obtainRowLock(row);
+    this.updatesLock.readLock().lock();
     long result = amount;
     try {
       Store store = stores.get(family);
@@ -3111,6 +3120,7 @@ public class HRegion implements HeapSize { // , Writable{
       size = this.memstoreSize.addAndGet(size);
       flush = isFlushSize(size);
     } finally {
+      this.updatesLock.readLock().unlock();
       releaseRowLock(lid);
     }
 
