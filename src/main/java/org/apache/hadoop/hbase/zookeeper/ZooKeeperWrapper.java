@@ -1382,6 +1382,12 @@ public class ZooKeeperWrapper implements Watcher {
 
   private void abort() {
     LOG.fatal("<" + instanceName + "> Aborting process because of fatal ZK error");
-    System.exit(1);
+
+    // Previously, this was System.exit(1). exit() invokes shutdown hooks.
+    // If abort happens in the region servers main worker thread, this can
+    // cause a deadlock in the shutdown sequence.
+    //
+    // When a RS ZK session expires, exit asap. Do not run any shutdown hooks.
+    Runtime.getRuntime().halt(1);
   }
 }
