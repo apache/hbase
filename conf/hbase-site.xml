@@ -22,4 +22,8 @@
  */
 -->
 <configuration>
+<property>
+  <name>hbase.master.port</name>
+  <value>60001</value>
+</property>
 </configuration>
