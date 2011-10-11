@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.lang.ref.WeakReference;
-import java.nio.ByteBuffer;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
@@ -244,7 +243,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @param buf block buffer
    * @param inMemory if block is in-memory
    */
-  public void cacheBlock(String blockName, ByteBuffer buf, boolean inMemory) {
+  public void cacheBlock(String blockName, HeapSize buf, boolean inMemory) {
     CachedBlock cb = map.get(blockName);
     if(cb != null) {
       throw new RuntimeException("Cached an already cached block");
@@ -268,7 +267,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @param blockName block name
    * @param buf block buffer
    */
-  public void cacheBlock(String blockName, ByteBuffer buf) {
+  public void cacheBlock(String blockName, HeapSize buf) {
     cacheBlock(blockName, buf, false);
   }
 
@@ -277,7 +276,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @param blockName block name
    * @return buffer of specified block name, or null if not in cache
    */
-  public ByteBuffer getBlock(String blockName) {
+  @Override
+  public HeapSize getBlock(String blockName) {
     CachedBlock cb = map.get(blockName);
     if(cb == null) {
       stats.miss();
@@ -294,6 +294,25 @@ public class LruBlockCache implements BlockCache, HeapSize {
     if (cb == null) return false;
     evictBlock(cb);
     return true;
+  }
+
+  /**
+   * Evicts all blocks whose name starts with the given prefix. This is an
+   * expensive operation implemented as a linear-time search through all blocks
+   * in the cache.
+   *
+   * @return the number of blocks evicted
+   */
+  @Override
+  public int evictBlocksByPrefix(String prefix) {
+    int numEvicted = 0;
+    for (String key : map.keySet()) {
+      if (key.startsWith(prefix)) {
+        if (evictBlock(key))
+          ++numEvicted;
+      }
+    }
+    return numEvicted;
   }
 
   protected long evictBlock(CachedBlock block) {

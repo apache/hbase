@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.nio.ByteBuffer;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -43,11 +42,11 @@ public class TestLruBlockCache extends TestCase {
 
     LruBlockCache cache = new LruBlockCache(maxSize,blockSize);
 
-    Block [] blocks = generateFixedBlocks(10, blockSize, "block");
+    CachedItem [] blocks = generateFixedBlocks(10, blockSize, "block");
 
     // Add all the blocks
-    for(Block block : blocks) {
-      cache.cacheBlock(block.blockName, block.buf);
+    for (CachedItem block : blocks) {
+      cache.cacheBlock(block.blockName, block);
     }
 
     // Let the eviction run
@@ -70,35 +69,35 @@ public class TestLruBlockCache extends TestCase {
 
     LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
 
-    Block [] blocks = generateRandomBlocks(100, blockSize);
+    CachedItem [] blocks = generateRandomBlocks(100, blockSize);
 
     long expectedCacheSize = cache.heapSize();
 
     // Confirm empty
-    for(Block block : blocks) {
+    for (CachedItem block : blocks) {
       assertTrue(cache.getBlock(block.blockName) == null);
     }
 
     // Add blocks
-    for(Block block : blocks) {
-      cache.cacheBlock(block.blockName, block.buf);
-      expectedCacheSize += block.heapSize();
+    for (CachedItem block : blocks) {
+      cache.cacheBlock(block.blockName, block);
+      expectedCacheSize += block.cacheBlockHeapSize();
     }
 
     // Verify correctly calculated cache heap size
     assertEquals(expectedCacheSize, cache.heapSize());
 
     // Check if all blocks are properly cached and retrieved
-    for(Block block : blocks) {
-      ByteBuffer buf = cache.getBlock(block.blockName);
+    for (CachedItem block : blocks) {
+      HeapSize buf = cache.getBlock(block.blockName);
       assertTrue(buf != null);
-      assertEquals(buf.capacity(), block.buf.capacity());
+      assertEquals(buf.heapSize(), block.heapSize());
     }
 
     // Re-add same blocks and ensure nothing has changed
-    for(Block block : blocks) {
+    for (CachedItem block : blocks) {
       try {
-        cache.cacheBlock(block.blockName, block.buf);
+        cache.cacheBlock(block.blockName, block);
         assertTrue("Cache should not allow re-caching a block", false);
       } catch(RuntimeException re) {
         // expected
@@ -109,10 +108,10 @@ public class TestLruBlockCache extends TestCase {
     assertEquals(expectedCacheSize, cache.heapSize());
 
     // Check if all blocks are properly cached and retrieved
-    for(Block block : blocks) {
-      ByteBuffer buf = cache.getBlock(block.blockName);
+    for (CachedItem block : blocks) {
+      HeapSize buf = cache.getBlock(block.blockName);
       assertTrue(buf != null);
-      assertEquals(buf.capacity(), block.buf.capacity());
+      assertEquals(buf.heapSize(), block.heapSize());
     }
 
     // Expect no evictions
@@ -126,14 +125,14 @@ public class TestLruBlockCache extends TestCase {
 
     LruBlockCache cache = new LruBlockCache(maxSize,blockSize,false);
 
-    Block [] blocks = generateFixedBlocks(10, blockSize, "block");
+    CachedItem [] blocks = generateFixedBlocks(10, blockSize, "block");
 
     long expectedCacheSize = cache.heapSize();
 
     // Add all the blocks
-    for(Block block : blocks) {
-      cache.cacheBlock(block.blockName, block.buf);
-      expectedCacheSize += block.heapSize();
+    for (CachedItem block : blocks) {
+      cache.cacheBlock(block.blockName, block);
+      expectedCacheSize += block.cacheBlockHeapSize();
     }
 
     // A single eviction run should have occurred
@@ -155,7 +154,7 @@ public class TestLruBlockCache extends TestCase {
     assertTrue(cache.getBlock(blocks[1].blockName) == null);
     for(int i=2;i<blocks.length;i++) {
       assertEquals(cache.getBlock(blocks[i].blockName),
-          blocks[i].buf);
+          blocks[i]);
     }
   }
 
@@ -166,21 +165,21 @@ public class TestLruBlockCache extends TestCase {
 
     LruBlockCache cache = new LruBlockCache(maxSize,blockSize,false);
 
-    Block [] singleBlocks = generateFixedBlocks(5, 10000, "single");
-    Block [] multiBlocks = generateFixedBlocks(5, 10000, "multi");
+    CachedItem [] singleBlocks = generateFixedBlocks(5, 10000, "single");
+    CachedItem [] multiBlocks = generateFixedBlocks(5, 10000, "multi");
 
     long expectedCacheSize = cache.heapSize();
 
     // Add and get the multi blocks
-    for(Block block : multiBlocks) {
-      cache.cacheBlock(block.blockName, block.buf);
-      expectedCacheSize += block.heapSize();
-      assertEquals(cache.getBlock(block.blockName), block.buf);
+    for (CachedItem block : multiBlocks) {
+      cache.cacheBlock(block.blockName, block);
+      expectedCacheSize += block.cacheBlockHeapSize();
+      assertEquals(cache.getBlock(block.blockName), block);
     }
 
     // Add the single blocks (no get)
-    for(Block block : singleBlocks) {
-      cache.cacheBlock(block.blockName, block.buf);
+    for (CachedItem block : singleBlocks) {
+      cache.cacheBlock(block.blockName, block);
       expectedCacheSize += block.heapSize();
     }
 
@@ -211,9 +210,9 @@ public class TestLruBlockCache extends TestCase {
     // And all others to be cached
     for(int i=1;i<4;i++) {
       assertEquals(cache.getBlock(singleBlocks[i].blockName),
-          singleBlocks[i].buf);
+          singleBlocks[i]);
       assertEquals(cache.getBlock(multiBlocks[i].blockName),
-          multiBlocks[i].buf);
+          multiBlocks[i]);
     }
   }
 
@@ -233,9 +232,9 @@ public class TestLruBlockCache extends TestCase {
         0.34f);// memory
 
 
-    Block [] singleBlocks = generateFixedBlocks(5, blockSize, "single");
-    Block [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
-    Block [] memoryBlocks = generateFixedBlocks(5, blockSize, "memory");
+    CachedItem [] singleBlocks = generateFixedBlocks(5, blockSize, "single");
+    CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
+    CachedItem [] memoryBlocks = generateFixedBlocks(5, blockSize, "memory");
 
     long expectedCacheSize = cache.heapSize();
 
@@ -243,17 +242,17 @@ public class TestLruBlockCache extends TestCase {
     for(int i=0;i<3;i++) {
 
       // Just add single blocks
-      cache.cacheBlock(singleBlocks[i].blockName, singleBlocks[i].buf);
-      expectedCacheSize += singleBlocks[i].heapSize();
+      cache.cacheBlock(singleBlocks[i].blockName, singleBlocks[i]);
+      expectedCacheSize += singleBlocks[i].cacheBlockHeapSize();
 
       // Add and get multi blocks
-      cache.cacheBlock(multiBlocks[i].blockName, multiBlocks[i].buf);
-      expectedCacheSize += multiBlocks[i].heapSize();
+      cache.cacheBlock(multiBlocks[i].blockName, multiBlocks[i]);
+      expectedCacheSize += multiBlocks[i].cacheBlockHeapSize();
       cache.getBlock(multiBlocks[i].blockName);
 
       // Add memory blocks as such
-      cache.cacheBlock(memoryBlocks[i].blockName, memoryBlocks[i].buf, true);
-      expectedCacheSize += memoryBlocks[i].heapSize();
+      cache.cacheBlock(memoryBlocks[i].blockName, memoryBlocks[i], true);
+      expectedCacheSize += memoryBlocks[i].cacheBlockHeapSize();
 
     }
 
@@ -264,7 +263,7 @@ public class TestLruBlockCache extends TestCase {
     assertEquals(expectedCacheSize, cache.heapSize());
 
     // Insert a single block, oldest single should be evicted
-    cache.cacheBlock(singleBlocks[3].blockName, singleBlocks[3].buf);
+    cache.cacheBlock(singleBlocks[3].blockName, singleBlocks[3]);
 
     // Single eviction, one thing evicted
     assertEquals(1, cache.getEvictionCount());
@@ -277,7 +276,7 @@ public class TestLruBlockCache extends TestCase {
     cache.getBlock(singleBlocks[1].blockName);
 
     // Insert another single block
-    cache.cacheBlock(singleBlocks[4].blockName, singleBlocks[4].buf);
+    cache.cacheBlock(singleBlocks[4].blockName, singleBlocks[4]);
 
     // Two evictions, two evicted.
     assertEquals(2, cache.getEvictionCount());
@@ -287,7 +286,7 @@ public class TestLruBlockCache extends TestCase {
     assertEquals(null, cache.getBlock(multiBlocks[0].blockName));
 
     // Insert another memory block
-    cache.cacheBlock(memoryBlocks[3].blockName, memoryBlocks[3].buf, true);
+    cache.cacheBlock(memoryBlocks[3].blockName, memoryBlocks[3], true);
 
     // Three evictions, three evicted.
     assertEquals(3, cache.getEvictionCount());
@@ -297,8 +296,8 @@ public class TestLruBlockCache extends TestCase {
     assertEquals(null, cache.getBlock(memoryBlocks[0].blockName));
 
     // Add a block that is twice as big (should force two evictions)
-    Block [] bigBlocks = generateFixedBlocks(3, blockSize*3, "big");
-    cache.cacheBlock(bigBlocks[0].blockName, bigBlocks[0].buf);
+    CachedItem [] bigBlocks = generateFixedBlocks(3, blockSize*3, "big");
+    cache.cacheBlock(bigBlocks[0].blockName, bigBlocks[0]);
 
     // Four evictions, six evicted (inserted block 3X size, expect +3 evicted)
     assertEquals(4, cache.getEvictionCount());
@@ -313,7 +312,7 @@ public class TestLruBlockCache extends TestCase {
     cache.getBlock(bigBlocks[0].blockName);
 
     // Cache another single big block
-    cache.cacheBlock(bigBlocks[1].blockName, bigBlocks[1].buf);
+    cache.cacheBlock(bigBlocks[1].blockName, bigBlocks[1]);
 
     // Five evictions, nine evicted (3 new)
     assertEquals(5, cache.getEvictionCount());
@@ -325,7 +324,7 @@ public class TestLruBlockCache extends TestCase {
     assertEquals(null, cache.getBlock(multiBlocks[2].blockName));
 
     // Cache a big memory block
-    cache.cacheBlock(bigBlocks[2].blockName, bigBlocks[2].buf, true);
+    cache.cacheBlock(bigBlocks[2].blockName, bigBlocks[2], true);
 
     // Six evictions, twelve evicted (3 new)
     assertEquals(6, cache.getEvictionCount());
@@ -355,18 +354,18 @@ public class TestLruBlockCache extends TestCase {
         0.33f, // multi
         0.34f);// memory
 
-    Block [] singleBlocks = generateFixedBlocks(20, blockSize, "single");
-    Block [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
+    CachedItem [] singleBlocks = generateFixedBlocks(20, blockSize, "single");
+    CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
 
     // Add 5 multi blocks
-    for(Block block : multiBlocks) {
-      cache.cacheBlock(block.blockName, block.buf);
+    for (CachedItem block : multiBlocks) {
+      cache.cacheBlock(block.blockName, block);
       cache.getBlock(block.blockName);
     }
 
     // Add 5 single blocks
     for(int i=0;i<5;i++) {
-      cache.cacheBlock(singleBlocks[i].blockName, singleBlocks[i].buf);
+      cache.cacheBlock(singleBlocks[i].blockName, singleBlocks[i]);
     }
 
     // An eviction ran
@@ -389,7 +388,7 @@ public class TestLruBlockCache extends TestCase {
     // 12 more evicted.
 
     for(int i=5;i<18;i++) {
-      cache.cacheBlock(singleBlocks[i].blockName, singleBlocks[i].buf);
+      cache.cacheBlock(singleBlocks[i].blockName, singleBlocks[i]);
     }
 
     // 4 total evictions, 16 total evicted
@@ -417,22 +416,22 @@ public class TestLruBlockCache extends TestCase {
         0.33f, // multi
         0.34f);// memory
 
-    Block [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
-    Block [] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
-    Block [] memoryBlocks = generateFixedBlocks(10, blockSize, "memory");
+    CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
+    CachedItem [] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
+    CachedItem [] memoryBlocks = generateFixedBlocks(10, blockSize, "memory");
 
     // Add all blocks from all priorities
     for(int i=0;i<10;i++) {
 
       // Just add single blocks
-      cache.cacheBlock(singleBlocks[i].blockName, singleBlocks[i].buf);
+      cache.cacheBlock(singleBlocks[i].blockName, singleBlocks[i]);
 
       // Add and get multi blocks
-      cache.cacheBlock(multiBlocks[i].blockName, multiBlocks[i].buf);
+      cache.cacheBlock(multiBlocks[i].blockName, multiBlocks[i]);
       cache.getBlock(multiBlocks[i].blockName);
 
       // Add memory blocks as such
-      cache.cacheBlock(memoryBlocks[i].blockName, memoryBlocks[i].buf, true);
+      cache.cacheBlock(memoryBlocks[i].blockName, memoryBlocks[i], true);
     }
 
     // Do not expect any evictions yet
@@ -456,29 +455,29 @@ public class TestLruBlockCache extends TestCase {
 
     // And the newest 5 blocks should still be accessible
     for(int i=5;i<10;i++) {
-      assertEquals(singleBlocks[i].buf, cache.getBlock(singleBlocks[i].blockName));
-      assertEquals(multiBlocks[i].buf, cache.getBlock(multiBlocks[i].blockName));
-      assertEquals(memoryBlocks[i].buf, cache.getBlock(memoryBlocks[i].blockName));
+      assertEquals(singleBlocks[i], cache.getBlock(singleBlocks[i].blockName));
+      assertEquals(multiBlocks[i], cache.getBlock(multiBlocks[i].blockName));
+      assertEquals(memoryBlocks[i], cache.getBlock(memoryBlocks[i].blockName));
     }
   }
 
-  private Block [] generateFixedBlocks(int numBlocks, int size, String pfx) {
-    Block [] blocks = new Block[numBlocks];
+  private CachedItem [] generateFixedBlocks(int numBlocks, int size, String pfx) {
+    CachedItem [] blocks = new CachedItem[numBlocks];
     for(int i=0;i<numBlocks;i++) {
-      blocks[i] = new Block(pfx + i, size);
+      blocks[i] = new CachedItem(pfx + i, size);
     }
     return blocks;
   }
 
-  private Block [] generateFixedBlocks(int numBlocks, long size, String pfx) {
+  private CachedItem [] generateFixedBlocks(int numBlocks, long size, String pfx) {
     return generateFixedBlocks(numBlocks, (int)size, pfx);
   }
 
-  private Block [] generateRandomBlocks(int numBlocks, long maxSize) {
-    Block [] blocks = new Block[numBlocks];
+  private CachedItem [] generateRandomBlocks(int numBlocks, long maxSize) {
+    CachedItem [] blocks = new CachedItem[numBlocks];
     Random r = new Random();
     for(int i=0;i<numBlocks;i++) {
-      blocks[i] = new Block("block" + i, r.nextInt((int)maxSize)+1);
+      blocks[i] = new CachedItem("block" + i, r.nextInt((int)maxSize)+1);
     }
     return blocks;
   }
@@ -508,19 +507,26 @@ public class TestLruBlockCache extends TestCase {
         LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
   }
 
-  private static class Block implements HeapSize {
+  private static class CachedItem implements HeapSize {
     String blockName;
-    ByteBuffer buf;
+    int size;
 
-    Block(String blockName, int size) {
+    CachedItem(String blockName, int size) {
       this.blockName = blockName;
-      this.buf = ByteBuffer.allocate(size);
+      this.size = size;
     }
 
+    /** The size of this item reported to the block cache layer */
+    @Override
     public long heapSize() {
-      return CachedBlock.PER_BLOCK_OVERHEAD +
-      ClassSize.align(blockName.length()) +
-      ClassSize.align(buf.capacity());
+      return ClassSize.align(size);
+    }
+
+    /** Size of the cache block holding this item. Used for verification. */
+    public long cacheBlockHeapSize() {
+      return CachedBlock.PER_BLOCK_OVERHEAD
+          + ClassSize.align(blockName.length())
+          + ClassSize.align(size);
     }
   }
 }

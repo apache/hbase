@@ -19,8 +19,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.nio.ByteBuffer;
-
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 
 /**
@@ -34,21 +33,21 @@ public interface BlockCache {
    * @param buf The block contents wrapped in a ByteBuffer.
    * @param inMemory Whether block should be treated as in-memory
    */
-  public void cacheBlock(String blockName, ByteBuffer buf, boolean inMemory);
+  public void cacheBlock(String blockName, HeapSize buf, boolean inMemory);
 
   /**
    * Add block to cache (defaults to not in-memory).
    * @param blockName Zero-based file block number.
    * @param buf The block contents wrapped in a ByteBuffer.
    */
-  public void cacheBlock(String blockName, ByteBuffer buf);
+  public void cacheBlock(String blockName, HeapSize buf);
 
   /**
    * Fetch block from cache.
    * @param blockName Block number to fetch.
    * @return Block or null if block is not in the cache.
    */
-  public ByteBuffer getBlock(String blockName);
+  public HeapSize getBlock(String blockName);
 
   /**
    * Evict block from cache.
@@ -56,6 +55,12 @@ public interface BlockCache {
    * @return true if block existed and was evicted, false if not
    */
   public boolean evictBlock(String blockName);
+
+  /**
+   * Evicts all blocks with the given prefix in the name
+   * @return the number of blocks evicted
+   */
+  public int evictBlocksByPrefix(String string);
 
   /**
    * Get the statistics for this block cache.
