@@ -5,7 +5,7 @@ import org.apache.commons.logging.LogFactory;
 
 public class ColumnFamilyProperties {
 
-  private static final Log LOG = LogFactory.getLog(Tester.class);
+  private static final Log LOG = LogFactory.getLog(ColumnFamilyProperties.class);
 
   public static int familyIndex = 1;
 

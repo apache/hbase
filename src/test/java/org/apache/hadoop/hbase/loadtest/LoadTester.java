@@ -36,7 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class Tester {
+public class LoadTester {
 
   public static String defaultTestClusterName = "VerificationTest_DummyTable";
   public String inputFilename = "LoadTest.properties";
@@ -57,14 +57,14 @@ public class Tester {
   // table name for the test
   public byte[] tableName;
   // column families used by the test
-  private static final Log LOG = LogFactory.getLog(Tester.class);
+  private static final Log LOG = LogFactory.getLog(LoadTester.class);
 
   MultiThreadedReader reader;
   MultiThreadedWriter writer;
 
   ColumnFamilyProperties[] familyProperties;
 
-  public Tester(String inputFilename, String zkNodeName, String tableNameString) {
+  public LoadTester(String inputFilename, String zkNodeName, String tableNameString) {
     if (inputFilename != null) {
       this.inputFilename = inputFilename;
     }
@@ -355,7 +355,7 @@ public class Tester {
       String inputFilename = cmd.getOptionValue(OPT_INPUT_FILENAME);
       String zkNodeName = cmd.getOptionValue(OPT_ZKNODE);
       String tableName = cmd.getOptionValue(OPT_TABLE_NAME);
-      Tester hBaseTest = new Tester(inputFilename, zkNodeName, tableName);
+      LoadTester hBaseTest = new LoadTester(inputFilename, zkNodeName, tableName);
       hBaseTest.readPropertiesFile();
 
       if (cmd.hasOption(OPT_DELETE_TABLE)) {
