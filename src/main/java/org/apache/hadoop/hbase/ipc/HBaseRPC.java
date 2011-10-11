@@ -702,7 +702,7 @@ public class HBaseRPC {
       } else if (params.length == 1 && instance instanceof HRegionServer &&
           params[0] instanceof Operation) {
         // annotate the response map with operation details
-        responseInfo.putAll(((Operation) params[1]).toMap());
+        responseInfo.putAll(((Operation) params[0]).toMap());
         // report to the log file
         LOG.warn("(operation" + tag + "): " +
             mapper.writeValueAsString(responseInfo));
