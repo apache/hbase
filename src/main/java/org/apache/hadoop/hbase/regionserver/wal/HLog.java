@@ -30,6 +30,7 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -1313,13 +1314,20 @@ public class HLog implements Syncable {
             LOG.warn("EOF from hlog " + logPath + ".  continuing");
             processedLogs.add(logPath);
           } catch (IOException e) {
-             if (skipErrors) {
-               LOG.info("Got while parsing hlog " + logPath +
-                 ". Marking as corrupted", e);
-               corruptedLogs.add(logPath);
-             } else {
-               throw e;
-             }
+            // If the IOE resulted from bad file format,
+            // then this problem is idempotent and retrying won't help
+            if (e.getCause() instanceof ParseException) {
+              LOG.warn("ParseException from hlog " + logPath + ".  continuing");
+              processedLogs.add(logPath);
+            } else {
+              if (skipErrors) {
+                LOG.info("Got while parsing hlog " + logPath +
+                  ". Marking as corrupted", e);
+                corruptedLogs.add(logPath);
+              } else {
+                throw e;
+              }
+            }
           }
         }
         writeEditsBatchToRegions(editsByRegion, logWriters, rootDir, fs, conf);
