@@ -187,7 +187,6 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         new ArrayList<InputSplit>(numRegions * numMappersPerRegion);
     byte[] startRow = scan.getStartRow();
     byte[] stopRow = scan.getStopRow();
-    int numSplits = 0;
     for (int i = 0; i < numRegions * numMappersPerRegion; i++) {
       if (!includeRegionInSplit(keys.getFirst()[i / numMappersPerRegion],
           keys.getSecond()[i / numMappersPerRegion])) {
@@ -211,7 +210,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
             splitStart, splitStop, regionLocation);
         splits.add(split);
         if (LOG.isDebugEnabled())
-          LOG.debug("getSplits: split -> " + (numSplits++) + " -> " + split);
+          LOG.debug("getSplits: split -> " + i + " -> " + split);
       }
     }
     return splits;
