@@ -811,7 +811,7 @@ public class HRegionServer implements HRegionInterface,
    * @return Throwable converted to an IOE; methods can only let out IOEs.
    */
   private Throwable cleanup(final Throwable t, final String msg) {
-    if (t instanceof NotServingRegionException)
+    if (t instanceof NotServingRegionException) {
         LOG.info(t.toString());
     } else {
         if (msg == null) {
