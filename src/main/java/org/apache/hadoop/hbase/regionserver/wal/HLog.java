@@ -26,6 +26,7 @@ import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
@@ -1313,6 +1314,8 @@ public class HLog implements Syncable {
             // truncated files are expected if a RS crashes (see HBASE-2643)
             LOG.warn("EOF from hlog " + logPath + ".  continuing");
             processedLogs.add(logPath);
+          } catch (InterruptedIOException iioe) {
+            throw iioe;
           } catch (IOException e) {
             // If the IOE resulted from bad file format,
             // then this problem is idempotent and retrying won't help
@@ -1494,11 +1497,10 @@ public class HLog implements Syncable {
 
       }
     } catch(InterruptedException ex) {
-      LOG.warn("Hlog writers were interrupted, possible data loss!");
-      if (!skipErrors) {
-        throw new IOException("Could not finish writing log entries",  ex);
-        //TODO  maybe we should fail here regardless if skipErrors is active or not
-      }
+      String errorMsgr = "Hlog writers were interrupted!";
+      LOG.info(errorMsgr, ex);
+      throw (InterruptedIOException)new InterruptedIOException(
+          errorMsgr).initCause(ex);
     }
 
     for (Map.Entry<byte[], Future> entry : writeFutureResult.entrySet()) {
@@ -1507,10 +1509,13 @@ public class HLog implements Syncable {
       } catch (ExecutionException e) {
         throw (new IOException(e.getCause()));
       } catch (InterruptedException e1) {
-        LOG.warn("Writer for region " +  Bytes.toString(entry.getKey()) +
-                " was interrupted, however the write process should have " +
-                "finished. Throwing up ", e1);
-        throw (new IOException(e1.getCause()));
+        String errorMsgr = "Writer for region " +
+               Bytes.toString(entry.getKey()) +
+               " was interrupted, however the write process should have " +
+               "finished. Throwing up ";
+        LOG.info(errorMsgr, e1);
+        throw (InterruptedIOException)new InterruptedIOException(
+            errorMsgr).initCause(e1);
       }
     }
   }

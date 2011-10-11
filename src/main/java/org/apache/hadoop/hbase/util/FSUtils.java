@@ -40,6 +40,7 @@ import org.apache.hadoop.io.SequenceFile;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -634,7 +635,8 @@ public class FSUtils {
           try {
             Thread.sleep(1000);
           } catch (InterruptedException ex) {
-            // ignore it and try again
+            throw (InterruptedIOException)
+              new InterruptedIOException().initCause(ex);
           }
         } else {
           throw new IOException("Failed to open " + p + " for append", e);
