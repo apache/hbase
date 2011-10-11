@@ -170,6 +170,8 @@ class CompactSplitThread extends Thread {
 
     r.setForceMajorCompaction(force);
 
+    addedToQueue = compactionQueue.add(r, priority);
+
     // only log if actually added to compaction queue...
     if (addedToQueue && LOG.isDebugEnabled()) {
       LOG.debug("Compaction " + (force? "(major) ": "") +
@@ -178,7 +180,6 @@ class CompactSplitThread extends Thread {
         (why != null && !why.isEmpty()? " because: " + why: "") +
         "; Priority: " + priority + "; Compaction queue size: " + compactionQueue.size());
     }
-    compactionQueue.add(r, priority);
   }
 
   private void split(final HRegion region, final byte [] midKey)
