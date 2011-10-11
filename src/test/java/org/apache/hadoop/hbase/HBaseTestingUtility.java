@@ -28,6 +28,8 @@ import java.lang.reflect.Field;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -55,6 +57,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ReadWriteConsistencyControl;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -113,6 +116,24 @@ public class HBaseTestingUtility {
       new Compression.Algorithm[] {
         Compression.Algorithm.NONE, Compression.Algorithm.GZ
       };
+
+  /**
+   * Create all combinations of Bloom filters and compression algorithms for
+   * testing.
+   */
+  private static List<Object[]> bloomAndCompressionCombinations() {
+    List<Object[]> configurations = new ArrayList<Object[]>();
+    for (Compression.Algorithm comprAlgo :
+         HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
+      for (StoreFile.BloomType bloomType : StoreFile.BloomType.values()) {
+        configurations.add(new Object[] { comprAlgo, bloomType });
+      }
+    }
+    return Collections.unmodifiableList(configurations);
+  }
+
+  public static final Collection<Object[]> BLOOM_AND_COMPRESSION_COMBINATIONS =
+      bloomAndCompressionCombinations();
 
   public HBaseTestingUtility() {
     this(HBaseConfiguration.create());
@@ -1038,4 +1059,40 @@ public class HBaseTestingUtility {
 
     return getFromStoreFile(store,get);
   }
+
+  public static void assertKVListsEqual(String additionalMsg,
+      final List<KeyValue> expected,
+      final List<KeyValue> actual) {
+    final int eLen = expected.size();
+    final int aLen = actual.size();
+    final int minLen = Math.min(eLen, aLen);
+
+    int i;
+    for (i = 0; i < minLen
+        && KeyValue.COMPARATOR.compare(expected.get(i), actual.get(i)) == 0;
+        ++i) {}
+
+    if (additionalMsg == null) {
+      additionalMsg = "";
+    }
+    if (!additionalMsg.isEmpty()) {
+      additionalMsg = ". " + additionalMsg;
+    }
+
+    if (eLen != aLen || i != minLen) {
+      throw new AssertionError(
+          "Expected and actual KV arrays differ at position " + i + ": " +
+          safeGetAsStr(expected, i) + " (length " + eLen +") vs. " +
+          safeGetAsStr(actual, i) + " (length " + aLen + ")" + additionalMsg);
+    }
+  }
+
+  private static <T> String safeGetAsStr(List<T> lst, int i) {
+    if (0 <= i && i < lst.size()) {
+      return lst.get(i).toString();
+    } else {
+      return "<out_of_range>";
+    }
+  }
+
 }

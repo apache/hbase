@@ -50,6 +50,13 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   private boolean closing = false;
   private final boolean isGet;
 
+  /** We don't ever expect to change this, the constant is just for clarity. */
+  static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
+
+  /** Used during unit testing to ensure that lazy seek does save seek ops */
+  private static boolean lazySeekEnabledGlobally =
+      LAZY_SEEK_ENABLED_BY_DEFAULT;
+
   // if heap == null and lastTop != null, you need to reseek given the key below
   private KeyValue lastTop = null;
 
@@ -462,4 +469,9 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       allScanners.add(scanner);
     return allScanners;
   }
+
+  static void enableLazySeekGlobally(boolean enable) {
+    lazySeekEnabledGlobally = enable;
+  }
+
 }

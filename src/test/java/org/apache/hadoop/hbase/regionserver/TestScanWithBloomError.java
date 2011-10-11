@@ -76,7 +76,8 @@ public class TestScanWithBloomError {
 
   @Test
   public void testThreeStoreFiles() throws IOException {
-    region = createRegion(TABLE_NAME, Compression.Algorithm.GZ, bloomType);
+    region = createRegion(TABLE_NAME, Compression.Algorithm.GZ, bloomType,
+        MAX_VERSIONS);
     createStoreFile(new int[] {1, 2, 6});
     createStoreFile(new int[] {1, 2, 3, 7});
     createStoreFile(new int[] {1, 9});

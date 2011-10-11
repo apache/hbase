@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.SortedSet;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * KeyValueScanner adaptor over the Reader.  It also provides hooks into
@@ -44,6 +45,8 @@ class StoreFileScanner implements KeyValueScanner {
   private final StoreFile.Reader reader;
   private final HFileScanner hfs;
   private KeyValue cur = null;
+
+  private static final AtomicLong seekCount = new AtomicLong();
 
   /**
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
@@ -109,6 +112,7 @@ class StoreFileScanner implements KeyValueScanner {
   }
 
   public boolean seek(KeyValue key) throws IOException {
+    seekCount.incrementAndGet();
     try {
       if(!seekAtOrAfter(hfs, key)) {
         close();
@@ -122,6 +126,7 @@ class StoreFileScanner implements KeyValueScanner {
   }
 
   public boolean reseek(KeyValue key) throws IOException {
+    seekCount.incrementAndGet();
     try {
       if (!reseekAtOrAfter(hfs, key)) {
         close();
@@ -211,4 +216,11 @@ class StoreFileScanner implements KeyValueScanner {
   Reader getReaderForTesting() {
     return reader;
   }
+
+  // Test methods
+
+  static final long getSeekCount() {
+    return seekCount.get();
+  }
+
 }

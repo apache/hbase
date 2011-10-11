@@ -65,11 +65,11 @@ public class TestMultiColumnScanner {
       LogFactory.getLog(TestMultiColumnScanner.class);
 
   private static final String TABLE_NAME = "TestMultiColumnScanner";
-  private static final int MAX_VERSIONS = 50;
 
-  // These fields are used in TestScanWithBloomError
+  // These fields are used in other unit tests
   static final String FAMILY = "CF";
   static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
+  static final int MAX_VERSIONS = 50;
 
   private final ColumnFamilyMetrics cfMetrics =
       ColumnFamilyMetrics.getInstance(FAMILY);
@@ -126,14 +126,7 @@ public class TestMultiColumnScanner {
 
   @Parameters
   public static final Collection<Object[]> parameters() {
-    List<Object[]> configurations = new ArrayList<Object[]>();
-    for (Compression.Algorithm comprAlgo :
-         HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
-      for (StoreFile.BloomType bloomType : StoreFile.BloomType.values()) {
-        configurations.add(new Object[] { comprAlgo, bloomType });
-      }
-    }
-    return configurations;
+    return HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS;
   }
 
   public TestMultiColumnScanner(Compression.Algorithm comprAlgo,
@@ -175,7 +168,8 @@ public class TestMultiColumnScanner {
 
   @Test
   public void testMultiColumnScanner() throws IOException {
-    HRegion region = createRegion(TABLE_NAME, comprAlgo, bloomType);
+    HRegion region = createRegion(TABLE_NAME, comprAlgo, bloomType,
+        MAX_VERSIONS);
     List<String> rows = sequentialStrings("row", NUM_ROWS);
     List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
     List<KeyValue> kvs = new ArrayList<KeyValue>();
@@ -320,10 +314,10 @@ public class TestMultiColumnScanner {
   }
 
   static HRegion createRegion(String tableName,
-      Compression.Algorithm comprAlgo, BloomType bloomType)
+      Compression.Algorithm comprAlgo, BloomType bloomType, int maxVersions)
       throws IOException {
     HColumnDescriptor hcd =
-      new HColumnDescriptor(FAMILY_BYTES, MAX_VERSIONS,
+      new HColumnDescriptor(FAMILY_BYTES, maxVersions,
           comprAlgo.getName(),
           HColumnDescriptor.DEFAULT_IN_MEMORY,
           HColumnDescriptor.DEFAULT_BLOCKCACHE,
