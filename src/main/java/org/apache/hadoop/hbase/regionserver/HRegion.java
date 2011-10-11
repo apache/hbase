@@ -3367,6 +3367,20 @@ public class HRegion implements HeapSize { // , Writable{
     this.splitPoint = sp;
   }
 
+  byte[] checkSplit() {
+    if (this.splitPoint != null) {
+      return this.splitPoint;
+    }
+    byte[] splitPoint = null;
+    for (Store s : stores.values()) {
+      splitPoint = s.checkSplit();
+      if (splitPoint != null) {
+        return splitPoint;
+      }
+    }
+    return null;
+  }
+
   /**
    * @return The priority that this region should have in the compaction queue
    */

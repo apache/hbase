@@ -656,7 +656,7 @@ public class Store implements HeapSize {
           StoreFile last = filesCompacting.get(filesCompacting.size() - 1);
           int idx = filesToCompact.indexOf(last);
           Preconditions.checkArgument(idx != -1);
-          filesToCompact = filesToCompact.subList(idx+1, filesToCompact.size());
+          filesToCompact.subList(0, idx + 1).clear();
         }
         int count = filesToCompact.size();
         if (N > count) {
@@ -818,7 +818,7 @@ public class Store implements HeapSize {
           StoreFile last = filesCompacting.get(filesCompacting.size() - 1);
           int idx = candidates.indexOf(last);
           Preconditions.checkArgument(idx != -1);
-          candidates = candidates.subList(idx + 1, candidates.size());
+          candidates.subList(0, idx + 1).clear();
         }
         List<StoreFile> filesToCompact = compactSelection(candidates);
 
@@ -933,6 +933,11 @@ public class Store implements HeapSize {
                 return input.isBulkLoadResult();
               }
             }));
+      }
+
+      // skip selection algorithm if we don't have enough files
+      if (filesToCompact.size() < this.minFilesToCompact) {
+        return Collections.emptyList();
       }
 
       /* TODO: add sorting + unit test back in when HBASE-2856 is fixed
@@ -1349,7 +1354,7 @@ public class Store implements HeapSize {
    * Determines if Store should be split
    * @return byte[] if store should be split, null otherwise.
    */
-  byte[] checkSplit() {
+  public byte[] checkSplit() {
     this.lock.readLock().lock();
     try {
       boolean force = this.region.shouldSplit();

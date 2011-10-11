@@ -209,7 +209,7 @@ public class HRegionServer implements HRegionInterface,
   private RegionServerDynamicMetrics dynamicMetrics;
 
   // Compactions
-  CompactSplitThread compactSplitThread;
+  public CompactSplitThread compactSplitThread;
 
   // Cache flushing
   MemStoreFlusher cacheFlusher;
@@ -865,7 +865,7 @@ public class HRegionServer implements HRegionInterface,
    *
    * @return false if file system is not available
    */
-  protected boolean checkFileSystem() {
+  public boolean checkFileSystem() {
     if (this.fsOk && this.fs != null) {
       try {
         FSUtils.checkFileSystemAvailable(this.fs);
@@ -1036,8 +1036,6 @@ public class HRegionServer implements HRegionInterface,
         handler);
     Threads.setDaemonThreadRunning(this.cacheFlusher, n + ".cacheFlusher",
       handler);
-    Threads.setDaemonThreadRunning(this.compactSplitThread, n + ".compactor",
-        handler);
     Threads.setDaemonThreadRunning(this.workerThread, n + ".worker", handler);
     Threads.setDaemonThreadRunning(this.majorCompactionChecker,
         n + ".majorCompactionChecker", handler);
@@ -1094,7 +1092,7 @@ public class HRegionServer implements HRegionInterface,
       return false;
     }
     // Verify that all threads are alive
-    if (!(leases.isAlive() && compactSplitThread.isAlive() &&
+    if (!(leases.isAlive() &&
         cacheFlusher.isAlive() && hlogRoller.isAlive() &&
         workerThread.isAlive() && this.majorCompactionChecker.isAlive())) {
       // One or more threads are no longer alive - shut down
@@ -1196,8 +1194,8 @@ public class HRegionServer implements HRegionInterface,
     Threads.shutdown(this.majorCompactionChecker);
     Threads.shutdown(this.workerThread);
     Threads.shutdown(this.cacheFlusher);
-    Threads.shutdown(this.compactSplitThread);
     Threads.shutdown(this.hlogRoller);
+    this.compactSplitThread.join();
     this.replicationHandler.join();
   }
 
@@ -1365,12 +1363,7 @@ public class HRegionServer implements HRegionInterface,
               region.flushcache();
               region.triggerSplit();
               region.setSplitPoint(info.getSplitPoint());
-              // force a compaction; split will be side-effect.
-              // TODO: remove this. no correlation between compaction & split
-              // other than (1) references & (2) CompactSplitThread couples them
-              compactSplitThread.requestCompaction(region,
-                e.msg.getType().name(),
-                CompactSplitThread.PRIORITY_USER);
+              compactSplitThread.requestSplit(region, region.checkSplit());
               break;
 
             case MSG_REGION_MAJOR_COMPACT:

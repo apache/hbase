@@ -1,19 +1,31 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.util.StringUtils;
 
-  /**
-   * This class represents a compaction request and holds the region, priority,
-   * and time submitted.
-   */
-  public class CompactionRequest implements Comparable<CompactionRequest> {
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+
+/**
+ * This class holds all details necessary to run a compaction.
+ */
+public class CompactionRequest implements Comparable<CompactionRequest>,
+    Runnable {
     static final Log LOG = LogFactory.getLog(CompactionRequest.class);
     private final HRegion r;
     private final Store s;
@@ -23,19 +35,10 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
     private int p;
     private final Date date;
 
-    public CompactionRequest(HRegion r, Store s) {
-      this(r, s, null, false, s.getCompactPriority());
-    }
-
-    public CompactionRequest(HRegion r, Store s, int p) {
-      this(r, s, null, false, p);
-    }
-
     public CompactionRequest(HRegion r, Store s,
         List<StoreFile> files, boolean isMajor, int p) {
-      if (r == null) {
-        throw new NullPointerException("HRegion cannot be null");
-      }
+      Preconditions.checkNotNull(r);
+      Preconditions.checkNotNull(files);
 
       this.r = r;
       this.s = s;
@@ -117,10 +120,68 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
       this.p = p;
     }
 
+  @Override
     public String toString() {
+      String fsList = Joiner.on(", ").join(Lists.transform(files,
+        new Function<StoreFile, String>() {
+          public String apply(StoreFile sf) {
+            return StringUtils.humanReadableInt(sf.getReader().length());
+          }
+        }));
+
       return "regionName=" + r.getRegionNameAsString() +
         ", storeName=" + new String(s.getFamily().getName()) +
         ", fileCount=" + files.size() +
+        ", fileSize=" + StringUtils.humanReadableInt(totalSize) +
+          " (" + fsList + ")" +
         ", priority=" + p + ", date=" + date;
+    }
+
+    @Override
+    public void run() {
+      HRegionServer server = this.r.getRegionServer();
+      if (server.isStopRequested()) {
+        return;
+      }
+      try {
+        long startTime = EnvironmentEdgeManager.currentTimeMillis();
+        boolean completed = r.compact(this);
+        long now = EnvironmentEdgeManager.currentTimeMillis();
+        LOG.info(((completed) ? "completed" : "aborted") + " compaction: " + this
+            + ", duration=" + StringUtils.formatTimeDiff(now, startTime));
+        if (completed) {
+          server.getMetrics().addCompaction(now - startTime, this.totalSize);
+          // degenerate case: blocked regions require recursive enqueues
+          if (s.getCompactPriority() <= 0) {
+            server.compactSplitThread
+              .requestCompaction(r, s, "Recursive enqueue");
+          }
+        }
+      } catch (IOException ex) {
+        LOG.error("Compaction failed " + this, RemoteExceptionHandler
+            .checkIOException(ex));
+        server.checkFileSystem();
+      } catch (Exception ex) {
+        LOG.error("Compaction failed " + this, ex);
+        server.checkFileSystem();
+      } finally {
+        s.finishRequest(this);
+        LOG.debug("CompactSplitThread Status: " + server.compactSplitThread);
+      }
+    }
+
+    /**
+     * Cleanup class to use when rejecting a compaction request from the queue.
+     */
+    public static class Rejection implements RejectedExecutionHandler {
+
+      @Override
+      public void rejectedExecution(Runnable request, ThreadPoolExecutor pool) {
+        if (request instanceof CompactionRequest) {
+          CompactionRequest cr = (CompactionRequest) request;
+          LOG.debug("Compaction Rejected: " + cr);
+          cr.getStore().finishRequest(cr);
+        }
+      }
     }
   }
