@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.util.Progressable;
 
 import com.google.common.base.Joiner;
 
@@ -396,8 +398,17 @@ public class TestStore extends TestCase {
     }
 
     @Override
-    public FSDataOutputStream create(Path p) throws IOException {
-      return new FaultyOutputStream(super.create(p), faultPos);
+    public FSDataOutputStream create(Path p,
+		FsPermission permission,
+        boolean overwrite,
+        int bufferSize,
+        short replication,
+        long blockSize,
+        int bytesPerChecksum,
+        Progressable progress) throws IOException {
+      return new FaultyOutputStream(super.create(p,
+		permission, overwrite, bufferSize, replication,
+		blockSize, bytesPerChecksum, progress), faultPos);
     }
 
   }

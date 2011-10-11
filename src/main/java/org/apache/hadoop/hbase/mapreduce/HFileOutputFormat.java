@@ -79,6 +79,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     // Invented config.  Add to hbase-*.xml if other than default compression.
     final String compression = conf.get("hfile.compression",
       Compression.Algorithm.NONE.getName());
+    final int bytesPerChecksum = HFile.getBytesPerChecksum(conf, conf);
 
     return new RecordWriter<ImmutableBytesWritable, KeyValue>() {
       // Map of families to writers and how much has been output on the writer.
@@ -127,7 +128,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       throws IOException {
         close(writer);
         return new HFile.Writer(fs,  StoreFile.getUniqueFile(fs, familydir),
-          blocksize, compression, KeyValue.KEY_COMPARATOR);
+          blocksize, bytesPerChecksum, compression, KeyValue.KEY_COMPARATOR);
       }
 
       private void close(final HFile.Writer w) throws IOException {

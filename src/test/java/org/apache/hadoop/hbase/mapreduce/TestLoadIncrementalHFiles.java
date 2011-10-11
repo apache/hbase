@@ -173,7 +173,8 @@ public class TestLoadIncrementalHFiles {
       byte[] family, byte[] qualifier,
       byte[] startKey, byte[] endKey, int numRows) throws IOException
   {
-    HFile.Writer writer = new HFile.Writer(fs, path, BLOCKSIZE, COMPRESSION,
+    HFile.Writer writer = new HFile.Writer(fs, path, BLOCKSIZE,
+		HFile.DEFAULT_BYTES_PER_CHECKSUM, COMPRESSION,
         KeyValue.KEY_COMPARATOR);
     long now = System.currentTimeMillis();
     try {

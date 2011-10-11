@@ -188,7 +188,8 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void setUp() throws Exception {
-      writer = new HFile.Writer(this.fs, this.mf, RFILE_BLOCKSIZE, (Compression.Algorithm) null, null);
+      writer = new HFile.Writer(this.fs, this.mf, RFILE_BLOCKSIZE,
+		HFile.DEFAULT_BYTES_PER_CHECKSUM, (Compression.Algorithm) null, null);
     }
 
     @Override

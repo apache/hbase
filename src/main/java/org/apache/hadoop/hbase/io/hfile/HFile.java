@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -153,6 +154,11 @@ public class HFile {
   public final static int DEFAULT_BLOCKSIZE = 64 * 1024;
 
   /**
+   * Default byes per checksum for hfile
+   */
+  public final static int DEFAULT_BYTES_PER_CHECKSUM = 512;
+
+  /**
    * Default compression: none.
    */
   public final static Compression.Algorithm DEFAULT_COMPRESSION_ALGORITHM =
@@ -191,6 +197,23 @@ public class HFile {
     return ret;
   }
 
+  /**
+   * Get the configured bytes per checksum for HFile
+   * if not configured, return the default value
+   * @param hconf hbase configuration
+   * @param fsconf dfs configuration
+   * @return bytes per checksum for HFile
+   */
+  public static int getBytesPerChecksum(Configuration hconf,
+		Configuration fsconf) {
+    int bytesPerChecksum = HFile.DEFAULT_BYTES_PER_CHECKSUM;
+    if (hconf != null) {
+	bytesPerChecksum =  hconf.getInt("hfile.io.bytes.per.checksum",
+			fsconf.getInt("io.bytes.per.checksum",
+					HFile.DEFAULT_BYTES_PER_CHECKSUM));
+    }
+    return bytesPerChecksum;
+  }
   /**
    * HFile Writer.
    */
@@ -265,7 +288,8 @@ public class HFile {
      */
     public Writer(FileSystem fs, Path path)
     throws IOException {
-      this(fs, path, DEFAULT_BLOCKSIZE, (Compression.Algorithm) null, null);
+      this(fs, path, DEFAULT_BLOCKSIZE, DEFAULT_BYTES_PER_CHECKSUM,
+		(Compression.Algorithm) null, null);
     }
 
     /**
@@ -273,15 +297,16 @@ public class HFile {
      * @param fs
      * @param path
      * @param blocksize
+     * @param bytesPerChecksum
      * @param compress
      * @param comparator
      * @throws IOException
      * @throws IOException
      */
-    public Writer(FileSystem fs, Path path, int blocksize,
+    public Writer(FileSystem fs, Path path, int blocksize, int bytesPerChecksum,
       String compress, final KeyComparator comparator)
     throws IOException {
-      this(fs, path, blocksize,
+      this(fs, path, blocksize, bytesPerChecksum,
         compress == null? DEFAULT_COMPRESSION_ALGORITHM:
           Compression.getCompressionAlgorithmByName(compress),
         comparator);
@@ -292,15 +317,24 @@ public class HFile {
      * @param fs
      * @param path
      * @param blocksize
+     * @param bytesPerChecksum
      * @param compress
      * @param comparator
      * @throws IOException
      */
-    public Writer(FileSystem fs, Path path, int blocksize,
+    public Writer(FileSystem fs, Path path, int blocksize, int bytesPerChecksum,
       Compression.Algorithm compress,
       final KeyComparator comparator)
     throws IOException {
-      this(fs.create(path), blocksize, compress, comparator);
+      this(fs.create(path,
+		FsPermission.getDefault(),
+		true,
+          fs.getConf().getInt("io.file.buffer.size", 4096),
+          fs.getDefaultReplication(),
+          fs.getDefaultBlockSize(),
+          bytesPerChecksum,
+          null),
+          blocksize, compress, comparator);
       this.closeOutputStream = true;
       this.name = path.toString();
       this.path = path;

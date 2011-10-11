@@ -686,7 +686,10 @@ public class StoreFile {
         Compression.Algorithm compress, final Configuration conf,
         final KVComparator comparator, BloomType bloomType, int maxKeys)
         throws IOException {
-      writer = new HFile.Writer(fs, path, blocksize, compress, comparator.getRawComparator());
+
+      writer = new HFile.Writer(
+		fs, path, blocksize, HFile.getBytesPerChecksum(conf, fs.getConf()),
+		compress, comparator.getRawComparator());
 
       this.kvComparator = comparator;
 
