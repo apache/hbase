@@ -564,9 +564,8 @@ public class StoreFile {
           BloomType bloomType,
           long maxKeyCount)
   throws IOException {
-	  return createWriter(fs, dir, blocksize, null, null, conf, BloomType.NONE,
-			  BloomFilterFactory.getErrorRate(conf), 0);
-
+      return createWriter(fs, dir, blocksize, algorithm, c, conf, bloomType,
+			  BloomFilterFactory.getErrorRate(conf), maxKeyCount);
   }
 
   /**
