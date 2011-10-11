@@ -25,11 +25,18 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
+
+import org.codehaus.jackson.map.ObjectMapper;
 
 import javax.net.SocketFactory;
 import java.io.DataInput;
@@ -530,6 +537,18 @@ public class HBaseRPC {
     private Class<?> implementation;
     private boolean verbose;
 
+    private static final String WARN_RESPONSE_TIME =
+      "hbase.ipc.warn.response.time";
+    private static final String WARN_RESPONSE_SIZE =
+      "hbase.ipc.warn.response.size";
+
+    /** Default value for above params */
+    private static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
+    private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
+
+    private final int warnResponseTime;
+    private final int warnResponseSize;
+
     /**
      * Construct an RPC server.
      * @param instance the instance whose methods will be called
@@ -566,6 +585,10 @@ public class HBaseRPC {
       this.instance = instance;
       this.implementation = instance.getClass();
       this.verbose = verbose;
+      this.warnResponseTime = conf.getInt(WARN_RESPONSE_TIME,
+          DEFAULT_WARN_RESPONSE_TIME);
+    this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
+        DEFAULT_WARN_RESPONSE_SIZE);
     }
 
     @Override
@@ -593,14 +616,36 @@ public class HBaseRPC {
         rpcMetrics.rpcQueueTime.inc(qTime);
         rpcMetrics.rpcProcessingTime.inc(processingTime);
         rpcMetrics.inc(call.getMethodName(), processingTime);
-        if (processingTime > 1000) {
-          rpcMetrics.inc(call.getMethodName() + ".aboveOneSec.",
-                         processingTime);
-        }
         if (verbose) log("Return: "+value);
 
-        return new HbaseObjectWritable(method.getReturnType(), value);
+        HbaseObjectWritable retVal =
+          new HbaseObjectWritable(method.getReturnType(), value);
+        long responseSize = retVal.getWritableSize();
+        // log any RPC responses that are slower than the configured warn
+        // response time or larger than configured warning size
+        boolean tooSlow = (processingTime > warnResponseTime
+            && warnResponseTime > -1);
+        boolean tooLarge = (responseSize > warnResponseSize
+            && warnResponseSize > -1);
+        if (tooSlow || tooLarge) {
+          // when tagging, we let TooLarge trump TooSmall to keep output simple
+          // note that large responses will often also be slow.
+          logResponse(call, (tooLarge ? "TooLarge" : "TooSlow"),
+              startTime, processingTime, qTime, responseSize);
+          if (tooSlow) {
+            // increment global slow RPC response counter
+            rpcMetrics.inc("slowResponse.", processingTime);
+          }
+        }
+        if (processingTime > 1000) {
+          // we use a hard-coded one second period so that we can clearly
+          // indicate the time period we're warning about in the name of the
+          // metric itself
+          rpcMetrics.inc(call.getMethodName() + ".aboveOneSec.",
+              processingTime);
+        }
 
+        return retVal;
       } catch (InvocationTargetException e) {
         Throwable target = e.getTargetException();
         if (target instanceof IOException) {
@@ -613,6 +658,60 @@ public class HBaseRPC {
         IOException ioe = new IOException(e.toString());
         ioe.setStackTrace(e.getStackTrace());
         throw ioe;
+      }
+    }
+
+    /**
+     * Logs an RPC response to the LOG file, producing valid JSON objects for
+     * client Operations.
+     * @param call The call to log.
+     * @param tag  The tag that will be used to indicate this event in the log.
+     * @param startTime       The time that the call was initiated, in ms.
+     * @param processingTime  The duration that the call took to run, in ms.
+     * @param qTime           The duration that the call spent on the queue
+     *                        prior to being initiated, in ms.
+     * @param responseSize    The size in bytes of the response buffer.
+     */
+    private void logResponse(Invocation call, String tag,
+        long startTime, int processingTime, int qTime, long responseSize)
+      throws IOException {
+      Object params[] = call.getParameters();
+      // for JSON encoding
+      ObjectMapper mapper = new ObjectMapper();
+      // base information that is reported regardless of type of call
+      Map<String, Object> responseInfo = new HashMap<String, Object>();
+      responseInfo.put("starttimems", startTime);
+      responseInfo.put("processingtimems", processingTime);
+      responseInfo.put("queuetimems", qTime);
+      responseInfo.put("responsesize", responseSize);
+      responseInfo.put("class", instance.getClass().getSimpleName());
+      responseInfo.put("method", call.getMethodName());
+      if (params.length == 2 && instance instanceof HRegionServer &&
+          params[0] instanceof byte[] &&
+          params[1] instanceof Operation) {
+        // if the slow process is a query, we want to log its table as well
+        // as its own fingerprint
+        byte [] tableName =
+          HRegionInfo.parseRegionName((byte[]) params[0])[0];
+        responseInfo.put("table", Bytes.toStringBinary(tableName));
+        // annotate the response map with operation details
+        responseInfo.putAll(((Operation) params[1]).toMap());
+        // report to the log file
+        LOG.warn("(operation" + tag + "): " +
+            mapper.writeValueAsString(responseInfo));
+      } else if (params.length == 1 && instance instanceof HRegionServer &&
+          params[0] instanceof Operation) {
+        // annotate the response map with operation details
+        responseInfo.putAll(((Operation) params[1]).toMap());
+        // report to the log file
+        LOG.warn("(operation" + tag + "): " +
+            mapper.writeValueAsString(responseInfo));
+      } else {
+        // can't get JSON details, so just report call.toString() along with
+        // a more generic tag.
+        responseInfo.put("call", call.toString());
+        LOG.warn("(response" + tag + "): " +
+            mapper.writeValueAsString(responseInfo));
       }
     }
   }
