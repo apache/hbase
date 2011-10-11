@@ -842,18 +842,27 @@ public class HRegionServer implements HRegionInterface,
         new IOException(t): new IOException(msg, t));
   }
   /*
-   * Check if an OOME and if so, call abort.
+   * Check if an OOME and if so, call abort immediately and avoid creating more
+   * objects.
    * @param e
    * @return True if we OOME'd and are aborting.
    */
   public boolean checkOOME(final Throwable e) {
     boolean stop = false;
-    if (e instanceof OutOfMemoryError ||
-      (e.getCause() != null && e.getCause() instanceof OutOfMemoryError) ||
-      (e.getMessage() != null &&
-        e.getMessage().contains("java.lang.OutOfMemoryError"))) {
-      abort("OutOfMemoryError, aborting", e);
-      stop = true;
+    try {
+      if (e instanceof OutOfMemoryError ||
+        (e.getCause() != null && e.getCause() instanceof OutOfMemoryError) ||
+        (e.getMessage() != null &&
+          e.getMessage().contains("java.lang.OutOfMemoryError"))) {
+        stop = true;
+        // not sure whether log4j will create more string obj here or not
+        LOG.fatal("Run out of memory;HRegionServer aborts itself immediately",
+            e);
+      }
+    } finally {
+      if (stop) {
+        this.forceAbort();
+      }
     }
     return stop;
   }
@@ -1174,6 +1183,14 @@ public class HRegionServer implements HRegionInterface,
    */
   public void abort(String reason) {
     abort(reason, null);
+  }
+
+  /**
+   * when the region server run out of memory, it needs to abort itseft quickly
+   * and avoid creating more objects.
+   */
+  public void forceAbort() {
+    Runtime.getRuntime().halt(1);
   }
 
   /*
