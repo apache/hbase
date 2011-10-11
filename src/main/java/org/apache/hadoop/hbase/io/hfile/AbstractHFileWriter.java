@@ -34,6 +34,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
+import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics.
+    ColumnFamilyConfigured;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -43,7 +45,8 @@ import org.apache.hadoop.io.Writable;
 /**
  * Common functionality needed by all versions of {@link HFile} writers.
  */
-public abstract class AbstractHFileWriter implements HFile.Writer {
+public abstract class AbstractHFileWriter extends ColumnFamilyConfigured
+    implements HFile.Writer {
 
   private static final Log LOG = LogFactory.getLog(AbstractHFileWriter.class);
 
@@ -95,13 +98,6 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   /** May be null if we were passed a stream. */
   protected final Path path;
 
-  // table qualified cfName for this HFile.
-  // This is used to report stats on a per-table/CF basis
-
-  // Note that this is gotten from the path, which can be null, so this can
-  // remain unknown
-  public String cfName = "cf.unknown";
-
   /** Whether to cache key/value data blocks on write */
   protected final boolean cacheDataBlocksOnWrite;
 
@@ -123,6 +119,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   public AbstractHFileWriter(Configuration conf,
       FSDataOutputStream outputStream, Path path, int blockSize,
       Compression.Algorithm compressAlgo, KeyComparator comparator) {
+    super(path);
     this.outputStream = outputStream;
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();
@@ -142,20 +139,6 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
 
     if (cacheDataBlocksOnWrite || cacheIndexBlocksOnWrite)
       initBlockCache();
-
-    if (path != null)
-      parsePath(path.toString());
-  }
-
-  public void parsePath(String path) {
-    String splits[] = path.split("/");
-    if (splits.length < 2) {
-      LOG.warn("Could not determine the table and column family of the " +
-          "HFile path " + path);
-      return;
-    }
-
-    cfName = "cf." + splits[splits.length - 2];
   }
 
   /**
@@ -260,11 +243,6 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   @Override
   public Path getPath() {
     return path;
-  }
-
-  @Override
-  public String getColumnFamilyName() {
-    return cfName;
   }
 
   @Override

@@ -30,8 +30,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 
@@ -169,7 +169,6 @@ public class HFileReaderV2 extends AbstractHFileReader implements
     // single-level.
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
       metaLoads++;
-      HRegion.incrNumericMetric(fsMetaBlockReadCntMetric, 1);
 
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
@@ -182,7 +181,7 @@ public class HFileReaderV2 extends AbstractHFileReader implements
           // Return a distinct 'shallow copy' of the block,
           // so pos does not get messed by the scanner
           cacheHits++;
-          HRegion.incrNumericMetric(fsMetaBlockReadCacheHitCntMetric, 1);
+          cfMetrics.updateOnCacheHit(BlockCategory.META, false);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Cache Miss, please load.
@@ -191,12 +190,11 @@ public class HFileReaderV2 extends AbstractHFileReader implements
       HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset,
           blockSize, -1, true);
       metaBlock.setColumnFamilyName(this.getColumnFamilyName());
-      HRegion.incrNumericMetric(fsMetaBlockReadCacheMissCntMetric, 1);
 
       long delta = System.currentTimeMillis() - now;
-      HRegion.incrTimeVaryingMetric(fsReadTimeMetric, delta);
       HFile.readTime += delta;
       HFile.readOps++;
+      cfMetrics.updateOnCacheMiss(BlockCategory.META, false, delta);
 
       // Cache the block
       if (cacheBlock && blockCache != null) {
@@ -258,30 +256,15 @@ public class HFileReaderV2 extends AbstractHFileReader implements
     try {
       blockLoads++;
 
-      if (isCompaction) {
-        HRegion.incrNumericMetric(compactionBlockReadCntMetric, 1);
-      } else {
-        HRegion.incrNumericMetric(fsBlockReadCntMetric, 1);
-      }
-
       // Check cache for block. If found return.
       if (blockCache != null) {
         HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey,
             cacheBlock);
         if (cachedBlock != null) {
+          BlockCategory blockCategory =
+              cachedBlock.getBlockType().getCategory();
           cacheHits++;
-          if (isCompaction) {
-            HRegion.incrNumericMetric(
-                compactionBlockReadCacheHitCntMetric, 1);
-            HRegion.incrNumericMetric("bt." +
-                cachedBlock.getBlockType().getMetricName() +
-                ".compactionBlockReadCacheHitCnt", 1);
-          } else {
-            HRegion.incrNumericMetric(fsBlockReadCacheHitCntMetric, 1);
-            HRegion.incrNumericMetric("bt." +
-                cachedBlock.getBlockType().getMetricName() +
-                ".fsBlockReadCacheHitCnt", 1);
-          }
+          cfMetrics.updateOnCacheHit(blockCategory, isCompaction);
           return cachedBlock;
         }
         // Carry on, please load.
@@ -292,20 +275,12 @@ public class HFileReaderV2 extends AbstractHFileReader implements
       HFileBlock dataBlock = fsBlockReader.readBlockData(dataBlockOffset,
           onDiskBlockSize, -1, pread);
       dataBlock.setColumnFamilyName(this.getColumnFamilyName());
-      HRegion.incrNumericMetric("bt." + dataBlock.getBlockType().getMetricName()
-          + ".blockReadCacheMissCnt", 1);
+      BlockCategory blockCategory = dataBlock.getBlockType().getCategory();
 
       long delta = System.currentTimeMillis() - now;
       HFile.readTime += delta;
       HFile.readOps++;
-      if (isCompaction) {
-        HRegion.incrNumericMetric(
-            this.compactionBlockReadCacheMissCntMetric, 1);
-        HRegion.incrTimeVaryingMetric(compactionReadTimeMetric, delta);
-      } else {
-        HRegion.incrNumericMetric(this.fsBlockReadCacheMissCntMetric, 1);
-        HRegion.incrTimeVaryingMetric(fsReadTimeMetric, delta);
-      }
+      cfMetrics.updateOnCacheMiss(blockCategory, isCompaction, delta);
 
       // Cache the block
       if (cacheBlock && blockCache != null) {

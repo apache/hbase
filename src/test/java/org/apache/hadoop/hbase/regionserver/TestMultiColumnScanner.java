@@ -44,7 +44,10 @@ import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -62,9 +65,14 @@ public class TestMultiColumnScanner {
       LogFactory.getLog(TestMultiColumnScanner.class);
 
   private static final String TABLE_NAME = "TestMultiColumnScanner";
+  private static final int MAX_VERSIONS = 50;
+
+  // These fields are used in TestScanWithBloomError
   static final String FAMILY = "CF";
   static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
-  static final int MAX_VERSIONS = 50;
+
+  private final ColumnFamilyMetrics cfMetrics =
+      ColumnFamilyMetrics.getInstance(FAMILY);
 
   /**
    * The size of the column qualifier set used. Increasing this parameter
@@ -135,12 +143,13 @@ public class TestMultiColumnScanner {
   }
 
   private long getBlocksRead() {
-    return HRegion.getNumericMetric("cf." + FAMILY + ".fsBlockReadCnt");
+    return HRegion.getNumericMetric(cfMetrics.getBlockMetricName(
+        BlockType.BlockCategory.ALL_CATEGORIES, false, BlockMetricType.READ_COUNT));
   }
 
   private long getCacheHits() {
-    return HRegion.getNumericMetric("cf." + FAMILY +
-        ".fsBlockReadCacheHitCnt");
+    return HRegion.getNumericMetric(cfMetrics.getBlockMetricName(
+        BlockType.BlockCategory.ALL_CATEGORIES, false, BlockMetricType.CACHE_HIT));
   }
 
   private void saveBlockStats() {

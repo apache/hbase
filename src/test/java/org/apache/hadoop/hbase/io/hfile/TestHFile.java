@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,6 +54,7 @@ public class TestHFile extends HBaseTestCase {
     HBaseTestingUtility.getTestDir("TestHFile").toString();
   private final int minBlockSize = 512;
   private static String localFormatter = "%010d";
+  private Map<String, Long> startingMetrics;
 
   /**
    * Test empty HFile.
@@ -67,6 +69,18 @@ public class TestHFile extends HBaseTestCase {
     r.loadFileInfo();
     assertNull(r.getFirstKey());
     assertNull(r.getLastKey());
+  }
+
+  @Override
+  public void setUp() throws Exception {
+    startingMetrics = ColumnFamilyMetrics.getMetricsSnapshot();
+    super.setUp();
+  }
+
+  @Override
+  public void tearDown() throws Exception {
+    super.tearDown();
+    ColumnFamilyMetrics.validateMetricChanges(startingMetrics);
   }
 
   // write some records into the tfile

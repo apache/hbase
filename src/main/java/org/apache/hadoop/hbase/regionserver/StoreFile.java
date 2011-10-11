@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -961,9 +962,8 @@ public class StoreFile {
     private final HFile.Reader reader;
     protected TimeRangeTracker timeRangeTracker = null;
     protected long sequenceID = -1;
-    private final String bloomAccessedMetric;
-    private final String bloomSkippedMetric;
     private byte[] lastBloomKey;
+    private final ColumnFamilyMetrics cfMetrics;
 
     public Reader(FileSystem fs, Path path, BlockCache blockCache,
         boolean inMemory, boolean evictOnClose)
@@ -971,9 +971,8 @@ public class StoreFile {
       reader = HFile.createReader(fs, path, blockCache, inMemory, evictOnClose);
 
       // prepare the text (key) for the metrics
-      bloomAccessedMetric = reader.getColumnFamilyName()
-          + ".keyMaybeInBloomCnt";
-      bloomSkippedMetric = reader.getColumnFamilyName() + ".keyNotInBloomCnt";
+      cfMetrics = ColumnFamilyMetrics.getInstance(
+          reader.getColumnFamilyName());
       bloomFilterType = BloomType.NONE;
     }
 
@@ -982,8 +981,7 @@ public class StoreFile {
      */
     Reader() {
       this.reader = null;
-      bloomAccessedMetric = "";
-      bloomSkippedMetric = "";
+      this.cfMetrics = ColumnFamilyMetrics.getInstance(null);
     }
 
     public RawComparator<byte []> getComparator() {
@@ -1208,10 +1206,7 @@ public class StoreFile {
                 && bloomFilter.contains(key, 0, key.length, bloom);
           }
 
-          if (exists)
-            HRegion.incrNumericMetric(bloomAccessedMetric, 1);
-          else
-            HRegion.incrNumericMetric(bloomSkippedMetric, 1);
+          cfMetrics.updateBloomMetrics(exists);
           return exists;
         }
       } catch (IOException e) {

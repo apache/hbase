@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics.ColumnFamilyAware;
 
 /**
  * An interface that exposes methods to retrieve the column type and BlockType
@@ -28,11 +29,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
  * metrics, for example. Used by implementations of HeapSize, such as
  * {@link HFileBlock}
  */
-public interface HFileBlockInfo {
-  /**
-   * @return Column family name of this cached item.
-   */
-  public String getColumnFamilyName();
+public interface HFileBlockInfo extends ColumnFamilyAware {
 
   /**
    * @return BlockType descriptor of this cached item. Indicates the type of

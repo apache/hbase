@@ -31,9 +31,11 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
+import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics;
+import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockInfo;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -266,9 +268,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * Cache the block with the specified name and buffer.
    * <p>
    * It is assumed this will NEVER be called on an already cached block.  If
-   * that is done, it is assumed that you are reinserting the same exact
-   * block due to a race condition and will update the buffer but not modify
-   * the size of the cache.
+   * that is done, an exception will be thrown.
    * @param blockName block name
    * @param buf block buffer
    * @param inMemory if block is in-memory
@@ -315,30 +315,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
       heapsize *= -1;
     }
     if (cb.getBuffer() instanceof HFileBlockInfo) {
-      HFileBlockInfo cb_hfbi = (HFileBlockInfo) cb.getBuffer();
-      // CF total size
-      HRegion.incrNumericPersistentMetric(cb_hfbi.getColumnFamilyName()
-          + ".blockCacheSize", heapsize);
-      // BlockType total size
-      HRegion.incrNumericPersistentMetric("bt."
-          + cb_hfbi.getBlockType().getMetricName() + ".blockCacheSize",
-          heapsize);
-      if (evict) {
-        // CF number evicted
-        HRegion.incrNumericMetric(cb_hfbi.getColumnFamilyName()
-            + ".blockCacheNumEvicted", 1);
-        // BlockType number evicted
-        HRegion.incrNumericMetric("bt." +
-            cb_hfbi.getBlockType().getMetricName() + ".blockCacheNumEvicted",
-            1);
-      } else {
-        // CF number cached
-        HRegion.incrNumericMetric(cb_hfbi.getColumnFamilyName()
-            + ".blockCacheNumCached", 1);
-        // BlockType number cached
-        HRegion.incrNumericMetric("bt." +
-            cb_hfbi.getBlockType().getMetricName() + ".blockCacheNumCached", 1);
-      }
+      final HFileBlockInfo blockInfo = (HFileBlockInfo) cb.getBuffer();
+      ColumnFamilyMetrics cfMetrics = ColumnFamilyMetrics.getInstance(
+          blockInfo.getColumnFamilyName());
+      cfMetrics.updateBlockCacheMetrics(blockInfo.getBlockType().getCategory(),
+          heapsize, evict);
     }
     return size.addAndGet(heapsize);
   }

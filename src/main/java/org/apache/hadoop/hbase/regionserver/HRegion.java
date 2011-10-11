@@ -349,7 +349,7 @@ public class HRegion implements HeapSize { // , Writable{
     oldVal.getSecond().incrementAndGet(); // increment ops by 1
   }
 
-  static long getNumericMetric(String key) {
+  public static long getNumericMetric(String key) {
     AtomicLong m = numericMetrics.get(key);
     if (m == null)
       return 0;

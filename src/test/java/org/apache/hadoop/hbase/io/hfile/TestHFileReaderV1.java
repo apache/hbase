@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -29,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -41,13 +43,20 @@ public class TestHFileReaderV1 {
 
   private Configuration conf;
   private FileSystem fs;
+  private Map<String, Long> startingMetrics;
 
   private static final int N = 1000;
 
   @Before
   public void setUp() throws IOException {
+    startingMetrics = ColumnFamilyMetrics.getMetricsSnapshot();
     conf = TEST_UTIL.getConfiguration();
     fs = FileSystem.get(conf);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    ColumnFamilyMetrics.validateMetricChanges(startingMetrics);
   }
 
   @Test

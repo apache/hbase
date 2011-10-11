@@ -57,6 +57,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.AbstractHFileReader;
+import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
@@ -589,7 +591,7 @@ public class HFileReadWriteTest {
     private volatile boolean stopRequested;
     private volatile Thread thread;
     private Set<String> fsBlockReadMetrics = new TreeSet<String>();
-    private boolean isRead;
+    private boolean isCompaction;
 
     public StatisticsPrinter(HFile.Reader reader) {
       this(new HFile.Reader[] { reader });
@@ -612,11 +614,12 @@ public class HFileReadWriteTest {
     }
 
     public StatisticsPrinter(HFile.Reader[] readers) {
-      isRead = workload == Workload.RANDOM_READS;
+      isCompaction = workload == Workload.MERGE;
       for (HFile.Reader reader : readers) {
-        AbstractHFileReader r = (AbstractHFileReader) reader;
-        fsBlockReadMetrics.add(isRead ? r.fsBlockReadCntMetric
-            : r.compactionBlockReadCntMetric);
+        fsBlockReadMetrics.add(
+            ColumnFamilyMetrics.ALL_CF_METRICS.getBlockMetricName(
+                BlockType.BlockCategory.ALL_CATEGORIES, isCompaction,
+                ColumnFamilyMetrics.BlockMetricType.READ_COUNT));
       }
 
       LOG.info("Using the following metrics for the number of data blocks " +

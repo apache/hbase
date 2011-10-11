@@ -30,10 +30,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
@@ -220,14 +220,14 @@ public class HFileReaderV1 extends AbstractHFileReader {
     // Per meta key from any given file, synchronize reads for said block
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
       metaLoads++;
-      HRegion.incrNumericMetric(this.fsMetaBlockReadCntMetric, 1);
+
       // Check cache for block.  If found return.
       if (blockCache != null) {
         HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey,
             cacheBlock);
         if (cachedBlock != null) {
           cacheHits++;
-          HRegion.incrNumericMetric(this.fsMetaBlockReadCacheHitCntMetric, 1);
+          cfMetrics.updateOnCacheHit(BlockCategory.META, false);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Cache Miss, please load.
@@ -240,9 +240,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
       hfileBlock.expectType(BlockType.META);
 
       long delta = System.currentTimeMillis() - now;
-      HRegion.incrTimeVaryingMetric(this.fsReadTimeMetric, delta);
       HFile.readTime += delta;
       HFile.readOps++;
+      cfMetrics.updateOnCacheMiss(BlockCategory.META, false, delta);
 
       // Cache the block
       if (cacheBlock && blockCache != null) {
@@ -283,27 +283,13 @@ public class HFileReaderV1 extends AbstractHFileReader {
     synchronized (dataBlockIndexReader.getRootBlockKey(block)) {
       blockLoads++;
 
-      if (isCompaction) {
-        HRegion.incrNumericMetric(this.compactionBlockReadCntMetric, 1);
-      } else {
-        HRegion.incrNumericMetric(this.fsBlockReadCntMetric, 1);
-      }
-
       // Check cache for block.  If found return.
       if (blockCache != null) {
         HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey,
             cacheBlock);
         if (cachedBlock != null) {
           cacheHits++;
-
-          if (isCompaction) {
-            HRegion.incrNumericMetric(
-                this.compactionBlockReadCacheHitCntMetric, 1);
-          } else {
-            HRegion.incrNumericMetric(
-                this.fsBlockReadCacheHitCntMetric, 1);
-          }
-
+          cfMetrics.updateOnCacheHit(BlockCategory.DATA, isCompaction);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Carry on, please load.
@@ -332,11 +318,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
       long delta = System.currentTimeMillis() - now;
       HFile.readTime += delta;
       HFile.readOps++;
-      if (isCompaction) {
-        HRegion.incrTimeVaryingMetric(this.compactionReadTimeMetric, delta);
-      } else {
-        HRegion.incrTimeVaryingMetric(this.fsReadTimeMetric, delta);
-      }
+      cfMetrics.updateOnCacheMiss(BlockCategory.DATA, isCompaction, delta);
 
       // Cache the block
       if (cacheBlock && blockCache != null) {

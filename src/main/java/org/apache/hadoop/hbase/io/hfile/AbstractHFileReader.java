@@ -22,11 +22,11 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics.
+    ColumnFamilyConfigured;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.io.RawComparator;
@@ -34,9 +34,8 @@ import org.apache.hadoop.io.RawComparator;
 /**
  * Common functionality needed by all versions of {@link HFile} readers.
  */
-public abstract class AbstractHFileReader implements HFile.Reader {
-
-  private static final Log LOG = LogFactory.getLog(AbstractHFileReader.class);
+public abstract class AbstractHFileReader extends ColumnFamilyConfigured
+    implements HFile.Reader {
 
   /** Filesystem-level block reader for this HFile format version. */
   protected HFileBlock.FSReader fsBlockReader;
@@ -97,32 +96,14 @@ public abstract class AbstractHFileReader implements HFile.Reader {
 
   protected FileInfo fileInfo;
 
-  // table qualified cfName for this HFile.
-  // This is used to report stats on a per-table/CF basis
-  public String cfName = "";
-
-  // various metrics that we want to track on a per-cf basis
-  public String fsReadTimeMetric = "";
-  public String compactionReadTimeMetric = "";
-
-  public String fsBlockReadCntMetric = "";
-  public String compactionBlockReadCntMetric = "";
-
-  public String fsBlockReadCacheHitCntMetric = "";
-  public String compactionBlockReadCacheHitCntMetric = "";
-
-  public String fsBlockReadCacheMissCntMetric = "";
-  public String compactionBlockReadCacheMissCntMetric = "";
-
-  public String fsMetaBlockReadCntMetric = "";
-  public String fsMetaBlockReadCacheHitCntMetric = "";
-  public String fsMetaBlockReadCacheMissCntMetric = "";
+  protected final ColumnFamilyMetrics cfMetrics;
 
   protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long fileSize,
       final boolean closeIStream,
       final BlockCache blockCache, final boolean inMemory,
       final boolean evictOnClose) {
+    super(path);
     this.trailer = trailer;
     this.compressAlgo = trailer.getCompressionCodec();
     this.blockCache = blockCache;
@@ -133,7 +114,7 @@ public abstract class AbstractHFileReader implements HFile.Reader {
     this.evictOnClose = evictOnClose;
     this.path = path;
     this.name = path.getName();
-    parsePath(path.toString());
+    cfMetrics = ColumnFamilyMetrics.getInstance(getColumnFamilyName());
   }
 
   @SuppressWarnings("serial")
@@ -149,42 +130,6 @@ public abstract class AbstractHFileReader implements HFile.Reader {
 
   protected String toStringLastKey() {
     return KeyValue.keyToString(getLastKey());
-  }
-
-  /**
-   * Parse the HFile path to figure out which table and column family
-   * it belongs to. This is used to maintain read statistics on a
-   * per-column-family basis.
-   *
-   * @param path HFile path name
-   */
-  public void parsePath(String path) {
-    String splits[] = path.split("/");
-    if (splits.length < 2) {
-      LOG.warn("Could not determine the table and column family of the " +
-          "HFile path " + path);
-      return;
-    }
-
-    cfName = "cf." + splits[splits.length - 2];
-
-    fsReadTimeMetric = cfName + ".fsRead";
-    compactionReadTimeMetric = cfName + ".compactionRead";
-
-    fsBlockReadCntMetric = cfName + ".fsBlockReadCnt";
-    fsBlockReadCacheHitCntMetric = cfName + ".fsBlockReadCacheHitCnt";
-    fsBlockReadCacheMissCntMetric = cfName + ".fsBlockReadCacheMissCnt";
-
-    compactionBlockReadCntMetric = cfName + ".compactionBlockReadCnt";
-    compactionBlockReadCacheHitCntMetric = cfName
-        + ".compactionBlockReadCacheHitCnt";
-    compactionBlockReadCacheMissCntMetric = cfName
-        + ".compactionBlockReadCacheMissCnt";
-
-    fsMetaBlockReadCntMetric = cfName + ".fsMetaBlockReadCnt";
-    fsMetaBlockReadCacheHitCntMetric = cfName + ".fsMetaBlockReadCacheHitCnt";
-    fsMetaBlockReadCacheMissCntMetric = cfName
-        + ".fsMetaBlockReadCacheMissCnt";
   }
 
   public abstract boolean isFileInfoLoaded();
@@ -306,11 +251,6 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   }
 
   @Override
-  public String getColumnFamilyName() {
-    return cfName;
-  }
-
-  @Override
   public FixedFileTrailer getTrailer() {
     return trailer;
   }
@@ -380,6 +320,10 @@ public abstract class AbstractHFileReader implements HFile.Reader {
 
   public Path getPath() {
     return path;
+  }
+
+  public ColumnFamilyMetrics getColumnFamilyMetrics() {
+    return cfMetrics;
   }
 
 }

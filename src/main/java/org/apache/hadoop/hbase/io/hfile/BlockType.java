@@ -75,7 +75,7 @@ public enum BlockType {
   INDEX_V1("IDXBLK)+", BlockCategory.INDEX);
 
   public enum BlockCategory {
-    DATA, META, INDEX, BLOOM
+    DATA, META, INDEX, BLOOM, ALL_CATEGORIES, UNKNOWN
   }
 
   public static final int MAGIC_LENGTH = 8;
@@ -99,10 +99,6 @@ public enum BlockType {
 
   public void write(ByteBuffer buf) {
     buf.put(magic);
-  }
-
-  public String getMetricName(){
-    return metricCat.toString();
   }
 
   public static BlockType parse(byte[] buf, int offset, int length)
@@ -179,6 +175,10 @@ public enum BlockType {
       throw new IOException("Invalid magic: expected "
           + Bytes.toStringBinary(magic) + ", got " + Bytes.toStringBinary(buf));
     }
+  }
+
+  public BlockCategory getCategory() {
+    return metricCat;
   }
 
 }

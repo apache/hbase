@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -34,6 +35,20 @@ import junit.framework.TestCase;
  * and that cached blocks are accessible when expected to be.
  */
 public class TestLruBlockCache extends TestCase {
+
+  private Map<String, Long> startingMetrics;
+
+  @Override
+  public void setUp() throws Exception {
+    startingMetrics = ColumnFamilyMetrics.getMetricsSnapshot();
+    super.setUp();
+  }
+
+  @Override
+  public void tearDown() throws Exception {
+    super.tearDown();
+    ColumnFamilyMetrics.validateMetricChanges(startingMetrics);
+  }
 
   public void testBackgroundEvictionThread() throws Exception {
 

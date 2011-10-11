@@ -26,6 +26,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
@@ -40,6 +42,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
@@ -58,9 +61,11 @@ import com.google.common.collect.Lists;
 public class TestStoreFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestStoreFile.class);
   private MiniDFSCluster cluster;
+  private Map<String, Long> startingMetrics;
 
   @Override
   public void setUp() throws Exception {
+    startingMetrics = ColumnFamilyMetrics.getMetricsSnapshot();
     try {
       this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
       // Set the hbase.rootdir to be the home directory in mini dfs.
@@ -78,6 +83,7 @@ public class TestStoreFile extends HBaseTestCase {
     shutdownDfs(cluster);
     // ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
     //  "Temporary end-of-test thread dump debugging HADOOP-2040: " + getName());
+    ColumnFamilyMetrics.validateMetricChanges(startingMetrics);
   }
 
   /**

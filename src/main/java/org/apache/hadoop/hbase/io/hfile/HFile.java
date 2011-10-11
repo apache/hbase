@@ -303,55 +303,55 @@ public class HFile {
      * Needs to be constant as the file is being moved to support caching on
      * write.
      */
-     String getName();
+    String getName();
 
-     String getColumnFamilyName();
+    String getColumnFamilyName();
 
-     RawComparator<byte []> getComparator();
+    RawComparator<byte []> getComparator();
 
-     HFileScanner getScanner(boolean cacheBlocks,
-        final boolean pread, final boolean isCompaction);
+    HFileScanner getScanner(boolean cacheBlocks,
+       final boolean pread, final boolean isCompaction);
 
-     ByteBuffer getMetaBlock(String metaBlockName,
-        boolean cacheBlock) throws IOException;
+    ByteBuffer getMetaBlock(String metaBlockName,
+       boolean cacheBlock) throws IOException;
 
-     HFileBlock readBlock(long offset, int onDiskBlockSize,
-         boolean cacheBlock, final boolean pread, final boolean isCompaction)
-         throws IOException;
+    HFileBlock readBlock(long offset, int onDiskBlockSize,
+        boolean cacheBlock, final boolean pread, final boolean isCompaction)
+        throws IOException;
 
-     Map<byte[], byte[]> loadFileInfo() throws IOException;
+    Map<byte[], byte[]> loadFileInfo() throws IOException;
 
-     byte[] getLastKey();
+    byte[] getLastKey();
 
-     byte[] midkey() throws IOException;
+    byte[] midkey() throws IOException;
 
-     long length();
+    long length();
 
-     long getEntries();
+    long getEntries();
 
-     byte[] getFirstKey();
+    byte[] getFirstKey();
 
-     long indexSize();
+    long indexSize();
 
-     byte[] getFirstRowKey();
+    byte[] getFirstRowKey();
 
-     byte[] getLastRowKey();
+    byte[] getLastRowKey();
 
-     FixedFileTrailer getTrailer();
+    FixedFileTrailer getTrailer();
 
-     HFileBlockIndex.BlockIndexReader getDataBlockIndexReader();
+    HFileBlockIndex.BlockIndexReader getDataBlockIndexReader();
 
-     HFileScanner getScanner(boolean cacheBlocks, boolean pread);
+    HFileScanner getScanner(boolean cacheBlocks, boolean pread);
 
-     Compression.Algorithm getCompressionAlgorithm();
+    Compression.Algorithm getCompressionAlgorithm();
 
     /**
      * Retrieves Bloom filter metadata as appropriate for each {@link HFile}
      * version. Knows nothing about how that metadata is structured.
      */
-     DataInput getBloomFilterMetadata() throws IOException;
+    DataInput getBloomFilterMetadata() throws IOException;
 
-     Path getPath();
+    Path getPath();
   }
 
   private static Reader pickReaderVersion(Path path, FSDataInputStream fsdis,
