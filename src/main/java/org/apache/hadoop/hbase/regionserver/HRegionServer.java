@@ -1176,6 +1176,16 @@ public class HRegionServer implements HRegionInterface,
   }
 
   /**
+   * @param rollCurrentHLog if true, the current HLog is rolled and will be
+   * included in the list returned
+   * @return list of HLog files
+   */
+  public List<String> getHLogsList(boolean rollCurrentHLog) throws IOException {
+    if (rollCurrentHLog) this.hlog.rollWriter();
+    return this.hlog.getHLogsList();
+  }
+
+  /**
    * Sets a flag that will cause all the HRegionServer threads to shut down
    * in an orderly fashion.  Used by unit tests.
    */

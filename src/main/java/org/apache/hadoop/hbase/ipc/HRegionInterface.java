@@ -83,6 +83,13 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
     throws IllegalArgumentException;
 
   /**
+  * @param rollCurrentHLog if true, the current HLog is rolled and will be
+  * included in the list returned
+  * @return list of HLog files
+  */
+  public List<String> getHLogsList(boolean rollCurrentHLog) throws IOException;
+
+  /**
    * Perform Get operation.
    * @param regionName name of region to get from
    * @param get Get operation

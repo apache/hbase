@@ -441,6 +441,17 @@ public class HLog implements Syncable {
   }
 
   /**
+   * @return list of all log files
+   */
+  public List<String> getHLogsList() {
+    List<String> hLogsList = new ArrayList<String>(this.outputfiles.size());
+    for (Path hlog : this.outputfiles.values()) {
+      hLogsList.add(hlog.toString());
+    }
+    return hLogsList;
+  }
+
+  /**
    * Roll the log writer. That is, start writing log messages to a new file.
    *
    * Because a log cannot be rolled during a cache flush, and a cache flush
