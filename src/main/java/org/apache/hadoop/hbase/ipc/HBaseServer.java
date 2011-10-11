@@ -23,6 +23,8 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.WritableWithSize;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -84,6 +86,14 @@ public abstract class HBaseServer {
    * How many calls/handler are allowed in the queue.
    */
   private static final int MAX_QUEUE_SIZE_PER_HANDLER = 100;
+
+  private static final String WARN_RESPONSE_SIZE =
+      "hbase.ipc.warn.response.size";
+
+  /** Default value for above param */
+  private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
+
+  private final int warnResponseSize;
 
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseServer");
@@ -889,6 +899,7 @@ public abstract class HBaseServer {
 
   /** Handles queued calls . */
   private class Handler extends Thread {
+    static final int BUFFER_INITIAL_SIZE = 1024;
     public Handler(int instanceNumber) {
       this.setDaemon(true);
       this.setName("IPC Server handler "+ instanceNumber + " on " + port);
@@ -898,8 +909,6 @@ public abstract class HBaseServer {
     public void run() {
       LOG.info(getName() + ": starting");
       SERVER.set(HBaseServer.this);
-      final int buffersize = 16 * 1024;
-      ByteArrayOutputStream buf = new ByteArrayOutputStream(buffersize);
       while (running) {
         try {
           Call call = callQueue.take(); // pop the queue; maybe blocked here
@@ -925,14 +934,25 @@ public abstract class HBaseServer {
           UserGroupInformation.setCurrentUser(previous);
           CurCall.set(null);
 
-          if (buf.size() > buffersize) {
-            // Allocate a new BAOS as reset only moves size back to zero but
-            // keeps the buffer of whatever the largest write was -- see
-            // hbase-900.
-            buf = new ByteArrayOutputStream(buffersize);
-          } else {
-            buf.reset();
+          int size = BUFFER_INITIAL_SIZE;
+          if (value instanceof WritableWithSize) {
+            // get the size hint.
+            WritableWithSize ohint = (WritableWithSize)value;
+            long hint = ohint.getWritableSize();
+            if (hint > 0) {
+              hint = hint + Bytes.SIZEOF_BYTE + Bytes.SIZEOF_INT;
+              if (hint > Integer.MAX_VALUE) {
+                // oops, new problem.
+                IOException ioe =
+                    new IOException("Result buffer size too large: " + hint);
+                errorClass = ioe.getClass().getName();
+                error = StringUtils.stringifyException(ioe);
+              } else {
+                size = ((int)hint);
+              }
+            }
           }
+          ByteBufferOutputStream buf = new ByteBufferOutputStream(size);
           DataOutputStream out = new DataOutputStream(buf);
           out.writeInt(call.id);                // write call id
           out.writeBoolean(error != null);      // write error flag
@@ -943,7 +963,14 @@ public abstract class HBaseServer {
             WritableUtils.writeString(out, errorClass);
             WritableUtils.writeString(out, error);
           }
-          call.setResponse(ByteBuffer.wrap(buf.toByteArray()));
+
+          if (buf.size() > warnResponseSize) {
+            LOG.warn(getName()+", responseTooLarge for: "+call+": Size: "
+                     + StringUtils.humanReadableInt(buf.size()));
+          }
+
+
+          call.setResponse(buf.getByteBuffer());
           responder.doRespond(call);
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
@@ -1005,6 +1032,10 @@ public abstract class HBaseServer {
                           Integer.toString(this.port));
     this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
     this.tcpKeepAlive = conf.getBoolean("ipc.server.tcpkeepalive", true);
+
+    this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
+                                        DEFAULT_WARN_RESPONSE_SIZE);
+
 
     // Create the responder here
     responder = new Responder();
