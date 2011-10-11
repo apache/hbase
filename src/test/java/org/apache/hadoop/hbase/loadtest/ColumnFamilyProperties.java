@@ -42,7 +42,7 @@ public class ColumnFamilyProperties {
     "\nVerbose=true" +
     "\nClusterTestTime=120" +
     "\nBulkLoad=true" +
-    "\nRegionsPerServer=7" +
+    "\nRegionsPerServer=5" +
     "\n" +
     "\nCF1_Name=ActionLog" +
     "\nCF1_StartTimestamp=10" +
@@ -95,7 +95,7 @@ VerifyPercent=2
 Verbose=true
 ClusterTestTime=120
 BulkLoad=true
-RegionsPerServer=7
+RegionsPerServer=5
 
 CF1_Name=ActionLog
 CF1_StartTimestamp=10

@@ -120,7 +120,7 @@ public class LoadTester {
       writer.setBulkLoad(Boolean.parseBoolean(properties.getProperty(
           "BulkLoad", "False")));
       regionsPerServer =
-          Integer.parseInt(properties.getProperty("RegionsPerServer"));
+          Integer.parseInt(properties.getProperty("RegionsPerServer", "5"));
 
       if (verbose == true) {
         LOG.info("Reader Threads: " + readerThreads);
