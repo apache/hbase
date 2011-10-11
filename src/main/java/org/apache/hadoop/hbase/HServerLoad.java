@@ -70,19 +70,24 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
      */
     private int storefileIndexSizeMB;
 
-    /** The current total size of root-level indexes for the region, in KB */
-    private int rootIndexSizeKB;
+    /**
+     * The current total size of root-level indexes for the region, in KB. Not
+     * serialized because of backwards-compatibility issues.
+     */
+    private int rootIndexSizeKB = -1;
 
     /**
-     * The total size of all index blocks, not just the root level, in KB.
+     * The total size of all index blocks, not just the root level, in KB. Not
+     * serialized because of backwards-compatibility issues.
      */
-    private int totalStaticIndexSizeKB;
+    private int totalStaticIndexSizeKB = -1;
 
     /**
      * The total size of all Bloom filter blocks, not just loaded into the
-     * block cache, in KB.
+     * block cache, in KB. Not serialized because of backwards-compatibility
+     * issues.
      */
-    private int totalStaticBloomSizeKB;
+    private int totalStaticBloomSizeKB = -1;
 
     /**
      * Constructor, for Writable
@@ -214,9 +219,6 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       this.storefileSizeMB = in.readInt();
       this.memstoreSizeMB = in.readInt();
       this.storefileIndexSizeMB = in.readInt();
-      this.rootIndexSizeKB = in.readInt();
-      this.totalStaticIndexSizeKB = in.readInt();
-      this.totalStaticBloomSizeKB = in.readInt();
     }
 
     public void write(DataOutput out) throws IOException {
@@ -227,9 +229,6 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       out.writeInt(storefileSizeMB);
       out.writeInt(memstoreSizeMB);
       out.writeInt(storefileIndexSizeMB);
-      out.writeInt(rootIndexSizeKB);
-      out.writeInt(totalStaticIndexSizeKB);
-      out.writeInt(totalStaticBloomSizeKB);
     }
 
     /**
@@ -247,12 +246,21 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
         Integer.valueOf(this.memstoreSizeMB));
       sb = Strings.appendKeyValue(sb, "storefileIndexSizeMB",
         Integer.valueOf(this.storefileIndexSizeMB));
-      sb = Strings.appendKeyValue(sb, "rootIndexSizeKB",
-          Integer.valueOf(this.rootIndexSizeKB));
-      sb = Strings.appendKeyValue(sb, "totalStaticIndexSizeKB",
-          Integer.valueOf(this.totalStaticIndexSizeKB));
-      sb = Strings.appendKeyValue(sb, "totalStaticBloomSizeKB",
+
+      if (rootIndexSizeKB != -1) {
+        sb = Strings.appendKeyValue(sb, "rootIndexSizeKB",
+            Integer.valueOf(this.rootIndexSizeKB));
+      }
+
+      if (totalStaticIndexSizeKB != -1) {
+        sb = Strings.appendKeyValue(sb, "totalStaticIndexSizeKB",
+            Integer.valueOf(this.totalStaticIndexSizeKB));
+      }
+
+      if (totalStaticBloomSizeKB != -1) {
+        sb = Strings.appendKeyValue(sb, "totalStaticBloomSizeKB",
           Integer.valueOf(this.totalStaticBloomSizeKB));
+      }
       return sb.toString();
     }
   }
