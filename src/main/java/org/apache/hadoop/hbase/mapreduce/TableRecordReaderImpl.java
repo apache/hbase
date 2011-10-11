@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -64,6 +65,9 @@ public class TableRecordReaderImpl {
    * @throws IOException When restarting the scan fails.
    */
   public void init() throws IOException {
+    LOG.info("Scanner init ; " +
+             " start row = " + Bytes.toStringBinary(scan.getStartRow()) +
+             " stop row = " + Bytes.toStringBinary(scan.getStopRow()));
     restart(scan.getStartRow());
   }
 
@@ -131,7 +135,7 @@ public class TableRecordReaderImpl {
     try {
       value = this.scanner.next();
     } catch (IOException e) {
-      LOG.debug("recovered from " + StringUtils.stringifyException(e));
+      LOG.info("recovered from " + StringUtils.stringifyException(e));
       restart(lastRow);
       scanner.next();    // skip presumed already mapped row
       value = scanner.next();
