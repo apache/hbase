@@ -549,27 +549,6 @@ public class RegionManager {
   }
 
   /**
-   * @return the rough number of the regions on fs
-   * Note: this method simply counts the regions on fs by accumulating all the dirs
-   * in each table dir (${HBASE_ROOT}/$TABLE) and skipping logfiles, compaction dirs.
-   * @throws IOException
-   */
-  public int countRegionsOnFS() throws IOException {
-    int regions = 0;
-    FileStatus [] tableDirs =
-      this.master.getFileSystem().listStatus(this.master.getRootDir(), new TableDirFilter());
-    FileStatus[] regionDirs;
-    RegionDirFilter rdf = new RegionDirFilter();
-    for(FileStatus tabledir : tableDirs) {
-      if(tabledir.isDir()) {
-        regionDirs = this.master.getFileSystem().listStatus(tabledir.getPath(), rdf);
-        regions += regionDirs.length;
-      }
-    }
-    return regions;
-  }
-
-  /**
    * @return Read-only map of online regions.
    */
   public Map<byte [], MetaRegion> getOnlineMetaRegions() {
