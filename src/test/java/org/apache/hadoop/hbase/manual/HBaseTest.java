@@ -19,7 +19,9 @@
  */
 package org.apache.hadoop.hbase.manual;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -32,11 +34,16 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.manual.utils.HBaseUtils;
 import org.apache.hadoop.hbase.manual.utils.HdfsAppender;
 import org.apache.hadoop.hbase.manual.utils.KillProcessesAndVerify;
 import org.apache.hadoop.hbase.manual.utils.MultiThreadedReader;
 import org.apache.hadoop.hbase.manual.utils.MultiThreadedWriter;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -173,6 +180,12 @@ public class HBaseTest
     System.out.printf("Started append test...");
   }
 
+  private static final String OPT_USAGE_BLOOM = " Bloom filter type, one of " +
+      Arrays.toString(StoreFile.BloomType.values());
+
+  private static final String OPT_USAGE_COMPRESSION = " Compression type, " +
+      "one of " + Arrays.toString(Compression.Algorithm.values());
+
   public static void main(String[] args) {
     try {
       // parse the command line args
@@ -193,6 +206,7 @@ public class HBaseTest
       // create tables if needed
       for(HBaseConfiguration conf : configList_) {
         HBaseUtils.createTableIfNotExists(conf, tableName_, columnFamilies_);
+        applyBloomFilterAndCompression(conf, tableName_, columnFamilies_);
       }
 
       // write some test data in an infinite loop if needed
@@ -217,6 +231,39 @@ public class HBaseTest
     }
   }
 
+  /**
+   * Apply the given Bloom filter type to all column families we care about.
+   */
+  private static void applyBloomFilterAndCompression(HBaseConfiguration conf,
+      byte[] tableName, byte[][] columnFamilies)
+  throws IOException {
+    String bloomStr = cmd_.getOptionValue(OPT_BLOOM);
+    StoreFile.BloomType bloomType = bloomStr == null ? null :
+        StoreFile.BloomType.valueOf(bloomStr);
+
+    String compressStr = cmd_.getOptionValue(OPT_COMPRESSION);
+    Compression.Algorithm compressAlgo = compressStr == null ? null :
+        Compression.Algorithm.valueOf(compressStr);
+
+    if (bloomStr == null && compressStr == null)
+      return;
+
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
+    LOG.info("Disabling table " + Bytes.toString(tableName));
+    admin.disableTable(tableName);
+    for (byte[] cf : columnFamilies) {
+      HColumnDescriptor columnDesc = tableDesc.getFamily(cf);
+      if (bloomStr != null)
+        columnDesc.setBloomFilterType(bloomType);
+      if (compressStr != null)
+        columnDesc.setCompressionType(compressAlgo);
+      admin.modifyColumn(tableName, columnDesc.getName(), columnDesc);
+    }
+    LOG.info("Enabling table " + Bytes.toString(tableName));
+    admin.enableTable(tableName);
+  }
+
   private static String USAGE;
   private static final String HEADER = "HBaseTest";
   private static final String FOOTER = "";
@@ -225,6 +272,8 @@ public class HBaseTest
   private static final String OPT_READ = "read";
   private static final String OPT_KILL = "kill";
   private static final String OPT_APPEND = "append";
+  private static final String OPT_BLOOM = "bloom";
+  private static final String OPT_COMPRESSION = "compression";
   private static final String OPT_TABLE_NAME = "tn";
   static void initAndParseArgs(String[] args) throws ParseException {
     // set the usage object
@@ -241,6 +290,8 @@ public class HBaseTest
     options_.addOption(OPT_READ      , true, OPT_USAGE_READ);
     options_.addOption(OPT_KILL      , true, OPT_USAGE_KILL);
     options_.addOption(OPT_APPEND    , true, OPT_USAGE_APPEND);
+    options_.addOption(OPT_BLOOM     , true, OPT_USAGE_BLOOM);
+    options_.addOption(OPT_COMPRESSION, true, OPT_USAGE_COMPRESSION);
     // parse the passed in options
     CommandLineParser parser = new BasicParser();
     cmd_ = parser.parse(options_, args);
