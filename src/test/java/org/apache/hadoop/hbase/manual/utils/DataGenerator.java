@@ -26,17 +26,6 @@ import org.apache.hadoop.hbase.util.MD5Hash;
 
 public class DataGenerator {
   static Random random_ = new Random();
-  /* one byte fill pattern */
-  public static final String fill1B_     = "-";
-  /* 64 byte fill pattern */
-  public static final String fill64B_    = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789  ";
-  /* alternate 64 byte fill pattern */
-  public static final String fill64BAlt_ = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789+-";
-  /* 1K fill pattern */
-  public static final String fill1K_     = fill64BAlt_+fill64BAlt_+fill64BAlt_+fill64BAlt_+
-                                           fill64BAlt_+fill64BAlt_+fill64BAlt_+fill64BAlt_+
-                                           fill64BAlt_+fill64BAlt_+fill64BAlt_+fill64BAlt_+
-                                           fill64BAlt_+fill64BAlt_+fill64BAlt_+fill64BAlt_;
 
   int minDataSize_ = 0;
   int maxDataSize_ = 0;
@@ -54,38 +43,23 @@ public class DataGenerator {
     maxDataSize_ = maxDataSize;
   }
 
-  public byte[] getDataInSize(long key) {
-    int dataSize = minDataSize_ + random_.nextInt(Math.abs(maxDataSize_ - minDataSize_));
-    StringBuilder sb = new StringBuilder();
-
-    // write the key first
-    int sizeLeft = dataSize;
-    String keyAsString = DataGenerator.md5PrefixedKey(key);
-    sb.append(keyAsString);
-    sizeLeft -= keyAsString.length();
-
-    for(int i = 0; i < sizeLeft/1024; ++i)
-    {
-      sb.append(fill1K_);
-    }
-    sizeLeft = sizeLeft % 1024;
-    for(int i = 0; i < sizeLeft/64; ++i)
-    {
-      sb.append(fill64B_);
-    }
-    sizeLeft = sizeLeft % 64;
-    for(int i = 0; i < dataSize%64; ++i)
-    {
-      sb.append(fill1B_);
-    }
-
-    return sb.toString().getBytes();
+  private static byte[] getDataForKey(String rowKey, int dataSize) {
+    // Need a different local random object since multiple threads might invoke
+    // this method at the same time.
+    Random random = new Random(rowKey.hashCode());
+    byte[] rbytes = new byte[dataSize];
+    random.nextBytes(rbytes);
+    return rbytes;
   }
 
-  public static boolean verify(String rowKey, String actionId, String data) {
-    if(!data.startsWith(rowKey)) {
-      return false;
-    }
-    return true;
+  public byte[] getDataInSize(long key) {
+    String rowKey = DataGenerator.md5PrefixedKey(key);
+    int dataSize = minDataSize_ + random_.nextInt(Math.abs(maxDataSize_ - minDataSize_));
+    return getDataForKey(rowKey, dataSize);
+  }
+
+  public static boolean verify(String rowKey, String actionId, byte[] data) {
+    byte[] expectedData = getDataForKey(rowKey, data.length);
+    return (Bytes.equals(expectedData, data));
   }
 }

@@ -176,10 +176,9 @@ public class MultiThreadedReader extends MultiThreadedAction
             List<KeyValue> keyValues = result.list();
             for(KeyValue kv : keyValues) {
               String actionId = new String(kv.getQualifier());
-              String data = new String(kv.getValue());
 
               // if something does not look right report it
-              if(!DataGenerator.verify(rowKey, actionId, data)) {
+              if (!DataGenerator.verify(rowKey, actionId, kv.getValue())) {
                 reader_.numErrors_.addAndGet(1);
                 LOG.error("Error checking data for key = " + rowKey + ", actionId = " + actionId);
               }
