@@ -53,7 +53,7 @@ if [ $# -gt 1 ] && [ "--sleep" = "$1" ]; then
   export HBASE_SLAVE_SLEEP=$1
   shift
 else
-  export HBASE_SLAVE_SLEEP=15
+  export HBASE_SLAVE_SLEEP=60
 fi
 
 # quick function to get a value from the HBase config file
