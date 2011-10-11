@@ -61,8 +61,8 @@ public class HBaseFsckRepair {
     clearInMaster(conf, actualRegion);
     clearInZK(conf, actualRegion);
 
-    // Clear assignment in META
-    clearMetaAssignment(conf, actualRegion);
+    // Clear assignment in META or ROOT
+    clearAssignment(conf, actualRegion);
   }
 
   private static void clearInMaster(Configuration conf, HRegionInfo region)
@@ -72,7 +72,9 @@ public class HBaseFsckRepair {
     long masterVersion =
       master.getProtocolVersion("org.apache.hadoop.hbase.ipc.HMasterInterface", 25);
     System.out.println("Master protocol version: " + masterVersion);
-    master.clearFromTransition(region);
+    try {
+      master.clearFromTransition(region);
+    } catch (Exception e) {}
   }
 
   private static void clearInZK(Configuration conf, HRegionInfo region)
@@ -91,10 +93,18 @@ public class HBaseFsckRepair {
     rs.closeRegion(region, false);
   }
 
-  private static void clearMetaAssignment(Configuration conf,
+  private static void clearAssignment(Configuration conf,
       HRegionInfo region)
   throws IOException {
-    HTable ht = new HTable(conf, HConstants.META_TABLE_NAME);
+    HTable ht = null;
+    if (region.isMetaTable()) {
+      // Clear assignment in ROOT
+      ht = new HTable(conf, HConstants.ROOT_TABLE_NAME);
+    }
+    else {
+      // Clear assignment in META
+      ht = new HTable(conf, HConstants.META_TABLE_NAME);
+    }
     Delete del = new Delete(region.getRegionName());
     del.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
     del.deleteColumns(HConstants.CATALOG_FAMILY,
