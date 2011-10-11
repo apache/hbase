@@ -838,7 +838,8 @@ public class HConnectionManager {
           if (serverAddress.equals("")) {
             throw new NoServerForRegionException("No server address listed " +
               "in " + Bytes.toString(parentTable) + " for region " +
-              regionInfo.getRegionNameAsString());
+              regionInfo.getRegionNameAsString() + " containing row " +
+              Bytes.toStringBinary(row));
           }
 
           // instantiate the location
