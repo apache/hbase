@@ -23,6 +23,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,6 +37,9 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.Calendar;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,6 +48,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -244,8 +251,20 @@ public class ZooKeeperWrapper implements Watcher {
 
   /** @return String dump of everything in ZooKeeper. */
   @SuppressWarnings({"ConstantConditions"})
-  public String dump() {
+  public String dump() throws IOException {
     StringBuilder sb = new StringBuilder();
+
+    dumpRegionServers(sb);
+    dumpUnassignedRegions(sb);
+    dumpQuorumServers(sb);
+
+    return sb.toString();
+  }
+
+  /**
+   * Dump of master, root and region servers
+   */
+  private void dumpRegionServers(StringBuilder sb) {
     sb.append("\nHBase tree in ZooKeeper is rooted at ").append(parentZNode);
     sb.append("\n  Cluster up? ").append(exists(clusterStateZNode, true));
     sb.append("\n  Master address: ").append(readMasterAddress(null));
@@ -254,6 +273,63 @@ public class ZooKeeperWrapper implements Watcher {
     for (HServerAddress address : scanRSDirectory()) {
       sb.append("\n    - ").append(address);
     }
+  }
+
+  /**
+   * Dump the unassigned regions
+   */
+  private void dumpUnassignedRegions(StringBuilder sb) throws IOException {
+    sb.append("\n  Unassigned regions:");
+
+    DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    Calendar calendar = Calendar.getInstance();
+    boolean noUnassigned = true;
+    // Get a list of all UNASSIGNED regions
+    List<String> nodes = this.listZnodes(rgnsInTransitZNode);
+    if(nodes != null) {
+      // For each unassigned region determine its state
+      // (UNASSIGNED/OFFLINE/CLOSING/CLOSED etc.)
+      // and its HMessage, which can contain additional info
+      for (String node : nodes) {
+        noUnassigned = false;
+        String path = joinPath(rgnsInTransitZNode, node);
+        byte[] data = null;
+        try {
+          data = readZNode(path, null);
+        } catch (IOException ioe) {
+          // This is expected, node has already been processed
+          continue;
+        }
+        // If there is no data for the region it is probably CLOSED?
+        if (data == null) {
+          sb.append("\n    - " + node + " has null data[]");
+        }
+        // Otherwise attach the state to the name of the region
+        else {
+          RegionTransitionEventData rtData = new RegionTransitionEventData();
+          rtData.readFields(new DataInputStream(new ByteArrayInputStream(data)));
+
+          sb.append("\n    - " + node);
+          sb.append(" (" + rtData.getHbEvent().toString() + ")");
+          sb.append(", from server: " + rtData.getRsName());
+          sb.append(", with timestamp: " + rtData.getTimeStamp());
+          calendar.setTimeInMillis(rtData.getTimeStamp());
+          sb.append(" (" + formatter.format(calendar.getTime()) + ")");
+          if (rtData.getHmsg() != null) {
+            sb.append("\n      + Message: " + rtData.getHmsg().toString());
+          }
+        }
+      }
+    }
+    if (noUnassigned) {
+      sb.append("\n    - No unassigned regions found.");
+    }
+  }
+
+  /**
+   * Dump the quorum server statistics.
+   */
+  private void dumpQuorumServers(StringBuilder sb) {
     sb.append("\n  Quorum Server Statistics:");
     String[] servers = quorumServers.split(",");
     for (String server : servers) {
@@ -267,7 +343,6 @@ public class ZooKeeperWrapper implements Watcher {
         sb.append("\n        ERROR: ").append(e.getMessage());
       }
     }
-    return sb.toString();
   }
 
   /**
