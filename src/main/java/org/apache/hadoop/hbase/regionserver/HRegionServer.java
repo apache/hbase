@@ -834,13 +834,16 @@ public class HRegionServer implements HRegionInterface,
    */
   private Throwable cleanup(final Throwable t, final String msg) {
     if (t instanceof NotServingRegionException) {
-        LOG.info(t.toString());
+      // In case of NotServingRegionException we should not make any sanity
+      // checks for the FileSystem or OOM.
+      LOG.info(t.toString());
+      return t;
     } else {
-        if (msg == null) {
-          LOG.error("", RemoteExceptionHandler.checkThrowable(t));
-        } else {
+      if (msg == null) {
+        LOG.error("", RemoteExceptionHandler.checkThrowable(t));
+      } else {
         LOG.error(msg, RemoteExceptionHandler.checkThrowable(t));
-        }
+      }
     }
     if (!checkOOME(t)) {
       checkFileSystem();
@@ -903,9 +906,17 @@ public class HRegionServer implements HRegionInterface,
   public boolean checkFileSystem() {
     if (this.fsOk && this.fs != null) {
       try {
-        FSUtils.checkFileSystemAvailable(this.fs);
+        FSUtils.checkFileSystemAvailable(this.fs, false);
       } catch (IOException e) {
         abort("File System not available", e);
+        // Wait for all threads to exit cleanly.
+        join();
+        // Finally attempt to close the Filesystem, to flush out any open streams.
+        try {
+          this.fs.close();
+        } catch (IOException ie) {
+          LOG.error("Could not close FileSystem", ie);
+        }
         this.fsOk = false;
       }
     }

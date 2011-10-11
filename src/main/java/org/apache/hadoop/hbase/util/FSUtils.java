@@ -113,13 +113,23 @@ public class FSUtils {
     return p;
   }
 
+  public static void checkFileSystemAvailable(final FileSystem fs)
+      throws IOException {
+    checkFileSystemAvailable(fs, true);
+  }
+
   /**
    * Checks to see if the specified file system is available
    *
-   * @param fs filesystem
-   * @throws IOException e
+   * @param fs
+   *          filesystem
+   * @param shutdown
+   *          whether or not to shutdown the filesystem.
+   * @throws IOException
+   *           e
    */
-  public static void checkFileSystemAvailable(final FileSystem fs)
+  public static void checkFileSystemAvailable(final FileSystem fs,
+      boolean shutdown)
   throws IOException {
     if (!(fs instanceof DistributedFileSystem)) {
       return;
@@ -133,10 +143,12 @@ public class FSUtils {
     } catch (IOException e) {
       exception = RemoteExceptionHandler.checkIOException(e);
     }
-    try {
-      fs.close();
-    } catch (Exception e) {
+    if (shutdown) {
+      try {
+        fs.close();
+      } catch (Exception e) {
         LOG.error("file system close failed: ", e);
+      }
     }
     IOException io = new IOException("File system is not available");
     io.initCause(exception);
