@@ -700,25 +700,31 @@ public class Store implements HeapSize {
   }
 
   /*
-   * Gets lowest timestamp from files in a dir
+   * Gets lowest timestamp from candidate StoreFiles
    *
    * @param fs
    * @param dir
    * @throws IOException
    */
-  private static long getLowestTimestamp(FileSystem fs, Path dir) throws IOException {
-    FileStatus[] stats = fs.listStatus(dir);
+  private static long getLowestTimestamp(FileSystem fs,
+      final List<StoreFile> candidates) throws IOException {
+    long minTs = Long.MAX_VALUE;
+    if (candidates.isEmpty()) {
+      return minTs;
+    }
+    Path[] p = new Path[candidates.size()];
+    for (int i = 0; i < candidates.size(); ++i) {
+      p[i] = candidates.get(i).getPath();
+    }
+
+    FileStatus[] stats = fs.listStatus(p);
     if (stats == null || stats.length == 0) {
-      return 0l;
+      return minTs;
     }
-    long lowTimestamp = Long.MAX_VALUE;
-    for (int i = 0; i < stats.length; i++) {
-      long timestamp = stats[i].getModificationTime();
-      if (timestamp < lowTimestamp){
-        lowTimestamp = timestamp;
-      }
+    for (FileStatus s : stats) {
+      minTs = Math.min(minTs, s.getModificationTime());
     }
-    return lowTimestamp;
+    return minTs;
   }
 
   /*
@@ -738,8 +744,7 @@ public class Store implements HeapSize {
         majorCompactionTime == 0) {
       return result;
     }
-    long lowTimestamp = getLowestTimestamp(fs,
-      filesToCompact.get(0).getPath().getParent());
+    long lowTimestamp = getLowestTimestamp(fs, filesToCompact);
     long now = System.currentTimeMillis();
     if (lowTimestamp > 0l && lowTimestamp < (now - this.majorCompactionTime)) {
       // Major compaction time has elapsed.
