@@ -80,6 +80,25 @@ public class MultiPut implements Writable {
     return res;
   }
 
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+
+    sb.append("#regions:" + puts.size() + " {");
+    for (List<Put> items : puts.values()) {
+      sb.append("#puts:" + items.size() + " <");
+      for (Put p : items) {
+        sb.append(p.toStringMax(4096));
+        if (sb.length() > 4096 * 2) {
+          sb.append("....<output truncated>...");
+          return sb.toString();
+        }
+      }
+      sb.append(">");
+    }
+    sb.append("}");
+    return sb.toString();
+  }
 
   @Override
   public void write(DataOutput out) throws IOException {

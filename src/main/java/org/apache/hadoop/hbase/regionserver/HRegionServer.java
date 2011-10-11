@@ -2374,11 +2374,23 @@ public class HRegionServer implements HRegionInterface,
     MultiPutResponse resp = new MultiPutResponse();
 
     // do each region as it's own.
+    int size = puts.puts.size();
+    int index = 0;
     for( Map.Entry<byte[], List<Put>> e: puts.puts.entrySet()) {
       int result = put(e.getKey(), e.getValue());
       resp.addResult(e.getKey(), result);
 
-      e.getValue().clear(); // clear some RAM
+      index++;
+      if (index < size) {
+        // clear each regions list of Puts to save RAM except for the
+        // last one. We will lose the reference to the last one pretty
+        // soon anyway; keep it for a little more, until we get back
+        // to HBaseServer level, where we might need to pretty print
+        // the MultiPut request for debugging slow/large puts.
+        // Note: A single row "put" from client also end up in server
+        // as a multiPut().
+        e.getValue().clear(); // clear some RAM
+      }
     }
 
     return resp;

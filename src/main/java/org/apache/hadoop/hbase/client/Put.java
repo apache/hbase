@@ -408,10 +408,10 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   }
 
   /**
+   * Truncate output buffer at suggested max size.
    * @return String
    */
-  @Override
-  public String toString() {
+  public String toStringMax(int suggestedMaxSize) {
     StringBuilder sb = new StringBuilder();
     sb.append("row=");
     sb.append(Bytes.toString(this.row));
@@ -434,11 +434,23 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
           moreThanOneB = true;
         }
         sb.append(kv.toString());
+        if (sb.length() > suggestedMaxSize) {
+          sb.append("...<output truncated>...");
+          return sb.toString();
+        }
       }
       sb.append(")");
     }
     sb.append("}");
     return sb.toString();
+  }
+
+  /**
+   * @return String
+   */
+  @Override
+  public String toString() {
+    return toStringMax(Integer.MAX_VALUE);
   }
 
   public int compareTo(Row p) {
