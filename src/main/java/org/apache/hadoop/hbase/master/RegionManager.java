@@ -239,7 +239,6 @@ public class RegionManager {
         - this.master.getMasterStartupTime();
     boolean assignmentByLocality = ((masterRunningTime < this.master
         .getApplyPreferredAssignmentPeriod()) &&
-        this.master.isClusterStartup() &&
         this.master.getPreferredRegionToRegionServerMapping() != null) ?
         true : false;
 

@@ -292,7 +292,7 @@ public class HMaster extends Thread implements HMasterInterface,
           1 * 60 * 1000);
 
     // disable scanning dfs by setting applyPreferredAssignmentPeriod to 0
-    if (isClusterStartup && applyPreferredAssignmentPeriod > 0) {
+    if (applyPreferredAssignmentPeriod > 0) {
       try {
         LOG.debug("get preferredRegionToHostMapping; expecting pause here");
         this.preferredRegionToRegionServerMapping =
