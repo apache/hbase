@@ -2696,7 +2696,6 @@ public class TestHRegion extends HBaseTestCase {
 	StoreFile.Reader reader = storefile.getReader();
 	reader.loadFileInfo();
       reader.loadBloomfilter();
-      assertEquals(num_unique_rows * duplicate_multiplier, reader.getEntries());
 	assertEquals(num_unique_rows, reader.getFilterEntries());
     }
 
@@ -2708,9 +2707,7 @@ public class TestHRegion extends HBaseTestCase {
 	StoreFile.Reader reader = storefile.getReader();
 	reader.loadFileInfo();
       reader.loadBloomfilter();
-      assertEquals(num_unique_rows * duplicate_multiplier * num_storefiles,
-						reader.getEntries());
-	assertEquals(10, reader.getFilterEntries());
+	assertEquals(num_unique_rows, reader.getFilterEntries());
     }
 
   }
