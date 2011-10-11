@@ -50,8 +50,10 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
 
   final byte [] FAMILY_NAME = Bytes.toBytes("col");
 
-  private static int regionServerNum =2;
-  private static int regionNum = 8;
+  private static int regionServerNum =4;
+  private static int regionNum = 16;
+  // total region num = region num + root and meta region
+  private static int totalRegionNum = regionNum +2;
 
   /** constructor */
   public TestGlobalMemStoreSize() {
@@ -114,7 +116,7 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
       }
       assertEquals(server.getGlobalMemstoreSize().get(),globalMemStoreSize);
     }
-    assertEquals(totalRegionNum,regionNum);
+    assertEquals(totalRegionNum,totalRegionNum);
 
     for (HRegionServer server : getOnlineRegionServers()) {
       for(HRegion region : server.getOnlineRegions()) {
@@ -148,8 +150,8 @@ public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
    * Wait until all the regions are assigned.
    */
   private void waitForAllRegionsAssigned() {
-    while (getRegionCount() < regionNum) {
-      LOG.debug("Waiting for there to be "+regionNum+" regions, but there are " + getRegionCount() + " right now.");
+    while (getRegionCount() < totalRegionNum) {
+      LOG.debug("Waiting for there to be "+totalRegionNum+" regions, but there are " + getRegionCount() + " right now.");
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {}
