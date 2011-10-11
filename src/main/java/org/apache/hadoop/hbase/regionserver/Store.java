@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.SortedSet;
@@ -112,6 +114,9 @@ public class Store implements HeapSize {
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final String storeNameStr;
   private final boolean inMemory;
+  private int peakStartHour;
+  private int peakEndHour;
+  private final static Calendar calendar = new GregorianCalendar();
 
   /*
    * List of store files inside this store. This is an immutable list that
@@ -206,6 +211,19 @@ public class Store implements HeapSize {
           "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
     }
     this.storefiles = sortAndClone(loadStoreFiles());
+    // Peak time is from [peakStartHour, peakEndHour). Valid numbers are [0, 23]
+    this.peakStartHour = conf.getInt("hbase.peak.start.hour", -1);
+    this.peakEndHour = conf.getInt("hbase.peak.end.hour", -1);
+    if (!isValidHour(this.peakStartHour) || !isValidHour(this.peakEndHour)) {
+      this.peakStartHour = this.peakEndHour = -1;
+      LOG.warn("Invalid start/end hour for peak hour : start = " +
+          this.peakStartHour + " end = " + this.peakEndHour +
+          ". Valid numbers are [0-23]");
+    }
+  }
+
+  private boolean isValidHour(int hour) {
+    return (hour >= 0 && hour <= 23);
   }
 
   public HColumnDescriptor getFamily() {
@@ -743,6 +761,17 @@ public class Store implements HeapSize {
     return isMajorCompaction(candidates);
   }
 
+  boolean isPeakTime(int currentHour) {
+    // Peak time checking is disabled just return false.
+    if (this.peakStartHour == this.peakEndHour) {
+      return false;
+    }
+    if (this.peakStartHour <= this.peakEndHour) {
+      return (currentHour >= this.peakStartHour && currentHour < this.peakEndHour);
+    }
+    return (currentHour >= this.peakStartHour || currentHour < this.peakEndHour);
+  }
+
   /*
    * @param filesToCompact Files to compact. Can be null.
    * @return True if we should run a major compaction.
@@ -766,6 +795,12 @@ public class Store implements HeapSize {
             " because one (major) compacted file only and elapsedTime " +
             elapsedTime + "ms is < ttl=" + this.ttl);
         }
+      } else if (isPeakTime(calendar.get(Calendar.HOUR_OF_DAY))) {
+        LOG.debug("Peak traffic time for HBase, not scheduling any major " +
+            "compactions. Peak hour period is : " + this.peakStartHour + " - " +
+            this.peakEndHour + " current hour is : " +
+            calendar.get(Calendar.HOUR_OF_DAY));
+        result = false;
       } else {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Major compaction triggered on store " + this.storeNameStr +

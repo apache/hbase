@@ -575,4 +575,30 @@ public class TestStore extends TestCase {
     result = HBaseTestingUtility.getFromStoreFile(store, get);
     assertTrue(result.size()==0);
   }
+
+  public void testIsPeakTime() throws IOException {
+    String methodName = "/testIsPeakTime";
+    final int[][] testcases = new int[][] { { 11, 15 }, { 23, 3 }, { 23, 0 },
+        { 0, 0 }, { 0, 23 } };
+    final int [][] tests = new int[][] {{ 10, 13, 16 }, { 0, 1, 4 },
+      { 22, 1, 23 }, { 1, 0, 2 }, { 0, 23, 16 }};
+    final boolean[][] answers = new boolean[][] {{false, true, false},
+      {true, true, false}, {false, false, true}, {false, false , false},
+      {true, false, true}};
+    assertEquals(testcases.length, tests.length);
+    assertEquals(tests.length, answers.length);
+    for (int i = 0; i < testcases.length; i++) {
+      int s = testcases[i][0];
+      int e = testcases[i][1];
+      Configuration conf = HBaseConfiguration.create();
+      conf.setInt("hbase.peak.start.hour", s);
+      conf.setInt("hbase.peak.end.hour", e);
+      assertEquals(tests[i].length, answers[i].length);
+      for (int j = 0; j < tests[i].length; j++) {
+        String method = methodName + i + "_" + j;
+        init(method, conf);
+        assertEquals(answers[i][j], this.store.isPeakTime(tests[i][j]));
+      }
+    }
+  }
 }
