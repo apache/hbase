@@ -33,6 +33,13 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PatternOptionBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -58,6 +65,7 @@ import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  * Check consistency among the in-memory states of the master and the
@@ -74,6 +82,7 @@ public class HBaseFsck {
   private HConnection connection;
   private TreeMap<String, HbckInfo> regionInfo = new TreeMap<String, HbckInfo>();
   private TreeMap<String, TInfo> tablesInfo = new TreeMap<String, TInfo>();
+  private Set<HServerAddress> couldNotScan = Sets.newHashSet();
   ErrorReporter errors = new PrintingErrorReporter();
 
   private static boolean details = false; // do we display the full report
@@ -88,6 +97,7 @@ public class HBaseFsck {
   private int numThreads = MAX_NUM_THREADS;
 
   ThreadPoolExecutor executor;         // threads to retrieve data from regionservers
+  private List<WorkItem> asyncWork = Lists.newArrayList();
 
   /**
    * Constructor
@@ -180,10 +190,13 @@ public class HBaseFsck {
     }
 
     // Determine what's deployed
-    processRegionServers(regionServers);
+    scanRegionServers(regionServers);
 
     // Determine what's on HDFS
-    checkHdfs();
+    scanHdfs();
+
+    // finish all async tasks before analyzing what we have
+    finishAsyncWork();
 
     // Check consistency
     checkConsistency();
@@ -201,7 +214,7 @@ public class HBaseFsck {
    * Scan HDFS for all regions, recording their information into
    * regionInfo
    */
-  void checkHdfs() throws IOException, InterruptedException {
+  void scanHdfs() throws IOException, InterruptedException {
     Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
     FileSystem fs = rootDir.getFileSystem(conf);
 
@@ -222,23 +235,12 @@ public class HBaseFsck {
     if (!foundVersionFile) {
       errors.reportError("Version file does not exist in root dir " + rootDir);
     }
-    //
-    // level 1:  <HBASE_DIR>/*
-    WorkItemHdfsDir[] dirs = new WorkItemHdfsDir[tableDirs.size()];
-    int num = 0;
-    for (FileStatus tableDir : tableDirs) {
-      dirs[num] = new WorkItemHdfsDir(this, fs, errors, tableDir);
-      executor.execute(dirs[num]);
-      num++;
-    }
 
-    // wait for all directories to be done
-    for (int i = 0; i < num; i++) {
-      synchronized (dirs[i]) {
-        while (!dirs[i].isDone()) {
-          dirs[i].wait();
-        }
-      }
+    // scan all the HDFS directories in parallel
+    for (FileStatus tableDir : tableDirs) {
+      WorkItem work = new WorkItemHdfsDir(this, fs, errors, tableDir);
+      executor.execute(work);
+      asyncWork.add(work);
     }
   }
 
@@ -271,27 +273,27 @@ public class HBaseFsck {
    * @param regionServerList - the list of region servers to connect to
    * @throws IOException if a remote or network exception occurs
    */
-  void processRegionServers(Collection<HServerInfo> regionServerList)
+  void scanRegionServers(Collection<HServerInfo> regionServerList)
     throws IOException, InterruptedException {
-
-    WorkItemRegion[] work = new WorkItemRegion[regionServerList.size()];
-    int num = 0;
 
     // loop to contact each region server in parallel
     for (HServerInfo rsinfo:regionServerList) {
-      work[num] = new WorkItemRegion(this, rsinfo, errors, connection);
-      executor.execute(work[num]);
-      num++;
+      WorkItem work = new WorkItemRegion(this, rsinfo, errors, connection);
+      executor.execute(work);
+      asyncWork.add(work);
     }
+  }
 
-    // wait for all submitted tasks to be done
-    for (int i = 0; i < num; i++) {
-      synchronized (work[i]) {
-        while (!work[i].isDone()) {
-          work[i].wait();
+  void finishAsyncWork() throws InterruptedException {
+    // wait for all directories to be done
+    for (WorkItem work : this.asyncWork) {
+      synchronized (work) {
+        while (!work.isDone()) {
+          work.wait();
         }
       }
     }
+
   }
 
   /**
@@ -359,16 +361,22 @@ public class HBaseFsck {
       errors.reportError("Region " + descriptiveName + " found in META, but not in HDFS, " +
         "and deployed on " + Joiner.on(", ").join(hbi.deployedOn));
     } else if (inMeta && inHdfs && !isDeployed && shouldBeDeployed) {
-      errors.reportWarning("Region " + descriptiveName + " not deployed on any region server.");
-      // If we are trying to fix the errors
-      if (fix == FixState.ALL) {
-        errors.print("Trying to fix unassigned region...");
-        if (HBaseFsckRepair.fixUnassigned(this.conf, hbi.metaEntry)) {
-          setShouldRerun();
+      if (couldNotScan.contains(hbi.metaEntry.regionServer)) {
+        LOG.info("Could not verify region " + descriptiveName
+            + " because could not scan supposed owner "
+            + hbi.metaEntry.regionServer);
+      } else {
+        errors.reportWarning("Region " + descriptiveName + " not deployed on any region server.");
+        // If we are trying to fix the errors
+        if (fix == FixState.ALL) {
+          errors.print("Trying to fix unassigned region...");
+          if (HBaseFsckRepair.fixUnassigned(this.conf, hbi.metaEntry)) {
+            setShouldRerun();
+          }
         }
       }
     } else if (inMeta && inHdfs && isDeployed && !shouldBeDeployed) {
-      errors.reportError("Region " + descriptiveName + " has should not be deployed according " +
+      errors.reportError("Region " + descriptiveName + " should not be deployed according " +
         "to META, but is deployed on " + Joiner.on(", ").join(hbi.deployedOn));
     } else if (inMeta && inHdfs && isMultiplyDeployed) {
       errors.reportFixableError("Region " + descriptiveName +
@@ -415,7 +423,8 @@ public class HBaseFsck {
       if (hbi.metaEntry == null) continue;
       if (hbi.metaEntry.regionServer == null) continue;
       if (hbi.foundRegionDir == null) continue;
-      if (hbi.deployedOn.size() != 1) continue;
+      if (hbi.deployedOn.isEmpty()
+          && !couldNotScan.contains(hbi.metaEntry.regionServer)) continue;
       if (hbi.onlyEdits) continue;
 
       // We should be safe here
@@ -563,6 +572,10 @@ public class HBaseFsck {
       }
     }
     return uniqueTables.toArray(new HTableDescriptor[uniqueTables.size()]);
+  }
+
+  private synchronized boolean addFailedServer(HServerAddress server) {
+    return couldNotScan.add(server);
   }
 
   /**
@@ -854,10 +867,14 @@ public class HBaseFsck {
     }
   }
 
+  static interface WorkItem extends Runnable {
+    boolean isDone();
+  }
+
   /**
    * Contact a region server and get all information from it
    */
-  static class WorkItemRegion implements Runnable {
+  static class WorkItemRegion implements WorkItem {
     private HBaseFsck hbck;
     private HServerInfo rsinfo;
     private ErrorReporter errors;
@@ -874,7 +891,7 @@ public class HBaseFsck {
     }
 
     // is this task done?
-    synchronized boolean isDone() {
+    public synchronized boolean isDone() {
       return done;
     }
 
@@ -908,8 +925,9 @@ public class HBaseFsck {
           hbi.addServer(rsinfo.getServerAddress());
         }
       } catch (IOException e) {          // unable to connect to the region server.
-        errors.reportError("RegionServer: " + rsinfo.getServerName() +
-                      " Unable to fetch region information. " + e);
+        errors.reportWarning("RegionServer: " + rsinfo.getServerName()
+          + " Unable to fetch region information. " + e);
+        hbck.addFailedServer(rsinfo.getServerAddress());
       } finally {
         done = true;
         notifyAll(); // wakeup anybody waiting for this item to be done
@@ -920,7 +938,7 @@ public class HBaseFsck {
   /**
    * Contact hdfs and get all information about spcified table directory.
    */
-  static class WorkItemHdfsDir implements Runnable {
+  static class WorkItemHdfsDir implements WorkItem {
     private HBaseFsck hbck;
     private FileStatus tableDir;
     private ErrorReporter errors;
@@ -936,7 +954,7 @@ public class HBaseFsck {
       this.done = false;
     }
 
-    synchronized boolean isDone() {
+    public synchronized boolean isDone() {
       return done;
     }
 
@@ -1046,66 +1064,90 @@ public class HBaseFsck {
     timelag = ms;
   }
 
-  protected static void printUsageAndExit() {
-    System.err.println("Usage: fsck [opts] ");
-    System.err.println(" where [opts] are:");
-    System.err.println("   -details Display full report of all regions.");
-    System.err.println("   -timelag {timeInSeconds}  Process only regions that " +
-                       " have not experienced any metadata updates in the last " +
-                       " {{timeInSeconds} seconds.");
-    System.err.println("   -fix [-w] [-y] Try to fix some of the errors." +
-                       "           -y Do not prompt for reconfirmation from users." +
-                       "           -w Try to fix warnings as well");
-    System.err.println("   -summary Print only summary of the tables and status.");
-    Runtime.getRuntime().exit(-2);
-  }
-
   /**
    * Main program
+   *
    * @param args
+   * @throws ParseException
    */
   public static void main(String [] args)
-    throws IOException, MasterNotRunningException, InterruptedException {
+ throws IOException,
+      MasterNotRunningException, InterruptedException, ParseException {
 
-    // create a fsck object
+    Options opt = new Options();
+    opt.addOption(OptionBuilder.withArgName("property=value").hasArg()
+        .withDescription("Override HBase Configuration Settings").create("D"));
+    opt.addOption(OptionBuilder.withArgName("timeInSeconds").hasArg()
+      .withDescription("Ignore regions with metadata updates in the last {timeInSeconds}.")
+      .withType(PatternOptionBuilder.NUMBER_VALUE).create("timelag"));
+    opt.addOption(OptionBuilder.withArgName("timeInSeconds").hasArg()
+      .withDescription("Stop scan jobs after a fixed time & analyze existing data.")
+      .withType(PatternOptionBuilder.NUMBER_VALUE).create("timeout"));
+    opt.addOption("fix", false, "Try to fix some of the errors.");
+    opt.addOption("y", false, "Do not prompt for reconfirmation from users on fix.");
+    opt.addOption("w", false, "Try to fix warnings as well as errors.");
+    opt.addOption("summary", false, "Print only summary of the tables and status.");
+    opt.addOption("detail", false, "Display full report of all regions.");
+    opt.addOption("h", false, "Display this help");
+    CommandLine cmd = new GnuParser().parse(opt, args);
+
+    // any unknown args or -h
+    if (!cmd.getArgList().isEmpty() || cmd.hasOption("h")) {
+      new HelpFormatter().printHelp("hbck", opt);
+      return;
+    }
+
     Configuration conf = HBaseConfiguration.create();
     conf.set("fs.defaultFS", conf.get("hbase.rootdir"));
+
+    if (cmd.hasOption("D")) {
+      for (String confOpt : cmd.getOptionValues("D")) {
+        String[] kv = confOpt.split("=", 2);
+        if (kv.length == 2) {
+          conf.set(kv[0], kv[1]);
+          LOG.debug("-D configuration override: " + kv[0] + "=" + kv[1]);
+        } else {
+          throw new ParseException("-D option format invalid: " + confOpt);
+        }
+      }
+    }
+    if (cmd.hasOption("timeout")) {
+      Object timeout = cmd.getParsedOptionValue("timeout");
+      if (timeout instanceof Long) {
+        conf.setLong(HConstants.HBASE_RPC_TIMEOUT_KEY, ((Long) timeout).longValue() * 1000);
+      } else {
+        throw new ParseException("-timeout needs a long value.");
+      }
+    }
+
+    // create a fsck object
     HBaseFsck fsck = new HBaseFsck(conf);
     fsck.setTimeLag(HBaseFsckRepair.getEstimatedFixTime(conf));
 
-    // Process command-line args.
-    for (int i = 0; i < args.length; i++) {
-      String cmd = args[i];
-      if (cmd.equals("-details")) {
-        fsck.displayFullReport();
-      } else if (cmd.equals("-timelag")) {
-        if (i == args.length - 1) {
-          System.err.println("HBaseFsck: -timelag needs a value.");
-          printUsageAndExit();
-        }
-        try {
-          long timelag = Long.parseLong(args[i+1]);
-          fsck.setTimeLag(timelag * 1000);
-        } catch (NumberFormatException e) {
-          System.err.println("-timelag needs a numeric value.");
-          printUsageAndExit();
-        }
-        i++;
-      } else if (cmd.equals("-fix")) {
-        fsck.setFixState(FixState.ERROR);
-      } else if (cmd.equals("-w")) {
-        fsck.setFixState(FixState.ALL);
-      } else if (cmd.equals("-y")) {
-        fsck.setPromptResponse(true);
-      } else if (cmd.equals("-summary")) {
-        fsck.setSummary();
+    if (cmd.hasOption("details")) {
+      fsck.displayFullReport();
+    }
+    if (cmd.hasOption("timelag")) {
+      Object timelag = cmd.getParsedOptionValue("timelag");
+      if (timelag instanceof Long) {
+        fsck.setTimeLag(((Long) timelag).longValue() * 1000);
       } else {
-        String str = "Unknown command line option : " + cmd;
-        LOG.info(str);
-        System.out.println(str);
-        printUsageAndExit();
+        throw new ParseException("-timelag needs a long value.");
       }
     }
+    if (cmd.hasOption("fix")) {
+      fsck.setFixState(FixState.ERROR);
+    }
+    if (cmd.hasOption("w")) {
+      fsck.setFixState(FixState.ALL);
+    }
+    if (cmd.hasOption("y")) {
+      fsck.setPromptResponse(true);
+    }
+    if (cmd.equals("summary")) {
+        fsck.setSummary();
+    }
+
     int code = -1;
     try {
       // do the real work of fsck

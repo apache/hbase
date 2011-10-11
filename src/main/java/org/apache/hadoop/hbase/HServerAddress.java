@@ -147,7 +147,6 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   @Override
   public int hashCode() {
     int result = address.hashCode();
-    result ^= stringValue.hashCode();
     return result;
   }
 
