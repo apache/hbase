@@ -948,8 +948,7 @@ public class ThriftServer {
                                                   byte [] startRow, byte [] stopRow,
                                                   byte [] filterString)
       throws IOError, TException {
-      return scannerOpenWithStopAndFilterStringTs(tableName, startRow,
-                                                  HConstants.EMPTY_END_ROW,
+      return scannerOpenWithStopAndFilterStringTs(tableName, startRow, stopRow,
                                                   filterString, Long.MAX_VALUE);
     }
 

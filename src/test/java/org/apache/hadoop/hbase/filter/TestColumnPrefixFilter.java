@@ -22,13 +22,52 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class TestColumnPrefixFilter {
+  static final Log LOG = LogFactory.getLog(TestColumnPrefixFilter.class);
+
 
   private final static HBaseTestingUtility TEST_UTIL = new
       HBaseTestingUtility();
 
   @Test
+  public void testColumnPrefixFastForwarding() throws IOException {
+    String family = "Family";
+    HTableDescriptor htd = new HTableDescriptor("TestColumnPrefixFilter");
+    htd.addFamily(new HColumnDescriptor(family));
+    HRegionInfo info = new HRegionInfo(htd, null, null, false);
+    HRegion region = HRegion.createHRegion(info, HBaseTestingUtility.
+        getTestDir(), TEST_UTIL.getConfiguration());
+    String row;
+    Put p;
+    row = "001";
+    p = new Put(Bytes.toBytes(row));
+    p.add(KeyValueTestUtil.create(row, family, "abc", 1, "value001"));
+    region.put(p);
+    row = "2";
+    p = new Put(Bytes.toBytes(row));
+    p.add(KeyValueTestUtil.create(row, family, "xyz", 1, "value009"));
+    region.put(p);
+
+    ColumnPrefixFilter filter;
+    Scan scan = new Scan(Bytes.toBytes("001"), Bytes.toBytes("0011"));
+    scan.setMaxVersions();
+    filter = new ColumnPrefixFilter(Bytes.toBytes("xyz"));
+    scan.setFilter(filter);
+    InternalScanner scanner = region.getScanner(scan);
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    int i = 0;
+    while(scanner.next(results)) { LOG.info("scan iter " + i++); }
+    if (results.size() > 0) {
+      LOG.info("results[0] = " + results.get(0).toString());
+    }
+    assertEquals(0, results.size());
+  }
+
+
+  //@Test
   public void testColumnPrefixFilter() throws IOException {
     String family = "Family";
     HTableDescriptor htd = new HTableDescriptor("TestColumnPrefixFilter");
