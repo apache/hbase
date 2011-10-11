@@ -3,12 +3,13 @@
   import="org.codehaus.jettison.json.JSONArray"
   import="org.codehaus.jettison.json.JSONException"
   import="org.codehaus.jettison.json.JSONObject"
+  import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.hbase.ipc.HBaseRPC"
   import="org.apache.hadoop.hbase.monitoring.MonitoredTask"
   import="org.apache.hadoop.hbase.monitoring.TaskMonitor" %><%
   TaskMonitor taskMonitor = TaskMonitor.get();
-  long now = System.currentTimeMillis();
   List<MonitoredTask> tasks = taskMonitor.getTasks();
+  long now = System.currentTimeMillis();
   Collections.reverse(tasks);
 %><?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
@@ -27,7 +28,20 @@
   <% if(tasks.isEmpty()) { %>
     <p>No tasks currently running on this node.</p>
   <% } else { %>
-    <table>
+    <table style="float:right">
+      <tr class="task-monitor-RUNNING">
+        <td>RUNNING</td>
+      </tr>
+      <tr class="task-monitor-COMPLETE">
+        <td>COMPLETE</td>
+      </tr>
+      <tr class="task-monitor-ABORTED">
+        <td>ABORTED</td>
+      </tr>
+    </table>
+    <p>Each task's state is indicated by its background color according to the
+    key.</p>
+    <table style="clear:right">
       <tr>
         <th>Description</th>
         <th>Status</th>
@@ -37,9 +51,13 @@
         <tr class="task-monitor-<%= task.getState() %>">
           <td><%= task.getDescription() %></td>
           <td><%= task.getStatus() %></td>
-          <td><%= now - task.getStartTime() %>ms
-            <% if(task.getCompletionTimestamp() != -1) { %>
-              (Completed <%= now - task.getCompletionTimestamp() %>ms ago)
+          <td><%= StringUtils.formatTimeDiff(now, task.getStartTime()) %>
+            <% if (task.getState() == MonitoredTask.State.COMPLETE) { %>
+              (Completed <%= StringUtils.formatTimeDiff(now,
+                              task.getCompletionTimestamp()) %> ago)
+            <% } else if (task.getState() == MonitoredTask.State.ABORTED) { %>
+              (Aborted <%= StringUtils.formatTimeDiff(now,
+                            task.getCompletionTimestamp()) %> ago)
             <% } %>
           </td>
         </tr>

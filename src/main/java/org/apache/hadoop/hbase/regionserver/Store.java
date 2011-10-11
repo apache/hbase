@@ -655,6 +655,10 @@ public class Store implements HeapSize {
       StoreFile.Writer writer = compactStores(filesToCompact, cr.isMajor(), maxId);
       // Move the compaction into place.
       sf = completeCompaction(filesToCompact, writer);
+    } catch (IOException ioe) {
+      // rather than leak the status, we abort here, then rethrow the exception
+      status.abort("IOException thrown");
+      throw ioe;
     } finally {
       synchronized (filesCompacting) {
         filesCompacting.removeAll(filesToCompact);

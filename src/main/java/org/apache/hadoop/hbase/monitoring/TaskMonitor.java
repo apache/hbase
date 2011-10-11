@@ -89,6 +89,7 @@ public class TaskMonitor {
         // assume it's done.
         if (stat.getState() == MonitoredTaskImpl.State.RUNNING) {
           LOG.warn("Status " + stat + " appears to have been leaked");
+          stat.setStatus("monitor leaked");
           stat.cleanup();
         }
       }

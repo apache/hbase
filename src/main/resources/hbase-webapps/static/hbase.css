@@ -24,5 +24,5 @@ tr.task-monitor-IDLE td {
 }
 
 tr.task-monitor-ABORTED td {
-  background-color: #ffa;
+  background-color: #f66;
 }
