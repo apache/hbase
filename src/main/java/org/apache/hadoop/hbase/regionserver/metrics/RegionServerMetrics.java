@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.metrics.HBaseInfo;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
 import org.apache.hadoop.hbase.metrics.PersistentMetricsTimeVaryingRate;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Strings;
@@ -156,6 +157,18 @@ public class RegionServerMetrics implements Updater {
     new MetricsTimeVaryingRate("fsGroupSyncLatency", registry);
 
   /**
+   * Memstore Insert time (in ms).
+   */
+  public final MetricsTimeVaryingRate memstoreInsertTime =
+    new MetricsTimeVaryingRate("memstoreInsert", registry);
+
+  public final MetricsTimeVaryingRate rowLockTime =
+    new MetricsTimeVaryingRate("rowLock", registry);
+
+  public final MetricsTimeVaryingRate rwccWaitTime =
+    new MetricsTimeVaryingRate("rwccWait", registry);
+
+  /**
    * time each scheduled compaction takes
    */
   protected final PersistentMetricsTimeVaryingRate compactionTime =
@@ -260,12 +273,22 @@ public class RegionServerMetrics implements Updater {
        *      by compaction & flush metrics.
        */
 
+      int writeOps = (int)HRegion.getWriteOps();
+      if (writeOps != 0) {
+        this.memstoreInsertTime.inc(writeOps, HRegion.getMemstoreInsertTime());
+        this.rwccWaitTime.inc(writeOps, HRegion.getRWCCWaitTime());
+        this.rowLockTime.inc(writeOps, HRegion.getRowLockTime());
+      }
+
       // push the result
       this.fsReadLatency.pushMetric(this.metricsRecord);
       this.fsWriteLatency.pushMetric(this.metricsRecord);
       this.fsWriteSize.pushMetric(this.metricsRecord);
       this.fsSyncLatency.pushMetric(this.metricsRecord);
       this.fsGroupSyncLatency.pushMetric(this.metricsRecord);
+      this.memstoreInsertTime.pushMetric(this.metricsRecord);
+      this.rowLockTime.pushMetric(this.metricsRecord);
+      this.rwccWaitTime.pushMetric(this.metricsRecord);
       this.compactionTime.pushMetric(this.metricsRecord);
       this.compactionSize.pushMetric(this.metricsRecord);
       this.flushTime.pushMetric(this.metricsRecord);
@@ -293,6 +316,9 @@ public class RegionServerMetrics implements Updater {
     this.fsWriteSize.resetMinMax();
     this.fsSyncLatency.resetMinMax();
     this.fsGroupSyncLatency.resetMinMax();
+    this.memstoreInsertTime.resetMinMax();
+    this.rowLockTime.resetMinMax();
+    this.rwccWaitTime.resetMinMax();
   }
 
   /**

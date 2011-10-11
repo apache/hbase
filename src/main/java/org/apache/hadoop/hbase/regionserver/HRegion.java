@@ -234,6 +234,29 @@ public class HRegion implements HeapSize { // , Writable{
   private final ReadWriteConsistencyControl rwcc =
       new ReadWriteConsistencyControl();
 
+  public static volatile AtomicLong writeOps = new AtomicLong(0);
+  public static volatile AtomicLong rowLockTime = new AtomicLong(0);
+  public static volatile AtomicLong rwccWaitTime = new AtomicLong(0);
+  public static volatile AtomicLong memstoreInsertTime = new AtomicLong(0);
+
+  public static final long getWriteOps() {
+    return writeOps.getAndSet(0);
+  }
+
+  public static final long getRowLockTime()
+  {
+    return rowLockTime.getAndSet(0);
+  }
+
+  public static final long getRWCCWaitTime()
+  {
+    return rwccWaitTime.getAndSet(0);
+  }
+
+  public static final long getMemstoreInsertTime() {
+    return memstoreInsertTime.getAndSet(0);
+  }
+
   /**
    * Name of the region info file that resides just under the region directory.
    */
@@ -1296,6 +1319,7 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       if(lockid == null) releaseRowLock(lid);
       splitsAndClosesLock.readLock().unlock();
+      HRegion.writeOps.incrementAndGet();
     }
   }
 
@@ -1385,6 +1409,7 @@ public class HRegion implements HeapSize { // , Writable{
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
     }
+    HRegion.writeOps.incrementAndGet();
   }
 
   /**
@@ -1448,6 +1473,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
     } finally {
       splitsAndClosesLock.readLock().unlock();
+      HRegion.writeOps.incrementAndGet();
     }
   }
 
@@ -1511,6 +1537,7 @@ public class HRegion implements HeapSize { // , Writable{
         requestFlush();
       }
     }
+    HRegion.writeOps.incrementAndGet();
     return batchOp.retCodes;
   }
 
@@ -1843,6 +1870,7 @@ public class HRegion implements HeapSize { // , Writable{
    * new entries.
    */
   private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap) {
+    long start = EnvironmentEdgeManager.currentTimeMillis();
     ReadWriteConsistencyControl.WriteEntry w = null;
     long size = 0;
     try {
@@ -1859,7 +1887,12 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
     } finally {
+      long now = EnvironmentEdgeManager.currentTimeMillis();
+      HRegion.memstoreInsertTime.addAndGet(now - start);
+      start = now;
       rwcc.completeMemstoreInsert(w);
+      now = EnvironmentEdgeManager.currentTimeMillis();
+      HRegion.rwccWaitTime.addAndGet(now - start);
     }
     return size;
   }
@@ -2285,7 +2318,10 @@ public class HRegion implements HeapSize { // , Writable{
   throws IOException {
     Integer lid = null;
     if (lockid == null) {
+      long start = EnvironmentEdgeManager.currentTimeMillis();
       lid = internalObtainRowLock(row, waitForLock);
+      long end = EnvironmentEdgeManager.currentTimeMillis();
+      HRegion.rowLockTime.addAndGet(end - start);
     } else {
       if (!isRowLocked(lockid)) {
         throw new IOException("Invalid row lock");
@@ -3122,6 +3158,7 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       this.updatesLock.readLock().unlock();
       releaseRowLock(lid);
+      HRegion.writeOps.incrementAndGet();
     }
 
     if (flush) {
