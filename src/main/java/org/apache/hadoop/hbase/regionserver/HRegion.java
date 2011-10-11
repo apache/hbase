@@ -2437,7 +2437,7 @@ public class HRegion implements HeapSize { // , Writable{
     if (!(o instanceof HRegion)) {
       return false;
     }
-    return this.hashCode() == ((HRegion)o).hashCode();
+    return Bytes.equals(this.getRegionName(), ((HRegion) o).getRegionName());
   }
 
   @Override
