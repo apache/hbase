@@ -2174,8 +2174,18 @@ public class HRegionServer implements HRegionInterface,
     return getOnlineRegions().toArray(new HRegion[0]);
   }
 
-  public List<String> getStoreFileList(byte[] regionName, byte[] columnFamily) {
+  public List<String> getStoreFileList(byte[] regionName, byte[] columnFamily)
+    throws IllegalArgumentException {
 	  HRegion region = getOnlineRegion(regionName);
+    if (region == null) {
+      throw new IllegalArgumentException("No region : " + new String(regionName)
+          + " available");
+    }
+    Store store = region.getStore(columnFamily);
+    if (store == null) {
+      throw new IllegalArgumentException("No column family : " +
+          new String(columnFamily) + " available");
+    }
 	  List<StoreFile> storeFiles = region.getStore(columnFamily).getStorefiles();
 	  List<String> storeFileNames = new ArrayList<String>(storeFiles.size());
 	  for (StoreFile storeFile: storeFiles) {
