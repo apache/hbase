@@ -787,6 +787,37 @@ public class HBaseAdmin {
   }
 
   /**
+   * Move a region. For expert-admins.
+   * Asynchronous operation. Region will be be assigned to the specified
+   * preferred host, then closed.
+   *
+   * @param regionName region name to move
+   * @param regionServer the "hostname:port" of the region server to which to
+   * move the region
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void moveRegion(final String regionName, final String regionServer)
+  throws IOException {
+    moveRegion(Bytes.toBytes(regionName), regionServer);
+  }
+
+  /**
+   * Move a region. For expert-admins.
+   * Asynchronous operation. Region will be be assigned to the specified
+   * preferred host, then closed.
+   *
+   * @param regionName region name to move
+   * @param regionServer the "hostname:port" of the region server to which to
+   * move the region
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void moveRegion(final byte[] regionName, final String regionServer)
+  throws IOException {
+    modifyTable(HConstants.META_TABLE_NAME, HConstants.Modify.MOVE_REGION,
+      new Object[]{regionName, regionServer});
+  }
+
+  /**
    * Flush a table or an individual region.
    * Asynchronous operation.
    *
@@ -1114,6 +1145,10 @@ public class HBaseAdmin {
         this.master.modifyTable(tableName, op, arr);
         break;
 
+      case MOVE_REGION:
+        if (args == null || args.length < 2) {
+          throw new IllegalArgumentException("Requires at least a region name and hostname");
+        }
       case CLOSE_REGION:
         if (args == null || args.length < 1) {
           throw new IllegalArgumentException("Requires at least a region name");

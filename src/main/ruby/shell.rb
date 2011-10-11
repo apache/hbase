@@ -251,6 +251,7 @@ Shell.load_command_group(
     enable_region
     flush
     major_compact
+    move_region
     shutdown
     split
     zk

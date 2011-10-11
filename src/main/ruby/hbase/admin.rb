@@ -168,6 +168,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Moves a region
+    def move_region(region_name, server)
+      @admin.moveRegion(region_name, server)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Enables a region
     def enable_region(region_name)
       online(region_name, false)

@@ -306,6 +306,7 @@ public final class HConstants {
   /** modifyTable op for replacing the table descriptor */
   public static enum Modify {
     CLOSE_REGION,
+    MOVE_REGION,
     TABLE_COMPACT,
     TABLE_FLUSH,
     TABLE_MAJOR_COMPACT,

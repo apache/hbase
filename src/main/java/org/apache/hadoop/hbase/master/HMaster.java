@@ -1366,6 +1366,27 @@ public class HMaster extends Thread implements HMasterInterface,
       }
       break;
 
+    case MOVE_REGION: {
+      if (args == null || args.length != 2) {
+        throw new IOException("Requires a region name and a hostname");
+      }
+      // Arguments are region name and an region server hostname.
+      byte [] regionname = ((ImmutableBytesWritable)args[0]).get();
+
+      // Need hri
+      Result rr = getFromMETA(regionname, HConstants.CATALOG_FAMILY);
+      HRegionInfo hri = getHRegionInfo(rr.getRow(), rr);
+      String hostnameAndPort = Bytes.toString(((ImmutableBytesWritable)args[1]).get());
+      HServerAddress serverAddress = new HServerAddress(hostnameAndPort);
+
+      // Assign the specified host to be the preferred host for the specified region.
+      this.regionManager.addRegionToPreferredAssignment(serverAddress, hri);
+
+      // Close the region so that it will be re-opened by the preferred host.
+      modifyTable(tableName, HConstants.Modify.CLOSE_REGION, new Writable[]{args[0]});
+      break;
+    }
+
     case CLOSE_REGION:
       if (args == null || args.length < 1 || args.length > 2) {
         throw new IOException("Requires at least a region name; " +
