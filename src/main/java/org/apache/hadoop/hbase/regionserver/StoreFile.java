@@ -1069,10 +1069,24 @@ public class StoreFile {
       }
     }
 
+    /**
+     * Checks whether the given scan passes the Bloom filter (if present). Only
+     * checks Bloom filters for single-row or single-row-column scans. Bloom
+     * filter checking for multi-gets is implemented as part of the store
+     * scanner system (see {@link StoreFileScanner#seekExactly}) and uses
+     * the lower-level API {@link #passesBloomFilter(byte[], int, int, byte[],
+     * int, int)}.
+     *
+     * @param scan the scan specification. Used to determine the row, and to
+     *          check whether this is a single-row ("get") scan.
+     * @param columns the set of columns. Only used for row-column Bloom
+     *          filters.
+     * @return true if the scan with the given column set passes the Bloom
+     *         filter, or if the Bloom filter is not applicable for the scan.
+     *         False if the Bloom filter is applicable and the scan fails it.
+     */
     private boolean passesBloomFilter(Scan scan,
         final SortedSet<byte[]> columns) {
-      // Multi-column non-get scans will use Bloom filters through the
-      // lower-level API function that this function calls.
       if (!scan.isGetScan())
         return true;
 

@@ -97,7 +97,12 @@ public class ScanQueryMatcher {
       // We can share the ExplicitColumnTracker, diff is we reset
       // between rows, not between storefiles.
       this.columns = new ExplicitColumnTracker(columns,maxVersions);
-      exactColumnQuery = true;
+
+      // Set the "exact column query" flag to enable row-column Bloom filter
+      // optimization. We avoid checking row-column Bloom filters twice for
+      // single-column get queries, because they are already being checked
+      // in StoreFile.shouldSeek.
+      exactColumnQuery = !(scan.isGetScan() && columns.size() == 1);
     }
   }
 
