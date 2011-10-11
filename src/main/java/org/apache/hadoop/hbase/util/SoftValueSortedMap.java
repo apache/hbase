@@ -23,11 +23,11 @@ import java.lang.ref.ReferenceQueue;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 /**
  * A SortedMap implementation that uses Soft Reference values
@@ -173,11 +173,11 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   public synchronized Set<Map.Entry<K,V>> entrySet() {
     checkReferences();
     Set<Map.Entry<K, SoftValue<K,V>>> entries = this.internalMap.entrySet();
-    Set<Map.Entry<K, V>> real_entries = new TreeSet<Map.Entry<K,V>>();
+    Set<Map.Entry<K, V>> realEntries = new LinkedHashSet<Map.Entry<K,V>>();
     for(Map.Entry<K, SoftValue<K,V>> entry : entries) {
-      real_entries.add(entry.getValue());
+      realEntries.add(entry.getValue());
     }
-    return real_entries;
+    return realEntries;
   }
 
   public synchronized Collection<V> values() {
