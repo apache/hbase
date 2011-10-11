@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2011 The Apache Software Foundation
  *
@@ -26,15 +25,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -42,6 +40,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -49,6 +48,9 @@ import org.apache.hadoop.hbase.util.ByteBloomFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 
 /**
  * Implements pretty-printing functionality for {@link HFile}s.
@@ -60,6 +62,7 @@ public class HFilePrettyPrinter {
   private Options options = new Options();
 
   private boolean verbose;
+  private boolean outputJSON;
   private boolean printValue;
   private boolean printKey;
   private boolean shouldPrintMeta;
@@ -77,6 +80,7 @@ public class HFilePrettyPrinter {
   public HFilePrettyPrinter() {
     options.addOption("v", "verbose", false,
         "Verbose output; emits file and meta data delimiters");
+    options.addOption("j", "json", false, "Print in JSON format");
     options.addOption("p", "printkv", false, "Print key/value pairs");
     options.addOption("e", "printkey", false, "Print keys");
     options.addOption("m", "printmeta", false, "Print meta data of file");
@@ -90,8 +94,7 @@ public class HFilePrettyPrinter {
         "Region to scan. Pass region name; e.g. '.META.,,1'");
   }
 
-  public boolean parseOptions(String args[]) throws ParseException,
-      IOException {
+  public boolean parseOptions(String args[]) throws ParseException, IOException {
     if (args.length == 0) {
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("HFile", options, true);
@@ -101,12 +104,20 @@ public class HFilePrettyPrinter {
     CommandLine cmd = parser.parse(options, args);
 
     verbose = cmd.hasOption("v");
+    outputJSON = cmd.hasOption("j");
     printValue = cmd.hasOption("p");
     printKey = cmd.hasOption("e") || printValue;
     shouldPrintMeta = cmd.hasOption("m");
     printBlocks = cmd.hasOption("b");
     checkRow = cmd.hasOption("k");
     checkFamily = cmd.hasOption("a");
+
+    if ((shouldPrintMeta || printBlocks || verbose) && outputJSON) {
+      System.err.println("Verbose output will result in invalid JSON. "
+          + "Disable verbosity, metadata, and block printgin if you intend "
+          + "to parse output as JSON");
+      System.exit(-1);
+    }
 
     if (cmd.hasOption("f")) {
       files.add(new Path(cmd.getOptionValue("f")));
@@ -130,8 +141,7 @@ public class HFilePrettyPrinter {
       if (verbose) {
         int i = 1;
         for (Path p : regionFiles) {
-          if (verbose)
-            System.out.println("Found file[" + i++ + "] -> " + p);
+          System.out.println("Found file[" + i++ + "] -> " + p);
         }
       }
       files.addAll(regionFiles);
@@ -141,8 +151,8 @@ public class HFilePrettyPrinter {
   }
 
   /**
-   * Runs the command-line pretty-printer, and returns the desired command
-   * exit code (zero for success, non-zero for failure).
+   * Runs the command-line pretty-printer, and returns the desired command exit
+   * code (zero for success, non-zero for failure).
    */
   public int run(String[] args) {
     conf = HBaseConfiguration.create();
@@ -169,7 +179,7 @@ public class HFilePrettyPrinter {
       }
     }
 
-    if (verbose || printKey) {
+    if (verbose) {
       System.out.println("Scanned kv count -> " + count);
     }
 
@@ -189,11 +199,10 @@ public class HFilePrettyPrinter {
     Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
 
     if (printKey || checkRow || checkFamily) {
-
-      // scan over file and read key/value's and check if requested
+      // scan over file and read key/value's, performing any requested checks
       HFileScanner scanner = reader.getScanner(false, false, false);
       scanner.seekTo();
-      scanKeysValues(file, count, scanner);
+      scanKeyValues(file, scanner);
     }
 
     // print meta data
@@ -209,19 +218,16 @@ public class HFilePrettyPrinter {
     reader.close();
   }
 
-  private void scanKeysValues(Path file, int count, HFileScanner scanner)
+  private void scanKeyValues(Path file, HFileScanner scanner)
       throws IOException {
     KeyValue pkv = null;
+    boolean first = true;
+    // Start the JSON array output. Must be done this way in order to avoid
+    // buffering the entire set of KeyValues into memory!
+    if (outputJSON)
+      System.out.print("[");
     do {
       KeyValue kv = scanner.getKeyValue();
-      // dump key value
-      if (printKey) {
-        System.out.print("K: " + kv);
-        if (printValue) {
-          System.out.print(" V: " + Bytes.toStringBinary(kv.getValue()));
-        }
-        System.out.println();
-      }
       // check if rows are in order
       if (checkRow && pkv != null) {
         if (Bytes.compareTo(pkv.getRow(), kv.getRow()) > 0) {
@@ -247,18 +253,49 @@ public class HFilePrettyPrinter {
               + "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
         }
       }
+      // dump key value
+      if (printKey) {
+        if (outputJSON) {
+          JSONObject jsonKv = new JSONObject();
+          // dump key value
+          try {
+            if (printKey) {
+              jsonKv.put("key", kv);
+              if (printValue) {
+                jsonKv.put("value", Bytes.toStringBinary(kv.getValue()));
+              }
+            }
+          } catch (JSONException e) {
+            e.printStackTrace();
+          }
+          if (first) {
+            first = false;
+          } else {
+            System.out.print(",");
+          }
+          System.out.print(jsonKv);
+        } else {
+          // normal, "pretty string" output
+          System.out.print("K: " + kv);
+          if (printValue) {
+            System.out.print(" V: " + Bytes.toStringBinary(kv.getValue()));
+          }
+          System.out.println();
+        }
+      }
       pkv = kv;
       ++count;
     } while (scanner.next());
+    if (outputJSON)
+      System.out.print("]");
   }
 
   /**
-   * Format a string of the form "k1=v1, k2=v2, ..." into separate lines
-   * with a four-space indentation.
+   * Format a string of the form "k1=v1, k2=v2, ..." into separate lines with a
+   * four-space indentation.
    */
   private static String asSeparateLines(String keyValueStr) {
-    return keyValueStr.replaceAll(", ([a-zA-Z]+=)",
-                                  ",\n" + FOUR_SPACES + "$1");
+    return keyValueStr.replaceAll(", ([a-zA-Z]+=)", ",\n" + FOUR_SPACES + "$1");
   }
 
   private void printMeta(HFile.Reader reader, Map<byte[], byte[]> fileInfo)
@@ -286,7 +323,6 @@ public class HFilePrettyPrinter {
         System.out.println(Bytes.toStringBinary(e.getValue()));
       }
     }
-
     System.out.println("Mid-key: " + Bytes.toStringBinary(reader.midkey()));
 
     // Printing bloom information
@@ -297,11 +333,11 @@ public class HFilePrettyPrinter {
 
     System.out.println("Bloom filter:");
     if (bloomFilter != null) {
-      System.out.println(FOUR_SPACES + bloomFilter.toString().replaceAll(
-          ByteBloomFilter.STATS_RECORD_SEP, "\n" + FOUR_SPACES));
+      System.out.println(FOUR_SPACES
+          + bloomFilter.toString().replaceAll(ByteBloomFilter.STATS_RECORD_SEP,
+              "\n" + FOUR_SPACES));
     } else {
       System.out.println(FOUR_SPACES + "Not present");
     }
   }
-
 }
