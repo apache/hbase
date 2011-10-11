@@ -76,6 +76,7 @@ if [ $# = 0 ]; then
   echo "  avro             run an HBase Avro server"
   echo "  migrate          upgrade an hbase.rootdir"
   echo "  hbck             run the hbase 'fsck' tool"
+  echo "  localityck	     run the hbase locality check tool"
   echo "  verify [-help]   verify that the cluster is working properly"
   echo " or"
   echo "  CLASSNAME        run the class named CLASSNAME"
@@ -256,6 +257,8 @@ elif [ "$COMMAND" = "migrate" ] ; then
   CLASS='org.apache.hadoop.hbase.util.Migrate'
 elif [ "$COMMAND" = "hbck" ] ; then
   CLASS='org.apache.hadoop.hbase.client.HBaseFsck'
+elif [ "$COMMAND" = "localityck" ] ; then
+  CLASS='org.apache.hadoop.hbase.client.HBaseLocalityCheck'
 elif [ "$COMMAND" = "verify" ] ; then
   CLASS='org.apache.hadoop.hbase.loadtest.LoadTester'
 elif [ "$COMMAND" = "zookeeper" ] ; then

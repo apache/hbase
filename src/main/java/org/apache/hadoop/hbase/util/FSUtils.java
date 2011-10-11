@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.util;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -44,10 +45,16 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
+import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -676,6 +683,105 @@ public class FSUtils {
       }
     }
     LOG.info("Finished lease recover attempt for " + p);
+  }
+
+  /**
+   * This function is to scan the root path of the file system to get the
+   * mapping between the region name and its best locality region server
+   *
+   * @param fs
+   * @param rootPath
+   * @param out
+   * @return
+   * @throws IOException
+   */
+  public static  Map<String, String> getRegionLocalityMappingFromFS(
+      final FileSystem fs,  final Path rootPath)
+      throws IOException {
+    // region name to its best locality region server mapping
+    Map<String, String> regionToBestLocalityRSMapping =
+       new HashMap<String,  String>();
+    // keep the most block count mapping
+    HashMap<String, AtomicInteger> blockCountMap =
+      new HashMap<String, AtomicInteger>();
+
+    long startTime = System.currentTimeMillis();
+    Path queryPath = new Path(rootPath.toString() + "/*/*/");
+    FileStatus[] statusList = fs.globStatus(queryPath);
+    LOG.debug("Query Path: " + queryPath + " ; # list of files: " +
+        statusList.length);
+
+    for (FileStatus regionStatus : statusList) {
+      if(!regionStatus.isDir()) {
+        continue;
+      }
+
+      // get the region name; it may get some noise data
+      Path regionPath = regionStatus.getPath();
+      String regionName = regionPath.getName();
+      if (!regionName.toLowerCase().matches("[0-9a-f]+")) {
+        continue;
+      }
+      //get table name
+      String tableName = regionPath.getParent().getName();
+
+      int totalBlkCount = 0;
+      blockCountMap.clear();
+
+      // for each cf, get all the blocks information
+      FileStatus[] cfList = fs.listStatus(regionPath);
+      for (FileStatus cfStatus : cfList) {
+        if (!cfStatus.isDir()) {
+          // skip because this is not a CF directory
+          continue;
+        }
+        FileStatus[] storeFileLists = fs.listStatus(cfStatus.getPath());
+        for (FileStatus storeFile : storeFileLists) {
+          BlockLocation[] blkLocations =
+            fs.getFileBlockLocations(storeFile, 0, storeFile.getLen());
+          totalBlkCount += blkLocations.length;
+          for(BlockLocation blk: blkLocations) {
+            for (String host: blk.getHosts()) {
+              AtomicInteger count = blockCountMap.get(host);
+              if (count == null) {
+                count = new AtomicInteger(0);
+                blockCountMap.put(host, count);
+              }
+             count.incrementAndGet();
+            }
+          }
+        }
+      }
+
+      int largestBlkCount = 0;
+      String hostToRun = null;
+      for (String host: blockCountMap.keySet()) {
+        int tmp = blockCountMap.get(host).get();
+        if (tmp > largestBlkCount) {
+          largestBlkCount = tmp;
+          hostToRun = host;
+        }
+      }
+
+      if (hostToRun.endsWith(".")) {
+        hostToRun = hostToRun.substring(0, hostToRun.length()-1);
+      }
+      String name = tableName + ":" + regionName;
+      regionToBestLocalityRSMapping.put(name,hostToRun);
+      LOG.debug("[ Best Locality Mapping ] Name: " + name+
+          " Region Server: " + hostToRun) ;
+
+      float rate = largestBlkCount / (float)totalBlkCount * 100;
+      String msg = "Host : " + hostToRun + " has "+largestBlkCount+" / "+
+        totalBlkCount+" ("+rate +"%) blocks for the < "+ name + " >";
+      LOG.info(msg);
+
+    }
+    long overhead = System.currentTimeMillis() - startTime;
+    String overheadMsg = "Scan DFS for locality info takes " + overhead + " ms";
+
+    LOG.info(overheadMsg);
+    return regionToBestLocalityRSMapping;
   }
 
 }

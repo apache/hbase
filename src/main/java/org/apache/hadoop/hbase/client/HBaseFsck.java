@@ -120,13 +120,11 @@ public class HBaseFsck {
           new LinkedBlockingQueue<Runnable>());
   }
 
-  /**
-   * Contacts the master and prints out cluster-wide information
-   * @throws IOException if a remote or network exception occurs
-   * @return 0 on success, non-zero on failure
-   */
-  int doWork() throws IOException, InterruptedException {
+  public TreeMap<String, HbckInfo> getRegionInfo() {
+    return this.regionInfo;
+  }
 
+  public int initAndScanRootMeta() throws IOException {
     // print hbase server version
     errors.print("Version: " + status.getHBaseVersion());
     LOG.debug("timelag = " + StringUtils.formatTime(this.timelag));
@@ -148,6 +146,19 @@ public class HBaseFsck {
     if (!checkMetaEntries()) {
       // Will remove later if we can fix it
       errors.reportError("Encountered fatal error. Exitting...");
+      return -1;
+    }
+    return 0;
+  }
+
+  /**
+   * Contacts the master and prints out cluster-wide information
+   * @throws IOException if a remote or network exception occurs
+   * @return 0 on success, non-zero on failure
+   */
+  int doWork() throws IOException, InterruptedException {
+
+    if (initAndScanRootMeta() == -1) {
       return -1;
     }
 
@@ -267,6 +278,23 @@ public class HBaseFsck {
     return true;
   }
 
+  /**
+   * Contacts each regionserver and fetches metadata about regions.
+   * @throws IOException if a remote or network exception occurs
+   */
+  void scanRegionServers() throws IOException, InterruptedException {
+    Collection<HServerInfo> regionServers = status.getServerInfo();
+    errors.print("Number of live region servers:" +
+        regionServers.size());
+    if (details) {
+      for (HServerInfo rsinfo: regionServers) {
+        errors.detail("\t RegionServer:" + rsinfo.getServerName());
+      }
+    }
+    scanRegionServers(regionServers);
+    // finish all async tasks before analyzing what we have
+    finishAsyncWork();
+  }
 
   /**
    * Contacts each regionserver and fetches metadata about regions.
@@ -274,7 +302,7 @@ public class HBaseFsck {
    * @throws IOException if a remote or network exception occurs
    */
   void scanRegionServers(Collection<HServerInfo> regionServerList)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
 
     // loop to contact each region server in parallel
     for (HServerInfo rsinfo:regionServerList) {

@@ -149,6 +149,13 @@ public class RegionManager {
   private final int zooKeeperNumRetries;
   private final int zooKeeperPause;
 
+  /**
+   * Set of region servers which send heart beat in the first period of time
+   * during the master boots. Hold the best locality regions for these
+   * region servers.
+   */
+  private Set<String> quickStartRegionServerSet = new HashSet<String>();
+
   RegionManager(HMaster master) throws IOException {
     Configuration conf = master.getConfiguration();
 
@@ -210,8 +217,8 @@ public class RegionManager {
   }
 
   /*
-   * Assigns regions to region servers attempting to balance the load across
-   * all region servers. Note that no synchronization is necessary as the caller
+   * Assigns regions to region servers attempting to balance the load across all
+   * region servers. Note that no synchronization is necessary as the caller
    * (ServerManager.processMsgs) already owns the monitor for the RegionManager.
    *
    * @param info
@@ -220,25 +227,49 @@ public class RegionManager {
    */
   void assignRegions(HServerInfo info, HRegionInfo[] mostLoadedRegions,
       ArrayList<HMsg> returnMsgs) {
+    // the region may assigned to this region server
+    Set<RegionState> regionsToAssign = null;
+
     HServerLoad thisServersLoad = info.getLoad();
     boolean isSingleServer = this.master.numServers() == 1;
+    // have to add . at the end of host name
+    String hostName = info.getHostname();
 
-    // figure out what regions need to be assigned and aren't currently being
-    // worked on elsewhere.
-    Set<RegionState> regionsToAssign =
-      regionsAwaitingAssignment(info.getServerAddress(), isSingleServer);
+    long masterRunningTime = System.currentTimeMillis()
+        - this.master.getMasterStartupTime();
+    boolean assignmentByLocality = ((masterRunningTime < this.master
+        .getApplyPreferredAssignmentPeriod()) &&
+        this.master.isClusterStartup() &&
+        this.master.getPreferredRegionToRegionServerMapping() != null) ?
+        true : false;
+
+    boolean holdRegionForBestRegionServer =
+      (masterRunningTime < this.master.getHoldRegionForBestLocalityPeriod());
+
+    if (assignmentByLocality) {
+      quickStartRegionServerSet.add(hostName);
+    }
+    // get the region set to be assigned to this region server
+    regionsToAssign = regionsAwaitingAssignment(info.getServerAddress(),
+        isSingleServer, assignmentByLocality, holdRegionForBestRegionServer,
+        quickStartRegionServerSet);
+
     if (regionsToAssign.size() == 0) {
       // There are no regions waiting to be assigned.
-      this.loadBalancer.loadBalancing(info, mostLoadedRegions, returnMsgs);
+      if (!assignmentByLocality) {
+        // load balance as before
+        this.loadBalancer.loadBalancing(info, mostLoadedRegions, returnMsgs);
+      }
     } else {
-      // if there's only one server, just give it all the regions
-      if (isSingleServer) {
+      // if there's only one server or assign the region by locality,
+      // just give the regions to this server
+      if (isSingleServer || assignmentByLocality) {
         assignRegionsToOneServer(regionsToAssign, info, returnMsgs);
       } else {
         // otherwise, give this server a few regions taking into account the
-        // load of all the other servers.
-        assignRegionsToMultipleServers(thisServersLoad, regionsToAssign,
-            info, returnMsgs);
+        // load of all the other servers
+        assignRegionsToMultipleServers(thisServersLoad, regionsToAssign, info,
+            returnMsgs);
       }
     }
   }
@@ -250,15 +281,15 @@ public class RegionManager {
    * regionsInTransition because this method is only called by assignRegions
    * whose caller owns the monitor for RegionManager
    *
-   * TODO: This code is unintelligible.  REWRITE. Add TESTS! St.Ack 09/30/2009
+   * TODO: This code is unintelligible. REWRITE. Add TESTS! St.Ack 09/30/2009
    * @param thisServersLoad
    * @param regionsToAssign
    * @param info
    * @param returnMsgs
    */
   private void assignRegionsToMultipleServers(final HServerLoad thisServersLoad,
-    final Set<RegionState> regionsToAssign, final HServerInfo info,
-    final ArrayList<HMsg> returnMsgs) {
+      final Set<RegionState> regionsToAssign, final HServerInfo info,
+      final ArrayList<HMsg> returnMsgs) {
     boolean isMetaAssign = false;
     for (RegionState s : regionsToAssign) {
       if (s.getRegionInfo().isMetaRegion())
@@ -269,9 +300,9 @@ public class RegionManager {
       regionsToGiveOtherServers(nRegionsToAssign, thisServersLoad);
     nRegionsToAssign -= otherServersRegionsCount;
     if (nRegionsToAssign > 0 || isMetaAssign) {
-      LOG.debug("Assigning for " + info + ": total nregions to assign=" +
-        nRegionsToAssign + ", regions to give other servers than this=" +
-        otherServersRegionsCount + ", isMetaAssign=" + isMetaAssign);
+      LOG.debug("Assigning for " + info + ": total nregions to assign="
+          + nRegionsToAssign + ", regions to give other servers than this="
+          + otherServersRegionsCount + ", isMetaAssign=" + isMetaAssign);
 
       // See how many we can assign before this server becomes more heavily
       // loaded than the next most heavily loaded server.
@@ -320,7 +351,7 @@ public class RegionManager {
     if (count > this.maxAssignInOneGo) {
       count = this.maxAssignInOneGo;
     }
-    for (RegionState s: regionsToAssign) {
+    for (RegionState s : regionsToAssign) {
       doRegionAssignment(s, info, returnMsgs);
       if (--count <= 0) {
         break;
@@ -330,7 +361,6 @@ public class RegionManager {
 
   /*
    * Assign all to the only server. An unlikely case but still possible.
-   *
    * Note that no synchronization is needed on regionsInTransition while
    * iterating on it because the only caller is assignRegions whose caller owns
    * the monitor for RegionManager
@@ -341,7 +371,7 @@ public class RegionManager {
    */
   private void assignRegionsToOneServer(final Set<RegionState> regionsToAssign,
       final HServerInfo info, final ArrayList<HMsg> returnMsgs) {
-    for (RegionState s: regionsToAssign) {
+    for (RegionState s : regionsToAssign) {
       doRegionAssignment(s, info, returnMsgs);
     }
   }
@@ -360,13 +390,16 @@ public class RegionManager {
     synchronized (this.regionsInTransition) {
       byte[] data = null;
       try {
-        data = Writables.getBytes(new RegionTransitionEventData(HBaseEventType.M2ZK_REGION_OFFLINE, HMaster.MASTER));
+        data = Writables.getBytes(new RegionTransitionEventData(
+            HBaseEventType.M2ZK_REGION_OFFLINE, HMaster.MASTER));
       } catch (IOException e) {
-        LOG.error("Error creating event data for " + HBaseEventType.M2ZK_REGION_OFFLINE, e);
+        LOG.error("Error creating event data for "
+            + HBaseEventType.M2ZK_REGION_OFFLINE, e);
       }
-      zkWrapper.createOrUpdateUnassignedRegion(
-          rs.getRegionInfo().getEncodedName(), data);
-      LOG.debug("Created UNASSIGNED zNode " + regionName + " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
+      zkWrapper.createOrUpdateUnassignedRegion(rs.getRegionInfo()
+          .getEncodedName(), data);
+      LOG.debug("Created UNASSIGNED zNode " + regionName + " in state "
+          + HBaseEventType.M2ZK_REGION_OFFLINE);
       this.regionsInTransition.put(regionName, rs);
     }
 
@@ -380,16 +413,16 @@ public class RegionManager {
    * more lightly loaded servers
    */
   private int regionsToGiveOtherServers(final int numUnassignedRegions,
-    final HServerLoad thisServersLoad) {
+      final HServerLoad thisServersLoad) {
     SortedMap<HServerLoad, Set<String>> lightServers =
       new TreeMap<HServerLoad, Set<String>>();
     this.master.getLightServers(thisServersLoad, lightServers);
     // Examine the list of servers that are more lightly loaded than this one.
     // Pretend that we will assign regions to these more lightly loaded servers
-    // until they reach load equal with ours. Then, see how many regions are left
-    // unassigned. That is how many regions we should assign to this server.
+    // until they reach load equal with ours. Then, see how many regions are
+    // left unassigned. That is how many regions we should assign to this server
     int nRegions = 0;
-    for (Map.Entry<HServerLoad, Set<String>> e: lightServers.entrySet()) {
+    for (Map.Entry<HServerLoad, Set<String>> e : lightServers.entrySet()) {
       HServerLoad lightLoad = new HServerLoad(e.getKey());
       do {
         lightLoad.setNumberOfRegions(lightLoad.getNumberOfRegions() + 1);
@@ -412,15 +445,22 @@ public class RegionManager {
    * the monitor for RegionManager
    */
   private Set<RegionState> regionsAwaitingAssignment(HServerAddress addr,
-                                                     boolean isSingleServer) {
+      boolean isSingleServer, boolean assignmentByLocality,
+      boolean holdRegionForBestRegionserver,
+      Set<String> quickStartRegionServerSet) {
+
     // set of regions we want to assign to this server
     Set<RegionState> regionsToAssign = new HashSet<RegionState>();
 
     boolean isMetaServer = isMetaServer(addr);
+    boolean isRootServer = isRootServer(addr);
+    boolean isMetaOrRoot = isMetaServer || isRootServer;
+    String hostName = addr.getHostname();
     RegionState rootState = null;
     // Handle if root is unassigned... only assign root if root is offline.
     synchronized (this.regionsInTransition) {
-      rootState = regionsInTransition.get(HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString());
+      rootState = regionsInTransition.get(HRegionInfo.ROOT_REGIONINFO
+          .getRegionNameAsString());
     }
     if (rootState != null && rootState.isUnassigned()) {
       // make sure root isnt assigned here first.
@@ -436,28 +476,46 @@ public class RegionManager {
 
     // Look over the set of regions that aren't currently assigned to
     // determine which we should assign to this server.
-    boolean reassigningMetas = numberOfMetaRegions.get() != onlineMetaRegions.size();
-    boolean isMetaOrRoot = isMetaServer || isRootServer(addr);
+    boolean reassigningMetas = numberOfMetaRegions.get() != onlineMetaRegions
+        .size();
     if (reassigningMetas && isMetaOrRoot && !isSingleServer) {
       return regionsToAssign; // dont assign anything to this server.
     }
+
     synchronized (this.regionsInTransition) {
-      for (RegionState s: regionsInTransition.values()) {
+      for (RegionState s : regionsInTransition.values()) {
+        String regionName = s.getRegionInfo().getEncodedName();
+        String tableName = s.getRegionInfo().getTableDesc().getNameAsString();
+        String name = tableName + ":" + regionName;
         HRegionInfo i = s.getRegionInfo();
         if (i == null) {
           continue;
         }
-        if (reassigningMetas &&
-            !i.isMetaRegion()) {
+        if (reassigningMetas && !i.isMetaRegion()) {
           // Can't assign user regions until all meta regions have been assigned
           // and are on-line
           continue;
         }
-        if (!i.isMetaRegion() &&
-            !master.getServerManager().canAssignUserRegions()) {
-          LOG.debug("user region " + i.getRegionNameAsString() +
-            " is in transition but not enough servers yet");
+        if (!i.isMetaRegion()
+            && !master.getServerManager().canAssignUserRegions()) {
+          LOG.debug("user region " + i.getRegionNameAsString()
+              + " is in transition but not enough servers yet");
           continue;
+        }
+
+        if (assignmentByLocality && !i.isRootRegion() && !i.isMetaRegion()) {
+          String preferredHost =
+            this.master.getPreferredRegionToRegionServerMapping().get(name);
+
+          if (preferredHost != null && hostName.startsWith(preferredHost)) {
+            LOG.debug("Doing Preferred Region Assignment for : " + name +
+                " to the " + hostName);
+          } else if (holdRegionForBestRegionserver ||
+              quickStartRegionServerSet.contains(preferredHost)) {
+            LOG.debug("Hold the region : " + name +
+                " for its best locality region server " + hostName);
+            continue;
+          }
         }
         if (s.isUnassigned()) {
           regionsToAssign.add(s);
