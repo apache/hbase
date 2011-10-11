@@ -2293,20 +2293,6 @@ public class HRegionServer implements HRegionInterface,
   }
 
   /**
-   * Return the total size of all memstores in every region.
-   * @return memstore size in bytes
-   */
-  public long getGlobalMemStoreSize() {
-    long total = 0;
-    synchronized (onlineRegions) {
-      for (HRegion region : onlineRegions.values()) {
-        total += region.memstoreSize.get();
-      }
-    }
-    return total;
-  }
-
-  /**
    * @return Return the leases.
    */
   protected Leases getLeases() {

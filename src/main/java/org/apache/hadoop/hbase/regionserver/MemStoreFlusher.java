@@ -287,7 +287,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
    * amount of memstore consumption.
    */
   public synchronized void reclaimMemStoreMemory() {
-    if (server.getGlobalMemStoreSize() >= globalMemStoreLimit) {
+    if ( HRegion.getGlobalMemstoreSize() >= globalMemStoreLimit) {
       flushSomeRegions();
     }
   }
@@ -301,7 +301,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     ArrayList<HRegion> regionsToCompact = new ArrayList<HRegion>();
     for (SortedMap<Long, HRegion> m =
         this.server.getCopyOfOnlineRegionsSortedBySize();
-      (globalMemStoreSize = server.getGlobalMemStoreSize()) >=
+      (globalMemStoreSize = HRegion.globalMemstoreSize.get()) >=
         this.globalMemStoreLimitLowMark;) {
       // flush the region with the biggest memstore
       if (m.size() <= 0) {

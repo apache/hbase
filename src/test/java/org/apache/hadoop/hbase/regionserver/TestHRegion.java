@@ -201,6 +201,59 @@ public class TestHRegion extends HBaseTestCase {
     }
   }
 
+  /**
+   * A unit test to test the global mem store size during put
+   */
+  public void testGlobalMemStoreSize() throws IOException {
+    int regionNum = 3;
+    List<HRegion> regionList = new ArrayList();
+    // create multiple regions
+    for (int r = 1; r <= regionNum; r ++) {
+      byte [] tableName = Bytes.toBytes("testGlobalMemStoreSize_r"+r);
+      byte [] fam = Bytes.toBytes("fam");
+      byte [] qf  = Bytes.toBytes("col");
+      byte [] val  = Bytes.toBytes("value");
+      // Create Table
+      HColumnDescriptor hcd = new HColumnDescriptor(fam, Integer.MAX_VALUE,
+          HColumnDescriptor.DEFAULT_COMPRESSION, false, true,
+          HColumnDescriptor.DEFAULT_TTL, "rowcol");
+
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      htd.addFamily(hcd);
+      HRegionInfo info = new HRegionInfo(htd, null, null, false);
+      Path path = new Path(DIR + "testGlobalMemStoreSize_"+r);
+      HRegion region = HRegion.createHRegion(info, path, conf);
+
+      int num_unique_rows = 10;
+      int version = 0;
+
+      for (int j = 0; j < num_unique_rows; j++) {
+        Put put = new Put(Bytes.toBytes("row" + j*r));
+        put.add(fam, qf, version++, val);
+        region.put(put);
+      }
+
+      regionList.add(region);
+    }
+
+    //cal total mem size
+    long globalMemStoreSize = 0;
+    for (HRegion region : regionList) {
+      globalMemStoreSize += region.memstoreSize.get();
+    }
+    assertTrue(HRegion.getGlobalMemstoreSize() >= globalMemStoreSize);
+
+    //cal total mem size after flush
+    globalMemStoreSize = 0;
+    for (HRegion region : regionList) {
+      region.flushcache();
+      globalMemStoreSize += region.memstoreSize.get();
+    }
+
+    assertEquals(globalMemStoreSize,0L);
+    assertTrue(HRegion.getGlobalMemstoreSize() >= globalMemStoreSize);
+  }
+
   /*
    * An involved filter test.  Has multiple column families and deletes in mix.
    */
