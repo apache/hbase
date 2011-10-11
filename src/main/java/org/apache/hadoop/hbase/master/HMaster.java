@@ -1052,6 +1052,17 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.connection.getHRegionConnection(meta.getServer());
   }
 
+  /**
+   * Method for getting the tableDescriptor
+   * @param tableName as a byte []
+   * @return the tableDescriptor
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HTableDescriptor getTableDescriptor(final byte [] tableName)
+  throws IOException {
+    return this.connection.getHTableDescriptor(tableName);
+  }
+
   public void modifyTable(final byte[] tableName, HConstants.Modify op,
       Writable[] args)
   throws IOException {
@@ -1077,24 +1088,28 @@ public class HMaster extends Thread implements HMasterInterface,
         if(tableName == null) {
           byte [] regionName = ((ImmutableBytesWritable)args[0]).get();
           pair = getTableRegionFromName(regionName);
-          // If the column family name is specified, we need to perform a
-          // column family specific action instead of an action on the whole
-          // region. For this purpose the second value in args is the column
-          // family name.
-          if (args.length == 2) {
-            byte [] columnFamily = ((ImmutableBytesWritable)args[1]).get();
-            this.regionManager.startCFAction(pair.getFirst().getRegionName(),
-                columnFamily, pair.getFirst(), pair.getSecond(), op);
-            break;
-          }
         } else {
           byte [] rowKey = ((ImmutableBytesWritable)args[0]).get();
           pair = getTableRegionForRow(tableName, rowKey);
         }
         LOG.info("About to " + op.toString() + " on " + Bytes.toString(tableName) + " and pair is " + pair);
         if (pair != null && pair.getSecond() != null) {
-          this.regionManager.startAction(pair.getFirst().getRegionName(),
-            pair.getFirst(), pair.getSecond(), op);
+          // If the column family name is specified, we need to perform a
+          // column family specific action instead of an action on the whole
+          // region. For this purpose the second value in args is the column
+          // family name.
+          if (args.length == 2) {
+            byte[] regionTableName = HRegionInfo.parseRegionName(
+                pair.getFirst().getRegionName())[0];
+            byte [] columnFamily = ((ImmutableBytesWritable)args[1]).get();
+            if (getTableDescriptor(regionTableName).hasFamily(columnFamily)) {
+              this.regionManager.startCFAction(pair.getFirst().getRegionName(),
+                  columnFamily, pair.getFirst(), pair.getSecond(), op);
+            }
+          } else {
+            this.regionManager.startAction(pair.getFirst().getRegionName(),
+                pair.getFirst(), pair.getSecond(), op);
+          }
         }
       } else {
         for (Pair<HRegionInfo,HServerAddress> pair: getTableRegions(tableName)) {

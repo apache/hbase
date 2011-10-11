@@ -45,8 +45,10 @@ import org.apache.hadoop.ipc.RemoteException;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 
 /**
  * Provides an interface to manage HBase database table metadata + general
@@ -726,19 +728,91 @@ public class HBaseAdmin {
   }
 
   /**
+   * Compact a column family within a table.
+   * Asynchronous operation.
+   *
+   * @param tableName region to compact
+   * @param columnFamily column family within the region to compact
+   * @throws IOException if a remote or network exception occurs
+   */
+  private void compactCF(String tableName, String columnFamily, HConstants.Modify op)
+    throws IOException {
+    compact(Bytes.toBytes(tableName), Bytes.toBytes(columnFamily));
+  }
+
+  /**
+   * Compact a column family within a table.
+   * Asynchronous operation.
+   *
+   * @param tableName region to compact
+   * @param columnFamily column family within the region to compact
+   * @throws IOException if a remote or network exception occurs
+   */
+  private void compactCF(final byte[] tableName, final byte[] columnFamily, HConstants.Modify op)
+    throws IOException {
+    // Validate table name and column family.
+    if (!this.connection.tableExists(tableName)) {
+      throw new IllegalArgumentException("HTable " + new String(tableName) +
+          " does not exist");
+    } else if (!getTableDescriptor(tableName).hasFamily(columnFamily)) {
+      throw new IllegalArgumentException("Column Family " +
+          new String(columnFamily) + " does not exist in " +
+          new String(tableName));
+    }
+
+    // Get all regions for this table.
+    HTable table = new HTable(this.conf, tableName);
+    Set <HRegionInfo> regions = table.getRegionsInfo().keySet();
+    Iterator <HRegionInfo> regionsIt = regions.iterator();
+
+    // Iterate over all regions and send a compaction request to each.
+    while (regionsIt.hasNext()) {
+      byte[] regionName = regionsIt.next().getRegionName();
+      modifyTable(null, op, new byte[][] {regionName, columnFamily});
+    }
+  }
+
+  /**
    * Compact a column family within a region.
    * Asynchronous operation.
    *
    * @param regionName region to compact
-   * @param columnFamilyName column family within the region to compact
+   * @param columnFamily column family within the region to compact
    * @throws IOException if a remote or network exception occurs
    */
-  public void compact(String regionName, String columnFamily)
+  public void compact(String tableOrRegionName, String columnFamily)
     throws IOException {
-    byte [] regionNameBytes = Bytes.toBytes(regionName);
-    byte [] columnFamilyBytes = Bytes.toBytes(columnFamily);
+    if (tableExists(tableOrRegionName)) {
+      compactCF(tableOrRegionName, columnFamily, HConstants.Modify.TABLE_COMPACT);
+      return;
+    }
+    // Validate column family.
+    byte[] tableName = HRegionInfo.parseRegionName(Bytes.toBytes(tableOrRegionName))[0];
+    if (!getTableDescriptor(tableName).hasFamily(Bytes.toBytes(columnFamily))) {
+      throw new IllegalArgumentException("Column Family " + columnFamily +
+          " does not exist in table " + new String(tableName));
+    }
+    compact(Bytes.toBytes(tableOrRegionName), Bytes.toBytes(columnFamily));
+  }
+
+  /**
+   * Compact a column family within a region.
+   * Asynchronous operation.
+   *
+   * @param regionName region to compact
+   * @param columnFamily column family within the region to compact
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void compact(final byte[] tableOrRegionName, final byte[] columnFamily)
+    throws IOException {
+    if (tableExists(tableOrRegionName)) {
+      compactCF(tableOrRegionName, columnFamily, HConstants.Modify.TABLE_COMPACT);
+      return;
+    }
+    byte [] tableName = HRegionInfo.parseRegionName(tableOrRegionName)[0];
+    // Perform compaction only if a valid column family was passed.
     modifyTable(null, HConstants.Modify.TABLE_COMPACT,
-        new byte[][] {regionNameBytes, columnFamilyBytes});
+        new byte[][] {tableOrRegionName, columnFamily});
   }
 
   /**
@@ -763,6 +837,48 @@ public class HBaseAdmin {
   public void majorCompact(final byte [] tableNameOrRegionName)
   throws IOException {
     modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_MAJOR_COMPACT);
+  }
+
+  /**
+   * Major compacts a column family within a region.
+   * Asynchronous operation.
+   *
+   * @param regionName region to compact
+   * @param columnFamily column family within the region to compact
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void majorCompact(String tableOrRegionName, String columnFamily)
+    throws IOException {
+    if (tableExists(tableOrRegionName)) {
+      compactCF(tableOrRegionName, columnFamily,
+          HConstants.Modify.TABLE_MAJOR_COMPACT);
+      return;
+    }
+    byte[] tableName = HRegionInfo.parseRegionName(Bytes.toBytes(tableOrRegionName))[0];
+    if (!getTableDescriptor(tableName).hasFamily(Bytes.toBytes(columnFamily))) {
+      throw new IllegalArgumentException("Column Family " + columnFamily +
+          " does not exist in table " + new String(tableName));
+    }
+    majorCompact(Bytes.toBytes(tableOrRegionName), Bytes.toBytes(columnFamily));
+  }
+
+  /**
+   * Major compacts a column family within a region.
+   * Asynchronous operation.
+   *
+   * @param regionName region to compact
+   * @param columnFamily column family within the region to compact
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void majorCompact(final byte[] tableOrRegionName, final byte[] columnFamily)
+    throws IOException {
+    if (tableExists(tableOrRegionName)) {
+      compactCF(tableOrRegionName, columnFamily,
+          HConstants.Modify.TABLE_MAJOR_COMPACT);
+      return;
+    }
+    modifyTable(null, HConstants.Modify.TABLE_MAJOR_COMPACT,
+        new byte[][] {tableOrRegionName, columnFamily});
   }
 
   /**

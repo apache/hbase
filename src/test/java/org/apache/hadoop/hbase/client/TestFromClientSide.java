@@ -35,7 +35,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Random;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import org.apache.commons.logging.Log;
@@ -47,6 +50,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -62,7 +66,9 @@ import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -82,6 +88,7 @@ public class TestFromClientSide {
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte [] VALUE = Bytes.toBytes("testValue");
+  private static Random random = new Random();
 
   /**
    * @throws java.lang.Exception
@@ -3906,4 +3913,202 @@ public class TestFromClientSide {
 
     LOG.info("Finishing testRegionCachePreWarm");
   }
+
+  private void randomCFPuts(HTable table, byte[] row, byte[] family, int nPuts) throws Exception {
+    Put put = new Put(row);
+    for(int i = 0; i < nPuts; i++) {
+      byte[] qualifier = Bytes.toBytes(random.nextInt());
+      Long timestamp = random.nextLong();
+      byte[] value = Bytes.toBytes(random.nextInt());
+      put.add(family, qualifier, timestamp, value);
+    }
+    table.put(put);
+  }
+
+  private void performMultiplePutAndFlush(HBaseAdmin admin, HTable table,
+      byte[] row, byte[] family, int nFlushes, int nPuts) throws Exception {
+    for (int i = 0; i < nFlushes; i++) {
+      randomCFPuts(table, row, family, nPuts);
+      admin.flush(table.getTableName());
+      Thread.sleep(2000);
+    }
+  }
+
+  private void compactCFTable(int op) throws Exception {
+    String tableName = "testCompactCFTable" + op;
+    byte [] TABLE = Bytes.toBytes(tableName);
+    HTable hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HConnection connection = HConnectionManager.getConnection(TEST_UTIL.getConfiguration());
+
+    // This should create multiple store files.
+    for (int i = 0; i < 3; i++) {
+      byte[] row = Bytes.toBytes(random.nextInt());
+      if (op == 1) {
+        performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 2);
+      } else {
+        performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 2);
+      }
+    }
+
+    // Check whether we have multiple store files.
+    Map <HRegionInfo, HServerAddress> map = hTable.getRegionsInfo();
+    Map <HRegionInfo, Integer> beforeCompact = new TreeMap<HRegionInfo, Integer>();
+    Iterator <Map.Entry<HRegionInfo, HServerAddress>> it1 = map.entrySet().iterator();
+    while (it1.hasNext()) {
+      Map.Entry <HRegionInfo, HServerAddress> mpe = it1.next();
+      byte[] regionName = mpe.getKey().getRegionName();
+      HRegionInterface server = connection.getHRegionConnection(mpe.getValue());
+      int storeFiles = server.getStoreFileList(regionName, FAMILY).size();
+      beforeCompact.put(mpe.getKey(), storeFiles);
+      assertTrue(storeFiles > 1 );
+    }
+
+    // Now perform compaction. 1 for major, 0 for simple.
+    if (op == 1) {
+      admin.majorCompact(TABLE , FAMILY);
+    } else {
+      admin.compact(TABLE, FAMILY);
+    }
+    Thread.sleep(6000);
+
+    // The number of store files after compaction should be lesser.
+    it1 = map.entrySet().iterator();
+    while (it1.hasNext()) {
+      Map.Entry <HRegionInfo, HServerAddress> mpe = it1.next();
+      byte[] regionName = mpe.getKey().getRegionName();
+      HRegionInterface server = connection.getHRegionConnection(mpe.getValue());
+      int storeFilesAfter = server.getStoreFileList(regionName, FAMILY).size();
+      int storeFilesBefore = beforeCompact.get(mpe.getKey());
+      if (op == 1) {
+        assertEquals(1, storeFilesAfter);
+      } else {
+        assertTrue(storeFilesAfter < storeFilesBefore);
+      }
+    }
+  }
+
+  private void compactCFRegion(int op) throws Exception {
+    String tableName = "testCompactCFWithinRegion" + op;
+    byte [] TABLE = Bytes.toBytes(tableName);
+    HTable hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HConnection connection = HConnectionManager.getConnection(TEST_UTIL.getConfiguration());
+    byte[] row = Bytes.toBytes("row2");
+    HRegionLocation regionLocation = hTable.getRegionLocation(row);
+    HServerAddress address = regionLocation.getServerAddress();
+    HRegionInterface server = connection.getHRegionConnection(address);
+    byte[] regionName = regionLocation.getRegionInfo().getRegionName();
+
+    // This should create multiple store files.
+    if (op == 1) {
+      performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 2);
+    } else {
+      performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 2);
+    }
+
+    // Check whether we have multiple store files.
+    int beforeCompaction = server.getStoreFileList(regionName, FAMILY).size();
+    System.out.println("Before compaction " + beforeCompaction);
+    assertTrue(beforeCompaction > 1 );
+
+    // Now perform compaction. 1 for major, 0 for simple.
+    if (op == 1) {
+      admin.majorCompact(regionName, FAMILY);
+    } else {
+      admin.compact(regionName, FAMILY);
+    }
+    Thread.sleep(6000);
+
+    // The number of store files after compaction should be lesser.
+    int afterCompaction = server.getStoreFileList(regionName, FAMILY).size();
+    System.out.println("After compaction " + beforeCompaction);
+    if (op ==1 ) {
+      assertEquals(1, afterCompaction);
+    } else {
+      assertTrue(afterCompaction < beforeCompaction);
+    }
+  }
+
+  private void compactMultipleCFRegion(int op) throws Exception {
+    String tableName = "testCompactMultipleCFWithinRegion" + op;
+    byte [] TABLE = Bytes.toBytes(tableName);
+    byte [] family1 = Bytes.toBytes("f1");
+    byte [] family2 = Bytes.toBytes("f2");
+    HTable hTable = TEST_UTIL.createTable(TABLE, new byte[][] {family1, family2}, 10);
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HConnection connection = HConnectionManager.getConnection(TEST_UTIL.getConfiguration());
+    byte[] row = Bytes.toBytes("row2");
+    HRegionLocation regionLocation = hTable.getRegionLocation(row);
+    HServerAddress address = regionLocation.getServerAddress();
+    HRegionInterface server = connection.getHRegionConnection(address);
+    byte[] regionName = regionLocation.getRegionInfo().getRegionName();
+
+    // This should create multiple store files.
+    if (op == 1) {
+      performMultiplePutAndFlush(admin, hTable, row, family1, 3, 2);
+      performMultiplePutAndFlush(admin, hTable, row, family2, 3, 2);
+    } else {
+      performMultiplePutAndFlush(admin, hTable, row, family1, 3, 2);
+      performMultiplePutAndFlush(admin, hTable, row, family2, 3, 2);
+    }
+
+    // Check whether we have multiple store files.
+    int beforeCompactionF1 = server.getStoreFileList(regionName, family1).size();
+    int beforeCompactionF2 = server.getStoreFileList(regionName, family2).size();
+    assertTrue(beforeCompactionF1 > 1 );
+    assertTrue(beforeCompactionF2 > 1 );
+
+    // Now perform compaction. 1 for major, 0 for simple.
+    if (op == 1) {
+      admin.majorCompact(regionName, family1);
+      admin.majorCompact(regionName, family2);
+    } else {
+      admin.compact(regionName, family1);
+      admin.compact(regionName, family2);
+    }
+    Thread.sleep(6000);
+
+    // The number of store files after compaction should be lesser.
+    int afterCompactionF1 = server.getStoreFileList(regionName, family1).size();
+    int afterCompactionF2 = server.getStoreFileList(regionName, family2).size();
+    if (op == 1) {
+      assertEquals(1, afterCompactionF1);
+      assertEquals(1, afterCompactionF2);
+    } else {
+      assertTrue(afterCompactionF1 < beforeCompactionF1);
+      assertTrue(afterCompactionF2 < beforeCompactionF2);
+    }
+  }
+
+  @Test
+  public void testCompactCFRegion() throws Exception {
+    compactCFRegion(0);
+  }
+
+  @Test
+  public void testMajorCompactCFRegion() throws Exception {
+    compactCFRegion(1);
+  }
+
+  @Test
+  public void testCompactMultipleCFRegion() throws Exception {
+    compactMultipleCFRegion(0);
+  }
+
+  @Test
+  public void testMajorCompactMultipleCFRegion() throws Exception {
+    compactMultipleCFRegion(1);
+  }
+
+  @Test
+  public void testCompactCFTable() throws Exception {
+    compactCFTable(0);
+  }
+
+  @Test
+  public void testMajorCompactCFTable() throws Exception {
+    compactCFTable(1);
+  }
 }
+

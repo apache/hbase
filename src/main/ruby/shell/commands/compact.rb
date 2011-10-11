@@ -33,6 +33,8 @@ module Shell
           hbase> compact 'r1'
           Compact only a column family within a region:
           hbase> compact 'r1', 'c1'
+          Compact a column family within a table:
+          hbase> compact 't1', 'c1'
         EOF
       end
 

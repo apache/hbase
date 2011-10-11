@@ -126,6 +126,16 @@ public class RegionManager {
     cfsToCompact = Collections.synchronizedSortedMap(
         new TreeMap<byte[],SortedMap<byte[],Pair<HRegionInfo,HServerAddress>>>
         (Bytes.BYTES_COMPARATOR));
+  /** Set of column families to major compact within a region.
+  This map is a double SortedMap, first indexed on regionName and then indexed
+  on column family name. This is done to facilitate the fact that we might want
+  to perform a certain action on only a column family within a region.
+  */
+  private final SortedMap<byte[],
+          SortedMap<byte[], Pair<HRegionInfo,HServerAddress>>>
+    cfsToMajorCompact = Collections.synchronizedSortedMap(
+        new TreeMap<byte[],SortedMap<byte[],Pair<HRegionInfo,HServerAddress>>>
+        (Bytes.BYTES_COMPARATOR));
   /** Set of regions to major compact. */
   private final SortedMap<byte[], Pair<HRegionInfo,HServerAddress>>
     regionsToMajorCompact = Collections.synchronizedSortedMap(
@@ -1261,12 +1271,16 @@ public class RegionManager {
       HRegionInfo info, HServerAddress server, HConstants.Modify op) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Adding operation " + op + " for column family : "
-          + columnFamily + " from tasklist");
+          + new String(columnFamily) + " from tasklist");
     }
     switch (op) {
       case TABLE_COMPACT:
         startCFAction(regionName, columnFamily, info, server,
             this.cfsToCompact);
+        break;
+      case TABLE_MAJOR_COMPACT:
+        startCFAction(regionName, columnFamily, info, server,
+            this.cfsToMajorCompact);
         break;
       default:
         throw new IllegalArgumentException("illegal table action " + op);
@@ -1278,15 +1292,17 @@ public class RegionManager {
       final HRegionInfo info,
       final HServerAddress server,
       final SortedMap<byte[], SortedMap<byte[], Pair<HRegionInfo,HServerAddress>>> map) {
-    SortedMap<byte[], Pair<HRegionInfo, HServerAddress>> cfMap =
-      map.get(regionName);
-    if (cfMap == null) {
-      cfMap = Collections.synchronizedSortedMap(
-          new TreeMap<byte[],Pair<HRegionInfo,HServerAddress>>
-          (Bytes.BYTES_COMPARATOR));
+    synchronized (map) {
+      SortedMap<byte[], Pair<HRegionInfo, HServerAddress>> cfMap =
+        map.get(regionName);
+      if (cfMap == null) {
+        cfMap = Collections.synchronizedSortedMap(
+            new TreeMap<byte[],Pair<HRegionInfo,HServerAddress>>
+            (Bytes.BYTES_COMPARATOR));
+      }
+      cfMap.put(columnFamily, new Pair<HRegionInfo,HServerAddress>(info, server));
+      map.put(regionName, cfMap);
     }
-    cfMap.put(columnFamily, new Pair<HRegionInfo,HServerAddress>(info, server));
-    map.put(regionName, cfMap);
   }
 
   /**
@@ -1326,37 +1342,12 @@ public class RegionManager {
 
   /**
    * @param regionName
-   * @param op
-   */
-  public void endAction(byte[] regionName, HConstants.Modify op) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing operation " + op + " from tasklist");
-    }
-    switch (op) {
-    case TABLE_SPLIT:
-      this.regionsToSplit.remove(regionName);
-      break;
-    case TABLE_COMPACT:
-      this.regionsToCompact.remove(regionName);
-      break;
-    case TABLE_MAJOR_COMPACT:
-      this.regionsToMajorCompact.remove(regionName);
-      break;
-    case TABLE_FLUSH:
-      this.regionsToFlush.remove(regionName);
-      break;
-    default:
-      throw new IllegalArgumentException("illegal table action " + op);
-    }
-  }
-
-  /**
-   * @param regionName
    */
   public void endActions(byte[] regionName) {
     regionsToSplit.remove(regionName);
     regionsToCompact.remove(regionName);
     cfsToCompact.remove(regionName);
+    cfsToMajorCompact.remove(regionName);
   }
 
   /**
@@ -1378,6 +1369,8 @@ public class RegionManager {
     // CF specific actions for a region.
     applyCFActions(serverInfo, returnMsgs, this.cfsToCompact,
         HMsg.Type.MSG_REGION_CF_COMPACT);
+    applyCFActions(serverInfo, returnMsgs, this.cfsToMajorCompact,
+        HMsg.Type.MSG_REGION_CF_MAJOR_COMPACT);
   }
 
   private void applyActions(final HServerInfo serverInfo,
@@ -1423,7 +1416,7 @@ public class RegionManager {
             byte[] columnFamily = (byte[])mapPairs.getKey();
             if (LOG.isDebugEnabled()) {
               LOG.debug("Sending " + msg + " " + pair.getFirst() + " to " + addr
-                  + " for column family : " + columnFamily);
+                  + " for column family : " + new String(columnFamily));
             }
             returnMsgs.add(new HMsg(msg, pair.getFirst(), columnFamily));
             it2.remove();

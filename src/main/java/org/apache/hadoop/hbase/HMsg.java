@@ -132,6 +132,11 @@ public class HMsg implements Writable {
      * Run compaction on a specific column family within a region.
      */
     MSG_REGION_CF_COMPACT,
+
+    /**
+     * Run major compaction on a specific column family within a region.
+     */
+    MSG_REGION_CF_MAJOR_COMPACT,
   }
 
   private Type type = null;
