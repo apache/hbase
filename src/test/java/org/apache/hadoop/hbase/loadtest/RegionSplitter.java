@@ -346,9 +346,9 @@ public class RegionSplitter {
 
           // if we have too many outstanding splits, wait for oldest ones to finish
           outstanding.addLast(Pair.newPair(start, split));
-          while (outstanding.size() > MAX_OUTSTANDING) {
+          while (outstanding.size() >= MAX_OUTSTANDING) {
             splitScan(outstanding, table, splitOut);
-            if (outstanding.size() > MAX_OUTSTANDING) Thread.sleep(30 * 1000);
+            if (outstanding.size() >= MAX_OUTSTANDING) Thread.sleep(30 * 1000);
           }
         }
       }
