@@ -19,7 +19,8 @@ import org.apache.hadoop.util.StringUtils;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 
 /**
  * This class holds all details necessary to run a compaction.
@@ -122,9 +123,16 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
 
   @Override
     public String toString() {
-      String fsList = Joiner.on(", ").join(Lists.transform(files,
+      String fsList = Joiner.on(", ").join(
+        Collections2.transform(Collections2.filter(files,
+            new Predicate<StoreFile>() {
+              public boolean apply(StoreFile sf) {
+                return sf.getReader() != null;
+              }
+            }),
         new Function<StoreFile, String>() {
           public String apply(StoreFile sf) {
+
             return StringUtils.humanReadableInt(sf.getReader().length());
           }
         }));
@@ -133,7 +141,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         ", storeName=" + new String(s.getFamily().getName()) +
         ", fileCount=" + files.size() +
         ", fileSize=" + StringUtils.humanReadableInt(totalSize) +
-          " (" + fsList + ")" +
+          ((fsList.isEmpty()) ? "" : " (" + fsList + ")") +
         ", priority=" + p + ", date=" + date;
     }
 
@@ -144,13 +152,13 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         return;
       }
       try {
-        long startTime = EnvironmentEdgeManager.currentTimeMillis();
+        long start = EnvironmentEdgeManager.currentTimeMillis();
         boolean completed = r.compact(this);
         long now = EnvironmentEdgeManager.currentTimeMillis();
-        LOG.info(((completed) ? "completed" : "aborted") + " compaction: " + this
-            + ", duration=" + StringUtils.formatTimeDiff(now, startTime));
+        LOG.debug(((completed) ? "completed" : "aborted") + " compaction: " +
+            this + "; duration=" + StringUtils.formatTimeDiff(now, start));
         if (completed) {
-          server.getMetrics().addCompaction(now - startTime, this.totalSize);
+          server.getMetrics().addCompaction(now - start, this.totalSize);
           // degenerate case: blocked regions require recursive enqueues
           if (s.getCompactPriority() <= 0) {
             server.compactSplitThread

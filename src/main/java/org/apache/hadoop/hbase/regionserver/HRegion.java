@@ -950,7 +950,8 @@ public class HRegion implements HeapSize { // , Writable{
             return false;
           }
         }
-        LOG.info("Starting compaction on region " + this);
+        LOG.info("Starting compaction on " + cr.getStore() + " in region "
+            + this);
         doRegionCompactionPrep();
         boolean completed = false;
         try {
