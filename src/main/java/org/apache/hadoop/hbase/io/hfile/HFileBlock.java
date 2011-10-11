@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -102,6 +103,9 @@ public class HFileBlock implements HeapSize, HFileBlockInfo {
    * header, or -1 if unknown.
    */
   private int nextBlockOnDiskSizeWithHeader = -1;
+
+  private static final AtomicLong numSeekRead = new AtomicLong();
+  private static final AtomicLong numPositionalRead = new AtomicLong();
 
   /**
    * Creates a new {@link HFile} block from the given fields. This constructor
@@ -946,6 +950,7 @@ public class HFileBlock implements HeapSize, HFileBlockInfo {
         // Positional read. Better for random reads.
         int extraSize = peekIntoNextBlock ? HEADER_SIZE : 0;
 
+        numPositionalRead.incrementAndGet();
         int ret = istream.read(fileOffset, dest, destOffset, size + extraSize);
         if (ret < size) {
           throw new IOException("Positional read of " + size + " bytes " +
@@ -956,9 +961,11 @@ public class HFileBlock implements HeapSize, HFileBlockInfo {
           // Could not read the next block's header, or did not try.
           return -1;
         }
+
       } else {
         // Seek + read. Better for scanning.
         synchronized (istream) {
+          numSeekRead.incrementAndGet();
           istream.seek(fileOffset);
 
           long realOffset = istream.getPos();
@@ -1117,6 +1124,9 @@ public class HFileBlock implements HeapSize, HFileBlockInfo {
 
         onDiskSizeWithoutHeader = uncompressedSizeWithMagic - MAGIC_LENGTH;
       } else {
+        // This is a "seek + read" approach.
+        numSeekRead.incrementAndGet();
+
         InputStream bufferedBoundedStream = createBufferedBoundedStream(
             offset, onDiskSize, pread);
         decompress(buf.array(), buf.arrayOffset() + HEADER_DELTA,
@@ -1433,4 +1443,13 @@ public class HFileBlock implements HeapSize, HFileBlockInfo {
   public int getNextBlockOnDiskSizeWithHeader() {
     return nextBlockOnDiskSizeWithHeader;
   }
+
+  public static long getNumSeekAndReadOperations() {
+    return numSeekRead.get();
+  }
+
+  public static long getNumPositionalReadOperations() {
+    return numPositionalRead.get();
+  }
+
 }
