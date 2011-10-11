@@ -289,7 +289,7 @@ public class HRegion implements HeapSize { // , Writable{
       --limit;
       sb.append(Bytes.toString(family));
       if (0 != limit) {
-        sb.append(":");
+        sb.append("~");
       }
     }
 
