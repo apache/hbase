@@ -3918,9 +3918,8 @@ public class TestFromClientSide {
     Put put = new Put(row);
     for(int i = 0; i < nPuts; i++) {
       byte[] qualifier = Bytes.toBytes(random.nextInt());
-      Long timestamp = random.nextLong();
       byte[] value = Bytes.toBytes(random.nextInt());
-      put.add(family, qualifier, timestamp, value);
+      put.add(family, qualifier, value);
     }
     table.put(put);
   }
