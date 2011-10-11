@@ -94,7 +94,7 @@ public class Store implements HeapSize {
   final Configuration conf;
   // ttl in milliseconds.
   protected long ttl;
-  private long majorCompactionTime;
+  long majorCompactionTime;
   private final int minFilesToCompact;
   private final int maxFilesToCompact;
   private final long minCompactSize;
@@ -198,7 +198,7 @@ public class Store implements HeapSize {
     this.minCompactSize = conf.getLong("hbase.hstore.compaction.min.size",
       this.region.memstoreFlushSize);
     this.maxCompactSize
-      = conf.getLong("hbase.hstore.compaction.max.size", 0);
+      = conf.getLong("hbase.hstore.compaction.max.size", Long.MAX_VALUE);
     this.compactRatio = conf.getFloat("hbase.hstore.compaction.ratio", 1.2F);
 
     if (Store.closeCheckInterval == 0) {
@@ -818,23 +818,19 @@ public class Store implements HeapSize {
      */
     List<StoreFile> filesToCompact = new ArrayList<StoreFile>(candidates);
 
-    // do not compact files above a configurable max filesize
-    // save all references. we MUST compact them
-    if (this.maxCompactSize > 0) {
-      final long msize = this.maxCompactSize;
-      filesToCompact.removeAll(Collections2.filter(filesToCompact,
-        new Predicate<StoreFile>() {
-          public boolean apply(StoreFile sf) {
-            // NOTE: keep all references. we must compact them
-            return sf.getReader().length() > msize && !sf.isReference();
-          }
-        }));
+    if (!forcemajor) {
+      // do not compact old files above a configurable threshold
+      // save all references. we MUST compact them
+      int pos = 0;
+      while (pos < filesToCompact.size() &&
+             filesToCompact.get(pos).getReader().length() > maxCompactSize &&
+             !filesToCompact.get(pos).isReference()) ++pos;
+      filesToCompact.subList(0, pos).clear();
     }
 
     // major compact on user action or age (caveat: we have too many files)
-    boolean majorcompaction = forcemajor ||
-      (!filesToCompact.isEmpty() && isMajorCompaction(filesToCompact)
-       && filesToCompact.size() > this.maxFilesToCompact);
+    boolean majorcompaction = (forcemajor || isMajorCompaction(filesToCompact))
+      && filesToCompact.size() < this.maxFilesToCompact;
 
     if (filesToCompact.isEmpty()) {
       LOG.debug(this.storeNameStr + ": no store files to compact");
@@ -846,8 +842,10 @@ public class Store implements HeapSize {
       int start = 0;
       double r = this.compactRatio;
 
+      /* TODO: add sorting + unit test back in when HBASE-2856 is fixed
       //sort files by size to correct when normal skew is altered by bulk load
       Collections.sort(filesToCompact, StoreFile.Comparators.FILE_SIZE);
+       */
 
       // get store file sizes for incremental compacting selection.
       int countOfFiles = filesToCompact.size();
