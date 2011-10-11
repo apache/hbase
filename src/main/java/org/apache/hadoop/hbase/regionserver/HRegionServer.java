@@ -679,6 +679,14 @@ public class HRegionServer implements HRegionInterface,
     if (!killed) {
       this.zooKeeperWrapper.close();
       join();
+      if ((this.fs != null) && (stopRequested.get() || abortRequested)) {
+        // Finally attempt to close the Filesystem, to flush out any open streams.
+        try {
+          this.fs.close();
+        } catch (IOException ie) {
+          LOG.error("Could not close FileSystem", ie);
+        }
+      }
     }
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
@@ -937,14 +945,6 @@ public class HRegionServer implements HRegionInterface,
         FSUtils.checkFileSystemAvailable(this.fs, false);
       } catch (IOException e) {
         abort("File System not available", e);
-        // Wait for all threads to exit cleanly.
-        join();
-        // Finally attempt to close the Filesystem, to flush out any open streams.
-        try {
-          this.fs.close();
-        } catch (IOException ie) {
-          LOG.error("Could not close FileSystem", ie);
-        }
         this.fsOk = false;
       }
     }

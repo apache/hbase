@@ -1,13 +1,18 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 
 import static org.junit.Assert.*;
 
@@ -18,13 +23,18 @@ import org.junit.Test;
 public class TestHRegionServerFileSystemFailure {
   private static final Log LOG = LogFactory
       .getLog(TestHRegionServerFileSystemFailure.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtility TEST_UTIL;
   private static byte[][] FAMILIES = { Bytes.toBytes("f1"),
       Bytes.toBytes("f2"), Bytes.toBytes("f3"), Bytes.toBytes("f4") };
   private static final int nLoaders = 10;
+  private static Configuration conf;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    conf = new HBaseConfiguration().create();
+    conf.setBoolean("ipc.client.ping", true);
+    conf.setInt("ipc.ping.interval", 5000);
+    TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(3);
   }
 
@@ -60,28 +70,35 @@ public class TestHRegionServerFileSystemFailure {
   public void testHRegionServerFileSystemFailure() throws Exception {
     // Build some data.
     byte[] tableName = Bytes.toBytes("testCloseHRegion");
-    TEST_UTIL.createTable(tableName, FAMILIES);
-    HTable table = new HTable(tableName);
-    for (int i = 0; i < FAMILIES.length; i++) {
-      byte[] columnFamily = FAMILIES[i];
-      TEST_UTIL.createMultiRegions(table, columnFamily);
-    }
+    HTable table = TEST_UTIL.createTable(tableName, FAMILIES);
 
     for (int i = 0; i < nLoaders; i++) {
       new TableLoader(table).start();
     }
 
     // Wait for loaders to build up some data.
-    Thread.sleep(10000);
+    Thread.sleep(1000);
 
-    // Pick a regionserver.
-    Configuration conf = TEST_UTIL.getConfiguration();
-    HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
 
     // Bring down HDFS.
-    TEST_UTIL.shutdownMiniDFSCluster();
+    TEST_UTIL.getDFSCluster().shutdownNameNode();
 
-    // Verify checkFileSystem returns false and doesn't throw Exceptions.
-    assertFalse(server.checkFileSystem());
+    // Verify checkFileSystem returns false.
+    List <RegionServerThread> servers = TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads();
+    for(RegionServerThread serverThread : servers) {
+      HRegionServer server = serverThread.getRegionServer();
+      if (serverThread.isAlive() && !server.isStopRequested()) {
+        assertFalse(server.checkFileSystem());
+        break;
+      }
+    }
+
+    // Bring namenode, hbasemaster back up so we cleanup properly.
+    TEST_UTIL.getDFSCluster().restartNameNode();
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    if (!master.isAlive()) {
+      master = HMaster.constructMaster(MiniHBaseCluster.MiniHBaseClusterMaster.class, conf);
+      master.start();
+    }
   }
 }
