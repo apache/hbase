@@ -1308,9 +1308,13 @@ public class HLog implements Syncable {
             recoverFileLease(fs, logPath, conf);
             parseHLog(log, editsByRegion, fs, conf);
             processedLogs.add(logPath);
-           } catch (IOException e) {
+          } catch (EOFException eof) {
+            // truncated files are expected if a RS crashes (see HBASE-2643)
+            LOG.warn("EOF from hlog " + logPath + ".  continuing");
+            processedLogs.add(logPath);
+          } catch (IOException e) {
              if (skipErrors) {
-               LOG.warn("Got while parsing hlog " + logPath +
+               LOG.info("Got while parsing hlog " + logPath +
                  ". Marking as corrupted", e);
                corruptedLogs.add(logPath);
              } else {
@@ -1553,8 +1557,8 @@ public class HLog implements Syncable {
         queue.addLast(entry);
         editsCount++;
       }
-      LOG.debug("Pushed=" + editsCount + " entries from " + path);
     } finally {
+      LOG.debug("Pushed=" + editsCount + " entries from " + path);
       try {
         if (in != null) {
           in.close();
