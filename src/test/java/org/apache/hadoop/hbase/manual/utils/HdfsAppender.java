@@ -69,7 +69,7 @@ public class HdfsAppender extends Thread
         Path p = new Path("/appendtest", Integer.toString(fileCount));
         HLog.Writer writer = HLog.createWriter(fs, p, conf);
 
-        while (writer.getLength() > logrollsize) {
+        while (writer.getLength() < logrollsize) {
           int rSize = r.nextInt(maxSize-minSize) + minSize;
           WALEdit value = new WALEdit();
           value.add(new KeyValue(t, t, t, 0, new byte[rSize]));
