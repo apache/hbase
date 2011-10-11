@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.manual.utils.HBaseUtils;
+import org.apache.hadoop.hbase.manual.utils.HdfsAppender;
 import org.apache.hadoop.hbase.manual.utils.KillProcessesAndVerify;
 import org.apache.hadoop.hbase.manual.utils.MultiThreadedReader;
 import org.apache.hadoop.hbase.manual.utils.MultiThreadedWriter;
@@ -158,6 +159,20 @@ public class HBaseTest
     System.out.printf("Started kill test...");
   }
 
+  static final String OPT_USAGE_APPEND = " <MIN Block Size>:<MAX Block Size>";
+
+  /* test the performance of HDFS.append() using a range of block sizes */
+  public void appendTest() {
+    String[] cols = cmd_.getOptionValue(OPT_APPEND).split(":");
+    int minSize = Integer.parseInt(cols[0]);
+    int maxSize = Integer.parseInt(cols[1]);
+
+    System.out.printf("Block Range:  %d -> %d\n", minSize, maxSize);
+
+    (new HdfsAppender(configList_.get(0), minSize, maxSize)).start();
+    System.out.printf("Started append test...");
+  }
+
   public static void main(String[] args) {
     try {
       // parse the command line args
@@ -192,6 +207,10 @@ public class HBaseTest
       if(cmd_.hasOption(OPT_READ)) {
         hBaseTest.readData();
       }
+      // call HDFS.append() in an infinite loop
+      if(cmd_.hasOption(OPT_APPEND)) {
+        hBaseTest.appendTest();
+      }
     } catch(Exception e) {
       e.printStackTrace();
       printUsage();
@@ -205,6 +224,7 @@ public class HBaseTest
   private static final String OPT_LOAD = "load";
   private static final String OPT_READ = "read";
   private static final String OPT_KILL = "kill";
+  private static final String OPT_APPEND = "append";
   private static final String OPT_TABLE_NAME = "tn";
   static void initAndParseArgs(String[] args) throws ParseException {
     // set the usage object
@@ -220,6 +240,7 @@ public class HBaseTest
     options_.addOption(OPT_LOAD      , true, OPT_USAGE_LOAD);
     options_.addOption(OPT_READ      , true, OPT_USAGE_READ);
     options_.addOption(OPT_KILL      , true, OPT_USAGE_KILL);
+    options_.addOption(OPT_APPEND    , true, OPT_USAGE_APPEND);
     // parse the passed in options
     CommandLineParser parser = new BasicParser();
     cmd_ = parser.parse(options_, args);
