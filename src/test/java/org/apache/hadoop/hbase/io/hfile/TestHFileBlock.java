@@ -472,9 +472,11 @@ public class TestHFileBlock {
           true, -1);
       assertEquals(80, HFileBlock.BYTE_BUFFER_HEAP_SIZE);
       long expected = ClassSize.align(ClassSize.estimateBase(HFileBlock.class,
-          true)
-          + ClassSize.estimateBase(buf.getClass(), true)
-          + HFileBlock.HEADER_SIZE + size);
+          true))
+          + ClassSize.align(ClassSize.estimateBase(buf.getClass(), true)
+              + HFileBlock.HEADER_SIZE + size)
+          + ClassSize.align(ClassSize.estimateBase(String.class, true) + 2
+              * block.getColumnFamilyName().length());
       assertEquals(expected, block.heapSize());
     }
   }

@@ -1380,9 +1380,12 @@ public class HFileBlock implements HeapSize, HFileBlockInfo {
     // uncompressed size, next block's on-disk size, offset and previous
     // offset, byte buffer object, and its byte array. Might also need to add
     // some fields inside the byte buffer.
-    return ClassSize.align(ClassSize.OBJECT + 2 * ClassSize.REFERENCE + 3
-        * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG + BYTE_BUFFER_HEAP_SIZE) +
-        ClassSize.align(buf.capacity());
+    // Also includes size of string cfName, which has its length multiplied by
+    // two because Java characters are unicode and thus 2 bytes each.
+    return ClassSize.align(ClassSize.OBJECT + 3 * ClassSize.REFERENCE + 3
+        * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG)
+        + ClassSize.align(buf.capacity() + BYTE_BUFFER_HEAP_SIZE)
+        + ClassSize.align(ClassSize.STRING + 2 * this.cfName.length());
   }
 
   /**
