@@ -291,9 +291,6 @@ public class StoreFile {
    * @return This files maximum edit sequence id.
    */
   public long getMaxSequenceId() {
-    if (this.sequenceid == -1) {
-      throw new IllegalAccessError("Has not been initialized");
-    }
     return this.sequenceid;
   }
 
