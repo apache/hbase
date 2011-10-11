@@ -68,6 +68,7 @@ public class MiniHBaseCluster {
   throws IOException {
     this.conf = conf;
     conf.set(HConstants.MASTER_PORT, "0");
+    conf.setLong("hbase.master.applyPreferredAssignment.period", 0);
     init(numRegionServers);
   }
 
