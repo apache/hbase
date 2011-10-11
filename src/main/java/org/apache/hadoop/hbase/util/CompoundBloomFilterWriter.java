@@ -202,10 +202,6 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
 
     ByteBloomFilter readyChunkBloom = readyChunk.chunk;
     readyChunkBloom.getDataWriter().write(out);
-    if (LOG.isDebugEnabled() && readyChunk.chunkId % 10 == 0) {
-      LOG.debug("Wrote Bloom chunk #" + readyChunk.chunkId + ": "
-          + readyChunkBloom + "; total Bloom " + "keys: " + totalKeyCount);
-    }
   }
 
   @Override
