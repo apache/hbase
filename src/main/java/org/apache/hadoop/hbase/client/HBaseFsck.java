@@ -74,6 +74,7 @@ public class HBaseFsck {
   private boolean fix = false; // do we want to try fixing the errors?
   private boolean rerun = false; // if we tried to fix something rerun hbck
   private static boolean summary = false; // if we want to print less output
+  private static boolean promptResponse = false;  // "no" to all prompt questions
 
   /**
    * Constructor
@@ -370,8 +371,9 @@ public class HBaseFsck {
       // If we are trying to fix the errors
       if (shouldFix()) {
         errors.print("Trying to fix unassigned region...");
-        setShouldRerun();
-        HBaseFsckRepair.fixUnassigned(this.conf, hbi.metaEntry);
+        if (HBaseFsckRepair.fixUnassigned(this.conf, hbi.metaEntry)) {
+          setShouldRerun();
+        }
       }
     } else if (inMeta && inHdfs && isDeployed && !shouldBeDeployed) {
       errors.reportError("Region " + descriptiveName + " has should not be deployed according " +
@@ -383,8 +385,9 @@ public class HBaseFsck {
       // If we are trying to fix the errors
       if (shouldFix()) {
         errors.print("Trying to fix assignment error...");
-        setShouldRerun();
-        HBaseFsckRepair.fixDupeAssignment(this.conf, hbi.metaEntry, hbi.deployedOn);
+        if (HBaseFsckRepair.fixDupeAssignment(this.conf, hbi.metaEntry, hbi.deployedOn)) {
+          setShouldRerun();
+        }
       }
     } else if (inMeta && inHdfs && isDeployed && !deploymentMatchesMeta) {
       errors.reportError("Region " + descriptiveName + " listed in META on region server " +
@@ -393,8 +396,9 @@ public class HBaseFsck {
       // If we are trying to fix the errors
       if (shouldFix()) {
         errors.print("Trying to fix assignment error...");
-        setShouldRerun();
-        HBaseFsckRepair.fixDupeAssignment(this.conf, hbi.metaEntry, hbi.deployedOn);
+        if (HBaseFsckRepair.fixDupeAssignment(this.conf, hbi.metaEntry, hbi.deployedOn)) {
+          setShouldRerun();
+        }
       }
     } else {
       errors.reportError("Region " + descriptiveName + " is in an unforeseen state:" +
@@ -581,9 +585,10 @@ public class HBaseFsck {
         errors.reportError(".META. is not found on any region.");
         if (shouldFix()) {
           errors.print("Trying to fix a problem with .META...");
-          setShouldRerun();
           // try to fix it (treat it as unassigned region)
-          HBaseFsckRepair.fixUnassigned(conf, root.metaEntry);
+          if (HBaseFsckRepair.fixUnassigned(conf, root.metaEntry)) {
+            setShouldRerun();
+          }
         }
       }
       // If there are more than one regions pretending to hold the .META.
@@ -591,13 +596,14 @@ public class HBaseFsck {
         errors.reportError(".META. is found on more than one region.");
         if (shouldFix()) {
           errors.print("Trying to fix a problem with .META...");
-          setShouldRerun();
           // try fix it (treat is a dupe assignment)
           List <HServerAddress> deployedOn = Lists.newArrayList();
           for (HbckInfo mRegion : metaRegions) {
             deployedOn.add(mRegion.metaEntry.regionServer);
           }
-          HBaseFsckRepair.fixDupeAssignment(conf, root.metaEntry, deployedOn);
+          if (HBaseFsckRepair.fixDupeAssignment(conf, root.metaEntry, deployedOn )) {
+            setShouldRerun();
+          }
         }
       }
       // rerun hbck with hopefully fixed META
@@ -840,6 +846,17 @@ public class HBaseFsck {
   }
 
   /**
+   * Let the user allow the opportunity to specify "-y" to all
+   * reconfirmation questions.
+   */
+  static void setPromptResponse(boolean value) {
+    promptResponse = value;
+  }
+  static boolean getPromptResponse() {
+    return promptResponse;
+  }
+
+  /**
    * We are interested in only those tables that have not changed their state in
    * META during the last few seconds specified by hbase.admin.fsck.timelag
    * @param seconds - the time in seconds
@@ -855,7 +872,9 @@ public class HBaseFsck {
     System.err.println("   -timelag {timeInSeconds}  Process only regions that " +
                        " have not experienced any metadata updates in the last " +
                        " {{timeInSeconds} seconds.");
-    System.err.println("   -fix Try to fix some of the errors.");
+    System.err.println("   -fix [-y] Try to fix some of the errors." +
+                       "           If -y is specified, then do not prompt for " +
+                       "           reconfirmation from users.");
     System.err.println("   -summary Print only summary of the tables and status.");
     Runtime.getRuntime().exit(-2);
   }
@@ -892,6 +911,8 @@ public class HBaseFsck {
         i++;
       } else if (cmd.equals("-fix")) {
         fsck.setFixErrors();
+      } else if (cmd.equals("-y")) {
+        fsck.setPromptResponse(true);
       } else if (cmd.equals("-summary")) {
         fsck.setSummary();
       } else {

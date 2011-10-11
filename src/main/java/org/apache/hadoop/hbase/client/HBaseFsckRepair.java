@@ -33,9 +33,14 @@ import org.apache.zookeeper.KeeperException;
 
 public class HBaseFsckRepair {
 
-  public static void fixDupeAssignment(Configuration conf, HRegionInfo region,
+  public static boolean fixDupeAssignment(Configuration conf, HRegionInfo region,
       List<HServerAddress> servers)
   throws IOException {
+
+    // ask if user really really wants to fix this region
+    if (!prompt("Region " + region + " with duplicate assignment. ")) {
+      return false;
+    }
 
     HRegionInfo actualRegion = new HRegionInfo(region);
 
@@ -50,12 +55,18 @@ public class HBaseFsckRepair {
 
     // It's unassigned so fix it as such
     fixUnassigned(conf, actualRegion);
+    return true;
   }
 
-  public static void fixUnassigned(Configuration conf, HRegionInfo region)
+  public static boolean fixUnassigned(Configuration conf, HRegionInfo region)
   throws IOException {
 
     HRegionInfo actualRegion = new HRegionInfo(region);
+
+    // ask if user really really wants to fix this region
+    if (!prompt("Region " + region + " is not assigned. ")) {
+      return false;
+    }
 
     // Clear status in master and zk
     clearInMaster(conf, actualRegion);
@@ -63,6 +74,7 @@ public class HBaseFsckRepair {
 
     // Clear assignment in META or ROOT
     clearAssignment(conf, actualRegion);
+    return true;
   }
 
   private static void clearInMaster(Configuration conf, HRegionInfo region)
@@ -110,5 +122,28 @@ public class HBaseFsckRepair {
     del.deleteColumns(HConstants.CATALOG_FAMILY,
         HConstants.STARTCODE_QUALIFIER);
     ht.delete(del);
+  }
+
+  /**
+   * Ask the user whether we should fix this problem.
+   * Returns true if we should continue to fix the problem.
+   */
+  private static boolean prompt(String msg) throws IOException {
+    // if the user has already specified "yes" to all prompt questions,
+    // short circuit this test.
+    if (HBaseFsck.getPromptResponse()) {
+      return true;
+    }
+    int inChar;
+    while (true) {
+      System.out.println(msg + "Fix(y/n):");
+      inChar = System.in.read();
+      if (inChar == 'n' || inChar == 'N') {
+        System.out.println("Not fixing " + msg);
+        return false;
+      } else if (inChar == 'y' || inChar == 'Y') {
+        return true;
+      }
+    }
   }
 }
