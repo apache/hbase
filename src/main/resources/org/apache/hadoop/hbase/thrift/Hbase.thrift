@@ -51,9 +51,9 @@ typedef binary Bytes
 typedef i32    ScannerID
 
 /**
- * TCell - Used to transport a cell value (byte[]) and the timestamp it was 
+ * TCell - Used to transport a cell value (byte[]) and the timestamp it was
  * stored with together as a result for get and getRow methods. This promotes
- * the timestamp of a cell to a first-class value, making it easy to take 
+ * the timestamp of a cell to a first-class value, making it easy to take
  * note of temporal data. Cell is used all the way from HStore up to HTable.
  */
 struct TCell{
@@ -86,7 +86,7 @@ struct TRegionInfo {
   2:Text endKey,
   3:i64 id,
   4:Text name,
-  5:byte version 
+  5:byte version
 }
 
 /**
@@ -109,11 +109,23 @@ struct BatchMutation {
 
 
 /**
- * Holds row name and then a map of columns to cells. 
+ * Holds row name and then a map of columns to cells.
  */
 struct TRowResult {
   1:Text row,
   2:map<Text, TCell> columns
+}
+
+/**
+ * A Scan object is used to specify scanner parameters when opening a scanner.
+ */
+struct TScan {
+  1:optional Text startRow,
+  2:optional Text stopRow,
+  3:optional i64 timestamp,
+  4:optional list<Text> columns,
+  5:optional i32 caching,
+  6:optional Text filterString
 }
 
 //
@@ -145,7 +157,7 @@ exception AlreadyExists {
 }
 
 //
-// Service 
+// Service
 //
 
 service Hbase {
@@ -156,7 +168,7 @@ service Hbase {
     /** name of the table */
     1:Bytes tableName
   ) throws (1:IOError io)
-    
+
   /**
    * Disables a table (takes it off-line) If it is being served, the master
    * will tell the servers to stop serving it.
@@ -173,13 +185,13 @@ service Hbase {
     /** name of the table to check */
     1:Bytes tableName
   ) throws (1:IOError io)
-    
+
   void compact(1:Bytes tableNameOrRegionName)
     throws (1:IOError io)
-  
+
   void majorCompact(1:Bytes tableNameOrRegionName)
     throws (1:IOError io)
-    
+
   /**
    * List all the userspace tables.
    *
@@ -237,7 +249,7 @@ service Hbase {
     1:Text tableName
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get a single TCell for the specified table, row, and column at the
    * latest timestamp. Returns an empty list if no such value exists.
    *
@@ -254,7 +266,7 @@ service Hbase {
     3:Text column
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get the specified number of versions for the specified table,
    * row, and column.
    *
@@ -274,7 +286,7 @@ service Hbase {
     4:i32 numVersions
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get the specified number of versions for the specified table,
    * row, and column.  Only versions less than or equal to the specified
    * timestamp will be returned.
@@ -298,10 +310,10 @@ service Hbase {
     5:i32 numVersions
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get all the data for the specified table and row at the latest
    * timestamp. Returns an empty list if the row does not exist.
-   * 
+   *
    * @return TRowResult containing the row and map of columns to TCells
    */
   list<TRowResult> getRow(
@@ -312,10 +324,10 @@ service Hbase {
     2:Text row
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get the specified columns for the specified table and row at the latest
    * timestamp. Returns an empty list if the row does not exist.
-   * 
+   *
    * @return TRowResult containing the row and map of columns to TCells
    */
   list<TRowResult> getRowWithColumns(
@@ -329,10 +341,10 @@ service Hbase {
     3:list<Text> columns
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get all the data for the specified table and row at the specified
    * timestamp. Returns an empty list if the row does not exist.
-   * 
+   *
    * @return TRowResult containing the row and map of columns to TCells
    */
   list<TRowResult> getRowTs(
@@ -345,11 +357,11 @@ service Hbase {
     /** timestamp */
     3:i64 timestamp
   ) throws (1:IOError io)
-    
-  /** 
+
+  /**
    * Get the specified columns for the specified table and row at the specified
    * timestamp. Returns an empty list if the row does not exist.
-   * 
+   *
    * @return TRowResult containing the row and map of columns to TCells
    */
   list<TRowResult> getRowWithColumnsTs(
@@ -364,7 +376,7 @@ service Hbase {
     4:i64 timestamp
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Apply a series of mutations (updates/deletes) to a row in a
    * single transaction.  If an exception is thrown, then the
    * transaction is aborted.  Default current timestamp is used, and
@@ -381,7 +393,7 @@ service Hbase {
     3:list<Mutation> mutations
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
-  /** 
+  /**
    * Apply a series of mutations (updates/deletes) to a row in a
    * single transaction.  If an exception is thrown, then the
    * transaction is aborted.  The specified timestamp is used, and
@@ -401,7 +413,7 @@ service Hbase {
     4:i64 timestamp
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
-  /** 
+  /**
    * Apply a series of batches (each a series of mutations on a single row)
    * in a single transaction.  If an exception is thrown, then the
    * transaction is aborted.  Default current timestamp is used, and
@@ -415,7 +427,7 @@ service Hbase {
     2:list<BatchMutation> rowBatches
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
-  /** 
+  /**
    * Apply a series of batches (each a series of mutations on a single row)
    * in a single transaction.  If an exception is thrown, then the
    * transaction is aborted.  The specified timestamp is used, and
@@ -448,8 +460,8 @@ service Hbase {
     /** amount to increment by */
     4:i64 value
   ) throws (1:IOError io, 2:IllegalArgument ia)
-    
-  /** 
+
+  /**
    * Delete all cells that match the passed row and column.
    */
   void deleteAll(
@@ -463,7 +475,7 @@ service Hbase {
     3:Text column
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Delete all cells that match the passed row and column and whose
    * timestamp is equal-to or older than the passed timestamp.
    */
@@ -507,7 +519,7 @@ service Hbase {
     3:i64 timestamp
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get a scanner on the current table starting at the specified row and
    * ending at the last row in the table.  Return the specified columns.
    *
@@ -531,7 +543,19 @@ service Hbase {
     3:list<Text> columns
   ) throws (1:IOError io)
 
-  /** 
+  /**
+   * Get a scanner on the current table, using the Scan instance
+   * for the scan parameters.
+   */
+  ScannerID scannerOpenWithScan(
+    /** name of table */
+    1:Text tableName,
+
+    /** Scan instance */
+    2:TScan scan
+  ) throws (1:IOError io)
+
+  /**
    * Get a scanner on the current table starting and stopping at the
    * specified rows.  ending at the last row in the table.  Return the
    * specified columns.
@@ -579,7 +603,7 @@ service Hbase {
     3:list<Text> columns
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get a scanner on the current table starting at the specified row and
    * ending at the last row in the table.  Return the specified columns.
    * Only values with the specified timestamp are returned.
@@ -607,7 +631,7 @@ service Hbase {
     4:i64 timestamp
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get a scanner on the current table starting and stopping at the
    * specified rows.  ending at the last row in the table.  Return the
    * specified columns.  Only values with the specified timestamp are
@@ -643,6 +667,122 @@ service Hbase {
   ) throws (1:IOError io)
 
   /**
+   * Get a scanner on the current table starting at the first row and
+   * ending at the last row in the table.  Return the specified columns.
+   *
+   * Return the specified columns that pass the filter constructed
+   * by the filterString
+   *
+   * @return scanner id to be used with other scanner procedures
+   */
+  ScannerID scannerOpenWithFilterString(
+    /** name of table */
+    1:Text tableName,
+
+    /**
+     * Filter string
+     */
+    2:Text filterString
+
+  ) throws (1:IOError io)
+
+  /**
+   * Get a scanner on the current table starting at the first row and
+   * ending at the last row in the table.
+   *
+   * Return the specified columns that pass the filter constructed
+   * by the filterString
+   *
+   * The timestamp of the keyvalue must also be within the specified timestamp
+   * No other columns will be returned.
+   *
+   * @return scanner id to be used with other scanner procedures
+   */
+  ScannerID scannerOpenWithFilterStringTs(
+    /** name of table */
+    1:Text tableName,
+
+    /**
+     * Filter string
+     */
+    2:Text filterString
+
+   /** timestamp */
+    3:i64 timestamp
+
+  ) throws (1:IOError io)
+
+  /**
+   * Get a scanner on the current table starting and stopping at the
+   * specified rows.
+   *
+   * Return the specified columns that pass the filter constructed
+   * by the filterString
+   *
+   * @return scanner id to be used with other scanner procedures
+   */
+  ScannerID scannerOpenWithStopAndFilterString(
+    /** name of table */
+    1:Text tableName,
+
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
+    2:Text startRow,
+
+    /**
+     * row to stop scanning on. This row is *not* included in the
+     * scanner's results.
+     * Send "" (empty string) to end at the last row.
+     */
+    3:Text stopRow,
+
+    /**
+     * Filter string
+     */
+    4:Text filterString
+  ) throws (1:IOError io)
+
+  /**
+   * Get a scanner on the current table starting and stopping at the
+   * specified rows.
+   *
+   * Return the specified columns that pass the filter constructed
+   * by the filterString
+   *
+   * The timestamp of the keyvalue must also be within the specified timestamp
+   * No other columns will be returned.
+   *
+   * @return scanner id to be used with other scanner procedures
+   */
+  ScannerID scannerOpenWithStopAndFilterStringTs(
+    /** name of table */
+    1:Text tableName,
+
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
+    2:Text startRow,
+
+    /**
+     * row to stop scanning on. This row is *not* included in the
+     * scanner's results.
+     * Send "" (empty string) to end at the last row.
+     */
+    3:Text stopRow,
+
+    /**
+     * Filter string
+     */
+    4:Text filterString
+
+   /** timestamp */
+    6:i64 timestamp
+  ) throws (1:IOError io)
+
+  /**
    * Returns the scanner's current row value and advances to the next
    * row in the table.  When there are no more rows in the table, or a key
    * greater-than-or-equal-to the scanner's specified stopRow is reached,
@@ -661,8 +801,8 @@ service Hbase {
 
   /**
    * Returns, starting at the scanner's current row value nbRows worth of
-   * rows and advances to the next row in the table.  When there are no more 
-   * rows in the table, or a key greater-than-or-equal-to the scanner's 
+   * rows and advances to the next row in the table.  When there are no more
+   * rows in the table, or a key greater-than-or-equal-to the scanner's
    * specified stopRow is reached,  an empty list is returned.
    *
    * @return a TRowResult containing the current row and a map of the columns to TCells.
