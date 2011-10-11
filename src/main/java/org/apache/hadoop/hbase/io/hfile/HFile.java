@@ -1960,7 +1960,7 @@ public class HFile {
 
         Map<byte[],byte[]> fileInfo = reader.loadFileInfo();
         int count = 0;
-        if (verbose || printKey || checkRow || checkFamily) {
+        if (printKey || checkRow || checkFamily) {
           // scan over file and read key/value's and check if requested
           HFileScanner scanner = reader.getScanner(false, false);
           scanner.seekTo();
