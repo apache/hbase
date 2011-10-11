@@ -376,7 +376,11 @@ public class MemStore implements HeapSize {
       long addedSize = add(newKv);
 
       // now find and RM the old one(s) to prevent version explosion:
-      SortedSet<KeyValue> ss = kvset.tailSet(newKv);
+	  KeyValue firstKv = KeyValue.createFirstOnRow(
+			  newKv.getBuffer(), newKv.getRowOffset(), newKv.getRowLength(),
+			  newKv.getBuffer(), newKv.getFamilyOffset(), newKv.getFamilyLength(),
+			  newKv.getBuffer(), newKv.getQualifierOffset(), newKv.getQualifierLength());
+      SortedSet<KeyValue> ss = kvset.tailSet(firstKv);
       Iterator<KeyValue> it = ss.iterator();
       while ( it.hasNext() ) {
         KeyValue kv = it.next();
@@ -397,9 +401,7 @@ public class MemStore implements HeapSize {
             newKv.getBuffer(), newKv.getQualifierOffset(), newKv.getQualifierLength(),
             kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength())) {
 
-          // to be extra safe we only remove Puts that have a memstoreTS==0
-          if (kv.getType() == KeyValue.Type.Put.getCode() &&
-              kv.getMemstoreTS() == 0) {
+          if (kv.getType() == KeyValue.Type.Put.getCode()) {
             // false means there was a change, so give us the size.
             addedSize -= heapSizeChange(kv, true);
 
