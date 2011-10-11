@@ -592,19 +592,22 @@ public class HLog implements Syncable {
 
     // If too many log files, figure which regions we need to flush.
     byte [][] regions = null;
-    int logCount = this.outputfiles.size() - logsToRemove;
+    int logCount = this.outputfiles.size();
     if (logCount > this.maxLogs && this.outputfiles != null &&
         this.outputfiles.size() > 0) {
       regions = findMemstoresWithEditsEqualOrOlderThan(this.outputfiles.firstKey(),
         this.lastSeqWritten);
-      StringBuilder sb = new StringBuilder();
-      for (int i = 0; i < regions.length; i++) {
-        if (i > 0) sb.append(", ");
-        sb.append(Bytes.toStringBinary(regions[i]));
+
+      if (regions != null) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < regions.length; i++) {
+          if (i > 0) sb.append(", ");
+          sb.append(Bytes.toStringBinary(regions[i]));
+        }
+        LOG.info("Too many hlogs: logs=" + logCount + ", maxlogs=" +
+            this.maxLogs + "; forcing flush of " + regions.length + " regions(s): " +
+            sb.toString());
       }
-      LOG.info("Too many hlogs: logs=" + logCount + ", maxlogs=" +
-        this.maxLogs + "; forcing flush of " + regions.length + " regions(s): " +
-        sb.toString());
     }
     return regions;
   }
