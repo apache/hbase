@@ -714,7 +714,7 @@ public class StoreFile {
           bt = bloomType;
         } catch (IllegalArgumentException iae) {
           LOG.error(String.format(
-            "Parse error while creating bloom for %s (%d, %d)",
+            "Parse error while creating bloom for %s (%d, %f)",
             path, maxKeys, err), iae);
           bloom = null;
           bt = BloomType.NONE;
