@@ -75,10 +75,9 @@ module Hbase
       if args.empty?
         @admin.majorCompact(table_or_region_name)
       elsif args.length == 1
-        # We are major compacting a column family within a region.
-        region_name = table_or_region_name
+        # We are major compacting a column family within a region or table.
         column_family = args.first
-        @admin.majorCompact(region_name, column_family)
+        @admin.majorCompact(table_or_region_name, column_family)
       end
     end
 

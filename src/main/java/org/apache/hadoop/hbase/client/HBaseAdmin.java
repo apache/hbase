@@ -737,7 +737,7 @@ public class HBaseAdmin {
    */
   private void compactCF(String tableName, String columnFamily, HConstants.Modify op)
     throws IOException {
-    compact(Bytes.toBytes(tableName), Bytes.toBytes(columnFamily));
+    compactCF(Bytes.toBytes(tableName), Bytes.toBytes(columnFamily), op);
   }
 
   /**
@@ -840,7 +840,7 @@ public class HBaseAdmin {
   }
 
   /**
-   * Major compacts a column family within a region.
+   * Major compacts a column family within a region or table.
    * Asynchronous operation.
    *
    * @param regionName region to compact
@@ -863,7 +863,7 @@ public class HBaseAdmin {
   }
 
   /**
-   * Major compacts a column family within a region.
+   * Major compacts a column family within a region or table.
    * Asynchronous operation.
    *
    * @param regionName region to compact
