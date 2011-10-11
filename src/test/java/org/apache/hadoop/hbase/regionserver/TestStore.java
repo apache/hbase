@@ -154,7 +154,7 @@ public class TestStore extends TestCase {
     assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS);
 
     // after compact; check the lowest time stamp
-    store.compact();
+    store.compact(store.requestCompaction());
     lowestTimeStampFromStore = Store.getLowestTimestamp(store.getStorefiles());
     lowestTimeStampFromFS = getLowestTimeStampFromFS(fs,store.getStorefiles());
     assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS);
