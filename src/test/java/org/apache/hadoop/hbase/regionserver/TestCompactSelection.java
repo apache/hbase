@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -36,9 +38,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.TestWALReplay;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.collect.Lists;
@@ -227,5 +227,42 @@ public class TestCompactSelection extends TestCase {
     compactEquals(new ArrayList<StoreFile>() /* empty */);
     // empty case (because all files are too big)
     compactEquals(sfCreate(tooBig, tooBig) /* empty */);
+  }
+
+  public void testOffPeakCompactionRatio() throws IOException {
+    /*
+     * NOTE: these tests are specific to describe the implementation of the
+     * current compaction algorithm.  Developed to ensure that refactoring
+     * doesn't implicitly alter this.
+     */
+    long tooBig = maxSize + 1;
+
+    Calendar calendar = new GregorianCalendar();
+    int hourOfDay = calendar.get(Calendar.HOUR_OF_DAY);
+    LOG.debug("Hour of day = " + hourOfDay);
+    int hourPlusOne = ((hourOfDay+1)%24);
+    int hourMinusOne = ((hourOfDay-1)%24);
+    int hourMinusTwo = ((hourOfDay-2)%24);
+
+    // check compact selection without peak hour setting
+    LOG.debug("Testing compact selection without off-peak settings...");
+    compactEquals(sfCreate(999,50,12,12,1), 12, 12, 1);
+
+    // set an off-peak compaction threshold
+    this.conf.setFloat("hbase.hstore.compaction.ratio.offpeak", 5.0F);
+
+    // set peak hour to current time and check compact selection
+    this.conf.setLong("hbase.offpeak.start.hour", hourMinusOne);
+    this.conf.setLong("hbase.offpeak.end.hour", hourPlusOne);
+    LOG.debug("Testing compact selection with off-peak settings (" +
+        hourMinusOne + ", " + hourPlusOne + ")");
+    compactEquals(sfCreate(999,50,12,12, 1), 50, 12, 12, 1);
+
+    // set peak hour outside current selection and check compact selection
+    this.conf.setLong("hbase.offpeak.start.hour", hourMinusTwo);
+    this.conf.setLong("hbase.offpeak.end.hour", hourMinusOne);
+    LOG.debug("Testing compact selection with off-peak settings (" +
+        hourMinusTwo + ", " + hourMinusOne + ")");
+    compactEquals(sfCreate(999,50,12,12, 1), 12, 12, 1);
   }
 }

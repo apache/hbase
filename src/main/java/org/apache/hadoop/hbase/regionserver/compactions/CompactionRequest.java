@@ -1,3 +1,22 @@
+/**
+ * Copyright 2011 The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
@@ -30,7 +49,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     static final Log LOG = LogFactory.getLog(CompactionRequest.class);
     private final HRegion r;
     private final Store s;
-    private final List<StoreFile> files;
+    private final CompactSelection files;
     private final long totalSize;
     private final boolean isMajor;
     private int p;
@@ -38,7 +57,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     private HRegionServer server = null;
 
     public CompactionRequest(HRegion r, Store s,
-        List<StoreFile> files, boolean isMajor, int p) {
+        CompactSelection files, boolean isMajor, int p) {
       Preconditions.checkNotNull(r);
       Preconditions.checkNotNull(files);
 
@@ -53,6 +72,10 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       this.isMajor = isMajor;
       this.p = p;
       this.date = new Date();
+    }
+
+    public void finishRequest() {
+      this.files.finishRequest();
     }
 
     /**
@@ -99,7 +122,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     }
 
     /** Gets the StoreFiles for the request */
-    public List<StoreFile> getFiles() {
+    public CompactSelection getFiles() {
       return files;
     }
 

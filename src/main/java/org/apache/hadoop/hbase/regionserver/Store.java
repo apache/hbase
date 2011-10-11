@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -52,6 +51,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -103,9 +103,6 @@ public class Store implements HeapSize {
   private final int maxFilesToCompact;
   private final long minCompactSize;
   private final long maxCompactSize;
-  // compactRatio: double on purpose!  Float.MAX < Long.MAX < Double.MAX
-  // With float, java will downcast your long to float for comparisons (bad)
-  private double compactRatio;
   private long lastCompactSize = 0;
   volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
@@ -208,7 +205,6 @@ public class Store implements HeapSize {
       this.region.memstoreFlushSize);
     this.maxCompactSize
       = conf.getLong("hbase.hstore.compaction.max.size", Long.MAX_VALUE);
-    this.compactRatio = conf.getFloat("hbase.hstore.compaction.ratio", 1.2F);
 
     if (Store.closeCheckInterval == 0) {
       Store.closeCheckInterval = conf.getInt(
@@ -881,7 +877,7 @@ public class Store implements HeapSize {
           Preconditions.checkArgument(idx != -1);
           candidates.subList(0, idx + 1).clear();
         }
-        List<StoreFile> filesToCompact = compactSelection(candidates);
+        CompactSelection filesToCompact = compactSelection(candidates);
 
         // no files to compact
         if (filesToCompact.isEmpty()) {
@@ -919,6 +915,7 @@ public class Store implements HeapSize {
   }
 
   public void finishRequest(CompactionRequest cr) {
+    cr.finishRequest();
     synchronized (filesCompacting) {
       filesCompacting.removeAll(cr.getFiles());
     }
@@ -943,7 +940,7 @@ public class Store implements HeapSize {
    * @return subset copy of candidate list that meets compaction criteria
    * @throws IOException
    */
-  List<StoreFile> compactSelection(List<StoreFile> candidates)
+  CompactSelection compactSelection(List<StoreFile> candidates)
       throws IOException {
     // ASSUMPTION!!! filesCompacting is locked when calling this function
 
@@ -958,7 +955,7 @@ public class Store implements HeapSize {
      *    | |  | |  | |  | | | | | |
      *    | |  | |  | |  | | | | | |
      */
-    List<StoreFile> filesToCompact = new ArrayList<StoreFile>(candidates);
+    CompactSelection filesToCompact = new CompactSelection(conf, candidates);
 
     boolean forcemajor = this.forceMajor && filesCompacting.isEmpty();
     if (!forcemajor) {
@@ -968,11 +965,12 @@ public class Store implements HeapSize {
       while (pos < filesToCompact.size() &&
              filesToCompact.get(pos).getReader().length() > maxCompactSize &&
              !filesToCompact.get(pos).isReference()) ++pos;
-      filesToCompact.subList(0, pos).clear();
+      filesToCompact.clearSubList(0, pos);
     }
 
     if (filesToCompact.isEmpty()) {
       LOG.debug(this.storeNameStr + ": no store files to compact");
+      filesToCompact.emptyFileList();
       return filesToCompact;
     }
 
@@ -983,7 +981,7 @@ public class Store implements HeapSize {
     if (!majorcompaction && !hasReferences(filesToCompact)) {
       // we're doing a minor compaction, let's see what files are applicable
       int start = 0;
-      double r = this.compactRatio;
+      double r = filesToCompact.getCompactSelectionRatio();
 
       // exclude bulk import files from minor compactions, if configured
       if (conf.getBoolean("hbase.hstore.compaction.exclude.bulk", false)) {
@@ -998,7 +996,8 @@ public class Store implements HeapSize {
 
       // skip selection algorithm if we don't have enough files
       if (filesToCompact.size() < this.minFilesToCompact) {
-        return Collections.emptyList();
+        filesToCompact.emptyFileList();
+        return filesToCompact;
       }
 
       /* TODO: add sorting + unit test back in when HBASE-2856 is fixed
@@ -1041,7 +1040,7 @@ public class Store implements HeapSize {
       int end = Math.min(countOfFiles, start + this.maxFilesToCompact);
       long totalSize = fileSizes[start]
                      + ((start+1 < countOfFiles) ? sumSize[start+1] : 0);
-      filesToCompact = filesToCompact.subList(start, end);
+      filesToCompact = filesToCompact.getSubList(start, end);
 
       // if we don't have enough files to compact, just wait
       if (filesToCompact.size() < this.minFilesToCompact) {
@@ -1051,13 +1050,14 @@ public class Store implements HeapSize {
             + StringUtils.humanReadableInt(totalSize)
             + " have met compaction criteria.");
         }
-        return Collections.emptyList();
+        filesToCompact.emptyFileList();
+        return filesToCompact;
       }
     } else {
       // all files included in this compaction, up to max
       if (filesToCompact.size() > this.maxFilesToCompact) {
         int pastMax = filesToCompact.size() - this.maxFilesToCompact;
-        filesToCompact.subList(0, pastMax).clear();
+        filesToCompact.clearSubList(0, pastMax);
       }
     }
     return filesToCompact;
@@ -1743,7 +1743,7 @@ public class Store implements HeapSize {
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (14 * ClassSize.REFERENCE) + (1 * Bytes.SIZEOF_DOUBLE) +
+      ClassSize.OBJECT + (14 * ClassSize.REFERENCE) +
       (7 * Bytes.SIZEOF_LONG) + (6 * Bytes.SIZEOF_INT) + (3 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
