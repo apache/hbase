@@ -86,6 +86,28 @@ public class MetaScanner {
       MetaScannerVisitor visitor, byte[] tableName, byte[] row,
       int rowLimit)
   throws IOException {
+    metaScan(configuration, visitor, HConstants.META_TABLE_NAME, tableName, row, rowLimit);
+  }
+
+  /**
+   * Scans the meta table and calls a visitor on each RowResult. Uses a table
+   * name and a row name to locate meta regions. And it only scans at most
+   * <code>rowLimit</code> of rows.
+   *
+   * @param configuration HBase configuration.
+   * @param visitor Visitor object.
+   * @param metaTableName Meta table name (usually .META.)
+   * @param tableName User table name.
+   * @param row Name of the row at the user table. The scan will start from
+   * the region row where the row resides.
+   * @param rowLimit Max of processed rows. If it is less than 0, it
+   * will be set to default value <code>Integer.MAX_VALUE</code>.
+   * @throws IOException e
+   */
+  public static void metaScan(Configuration configuration, MetaScannerVisitor visitor,
+    byte[] metaTableName, byte[] tableName, byte[] row,
+      int rowLimit)
+  throws IOException {
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
 
     HConnection connection = HConnectionManager.getConnection(configuration);
@@ -99,7 +121,7 @@ public class MetaScanner {
         HRegionInfo.createRegionName(tableName, row, HConstants.NINES,
           false);
 
-      HTable metaTable = new HTable(configuration, HConstants.META_TABLE_NAME);
+      HTable metaTable = new HTable(configuration, metaTableName);
       Result startRowResult = metaTable.getRowOrBefore(searchRow,
           HConstants.CATALOG_FAMILY);
       if (startRowResult == null) {
@@ -132,7 +154,7 @@ public class MetaScanner {
         configuration.getInt("hbase.meta.scanner.caching", 100));
     do {
       final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
-      callable = new ScannerCallable(connection, HConstants.META_TABLE_NAME,
+      callable = new ScannerCallable(connection, metaTableName,
           scan);
       // Open scanner
       connection.getRegionServerWithRetries(callable);
