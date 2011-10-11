@@ -484,6 +484,9 @@ public class TestStoreFile extends HBaseTestCase {
     fs.delete(f, true);
 
     conf.setInt(StoreFile.IO_STOREFILE_BLOOM_MAX_KEYS, Integer.MAX_VALUE);
+
+    // TODO: commented out because we ran out of java heap space on trunk
+    /*
     // the below config caused IllegalArgumentException in our production cluster
     // however, the resulting byteSize is < MAX_INT, so this should work properly
     writer = new StoreFile.Writer(fs, f,
@@ -491,6 +494,7 @@ public class TestStoreFile extends HBaseTestCase {
         conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, 272446963);
     assertTrue(writer.hasBloom());
     bloomWriteRead(writer, fs);
+    */
 
     // this, however, is too large and should not create a bloom
     // because Java can't create a contiguous array > MAX_INT
