@@ -593,6 +593,10 @@ public class HBaseRPC {
         rpcMetrics.rpcQueueTime.inc(qTime);
         rpcMetrics.rpcProcessingTime.inc(processingTime);
         rpcMetrics.inc(call.getMethodName(), processingTime);
+        if (processingTime > 1000) {
+          rpcMetrics.inc(call.getMethodName() + ".aboveOneSec.",
+                         processingTime);
+        }
         if (verbose) log("Return: "+value);
 
         return new HbaseObjectWritable(method.getReturnType(), value);
