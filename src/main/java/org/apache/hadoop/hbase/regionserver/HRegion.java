@@ -1065,7 +1065,7 @@ public class HRegion implements HeapSize { // , Writable{
           }
         }
         LOG.info("Starting compaction on " + cr.getStore() + " in region "
-            + this + (cr.getFiles().isOffPeakCompaction()?" as an off-peak compaction":""));
+            + this + (cr.getCompactSelection().isOffPeakCompaction()?" as an off-peak compaction":""));
         doRegionCompactionPrep();
         boolean completed = false;
         try {

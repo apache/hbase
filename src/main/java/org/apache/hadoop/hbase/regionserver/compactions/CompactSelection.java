@@ -30,7 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 
-public class CompactSelection extends AbstractList<StoreFile> {
+public class CompactSelection {
   private static final long serialVersionUID = 1L;
   static final Log LOG = LogFactory.getLog(CompactSelection.class);
   // the actual list - this is needed to handle methods like "sublist"
@@ -113,6 +113,10 @@ public class CompactSelection extends AbstractList<StoreFile> {
     }
   }
 
+  public List<StoreFile> getFilesToCompact() {
+    return filesToCompact;
+  }
+
   /**
    * Removes all files from the current compaction list, and resets off peak
    * compactions is set.
@@ -161,15 +165,5 @@ public class CompactSelection extends AbstractList<StoreFile> {
 
   private boolean isValidHour(int hour) {
     return (hour >= 0 && hour <= 23);
-  }
-
-  @Override
-  public StoreFile get(int index) {
-    return filesToCompact.get(index);
-  }
-
-  @Override
-  public int size() {
-    return filesToCompact.size();
   }
 }

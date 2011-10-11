@@ -880,21 +880,21 @@ public class Store implements HeapSize {
         CompactSelection filesToCompact = compactSelection(candidates);
 
         // no files to compact
-        if (filesToCompact.isEmpty()) {
+        if (filesToCompact.getFilesToCompact().isEmpty()) {
           return null;
         }
 
         // basic sanity check: do not try to compact the same StoreFile twice.
-        if (!Collections.disjoint(filesCompacting, filesToCompact)) {
+        if (!Collections.disjoint(filesCompacting, filesToCompact.getFilesToCompact())) {
           // TODO: change this from an IAE to LOG.error after sufficient testing
           Preconditions.checkArgument(false, "%s overlaps with %s",
               filesToCompact, filesCompacting);
         }
-        filesCompacting.addAll(filesToCompact);
+        filesCompacting.addAll(filesToCompact.getFilesToCompact());
         Collections.sort(filesCompacting, StoreFile.Comparators.FLUSH_TIME);
 
         // major compaction iff all StoreFiles are included
-        boolean isMajor = (filesToCompact.size() == this.storefiles.size());
+        boolean isMajor = (filesToCompact.getFilesToCompact().size() == this.storefiles.size());
         if (isMajor) {
           // since we're enqueuing a major, update the compaction wait interval
           this.forceMajor = false;
@@ -955,37 +955,41 @@ public class Store implements HeapSize {
      *    | |  | |  | |  | | | | | |
      *    | |  | |  | |  | | | | | |
      */
-    CompactSelection filesToCompact = new CompactSelection(conf, candidates);
+    CompactSelection compactSelection = new CompactSelection(conf, candidates);
 
     boolean forcemajor = this.forceMajor && filesCompacting.isEmpty();
     if (!forcemajor) {
       // do not compact old files above a configurable threshold
       // save all references. we MUST compact them
       int pos = 0;
-      while (pos < filesToCompact.size() &&
-             filesToCompact.get(pos).getReader().length() > maxCompactSize &&
-             !filesToCompact.get(pos).isReference()) ++pos;
-      filesToCompact.clearSubList(0, pos);
+      while (pos < compactSelection.getFilesToCompact().size() &&
+             compactSelection.getFilesToCompact().get(pos).getReader().length()
+               > maxCompactSize &&
+             !compactSelection.getFilesToCompact().get(pos).isReference()) ++pos;
+      compactSelection.clearSubList(0, pos);
     }
 
-    if (filesToCompact.isEmpty()) {
+    if (compactSelection.getFilesToCompact().isEmpty()) {
       LOG.debug(this.storeNameStr + ": no store files to compact");
-      filesToCompact.emptyFileList();
-      return filesToCompact;
+      compactSelection.emptyFileList();
+      return compactSelection;
     }
 
     // major compact on user action or age (caveat: we have too many files)
-    boolean majorcompaction = (forcemajor || isMajorCompaction(filesToCompact))
-      && filesToCompact.size() < this.maxFilesToCompact;
+    boolean majorcompaction =
+      (forcemajor || isMajorCompaction(compactSelection.getFilesToCompact()))
+      && compactSelection.getFilesToCompact().size() < this.maxFilesToCompact;
 
-    if (!majorcompaction && !hasReferences(filesToCompact)) {
+    if (!majorcompaction &&
+        !hasReferences(compactSelection.getFilesToCompact())) {
       // we're doing a minor compaction, let's see what files are applicable
       int start = 0;
-      double r = filesToCompact.getCompactSelectionRatio();
+      double r = compactSelection.getCompactSelectionRatio();
 
       // exclude bulk import files from minor compactions, if configured
       if (conf.getBoolean("hbase.hstore.compaction.exclude.bulk", false)) {
-        filesToCompact.removeAll(Collections2.filter(filesToCompact,
+        compactSelection.getFilesToCompact().removeAll(Collections2.filter(
+            compactSelection.getFilesToCompact(),
             new Predicate<StoreFile>() {
               @Override
               public boolean apply(StoreFile input) {
@@ -995,9 +999,9 @@ public class Store implements HeapSize {
       }
 
       // skip selection algorithm if we don't have enough files
-      if (filesToCompact.size() < this.minFilesToCompact) {
-        filesToCompact.emptyFileList();
-        return filesToCompact;
+      if (compactSelection.getFilesToCompact().size() < this.minFilesToCompact) {
+        compactSelection.emptyFileList();
+        return compactSelection;
       }
 
       /* TODO: add sorting + unit test back in when HBASE-2856 is fixed
@@ -1006,11 +1010,11 @@ public class Store implements HeapSize {
        */
 
       // get store file sizes for incremental compacting selection.
-      int countOfFiles = filesToCompact.size();
+      int countOfFiles = compactSelection.getFilesToCompact().size();
       long [] fileSizes = new long[countOfFiles];
       long [] sumSize = new long[countOfFiles];
       for (int i = countOfFiles-1; i >= 0; --i) {
-        StoreFile file = filesToCompact.get(i);
+        StoreFile file = compactSelection.getFilesToCompact().get(i);
         fileSizes[i] = file.getReader().length();
         // calculate the sum of fileSizes[i,i+maxFilesToCompact-1) for algo
         int tooFar = i + this.maxFilesToCompact - 1;
@@ -1040,27 +1044,28 @@ public class Store implements HeapSize {
       int end = Math.min(countOfFiles, start + this.maxFilesToCompact);
       long totalSize = fileSizes[start]
                      + ((start+1 < countOfFiles) ? sumSize[start+1] : 0);
-      filesToCompact = filesToCompact.getSubList(start, end);
+      compactSelection = compactSelection.getSubList(start, end);
 
       // if we don't have enough files to compact, just wait
-      if (filesToCompact.size() < this.minFilesToCompact) {
+      if (compactSelection.getFilesToCompact().size() < this.minFilesToCompact) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Skipped compaction of " + this.storeNameStr
             + ".  Only " + (end - start) + " file(s) of size "
             + StringUtils.humanReadableInt(totalSize)
             + " have met compaction criteria.");
         }
-        filesToCompact.emptyFileList();
-        return filesToCompact;
+        compactSelection.emptyFileList();
+        return compactSelection;
       }
     } else {
       // all files included in this compaction, up to max
-      if (filesToCompact.size() > this.maxFilesToCompact) {
-        int pastMax = filesToCompact.size() - this.maxFilesToCompact;
-        filesToCompact.clearSubList(0, pastMax);
+      if (compactSelection.getFilesToCompact().size() > this.maxFilesToCompact) {
+        int pastMax =
+          compactSelection.getFilesToCompact().size() - this.maxFilesToCompact;
+        compactSelection.clearSubList(0, pastMax);
       }
     }
-    return filesToCompact;
+    return compactSelection;
   }
 
   /**
