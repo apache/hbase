@@ -805,11 +805,12 @@ public class HBaseAdmin {
     if (tableNameOrRegionName == null) {
       throw new IllegalArgumentException("Pass a table name or region name");
     }
-    byte [] tableName = tableExists(tableNameOrRegionName)?
-      tableNameOrRegionName: null;
-    byte [] regionName = tableName == null? tableNameOrRegionName: null;
-    Object [] args = regionName == null? null: new byte [][] {regionName};
-    modifyTable(tableName == null? null: tableName, op, args);
+    if (tableExists(tableNameOrRegionName)) {
+      modifyTable(tableNameOrRegionName, op, null);
+    } else {
+      HRegionInfo.parseRegionName(tableNameOrRegionName); // verify format
+      modifyTable(null, op, new byte[][] {tableNameOrRegionName});
+    }
   }
 
   /**
