@@ -870,7 +870,7 @@ public class Store implements HeapSize {
       double r = this.compactRatio;
 
       // exclude bulk import files from minor compactions, if configured
-      if (conf.getBoolean("hbase.hstore.compaction.include.bulk", false)) {
+      if (conf.getBoolean("hbase.hstore.compaction.exclude.bulk", false)) {
         filesToCompact.removeAll(Collections2.filter(filesToCompact,
             new Predicate<StoreFile>() {
               @Override
