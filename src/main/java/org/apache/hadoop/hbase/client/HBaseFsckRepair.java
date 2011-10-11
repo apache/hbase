@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -75,6 +77,26 @@ public class HBaseFsckRepair {
     // Clear assignment in META or ROOT
     clearAssignment(conf, actualRegion);
     return true;
+  }
+
+  public static int getEstimatedFixTime(Configuration conf)
+  throws IOException {
+    // Fix Time ~=
+    //   META rescan interval (when master notices region is unassigned)
+    // + Time to Replay Recovered Edits (flushing HLogs == main bottleneck)
+
+    int metaRescan = conf.getInt("hbase.master.meta.thread.rescanfrequency",
+        60 * 1000);
+    // estimate = HLog Size * Max HLogs / Throughput [1 Gbps / 2 == 60MBps]
+    Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
+    FileSystem fs = rootDir.getFileSystem(conf);
+    long logSize = conf.getLong("hbase.regionserver.hlog.blocksize",
+        fs.getDefaultBlockSize())
+        * conf.getInt("hbase.regionserver.maxlogs", 32);
+    int recoverEdits = (int)(logSize / (60*1000*1000));
+    int pad = 1000; // 1 sec pad
+
+    return metaRescan + recoverEdits + pad;
   }
 
   private static void clearInMaster(Configuration conf, HRegionInfo region)

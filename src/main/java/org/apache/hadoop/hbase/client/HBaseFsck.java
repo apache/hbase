@@ -24,6 +24,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,6 +51,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -58,8 +61,6 @@ import com.google.common.collect.Lists;
  * region server(s) and the state of data in HDFS.
  */
 public class HBaseFsck {
-  public static final long DEFAULT_TIME_LAG = 60000; // default value of 1 minute
-
   private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
   private Configuration conf;
 
@@ -70,8 +71,11 @@ public class HBaseFsck {
   ErrorReporter errors = new PrintingErrorReporter();
 
   private static boolean details = false; // do we display the full report
-  private long timelag = DEFAULT_TIME_LAG; // tables whose modtime is older
-  private boolean fix = false; // do we want to try fixing the errors?
+  private long timelag = 0; // tables whose modtime is older
+  enum FixState {
+    NONE, ERROR, ALL
+  };
+  FixState fix = FixState.NONE; // do we want to try fixing the errors?
   private boolean rerun = false; // if we tried to fix something rerun hbck
   private static boolean summary = false; // if we want to print less output
   private static boolean promptResponse = false;  // "no" to all prompt questions
@@ -101,6 +105,7 @@ public class HBaseFsck {
 
     // print hbase server version
     errors.print("Version: " + status.getHBaseVersion());
+    LOG.debug("timelag = " + StringUtils.formatTime(this.timelag));
 
     // Make sure regionInfo is empty before starting
     regionInfo.clear();
@@ -328,8 +333,10 @@ public class HBaseFsck {
       hasMetaAssignment && isDeployed && !isMultiplyDeployed &&
       hbi.metaEntry.regionServer.equals(hbi.deployedOn.get(0));
     boolean shouldBeDeployed = inMeta && !hbi.metaEntry.isOffline();
-    boolean recentlyModified = hbi.foundRegionDir != null &&
-      hbi.foundRegionDir.getModificationTime() + timelag > System.currentTimeMillis();
+    long tooRecent = System.currentTimeMillis() - timelag;
+    boolean recentlyModified =
+      (inHdfs && hbi.foundRegionDir.getModificationTime() > tooRecent) ||
+      (inMeta && hbi.metaEntry.modTime                    > tooRecent);
 
     // ========== First the healthy cases =============
     if (hbi.onlyEdits) {
@@ -367,9 +374,9 @@ public class HBaseFsck {
       errors.reportError("Region " + descriptiveName + " found in META, but not in HDFS, " +
         "and deployed on " + Joiner.on(", ").join(hbi.deployedOn));
     } else if (inMeta && inHdfs && !isDeployed && shouldBeDeployed) {
-      errors.reportError("Region " + descriptiveName + " not deployed on any region server.");
+      errors.reportWarning("Region " + descriptiveName + " not deployed on any region server.");
       // If we are trying to fix the errors
-      if (shouldFix()) {
+      if (fix == FixState.ALL) {
         errors.print("Trying to fix unassigned region...");
         if (HBaseFsckRepair.fixUnassigned(this.conf, hbi.metaEntry)) {
           setShouldRerun();
@@ -379,22 +386,23 @@ public class HBaseFsck {
       errors.reportError("Region " + descriptiveName + " has should not be deployed according " +
         "to META, but is deployed on " + Joiner.on(", ").join(hbi.deployedOn));
     } else if (inMeta && inHdfs && isMultiplyDeployed) {
-      errors.reportError("Region " + descriptiveName + " is listed in META on region server " +
-        hbi.metaEntry.regionServer + " but is multiply assigned to region servers " +
+      errors.reportFixableError("Region " + descriptiveName +
+        " is listed in META on region server " + hbi.metaEntry.regionServer +
+        " but is multiply assigned to region servers " +
         Joiner.on(", ").join(hbi.deployedOn));
       // If we are trying to fix the errors
-      if (shouldFix()) {
+      if (fix != FixState.NONE) {
         errors.print("Trying to fix assignment error...");
         if (HBaseFsckRepair.fixDupeAssignment(this.conf, hbi.metaEntry, hbi.deployedOn)) {
           setShouldRerun();
         }
       }
     } else if (inMeta && inHdfs && isDeployed && !deploymentMatchesMeta) {
-      errors.reportError("Region " + descriptiveName + " listed in META on region server " +
-        hbi.metaEntry.regionServer + " but found on region server " +
-        hbi.deployedOn.get(0));
+      errors.reportFixableError("Region " + descriptiveName +
+        " listed in META on region server " + hbi.metaEntry.regionServer +
+        " but found on region server " + hbi.deployedOn.get(0));
       // If we are trying to fix the errors
-      if (shouldFix()) {
+      if (fix != FixState.NONE) {
         errors.print("Trying to fix assignment error...");
         if (HBaseFsckRepair.fixDupeAssignment(this.conf, hbi.metaEntry, hbi.deployedOn)) {
           setShouldRerun();
@@ -413,8 +421,8 @@ public class HBaseFsck {
 
   /**
    * Checks tables integrity. Goes over all regions and scans the tables.
-   * Collects all the pieces for each table and checks if there are missing,
-   * repeated or overlapping ones.
+   * Collects the table -> [region] mapping and checks if there are missing,
+   * repeated or overlapping regions.
    */
   void checkIntegrity() {
     for (HbckInfo hbi : regionInfo.values()) {
@@ -440,7 +448,8 @@ public class HBaseFsck {
 
     for (TInfo tInfo : tablesInfo.values()) {
       if (!tInfo.check()) {
-        errors.reportError("Found inconsistency in table " + tInfo.getName());
+        errors.reportError("Found inconsistency in table " + tInfo.getName() +
+            ": " + tInfo.getLastError());
       }
     }
   }
@@ -452,6 +461,7 @@ public class HBaseFsck {
     String tableName;
     TreeMap <byte[], byte[]> edges;
     TreeSet <HServerAddress> deployedOn;
+    String lastError = null;
 
     TInfo(String name) {
       this.tableName = name;
@@ -475,24 +485,44 @@ public class HBaseFsck {
       return edges.size();
     }
 
+    public String getLastError() {
+      return this.lastError;
+    }
+
+    public String posToStr(byte[] k) {
+      return k.length > 0 ? Bytes.toStringBinary(k) : "0";
+    }
+
+    public String regionToStr(Map.Entry<byte[], byte []> e) {
+      return posToStr(e.getKey()) + " -> " + posToStr(e.getValue());
+    }
+
     public boolean check() {
+      if (details) {
+        errors.detail("Regions found in META for " + this.tableName);
+        for (Map.Entry<byte[], byte []> e : edges.entrySet()) {
+          errors.detail('\t' + regionToStr(e));
+        }
+      }
+
       byte[] last = new byte[0];
       byte[] next = new byte[0];
       TreeSet <byte[]> visited = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
       // Each table should start with a zero-length byte[] and end at a
       // zero-length byte[]. Just follow the edges to see if this is true
       while (true) {
-        // Check if chain is broken
+        // Check if region chain is broken
         if (!edges.containsKey(last)) {
-          errors.detail("Chain of regions in table " + tableName +
-                        " is broken.");
+          this.lastError = "Cannot find region with start key "
+            + posToStr(last);
           return false;
         }
         next = edges.get(last);
         // Found a cycle
         if (visited.contains(next)) {
-          errors.detail("Chain of regions in table " + tableName +
-                        " has a cycle.");
+          this.lastError = "Cycle found in region chain. "
+            + "Current = "+ posToStr(last)
+		+ "; Cycle Start = " +  posToStr(next);
           return false;
         }
         // Mark next node as visited
@@ -501,8 +531,14 @@ public class HBaseFsck {
         if (next.length == 0) {
           // If we have visited all elements we are fine
           if (edges.size() != visited.size()) {
-            errors.detail("Chain of regions in table " + tableName +
-                          " contains less elements than are listed in META.");
+            this.lastError = "Region in-order travesal does not include "
+              + "all elements found in META.  Chain=" + visited.size()
+              + "; META=" + edges.size() + "; Missing=";
+            for (Map.Entry<byte[], byte []> e : edges.entrySet()) {
+              if (!visited.contains(e.getKey())) {
+                this.lastError += regionToStr(e) + " , ";
+              }
+            }
             return false;
           }
           return true;
@@ -582,8 +618,8 @@ public class HBaseFsck {
 
       // If there is no region holding .META.
       if (metaRegions.size() == 0) {
-        errors.reportError(".META. is not found on any region.");
-        if (shouldFix()) {
+        errors.reportWarning(".META. is not found on any region.");
+        if (fix == FixState.ALL) {
           errors.print("Trying to fix a problem with .META...");
           // try to fix it (treat it as unassigned region)
           if (HBaseFsckRepair.fixUnassigned(conf, root.metaEntry)) {
@@ -593,8 +629,8 @@ public class HBaseFsck {
       }
       // If there are more than one regions pretending to hold the .META.
       else if (metaRegions.size() > 1) {
-        errors.reportError(".META. is found on more than one region.");
-        if (shouldFix()) {
+        errors.reportFixableError(".META. is found on more than one region.");
+        if (fix != FixState.NONE) {
           errors.print("Trying to fix a problem with .META...");
           // try fix it (treat is a dupe assignment)
           List <HServerAddress> deployedOn = Lists.newArrayList();
@@ -733,10 +769,9 @@ public class HBaseFsck {
   private void printTableSummary() {
     System.out.println("Summary:");
     for (TInfo tInfo : tablesInfo.values()) {
-      if (tInfo.check()) {
+      if (tInfo.getLastError() == null) {
         System.out.println("Table " + tInfo.getName() + " is okay.");
-      }
-      else {
+      } else {
         System.out.println("Table " + tInfo.getName() + " is inconsistent.");
       }
       System.out.println("  -- number of regions: " + tInfo.getNumRegions());
@@ -749,7 +784,9 @@ public class HBaseFsck {
   }
 
   interface ErrorReporter {
+    public void reportWarning(String message);
     public void reportError(String message);
+    public void reportFixableError(String message);
     public int summarize();
     public void detail(String details);
     public void progress();
@@ -757,8 +794,17 @@ public class HBaseFsck {
   }
 
   private static class PrintingErrorReporter implements ErrorReporter {
+    public int warnCount = 0;
     public int errorCount = 0;
+    public int fixableCount = 0;
     private int showProgress;
+
+    public void reportWarning(String message) {
+      if (!summary) {
+        System.out.println("WARNING: " + message);
+      }
+      warnCount++;
+    }
 
     public void reportError(String message) {
       if (!summary) {
@@ -768,15 +814,31 @@ public class HBaseFsck {
       showProgress = 0;
     }
 
+    public void reportFixableError(String message) {
+      if (!summary) {
+        System.out.println("ERROR (fixable): " + message);
+      }
+      fixableCount++;
+      showProgress = 0;
+    }
+
     public int summarize() {
-      System.out.println(Integer.toString(errorCount) +
+      System.out.println(Integer.toString(errorCount + fixableCount) +
                          " inconsistencies detected.");
-      if (errorCount == 0) {
-        System.out.println("Status: OK");
+      System.out.println(Integer.toString(fixableCount) +
+      " inconsistencies are fixable.");
+      if (warnCount > 0) {
+        System.out.println(Integer.toString(warnCount) + " warnings.");
+      }
+      if (errorCount + fixableCount == 0) {
+        System.out.println("Status: OK ");
         return 0;
-      } else {
+      } else if (fixableCount == 0) {
         System.out.println("Status: INCONSISTENT");
         return -1;
+      } else {
+        System.out.println("Status: INCONSISTENT (fixable)");
+        return -2;
       }
     }
 
@@ -837,12 +899,8 @@ public class HBaseFsck {
    * Fix inconsistencies found by fsck. This should try to fix errors (if any)
    * found by fsck utility.
    */
-  void setFixErrors() {
-    fix = true;
-  }
-
-  boolean shouldFix() {
-    return fix;
+  void setFixState(FixState newVal) {
+    fix = newVal;
   }
 
   /**
@@ -859,10 +917,10 @@ public class HBaseFsck {
   /**
    * We are interested in only those tables that have not changed their state in
    * META during the last few seconds specified by hbase.admin.fsck.timelag
-   * @param seconds - the time in seconds
+   * @param ms - the time in milliseconds
    */
-  void setTimeLag(long seconds) {
-    timelag = seconds * 1000; // convert to milliseconds
+  void setTimeLag(long ms) {
+    timelag = ms;
   }
 
   protected static void printUsageAndExit() {
@@ -872,9 +930,9 @@ public class HBaseFsck {
     System.err.println("   -timelag {timeInSeconds}  Process only regions that " +
                        " have not experienced any metadata updates in the last " +
                        " {{timeInSeconds} seconds.");
-    System.err.println("   -fix [-y] Try to fix some of the errors." +
-                       "           If -y is specified, then do not prompt for " +
-                       "           reconfirmation from users.");
+    System.err.println("   -fix [-w] [-y] Try to fix some of the errors." +
+                       "           -y Do not prompt for reconfirmation from users." +
+                       "           -w Try to fix warnings as well");
     System.err.println("   -summary Print only summary of the tables and status.");
     Runtime.getRuntime().exit(-2);
   }
@@ -890,6 +948,7 @@ public class HBaseFsck {
     Configuration conf = HBaseConfiguration.create();
     conf.set("fs.defaultFS", conf.get("hbase.rootdir"));
     HBaseFsck fsck = new HBaseFsck(conf);
+    fsck.setTimeLag(HBaseFsckRepair.getEstimatedFixTime(conf));
 
     // Process command-line args.
     for (int i = 0; i < args.length; i++) {
@@ -903,14 +962,16 @@ public class HBaseFsck {
         }
         try {
           long timelag = Long.parseLong(args[i+1]);
-          fsck.setTimeLag(timelag);
+          fsck.setTimeLag(timelag * 1000);
         } catch (NumberFormatException e) {
           System.err.println("-timelag needs a numeric value.");
           printUsageAndExit();
         }
         i++;
       } else if (cmd.equals("-fix")) {
-        fsck.setFixErrors();
+        fsck.setFixState(FixState.ERROR);
+      } else if (cmd.equals("-w")) {
+        fsck.setFixState(FixState.ALL);
       } else if (cmd.equals("-y")) {
         fsck.setPromptResponse(true);
       } else if (cmd.equals("-summary")) {
@@ -922,14 +983,25 @@ public class HBaseFsck {
         printUsageAndExit();
       }
     }
-    // do the real work of fsck
-    int code = fsck.doWork();
-    // If we have changed the HBase state it is better to run fsck again
-    // to see if we haven't broken something else in the process.
-    // We run it only once more because otherwise we can easily fall into
-    // an infinite loop.
-    if (fsck.shouldRerun()) {
+    int code = -1;
+    try {
+      // do the real work of fsck
       code = fsck.doWork();
+      // If we have tried to fix the HBase state, run fsck again
+      // to see if we have fixed our problems
+      if (fsck.shouldRerun()) {
+        fsck.setFixState(FixState.NONE);
+        long fixTime = HBaseFsckRepair.getEstimatedFixTime(conf);
+        if (fixTime > 0) {
+          LOG.info("Waiting " + StringUtils.formatTime(fixTime) +
+              " before checking to see if fixes worked...");
+          Thread.sleep(fixTime);
+        }
+        code = fsck.doWork();
+      }
+    } catch (InterruptedException ie) {
+      LOG.info("HBCK was interrupted by user. Exiting...");
+      code = -1;
     }
 
     Runtime.getRuntime().exit(code);
