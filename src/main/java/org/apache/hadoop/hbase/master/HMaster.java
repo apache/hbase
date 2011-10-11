@@ -1077,6 +1077,16 @@ public class HMaster extends Thread implements HMasterInterface,
         if(tableName == null) {
           byte [] regionName = ((ImmutableBytesWritable)args[0]).get();
           pair = getTableRegionFromName(regionName);
+          // If the column family name is specified, we need to perform a
+          // column family specific action instead of an action on the whole
+          // region. For this purpose the second value in args is the column
+          // family name.
+          if (args.length == 2) {
+            byte [] columnFamily = ((ImmutableBytesWritable)args[1]).get();
+            this.regionManager.startCFAction(pair.getFirst().getRegionName(),
+                columnFamily, pair.getFirst(), pair.getSecond(), op);
+            break;
+          }
         } else {
           byte [] rowKey = ((ImmutableBytesWritable)args[0]).get();
           pair = getTableRegionForRow(tableName, rowKey);

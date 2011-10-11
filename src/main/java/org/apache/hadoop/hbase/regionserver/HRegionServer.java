@@ -1394,6 +1394,18 @@ public class HRegionServer implements HRegionInterface,
                 e.msg.getType().name(),
                 CompactSplitThread.PRIORITY_USER);
               break;
+            case MSG_REGION_CF_COMPACT:
+              region = getRegion(info.getRegionName());
+              byte[] columnFamily = e.msg.getMessage();
+              LOG.info("Compaction request for column family : "
+                  + columnFamily + " within region : " + region +" received");
+              Store store = region.getStore(columnFamily);
+              compactSplitThread.requestCompaction(region,
+                store,
+                false,
+                e.msg.getType().name(),
+                CompactSplitThread.PRIORITY_USER);
+              break;
 
             case MSG_REGION_FLUSH:
               region = getRegion(info.getRegionName());

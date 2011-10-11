@@ -127,6 +127,11 @@ public class HMsg implements Writable {
      * pathological states.
      */
     TESTING_MSG_BLOCK_RS,
+
+    /**
+     * Run compaction on a specific column family within a region.
+     */
+    MSG_REGION_CF_COMPACT,
   }
 
   private Type type = null;

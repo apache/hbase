@@ -726,6 +726,22 @@ public class HBaseAdmin {
   }
 
   /**
+   * Compact a column family within a region.
+   * Asynchronous operation.
+   *
+   * @param regionName region to compact
+   * @param columnFamilyName column family within the region to compact
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void compact(String regionName, String columnFamily)
+    throws IOException {
+    byte [] regionNameBytes = Bytes.toBytes(regionName);
+    byte [] columnFamilyBytes = Bytes.toBytes(columnFamily);
+    modifyTable(null, HConstants.Modify.TABLE_COMPACT,
+        new byte[][] {regionNameBytes, columnFamilyBytes});
+  }
+
+  /**
    * Major compact a table or an individual region.
    * Asynchronous operation.
    *
