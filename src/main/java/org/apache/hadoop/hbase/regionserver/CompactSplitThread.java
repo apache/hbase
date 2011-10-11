@@ -58,6 +58,7 @@ public class CompactSplitThread {
     super();
     this.server = server;
     this.conf = server.conf;
+    Preconditions.checkArgument(this.server != null && this.conf != null);
 
     int largeThreads = Math.max(1, conf.getInt(
         "hbase.regionserver.thread.compaction.large", 1));
@@ -157,6 +158,7 @@ public class CompactSplitThread {
 
     CompactionRequest cr = s.requestCompaction();
     if (cr != null) {
+      cr.setServer(this.server);
       if (priority != NO_PRIORITY) {
         cr.setPriority(priority);
       }

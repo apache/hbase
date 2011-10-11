@@ -35,6 +35,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     private final boolean isMajor;
     private int p;
     private final Date date;
+    private HRegionServer server = null;
 
     public CompactionRequest(HRegion r, Store s,
         List<StoreFile> files, boolean isMajor, int p) {
@@ -111,6 +112,10 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       return this.isMajor;
     }
 
+    public void setServer(HRegionServer server) {
+      this.server = server;
+    }
+
     /** Gets the priority for the request */
     public int getPriority() {
       return p;
@@ -147,11 +152,10 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
 
     @Override
     public void run() {
-      HRegionServer server = this.r.getRegionServer();
-      if (server.isStopRequested()) {
-        return;
-      }
       try {
+        if (server.isStopRequested()) {
+          return;
+        }
         long start = EnvironmentEdgeManager.currentTimeMillis();
         boolean completed = r.compact(this);
         long now = EnvironmentEdgeManager.currentTimeMillis();
@@ -168,13 +172,19 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       } catch (IOException ex) {
         LOG.error("Compaction failed " + this, RemoteExceptionHandler
             .checkIOException(ex));
-        server.checkFileSystem();
+        if (server != null) {
+          server.checkFileSystem();
+        }
       } catch (Exception ex) {
         LOG.error("Compaction failed " + this, ex);
-        server.checkFileSystem();
+        if (server != null) {
+          server.checkFileSystem();
+        }
       } finally {
         s.finishRequest(this);
-        LOG.debug("CompactSplitThread Status: " + server.compactSplitThread);
+        if (server != null) {
+          LOG.debug("CompactSplitThread Status: " + server.compactSplitThread);
+        }
       }
     }
 
