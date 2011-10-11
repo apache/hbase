@@ -935,7 +935,7 @@ public class HRegion implements HeapSize { // , Writable{
       LOG.debug("Skipping compaction on " + this + " because closing/closed");
       return false;
     }
-    Preconditions.checkArgument(cr.getHRegion().toString() == this.toString());
+    Preconditions.checkArgument(cr.getHRegion().equals(this));
     splitsAndClosesLock.readLock().lock();
     try {
       if (this.closed.get()) {

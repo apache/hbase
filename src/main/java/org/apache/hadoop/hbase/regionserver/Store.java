@@ -597,7 +597,8 @@ public class Store implements HeapSize {
     if (cr == null || cr.getFiles().isEmpty()) {
       return;
     }
-    Preconditions.checkArgument(cr.getStore().toString() == this.toString());
+    Preconditions.checkArgument(cr.getStore().toString()
+        .equals(this.toString()));
 
     List<StoreFile> filesToCompact = cr.getFiles();
 
