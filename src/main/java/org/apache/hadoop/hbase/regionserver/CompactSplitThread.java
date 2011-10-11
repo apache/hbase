@@ -259,7 +259,11 @@ class CompactSplitThread extends Thread {
    */
   void interruptIfNecessary() {
     if (lock.tryLock()) {
-      this.interrupt();
+      try {
+        this.interrupt();
+      } finally {
+        lock.unlock();
+      }
     }
   }
 

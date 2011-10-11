@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -93,6 +94,8 @@ public class Store implements HeapSize {
   protected long ttl;
   private long majorCompactionTime;
   private int maxFilesToCompact;
+  /* how many bytes to write between status checks */
+  int closeCheckInterval;
   private final long desiredMaxFileSize;
   private volatile long storeSize = 0L;
   private final Object flushLock = new Object();
@@ -187,6 +190,8 @@ public class Store implements HeapSize {
     }
 
     this.maxFilesToCompact = conf.getInt("hbase.hstore.compaction.max", 10);
+    this.closeCheckInterval = conf.getInt(
+        "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
     this.storefiles = sortAndClone(loadStoreFiles());
   }
 
@@ -794,22 +799,42 @@ public class Store implements HeapSize {
     // where all source cells are expired or deleted.
     StoreFile.Writer writer = null;
     try {
+    // NOTE: the majority of the time for a compaction is spent in this section
     if (majorCompaction) {
       InternalScanner scanner = null;
       try {
         Scan scan = new Scan();
         scan.setMaxVersions(family.getMaxVersions());
         scanner = new StoreScanner(this, scan, scanners);
+        int bytesWritten = 0;
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.
         ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
         while (scanner.next(kvs)) {
-          // output to writer:
-          for (KeyValue kv : kvs) {
-            if (writer == null) {
-              writer = createWriterInTmp(maxKeyCount);
+          if (writer == null && !kvs.isEmpty()) {
+            writer = createWriterInTmp(maxKeyCount);
+          }
+          if (writer != null) {
+            // output to writer:
+            for (KeyValue kv : kvs) {
+              writer.append(kv);
+
+              // check periodically to see if a system stop is requested
+              if (this.closeCheckInterval > 0) {
+                bytesWritten += kv.getLength();
+                if (bytesWritten > this.closeCheckInterval) {
+                  bytesWritten = 0;
+                  if (!this.region.areWritesEnabled()) {
+                    writer.close();
+                    fs.delete(writer.getPath(), false);
+                    throw new InterruptedIOException(
+                        "Aborting compaction of store " + this +
+                        " in region " + this.region +
+                        " because user requested stop.");
+                  }
+                }
+              }
             }
-            writer.append(kv);
           }
           kvs.clear();
         }
@@ -822,9 +847,29 @@ public class Store implements HeapSize {
       MinorCompactingStoreScanner scanner = null;
       try {
         scanner = new MinorCompactingStoreScanner(this, scanners);
-        writer = createWriterInTmp(maxKeyCount);
-        while (scanner.next(writer)) {
-          // Nothing to do
+        if (scanner.peek() != null) {
+          writer = createWriterInTmp(maxKeyCount);
+          int bytesWritten = 0;
+          while (scanner.peek() != null) {
+            KeyValue kv = scanner.next();
+            writer.append(kv);
+
+            // check periodically to see if a system stop is requested
+            if (this.closeCheckInterval > 0) {
+              bytesWritten += kv.getLength();
+              if (bytesWritten > this.closeCheckInterval) {
+                bytesWritten = 0;
+                if (!this.region.areWritesEnabled()) {
+                  writer.close();
+                  fs.delete(writer.getPath(), false);
+                  throw new InterruptedIOException(
+                      "Aborting compaction of store " + this +
+                      " in region " + this.region +
+                      " because user requested stop.");
+                }
+              }
+            }
+          }
         }
       } finally {
         if (scanner != null)
