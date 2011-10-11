@@ -44,7 +44,11 @@ public class KeyOnlyFilter extends FilterBase {
     return ReturnCode.INCLUDE;
   }
 
-  public void write(DataOutput out) throws IOException {}
+  public void write(DataOutput out) throws IOException {
+    out.writeBoolean(this.lenAsVal);
+  }
 
-  public void readFields(DataInput in) throws IOException {}
+  public void readFields(DataInput in) throws IOException {
+    this.lenAsVal = in.readBoolean();
+  }
 }
