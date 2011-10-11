@@ -1291,7 +1291,17 @@ public class HFile {
         if (block == null) {
           throw new IOException("Next called on non-seeked scanner");
         }
-        block.position(block.position() + currKeyLen + currValueLen);
+        try {
+          block.position(block.position() + currKeyLen + currValueLen);
+        } catch (IllegalArgumentException e) {
+          LOG.error("Current pos = " + block.position() +
+                    "; currKeyLen = " + currKeyLen +
+                    "; currValLen = " + currValueLen +
+                    "; block limit = " + block.limit() +
+                    "; HFile name = " + reader.getName() +
+                    "; currBlock id = " + this.currBlock);
+          throw e;
+        }
         if (block.remaining() <= 0) {
           // LOG.debug("Fetch next block");
           currBlock++;

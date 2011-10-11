@@ -797,10 +797,13 @@ public class Store implements HeapSize {
       if (r != null) {
         // NOTE: getFilterEntries could cause under-sized blooms if the user
         //       switches bloom type (e.g. from ROW to ROWCOL)
-        maxKeyCount += (r.getBloomFilterType() == family.getBloomFilterType())
-          ? r.getFilterEntries() : r.getEntries();
+        int keyCount = (r.getBloomFilterType() == family.getBloomFilterType())
+            ? r.getFilterEntries() : r.getEntries();
+        maxKeyCount += keyCount;
+        LOG.info("Compacting: " + file + "; keyCount = " + keyCount + "; Bloom Type = " + r.getBloomFilterType().toString());
       }
     }
+    LOG.info("Estimated total keyCount for output of compaction = " + maxKeyCount);
 
     // For each file, obtain a scanner:
     List<StoreFileScanner> scanners = StoreFileScanner
