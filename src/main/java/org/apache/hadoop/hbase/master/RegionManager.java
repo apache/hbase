@@ -1381,7 +1381,7 @@ public class RegionManager {
       double avg = master.getAverageLoad();
 
       // nothing to balance if server load not more then average load
-      if(servLoad.getLoad() <= Math.ceil(avg) || avg <= 2.0) {
+      if(servLoad.getLoad() <= Math.floor(avg) || avg <= 2.0) {
         return;
       }
 
@@ -1447,12 +1447,12 @@ public class RegionManager {
         return 0; // there is no low loaded servers
 
       int lowSrvCount = loadToServers.get(loadToServers.firstKey()).size();
-      int numRegionsToClose = 0;
-
       int numSrvRegs = srvLoad.getNumberOfRegions();
       int numMoveToLowLoaded = (avgLoadMinusSlop - lowestLoad) * lowSrvCount;
-      numRegionsToClose = numSrvRegs - (int)Math.ceil(avgLoad);
+
+      int numRegionsToClose = numSrvRegs - (int)Math.floor(avgLoad);
       numRegionsToClose = Math.min(numRegionsToClose, numMoveToLowLoaded);
+
       if (LOG.isDebugEnabled()) {
         LOG.debug("Server(s) are carrying only " + lowestLoad + " regions. " +
           "Server " + srvName + " is most loaded (" + numSrvRegs +
