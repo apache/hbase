@@ -54,6 +54,7 @@ import java.lang.management.MemoryUsage;
 import java.nio.ByteBuffer;
 import java.text.NumberFormat;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -303,7 +304,7 @@ public class StoreFile {
    * @return 0 if no non-bulk-load files are provided or, this is Store that
    * does not yet have any store files.
    */
-  public static long getMaxSequenceIdInList(List<StoreFile> sfs) {
+  public static long getMaxSequenceIdInList(Collection<StoreFile> sfs) {
     long max = 0;
     for (StoreFile sf : sfs) {
       if (!sf.isBulkLoadResult()) {
@@ -902,6 +903,13 @@ public class StoreFile {
       bloomFilterType = BloomType.NONE;
     }
 
+    /**
+     * ONLY USE DEFAULT CONSTRUCTOR FOR UNIT TESTS
+     */
+    Reader() {
+      this.reader = null;
+    }
+
     public RawComparator<byte []> getComparator() {
       return reader.getComparator();
     }
@@ -1125,5 +1133,15 @@ public class StoreFile {
       }
     }
 
+    /**
+     * FILE_SIZE = descending sort StoreFiles (largest --> smallest in size)
+     */
+    static final Comparator<StoreFile> FILE_SIZE =
+      Ordering.natural().reverse().onResultOf(new Function<StoreFile, Long>() {
+        @Override
+        public Long apply(StoreFile sf) {
+          return sf.getReader().length();
+        }
+      });
   }
 }
