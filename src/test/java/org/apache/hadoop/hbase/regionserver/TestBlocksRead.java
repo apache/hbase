@@ -67,7 +67,7 @@ public class TestBlocksRead extends HBaseTestCase {
           HColumnDescriptor.DEFAULT_BLOCKCACHE,
           1, // small block size deliberate; each kv on its own block
           HColumnDescriptor.DEFAULT_TTL,
-          HColumnDescriptor.DEFAULT_BLOOMFILTER,
+          StoreFile.BloomType.ROWCOL.toString(),
           HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       htd.addFamily(familyDesc);
     }
@@ -201,20 +201,21 @@ public class TestBlocksRead extends HBaseTestCase {
     verifyData(kvs[0], "row", "col2", 2);
     verifyData(kvs[1], "row", "col3", 3);
 
-    // Expected block reads: 3
-    // Unfortunately, this is a common case when KVs are large, and occupy 1 block each.
+    // Expected block reads: 2
+    // Unfortunately, this is a common case when KVs are large, and occupy
+    // 1 block each.
     // This issue has been reported as HBASE-4443.
-    // Explanation of 3 seeks:
-    //  * The first one should be able to process any Delete marker at the top
-    //    of the row.
-    //  * The second one will be block containing col4, because we search for
+    // Since HBASE-4469 is fixed now, the seek for delete family marker has been
+    // optimized.
+    // Explanation of 2 seeks:
+    //  * The 1st one will be block containing col4, because we search for
     //    row/col5/TS=Long.MAX_VAL.
-    //    This will land us in the previous block, and not the block containing row/col5.
+    //    This will land us in the previous block, and not the block containing
+    //    row/col5.
     //  * The final block we read will be the actual block that contains our data.
-    // When HBASE-4443 is fixed, the number of expected blocks here should be dropped to 2.
-    // If we also do some special handling to avoid looking for deletes at the top of the
-    // row, then this case can also work in 1 block read.
-    kvs = getData(FAMILY, "row", Arrays.asList("col5"), 3);
+    // When HBASE-4443 is fixed, the number of expected blocks here should be
+    //  dropped to 1.
+    kvs = getData(FAMILY, "row", Arrays.asList("col5"), 2);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col5", 5);
   }
@@ -243,28 +244,23 @@ public class TestBlocksRead extends HBaseTestCase {
     putData(FAMILY, "row", "col2", 4);
     region.flushcache();
 
-    // Expected blocks read: 2.
-    //
-    // We still visit all files for top of the row delete
-    // marker. File 2's top block is also the KV we are
-    // interested. When lazy seek is further optimized
-    // the number of read blocks should drop to 1.
-    //
-    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 2);
+    // Expected blocks read: 1.
+    // Since HBASE-4469 is fixed now, the seek for delete family marker has been
+    // optimized.
+    // File 2's top block is also the KV we are
+    // interested. So only 1 seek is needed.
+    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 1);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col1", 3);
 
-    // Expected blocks read: 3
+    // Expected blocks read: 2
     //
-    // We still visit all files for top of the row delete
-    // marker. File 2's top block has the "col1" KV we are
+    // Since HBASE-4469 is fixed now, the seek for delete family marker has been
+    // optimized. File 2's top block has the "col1" KV we are
     // interested. We also need "col2" which is in a block
     // of its own. So, we need that block as well.
     //
-    // When lazy seek is further optimized the number of blocks
-    // read for this case should drop to 2.
-    //
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2"), 3);
+    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2"), 2);
     assertEquals(2, kvs.length);
     verifyData(kvs[0], "row", "col1", 3);
     verifyData(kvs[1], "row", "col2", 4);
@@ -273,31 +269,27 @@ public class TestBlocksRead extends HBaseTestCase {
     putData(FAMILY, "row", "col3", 5);
     region.flushcache();
 
-    // Expected blocks read: 3
+    // Expected blocks read: 1
     //
-    // We still visit all files for top of the row delete
-    // marker. File 3's top block has the "col3" KV we are
-    // interested.
+    // Since HBASE-4469 is fixed now, the seek for delete family marker has been
+    // optimized. File 3's top block has the "col3" KV we are
+    // interested. So only 1 seek is needed.
     //
-    // When lazy seek is further optimized the number of
-    // read blocks should drop to 1.
-    //
-    kvs = getData(FAMILY, "row", "col3", 3);
+    kvs = getData(FAMILY, "row", "col3", 1);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col3", 5);
 
     // Get a column from older file.
     // Expected blocks read: 3
     //
-    // We still visit all files for top of the row delete
-    // marker. File 2's top block has the "col1" KV we are
+    // Since HBASE-4469 is fixed now, the seek for delete family marker has been
+    // optimized.  File 2's top block has the "col1" KV we are
     // interested.
     //
-    // When lazy seek is further optimized the number of
-    // read blocks should drop to 2. [We only need to
-    // consult File 2 & File 3.]
+    // Also no need to seek to file 3 since the row-col bloom filter is enabled.
+    // Only 1 seek in File 2 is needed.
     //
-    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 3);
+    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 1);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col1", 3);
 
@@ -308,11 +300,11 @@ public class TestBlocksRead extends HBaseTestCase {
     // Expected blocks read: 6. Why? [TODO]
     // With lazy seek, would have expected this to be lower.
     // At least is shouldn't be worse than before.
-    kvs = getData(FAMILY, "row", "col1", 6);
+    kvs = getData(FAMILY, "row", "col1", 5);
     assertEquals(0, kvs.length);
-    kvs = getData(FAMILY, "row", "col2", 6);
+    kvs = getData(FAMILY, "row", "col2", 5);
     assertEquals(0, kvs.length);
-    kvs = getData(FAMILY, "row", "col3", 6);
+    kvs = getData(FAMILY, "row", "col3", 2);
     assertEquals(0, kvs.length);
     kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 6);
     assertEquals(0, kvs.length);
@@ -346,7 +338,7 @@ public class TestBlocksRead extends HBaseTestCase {
     //  top block would serve "col1". And we should need two more to
     //  serve col2 and col3 from file 6.
     //
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 9);
+    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 5);
     assertEquals(3, kvs.length);
     verifyData(kvs[0], "row", "col1", 11);
     verifyData(kvs[1], "row", "col2", 12);

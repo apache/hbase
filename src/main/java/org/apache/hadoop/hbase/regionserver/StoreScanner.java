@@ -100,9 +100,11 @@ class StoreScanner extends NonLazyKeyValueScanner
 
     // Seek all scanners to the start of the Row (or if the exact matching row
     // key does not exist, then to the start of the next matching Row).
+    // Always check bloom filter to optimize the top row seek for delete
+    // family marker.
     if (explicitColumnQuery && lazySeekEnabledGlobally) {
       for (KeyValueScanner scanner : scanners) {
-        scanner.requestSeek(matcher.getStartKey(), false, useRowColBloom);
+        scanner.requestSeek(matcher.getStartKey(), false, true);
       }
     } else {
       for (KeyValueScanner scanner : scanners) {

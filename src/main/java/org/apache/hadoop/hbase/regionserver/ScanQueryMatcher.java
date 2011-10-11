@@ -80,7 +80,7 @@ public class ScanQueryMatcher {
     this.rowComparator = rowComparator;
     this.deletes =  new ScanDeleteTracker();
     this.stopRow = scan.getStopRow();
-    this.startKey = KeyValue.createFirstOnRow(scan.getStartRow());
+    this.startKey = KeyValue.createFirstOnRow(scan.getStartRow(), family, null);
     this.filter = scan.getFilter();
     this.retainDeletesInOutput = retainDeletesInOutput;
 

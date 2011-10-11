@@ -50,6 +50,11 @@ class StoreFileScanner implements KeyValueScanner {
   private boolean delayedReseek;
   private KeyValue delayedSeekKV;
 
+  // The variable, realSeekDone, may cheat on store file scanner for the
+  // multi-column bloom-filter optimization.
+  // So this flag shows whether this storeFileScanner could do a reseek.
+  private boolean isReseekable = false;
+
   private static final AtomicLong seekCount = new AtomicLong();
 
   /**
@@ -123,6 +128,8 @@ class StoreFileScanner implements KeyValueScanner {
           close();
           return false;
         }
+
+        this.isReseekable = true;
         cur = hfs.getKeyValue();
         return true;
       } finally {
@@ -284,7 +291,7 @@ class StoreFileScanner implements KeyValueScanner {
     if (realSeekDone)
       return;
 
-    if (delayedReseek) {
+    if (delayedReseek && this.isReseekable) {
       reseek(delayedSeekKV);
     } else {
       seek(delayedSeekKV);
