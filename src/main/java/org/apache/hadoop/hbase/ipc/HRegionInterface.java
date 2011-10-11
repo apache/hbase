@@ -73,6 +73,8 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    */
   public HRegion [] getOnlineRegionsAsArray();
 
+  public List<String> getStoreFileList(byte[] regionName, byte[] columnFamily);
+
   /**
    * Perform Get operation.
    * @param regionName name of region to get from

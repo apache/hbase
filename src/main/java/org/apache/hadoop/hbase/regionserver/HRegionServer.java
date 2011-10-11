@@ -2135,6 +2135,16 @@ public class HRegionServer implements HRegionInterface,
     return getOnlineRegions().toArray(new HRegion[0]);
   }
 
+  public List<String> getStoreFileList(byte[] regionName, byte[] columnFamily) {
+	  HRegion region = getOnlineRegion(regionName);
+	  List<StoreFile> storeFiles = region.getStore(columnFamily).getStorefiles();
+	  List<String> storeFileNames = new ArrayList<String>(storeFiles.size());
+	  for (StoreFile storeFile: storeFiles) {
+		  storeFileNames.add(storeFile.getPath().toString());
+	  }
+	  return storeFileNames;
+  }
+
   /**
    * @return The HRegionInfos from online regions sorted
    */
