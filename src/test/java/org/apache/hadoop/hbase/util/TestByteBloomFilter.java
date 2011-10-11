@@ -20,13 +20,10 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
-import java.util.Random;
 
 import junit.framework.TestCase;
 
@@ -141,61 +138,4 @@ public class TestByteBloomFilter extends TestCase {
 
     // test: foldFactor > log(max/actual)
   }
-
-  public void testDynamicBloom() throws Exception {
-    int keyInterval = 1000;
-    float err = (float)0.01;
-    BitSet valid = new BitSet(keyInterval*4);
-
-    DynamicByteBloomFilter bf1 = new DynamicByteBloomFilter(keyInterval, err,
-        Hash.MURMUR_HASH);
-    bf1.allocBloom();
-    
-    long seed = System.currentTimeMillis();
-    Random r = new Random(seed);
-    System.out.println("seed = " + seed);
-
-    for (int i = 0; i < keyInterval*4; ++i) { // add
-      if (r.nextBoolean()) {
-        bf1.add(Bytes.toBytes(i));
-        valid.set(i);
-
-        // we assume only 2 blooms in this test, so exit before a 3rd is made
-        if (bf1.getKeyCount() == 2000) {
-          break;
-        }
-      }
-    }
-    assertTrue(2 <= bf1.bloomCount());
-    System.out.println("keys added = " + bf1.getKeyCount());
-
-    // test serialization/deserialization
-    ByteArrayOutputStream metaOut = new ByteArrayOutputStream();
-    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
-    bf1.getMetaWriter().write(new DataOutputStream(metaOut));
-    bf1.getDataWriter().write(new DataOutputStream(dataOut));
-    ByteBuffer bb = ByteBuffer.wrap(dataOut.toByteArray()); 
-    DynamicByteBloomFilter newBf1 = new DynamicByteBloomFilter(
-        ByteBuffer.wrap(metaOut.toByteArray()));
-
-    int falsePositives = 0;
-    for (int i = 0; i < keyInterval*4; ++i) { // check
-      if (newBf1.contains(Bytes.toBytes(i), bb)) {
-        if (!valid.get(i)) ++falsePositives;
-      } else {
-        if (valid.get(i)) {
-          assert false;
-        }
-      }
-    }
-    
-    // Dynamic Blooms are a little sneaky.  The error rate currently isn't
-    // 'err', it's err * bloomCount.  bloomCount == 2000/1000 == 2 in this case
-    // So, the actual error rate should be roughly:
-    //    (keyInterval*2) * err * bloomCount
-    // allow some tolerance
-    System.out.println("False positives: " + falsePositives);
-    assertTrue(falsePositives <= (keyInterval*5)*err); 
-  }
-
 }

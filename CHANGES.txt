@@ -25,6 +25,8 @@ Release 0.21.0 - Unreleased
    HBASE-2565  Remove contrib module from hbase
    HBASE-2397  Bytes.toStringBinary escapes printable chars
    HBASE-2771  Update our hadoop jar to be latest from 0.20-append branch
+   HBASE-2803  Remove remaining Get code from Store.java,etc
+   HBASE-2553  Revisit IncrementColumnValue implementation in 0.22
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
@@ -434,6 +436,17 @@ Release 0.21.0 - Unreleased
                (Nicolas Spiegelberg via Stack)
    HBASE-2781  ZKW.createUnassignedRegion doesn't make sure existing znode is
                in the right state (Karthik Ranganathan via JD)
+   HBASE-2727  Splits writing one file only is untenable; need dir of recovered
+               edits ordered by sequenceid
+   HBASE-2843  Readd bloomfilter test over zealously removed by HBASE-2625
+   HBASE-2846  Make rest server be same as thrift and avro servers
+   HBASE-1511  Pseudo distributed mode in LocalHBaseCluster
+               (Nicolas Spiegelberg via Stack)
+   HBASE-2851  Remove testDynamicBloom() unit test
+               (Nicolas Spiegelberg via Stack)
+   HBASE-2853  TestLoadIncrementalHFiles fails on TRUNK
+   HBASE-2854  broken tests on trunk
+   HBASE-2859  Cleanup deprecated stuff in TestHLog (Alex Newman via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
@@ -763,7 +776,17 @@ Release 0.21.0 - Unreleased
    HBASE-2828  HTable unnecessarily coupled with HMaster
                (Nicolas Spiegelberg via Stack)
    HBASE-2265  HFile and Memstore should maintain minimum and maximum timestamps
-	       (Pranav via Ryan)
+               (Pranav via Ryan)
+   HBASE-2836  Speed mvn site building by removing generation of useless reports
+   HBASE-2808  Document the implementation of replication
+   HBASE-2517  During reads when passed the specified time range, seek to
+               next column (Pranav via jgray)
+   HBASE-2835  Update hadoop jar to head of branch-0.20-append to catch three
+               added patches
+   HBASE-2840  Remove the final remnants of the old Get code - the query matchers
+               and other helper classes
+   HBASE-2845  Small edit of shell main help page cutting down some on white
+               space and text
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

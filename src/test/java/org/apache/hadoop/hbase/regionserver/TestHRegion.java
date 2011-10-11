@@ -1367,6 +1367,7 @@ public class TestHRegion extends HBaseTestCase {
     String method = this.getName();
     initHRegion(tableName, method, families);
 
+
     //Putting data in Region
     Put put = new Put(row1);
     put.add(fam1, null, null);
@@ -1384,10 +1385,12 @@ public class TestHRegion extends HBaseTestCase {
     scan.addFamily(fam2);
     scan.addFamily(fam4);
     is = (RegionScanner) region.getScanner(scan);
+    ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
     assertEquals(1, ((RegionScanner)is).storeHeap.getHeap().size());
 
     scan = new Scan();
     is = (RegionScanner) region.getScanner(scan);
+    ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
     assertEquals(families.length -1,
         ((RegionScanner)is).storeHeap.getHeap().size());
   }
@@ -1856,7 +1859,8 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(value+amount, result);
 
     Store store = region.getStore(fam1);
-    assertEquals(1, store.memstore.kvset.size());
+    // we will have the original Put, and also the ICV'ed Put as well.
+    assertEquals(2, store.memstore.kvset.size());
     assertTrue(store.memstore.snapshot.isEmpty());
 
     assertICV(row, fam1, qual1, value+amount);
