@@ -553,7 +553,7 @@ public class StoreFile {
                                               final KeyValue.KVComparator c,
                                               final Configuration conf,
                                               BloomType bloomType,
-                                              int maxKeySize)
+                                              long maxKeySize)
       throws IOException {
 
     if (!fs.exists(dir)) {
@@ -685,7 +685,7 @@ public class StoreFile {
      */
     public Writer(FileSystem fs, Path path, int blocksize,
         Compression.Algorithm compress, final Configuration conf,
-        final KVComparator comparator, BloomType bloomType, int maxKeys)
+        final KVComparator comparator, BloomType bloomType, long maxKeys)
         throws IOException {
 
       writer = new HFile.Writer(
@@ -711,7 +711,7 @@ public class StoreFile {
 
         if (maxKeys < tooBig) {
           try {
-            bloom = new ByteBloomFilter(maxKeys, err,
+            bloom = new ByteBloomFilter((int)maxKeys, err,
                 Hash.getHashType(conf), maxFold);
             bloom.allocBloom();
             bt = bloomType;
@@ -1037,7 +1037,7 @@ public class StoreFile {
       }
     }
 
-    public int getFilterEntries() {
+    public long getFilterEntries() {
       return (this.bloomFilter != null) ? this.bloomFilter.getKeyCount()
           : reader.getFilterEntries();
     }
@@ -1062,7 +1062,7 @@ public class StoreFile {
       return reader.length();
     }
 
-    public int getEntries() {
+    public long getEntries() {
       return reader.getEntries();
     }
 

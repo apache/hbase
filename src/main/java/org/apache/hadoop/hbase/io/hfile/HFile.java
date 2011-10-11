@@ -233,7 +233,7 @@ public class HFile {
     private long totalBytes = 0;
 
     // Total # of key/value entries, ie: how many times add() was called.
-    private int entryCount = 0;
+    private long entryCount = 0;
 
     // Used calculating average key and value lengths.
     private long keylength = 0;
@@ -678,7 +678,18 @@ public class HFile {
       trailer.metaIndexCount = metaNames.size();
 
       trailer.totalUncompressedBytes = totalBytes;
-      trailer.entryCount = entryCount;
+
+      // the entryCount in the HFile is currently only used for
+      // reporting, and for bloom calculations. This fix only
+      // avoids the counter from wrapping around to -ve values.
+      // If/when we change the FixedFileTrailer format in future,
+      // we can modify the entryCount to a long.
+      if (entryCount > Integer.MAX_VALUE)
+      {
+        trailer.entryCount = Integer.MAX_VALUE;
+      } else {
+        trailer.entryCount = (int)entryCount;
+      }
 
       trailer.compressionCodec = this.compressAlgo.ordinal();
 
@@ -1156,7 +1167,7 @@ public class HFile {
     /**
      * @return number of KV entries in this HFile
      */
-    public int getEntries() {
+    public long getEntries() {
       if (!this.isFileInfoLoaded()) {
         throw new RuntimeException("File info not loaded");
       }
@@ -1189,7 +1200,7 @@ public class HFile {
     /**
      * @return number of K entries in this HFile's filter.  Returns KV count if no filter.
      */
-    public int getFilterEntries() {
+    public long getFilterEntries() {
       return getEntries();
     }
 
@@ -1524,6 +1535,12 @@ public class HFile {
     // How many meta block index entries (aka: meta block count)
     int metaIndexCount;
     long totalUncompressedBytes;
+
+    // Note: An HFile today can contain more than Integer.MAX_VALUE keys.
+    // However, the entryCount (not being used for much today) will
+    // cap out at Integer.MAX_VALUE.
+    // If/when we change the trailer format, we should change the
+    // entryCount datatype to a long.
     int entryCount;
     int compressionCodec;
     int version = 1;
@@ -1925,6 +1942,7 @@ public class HFile {
         }
         files.addAll(regionFiles);
       }
+
       // iterate over all files found
       for (Path file : files) {
         if (verbose) System.out.println("Scanning -> " + file);
@@ -1934,49 +1952,54 @@ public class HFile {
         }
         // create reader and load file info
         HFile.Reader reader = new HFile.Reader(fs, file, null, false);
+
         Map<byte[],byte[]> fileInfo = reader.loadFileInfo();
-        // scan over file and read key/value's and check if requested
-        HFileScanner scanner = reader.getScanner(false, false);
-        scanner.seekTo();
-        KeyValue pkv = null;
         int count = 0;
-        do {
-          KeyValue kv = scanner.getKeyValue();
-          // dump key value
-          if (printKeyValue) {
-            System.out.println("K: " + kv +
-              " V: " + Bytes.toStringBinary(kv.getValue()));
-          }
-          // check if rows are in order
-          if (checkRow && pkv != null) {
-            if (Bytes.compareTo(pkv.getRow(), kv.getRow()) > 0) {
-              System.err.println("WARNING, previous row is greater then" +
-                " current row\n\tfilename -> " + file +
-                "\n\tprevious -> " + Bytes.toStringBinary(pkv.getKey()) +
-                "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
+        if (verbose || printKeyValue || checkRow || checkFamily) {
+          // scan over file and read key/value's and check if requested
+          HFileScanner scanner = reader.getScanner(false, false);
+          scanner.seekTo();
+          KeyValue pkv = null;
+          do {
+            KeyValue kv = scanner.getKeyValue();
+            // dump key value
+            if (printKeyValue) {
+              System.out.println("K: " + kv +
+                  " V: " + Bytes.toStringBinary(kv.getValue()));
             }
-          }
-          // check if families are consistent
-          if (checkFamily) {
-            String fam = Bytes.toString(kv.getFamily());
-            if (!file.toString().contains(fam)) {
-              System.err.println("WARNING, filename does not match kv family," +
-                "\n\tfilename -> " + file +
-                "\n\tkeyvalue -> " + Bytes.toStringBinary(kv.getKey()));
+            // check if rows are in order
+            if (checkRow && pkv != null) {
+              if (Bytes.compareTo(pkv.getRow(), kv.getRow()) > 0) {
+                System.err.println("WARNING, previous row is greater then" +
+                    " current row\n\tfilename -> " + file +
+                    "\n\tprevious -> " + Bytes.toStringBinary(pkv.getKey()) +
+                    "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
+              }
             }
-            if (pkv != null && Bytes.compareTo(pkv.getFamily(), kv.getFamily()) != 0) {
-              System.err.println("WARNING, previous kv has different family" +
-                " compared to current key\n\tfilename -> " + file +
-                "\n\tprevious -> " +  Bytes.toStringBinary(pkv.getKey()) +
-                "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
+            // check if families are consistent
+            if (checkFamily) {
+              String fam = Bytes.toString(kv.getFamily());
+              if (!file.toString().contains(fam)) {
+                System.err.println("WARNING, filename does not match kv family," +
+                    "\n\tfilename -> " + file +
+                    "\n\tkeyvalue -> " + Bytes.toStringBinary(kv.getKey()));
+              }
+              if (pkv != null && Bytes.compareTo(pkv.getFamily(), kv.getFamily()) != 0) {
+                System.err.println("WARNING, previous kv has different family" +
+                    " compared to current key\n\tfilename -> " + file +
+                    "\n\tprevious -> " +  Bytes.toStringBinary(pkv.getKey()) +
+                    "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
+              }
             }
-          }
-          pkv = kv;
-          count++;
-        } while (scanner.next());
+            pkv = kv;
+            count++;
+          } while (scanner.next());
+        }
+
         if (verbose || printKeyValue) {
           System.out.println("Scanned kv count -> " + count);
         }
+
         // print meta data
         if (printMeta) {
           System.out.println("Block index size as per heapsize: " + reader.indexSize());

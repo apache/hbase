@@ -507,7 +507,7 @@ public class Store implements HeapSize {
   /*
    * @return Writer for a new StoreFile in the tmp dir.
    */
-  private StoreFile.Writer createWriterInTmp(int maxKeyCount)
+  private StoreFile.Writer createWriterInTmp(long maxKeyCount)
   throws IOException {
     return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
         this.compression, this.comparator, this.conf,
@@ -844,13 +844,13 @@ public class Store implements HeapSize {
                                final boolean majorCompaction, final long maxId)
       throws IOException {
     // calculate maximum key count after compaction (for blooms)
-    int maxKeyCount = 0;
+    long maxKeyCount = 0;
     for (StoreFile file : filesToCompact) {
       StoreFile.Reader r = file.getReader();
       if (r != null) {
         // NOTE: getFilterEntries could cause under-sized blooms if the user
         //       switches bloom type (e.g. from ROW to ROWCOL)
-        int keyCount = (r.getBloomFilterType() == family.getBloomFilterType())
+        long keyCount = (r.getBloomFilterType() == family.getBloomFilterType())
             ? r.getFilterEntries() : r.getEntries();
         maxKeyCount += keyCount;
         LOG.info("Compacting: " + file + "; keyCount = " + keyCount + "; Bloom Type = " + r.getBloomFilterType().toString());
