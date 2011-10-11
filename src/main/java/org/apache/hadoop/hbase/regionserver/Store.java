@@ -869,6 +869,17 @@ public class Store implements HeapSize {
       int start = 0;
       double r = this.compactRatio;
 
+      // exclude bulk import files from minor compactions, if configured
+      if (conf.getBoolean("hbase.hstore.compaction.include.bulk", false)) {
+        filesToCompact.removeAll(Collections2.filter(filesToCompact,
+            new Predicate<StoreFile>() {
+              @Override
+              public boolean apply(StoreFile input) {
+                return input.isBulkLoadResult();
+              }
+            }));
+      }
+
       /* TODO: add sorting + unit test back in when HBASE-2856 is fixed
       //sort files by size to correct when normal skew is altered by bulk load
       Collections.sort(filesToCompact, StoreFile.Comparators.FILE_SIZE);
