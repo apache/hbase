@@ -92,10 +92,6 @@ public class ZKUnassignedWatcher implements Watcher {
   @Override
   public synchronized void process(WatchedEvent event) {
     EventType type = event.getType();
-    LOG.debug("ZK-EVENT-PROCESS: Got zkEvent " + type +
-              " state:" + event.getState() +
-              " path:" + event.getPath());
-
     // Handle the ignored events
     if(type.equals(EventType.None)       ||
        type.equals(EventType.NodeDeleted)) {
@@ -108,6 +104,9 @@ public class ZKUnassignedWatcher implements Watcher {
            zkWrapper.getRegionInTransitionZNode()))) {
       return;
     }
+
+    LOG.debug("ZK-EVENT-PROCESS: Got zkEvent " + type +
+              " path:" + event.getPath());
 
     try
     {

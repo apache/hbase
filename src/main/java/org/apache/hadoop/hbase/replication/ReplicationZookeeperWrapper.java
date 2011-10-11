@@ -483,8 +483,8 @@ public class ReplicationZookeeperWrapper {
     @Override
     public void process(WatchedEvent watchedEvent) {
       Event.EventType type = watchedEvent.getType();
-      LOG.info("Got event " + type + " with path " + watchedEvent.getPath());
       if (type.equals(Event.EventType.NodeDataChanged)) {
+        LOG.info("Got event " + type + " with path " + watchedEvent.getPath());
         setReplicating();
       }
     }

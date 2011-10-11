@@ -380,16 +380,18 @@ public class HConnectionManager {
         tries++) {
 
           try {
-            masterLocation = zk.readMasterAddressOrThrow();
+            masterLocation = zk.readMasterAddress(zk);
 
-            HMasterInterface tryMaster = (HMasterInterface)HBaseRPC.getProxy(
-                HMasterInterface.class, HBaseRPCProtocolVersion.versionID,
-                masterLocation.getInetSocketAddress(), this.conf);
+            if (masterLocation != null) {
+              HMasterInterface tryMaster = (HMasterInterface)HBaseRPC.getProxy(
+                  HMasterInterface.class, HBaseRPCProtocolVersion.versionID,
+                  masterLocation.getInetSocketAddress(), this.conf);
 
-            if (tryMaster.isMasterRunning()) {
-              this.master = tryMaster;
-              this.masterLock.notifyAll();
-              break;
+              if (tryMaster.isMasterRunning()) {
+                this.master = tryMaster;
+                this.masterLock.notifyAll();
+                break;
+              }
             }
 
           } catch (IOException e) {

@@ -112,6 +112,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
@@ -322,18 +323,22 @@ public class HRegionServer implements HRegionInterface,
         "hbase-958 debugging");
     }
     reinitializeThreads();
-    reinitializeZooKeeper();
+    initializeZooKeeper();
     int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
     for(int i = 0; i < nbBlocks; i++)  {
       reservedSpace.add(new byte[HConstants.DEFAULT_SIZE_RESERVATION_BLOCK]);
     }
   }
 
-  private void reinitializeZooKeeper() throws IOException {
+  private void initializeZooKeeper() throws IOException {
     zooKeeperWrapper =
         ZooKeeperWrapper.createInstance(conf, serverInfo.getServerName());
     zooKeeperWrapper.registerListener(this);
-    watchMasterAddress();
+    try {
+      zooKeeperWrapper.watchMasterAddress(zooKeeperWrapper);
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    }
   }
 
   private void reinitializeThreads() {
@@ -371,8 +376,6 @@ public class HRegionServer implements HRegionInterface,
   public void process(WatchedEvent event) {
     EventType type = event.getType();
     KeeperState state = event.getState();
-    LOG.info("Got ZooKeeper event, state: " + state + ", type: " +
-      type + ", path: " + event.getPath());
 
     // Ignore events if we're shutting down.
     if (this.stopRequested.get()) {
@@ -380,48 +383,34 @@ public class HRegionServer implements HRegionInterface,
       return;
     }
 
-    if (state == KeeperState.Expired) {
-      LOG.error("ZooKeeper session expired");
-      boolean restart =
-        this.conf.getBoolean("hbase.regionserver.restart.on.zk.expire", false);
-      if (restart) {
-        restart();
-      } else {
-        abort("ZooKeeper session expired");
+    if (!event.getPath().equals(zooKeeperWrapper.masterElectionZNode)) {
+      return;
+    }
+
+    try {
+      if (type == EventType.NodeDeleted) {
+        handleMasterNodeDeleted();
+      } else if (type == EventType.NodeCreated) {
+        handleMasterNodeCreated();
       }
-    } else if (type == EventType.NodeDeleted) {
-      watchMasterAddress();
-    } else if (type == EventType.NodeCreated) {
+    } catch(KeeperException ke) {
+      LOG.error("KeeperException handling master failover", ke);
+      abort("ZooKeeper exception handling master failover");
+    }
+  }
+
+  private void handleMasterNodeDeleted() throws KeeperException {
+    if(zooKeeperWrapper.watchMasterAddress(zooKeeperWrapper)) {
+      handleMasterNodeCreated();
+    }
+  }
+
+  private void handleMasterNodeCreated() throws KeeperException {
+    if(!zooKeeperWrapper.watchMasterAddress(zooKeeperWrapper)) {
+      handleMasterNodeDeleted();
+    } else {
       getMaster();
-
-      // ZooKeeper watches are one time only, so we need to re-register our watch.
-      watchMasterAddress();
     }
-  }
-
-  private void watchMasterAddress() {
-    while (!stopRequested.get() && !zooKeeperWrapper.watchMasterAddress(this)) {
-      LOG.warn("Unable to set watcher on ZooKeeper master address. Retrying.");
-      sleeper.sleep();
-    }
-  }
-
-  private void restart() {
-    abort("Restarting region server");
-    Threads.shutdown(regionServerThread);
-    boolean done = false;
-    while (!done) {
-      try {
-        reinitialize();
-        done = true;
-      } catch (IOException e) {
-        LOG.debug("Error trying to reinitialize ZooKeeper", e);
-      }
-    }
-    Thread t = new Thread(this);
-    String name = regionServerThread.getName();
-    t.setName(name);
-    t.start();
   }
 
   /** @return ZooKeeperWrapper used by RegionServer. */
@@ -1204,11 +1193,11 @@ public class HRegionServer implements HRegionInterface,
         return false;
       }
       try {
-        masterAddress = zooKeeperWrapper.readMasterAddressOrThrow();
-      } catch (IOException e) {
-        LOG.warn("Unable to read master address from ZooKeeper. Retrying." +
-                 " Error was:", e);
-        sleeper.sleep();
+        masterAddress = zooKeeperWrapper.readAddressOrThrow(
+            zooKeeperWrapper.masterElectionZNode, zooKeeperWrapper);
+      } catch (KeeperException e) {
+        LOG.warn("Unable to read master address from ZooKeeper.", e);
+        abort("Unable to read master address in ZK");
       }
     }
 

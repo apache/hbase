@@ -55,6 +55,8 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.data.Stat;
@@ -127,7 +129,7 @@ public class ZooKeeperWrapper implements Watcher {
   /*
    * ZNode used for election of the primary master when there are secondaries.
    */
-  private final String masterElectionZNode;
+  public final String masterElectionZNode;
   /*
    * State of the cluster - if up and running or shutting down
    */
@@ -191,7 +193,6 @@ public class ZooKeeperWrapper implements Watcher {
                             HConstants.ZOOKEEPER_CONFIG_NAME);
     }
     sessionTimeout = conf.getInt("zookeeper.session.timeout", 60 * 1000);
-    reconnectToZk();
 
     parentZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
 
@@ -206,23 +207,44 @@ public class ZooKeeperWrapper implements Watcher {
     rgnsInTransitZNode  = getZNode(parentZNode, regionsInTransitZNodeName);
     masterElectionZNode = getZNode(parentZNode, masterAddressZNodeName);
     clusterStateZNode   = getZNode(parentZNode, stateZNodeName);
+
+    connectToZk();
   }
 
-  public void reconnectToZk() throws IOException {
+  public void connectToZk() throws IOException {
     try {
-      LOG.info("Reconnecting to zookeeper");
+      LOG.info("Connecting to zookeeper");
       if(zooKeeper != null) {
         zooKeeper.close();
-        LOG.debug("<" + instanceName + ">" + "Closed existing zookeeper client");
+        LOG.error("<" + instanceName + ">" + " Closed existing zookeeper client");
       }
       zooKeeper = new ZooKeeper(quorumServers, sessionTimeout, this);
-      LOG.debug("<" + instanceName + ">" + "Connected to zookeeper again");
+      LOG.debug("<" + instanceName + ">" + " Connected to zookeeper");
+      // Ensure we are actually connected
+      ensureZkAvailable(10);
     } catch (IOException e) {
-      LOG.error("<" + instanceName + ">" + "Failed to create ZooKeeper object: " + e);
+      LOG.error("<" + instanceName + "> " + "Failed to create ZooKeeper object: " + e);
       throw new IOException(e);
     } catch (InterruptedException e) {
-      LOG.error("<" + instanceName + ">" + "Error closing ZK connection: " + e);
+      LOG.error("<" + instanceName + " >" + "Error closing ZK connection: " + e);
       throw new IOException(e);
+    }
+  }
+
+  private void ensureZkAvailable(int maxRetries)
+  throws IOException, InterruptedException {
+    while (maxRetries-- > 0) {
+      try {
+        zooKeeper.exists(parentZNode, false);
+        return;
+      } catch(KeeperException.ConnectionLossException cle) {
+        LOG.info("Received ZK ConnectionLossException, ZK not done initializing"
+            + ", retrying connect to ZK after 1 second sleep");
+        Thread.sleep(1000);
+      } catch(KeeperException ke) {
+        LOG.error("Received abnormal ZK exception, aborting", ke);
+        throw new IOException(ke);
+      }
     }
   }
 
@@ -240,11 +262,27 @@ public class ZooKeeperWrapper implements Watcher {
    */
   @Override
   public synchronized void process(WatchedEvent event) {
+    LOG.debug("<" + instanceName + "> Received ZK WatchedEvent: " +
+        "[path=" + event.getPath() + "] " +
+        "[state=" + event.getState().toString() + "] " +
+        "[type=" + event.getType().toString() + "]");
+    if (event.getType() == EventType.None) {
+      if (event.getState() == KeeperState.Expired) {
+        LOG.error("ZooKeeper Session Expiration, aborting server");
+        abort();
+      } else if (event.getState() == KeeperState.Disconnected) {
+        LOG.warn("Disconnected from ZooKeeper");
+      } else if (event.getState() == KeeperState.SyncConnected) {
+        LOG.info("Reconnected to ZooKeeper");
+      }
+      return;
+    }
     for(Watcher w : listeners) {
       try {
         w.process(event);
       } catch (Throwable t) {
-        LOG.error("<"+instanceName+">" + "ZK updates listener threw an exception in process()", t);
+        LOG.error("<"+instanceName+">" + " Sub-ZK Watcher threw an exception " +
+            "in process()", t);
       }
     }
   }
@@ -386,26 +424,20 @@ public class ZooKeeperWrapper implements Watcher {
     return res.toArray(new String[res.size()]);
   }
 
+  /**
+   * Check if the specified znode exists.  Set a watch if boolean is true,
+   * whether or not the node exists.
+   * @param znode
+   * @param watch
+   * @return
+   */
   public boolean exists(String znode, boolean watch) {
     try {
-      return zooKeeper.exists(getZNode(parentZNode, znode), watch?this:null) != null;
-    } catch (KeeperException.SessionExpiredException e) {
-      // if the session has expired try to reconnect to ZK, then perform query
-      try {
-        // TODO: ZK-REFACTOR: We should not reconnect - we should just quit and restart.
-        reconnectToZk();
-        return zooKeeper.exists(getZNode(parentZNode, znode), watch?this:null) != null;
-      } catch (IOException e1) {
-        LOG.error("Error reconnecting to zookeeper", e1);
-        throw new RuntimeException("Error reconnecting to zookeeper", e1);
-      } catch (KeeperException e1) {
-        LOG.error("Error reading after reconnecting to zookeeper", e1);
-        throw new RuntimeException("Error reading after reconnecting to zookeeper", e1);
-      } catch (InterruptedException e1) {
-        LOG.error("Error reading after reconnecting to zookeeper", e1);
-        throw new RuntimeException("Error reading after reconnecting to zookeeper", e1);
-      }
+      return zooKeeper.exists(getZNode(parentZNode, znode), watch ? this : null)
+             != null;
     } catch (KeeperException e) {
+      LOG.error("Received KeeperException on exists() call, aborting", e);
+      abort();
       return false;
     } catch (InterruptedException e) {
       return false;
@@ -452,15 +484,6 @@ public class ZooKeeperWrapper implements Watcher {
    */
   public HServerAddress readRootRegionLocation() {
     return readAddress(rootRegionZNode, null);
-  }
-
-  /**
-   * Read address of master server.
-   * @return HServerAddress of master server.
-   * @throws IOException if there's a problem reading the ZNode.
-   */
-  public HServerAddress readMasterAddressOrThrow() throws IOException {
-    return readAddressOrThrow(masterElectionZNode, null);
   }
 
   /**
@@ -521,23 +544,26 @@ public class ZooKeeperWrapper implements Watcher {
   }
 
   /**
-   * Set a watcher on the master address ZNode. The watcher will be set unless
-   * an exception occurs with ZooKeeper.
+   * Set a watcher on the master address ZNode whether or not the node currently
+   * exists. The watcher will always be set unless this method throws an
+   * exception.  Method will return true if node existed when watch was set,
+   * false if not.
    * @param watcher Watcher to set on master address ZNode.
-   * @return true if watcher was set, false otherwise.
+   * @return true if node exists when watch set, false if not
    */
-  public boolean watchMasterAddress(Watcher watcher) {
+  public boolean watchMasterAddress(Watcher watcher)
+  throws KeeperException {
     try {
-      zooKeeper.exists(masterElectionZNode, watcher);
+      Stat s = zooKeeper.exists(masterElectionZNode, watcher);
+      LOG.debug("<" + instanceName + ">" + " Set watcher on master address ZNode " + masterElectionZNode);
+      return s != null;
     } catch (KeeperException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to set watcher on ZNode " + masterElectionZNode, e);
-      return false;
+      LOG.warn("<" + instanceName + ">" + " Failed to set watcher on ZNode " + masterElectionZNode, e);
+      throw e;
     } catch (InterruptedException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to set watcher on ZNode " + masterElectionZNode, e);
+      LOG.warn("<" + instanceName + ">" + " Failed to set watcher on ZNode " + masterElectionZNode, e);
       return false;
     }
-    LOG.debug("<" + instanceName + ">" + "Set watcher on master address ZNode " + masterElectionZNode);
-    return true;
   }
 
   /**
@@ -551,20 +577,30 @@ public class ZooKeeperWrapper implements Watcher {
     try {
       LOG.debug("<" + instanceName + ">" + "Trying to read " + znode);
       return readAddressOrThrow(znode, watcher);
-    } catch (IOException e) {
+    } catch (KeeperException e) {
       LOG.debug("<" + instanceName + ">" + "Failed to read " + e.getMessage());
       return null;
     }
   }
 
-  private HServerAddress readAddressOrThrow(String znode, Watcher watcher) throws IOException {
+  /**
+   * Reads the specified address from the specified zk node, setting the
+   * specified watcher.  Returns null if the node does not exist.
+   * @param znode
+   * @param watcher
+   * @return
+   * @throws KeeperException
+   */
+  public HServerAddress readAddressOrThrow(String znode, Watcher watcher)
+  throws KeeperException {
     byte[] data;
     try {
       data = zooKeeper.getData(znode, watcher, null);
     } catch (InterruptedException e) {
-      throw new IOException(e);
-    } catch (KeeperException e) {
-      throw new IOException(e);
+      // This should not happen
+      return null;
+    } catch (KeeperException.NoNodeException e) {
+      return null;
     }
 
     String addressString = Bytes.toString(data);
@@ -1110,18 +1146,21 @@ public class ZooKeeperWrapper implements Watcher {
       // create the znode
       zooKeeper.create(fullyQualifiedZNodeName, data, Ids.OPEN_ACL_UNSAFE, createMode);
       LOG.debug("<" + instanceName + ">" + "Created ZNode " + fullyQualifiedZNodeName + " in ZooKeeper");
+    } catch (KeeperException.NodeExistsException nee) {
+      LOG.debug("<" + instanceName + "> " + "ZNode " + fullyQualifiedZNodeName + " already exists, still setting watch");
+    } catch (InterruptedException e) {
+      LOG.warn("<" + instanceName + ">" + "Failed to create ZNode " + fullyQualifiedZNodeName + " in ZooKeeper", e);
+      return null;
+    } catch (KeeperException e) {
+      LOG.error("<" + instanceName + ">" + "Failed to create ZNode " + fullyQualifiedZNodeName + " in ZooKeeper", e);
+      return null;
+    }
       // watch the znode for deletion, data change, creation of children
       if(watch) {
         watchZNode(zNodeName);
       }
-      return fullyQualifiedZNodeName;
-    } catch (InterruptedException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to create ZNode " + fullyQualifiedZNodeName + " in ZooKeeper", e);
-    } catch (KeeperException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to create ZNode " + fullyQualifiedZNodeName + " in ZooKeeper", e);
-    }
 
-    return null;
+    return fullyQualifiedZNodeName;
   }
 
   public byte[] readZNode(String znodeName, Stat stat) throws IOException {
@@ -1281,29 +1320,11 @@ public class ZooKeeperWrapper implements Watcher {
         unassignedZNodesWatched.remove(znode);
         deleteZNode(znode);
       }
-    } catch (KeeperException.SessionExpiredException e) {
-      LOG.error("Zookeeper session has expired", e);
-      // if the session has expired try to reconnect to ZK, then perform query
-      try {
-        // TODO: ZK-REFACTOR: should just quit on reconnect??
-        reconnectToZk();
-        synchronized(unassignedZNodesWatched) {
-          unassignedZNodesWatched.remove(znode);
-          deleteZNode(znode);
-        }
-      } catch (IOException e1) {
-        LOG.error("Error reconnecting to zookeeper", e1);
-        throw new RuntimeException("Error reconnecting to zookeeper", e1);
-      } catch (KeeperException.SessionExpiredException e1) {
-        LOG.error("Error reading after reconnecting to zookeeper", e1);
-        throw new RuntimeException("Error reading after reconnecting to zookeeper", e1);
-      } catch (KeeperException e1) {
-        LOG.error("Error reading after reconnecting to zookeeper", e1);
-      } catch (InterruptedException e1) {
-        LOG.error("Error reading after reconnecting to zookeeper", e1);
-      }
+    } catch (KeeperException.NoNodeException e) {
+      LOG.warn("Attempted to delete an unassigned region node but it DNE");
     } catch (KeeperException e) {
       LOG.error("Error deleting region " + regionName, e);
+      abort();
     } catch (InterruptedException e) {
       LOG.error("Error deleting region " + regionName, e);
     }
@@ -1357,5 +1378,10 @@ public class ZooKeeperWrapper implements Watcher {
       return data;
     }
 
+  }
+
+  private void abort() {
+    LOG.fatal("<" + instanceName + "> Aborting process because of fatal ZK error");
+    System.exit(1);
   }
 }

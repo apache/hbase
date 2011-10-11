@@ -66,13 +66,12 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.executor.HBaseExecutorService;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -101,8 +100,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.zookeeper.Watcher.Event.KeeperState;
 
 import com.google.common.collect.Lists;
 
@@ -1182,41 +1179,7 @@ public class HMaster extends Thread implements HMasterInterface,
    */
   @Override
   public void process(WatchedEvent event) {
-    LOG.debug("Event " + event.getType() +
-              " with state " + event.getState() +
-              " with path " + event.getPath());
-    // Master should kill itself if its session expired or if its
-    // znode was deleted manually (usually for testing purposes)
-    if(event.getState() == KeeperState.Expired ||
-      (event.getType().equals(EventType.NodeDeleted) &&
-        event.getPath().equals(this.zooKeeperWrapper.getMasterElectionZNode())) &&
-        !shutdownRequested.get()) {
-
-      LOG.info("Master lost its znode, trying to get a new one");
-
-      // Can we still be the master? If not, goodbye
-
-      zooKeeperWrapper.close();
-      try {
-        zooKeeperWrapper =
-            ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
-        zooKeeperWrapper.registerListener(this);
-        this.zkMasterAddressWatcher.setZookeeper(zooKeeperWrapper);
-        if(!this.zkMasterAddressWatcher.
-            writeAddressToZooKeeper(this.address,false)) {
-          throw new Exception("Another Master is currently active");
-        }
-
-        // we are a failed over master, reset the fact that we started the
-        // cluster
-        resetClusterStartup();
-        // Verify the cluster to see if anything happened while we were away
-        joinCluster();
-      } catch (Exception e) {
-        LOG.error("Killing master because of", e);
-        System.exit(1);
-      }
-    }
+    // no-op now
   }
 
   private static void printUsageAndExit() {

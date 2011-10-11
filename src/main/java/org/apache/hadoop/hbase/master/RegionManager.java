@@ -950,6 +950,7 @@ public class RegionManager {
   public void removeRegion(HRegionInfo info) {
     synchronized (this.regionsInTransition) {
       this.regionsInTransition.remove(info.getRegionNameAsString());
+      zkWrapper.deleteUnassignedRegion(info.getEncodedName());
     }
   }
 
