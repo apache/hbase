@@ -295,9 +295,15 @@ public class HFile {
   public static final String CACHE_BLOCKS_ON_WRITE_KEY =
       "hbase.rs.cacheblocksonwrite";
 
-  /** An interface used by clients to open and iterate an {@link HFile}. */
-  public interface Reader extends Closeable {
+  /** An abstraction used by the block index */
+  public interface CachingBlockReader {
+    HFileBlock readBlock(long offset, long onDiskBlockSize,
+        boolean cacheBlock, final boolean pread, final boolean isCompaction)
+        throws IOException;
+  }
 
+  /** An interface used by clients to open and iterate an {@link HFile}. */
+  public interface Reader extends Closeable, CachingBlockReader {
     /**
      * Returns this reader's "name". Usually the last component of the path.
      * Needs to be constant as the file is being moved to support caching on
@@ -314,10 +320,6 @@ public class HFile {
 
     ByteBuffer getMetaBlock(String metaBlockName,
        boolean cacheBlock) throws IOException;
-
-    HFileBlock readBlock(long offset, int onDiskBlockSize,
-        boolean cacheBlock, final boolean pread, final boolean isCompaction)
-        throws IOException;
 
     Map<byte[], byte[]> loadFileInfo() throws IOException;
 
