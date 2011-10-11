@@ -254,6 +254,9 @@ public class HLog implements Syncable {
   private static volatile long syncOps;
   private static volatile long syncTime;
 
+  public static volatile long lastSplitTime = 0;
+  public static volatile long lastSplitSize = 0;
+
   public static long getWriteOps() {
     long ret = writeOps;
     writeOps = 0;
@@ -1187,7 +1190,7 @@ public class HLog implements Syncable {
     Path oldLogDir, final FileSystem fs, final Configuration conf)
   throws IOException {
 
-    long millis = System.currentTimeMillis();
+    long startTime = System.currentTimeMillis();
     List<Path> splits = null;
     if (!fs.exists(srcDir)) {
       // Nothing to do
@@ -1218,9 +1221,9 @@ public class HLog implements Syncable {
       io.initCause(e);
       throw io;
     }
-    long endMillis = System.currentTimeMillis();
-    LOG.info("hlog file splitting completed in " + (endMillis - millis) +
-        " millis for " + srcDir.toString());
+    lastSplitTime = System.currentTimeMillis() - startTime;
+    LOG.info("hlog file splitting completed in " + lastSplitTime +
+        " ms for " + srcDir.toString());
     return splits;
   }
 
@@ -1293,8 +1296,9 @@ public class HLog implements Syncable {
     // More means faster but bigger mem consumption
     //TODO make a note on the conf rename and update hbase-site.xml if needed
     int logFilesPerStep = conf.getInt("hbase.hlog.split.batch.size", 3);
-     boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", false);
+    boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", false);
 
+    lastSplitSize = 0;
 
     try {
       int i = -1;
@@ -1309,6 +1313,7 @@ public class HLog implements Syncable {
           FileStatus log = logfiles[i];
           Path logPath = log.getPath();
           long logLength = log.getLen();
+          lastSplitSize += logLength;
           LOG.debug("Splitting hlog " + (i + 1) + " of " + logfiles.length +
             ": " + logPath + ", length=" + logLength );
           try {

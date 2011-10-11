@@ -177,7 +177,7 @@ public class HRegion implements HeapSize { // , Writable{
    * major compaction.  Cleared each time through compaction code.
    */
   private volatile boolean forceMajorCompaction = false;
-  private long lastCompactPeriod = 0;
+  private Pair<Long,Long> lastCompactInfo = null;
 
   /*
    * Data structure of write state flags used coordinating flushes,
@@ -218,6 +218,8 @@ public class HRegion implements HeapSize { // , Writable{
 
   final long memstoreFlushSize;
   private volatile long lastFlushTime;
+  private List<Pair<Long,Long>> recentFlushes
+    = new ArrayList<Pair<Long,Long>>();
   final FlushRequester flushListener;
   private final long blockingMemStoreSize;
   final long threadWakeFrequency;
@@ -607,14 +609,26 @@ public class HRegion implements HeapSize { // , Writable{
     return this.fs;
   }
 
-  /** @return how long the last compaction took */
-  public long getLastCompactPeriod() {
-    return this.lastCompactPeriod;
+  /** @return how info about the last compaction <time, size> */
+  public Pair<Long, Long> getLastCompactInfo() {
+    return this.lastCompactInfo;
   }
 
   /** @return the last time the region was flushed */
   public long getLastFlushTime() {
     return this.lastFlushTime;
+  }
+
+  /** @return how info about the last flushes <time, size> */
+  public List<Pair<Long,Long>> getRecentFlushInfo() {
+    // only MemStoreFlusher thread should be calling this, so read lock is okay
+    this.splitsAndClosesLock.readLock().lock();
+
+    List<Pair<Long,Long>> ret = this.recentFlushes;
+    this.recentFlushes = new ArrayList<Pair<Long,Long>>();
+
+    this.splitsAndClosesLock.readLock().unlock();
+    return ret;
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -815,6 +829,7 @@ public class HRegion implements HeapSize { // , Writable{
       return null;
     }
     splitsAndClosesLock.readLock().lock();
+    this.lastCompactInfo = null;
     try {
       byte [] splitRow = null;
       if (this.closed.get()) {
@@ -835,11 +850,13 @@ public class HRegion implements HeapSize { // , Writable{
             "compaction on region " + this);
         long startTime = EnvironmentEdgeManager.currentTimeMillis();
         doRegionCompactionPrep();
+        long lastCompactSize = 0;
         long maxSize = -1;
         boolean completed = false;
         try {
           for (Store store: stores.values()) {
             final Store.StoreSize ss = store.compact(majorCompaction);
+            lastCompactSize += store.getLastCompactSize();
             if (ss != null && ss.getSize() > maxSize) {
               maxSize = ss.getSize();
               splitRow = ss.getSplitRow();
@@ -853,7 +870,10 @@ public class HRegion implements HeapSize { // , Writable{
           LOG.info(((completed) ? "completed" : "aborted")
               + " compaction on region " + this
               + " after " + StringUtils.formatTimeDiff(now, startTime));
-          this.lastCompactPeriod = (completed) ? (now - startTime) / 1000 : 0;
+          if (completed) {
+            this.lastCompactInfo =
+              new Pair<Long,Long>((now - startTime) / 1000, lastCompactSize);
+          }
         }
       } finally {
         synchronized (writestate) {
@@ -1100,14 +1120,16 @@ public class HRegion implements HeapSize { // , Writable{
       notifyAll(); // FindBugs NN_NAKED_NOTIFY
     }
 
+    long time = EnvironmentEdgeManager.currentTimeMillis() - startTime;
     if (LOG.isDebugEnabled()) {
-      long now = EnvironmentEdgeManager.currentTimeMillis();
       LOG.info("Finished memstore flush of ~" +
         StringUtils.humanReadableInt(currentMemStoreSize) + " for region " +
-        this + " in " + (now - startTime) + "ms, sequence id=" + sequenceId +
+        this + " in " + time + "ms, sequence id=" + sequenceId +
         ", compaction requested=" + compactionRequested +
         ((wal == null)? "; wal=null": ""));
     }
+    this.recentFlushes.add(new Pair<Long,Long>(time/1000,currentMemStoreSize));
+
     return compactionRequested;
   }
 
@@ -3118,7 +3140,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (4 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN +
-      (21 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
+      (22 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) +

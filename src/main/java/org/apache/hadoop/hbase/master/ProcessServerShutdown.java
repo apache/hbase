@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.master.RegionManager.RegionState;
+import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -292,6 +293,8 @@ class ProcessServerShutdown extends RegionServerOperation {
     if (!logSplit) {
       // Process the old log file
       if (this.master.getFileSystem().exists(rsLogDir)) {
+        long splitTime = 0, splitSize = 0;
+
         if (!master.splitLogLock.tryLock()) {
           return false;
         }
@@ -299,9 +302,13 @@ class ProcessServerShutdown extends RegionServerOperation {
           HLog.splitLog(master.getRootDir(), rsLogDir,
               this.master.getOldLogDir(), this.master.getFileSystem(),
             this.master.getConfiguration());
+          splitTime = HLog.lastSplitTime;
+          splitSize = HLog.lastSplitSize;
         } finally {
           master.splitLogLock.unlock();
         }
+
+        this.master.getMetrics().addSplit(splitTime, splitSize);
       }
       logSplit = true;
     }

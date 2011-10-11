@@ -660,16 +660,21 @@ public class HMaster extends Thread implements HMasterInterface,
       if(this.serverManager.getServerInfo(serverName) == null) {
         LOG.info("Log folder doesn't belong " +
           "to a known region server, splitting");
+        long splitTime = 0, splitSize = 0;
+
         this.splitLogLock.lock();
         Path logDir =
           new Path(this.rootdir, HLog.getHLogDirectoryName(serverName));
         try {
           HLog.splitLog(this.rootdir, logDir, oldLogDir, this.fs, getConfiguration());
+          splitTime = HLog.lastSplitTime;
+          splitSize = HLog.lastSplitSize;
         } catch (IOException e) {
           LOG.error("Failed splitting " + logDir.toString(), e);
         } finally {
           this.splitLogLock.unlock();
         }
+        this.metrics.addSplit(splitTime, splitSize);
       } else {
         LOG.info("Log folder belongs to an existing region server");
       }
