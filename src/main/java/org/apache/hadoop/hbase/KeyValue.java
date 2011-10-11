@@ -154,6 +154,13 @@ public class KeyValue implements Writable, HeapSize {
    * enum ordinals . They change if item is removed or moved.  Do our own codes.
    */
   public static enum Type {
+    /**
+     * The minimum type. The latest type in the sorted order out of all
+     * key-values for the same row/column/timestamp combination. See
+     * {@link #createLastOnRow} functions. The minimum key type is actually
+     * greater than all other types, as compared by
+     * {@link KeyComparator#compare(byte[], int, int, byte[], int, int)}.
+     */
     Minimum((byte)0),
     Put((byte)4),
 
@@ -161,7 +168,13 @@ public class KeyValue implements Writable, HeapSize {
     DeleteColumn((byte)12),
     DeleteFamily((byte)14),
 
-    // Maximum is used when searching; you look from maximum on down.
+    /**
+     * Maximum is used when searching; you look from maximum on down. The
+     * earliest type in the sorted order for the same row/column/timestamp. See
+     * {@link #createFirstOnRow} functions. The maximum key type is actually
+     * smaller than all other types, as compared by
+     * {@link KeyComparator#compare(byte[], int, int, byte[], int, int)}.
+     */
     Maximum((byte)255);
 
     private final byte code;
@@ -1880,8 +1893,14 @@ public class KeyValue implements Writable, HeapSize {
       byte ltype = left[loffset + (llength - 1)];
       byte rtype = right[roffset + (rlength - 1)];
 
+      // If the column is not specified, the "minimum" key type appears
+      // the latest in the sorted order, regardless of the timestamp. This is
+      // used for specifying the last key/value in a given row, because there
+      // is no "lexicographically last column" (it would be infinitely long).
+      // The "maximum" key type does not need this behavior.
       if (lcolumnlength == 0 && ltype == Type.Minimum.getCode()) {
-        return 1; // left is bigger.
+        // left is "bigger", i.e. it appears later in the sorted order
+        return 1;
       }
       if (rcolumnlength == 0 && rtype == Type.Minimum.getCode()) {
         return -1;
@@ -1908,7 +1927,9 @@ public class KeyValue implements Writable, HeapSize {
 
       if (!this.ignoreType) {
         // Compare types. Let the delete types sort ahead of puts; i.e. types
-        // of higher numbers sort before those of lesser numbers
+        // of higher numbers sort before those of lesser numbers. Maximum (255)
+        // appears ahead of everything, and minimum (0) appears after
+        // everything.
         return (0xff & rtype) - (0xff & ltype);
       }
       return 0;
