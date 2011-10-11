@@ -420,7 +420,7 @@ public class HFile {
         baosDos.flush();
         byte [] bytes = baos.toByteArray();
         ByteBuffer blockToCache = ByteBuffer.wrap(bytes, DATABLOCKMAGIC.length,
-            bytes.length - DATABLOCKMAGIC.length);
+            bytes.length - DATABLOCKMAGIC.length).slice();
         String blockName = name + blockNumber;
         blockCache.cacheBlock(blockName, blockToCache);
         baosDos.close();
