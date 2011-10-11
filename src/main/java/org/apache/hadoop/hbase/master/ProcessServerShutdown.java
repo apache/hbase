@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -292,7 +294,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       ", onlineMetaRegions.size(): " +
       master.getRegionManager().numOnlineMetaRegions());
     if (!isSplitFinished) {
-      long splitTime = 0, splitSize = 0;
+      long splitTime = 0, splitSize = 0, splitCount = 0;
       FileSystem fs = this.master.getFileSystem();
       // we rename during split, so check both names
       Path rsSplitDir = new Path(rsLogDir.getParent(),
@@ -315,18 +317,19 @@ class ProcessServerShutdown extends RegionServerOperation {
             }
             LOG.debug("Renamed region directory: " + rsSplitDir);
           }
-
+          ContentSummary contentSum = fs.getContentSummary(rsSplitDir);
+          splitCount = contentSum.getFileCount();
+          splitSize = contentSum.getSpaceConsumed();
           // Process the old log files
           HLog.splitLog(master.getRootDir(), rsSplitDir,
             this.master.getOldLogDir(), this.master.getFileSystem(),
             this.master.getConfiguration());
           splitTime = HLog.lastSplitTime;
-          splitSize = HLog.lastSplitSize;
+          this.master.getMetrics().addSplit(splitTime, splitCount, splitSize);
         } finally {
           master.splitLogLock.unlock();
         }
 
-        this.master.getMetrics().addSplit(splitTime, splitSize);
       }
       isSplitFinished = true;
     }

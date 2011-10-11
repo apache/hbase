@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.master.metrics;
 
 import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.metrics.HBaseInfo;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
 import org.apache.hadoop.hbase.metrics.PersistentMetricsTimeVaryingRate;
@@ -30,6 +30,7 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 
@@ -50,19 +51,46 @@ public class MasterMetrics implements Updater {
   private long lastUpdate = System.currentTimeMillis();
   private long lastExtUpdate = System.currentTimeMillis();
   private long extendedPeriod = 0;
-/*
+  /*
    * Count of requests to the cluster since last call to metrics update
    */
   private final MetricsRate cluster_requests =
     new MetricsRate("cluster_requests", registry);
 
   /** Time it takes to finish HLog.splitLog() */
-  final PersistentMetricsTimeVaryingRate splitTime =
-    new PersistentMetricsTimeVaryingRate("splitTime", registry);
+  final MetricsLongValue  splitTime =
+    new MetricsLongValue("splitTime", registry);
 
-  /** Size of HLog files being split */
-  final PersistentMetricsTimeVaryingRate splitSize =
-    new PersistentMetricsTimeVaryingRate("splitSize", registry);
+
+  /*  Number of active region servers. This number is updated
+   *  every time a regionserver joins or leaves.
+   */
+  public MetricsIntValue numRegionServers =
+	new MetricsIntValue("numRegionServers", registry);
+
+  /*  This is the number of dead region servers.
+   *  This is cumululative across all intervals from startup time.
+   */
+  public MetricsIntValue numRSExpired =
+	new MetricsIntValue("numRSExpired", registry);
+
+  /** Metrics to keep track of the number and size of logs split.
+   *  This is cumulative across all intervals from startup time.
+   */
+  public MetricsLongValue numLogsSplit =
+	  new MetricsLongValue("numLogsSplit", registry);
+
+  private MetricsLongValue sizeOfLogsSplit =
+	  new MetricsLongValue("sizeOfLogsSplit", registry);
+
+  /** Track the number of regions opened. Useful for identifying
+   *  open/close of regions due to load balancing.
+   *  This is a cumulative metric.
+   */
+  private MetricsIntValue numRegionsOpened =
+	  new MetricsIntValue("numRegionsOpened", registry);
+
+  private ServerManager serverManager;
 
   public MasterMetrics(final String name) {
     MetricsContext context = MetricsUtil.getContext("hbase");
@@ -71,7 +99,6 @@ public class MasterMetrics implements Updater {
     context.registerUpdater(this);
     JvmMetrics.init("Master", name);
     HBaseInfo.init();
-
     // expose the MBean for metrics
     masterStatistics = new MasterStatistics(this.registry);
 
@@ -88,6 +115,10 @@ public class MasterMetrics implements Updater {
 
     LOG.info("Initialized");
   }
+  public MasterMetrics(final String name, ServerManager serverMgr) {
+	  this(name);
+	  serverManager = serverMgr;
+  }
 
   public void shutdown() {
     if (masterStatistics != null)
@@ -100,21 +131,24 @@ public class MasterMetrics implements Updater {
    * @param unused
    */
   public void doUpdates(MetricsContext unused) {
+
     synchronized (this) {
       this.lastUpdate = System.currentTimeMillis();
-
+      this.numRegionServers.set(this.serverManager.numServers());
       // has the extended period for long-living stats elapsed?
       if (this.extendedPeriod > 0 &&
           this.lastUpdate - this.lastExtUpdate >= this.extendedPeriod) {
         this.lastExtUpdate = this.lastUpdate;
-        this.splitTime.resetMinMaxAvg();
-        this.splitSize.resetMinMaxAvg();
         this.resetAllMinMax();
       }
 
       this.cluster_requests.pushMetric(metricsRecord);
       this.splitTime.pushMetric(metricsRecord);
-      this.splitSize.pushMetric(metricsRecord);
+      this.numRegionServers.pushMetric(metricsRecord);
+      this.numRSExpired.pushMetric(metricsRecord);
+      this.numLogsSplit.pushMetric(metricsRecord);
+      this.sizeOfLogsSplit.pushMetric(metricsRecord);
+      this.numRegionsOpened.pushMetric(metricsRecord);
     }
     this.metricsRecord.update();
   }
@@ -128,9 +162,10 @@ public class MasterMetrics implements Updater {
    * @param time time that the split took
    * @param size length of original HLogs that were split
    */
-  public synchronized void addSplit(long time, long size) {
-    splitTime.inc(time);
-    splitSize.inc(size);
+  public synchronized void addSplit(long time, long splitCount, long splitSize) {
+	  splitTime.set(splitTime.get() + time);
+	  numLogsSplit.set(numLogsSplit.get() + splitCount);
+	  sizeOfLogsSplit.set(sizeOfLogsSplit.get() + splitSize);
   }
 
   /**
@@ -146,4 +181,13 @@ public class MasterMetrics implements Updater {
   public void incrementRequests(final int inc) {
     this.cluster_requests.inc(inc);
   }
+
+  public synchronized void incRegionsOpened() {
+	  numRegionsOpened.set(numRegionsOpened.get() + 1);
+  }
+
+  public synchronized void incRegionServerExpired() {
+	  numRSExpired.set(numRSExpired.get() + 1);
+  }
+
 }

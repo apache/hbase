@@ -1106,8 +1106,10 @@ public class RegionManager {
       RegionState s = regionsInTransition.get(regionName);
       if (s != null) {
         s.setOpen();
+        this.master.getMetrics().incRegionsOpened();
       }
     }
+
   }
 
   /**

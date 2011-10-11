@@ -36,7 +36,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
@@ -275,7 +276,7 @@ public class HMaster extends Thread implements HMasterInterface,
     regionManager = new RegionManager(this);
 
     setName(MASTER);
-    this.metrics = new MasterMetrics(MASTER);
+    this.metrics = new MasterMetrics(MASTER, this.serverManager);
     // We're almost open for business
     this.closed.set(false);
     LOG.info("HMaster w/ hbck initialized on " + this.address.toString());
@@ -716,7 +717,7 @@ public class HMaster extends Thread implements HMasterInterface,
       if(this.serverManager.getServerInfo(serverName) == null) {
         LOG.info("Log folder doesn't belong " +
           "to a known region server, splitting");
-        long splitTime = 0, splitSize = 0;
+        long splitTime = 0, splitSize = 0, splitCount = 0;
 
         this.splitLogLock.lock();
         try {
@@ -731,15 +732,17 @@ public class HMaster extends Thread implements HMasterInterface,
             logDir = splitDir;
             LOG.debug("Renamed region directory: " + splitDir);
           }
+          ContentSummary contentSummary = fs.getContentSummary(logDir);
+          splitCount = contentSummary.getFileCount();
+          splitSize = contentSummary.getSpaceConsumed();
           HLog.splitLog(this.rootdir, logDir, oldLogDir, this.fs, getConfiguration());
           splitTime = HLog.lastSplitTime;
-          splitSize = HLog.lastSplitSize;
+          this.metrics.addSplit(splitTime, splitCount, splitSize );
         } catch (IOException e) {
           LOG.error("Failed splitting " + logDir.toString(), e);
         } finally {
           this.splitLogLock.unlock();
         }
-        this.metrics.addSplit(splitTime, splitSize);
       } else {
         LOG.info("Log folder belongs to an existing region server");
       }

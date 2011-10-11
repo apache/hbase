@@ -872,6 +872,7 @@ public class ServerManager {
     this.deadServers.add(serverName);
     this.master.getRegionServerOperationQueue().
       put(new ProcessServerShutdown(master, info));
+    this.master.getMetrics().incRegionServerExpired();
   }
 
   /**
