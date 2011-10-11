@@ -811,10 +811,14 @@ public class HRegionServer implements HRegionInterface,
    * @return Throwable converted to an IOE; methods can only let out IOEs.
    */
   private Throwable cleanup(final Throwable t, final String msg) {
-    if (msg == null) {
-      LOG.error("", RemoteExceptionHandler.checkThrowable(t));
+    if (t instanceof NotServingRegionException)
+        LOG.info(t.toString());
     } else {
-      LOG.error(msg, RemoteExceptionHandler.checkThrowable(t));
+        if (msg == null) {
+          LOG.error("", RemoteExceptionHandler.checkThrowable(t));
+        } else {
+        LOG.error(msg, RemoteExceptionHandler.checkThrowable(t));
+        }
     }
     if (!checkOOME(t)) {
       checkFileSystem();
