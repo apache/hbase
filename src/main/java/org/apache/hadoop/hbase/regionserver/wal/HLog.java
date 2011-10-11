@@ -1411,7 +1411,6 @@ public class HLog implements Syncable {
         throw new IOException("Discovered orphan hlog after split. Maybe " +
           "HRegionServer was not dead when we started");
       }
-      archiveLogs(corruptedLogs, processedLogs, oldLogDir, fs, conf);
     } finally {
       splits = new ArrayList<Path>(logWriters.size());
       for (WriterAndPath wap : logWriters.values()) {
@@ -1420,6 +1419,7 @@ public class HLog implements Syncable {
         LOG.debug("Closed " + wap.p);
       }
     }
+    archiveLogs(corruptedLogs, processedLogs, oldLogDir, fs, conf);
     return splits;
   }
 
