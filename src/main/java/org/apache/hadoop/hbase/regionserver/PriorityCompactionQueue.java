@@ -20,132 +20,62 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 
 /**
- * This class delegates to the BlockingQueue but wraps all HRegions in
+ * This class delegates to the BlockingQueue but wraps all Stores in
  * compaction requests that hold the priority and the date requested.
  *
  * Implementation Note: With an elevation time of -1 there is the potential for
  * starvation of the lower priority compaction requests as long as there is a
  * constant stream of high priority requests.
  */
-public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
+public class PriorityCompactionQueue implements BlockingQueue<CompactionRequest> {
   static final Log LOG = LogFactory.getLog(PriorityCompactionQueue.class);
-
-  /**
-   * This class represents a compaction request and holds the region, priority,
-   * and time submitted.
-   */
-  private class CompactionRequest implements Comparable<CompactionRequest> {
-    private final HRegion r;
-    private final int p;
-    private final Date date;
-
-    public CompactionRequest(HRegion r, int p) {
-      this(r, p, null);
-    }
-
-    public CompactionRequest(HRegion r, int p, Date d) {
-      if (r == null) {
-        throw new NullPointerException("HRegion cannot be null");
-      }
-
-      if (d == null) {
-        d = new Date();
-      }
-
-      this.r = r;
-      this.p = p;
-      this.date = d;
-    }
-
-    /**
-     * This function will define where in the priority queue the request will
-     * end up.  Those with the highest priorities will be first.  When the
-     * priorities are the same it will It will first compare priority then date
-     * to maintain a FIFO functionality.
-     *
-     * <p>Note: The date is only accurate to the millisecond which means it is
-     * possible that two requests were inserted into the queue within a
-     * millisecond.  When that is the case this function will break the tie
-     * arbitrarily.
-     */
-    @Override
-    public int compareTo(CompactionRequest request) {
-      //NOTE: The head of the priority queue is the least element
-      if (this.equals(request)) {
-        return 0; //they are the same request
-      }
-      int compareVal;
-
-      compareVal = p - request.p; //compare priority
-      if (compareVal != 0) {
-        return compareVal;
-      }
-
-      compareVal = date.compareTo(request.date);
-      if (compareVal != 0) {
-        return compareVal;
-      }
-
-      //break the tie arbitrarily
-      return -1;
-    }
-
-    /** Gets the HRegion for the request */
-    HRegion getHRegion() {
-      return r;
-    }
-
-    /** Gets the priority for the request */
-    int getPriority() {
-      return p;
-    }
-
-    public String toString() {
-      return "regionName=" + r.getRegionNameAsString() +
-        ", priority=" + p + ", date=" + date;
-    }
-  }
 
   /** The actual blocking queue we delegate to */
   protected final BlockingQueue<CompactionRequest> queue =
     new PriorityBlockingQueue<CompactionRequest>();
 
-  /** Hash map of the HRegions contained within the Compaction Queue */
-  private final HashMap<HRegion, CompactionRequest> regionsInQueue =
-    new HashMap<HRegion, CompactionRequest>();
+  /** Hash map of the Stores contained within the Compaction Queue */
+  private final HashMap<Store, CompactionRequest> storesInQueue =
+    new HashMap<Store, CompactionRequest>();
 
   /** Creates a new PriorityCompactionQueue with no priority elevation time */
   public PriorityCompactionQueue() {
     LOG.debug("Create PriorityCompactionQueue");
   }
 
-  /** If the region is not already in the queue it will add it and return a
+  /** If the store is not already in the queue it will add it and return a
    * new compaction request object.  If it is already present in the queue
    * then it will return null.
    * @param p If null it will use the default priority
    * @return returns a compaction request if it isn't already in the queue
    */
-  protected CompactionRequest addToRegionsInQueue(HRegion r, int p) {
+  protected CompactionRequest addToCompactionQueue(CompactionRequest newRequest) {
     CompactionRequest queuedRequest = null;
-    CompactionRequest newRequest = new CompactionRequest(r, p);
-    synchronized (regionsInQueue) {
-      queuedRequest = regionsInQueue.get(r);
+    synchronized (storesInQueue) {
+      queuedRequest = storesInQueue.get(newRequest.getStore());
       if (queuedRequest == null ||
           newRequest.getPriority() < queuedRequest.getPriority()) {
-        LOG.trace("Inserting region in queue. " + newRequest);
-        regionsInQueue.put(r, newRequest);
+        String reason = "";
+        if (newRequest.getPriority() < queuedRequest.getPriority()) {
+          reason = "Reason : priority changed from " +
+            queuedRequest.getPriority() + " to " +
+            newRequest.getPriority() + ". ";
+        }
+        LOG.debug("Inserting store in queue. " + reason + newRequest);
+        storesInQueue.put(newRequest.getStore(), newRequest);
       } else {
-        LOG.trace("Region already in queue, skipping. Queued: " + queuedRequest +
+        LOG.debug("Store already in queue, skipping. Queued: " + queuedRequest +
           ", requested: " + newRequest);
         newRequest = null; // It is already present so don't add it
       }
@@ -159,23 +89,25 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
     return newRequest;
   }
 
-  /** Removes the request from the regions in queue
+  /** Removes the request from the stores in queue
    * @param p If null it will use the default priority
    */
-  protected CompactionRequest removeFromRegionsInQueue(HRegion r) {
-    if (r == null) return null;
+  protected CompactionRequest removeFromQueue(CompactionRequest c) {
+    if (c == null) return null;
 
-    synchronized (regionsInQueue) {
-      CompactionRequest cr = regionsInQueue.remove(r);
+    synchronized (storesInQueue) {
+      CompactionRequest cr = storesInQueue.remove(c.getStore());
       if (cr == null) {
-        LOG.warn("Removed a region it couldn't find in regionsInQueue: " + r);
+        LOG.warn("Removed a compaction request it couldn't find in storesInQueue: " +
+            "region = " + c.getHRegion() + ", store = " + c.getStore());
       }
       return cr;
     }
   }
 
-  public boolean add(HRegion e, int p) {
-    CompactionRequest request = this.addToRegionsInQueue(e, p);
+  @Override
+  public boolean add(CompactionRequest e) {
+    CompactionRequest request = this.addToCompactionQueue(e);
     if (request != null) {
       boolean result = queue.add(request);
       queue.peek();
@@ -186,68 +118,50 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
   }
 
   @Override
-  public boolean add(HRegion e) {
-    return add(e, e.getCompactPriority());
-  }
-
-  public boolean offer(HRegion e, int p) {
-    CompactionRequest request = this.addToRegionsInQueue(e, p);
+  public boolean offer(CompactionRequest e) {
+    CompactionRequest request = this.addToCompactionQueue(e);
     return (request != null)? queue.offer(request): false;
   }
 
   @Override
-  public boolean offer(HRegion e) {
-    return offer(e, e.getCompactPriority());
-  }
-
-  public void put(HRegion e, int p) throws InterruptedException {
-    CompactionRequest request = this.addToRegionsInQueue(e, p);
+  public void put(CompactionRequest e) throws InterruptedException {
+    CompactionRequest request = this.addToCompactionQueue(e);
     if (request != null) {
       queue.put(request);
     }
   }
 
   @Override
-  public void put(HRegion e) throws InterruptedException {
-    put(e, e.getCompactPriority());
-  }
-
-  public boolean offer(HRegion e, int p, long timeout, TimeUnit unit)
+  public boolean offer(CompactionRequest e, long timeout, TimeUnit unit)
   throws InterruptedException {
-    CompactionRequest request = this.addToRegionsInQueue(e, p);
+    CompactionRequest request = this.addToCompactionQueue(e);
     return (request != null)? queue.offer(request, timeout, unit): false;
   }
 
   @Override
-  public boolean offer(HRegion e, long timeout, TimeUnit unit)
-  throws InterruptedException {
-    return offer(e, e.getCompactPriority(), timeout, unit);
-  }
-
-  @Override
-  public HRegion take() throws InterruptedException {
+  public CompactionRequest take() throws InterruptedException {
     CompactionRequest cr = queue.take();
     if (cr != null) {
-      removeFromRegionsInQueue(cr.getHRegion());
-      return cr.getHRegion();
+      removeFromQueue(cr);
+      return cr;
     }
     return null;
   }
 
   @Override
-  public HRegion poll(long timeout, TimeUnit unit) throws InterruptedException {
+  public CompactionRequest poll(long timeout, TimeUnit unit) throws InterruptedException {
     CompactionRequest cr = queue.poll(timeout, unit);
     if (cr != null) {
-      removeFromRegionsInQueue(cr.getHRegion());
-      return cr.getHRegion();
+      removeFromQueue(cr);
+      return cr;
     }
     return null;
   }
 
   @Override
-  public boolean remove(Object r) {
-    if (r instanceof HRegion) {
-      CompactionRequest cr = removeFromRegionsInQueue((HRegion) r);
+  public boolean remove(Object o) {
+    if (o instanceof CompactionRequest) {
+      CompactionRequest cr = removeFromQueue((CompactionRequest) o);
       if (cr != null) {
         return queue.remove(cr);
       }
@@ -257,21 +171,21 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
   }
 
   @Override
-  public HRegion remove() {
+  public CompactionRequest remove() {
     CompactionRequest cr = queue.remove();
     if (cr != null) {
-      removeFromRegionsInQueue(cr.getHRegion());
-      return cr.getHRegion();
+      removeFromQueue(cr);
+      return cr;
     }
     return null;
   }
 
   @Override
-  public HRegion poll() {
+  public CompactionRequest poll() {
     CompactionRequest cr = queue.poll();
     if (cr != null) {
-      removeFromRegionsInQueue(cr.getHRegion());
-      return cr.getHRegion();
+      removeFromQueue(cr);
+      return cr;
     }
     return null;
   }
@@ -283,9 +197,9 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
 
   @Override
   public boolean contains(Object r) {
-    if (r instanceof HRegion) {
-      synchronized (regionsInQueue) {
-        return regionsInQueue.containsKey((HRegion) r);
+    if (r instanceof CompactionRequest) {
+      synchronized (storesInQueue) {
+        return storesInQueue.containsKey((CompactionRequest) r);
       }
     } else if (r instanceof CompactionRequest) {
       return queue.contains(r);
@@ -294,15 +208,15 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
   }
 
   @Override
-  public HRegion element() {
+  public CompactionRequest element() {
     CompactionRequest cr = queue.element();
-    return (cr != null)? cr.getHRegion(): null;
+    return (cr != null)? cr: null;
   }
 
   @Override
-  public HRegion peek() {
+  public CompactionRequest peek() {
     CompactionRequest cr = queue.peek();
-    return (cr != null)? cr.getHRegion(): null;
+    return (cr != null)? cr: null;
   }
 
   @Override
@@ -317,14 +231,14 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
 
   @Override
   public void clear() {
-    regionsInQueue.clear();
+    storesInQueue.clear();
     queue.clear();
   }
 
   // Unimplemented methods, collection methods
 
   @Override
-  public Iterator<HRegion> iterator() {
+  public Iterator<CompactionRequest> iterator() {
     throw new UnsupportedOperationException("Not supported.");
   }
 
@@ -344,7 +258,7 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
   }
 
   @Override
-  public boolean addAll(Collection<? extends HRegion> c) {
+  public boolean addAll(Collection<? extends CompactionRequest> c) {
     throw new UnsupportedOperationException("Not supported.");
   }
 
@@ -359,12 +273,12 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
   }
 
   @Override
-  public int drainTo(Collection<? super HRegion> c) {
+  public int drainTo(Collection<? super CompactionRequest> c) {
     throw new UnsupportedOperationException("Not supported.");
   }
 
   @Override
-  public int drainTo(Collection<? super HRegion> c, int maxElements) {
+  public int drainTo(Collection<? super CompactionRequest> c, int maxElements) {
     throw new UnsupportedOperationException("Not supported.");
   }
 }

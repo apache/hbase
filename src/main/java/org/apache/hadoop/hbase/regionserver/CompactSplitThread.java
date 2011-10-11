@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils;
 
@@ -69,37 +71,45 @@ class CompactSplitThread extends Thread {
   @Override
   public void run() {
     while (!this.server.isStopRequested()) {
+      CompactionRequest compactionRequest = null;
       HRegion r = null;
       try {
-        r = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
-        if (r != null) {
+        compactionRequest = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
+        if (compactionRequest != null) {
           lock.lock();
           try {
             if(!this.server.isStopRequested()) {
               // Don't interrupt us while we are working
-              byte [] midKey = r.compactStores();
+              r = compactionRequest.getHRegion();
+              byte [] midKey = r.compactStore(compactionRequest.getStore());
               if (r.getLastCompactInfo() != null) {  // compaction aborted?
                 this.server.getMetrics().addCompaction(r.getLastCompactInfo());
               }
               if (LOG.isDebugEnabled()) {
-                HRegion next = this.compactionQueue.peek();
+                CompactionRequest next = this.compactionQueue.peek();
                 LOG.debug("Just finished a compaction. " +
                           " Current Compaction Queue: size=" +
                           getCompactionQueueSize() +
                           ((next != null) ?
-                              ", topPri=" + next.getCompactPriority() : ""));
+                              ", topPri=" + next.getPriority() : ""));
               }
               if (!this.server.isStopRequested()) {
                 // requests that were added during compaction will have a
                 // stale priority. remove and re-insert to update priority
-                boolean hadCompaction = compactionQueue.remove(r);
+                boolean hadCompaction = compactionQueue.remove(compactionRequest);
                 if (midKey != null) {
                   split(r, midKey);
                 } else if (hadCompaction) {
-                  compactionQueue.add(r);
-                } else if (r.getCompactPriority() < PRIORITY_USER) {
+                  // recompute the priority for a request already in the queue
+                  LOG.debug("Re-computing priority for compaction request " + compactionRequest);
+                  compactionRequest.setPriority(compactionRequest.getStore().getCompactPriority());
+                  compactionQueue.add(compactionRequest);
+                } else if (compactionRequest.getStore().getCompactPriority() < PRIORITY_USER) {
                   // degenerate case. recursively enqueue blocked regions
-                  compactionQueue.add(r);
+                  LOG.debug("Re-queueing with " + compactionRequest.getStore().getCompactPriority() +
+                      " priority for compaction request " + compactionRequest);
+                  compactionRequest.setPriority(compactionRequest.getStore().getCompactPriority());
+                  compactionQueue.add(compactionRequest);
                 }
               }
             }
@@ -135,7 +145,9 @@ class CompactSplitThread extends Thread {
    */
   public synchronized void requestCompaction(final HRegion r,
       final String why) {
-    requestCompaction(r, false, why, r.getCompactPriority());
+    for(Store s : r.getStores().values()) {
+      requestCompaction(r, s, false, why, s.getCompactPriority());
+    }
   }
 
   public synchronized void requestCompaction(final HRegion r,
@@ -143,12 +155,19 @@ class CompactSplitThread extends Thread {
     requestCompaction(r, false, why, p);
   }
 
+  public synchronized void requestCompaction(final HRegion r,
+      final boolean force, final String why, int p) {
+    for(Store s : r.getStores().values()) {
+      requestCompaction(r, s, force, why, p);
+    }
+  }
+
   /**
    * @param r HRegion store belongs to
    * @param force Whether next compaction should be major
    * @param why Why compaction requested -- used in debug messages
    */
-  public synchronized void requestCompaction(final HRegion r,
+  public synchronized void requestCompaction(final HRegion r, final Store s,
       final boolean force, final String why, int priority) {
 
     boolean addedToQueue = false;
@@ -159,16 +178,16 @@ class CompactSplitThread extends Thread {
 
     // tell the region to major-compact (and don't downgrade it)
     if (force) {
-      r.setForceMajorCompaction(force);
+      s.setForceMajorCompaction(force);
     }
-
-    addedToQueue = compactionQueue.add(r, priority);
-
+    CompactionRequest compactionRequest = new CompactionRequest(r, s, priority);
+    addedToQueue = compactionQueue.add(compactionRequest);
     // only log if actually added to compaction queue...
     if (addedToQueue && LOG.isDebugEnabled()) {
       LOG.debug("Compaction " + (force? "(major) ": "") +
         "requested for region " + r.getRegionNameAsString() +
         "/" + r.getRegionInfo().getEncodedName() +
+        ", store " + s +
         (why != null && !why.isEmpty()? " because: " + why: "") +
         "; Priority: " + priority + "; Compaction queue size: " + compactionQueue.size());
     }
