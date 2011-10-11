@@ -74,6 +74,8 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -1252,11 +1254,14 @@ public class HLog implements Syncable {
   public static List<Path> splitLog(final Path rootDir, final Path srcDir,
     Path oldLogDir, final FileSystem fs, final Configuration conf)
   throws IOException {
-
+    MonitoredTask status = TaskMonitor.get().createStatus(
+        "Splitting logs in " + srcDir);
     long startTime = System.currentTimeMillis();
     List<Path> splits = null;
+    status.setStatus("Determining files to split");
     if (!fs.exists(srcDir)) {
       // Nothing to do
+      status.markComplete("No log directory existed to split.");
       return splits;
     }
     FileStatus [] logfiles = fs.listStatus(srcDir);
@@ -1266,6 +1271,7 @@ public class HLog implements Syncable {
     }
     LOG.info("Splitting " + logfiles.length + " hlog(s) in " +
       srcDir.toString());
+    status.setStatus("Performing split");
     splits = splitLog(rootDir, srcDir, oldLogDir, logfiles, fs, conf);
     try {
       FileStatus[] files = fs.listStatus(srcDir);
@@ -1285,6 +1291,7 @@ public class HLog implements Syncable {
       throw io;
     }
     lastSplitTime = System.currentTimeMillis() - startTime;
+    status.markComplete("Log splits complete.");
     LOG.info("hlog file splitting completed in " + lastSplitTime +
         " ms for " + srcDir.toString());
     return splits;
@@ -1354,6 +1361,8 @@ public class HLog implements Syncable {
       Collections.synchronizedMap(
         new TreeMap<byte [], WriterAndPath>(Bytes.BYTES_COMPARATOR));
     List<Path> splits = null;
+    MonitoredTask status = TaskMonitor.get().createStatus(
+        "Splitting logs in " + srcDir);
 
     // Number of logs in a read batch
     // More means faster but bigger mem consumption
@@ -1363,6 +1372,7 @@ public class HLog implements Syncable {
 
     lastSplitSize = 0;
 
+    status.setStatus("Performing split");
     try {
       int i = -1;
       while (i < logfiles.length) {
@@ -1388,6 +1398,7 @@ public class HLog implements Syncable {
             LOG.warn("EOF from hlog " + logPath + ".  continuing");
             processedLogs.add(logPath);
           } catch (InterruptedIOException iioe) {
+            status.abort(StringUtils.stringifyException(iioe));
             throw iioe;
           } catch (IOException e) {
             // If the IOE resulted from bad file format,
@@ -1401,6 +1412,7 @@ public class HLog implements Syncable {
                   ". Marking as corrupted", e);
                 corruptedLogs.add(logPath);
               } else {
+                status.abort(StringUtils.stringifyException(e));
                 throw e;
               }
             }
@@ -1409,6 +1421,7 @@ public class HLog implements Syncable {
         writeEditsBatchToRegions(editsByRegion, logWriters, rootDir, fs, conf);
       }
       if (fs.listStatus(srcDir).length > processedLogs.size() + corruptedLogs.size()) {
+        status.abort("Discovered orphan hlog after split");
         throw new IOException("Discovered orphan hlog after split. Maybe " +
           "HRegionServer was not dead when we started");
       }
@@ -1420,7 +1433,9 @@ public class HLog implements Syncable {
         LOG.debug("Closed " + wap.p);
       }
     }
+    status.setStatus("Archiving logs after completed split");
     archiveLogs(corruptedLogs, processedLogs, oldLogDir, fs, conf);
+    status.markComplete("Split completed");
     return splits;
   }
 

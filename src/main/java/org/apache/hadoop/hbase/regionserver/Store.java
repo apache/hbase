@@ -49,6 +49,8 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -445,28 +447,34 @@ public class Store implements HeapSize {
    * previously.
    * @param logCacheFlushId flush sequence number
    * @param snapshot
+   * @param snapshotTimeRangeTracker
+   * @param status
    * @return true if a compaction is needed
    * @throws IOException
    */
   private StoreFile flushCache(final long logCacheFlushId,
       SortedSet<KeyValue> snapshot,
-      TimeRangeTracker snapshotTimeRangeTracker) throws IOException {
+      TimeRangeTracker snapshotTimeRangeTracker,
+      MonitoredTask status) throws IOException {
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
-    return internalFlushCache(snapshot, logCacheFlushId, snapshotTimeRangeTracker);
+    return internalFlushCache(snapshot, logCacheFlushId,
+        snapshotTimeRangeTracker, status);
   }
 
   /*
    * @param cache
    * @param logCacheFlushId
+   * @param snapshotTimeRangeTracker
+   * @param status
    * @return StoreFile created.
    * @throws IOException
    */
   private StoreFile internalFlushCache(final SortedSet<KeyValue> set,
       final long logCacheFlushId,
-      TimeRangeTracker snapshotTimeRangeTracker)
-      throws IOException {
+      TimeRangeTracker snapshotTimeRangeTracker,
+      MonitoredTask status) throws IOException {
     StoreFile.Writer writer;
     String fileName;
     long flushed = 0;
@@ -479,6 +487,7 @@ public class Store implements HeapSize {
     // flush to list of store files.  Add cleanup of anything put on filesystem
     // if we fail.
     synchronized (flushLock) {
+      status.setStatus("Flushing " + this + ": creating writer");
       // A. Write the map out to the disk
       writer = createWriterInTmp(set.size());
       writer.setTimeRangeTracker(snapshotTimeRangeTracker);
@@ -495,7 +504,9 @@ public class Store implements HeapSize {
       } finally {
         // Write out the log sequence number that corresponds to this output
         // hfile.  The hfile is current up to and including logCacheFlushId.
+        status.setStatus("Flushing " + this + ": appending metadata");
         writer.appendMetadata(logCacheFlushId, false);
+        status.setStatus("Flushing " + this + ": closing flushed file");
         writer.close();
       }
     }
@@ -628,6 +639,10 @@ public class Store implements HeapSize {
     long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact);
 
     // Ready to go. Have list of files to compact.
+    MonitoredTask status = TaskMonitor.get().createStatus(
+        (cr.isMajor() ? "Major " : "") + "Compaction of "
+        + this.storeNameStr + " on "
+        + this.region.getRegionInfo().getRegionNameAsString());
     LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
         + this.storeNameStr + " of "
         + this.region.getRegionInfo().getRegionNameAsString()
@@ -636,6 +651,7 @@ public class Store implements HeapSize {
 
     StoreFile sf = null;
     try {
+      status.setStatus("Compacting " + filesToCompact.size() + " file(s)");
       StoreFile.Writer writer = compactStores(filesToCompact, cr.isMajor(), maxId);
       // Move the compaction into place.
       sf = completeCompaction(filesToCompact, writer);
@@ -645,6 +661,7 @@ public class Store implements HeapSize {
       }
     }
 
+    status.markComplete("Completed compaction");
     LOG.info("Completed" + (cr.isMajor() ? " major " : " ") + "compaction of "
         + filesToCompact.size() + " file(s) in " + this.storeNameStr + " of "
         + this.region.getRegionInfo().getRegionNameAsString()
@@ -1690,8 +1707,9 @@ public class Store implements HeapSize {
     }
 
     @Override
-    public void flushCache() throws IOException {
-      storeFile = Store.this.flushCache(cacheFlushId, snapshot, snapshotTimeRangeTracker);
+    public void flushCache(MonitoredTask status) throws IOException {
+      storeFile = Store.this.flushCache(cacheFlushId, snapshot,
+          snapshotTimeRangeTracker, status);
     }
 
     @Override

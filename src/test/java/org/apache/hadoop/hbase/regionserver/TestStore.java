@@ -54,12 +54,14 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 
 import com.google.common.base.Joiner;
+import org.mockito.Mockito;
 
 /**
  * Test class fosr the Store
@@ -497,7 +499,7 @@ public class TestStore extends TestCase {
   private static void flushStore(Store store, long id) throws IOException {
     StoreFlusher storeFlusher = store.getStoreFlusher(id);
     storeFlusher.prepare();
-    storeFlusher.flushCache();
+    storeFlusher.flushCache(Mockito.mock(MonitoredTask.class));
     storeFlusher.commit();
   }
 

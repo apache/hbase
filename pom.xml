@@ -382,6 +382,12 @@
                   package="org.apache.hadoop.hbase.generated.regionserver"
                   webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
 
+                <mkdir dir="${build.webapps}/taskmonitor/WEB-INF"/>
+                <jspcompiler uriroot="${src.webapps}/taskmonitor"
+                    outputdir="${generated.sources}"
+                  package="org.apache.hadoop.hbase.generated.taskmonitor"
+                  webxml="${build.webapps}/taskmonitor/WEB-INF/web.xml"/>
+
                 <exec executable="sh">
                     <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}"/>
                 </exec>

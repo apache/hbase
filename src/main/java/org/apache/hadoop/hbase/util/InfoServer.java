@@ -24,6 +24,7 @@ import org.apache.hadoop.http.HttpServer;
 import org.mortbay.jetty.handler.ContextHandlerCollection;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
+import org.mortbay.jetty.webapp.WebAppContext;
 
 import java.io.IOException;
 import java.net.URL;
@@ -79,6 +80,12 @@ public class InfoServer extends HttpServer {
       logContext.addServlet(DefaultServlet.class, "/");
       defaultContexts.put(logContext, true);
     }
+    // Now bring up the task monitor
+    WebAppContext taskMonitorContext =
+      new WebAppContext(parent, "taskmontior", "/taskmonitor");
+    taskMonitorContext.addServlet(DefaultServlet.class, "/");
+    taskMonitorContext.setWar(appDir + "/taskmonitor");
+    defaultContexts.put(taskMonitorContext, true);
   }
 
   /**

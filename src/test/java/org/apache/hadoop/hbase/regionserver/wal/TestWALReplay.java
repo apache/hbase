@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,6 +53,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Test replay of edits out of a WAL split.
@@ -373,9 +375,11 @@ public class TestWALReplay {
     try {
       final HRegion region = new HRegion(basedir, newWal, newFS, newConf, hri,
           null) {
-        protected boolean internalFlushcache(HLog wal, long myseqid)
+        protected boolean internalFlushcache(HLog wal, long myseqid,
+            MonitoredTask status)
         throws IOException {
-          boolean b = super.internalFlushcache(wal, myseqid);
+          boolean b = super.internalFlushcache(wal, myseqid,
+              Mockito.mock(MonitoredTask.class));
           flushcount.incrementAndGet();
           return b;
         };

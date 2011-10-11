@@ -84,6 +84,8 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -540,14 +542,20 @@ public class HMaster extends Thread implements HMasterInterface,
   /** Main processing loop */
   @Override
   public void run() {
-   try {
-     joinCluster();
-     initPreferredAssignment();
-     startServiceThreads();
-   }catch (IOException e) {
-     LOG.fatal("Unhandled exception. Master quits.", e);
-     return;
-   }
+    MonitoredTask startupStatus =
+      TaskMonitor.get().createStatus("Master startup");
+    startupStatus.setDescription("Master startup");
+    try {
+      joinCluster();
+      initPreferredAssignment();
+      startupStatus.setStatus("Initializing master service threads");
+      startServiceThreads();
+      startupStatus.markComplete("Initialization successful");
+    } catch (IOException e) {
+      LOG.fatal("Unhandled exception. Master quits.", e);
+      startupStatus.cleanup();
+      return;
+    }
     try {
       /* Main processing loop */
       FINISHED: while (!this.closed.get()) {
@@ -579,9 +587,11 @@ public class HMaster extends Thread implements HMasterInterface,
       }
     } catch (Throwable t) {
       LOG.fatal("Unhandled exception. Starting shutdown.", t);
+      startupStatus.cleanup();
       this.closed.set(true);
     }
 
+    startupStatus.cleanup();
     if (!this.shutdownRequested.get()) {  // shutdown not by request
       shutdown();  // indicated that master is shutting down
       startShutdown();  // get started with shutdown: stop scanners etc.

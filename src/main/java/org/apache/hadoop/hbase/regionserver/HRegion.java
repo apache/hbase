@@ -76,6 +76,8 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -471,15 +473,20 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public long initialize(final Progressable reporter)
   throws IOException {
+    MonitoredTask status = TaskMonitor.get().createStatus(
+        "Initializing region " + this);
     // Write HRI to a file in case we need to recover .META.
+    status.setStatus("Writing region info on filesystem");
     checkRegioninfoOnFilesystem();
 
     // Remove temporary data left over from old regions
+    status.setStatus("Cleaning up temporary data from old regions");
     cleanupTmpDir();
 
     // Load in all the HStores.  Get maximum seqid.
     long maxSeqId = -1;
     for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
+      status.setStatus("Instantiating store for column family " + c);
       Store store = instantiateHStore(this.tableDir, c);
       this.stores.put(c.getName(), store);
       long storeSeqId = store.getMaxSequenceId();
@@ -488,11 +495,13 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
     // Recover any edits if available.
-    maxSeqId = replayRecoveredEditsIfAny(this.regiondir, maxSeqId, reporter);
+    maxSeqId = replayRecoveredEditsIfAny(
+        this.regiondir, maxSeqId, reporter, status);
 
     // Get rid of any splits or merges that were lost in-progress.  Clean out
     // these directories here on open.  We may be opening a region that was
     // being split but we crashed in the middle of it all.
+    status.setStatus("Cleaning up detritus from prior splits");
     FSUtils.deleteDirectory(this.fs, new Path(regiondir, SPLITDIR));
     FSUtils.deleteDirectory(this.fs, new Path(regiondir, MERGEDIR));
 
@@ -507,6 +516,7 @@ public class HRegion implements HeapSize { // , Writable{
     // (particularly if no recovered edits, seqid will be -1).
     long nextSeqid = maxSeqId + 1;
     LOG.info("Onlined " + this.toString() + "; next sequenceid=" + nextSeqid);
+    status.markComplete("Region opened successfully");
     return nextSeqid;
   }
 
@@ -647,11 +657,16 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException e
    */
   public List<StoreFile> close(final boolean abort) throws IOException {
+    MonitoredTask status = TaskMonitor.get().createStatus(
+        "Closing region " + this + (abort ? " due to abort" : ""));
     if (isClosed()) {
+      status.abort("Already got closed by another process");
       LOG.warn("region " + this + " already closed");
       return null;
     }
+    status.setStatus("Waiting for split lock");
     synchronized (splitLock) {
+      status.setStatus("Disabling compacts and flushes for region");
       boolean wasFlushing = false;
       synchronized (writestate) {
         // Disable compacting and flushing by background threads for this
@@ -674,11 +689,13 @@ public class HRegion implements HeapSize { // , Writable{
       // that will clear out of the bulk of the memstore before we put up
       // the close flag?
       if (!abort && !wasFlushing && worthPreFlushing()) {
+        status.setStatus("Pre-flushing region before close");
         LOG.info("Running close preflush of " + this.getRegionNameAsString());
-        internalFlushcache();
+        internalFlushcache(status);
       }
       newScannerLock.writeLock().lock();
       this.closing.set(true);
+      status.setStatus("Disabling writes for close");
       try {
         splitsAndClosesLock.writeLock().lock();
         LOG.debug("Updates disabled for region, no outstanding scanners on " +
@@ -692,7 +709,7 @@ public class HRegion implements HeapSize { // , Writable{
 
           // Don't flush the cache if we are aborting
           if (!abort) {
-            internalFlushcache();
+            internalFlushcache(status);
           }
 
           List<StoreFile> result = new ArrayList<StoreFile>();
@@ -700,6 +717,7 @@ public class HRegion implements HeapSize { // , Writable{
             result.addAll(store.close());
           }
           this.closed.set(true);
+          status.markComplete("Closed");
           LOG.info("Closed " + this);
           return result;
         } finally {
@@ -1084,7 +1102,9 @@ public class HRegion implements HeapSize { // , Writable{
    * because a Snapshot was not properly persisted.
    */
   public boolean flushcache() throws IOException {
+    MonitoredTask status = TaskMonitor.get().createStatus("Flushing" + this);
     if (this.closed.get()) {
+      status.abort("Skipped: closed");
       return false;
     }
     synchronized (writestate) {
@@ -1097,14 +1117,19 @@ public class HRegion implements HeapSize { // , Writable{
               writestate.flushing + ", writesEnabled=" +
               writestate.writesEnabled);
         }
+        status.abort("Not flushing since " + (writestate.flushing ?
+              "already flushing" : "writes not enabled"));
         return false;
       }
     }
     try {
       // Prevent splits and closes
+      status.setStatus("Acquiring readlock on region");
       splitsAndClosesLock.readLock().lock();
       try {
-        return internalFlushcache();
+        boolean result = internalFlushcache(status);
+        status.markComplete("Flush successful");
+        return result;
       } finally {
         splitsAndClosesLock.readLock().unlock();
       }
@@ -1113,6 +1138,7 @@ public class HRegion implements HeapSize { // , Writable{
         writestate.flushing = false;
         this.writestate.flushRequested = false;
         writestate.notifyAll();
+        status.cleanup();
       }
     }
   }
@@ -1144,6 +1170,7 @@ public class HRegion implements HeapSize { // , Writable{
    * routes.
    *
    * <p> This method may block for some time.
+   * @param status
    *
    * @return true if the region needs compacting
    *
@@ -1151,20 +1178,22 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws DroppedSnapshotException Thrown when replay of hlog is required
    * because a Snapshot was not properly persisted.
    */
-  protected boolean internalFlushcache() throws IOException {
-    return internalFlushcache(this.log, -1);
+  protected boolean internalFlushcache(MonitoredTask status)
+    throws IOException {
+    return internalFlushcache(this.log, -1, status);
   }
 
   /**
    * @param wal Null if we're NOT to go via hlog/wal.
    * @param myseqid The seqid to use if <code>wal</code> is null writing out
    * flush file.
+   * @param status
    * @return true if the region needs compacting
    * @throws IOException
    * @see {@link #internalFlushcache()}
    */
-  protected boolean internalFlushcache(final HLog wal, final long myseqid)
-  throws IOException {
+  protected boolean internalFlushcache(final HLog wal, final long myseqid,
+      MonitoredTask status) throws IOException {
     final long startTime = EnvironmentEdgeManager.currentTimeMillis();
     // Clear flush flag.
     // Record latest flush time
@@ -1193,7 +1222,9 @@ public class HRegion implements HeapSize { // , Writable{
     // We have to take a write lock during snapshot, or else a write could
     // end up in both snapshot and memstore (makes it difficult to do atomic
     // rows then)
+    status.setStatus("Obtaining lock to block concurrent updates");
     this.updatesLock.writeLock().lock();
+    status.setStatus("Preparing to flush by snapshotting stores");
     final long currentMemStoreSize = this.memstoreSize.get();
     //copy the array of per column family memstore values
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(
@@ -1214,6 +1245,7 @@ public class HRegion implements HeapSize { // , Writable{
       this.updatesLock.writeLock().unlock();
     }
 
+    status.setStatus("Flushing stores");
     LOG.debug("Finished snapshotting, commencing flushing stores");
 
     // Any failure from here on out will be catastrophic requiring server
@@ -1227,7 +1259,7 @@ public class HRegion implements HeapSize { // , Writable{
       // just-made new flush store file.
 
       for (StoreFlusher flusher : storeFlushers) {
-        flusher.flushCache();
+        flusher.flushCache(status);
       }
 
       Callable<Void> atomicWork = internalPreFlushcacheCommit();
@@ -1276,6 +1308,7 @@ public class HRegion implements HeapSize { // , Writable{
       DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
           Bytes.toStringBinary(getRegionName()));
       dse.initCause(t);
+      status.abort("Flush failed: " + StringUtils.stringifyException(t));
       throw dse;
     }
 
@@ -1305,6 +1338,7 @@ public class HRegion implements HeapSize { // , Writable{
         this + " in " + time + "ms, sequence id=" + sequenceId +
         ", compaction requested=" + compactionRequested +
         ((wal == null)? "; wal=null": ""));
+      status.setStatus("Finished memstore flush");
     }
     this.recentFlushes.add(new Pair<Long,Long>(time/1000,currentMemStoreSize));
 
@@ -2173,13 +2207,14 @@ public class HRegion implements HeapSize { // , Writable{
    * @param minSeqId Any edit found in split editlogs needs to be in excess of
    * this minSeqId to be applied, else its skipped.
    * @param reporter
+   * @param status
    * @return the sequence id of the last edit added to this region out of the
    * recovered edits log or <code>minSeqId</code> if nothing added from editlogs.
    * @throws UnsupportedEncodingException
    * @throws IOException
    */
   protected long replayRecoveredEditsIfAny(final Path regiondir,
-      final long minSeqId, final Progressable reporter)
+      final long minSeqId, final Progressable reporter, MonitoredTask status)
   throws UnsupportedEncodingException, IOException {
     long seqid = minSeqId;
     NavigableSet<Path> files = HLog.getSplitEditFilesSorted(this.fs, regiondir);
@@ -2205,7 +2240,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     if (seqid > minSeqId) {
       // Then we added some edits to memory. Flush and cleanup split edit files.
-      internalFlushcache(null, seqid);
+      internalFlushcache(null, seqid, status);
     }
     // Now delete the content of recovered edits.  We're done w/ them.
     for (Path file: files) {
@@ -2230,7 +2265,10 @@ public class HRegion implements HeapSize { // , Writable{
   private long replayRecoveredEdits(final Path edits,
       final long minSeqId, final Progressable reporter)
     throws IOException {
-    LOG.info("Replaying edits from " + edits + "; minSeqId=" + minSeqId);
+    String msg = "Replaying edits from " + edits + "; minSeqId=" + minSeqId;
+    LOG.info(msg);
+    MonitoredTask status = TaskMonitor.get().createStatus(msg);
+    status.setStatus("Opening logs");
     HLog.Reader reader = HLog.getReader(this.fs, edits, conf);
     try {
     long currentEditSeqId = minSeqId;
@@ -2281,40 +2319,51 @@ public class HRegion implements HeapSize { // , Writable{
           flush = restoreEdit(store, kv);
           editsCount++;
         }
-        if (flush) internalFlushcache(null, currentEditSeqId);
+        if (flush) internalFlushcache(null, currentEditSeqId, status);
 
         // Every 'interval' edits, tell the reporter we're making progress.
         // Have seen 60k edits taking 3minutes to complete.
         if (reporter != null && (editsCount % interval) == 0) {
+          status.setStatus("Replaying edits..." +
+              " skipped=" + skippedEdits +
+              " edits=" + editsCount);
           reporter.progress();
         }
       }
     } catch (EOFException eof) {
       Path p = HLog.moveAsideBadEditsFile(fs, edits);
-      LOG.warn("Encountered EOF. Most likely due to Master failure during " +
+      msg = "Encountered EOF. Most likely due to Master failure during " +
           "log spliting, so we have this data in another edit.  " +
-          "Continuing, but renaming " + edits + " as " + p, eof);
+          "Continuing, but renaming " + edits + " as " + p;
+      LOG.warn(msg, eof);
+      status.setStatus(msg);
     } catch (IOException ioe) {
       // If the IOE resulted from bad file format,
       // then this problem is idempotent and retrying won't help
       if (ioe.getCause() instanceof ParseException) {
         Path p = HLog.moveAsideBadEditsFile(fs, edits);
-        LOG.warn("File corruption encountered!  " +
-            "Continuing, but renaming " + edits + " as " + p, ioe);
+        msg = "File corruption encountered!  " +
+            "Continuing, but renaming " + edits + " as " + p;
+        LOG.warn(msg, ioe);
+        status.setStatus(msg);
       } else {
         // other IO errors may be transient (bad network connection,
         // checksum exception on one datanode, etc).  throw & retry
+        status.abort(StringUtils.stringifyException(ioe));
         throw ioe;
       }
     }
+    msg = "Applied " + editsCount + ", skipped " + skippedEdits +
+        ", firstSeqIdInLog=" + firstSeqIdInLog +
+        ", maxSeqIdInLog=" + currentEditSeqId;
+    status.markComplete(msg);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Applied " + editsCount + ", skipped " + skippedEdits +
-          ", firstSeqIdInLog=" + firstSeqIdInLog +
-          ", maxSeqIdInLog=" + currentEditSeqId);
+      LOG.debug(msg);
     }
     return currentEditSeqId;
     } finally {
       reader.close();
+      status.cleanup();
     }
   }
 
