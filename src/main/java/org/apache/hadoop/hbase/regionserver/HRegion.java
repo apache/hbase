@@ -817,7 +817,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return split row if split is needed
    * @throws IOException e
    */
-  byte [] compactStores()
+  public byte [] compactStores()
   throws IOException {
     if (this.closing.get() || this.closed.get()) {
       LOG.debug("Skipping compaction on " + this + " because closing/closed");
