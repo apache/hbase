@@ -97,6 +97,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.WatchedEvent;
@@ -1418,6 +1419,13 @@ public class HMaster extends Thread implements HMasterInterface,
       lastFragmentationQuery = now;
     }
     return fragmentation;
+  }
+
+  @Override
+  public ProtocolSignature getProtocolSignature(String protocol,
+      long clientVersion, int clientMethodsHash) throws IOException {
+    return ProtocolSignature.getProtocolSignature(
+        this, protocol, clientVersion, clientMethodsHash);
   }
 
   /**

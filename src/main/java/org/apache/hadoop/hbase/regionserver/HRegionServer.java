@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
@@ -2535,6 +2536,13 @@ public class HRegionServer implements HRegionInterface,
       LOG.error("Could not parse", e);
       printUsageAndExit();
     }
+  }
+
+  @Override
+  public ProtocolSignature getProtocolSignature(String protocol,
+      long clientVersion, int clientMethodsHash) throws IOException {
+    return ProtocolSignature.getProtocolSignature(
+        this, protocol, clientVersion, clientMethodsHash);
   }
 
   /**
