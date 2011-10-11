@@ -511,8 +511,6 @@ public class RegionManager {
                 " to the " + hostName);
           } else if (holdRegionForBestRegionserver ||
               quickStartRegionServerSet.contains(preferredHost)) {
-            LOG.debug("Hold the region : " + name +
-                " for its best locality region server " + hostName);
             continue;
           }
         }
