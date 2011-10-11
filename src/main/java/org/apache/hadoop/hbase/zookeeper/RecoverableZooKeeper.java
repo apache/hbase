@@ -86,6 +86,7 @@ public class RecoverableZooKeeper {
   public void delete(String path, int version)
     throws InterruptedException, KeeperException {
     RetryCounter retryCounter = retryCounterFactory.create();
+    boolean isRetry = false; // False for first attempt, true for all retries.
     while (true) {
       try {
         zk.delete(path, version);
@@ -93,7 +94,14 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case NONODE:
-            return; // Delete was successful
+            if (isRetry) {
+              LOG.info("Node " + path + " already deleted. Assuming that a " +
+                  "previous attempt succeeded.");
+              return;
+            }
+            LOG.warn("Node " + path + " already deleted, and this is not a " +
+                     "retry");
+            throw e;
 
           case CONNECTIONLOSS:
           case OPERATIONTIMEOUT:
@@ -113,6 +121,7 @@ public class RecoverableZooKeeper {
 		"ZooKeeper after sleeping "+retryIntervalMillis+" ms");
       retryCounter.sleepUntilNextRetry();
       retryCounter.useRetry();
+      isRetry = true;
     }
   }
 
@@ -445,14 +454,31 @@ public class RecoverableZooKeeper {
   private String createNonSequential(String path, byte[] data, List<ACL> acl,
       CreateMode createMode) throws KeeperException, InterruptedException {
     RetryCounter retryCounter = retryCounterFactory.create();
+    boolean isRetry = false; // False for first attempt, true for all retries.
     while (true) {
       try {
         return zk.create(path, data, acl, createMode);
       } catch (KeeperException e) {
         switch (e.code()) {
           case NODEEXISTS:
-            // Non-sequential node was successfully created
-            return path;
+            if (isRetry) {
+              // If the connection was lost, there is still a possibility that
+              // we have successfully created the node at our previous attempt,
+              // so we read the node and compare.
+              byte[] currentData = zk.getData(path, false, null);
+              if (currentData != null &&
+                  Bytes.compareTo(currentData, id) == 0) {
+                // We successfully created a non-sequential node
+                return path;
+              }
+              LOG.error("Node " + path + " already exists with " +
+                  Bytes.toStringBinarySafe(currentData) + ", could not write " +
+                  Bytes.toStringBinarySafe(data));
+              throw e;
+            }
+            LOG.error("Node " + path + " already exists and this is not a " +
+			"retry");
+            throw e;
 
           case CONNECTIONLOSS:
           case OPERATIONTIMEOUT:
@@ -472,6 +498,7 @@ public class RecoverableZooKeeper {
           "ZooKeeper after sleeping "+retryIntervalMillis+" ms");
       retryCounter.sleepUntilNextRetry();
       retryCounter.useRetry();
+      isRetry = true;
     }
   }
 
