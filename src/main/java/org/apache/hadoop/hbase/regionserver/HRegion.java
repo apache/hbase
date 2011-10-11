@@ -1230,7 +1230,8 @@ public class HRegion implements HeapSize { // , Writable{
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(
         stores.size());
     try {
-      sequenceId = (wal == null)? myseqid: wal.startCacheFlush();
+      sequenceId = (wal == null)? myseqid :
+        wal.startCacheFlush(this.regionInfo.getRegionName());
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
 
       for (Store s : stores.values()) {
@@ -1304,7 +1305,9 @@ public class HRegion implements HeapSize { // , Writable{
       // We used to only catch IOEs but its possible that we'd get other
       // exceptions -- e.g. HBASE-659 was about an NPE -- so now we catch
       // all and sundry.
-      if (wal != null) wal.abortCacheFlush();
+      if (wal != null) {
+        wal.abortCacheFlush(this.regionInfo.getRegionName());
+      }
       DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
           Bytes.toStringBinary(getRegionName()));
       dse.initCause(t);

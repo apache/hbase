@@ -1163,13 +1163,47 @@ public class HLog implements Syncable {
    * completion of a cache-flush. Otherwise the log-seq-id for the flush will
    * not appear in the correct logfile.
    *
+   * Ensuring that flushes and log-rolls don't happen concurrently also allows
+   * us to temporarily put a log-seq-number in lastSeqWritten against the region
+   * being flushed that might not be the earliest in-memory log-seq-number for
+   * that region. By the time the flush is completed or aborted and before the
+   * cacheFlushLock is released it is ensured that lastSeqWritten again has the
+   * oldest in-memory edit's lsn for the region that was being flushed.
+   *
+   * In this method, by removing the entry in lastSeqWritten for the region
+   * being flushed we ensure that the next edit inserted in this region will be
+   * correctly recorded in {@link #append(HRegionInfo, HLogKey, WALEdit)}. The
+   * lsn of the earliest in-memory lsn - which is now in the memstore snapshot -
+   * is saved temporarily in the lastSeqWritten map while the flush is active.
+   *
    * @return sequence ID to pass {@link #completeCacheFlush(byte[], byte[], long, boolean)}
    * (byte[], byte[], long)}
    * @see #completeCacheFlush(byte[], byte[], long, boolean)
    * @see #abortCacheFlush()
    */
-  public long startCacheFlush() {
+  public long startCacheFlush(final byte [] regionName) {
     this.cacheFlushLock.lock();
+    Long seq = this.lastSeqWritten.remove(regionName);
+    // seq is the lsn of the oldest edit associated with this region. If a
+    // snapshot already exists - because the last flush failed - then seq will
+    // be the lsn of the oldest edit in the snapshot
+    if (seq != null) {
+      // keeping the earliest sequence number of the snapshot in
+      // lastSeqWritten maintains the correctness of
+      // getOldestOutstandingSeqNum(). But it doesn't matter really because
+      // everything is being done inside of cacheFlush lock.
+      Long oldseq =
+        lastSeqWritten.put(regionName, seq);
+      if (oldseq != null) {
+        LOG.error("Logic Error Snapshot seq id from earlier flush still" +
+                  " present! for region " + Bytes.toString(regionName) +
+                  " overwritten oldseq=" + oldseq + "with new seq=" + seq);
+        Runtime.getRuntime().halt(1);
+      } else {
+        LOG.debug("Inserted lastSeqWritten of region snapshot " +
+                  regionName + " as " + seq);
+      }
+    }
     return obtainSeqNum();
   }
 
@@ -1184,9 +1218,8 @@ public class HLog implements Syncable {
    * @throws IOException
    */
   public void completeCacheFlush(final byte [] regionName, final byte [] tableName,
-    final long logSeqId,
-    final boolean isMetaRegion)
-  throws IOException {
+                                 final long logSeqId, final boolean isMetaRegion)
+    throws IOException {
     try {
       synchronized (updateLock) {
         if (this.closed) {
@@ -1195,18 +1228,18 @@ public class HLog implements Syncable {
         long now = System.currentTimeMillis();
         WALEdit edit = completeCacheFlushLogEdit();
         HLogKey key = makeKey(regionName, tableName, logSeqId,
-            System.currentTimeMillis());
+                              System.currentTimeMillis());
         this.writer.append(new Entry(key, edit));
         this.numEntries.incrementAndGet();
-        Long seq = this.lastSeqWritten.get(regionName);
-        if (seq != null && logSeqId >= seq.longValue()) {
-          this.lastSeqWritten.remove(regionName);
-        }
       }
       // sync txn to file system
       this.sync(isMetaRegion);
 
     } finally {
+      // updateLock not needed for removing snapshot's entry
+      // Cleaning up of lastSeqWritten is in the finally clause because we
+      // don't want to confuse getOldestOutstandingSeqNum()
+      this.lastSeqWritten.remove(regionName);
       this.cacheFlushLock.unlock();
     }
   }
@@ -1225,7 +1258,27 @@ public class HLog implements Syncable {
    * currently is a restart of the regionserver so the snapshot content dropped
    * by the failure gets restored to the memstore.
    */
-  public void abortCacheFlush() {
+  public void abortCacheFlush(byte[] regionName) {
+    LOG.debug("Aborting cache flush of region " +
+              Bytes.toString(regionName));
+    Long snapshot_seq =
+      this.lastSeqWritten.remove(regionName);
+    if (snapshot_seq != null) {
+      // updateLock not necessary because we are racing against
+      // lastSeqWritten.putIfAbsent() in append() and we will always win
+      // before releasing cacheFlushLock make sure that the region's entry in
+      // lastSeqWritten points to the earliest edit in the region
+      Long current_memstore_earliest_seq =
+        this.lastSeqWritten.put(regionName, snapshot_seq);
+      if (current_memstore_earliest_seq != null &&
+          (current_memstore_earliest_seq.longValue() <=
+           snapshot_seq.longValue())) {
+        LOG.error("Logic Error region " + Bytes.toString(regionName) +
+                  "acquired edits out of order current memstore seq=" +
+                  current_memstore_earliest_seq + " snapshot seq=" + snapshot_seq);
+        Runtime.getRuntime().halt(1);
+      }
+    }
     this.cacheFlushLock.unlock();
   }
 
