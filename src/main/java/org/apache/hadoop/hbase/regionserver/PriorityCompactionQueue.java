@@ -67,7 +67,8 @@ public class PriorityCompactionQueue implements BlockingQueue<CompactionRequest>
       if (queuedRequest == null ||
           newRequest.getPriority() < queuedRequest.getPriority()) {
         String reason = "";
-        if (newRequest.getPriority() < queuedRequest.getPriority()) {
+        if (queuedRequest != null &&
+            newRequest.getPriority() < queuedRequest.getPriority()) {
           reason = "Reason : priority changed from " +
             queuedRequest.getPriority() + " to " +
             newRequest.getPriority() + ". ";
