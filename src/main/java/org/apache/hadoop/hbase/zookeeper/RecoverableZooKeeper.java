@@ -467,7 +467,7 @@ public class RecoverableZooKeeper {
               // so we read the node and compare.
               byte[] currentData = zk.getData(path, false, null);
               if (currentData != null &&
-                  Bytes.compareTo(currentData, id) == 0) {
+                  Bytes.compareTo(currentData, data) == 0) {
                 // We successfully created a non-sequential node
                 return path;
               }
