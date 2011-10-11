@@ -68,7 +68,7 @@ public class TestMultiColumnScanner {
    * The size of the column qualifier set used. Increasing this parameter
    * exponentially increases test time.
    */
-  private static final int NUM_COLUMNS = 8;
+  private static final int NUM_COLUMNS = 10;
 
   private static final int MAX_COLUMN_BIT_MASK = 1 << NUM_COLUMNS - 1;
   private static final int NUM_FLUSHES = 10;
@@ -85,7 +85,13 @@ public class TestMultiColumnScanner {
       1, 3, 5, Integer.MAX_VALUE, BIG_LONG, Long.MAX_VALUE - 1};
 
   /** The probability that a column is skipped in a store file. */
-  private static final double COLUMN_SKIP_PROBABILITY = 0.7;
+  private static final double COLUMN_SKIP_IN_STORE_FILE_PROB = 0.7;
+
+  /** The probability of skipping a column in a single row */
+  private static final double COLUMN_SKIP_IN_ROW_PROB = 0.1;
+
+  /** The probability of skipping a column everywhere */
+  private static final double COLUMN_SKIP_EVERYWHERE_PROB = 0.1;
 
   /** The probability to delete a row/column pair */
   private static final double DELETE_PROBABILITY = 0.02;
@@ -181,15 +187,37 @@ public class TestMultiColumnScanner {
     Map<String, Long> lastDelTimeMap = new HashMap<String, Long>();
 
     Random rand = new Random(29372937L);
+    Set<String> rowQualSkip = new HashSet<String>();
+
+    // Skip some columns in some rows. We need to test scanning over a set
+    // of columns when some of the columns are not there.
+    for (String row : rows)
+      for (String qual : qualifiers)
+        if (rand.nextDouble() < COLUMN_SKIP_IN_ROW_PROB) {
+          LOG.info("Skipping " + qual + " in row " + row);
+          rowQualSkip.add(rowQualKey(row, qual));
+        }
+
+    // Also skip some columns in all rows.
+    for (String qual : qualifiers)
+      if (rand.nextDouble() < COLUMN_SKIP_EVERYWHERE_PROB) {
+        LOG.info("Skipping " + qual + " in all rows");
+        for (String row : rows)
+          rowQualSkip.add(rowQualKey(row, qual));
+      }
+
     for (int iFlush = 0; iFlush < NUM_FLUSHES; ++iFlush) {
       for (String qual : qualifiers) {
         // This is where we decide to include or not include this column into
         // this store file, regardless of row and timestamp.
-        if (rand.nextDouble() < COLUMN_SKIP_PROBABILITY)
+        if (rand.nextDouble() < COLUMN_SKIP_IN_STORE_FILE_PROB)
           continue;
 
         byte[] qualBytes = Bytes.toBytes(qual);
         for (String row : rows) {
+          if (rowQualSkip.contains(rowQualKey(row, qual)))
+            continue;
+
           Put p = new Put(Bytes.toBytes(row));
           for (long ts : TIMESTAMPS) {
             String value = createValue(row, qual, ts);
@@ -310,6 +338,10 @@ public class TestMultiColumnScanner {
   private static String qualStr(KeyValue kv) {
     return Bytes.toString(kv.getBuffer(), kv.getQualifierOffset(),
         kv.getQualifierLength());
+  }
+
+  private static String rowQualKey(String row, String qual) {
+    return row + "_" + qual;
   }
 
   private static String createValue(String row, String qual, long ts) {
