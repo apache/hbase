@@ -76,7 +76,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     // Get the path of the temporary output file
     final Path outputPath = FileOutputFormat.getOutputPath(context);
     final Path outputdir = new FileOutputCommitter(outputPath, context).getWorkPath();
-    Configuration conf = context.getConfiguration();
+    final Configuration conf = context.getConfiguration();
     final FileSystem fs = outputdir.getFileSystem(conf);
     // These configs. are from hbase-*.xml
     final long maxsize = conf.getLong("hbase.hregion.max.filesize",
@@ -131,7 +131,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
 
         // create a new HLog writer, if necessary
         if (wl == null || wl.writer == null) {
-          wl = getNewWriter(family);
+          wl = getNewWriter(family, conf);
         }
 
         // we now have the proper HLog writer. full steam ahead
@@ -161,12 +161,13 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
        * @return A WriterLength, containing a new HFile.Writer.
        * @throws IOException
        */
-      private WriterLength getNewWriter(byte[] family) throws IOException {
+      private WriterLength getNewWriter(byte[] family, Configuration conf)
+          throws IOException {
         WriterLength wl = new WriterLength();
         Path familydir = new Path(outputdir, Bytes.toString(family));
         String compression = compressionMap.get(family);
         compression = compression == null ? defaultCompression : compression;
-        wl.writer = new HFile.Writer(fs,
+        wl.writer = HFile.getWriterFactory(conf).createWriter(fs,
           StoreFile.getUniqueFile(fs, familydir), blocksize,
           bytesPerChecksum, compression, KeyValue.KEY_COMPARATOR);
         this.writers.put(family, wl);

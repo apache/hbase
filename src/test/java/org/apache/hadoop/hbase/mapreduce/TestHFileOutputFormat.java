@@ -478,6 +478,9 @@ public class TestHFileOutputFormat  {
 
     try {
       // partial map red setup to get an operational writer for testing
+      // We turn off the sequence file compression, because DefaultCodec
+      // pollutes the GZip codec pool with an incompatible compressor.
+      conf.set("io.seqfile.compression.type", "NONE");
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
       setupRandomGeneratorMapper(job);
       HFileOutputFormat.configureIncrementalLoad(job, table);
@@ -508,7 +511,8 @@ public class TestHFileOutputFormat  {
             // verify that the compression on this file matches the configured
             // compression
             Path dataFilePath = fileSystem.listStatus(f.getPath())[0].getPath();
-            Reader reader = new HFile.Reader(fileSystem, dataFilePath, null, false, true);
+            Reader reader = HFile.createReader(fileSystem, dataFilePath, null,
+                false, true);
             reader.loadFileInfo();
             assertEquals("Incorrect compression used for column family " + familyStr
                          + "(reader: " + reader + ")",

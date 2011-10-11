@@ -270,6 +270,13 @@ public class HRegion implements HeapSize { // , Writable{
     oldVal.addAndGet(amount);
   }
 
+  static long getNumericMetric(String key) {
+    AtomicLong m = numericMetrics.get(key);
+    if (m == null)
+      return 0;
+    return m.get();
+  }
+
   public static void incrTimeVaryingMetric(String key, long amount) {
     Pair<AtomicLong, AtomicInteger> oldVal = timeVaryingMetrics.get(key);
     if (oldVal == null) {

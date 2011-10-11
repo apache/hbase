@@ -188,9 +188,9 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void setUp() throws Exception {
-      writer = new HFile.Writer(this.fs, this.mf, RFILE_BLOCKSIZE,
-		HFile.DEFAULT_BYTES_PER_CHECKSUM, (Compression.Algorithm) null, null,
-		null);
+      writer = HFile.getWriterFactory(conf).createWriter(this.fs, this.mf,
+          RFILE_BLOCKSIZE, HFile.DEFAULT_BYTES_PER_CHECKSUM,
+          (Compression.Algorithm) null, null);
     }
 
     @Override
@@ -226,7 +226,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void setUp() throws Exception {
-      reader = new HFile.Reader(this.fs, this.mf, null, false, false);
+      reader = HFile.createReader(this.fs, this.mf, null, false, false);
       this.reader.loadFileInfo();
     }
 

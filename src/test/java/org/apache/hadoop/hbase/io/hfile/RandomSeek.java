@@ -68,9 +68,9 @@ public class RandomSeek {
     long start = System.currentTimeMillis();
     SimpleBlockCache cache = new SimpleBlockCache();
     //LruBlockCache cache = new LruBlockCache();
-    Reader reader = new HFile.Reader(lfs, path, cache, false, false);
+    Reader reader = HFile.createReader(lfs, path, cache, false, false);
     reader.loadFileInfo();
-    System.out.println(reader.trailer);
+    System.out.println(reader.getTrailer());
     long end = System.currentTimeMillis();
 
     System.out.println("Index read time: " + (end - start));

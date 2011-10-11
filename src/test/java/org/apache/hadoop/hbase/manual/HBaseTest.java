@@ -183,7 +183,7 @@ public class HBaseTest
   private static final String OPT_USAGE_BLOOM = " Bloom filter type, one of " +
       Arrays.toString(StoreFile.BloomType.values());
 
-  private static final String OPT_USAGE_COMPRESSION = " Compression type, " +
+  static final String OPT_USAGE_COMPRESSION = " Compression type, " +
       "one of " + Arrays.toString(Compression.Algorithm.values());
 
   public static void main(String[] args) {

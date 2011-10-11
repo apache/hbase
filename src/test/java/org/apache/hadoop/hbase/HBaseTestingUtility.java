@@ -31,7 +31,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.UUID;
 
 import org.apache.commons.logging.Log;
@@ -50,6 +49,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -101,6 +101,19 @@ public class HBaseTestingUtility {
    */
   public static final String DEFAULT_TEST_DIRECTORY = "target/build/data";
 
+  /** Compression algorithms to use in parameterized JUnit 4 tests */
+  public static final List<Object[]> COMPRESSION_ALGORITHMS_PARAMETERIZED =
+    Arrays.asList(new Object[][] {
+      { Compression.Algorithm.NONE },
+      { Compression.Algorithm.GZ }
+    });
+
+  /** Compression algorithms to use in testing */
+  public static final Compression.Algorithm[] COMPRESSION_ALGORITHMS =
+      new Compression.Algorithm[] {
+        Compression.Algorithm.NONE, Compression.Algorithm.GZ
+      };
+
   public HBaseTestingUtility() {
     this(HBaseConfiguration.create());
   }
@@ -114,6 +127,18 @@ public class HBaseTestingUtility {
    */
   public Configuration getConfiguration() {
     return this.conf;
+  }
+
+  /**
+   * Makes sure the test directory is set up so that {@link #getTestDir()}
+   * returns a valid directory. Useful in unit tests that do not run a
+   * mini-cluster.
+   */
+  public void initTestDir() {
+    if (System.getProperty(TEST_DIRECTORY_KEY) == null) {
+      clusterTestBuildDir = setupClusterTestBuildDir();
+      System.setProperty(TEST_DIRECTORY_KEY, clusterTestBuildDir.getPath());
+    }
   }
 
   /**

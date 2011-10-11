@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 
@@ -61,16 +62,18 @@ public class CompressionTest {
 
   public static void main(String[] args) {
     if (args.length != 2) usage();
+    Configuration conf = HBaseConfiguration.create();
     try {
       DistributedFileSystem dfs = openConnection(args[0]);
       dfs.delete(path, false);
-      HFile.Writer writer = new HFile.Writer(dfs, path,
-        HFile.DEFAULT_BLOCKSIZE, HFile.DEFAULT_BYTES_PER_CHECKSUM, args[1], null);
+      HFile.Writer writer = HFile.getWriterFactory(conf).createWriter(dfs,
+          path, HFile.DEFAULT_BLOCKSIZE, HFile.DEFAULT_BYTES_PER_CHECKSUM,
+          args[1], null);
       writer.append(Bytes.toBytes("testkey"), Bytes.toBytes("testval"));
       writer.appendFileInfo(Bytes.toBytes("infokey"), Bytes.toBytes("infoval"));
       writer.close();
 
-      HFile.Reader reader = new HFile.Reader(dfs, path, null, false, false);
+      HFile.Reader reader = HFile.createReader(dfs, path, null, false, false);
       reader.loadFileInfo();
       byte[] key = reader.getFirstKey();
       boolean rc = Bytes.toString(key).equals("testkey");

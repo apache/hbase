@@ -184,7 +184,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   throws IOException {
     final Path hfilePath = item.hfilePath;
     final FileSystem fs = hfilePath.getFileSystem(getConf());
-    HFile.Reader hfr = new HFile.Reader(fs, hfilePath, null, false, false);
+    HFile.Reader hfr = HFile.createReader(fs, hfilePath, null, false, false);
     final byte[] first, last;
     try {
       hfr.loadFileInfo();
@@ -276,7 +276,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
       halfWriter = new StoreFile.Writer(
           fs, outFile, blocksize, compression, conf, KeyValue.COMPARATOR,
-          bloomFilterType, 0, false);
+          bloomFilterType, 0);
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();
       do {

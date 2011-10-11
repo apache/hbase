@@ -203,7 +203,7 @@ public class TestStore extends TestCase {
     Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
     StoreFile.Writer w = StoreFile.createWriter(fs, storedir,
-        StoreFile.DEFAULT_BLOCKSIZE_SMALL);
+        StoreFile.DEFAULT_BLOCKSIZE_SMALL, c);
     w.appendMetadata(seqid + 1, false);
     w.close();
     this.store.close();
