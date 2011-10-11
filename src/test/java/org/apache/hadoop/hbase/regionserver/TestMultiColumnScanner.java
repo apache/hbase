@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -60,9 +61,10 @@ public class TestMultiColumnScanner {
   private static final Log LOG =
       LogFactory.getLog(TestMultiColumnScanner.class);
 
-  private static final String FAMILY = "CF";
-  private static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
-  private static final int MAX_VERSIONS = 50;
+  private static final String TABLE_NAME = "TestMultiColumnScanner";
+  static final String FAMILY = "CF";
+  static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
+  static final int MAX_VERSIONS = 50;
 
   /**
    * The size of the column qualifier set used. Increasing this parameter
@@ -164,19 +166,7 @@ public class TestMultiColumnScanner {
 
   @Test
   public void testMultiColumnScanner() throws IOException {
-    String table = "TestMultiColumnScanner";
-    HColumnDescriptor hcd =
-      new HColumnDescriptor(FAMILY_BYTES, MAX_VERSIONS,
-          comprAlgo.getName(),
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          HColumnDescriptor.DEFAULT_TTL,
-          bloomType.toString());
-    HTableDescriptor htd = new HTableDescriptor(table);
-    htd.addFamily(hcd);
-    HRegionInfo info = new HRegionInfo(htd, null, null, false);
-    HRegion region = HRegion.createHRegion(
-        info, HBaseTestingUtility.getTestDir(), TEST_UTIL.getConfiguration());
+    HRegion region = createRegion(TABLE_NAME, comprAlgo, bloomType);
     List<String> rows = sequentialStrings("row", NUM_ROWS);
     List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
     List<KeyValue> kvs = new ArrayList<KeyValue>();
@@ -221,7 +211,8 @@ public class TestMultiColumnScanner {
           Put p = new Put(Bytes.toBytes(row));
           for (long ts : TIMESTAMPS) {
             String value = createValue(row, qual, ts);
-            KeyValue kv = KeyValueTestUtil.create(row, FAMILY, qual, ts, value);
+            KeyValue kv = KeyValueTestUtil.create(row, FAMILY, qual, ts,
+                value);
             assertEquals(kv.getTimestamp(), ts);
             p.add(kv);
             String keyAsString = kv.toString();
@@ -316,6 +307,25 @@ public class TestMultiColumnScanner {
         "pairs", lastDelTimeMap.size() > 0);
     LOG.info("Number of row/col pairs deleted at least once: " +
        lastDelTimeMap.size());
+    region.close();
+  }
+
+  static HRegion createRegion(String tableName,
+      Compression.Algorithm comprAlgo, BloomType bloomType)
+      throws IOException {
+    HColumnDescriptor hcd =
+      new HColumnDescriptor(FAMILY_BYTES, MAX_VERSIONS,
+          comprAlgo.getName(),
+          HColumnDescriptor.DEFAULT_IN_MEMORY,
+          HColumnDescriptor.DEFAULT_BLOCKCACHE,
+          HColumnDescriptor.DEFAULT_TTL,
+          bloomType.toString());
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(hcd);
+    HRegionInfo info = new HRegionInfo(htd, null, null, false);
+    HRegion region = HRegion.createHRegion(
+        info, HBaseTestingUtility.getTestDir(), TEST_UTIL.getConfiguration());
+    return region;
   }
 
   private static String getRowQualStr(KeyValue kv) {
@@ -344,7 +354,7 @@ public class TestMultiColumnScanner {
     return row + "_" + qual;
   }
 
-  private static String createValue(String row, String qual, long ts) {
+  static String createValue(String row, String qual, long ts) {
     return "value_for_" + row + "_" + qual + "_" + ts;
   }
 

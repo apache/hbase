@@ -63,6 +63,12 @@ public class ScanQueryMatcher {
   protected byte [] row;
 
   /**
+   * True if we are only interested in the given exact set of columns. In that
+   * case we can use Bloom filters to avoid unnecessary disk seeks.
+   */
+  private boolean exactColumnQuery;
+
+  /**
    * Constructs a ScanQueryMatcher for a Scan.
    * @param scan
    * @param family
@@ -91,8 +97,10 @@ public class ScanQueryMatcher {
       // We can share the ExplicitColumnTracker, diff is we reset
       // between rows, not between storefiles.
       this.columns = new ExplicitColumnTracker(columns,maxVersions);
+      exactColumnQuery = true;
     }
   }
+
   public ScanQueryMatcher(Scan scan, byte [] family,
       NavigableSet<byte[]> columns, long ttl,
       KeyValue.KeyComparator rowComparator, int maxVersions) {
@@ -318,6 +326,10 @@ public class ScanQueryMatcher {
         kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
         null, 0, 0,
         null, 0, 0);
+  }
+
+  public boolean isExactColumnQuery() {
+    return exactColumnQuery;
   }
 
   /**

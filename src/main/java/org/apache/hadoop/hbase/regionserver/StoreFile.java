@@ -1071,37 +1071,83 @@ public class StoreFile {
 
     private boolean passesBloomFilter(Scan scan,
         final SortedSet<byte[]> columns) {
+      // Multi-column non-get scans will use Bloom filters through the
+      // lower-level API function that this function calls.
+      if (!scan.isGetScan())
+        return true;
+
+      byte[] row = scan.getStartRow();
+      switch (this.bloomFilterType) {
+        case ROW:
+          return passesBloomFilter(row, 0, row.length, null, 0, 0);
+
+        case ROWCOL:
+          if (columns != null && columns.size() == 1) {
+            byte[] column = columns.first();
+            return passesBloomFilter(row, 0, row.length, column, 0,
+                column.length);
+          }
+
+          // For multi-column queries the Bloom filter is checked from the
+          // seekExact operation.
+          return true;
+
+        default:
+          return true;
+      }
+    }
+
+    /**
+     * A method for checking Bloom filters. Called directly from
+     * {@link StoreFileScanner} in case of a multi-column query.
+     *
+     * @param row
+     * @param rowOffset
+     * @param rowLen
+     * @param col
+     * @param colOffset
+     * @param colLen
+     * @return
+     */
+    public boolean passesBloomFilter(byte[] row, int rowOffset, int rowLen,
+        byte[] col, int colOffset, int colLen) {
+      if (bloomFilter == null)
+        return true;
+
+      byte[] key;
+      switch (bloomFilterType) {
+        case ROW:
+          if (col != null) {
+            throw new RuntimeException("Row-only Bloom filter called with " +
+                "column specified");
+          }
+          if (rowOffset != 0 || rowLen != row.length) {
+              throw new AssertionError("For row-only Bloom filters the row "
+                  + "must occupy the whole array");
+          }
+          key = row;
+          break;
+
+        case ROWCOL:
+          key = bloomFilter.createBloomKey(row, rowOffset, rowLen, col,
+              colOffset, colLen);
+          break;
+
+        default:
+          return true;
+      }
+
       // Cache Bloom filter as a local variable in case it is set to null by
       // another thread on an IO error.
       BloomFilter bloomFilter = this.bloomFilter;
 
-      if (bloomFilter == null || !scan.isGetScan()) {
+      if (bloomFilter == null) {
         return true;
       }
 
       // Empty file?
       if (reader.getTrailer().getEntryCount() == 0)
         return false;
-
-      byte[] row = scan.getStartRow();
-      byte[] key;
-      switch (this.bloomFilterType) {
-        case ROW:
-          key = row;
-          break;
-
-        case ROWCOL:
-          if (columns != null && columns.size() == 1) {
-            byte[] column = columns.first();
-            key = bloomFilter.createBloomKey(row, 0, row.length,
-                column, 0, column.length);
-            break;
-          }
-          return true;
-
-        default:
-          return true;
-      }
 
       try {
         boolean shouldCheckBloom;
@@ -1281,6 +1327,10 @@ public class StoreFile {
 
     HFile.Reader getHFileReader() {
       return reader;
+    }
+
+    void disableBloomFilterForTesting() {
+      bloomFilter = null;
     }
   }
 

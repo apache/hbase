@@ -208,7 +208,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     }
   }
 
-  private static class Scanner implements KeyValueScanner {
+  private static class Scanner extends AbstractKeyValueScanner {
     private Iterator<KeyValue> iter;
     private KeyValue current;
     private boolean closed = false;
