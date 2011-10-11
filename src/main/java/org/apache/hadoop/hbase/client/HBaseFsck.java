@@ -259,7 +259,7 @@ public class HBaseFsck {
             f_hri.readFields(in);
           } catch (IOException ex) {
             errors.reportError("Could not read .regioninfo file at "
-	                       + regionInifoPath);
+	                       + regionInfoPath);
           } finally {
             in.close();
           }
