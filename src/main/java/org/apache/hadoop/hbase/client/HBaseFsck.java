@@ -190,8 +190,8 @@ public class HBaseFsck {
       for (FileStatus regionDir : regionDirs) {
         String encodedName = regionDir.getPath().getName();
 
-        // ignore directories that aren't numeric
-        if (!encodedName.matches("^\\d+$")) continue;
+        // ignore directories that aren't hexadecimal
+        if (!encodedName.toLowerCase().matches("[0-9a-f]+")) continue;
 
         HbckInfo hbi = getOrCreateInfo(encodedName);
         hbi.foundRegionDir = regionDir;
