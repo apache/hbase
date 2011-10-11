@@ -2314,6 +2314,33 @@ public class HRegionServer implements HRegionInterface,
     }
     region.flushcache();
   }
+
+  /**
+   * Flushes the given region if lastFlushTime < ifOlderThanTS
+   */
+   public void flushRegion(byte[] regionName, long ifOlderThanTS)
+     throws IllegalArgumentException, IOException {
+     HRegion region = getOnlineRegion(regionName);
+     if (region == null) {
+       throw new IllegalArgumentException("No region : " + new String(regionName)
+       + " available");
+     }
+     if (region.getLastFlushTime() < ifOlderThanTS) region.flushcache();
+   }
+
+  /**
+   * Gets last flush time for the given region
+   * @return the last flush time for a region
+   */
+  public long getLastFlushTime(byte[] regionName) {
+    HRegion region = getOnlineRegion(regionName);
+    if (region == null) {
+      throw new IllegalArgumentException("No region : " + new String(regionName)
+      + " available");
+    }
+    return region.getLastFlushTime();
+  }
+
   /**
    * @return The HRegionInfos from online regions sorted
    */

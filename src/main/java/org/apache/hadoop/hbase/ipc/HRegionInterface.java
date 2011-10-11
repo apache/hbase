@@ -79,6 +79,18 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
   public void flushRegion(byte[] regionName)
     throws IllegalArgumentException, IOException;
 
+  /**
+   * Flush the given region if lastFlushTime < ifOlderThanTS
+   */
+  public void flushRegion(byte[] regionName, long ifOlderThanTS)
+    throws IllegalArgumentException, IOException;
+
+  /**
+   * Gets last flush time for the given region
+   * @return the last flush time for a region
+   */
+  public long getLastFlushTime(byte[] regionName);
+
   public List<String> getStoreFileList(byte[] regionName, byte[] columnFamily)
     throws IllegalArgumentException;
 
