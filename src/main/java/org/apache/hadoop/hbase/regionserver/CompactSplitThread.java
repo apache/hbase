@@ -68,7 +68,6 @@ class CompactSplitThread extends Thread {
 
   @Override
   public void run() {
-    int count = 0;
     while (!this.server.isStopRequested()) {
       HRegion r = null;
       try {
@@ -81,6 +80,9 @@ class CompactSplitThread extends Thread {
           try {
             // Don't interrupt us while we are working
             byte [] midKey = r.compactStores();
+            LOG.debug("Just finished a compaction. " +
+                      " Current Compaction Queue Size: " +
+                      getCompactionQueueSize());
             if (midKey != null && !this.server.isStopRequested()) {
               split(r, midKey);
             }
@@ -127,21 +129,28 @@ class CompactSplitThread extends Thread {
    */
   public synchronized void compactionRequested(final HRegion r,
       final boolean force, final String why) {
+
+    boolean addedToQueue = false;
+
     if (this.server.stopRequested.get()) {
       return;
     }
+
     r.setForceMajorCompaction(force);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Compaction " + (force? "(major) ": "") +
-        "requested for region " + r.getRegionNameAsString() +
-        "/" + r.getRegionInfo().getEncodedName() +
-        (why != null && !why.isEmpty()? " because: " + why: ""));
-    }
     synchronized (regionsInQueue) {
       if (!regionsInQueue.contains(r)) {
         compactionQueue.add(r);
         regionsInQueue.add(r);
+        addedToQueue = true;
       }
+    }
+
+    // only log if actually added to compaction queue...
+    if (addedToQueue && LOG.isDebugEnabled()) {
+      LOG.debug("Compaction " + (force? "(major) ": "") +
+        "requested for region " + r.getRegionNameAsString() +
+        "/" + r.getRegionInfo().getEncodedName() +
+        (why != null && !why.isEmpty()? " because: " + why: ""));
     }
   }
 
