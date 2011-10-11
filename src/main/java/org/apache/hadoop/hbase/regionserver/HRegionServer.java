@@ -1510,7 +1510,7 @@ public class HRegionServer implements HRegionInterface,
     getOutboundMsgs().add(new HMsg(HMsg.Type.MSG_REPORT_PROCESS_OPEN, hri));
   }
 
-  protected void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
+  public void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
   throws IOException {
     RSZookeeperUpdater zkUpdater = null;
     if(reportWhenCompleted) {

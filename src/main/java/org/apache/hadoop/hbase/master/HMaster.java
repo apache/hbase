@@ -271,7 +271,7 @@ public class HMaster extends Thread implements HMasterInterface,
     this.metrics = new MasterMetrics(MASTER);
     // We're almost open for business
     this.closed.set(false);
-    LOG.info("HMaster initialized on " + this.address.toString());
+    LOG.info("HMaster w/ hbck initialized on " + this.address.toString());
   }
 
   /**
@@ -1400,5 +1400,11 @@ public class HMaster extends Thread implements HMasterInterface,
    */
   public static void main(String [] args) {
     doMain(args, HMaster.class);
+  }
+
+  @Override
+  public void clearFromTransition(HRegionInfo region) {
+    this.regionManager.clearFromInTransition(region.getRegionName());
+    LOG.info("Cleared region " + region + " from transition map");
   }
 }

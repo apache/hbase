@@ -69,7 +69,8 @@ public class HBaseFsck {
 
   private boolean details = false; // do we display the full report?
   private long timelag = DEFAULT_TIME_LAG; // tables whose modtime is older
-
+  private boolean fix = false; // do we want to try fixing the errors?
+  private boolean rerun = false; // if we tried to fix something rerun hbck
 
   /**
    * Constructor
@@ -255,7 +256,7 @@ public class HBaseFsck {
   /**
    * Check consistency of all regions that have been found in previous phases.
    */
-  void checkConsistency() {
+  void checkConsistency() throws IOException {
     for (HbckInfo hbi : regionInfo.values()) {
       doConsistencyCheck(hbi);
     }
@@ -264,19 +265,20 @@ public class HBaseFsck {
   /**
    * Check a single region for consistency and correct deployment.
    */
-  void doConsistencyCheck(HbckInfo hbi) {
+  void doConsistencyCheck(HbckInfo hbi) throws IOException {
     String descriptiveName = hbi.toString();
 
     boolean inMeta = hbi.metaEntry != null;
     boolean inHdfs = hbi.foundRegionDir != null;
+    boolean hasMetaAssignment = inMeta && hbi.metaEntry.regionServer != null;
     boolean isDeployed = !hbi.deployedOn.isEmpty();
     boolean isMultiplyDeployed = hbi.deployedOn.size() > 1;
     boolean deploymentMatchesMeta =
-      inMeta && isDeployed && !isMultiplyDeployed &&
+      hasMetaAssignment && isDeployed && !isMultiplyDeployed &&
       hbi.metaEntry.regionServer.equals(hbi.deployedOn.get(0));
     boolean shouldBeDeployed = inMeta && !hbi.metaEntry.isOffline();
     boolean recentlyModified = hbi.foundRegionDir != null &&
-      hbi.foundRegionDir.getModificationTime() + timelag < System.currentTimeMillis();
+      hbi.foundRegionDir.getModificationTime() + timelag > System.currentTimeMillis();
 
     // ========== First the healthy cases =============
     if (inMeta && inHdfs && isDeployed && deploymentMatchesMeta && shouldBeDeployed) {
@@ -313,6 +315,12 @@ public class HBaseFsck {
         "and deployed on " + Joiner.on(", ").join(hbi.deployedOn));
     } else if (inMeta && inHdfs && !isDeployed) {
       errors.reportError("Region " + descriptiveName + " not deployed on any region server.");
+      // If we are trying to fix the errors
+      if (shouldFix()) {
+        System.out.println("Trying to fix unassigned region...");
+        setShouldRerun();
+        HBaseFsckRepair.fixUnassigned(this.conf, hbi.metaEntry);
+      }
     } else if (inMeta && inHdfs && isDeployed && !shouldBeDeployed) {
       errors.reportError("Region " + descriptiveName + " has should not be deployed according " +
         "to META, but is deployed on " + Joiner.on(", ").join(hbi.deployedOn));
@@ -320,10 +328,22 @@ public class HBaseFsck {
       errors.reportError("Region " + descriptiveName + " is listed in META on region server " +
         hbi.metaEntry.regionServer + " but is multiply assigned to region servers " +
         Joiner.on(", ").join(hbi.deployedOn));
+      // If we are trying to fix the errors
+      if (shouldFix()) {
+        System.out.println("Trying to fix assignment error...");
+        setShouldRerun();
+        HBaseFsckRepair.fixDupeAssignment(this.conf, hbi.metaEntry, hbi.deployedOn);
+      }
     } else if (inMeta && inHdfs && isDeployed && !deploymentMatchesMeta) {
       errors.reportError("Region " + descriptiveName + " listed in META on region server " +
         hbi.metaEntry.regionServer + " but found on region server " +
         hbi.deployedOn.get(0));
+      // If we are trying to fix the errors
+      if (shouldFix()) {
+        System.out.println("Trying to fix assignment error...");
+        setShouldRerun();
+        HBaseFsckRepair.fixDupeAssignment(this.conf, hbi.metaEntry, hbi.deployedOn);
+      }
     } else {
       errors.reportError("Region " + descriptiveName + " is in an unforeseen state:" +
         " inMeta=" + inMeta +
@@ -513,7 +533,7 @@ public class HBaseFsck {
         System.out.println("\nRest easy, buddy! HBase is clean. ");
         return 0;
       } else {
-        System.out.println("\nInconsistencies detected.");
+        System.out.println("\n" + Integer.toString(errorCount) + " inconsistencies detected.");
         return -1;
       }
     }
@@ -537,6 +557,32 @@ public class HBaseFsck {
    */
   void displayFullReport() {
     details = true;
+  }
+
+  /**
+   * Check if we should rerun fsck again. This checks if we've tried to fix
+   * something and we should rerun fsck tool again.
+   * Display the full report from fsck. This displays all live and dead region servers ,
+   * and all known regions.
+   */
+  void setShouldRerun() {
+    rerun = true;
+  }
+
+  boolean shouldRerun() {
+    return rerun;
+  }
+
+  /**
+   * Fix inconsistencies found by fsck. This should try to fix errors (if any)
+   * found by fsck utility.
+   */
+  void setFixErrors() {
+    fix = true;
+  }
+
+  boolean shouldFix() {
+    return fix;
   }
 
   /**
@@ -588,6 +634,8 @@ public class HBaseFsck {
           printUsageAndExit();
         }
         i++;
+      } else if (cmd.equals("-fix")) {
+        fsck.setFixErrors();
       } else {
         String str = "Unknown command line option : " + cmd;
         LOG.info(str);
@@ -597,6 +645,14 @@ public class HBaseFsck {
     }
     // do the real work of fsck
     int code = fsck.doWork();
+    // If we have changed the HBase state it is better to run fsck again
+    // to see if we haven't broken something else in the process.
+    // We run it only once more because otherwise we can easily fall into
+    // an infinite loop.
+    if (fsck.shouldRerun()) {
+      code = fsck.doWork();
+    }
+
     Runtime.getRuntime().exit(code);
   }
 }

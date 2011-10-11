@@ -298,4 +298,12 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    */
   public void replicateLogEntries(HLog.Entry[] entries) throws IOException;
 
+  /**
+   * Closes the specified region.
+   * @param hri region to be closed
+   * @param reportWhenCompleted whether to report to master
+   * @throws IOException
+   */
+  public void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
+  throws IOException;
 }

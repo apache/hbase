@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.io.Writable;
 
@@ -128,4 +129,10 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @return status object
    */
   public ClusterStatus getClusterStatus();
+
+  /**
+   * Clears the specified region from being in transition.  Used by HBaseFsck.
+   * @param region region to clear from transition map
+   */
+  public void clearFromTransition(HRegionInfo region);
 }
