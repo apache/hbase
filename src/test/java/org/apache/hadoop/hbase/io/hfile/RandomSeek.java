@@ -78,7 +78,7 @@ public class RandomSeek {
     List<String> keys = slurp("/Users/ryan/xaa.50k");
 
     // Get a scanner that doesn't cache and that uses pread.
-    HFileScanner scanner = reader.getScanner(false, true, false);
+    HFileScanner scanner = reader.getScanner(false, true);
     int count;
     long totalBytes = 0;
     int notFound = 0;

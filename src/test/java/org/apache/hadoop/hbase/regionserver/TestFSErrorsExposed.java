@@ -77,7 +77,7 @@ public class TestFSErrorsExposed {
     StoreFile sf = new StoreFile(fs, writer.getPath(), false,
         util.getConfiguration(), StoreFile.BloomType.NONE, false);
     StoreFile.Reader reader = sf.createReader();
-    HFileScanner scanner = reader.getScanner(false, true, false);
+    HFileScanner scanner = reader.getScanner(false, true);
 
     FaultyInputStream inStream = fs.inStreams.get(0).get();
     assertNotNull(inStream);
@@ -118,7 +118,7 @@ public class TestFSErrorsExposed {
     StoreFile sf = new StoreFile(fs, writer.getPath(), false,
         util.getConfiguration(), BloomType.NONE, false);
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
-        Collections.singletonList(sf), false, true, false);
+        Collections.singletonList(sf), false, true);
     KeyValueScanner scanner = scanners.get(0);
 
     FaultyInputStream inStream = fs.inStreams.get(0).get();

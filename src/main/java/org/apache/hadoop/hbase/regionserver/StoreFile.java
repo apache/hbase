@@ -942,6 +942,19 @@ public class StoreFile {
     }
 
     /**
+     * Get a scanner to scan over this StoreFile. Do not use
+     * this overload if using this scanner for compactions.
+     *
+     * @param cacheBlocks should this scanner cache blocks?
+     * @param pread use pread (for highly concurrent small readers)
+     * @return a scanner
+     */
+    public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
+                                               boolean pread) {
+      return getStoreFileScanner(cacheBlocks, pread, false);
+    }
+
+    /**
      * Get a scanner to scan over this StoreFile.
      *
      * @param cacheBlocks should this scanner cache blocks?
@@ -955,6 +968,20 @@ public class StoreFile {
       return new StoreFileScanner(this,
                                  getScanner(cacheBlocks, pread,
                                             isCompaction));
+    }
+
+    /**
+     * Warning: Do not write further code which depends on this call. Instead
+     * use getStoreFileScanner() which uses the StoreFileScanner class/interface
+     * which is the preferred way to scan a store with higher level concepts.
+     *
+     * @param cacheBlocks should we cache the blocks?
+     * @param pread use pread (for concurrent small readers)
+     * @return the underlying HFileScanner
+     */
+    @Deprecated
+    public HFileScanner getScanner(boolean cacheBlocks, boolean pread){
+      return getScanner(cacheBlocks, pread, false);
     }
 
     /**

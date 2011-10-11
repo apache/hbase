@@ -992,6 +992,21 @@ public class HFile {
      * Call {@link HFileScanner#seekTo(byte[])} to position an start the read.
      * There is nothing to clean up in a Scanner. Letting go of your references
      * to the scanner is sufficient.
+     * NOTE: Do not use this overload of getScanner for compactions.
+     * @param cacheBlocks True if we should cache blocks read in by this scanner.
+     * @param pread Use positional read rather than seek+read if true (pread is
+     * better for random reads, seek+read is better scanning).
+     * @return Scanner on this file.
+     */
+    public HFileScanner getScanner(boolean cacheBlocks, final boolean pread) {
+      return getScanner(cacheBlocks, pread, false);
+    }
+
+    /**
+     * Create a Scanner on this file.  No seeks or reads are done on creation.
+     * Call {@link HFileScanner#seekTo(byte[])} to position an start the read.
+     * There is nothing to clean up in a Scanner. Letting go of your references
+     * to the scanner is sufficient.
      * @param cacheBlocks True if we should cache blocks read in by this scanner.
      * @param pread Use positional read rather than seek+read if true (pread is
      * better for random reads, seek+read is better scanning).

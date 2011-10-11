@@ -56,6 +56,20 @@ class StoreFileScanner implements KeyValueScanner {
   /**
    * Return an array of scanners corresponding to the given
    * set of store files.
+   * Note: Do not use this overload if using the scanners for
+   * compactions.
+   */
+  public static List<StoreFileScanner> getScannersForStoreFiles(
+      Collection<StoreFile> files,
+      boolean cacheBlocks,
+      boolean usePread) throws IOException {
+    return getScannersForStoreFiles(files, cacheBlocks,
+                                   usePread, false);
+  }
+
+  /**
+   * Return an array of scanners corresponding to the given
+   * set of store files.
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(
       Collection<StoreFile> files,

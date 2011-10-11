@@ -62,7 +62,7 @@ public class TestSeekTo extends HBaseTestCase {
     Path p = makeNewFile();
     HFile.Reader reader = new HFile.Reader(fs, p, null, false);
     reader.loadFileInfo();
-    HFileScanner scanner = reader.getScanner(false, true, false);
+    HFileScanner scanner = reader.getScanner(false, true);
     assertEquals(false, scanner.seekBefore(toKV("a").getKey()));
 
     assertEquals(false, scanner.seekBefore(toKV("c").getKey()));
@@ -96,7 +96,7 @@ public class TestSeekTo extends HBaseTestCase {
     HFile.Reader reader = new HFile.Reader(fs, p, null, false);
     reader.loadFileInfo();
     assertEquals(2, reader.blockIndex.count);
-    HFileScanner scanner = reader.getScanner(false, true, false);
+    HFileScanner scanner = reader.getScanner(false, true);
     // lies before the start of the file.
     assertEquals(-1, scanner.seekTo(toKV("a").getKey()));
 
