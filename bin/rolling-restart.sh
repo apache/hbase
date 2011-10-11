@@ -48,13 +48,19 @@ then
   exit $errCode
 fi
 
+if [ $# -gt 1 ] && [ "--sleep" = "$1" ]; then
+  shift
+  export HBASE_SLAVE_SLEEP=$1
+  shift
+else
+  export HBASE_SLAVE_SLEEP=15
+fi
+
 # quick function to get a value from the HBase config file
 distMode=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool hbase.cluster.distributed`
 if [ "$distMode" == 'false' ]; then
   "$bin"/hbase-daemon.sh restart master
 else
-  export HBASE_SLAVE_SLEEP=60
-
   # stop all masters before re-start to avoid races for master znode
   "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" stop master
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
