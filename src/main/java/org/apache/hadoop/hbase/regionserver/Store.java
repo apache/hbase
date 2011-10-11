@@ -1310,6 +1310,10 @@ public class Store implements HeapSize {
           largestSf = sf;
         }
       }
+      // if the user explicit set a split point, use that
+      if (this.region.getSplitPoint() != null) {
+        return new StoreSize(maxSize, this.region.getSplitPoint());
+      }
       StoreFile.Reader r = largestSf.getReader();
       if (r == null) {
         LOG.warn("Storefile " + largestSf + " Reader is null");

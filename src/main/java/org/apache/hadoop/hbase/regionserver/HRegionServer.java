@@ -1349,6 +1349,7 @@ public class HRegionServer implements HRegionInterface,
               region = getRegion(info.getRegionName());
               region.flushcache();
               region.shouldSplit(true);
+              region.setSplitPoint(info.getSplitPoint());
               // force a compaction; split will be side-effect.
               compactSplitThread.requestCompaction(region,
                 false, e.msg.getType().name(),

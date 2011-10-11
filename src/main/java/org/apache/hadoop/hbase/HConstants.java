@@ -307,7 +307,8 @@ public final class HConstants {
     TABLE_FLUSH,
     TABLE_MAJOR_COMPACT,
     TABLE_SET_HTD,
-    TABLE_SPLIT
+    TABLE_SPLIT,
+    TABLE_EXPLICIT_SPLIT
   }
 
   /**

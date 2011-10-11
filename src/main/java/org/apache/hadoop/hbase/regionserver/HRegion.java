@@ -234,6 +234,7 @@ public class HRegion implements HeapSize { // , Writable{
     new ReentrantReadWriteLock();
   private final Object splitLock = new Object();
   private boolean splitRequest;
+  private byte[] splitPoint = null;
 
   private final ReadWriteConsistencyControl rwcc =
       new ReadWriteConsistencyControl();
@@ -880,6 +881,10 @@ public class HRegion implements HeapSize { // , Writable{
           writestate.compacting = false;
           writestate.notifyAll();
         }
+      }
+      if (splitRow != null) {
+        assert splitPoint == null || Bytes.equals(splitRow, splitPoint);
+        this.splitPoint = null; // clear the split point (if set)
       }
       return splitRow;
     } finally {
@@ -3139,8 +3144,8 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      (4 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN +
-      (22 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
+      (4 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN + ClassSize.ARRAY +
+      (23 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) +
@@ -3241,6 +3246,14 @@ public class HRegion implements HeapSize { // , Writable{
     boolean old = this.splitRequest;
     this.splitRequest = b;
     return old;
+  }
+
+  byte[] getSplitPoint() {
+    return this.splitPoint;
+  }
+
+  void setSplitPoint(byte[] sp) {
+    this.splitPoint = sp;
   }
 
   /**

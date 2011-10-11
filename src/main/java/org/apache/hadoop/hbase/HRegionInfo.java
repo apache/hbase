@@ -127,6 +127,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   private transient byte [] regionName = HConstants.EMPTY_BYTE_ARRAY;
   private String regionNameStr = "";
   private boolean split = false;
+  private byte [] splitPoint = null;
   private byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
   protected HTableDescriptor tableDesc = null;
   private int hashCode = -1;
@@ -475,6 +476,22 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   }
 
   /**
+   * @return point to explicitly split the region on
+   */
+  public byte[] getSplitPoint() {
+    return (this.splitPoint != null && this.splitPoint.length > 0)
+      ? this.splitPoint : null;
+  }
+
+  /**
+   * @param splitPoint set split status & position to split on
+   */
+  public void setSplitPoint(byte[] splitPoint) {
+    this.split = true;
+    this.splitPoint = splitPoint;
+  }
+
+  /**
    * @return True if this region is offline.
    */
   public boolean isOffline() {
@@ -547,6 +564,9 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     out.writeLong(regionId);
     Bytes.writeByteArray(out, regionName);
     out.writeBoolean(split);
+    if (split) {
+      Bytes.writeByteArray(out, splitPoint);
+    }
     Bytes.writeByteArray(out, startKey);
     tableDesc.write(out);
     out.writeInt(hashCode);
@@ -561,6 +581,9 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.regionName = Bytes.readByteArray(in);
     this.regionNameStr = Bytes.toStringBinary(this.regionName);
     this.split = in.readBoolean();
+    if (this.split) {
+      this.splitPoint = Bytes.readByteArray(in);
+    }
     this.startKey = Bytes.readByteArray(in);
     this.tableDesc.readFields(in);
     this.hashCode = in.readInt();

@@ -761,14 +761,35 @@ public class HBaseAdmin {
   }
 
   /**
-   * Split a table or an individual region.
-   * Asynchronous operation.
+   * Split a table or an individual region.  Implicitly finds an optimal split
+   * point.  Asynchronous operation.
    *
    * @param tableNameOrRegionName table to region to split
    * @throws IOException if a remote or network exception occurs
    */
   public void split(final byte [] tableNameOrRegionName) throws IOException {
     modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_SPLIT);
+  }
+
+  /**
+   * Split a table or an individual region.
+   * Asynchronous operation.
+   *
+   * @param tableNameOrRegionName table to region to split
+   * @param splitPoint the explicit position to split on
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void split(final byte [] tableNameOrRegionName,
+      final byte [] splitPoint) throws IOException {
+    if (tableNameOrRegionName == null) {
+      throw new IllegalArgumentException("Pass a table name or region name");
+    }
+    byte [] tableName = tableExists(tableNameOrRegionName)?
+      tableNameOrRegionName: null;
+    byte [] regionName = tableName == null? tableNameOrRegionName: null;
+    Object [] args = regionName == null?
+      new byte [][] {splitPoint}: new byte [][] {regionName, splitPoint};
+    modifyTable(tableName, HConstants.Modify.TABLE_EXPLICIT_SPLIT, args);
   }
 
   /*
@@ -840,19 +861,13 @@ public class HBaseAdmin {
 
       case TABLE_COMPACT:
       case TABLE_SPLIT:
+      case TABLE_EXPLICIT_SPLIT:
       case TABLE_MAJOR_COMPACT:
       case TABLE_FLUSH:
         if (args != null && args.length > 0) {
-          arr = new Writable[1];
-          if (args[0] instanceof byte[]) {
-            arr[0] = new ImmutableBytesWritable((byte[])args[0]);
-          } else if (args[0] instanceof ImmutableBytesWritable) {
-            arr[0] = (ImmutableBytesWritable)args[0];
-          } else if (args[0] instanceof String) {
-            arr[0] = new ImmutableBytesWritable(Bytes.toBytes((String)args[0]));
-          } else {
-            throw new IllegalArgumentException("Requires byte[], String, or" +
-              "ImmutableBytesWritable");
+          arr = new Writable[args.length];
+          for (int i = 0; i < args.length; i++) {
+            arr[i] = toWritable(args[i]);
           }
         }
         this.master.modifyTable(tableName, op, arr);
@@ -864,18 +879,7 @@ public class HBaseAdmin {
         }
         arr = new Writable[args.length];
         for (int i = 0; i < args.length; i++) {
-          if (args[i] instanceof byte[]) {
-            arr[i] = new ImmutableBytesWritable((byte[])args[i]);
-          } else if (args[i] instanceof ImmutableBytesWritable) {
-            arr[i] = (ImmutableBytesWritable)args[i];
-          } else if (args[i] instanceof String) {
-            arr[i] = new ImmutableBytesWritable(Bytes.toBytes((String)args[i]));
-          } else if (args[i] instanceof Boolean) {
-            arr[i] = new BooleanWritable((Boolean) args[i]);
-          } else {
-            throw new IllegalArgumentException("Requires byte [] or " +
-              "ImmutableBytesWritable, not " + args[i]);
-          }
+          arr[i] = toWritable(args[i]);
         }
         this.master.modifyTable(tableName, op, arr);
         break;
@@ -885,6 +889,24 @@ public class HBaseAdmin {
       }
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
+    }
+  }
+
+  private static Writable toWritable(Object o) {
+    if (o == null) {
+      return null;
+    }
+    if (o instanceof byte[]) {
+      return new ImmutableBytesWritable((byte[])o);
+    } else if (o instanceof ImmutableBytesWritable) {
+      return (ImmutableBytesWritable)o;
+    } else if (o instanceof String) {
+      return new ImmutableBytesWritable(Bytes.toBytes((String)o));
+    } else if (o instanceof Boolean) {
+      return new BooleanWritable((Boolean) o);
+    } else {
+      throw new IllegalArgumentException("Requires byte [] or " +
+        "ImmutableBytesWritable, not " + o.getClass() + " : " + o);
     }
   }
 

@@ -456,6 +456,12 @@ public class HBaseTestingUtility {
     return new HTable(getConfiguration(), tableName);
   }
 
+  public void deleteTable(byte[] tableName) throws IOException {
+    HBaseAdmin hba = new HBaseAdmin(getConfiguration());
+    hba.disableTable(tableName);
+    hba.deleteTable(tableName);
+  }
+
   /**
    * Provide an existing table name to truncate
    * @param tableName existing table

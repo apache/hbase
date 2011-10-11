@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.HConstants.Modify;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.MetaScanner;
@@ -1073,6 +1074,42 @@ public class HMaster extends Thread implements HMasterInterface,
           this.regionManager.startAction(pair.getFirst().getRegionName(),
             pair.getFirst(), pair.getSecond(), op);
         }
+      }
+      break;
+
+    // format : {tableName row | region} splitPoint
+    case TABLE_EXPLICIT_SPLIT:
+      if (args == null || args.length < (tableName == null? 2 : 1)) {
+        throw new IOException("incorrect number of arguments given");
+      }
+      Pair<HRegionInfo,HServerAddress> pair = null;
+      byte[] splitPoint = null;
+
+      // split a single region
+      if(tableName == null) {
+        byte [] regionName = ((ImmutableBytesWritable)args[0]).get();
+        pair = getTableRegionFromName(regionName);
+        splitPoint = ((ImmutableBytesWritable)args[1]).get();
+      } else {
+        splitPoint = ((ImmutableBytesWritable)args[0]).get();
+        pair = getTableRegionForRow(tableName, splitPoint);
+      }
+      if (pair == null) {
+        throw new IOException("couldn't find RegionInfo from region name");
+      } else if (splitPoint == null) {
+        throw new IOException("must give explicit split point");
+      } else if (!pair.getFirst().containsRow(splitPoint)) {
+        throw new IOException("split point outside specified region's range");
+      }
+      HRegionInfo r = pair.getFirst();
+      r.setSplitPoint(splitPoint);
+      LOG.info("About to " + op.toString() + " on " +
+               Bytes.toString(pair.getFirst().getTableDesc().getName()) +
+               " at " + Bytes.toString(splitPoint) +
+               " and pair is " + pair);
+      if (pair.getSecond() != null) {
+        this.regionManager.startAction(pair.getFirst().getRegionName(),
+          pair.getFirst(), pair.getSecond(), Modify.TABLE_SPLIT);
       }
       break;
 
