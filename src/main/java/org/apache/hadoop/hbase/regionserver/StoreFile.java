@@ -48,12 +48,14 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -411,6 +413,7 @@ public class StoreFile {
       this.reader = new HalfStoreFileReader(this.fs, this.referencePath,
           getBlockCache(), this.reference);
     } else {
+      SchemaMetrics.configureGlobally(conf);
       this.reader = new Reader(this.fs, this.path, getBlockCache(),
           this.inMemory,
           this.conf.getBoolean(HFile.EVICT_BLOCKS_ON_CLOSE_KEY, true));
@@ -754,8 +757,8 @@ public class StoreFile {
         throws IOException {
 
       writer = HFile.getWriterFactory(conf).createWriter(
-		fs, path, blocksize, HFile.getBytesPerChecksum(conf, fs.getConf()),
-		compress, comparator.getRawComparator());
+          fs, path, blocksize, HFile.getBytesPerChecksum(conf, fs.getConf()),
+          compress, comparator.getRawComparator());
 
       this.kvComparator = comparator;
 
@@ -954,7 +957,7 @@ public class StoreFile {
   /**
    * Reader for a StoreFile.
    */
-  public static class Reader {
+  public static class Reader extends SchemaConfigured {
     static final Log LOG = LogFactory.getLog(Reader.class.getName());
 
     protected BloomFilter bloomFilter = null;
@@ -963,16 +966,17 @@ public class StoreFile {
     protected TimeRangeTracker timeRangeTracker = null;
     protected long sequenceID = -1;
     private byte[] lastBloomKey;
-    private final ColumnFamilyMetrics cfMetrics;
+
+    private Reader(HFile.Reader reader) {
+      super(reader);
+      this.reader = reader;
+    }
 
     public Reader(FileSystem fs, Path path, BlockCache blockCache,
         boolean inMemory, boolean evictOnClose)
         throws IOException {
-      reader = HFile.createReader(fs, path, blockCache, inMemory, evictOnClose);
-
-      // prepare the text (key) for the metrics
-      cfMetrics = ColumnFamilyMetrics.getInstance(
-          reader.getColumnFamilyName());
+      this(HFile.createReader(fs, path, blockCache, inMemory,
+          evictOnClose));
       bloomFilterType = BloomType.NONE;
     }
 
@@ -981,7 +985,6 @@ public class StoreFile {
      */
     Reader() {
       this.reader = null;
-      this.cfMetrics = ColumnFamilyMetrics.getInstance(null);
     }
 
     public RawComparator<byte []> getComparator() {
@@ -1206,7 +1209,7 @@ public class StoreFile {
                 && bloomFilter.contains(key, 0, key.length, bloom);
           }
 
-          cfMetrics.updateBloomMetrics(exists);
+          getSchemaMetrics().updateBloomMetrics(exists);
           return exists;
         }
       } catch (IOException e) {

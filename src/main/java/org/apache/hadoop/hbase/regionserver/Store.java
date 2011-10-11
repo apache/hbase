@@ -53,6 +53,8 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.util.StringUtils;
@@ -87,7 +89,7 @@ import com.google.common.collect.Lists;
  * <p>Locking and transactions are handled at a higher level.  This API should
  * not be called directly but by an HRegion manager.
  */
-public class Store implements HeapSize {
+public class Store extends SchemaConfigured implements HeapSize {
   static final Log LOG = LogFactory.getLog(Store.class);
   protected final MemStore memstore;
   // This stores directory in the filesystem.
@@ -151,6 +153,8 @@ public class Store implements HeapSize {
   protected Store(Path basedir, HRegion region, HColumnDescriptor family,
     FileSystem fs, Configuration conf)
   throws IOException {
+    super(conf, region.getTableDesc().getNameAsString(),
+        Bytes.toString(family.getName()));
     HRegionInfo info = region.regionInfo;
     this.fs = fs;
     this.homedir = getStoreHomedir(basedir, info.getEncodedName(), family.getName());
@@ -178,7 +182,7 @@ public class Store implements HeapSize {
       this.ttl *= 1000;
     }
     this.memstore = new MemStore(this.comparator);
-    this.storeNameStr = Bytes.toString(this.family.getName());
+    this.storeNameStr = getColumnFamilyName();
 
     // By default, compact if storefile.count >= minFilesToCompact
     this.minFilesToCompact = Math.max(2,
@@ -528,8 +532,8 @@ public class Store implements HeapSize {
     // retrieved from HRegion.recentFlushes, which is set within
     // HRegion.internalFlushcache, which indirectly calls this to actually do
     // the flushing through the StoreFlusherImpl class
-    HRegion.incrNumericPersistentMetric("cf." + this.toString() + ".flushSize",
-        flushed);
+    getSchemaMetrics().updatePersistentStoreMetric(
+        SchemaMetrics.StoreMetricType.FLUSH_SIZE, flushed);
     if(LOG.isInfoEnabled()) {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
         ", sequenceid=" + logCacheFlushId +
@@ -1748,7 +1752,7 @@ public class Store implements HeapSize {
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (14 * ClassSize.REFERENCE) +
+      new SchemaConfigured().heapSize() + (14 * ClassSize.REFERENCE) +
       (7 * Bytes.SIZEOF_LONG) + (6 * Bytes.SIZEOF_INT) + (3 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +

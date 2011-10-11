@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -17,23 +17,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.hadoop.hbase.io.hfile.BlockType;
-import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics.ColumnFamilyAware;
+import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 
-/**
- * An interface that exposes methods to retrieve the column type and BlockType
- * of a particular cached block. This is more information than that which is
- * required by most cache implementations, but is used for more specific
- * metrics, for example. Used by implementations of HeapSize, such as
- * {@link HFileBlock}
- */
-public interface HFileBlockInfo extends ColumnFamilyAware {
-
+public interface Cacheable extends HeapSize {
   /**
-   * @return BlockType descriptor of this cached item. Indicates the type of
-   *         data, such as a data block or an index one.
+   * @return the block type of this cached HFile block
    */
   public BlockType getBlockType();
+
+  /**
+   * @return the metrics object identified by table and column family
+   */
+  public SchemaMetrics getSchemaMetrics();
 }

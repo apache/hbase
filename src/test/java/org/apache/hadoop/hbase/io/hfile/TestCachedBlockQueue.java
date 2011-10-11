@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 
 import junit.framework.TestCase;
 
@@ -129,11 +130,22 @@ public class TestCachedBlockQueue extends TestCase {
   {
     public CachedBlock(final long heapSize, String name, long accessTime) {
       super(name,
-          new HeapSize(){
+          new Cacheable() {
             @Override
             public long heapSize() {
               return ((int)(heapSize - CachedBlock.PER_BLOCK_OVERHEAD));
-            }},
+            }
+
+            @Override
+            public BlockType getBlockType() {
+              return BlockType.DATA;
+            }
+
+            @Override
+            public SchemaMetrics getSchemaMetrics() {
+              return SchemaMetrics.ALL_SCHEMA_METRICS;
+            }
+          },
           accessTime,false);
     }
   }

@@ -11,13 +11,13 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 
@@ -132,13 +132,6 @@ public class TestBlocksRead extends HBaseTestCase {
     region.delete(del, null, true);
   }
 
-  private void deleteFamily(byte[] cf, String row, String column, long version)
-    throws IOException {
-    Delete del = new Delete(Bytes.toBytes(row));
-    del.deleteColumns(cf, Bytes.toBytes(column), version);
-    region.delete(del, null, true);
-  }
-
   private static void verifyData(KeyValue kv, String expectedRow,
                                  String expectedCol, long expectedVersion) {
     assertEquals("RowCheck", expectedRow, Bytes.toString(kv.getRow()));
@@ -150,8 +143,9 @@ public class TestBlocksRead extends HBaseTestCase {
   }
 
   private static long getBlkAccessCount(byte[] cf) {
-    return HRegion.getNumericMetric("cf." + Bytes.toString(cf)  + "."
-        + "bt.Data.fsBlockReadCnt");
+    return HRegion.getNumericMetric(SchemaMetrics.CF_PREFIX
+        + Bytes.toString(cf) + "." + SchemaMetrics.BLOCK_TYPE_PREFIX
+        + "Data.fsBlockReadCnt");
   }
 
   /**

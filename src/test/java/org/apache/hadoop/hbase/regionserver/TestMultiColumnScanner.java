@@ -44,12 +44,13 @@ import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -71,8 +72,7 @@ public class TestMultiColumnScanner {
   static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
   static final int MAX_VERSIONS = 50;
 
-  private final ColumnFamilyMetrics cfMetrics =
-      ColumnFamilyMetrics.getInstance(FAMILY);
+  private SchemaMetrics schemaMetrics;
 
   /**
    * The size of the column qualifier set used. Increasing this parameter
@@ -124,6 +124,13 @@ public class TestMultiColumnScanner {
       assertTrue(TIMESTAMPS[i] < TIMESTAMPS[i + 1]);
   }
 
+  @Before
+  public void setUp() {
+    SchemaMetrics.configureGlobally(TEST_UTIL.getConfiguration());
+    schemaMetrics = SchemaMetrics.getInstance(TABLE_NAME, FAMILY);
+  }
+
+
   @Parameters
   public static final Collection<Object[]> parameters() {
     return HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS;
@@ -136,13 +143,15 @@ public class TestMultiColumnScanner {
   }
 
   private long getBlocksRead() {
-    return HRegion.getNumericMetric(cfMetrics.getBlockMetricName(
-        BlockType.BlockCategory.ALL_CATEGORIES, false, BlockMetricType.READ_COUNT));
+    return HRegion.getNumericMetric(schemaMetrics.getBlockMetricName(
+        BlockType.BlockCategory.ALL_CATEGORIES, false,
+        BlockMetricType.READ_COUNT));
   }
 
   private long getCacheHits() {
-    return HRegion.getNumericMetric(cfMetrics.getBlockMetricName(
-        BlockType.BlockCategory.ALL_CATEGORIES, false, BlockMetricType.CACHE_HIT));
+    return HRegion.getNumericMetric(schemaMetrics.getBlockMetricName(
+        BlockType.BlockCategory.ALL_CATEGORIES, false,
+        BlockMetricType.CACHE_HIT));
   }
 
   private void saveBlockStats() {

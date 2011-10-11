@@ -42,10 +42,10 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -65,7 +65,7 @@ public class TestStoreFile extends HBaseTestCase {
 
   @Override
   public void setUp() throws Exception {
-    startingMetrics = ColumnFamilyMetrics.getMetricsSnapshot();
+    startingMetrics = SchemaMetrics.getMetricsSnapshot();
     try {
       this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
       // Set the hbase.rootdir to be the home directory in mini dfs.
@@ -83,7 +83,7 @@ public class TestStoreFile extends HBaseTestCase {
     shutdownDfs(cluster);
     // ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
     //  "Temporary end-of-test thread dump debugging HADOOP-2040: " + getName());
-    ColumnFamilyMetrics.validateMetricChanges(startingMetrics);
+    SchemaMetrics.validateMetricChanges(startingMetrics);
   }
 
   /**

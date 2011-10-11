@@ -1,0 +1,720 @@
+/*
+ * Copyright 2011 The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.hbase.regionserver.metrics;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Pair;
+
+/**
+ * A collection of metric names in a given column family or a (table, column
+ * family) combination. The following "dimensions" are supported:
+ * <ul>
+ * <li>Table name (optional; enabled based on configuration)</li>
+ * <li>Per-column family vs. aggregated. The aggregated mode is only supported
+ * when table name is not included.</li>
+ * <li>Block category (data, index, bloom filter, etc.)</li>
+ * <li>Whether the request is part of a compaction</li>
+ * <li>Metric type (read time, block read count, cache hits/misses, etc.)</li>
+ * </ul>
+ * <p>
+ * An instance of this class does not store any metric values. It just allows
+ * to determine the correct metric name for each combination of the above
+ * dimensions.
+ * <p>
+ * <table>
+ * <tr>
+ * <th rowspan="2">Metric key</th>
+ * <th colspan="2">Per-table metrics conf setting</th>
+ * <th rowspan="2">Description</th>
+ * </tr>
+ * <tr>
+ * <th>On</th>
+ * <th>Off</th>
+ * </th>
+ * <tr>
+ *   <td> tab.T.cf.CF.M </td> <td> Include </td> <td> Skip    </td>
+ *   <td> A specific column family of a specific table        </td>
+ * </tr>
+ * <tr>
+ *   <td> tab.T.M       </td> <td> Skip    </td> <td> Skip    </td>
+ *   <td> All column families in the given table              </td>
+ * </tr>
+ * <tr>
+ *   <td> cf.CF.M       </td> <td> Skip    </td> <td> Include </td>
+ *   <td> A specific column family in all tables              </td>
+ * </tr>
+ * <tr>
+ *   <td> M             </td> <td> Include </td> <td> Include </td>
+ *   <td> All column families in all tables                   </td>
+ * </tr>
+ * </table>
+ */
+public class SchemaMetrics {
+
+  public interface SchemaAware {
+    public String getTableName();
+    public String getColumnFamilyName();
+    public SchemaMetrics getSchemaMetrics();
+  }
+
+  private static final Log LOG = LogFactory.getLog(SchemaMetrics.class);
+
+  public static enum BlockMetricType {
+    // Metric configuration: compactionAware | timeVarying
+    READ_TIME("Read",                   true,  true),
+    READ_COUNT("BlockReadCnt",          true,  false),
+    CACHE_HIT("BlockReadCacheHitCnt",   true,  false),
+    CACHE_MISS("BlockReadCacheMissCnt", true,  false),
+
+    CACHE_SIZE("blockCacheSize",        false, false),
+    CACHED("blockCacheNumCached",       false, false),
+    EVICTED("blockCacheNumEvicted",     false, false);
+
+    private final String metricStr;
+    private final boolean compactionAware;
+    private final boolean timeVarying;
+
+    BlockMetricType(String metricStr, boolean compactionAware,
+          boolean timeVarying) {
+      this.metricStr = metricStr;
+      this.compactionAware = compactionAware;
+      this.timeVarying = timeVarying;
+    }
+
+    @Override
+    public String toString() {
+      return metricStr;
+    }
+
+    private static final String BLOCK_METRIC_TYPE_RE;
+    static {
+      StringBuilder sb = new StringBuilder();
+      for (BlockMetricType bmt : values()) {
+        if (sb.length() > 0)
+          sb.append("|");
+        sb.append(bmt);
+      }
+      BLOCK_METRIC_TYPE_RE = sb.toString();
+    }
+  };
+
+  public static enum StoreMetricType {
+    STORE_FILE_COUNT("storeFileCount"),
+    STORE_FILE_INDEX_SIZE("storeFileIndexSizeMB"),
+    STORE_FILE_SIZE_MB("storeFileSizeMB"),
+    STATIC_BLOOM_SIZE_KB("staticBloomSizeKB"),
+    MEMSTORE_SIZE_MB("memstoreSizeMB"),
+    STATIC_INDEX_SIZE_KB("staticIndexSizeKB"),
+    FLUSH_SIZE("flushSize");
+
+    private final String metricStr;
+
+    StoreMetricType(String metricStr) {
+      this.metricStr = metricStr;
+    }
+
+    @Override
+    public String toString() {
+      return metricStr;
+    }
+  };
+
+  // Constants
+  /**
+   * A string used when column family or table name is unknown, and in some
+   * unit tests. This should not normally show up in metric names but if it
+   * does it is better than creating a silent discrepancy in total vs.
+   * per-CF/table metrics.
+   */
+  public static final String UNKNOWN = "__unknown";
+
+  private static final String TABLE_PREFIX = "tab.";
+  public static final String CF_PREFIX = "cf.";
+  public static final String BLOCK_TYPE_PREFIX = "bt.";
+  public static final String CF_UNKNOWN_PREFIX = CF_PREFIX + UNKNOWN;
+  public static final String CF_BAD_FAMILY_PREFIX = CF_PREFIX + "__badfamily";
+
+  /**
+   * A special schema metric value that means "all tables aggregated" or
+   * "all column families aggregated" when used as a table name or a column
+   * family name.
+   */
+  public static final String TOTAL_KEY = "";
+
+  /**
+   * Special handling for meta-block-specific metrics for
+   * backwards-compatibility.
+   */
+  private static final String META_BLOCK_CATEGORY_STR = "Meta";
+
+  private static final int NUM_BLOCK_CATEGORIES =
+      BlockCategory.values().length;
+
+  private static final int NUM_METRIC_TYPES =
+      BlockMetricType.values().length;
+
+  static final boolean[] BOOL_VALUES = new boolean[] { false, true };
+
+  private static final int NUM_BLOCK_METRICS =
+      NUM_BLOCK_CATEGORIES *  // blockCategory
+      BOOL_VALUES.length *    // isCompaction
+      NUM_METRIC_TYPES;       // metricType
+
+  private static final int NUM_STORE_METRIC_TYPES =
+      StoreMetricType.values().length;
+
+  /** Conf key controlling whether we include table name in metric names */
+  private static final String SHOW_TABLE_NAME_CONF_KEY =
+      "hbase.metrics.showTableName";
+
+  // Global variables
+  /** All instances of this class */
+  private static final ConcurrentHashMap<String, SchemaMetrics>
+      cfToMetrics = new ConcurrentHashMap<String, SchemaMetrics>();
+
+  /** Metrics for all tables and column families. */
+  // This has to be initialized after cfToMetrics.
+  public static final SchemaMetrics ALL_SCHEMA_METRICS =
+    getInstance(TOTAL_KEY, TOTAL_KEY);
+
+  /**
+   * Whether to include table name in metric names. If this is null, it has not
+   * been initialized. This is a global instance, but we also have a copy of it
+   * per a {@link SchemaMetrics} object to avoid synchronization overhead.
+   */
+  private static volatile Boolean useTableNameGlobally;
+
+  /** Whether we logged a message about configuration inconsistency */
+  private static volatile boolean loggedConfInconsistency;
+
+  // Instance variables
+  private final String[] blockMetricNames = new String[NUM_BLOCK_METRICS];
+  private final boolean[] blockMetricTimeVarying =
+      new boolean[NUM_BLOCK_METRICS];
+
+  private final String[] bloomMetricNames = new String[2];
+  private final String[] storeMetricNames = new String[NUM_STORE_METRIC_TYPES];
+
+  private SchemaMetrics(final String tableName, final String cfName) {
+    String metricPrefix =
+        tableName.equals(TOTAL_KEY) ? "" : TABLE_PREFIX + tableName + ".";
+    metricPrefix += cfName.equals(TOTAL_KEY) ? "" : CF_PREFIX + cfName + ".";
+
+    for (BlockCategory blockCategory : BlockCategory.values()) {
+      for (boolean isCompaction : BOOL_VALUES) {
+        for (BlockMetricType metricType : BlockMetricType.values()) {
+          if (!metricType.compactionAware && isCompaction) {
+            continue;
+          }
+
+          StringBuilder sb = new StringBuilder(metricPrefix);
+          if (blockCategory != BlockCategory.ALL_CATEGORIES
+              && blockCategory != BlockCategory.META) {
+            String categoryStr = blockCategory.toString();
+            categoryStr = categoryStr.charAt(0)
+                + categoryStr.substring(1).toLowerCase();
+            sb.append(BLOCK_TYPE_PREFIX + categoryStr + ".");
+          }
+
+          if (metricType.compactionAware) {
+            sb.append(isCompaction ? "compaction" : "fs");
+          }
+
+          // A special-case for meta blocks for backwards-compatibility.
+          if (blockCategory == BlockCategory.META) {
+            sb.append(META_BLOCK_CATEGORY_STR);
+          }
+
+          sb.append(metricType);
+
+          int i = getBlockMetricIndex(blockCategory, isCompaction, metricType);
+          blockMetricNames[i] = sb.toString().intern();
+          blockMetricTimeVarying[i] = metricType.timeVarying;
+        }
+      }
+    }
+
+    for (boolean isInBloom : BOOL_VALUES) {
+      bloomMetricNames[isInBloom ? 1 : 0] = metricPrefix
+          + (isInBloom ? "keyMaybeInBloomCnt" : "keyNotInBloomCnt");
+    }
+
+    for (StoreMetricType storeMetric : StoreMetricType.values()) {
+      storeMetricNames[storeMetric.ordinal()] = metricPrefix +
+        storeMetric.toString();
+    }
+  }
+
+  /**
+   * Returns a {@link SchemaMetrics} object for the given table and column
+   * family, instantiating it if necessary.
+   *
+   * @param tableName table name (null is interpreted as "unknown"). This is
+   *          ignored
+   * @param cfName column family name (null is interpreted as "unknown")
+   */
+  public static SchemaMetrics getInstance(String tableName, String cfName) {
+    if (tableName == null) {
+      tableName = UNKNOWN;
+    }
+
+    if (!tableName.equals(TOTAL_KEY)) {
+      // We are provided with a non-trivial table name (including "unknown").
+      // We need to know whether table name should be included into metrics.
+      if (useTableNameGlobally == null) {
+        throw new IllegalStateException("The value of the "
+            + SHOW_TABLE_NAME_CONF_KEY + " conf option has not been specified "
+            + "in SchemaMetrics");
+      }
+      final boolean useTableName = useTableNameGlobally;
+      if (!useTableName) {
+        // Don't include table name in metric keys.
+        tableName = TOTAL_KEY;
+      }
+    }
+
+    if (cfName == null) {
+      cfName = UNKNOWN;
+    }
+
+    final String instanceKey = tableName + "\t" + cfName;
+    SchemaMetrics schemaMetrics = cfToMetrics.get(instanceKey);
+    if (schemaMetrics != null) {
+      return schemaMetrics;
+    }
+
+    schemaMetrics = new SchemaMetrics(tableName, cfName);
+    SchemaMetrics existingMetrics = cfToMetrics.putIfAbsent(instanceKey,
+        schemaMetrics);
+    return existingMetrics != null ? existingMetrics : schemaMetrics;
+  }
+
+  private static final int getBlockMetricIndex(BlockCategory blockCategory,
+      boolean isCompaction, BlockMetricType metricType) {
+    int i = 0;
+    i = i * NUM_BLOCK_CATEGORIES + blockCategory.ordinal();
+    i = i * BOOL_VALUES.length + (isCompaction ? 1 : 0);
+    i = i * NUM_METRIC_TYPES + metricType.ordinal();
+    return i;
+  }
+
+  public String getBlockMetricName(BlockCategory blockCategory,
+      boolean isCompaction, BlockMetricType metricType) {
+    if (isCompaction && !metricType.compactionAware) {
+      throw new IllegalArgumentException("isCompaction cannot be true for "
+          + metricType);
+    }
+    return blockMetricNames[getBlockMetricIndex(blockCategory, isCompaction,
+        metricType)];
+  }
+
+  public String getBloomMetricName(boolean isInBloom) {
+    return bloomMetricNames[isInBloom ? 1 : 0];
+  }
+
+  /**
+   * Increments the given metric, both per-CF and aggregate, for both the given
+   * category and all categories in aggregate (four counters total).
+   */
+  private void incrNumericMetric(BlockCategory blockCategory,
+      boolean isCompaction, BlockMetricType metricType) {
+    if (blockCategory == null) {
+      blockCategory = BlockCategory.UNKNOWN;  // So that we see this in stats.
+    }
+    HRegion.incrNumericMetric(getBlockMetricName(blockCategory,
+        isCompaction, metricType), 1);
+
+    if (blockCategory != BlockCategory.ALL_CATEGORIES) {
+      incrNumericMetric(BlockCategory.ALL_CATEGORIES, isCompaction,
+          metricType);
+    }
+  }
+
+  private void addToReadTime(BlockCategory blockCategory,
+      boolean isCompaction, long timeMs) {
+    HRegion.incrTimeVaryingMetric(getBlockMetricName(blockCategory,
+        isCompaction, BlockMetricType.READ_TIME), timeMs);
+
+    // Also update the read time aggregated across all block categories
+    if (blockCategory != BlockCategory.ALL_CATEGORIES) {
+      addToReadTime(BlockCategory.ALL_CATEGORIES, isCompaction, timeMs);
+    }
+  }
+
+  /**
+   * Update the store metric to a certain value.
+   * @param storeMetricType the store metric to update
+   * @param value the value to update the metric to
+   */
+  public void updateStoreMetric(StoreMetricType storeMetricType, long value) {
+    HRegion.setNumericMetric(storeMetricNames[storeMetricType.ordinal()],
+        value);
+  }
+
+  /**
+   * Update a metric that does not get reset on every poll.
+   * @param storeMetricType the store metric to update
+   * @param value the value to update the metric to
+   */
+  public void updatePersistentStoreMetric(StoreMetricType storeMetricType,
+      long value) {
+    HRegion.incrNumericPersistentMetric(
+        storeMetricNames[storeMetricType.ordinal()], value);
+  }
+
+  /**
+   * Updates the number of hits and the total number of block reads on a block
+   * cache hit.
+   */
+  public void updateOnCacheHit(BlockCategory blockCategory,
+      boolean isCompaction) {
+    blockCategory.expectSpecific();
+    incrNumericMetric(blockCategory, isCompaction, BlockMetricType.CACHE_HIT);
+    incrNumericMetric(blockCategory, isCompaction, BlockMetricType.READ_COUNT);
+    if (this != ALL_SCHEMA_METRICS) {
+      ALL_SCHEMA_METRICS.updateOnCacheHit(blockCategory, isCompaction);
+    }
+  }
+
+  /**
+   * Updates read time, the number of misses, and the total number of block
+   * reads on a block cache miss.
+   */
+  public void updateOnCacheMiss(BlockCategory blockCategory,
+      boolean isCompaction, long timeMs) {
+    blockCategory.expectSpecific();
+    addToReadTime(blockCategory, isCompaction, timeMs);
+    incrNumericMetric(blockCategory, isCompaction, BlockMetricType.CACHE_MISS);
+    incrNumericMetric(blockCategory, isCompaction, BlockMetricType.READ_COUNT);
+    if (this != ALL_SCHEMA_METRICS) {
+      ALL_SCHEMA_METRICS.updateOnCacheMiss(blockCategory, isCompaction,
+          timeMs);
+    }
+  }
+
+  /**
+   * Adds the given delta to the cache size for the given block category and
+   * the aggregate metric for all block categories. Updates both the per-CF
+   * counter and the counter for all CFs (four metrics total). The cache size
+   * metric is "persistent", i.e. it does not get reset when metrics are
+   * collected.
+   */
+  public void addToCacheSize(BlockCategory category, long cacheSizeDelta) {
+    if (category == null) {
+      category = BlockCategory.ALL_CATEGORIES;
+    }
+    HRegion.incrNumericPersistentMetric(getBlockMetricName(category, false,
+        BlockMetricType.CACHE_SIZE), cacheSizeDelta);
+
+    if (category != BlockCategory.ALL_CATEGORIES) {
+      addToCacheSize(BlockCategory.ALL_CATEGORIES, cacheSizeDelta);
+    }
+  }
+
+  public void updateOnCachePutOrEvict(BlockCategory blockCategory,
+      long cacheSizeDelta, boolean isEviction) {
+    addToCacheSize(blockCategory, cacheSizeDelta);
+    incrNumericMetric(blockCategory, false,
+        isEviction ? BlockMetricType.EVICTED : BlockMetricType.CACHED);
+    if (this != ALL_SCHEMA_METRICS) {
+      ALL_SCHEMA_METRICS.updateOnCachePutOrEvict(blockCategory, cacheSizeDelta,
+          isEviction);
+    }
+  }
+
+  /**
+   * Increments both the per-CF and the aggregate counter of bloom
+   * positives/negatives as specified by the argument.
+   */
+  public void updateBloomMetrics(boolean isInBloom) {
+    HRegion.incrNumericMetric(getBloomMetricName(isInBloom), 1);
+    if (this != ALL_SCHEMA_METRICS) {
+      ALL_SCHEMA_METRICS.updateBloomMetrics(isInBloom);
+    }
+  }
+
+  /**
+   * Sets the flag whether to use table name in metric names according to the
+   * given configuration. This must be called at least once before
+   * instantiating HFile readers/writers.
+   */
+  public static void configureGlobally(Configuration conf) {
+    final boolean useTableNameNew =
+        conf.getBoolean(SHOW_TABLE_NAME_CONF_KEY, false);
+    setUseTableName(useTableNameNew);
+  }
+
+  /**
+   * Sets the flag of whether to use table name in metric names. This flag
+   * is specified in configuration and is not expected to change at runtime,
+   * so we log an error message when it does change.
+   */
+  private static void setUseTableName(final boolean useTableNameNew) {
+    if (useTableNameGlobally == null) {
+      // This configuration option has not yet been set.
+      useTableNameGlobally = useTableNameNew;
+    } else if (useTableNameGlobally != useTableNameNew
+        && !loggedConfInconsistency) {
+      // The configuration is inconsistent and we have not reported it
+      // previously. Once we report it, just keep ignoring the new setting.
+      LOG.error("Inconsistent configuration. Previous configuration "
+          + "for using table name in metrics: " + useTableNameGlobally + ", "
+          + "new configuration: " + useTableNameNew);
+      loggedConfInconsistency = true;
+    }
+  }
+
+  // Methods used in testing
+
+  private static final String WORD_AND_DOT_RE_STR = "[^.]+\\.";
+  private static final String TABLE_NAME_RE_STR =
+      "\\b" + TABLE_PREFIX.replace(".", "\\.") + WORD_AND_DOT_RE_STR;
+  private static final String CF_NAME_RE_STR =
+      "\\b" + CF_PREFIX.replace(".", "\\.") + WORD_AND_DOT_RE_STR;
+  private static final Pattern CF_NAME_RE = Pattern.compile(
+      CF_NAME_RE_STR);
+  private static final Pattern TABLE_AND_CF_NAME_RE = Pattern.compile(
+      TABLE_NAME_RE_STR + CF_NAME_RE_STR);
+  private static final Pattern BLOCK_CATEGORY_RE = Pattern.compile(
+      "\\b" + BLOCK_TYPE_PREFIX.replace(".", "\\.") + "[^.]+\\." +
+      // Also remove the special-case block type marker for meta blocks
+      "|" + META_BLOCK_CATEGORY_STR + "(?=" +
+      BlockMetricType.BLOCK_METRIC_TYPE_RE + ")");
+
+  /**
+   * A suffix for the "number of operations" part of "time-varying metrics". We
+   * only use this for metric verification in unit testing. Time-varying
+   * metrics are handled by a different code path in production.
+   */
+  private static String NUM_OPS_SUFFIX = "numops";
+
+  /**
+   * A custom suffix that we use for verifying the second component of
+   * a "time-varying metric".
+   */
+  private static String TOTAL_SUFFIX = "_total";
+  private static final Pattern TIME_VARYING_SUFFIX_RE = Pattern.compile(
+      "(" + NUM_OPS_SUFFIX + "|" + TOTAL_SUFFIX + ")$");
+
+  void printMetricNames() {
+    for (BlockCategory blockCategory : BlockCategory.values()) {
+      for (boolean isCompaction : BOOL_VALUES) {
+        for (BlockMetricType metricType : BlockMetricType.values()) {
+          int i = getBlockMetricIndex(blockCategory, isCompaction, metricType);
+          System.err.println("blockCategory=" + blockCategory + ", "
+              + "metricType=" + metricType + ", isCompaction=" + isCompaction
+              + ", metricName=" + blockMetricNames[i]);
+        }
+      }
+    }
+  }
+
+  private Collection<String> getAllMetricNames() {
+    List<String> allMetricNames = new ArrayList<String>();
+    for (int i = 0; i < blockMetricNames.length; ++i) {
+      final String blockMetricName = blockMetricNames[i];
+      final boolean timeVarying = blockMetricTimeVarying[i];
+      if (blockMetricName != null) {
+        if (timeVarying) {
+          allMetricNames.add(blockMetricName + NUM_OPS_SUFFIX);
+          allMetricNames.add(blockMetricName + TOTAL_SUFFIX);
+        } else {
+          allMetricNames.add(blockMetricName);
+        }
+      }
+    }
+    allMetricNames.addAll(Arrays.asList(bloomMetricNames));
+    return allMetricNames;
+  }
+
+  private static final boolean isTimeVaryingKey(String metricKey) {
+    return metricKey.endsWith(NUM_OPS_SUFFIX)
+        || metricKey.endsWith(TOTAL_SUFFIX);
+  }
+
+  private static final String stripTimeVaryingSuffix(String metricKey) {
+    return TIME_VARYING_SUFFIX_RE.matcher(metricKey).replaceAll("");
+  }
+
+  public static Map<String, Long> getMetricsSnapshot() {
+    Map<String, Long> metricsSnapshot = new TreeMap<String, Long>();
+    for (SchemaMetrics cfm : cfToMetrics.values()) {
+      for (String metricName : cfm.getAllMetricNames()) {
+        long metricValue;
+        if (isTimeVaryingKey(metricName)) {
+          Pair<Long, Integer> totalAndCount =
+              HRegion.getTimeVaryingMetric(stripTimeVaryingSuffix(metricName));
+          metricValue = metricName.endsWith(TOTAL_SUFFIX) ?
+              totalAndCount.getFirst() : totalAndCount.getSecond();
+        } else {
+          metricValue = HRegion.getNumericMetric(metricName);
+        }
+
+        metricsSnapshot.put(metricName, metricValue);
+      }
+    }
+    return metricsSnapshot;
+  }
+
+  private static long getLong(Map<String, Long> m, String k) {
+    Long l = m.get(k);
+    return l != null ? l : 0;
+  }
+
+  private static void putLong(Map<String, Long> m, String k, long v) {
+    if (v != 0) {
+      m.put(k, v);
+    } else {
+      m.remove(k);
+    }
+  }
+  private static Map<String, Long> diffMetrics(Map<String, Long> a,
+      Map<String, Long> b) {
+    Set<String> allKeys = new TreeSet<String>(a.keySet());
+    allKeys.addAll(b.keySet());
+    Map<String, Long> diff = new TreeMap<String, Long>();
+    for (String k : allKeys) {
+      long aVal = getLong(a, k);
+      long bVal = getLong(b, k);
+      if (aVal != bVal) {
+        diff.put(k, bVal - aVal);
+      }
+    }
+    return diff;
+  }
+
+  public static void validateMetricChanges(Map<String, Long> oldMetrics) {
+    final Map<String, Long> newMetrics = getMetricsSnapshot();
+    final Map<String, Long> allCfDeltas = new TreeMap<String, Long>();
+    final Map<String, Long> allBlockCategoryDeltas =
+        new TreeMap<String, Long>();
+    final Map<String, Long> deltas = diffMetrics(oldMetrics, newMetrics);
+    final Pattern cfTableMetricRE =
+        useTableNameGlobally ? TABLE_AND_CF_NAME_RE : CF_NAME_RE;
+    final Set<String> allKeys = new TreeSet<String>(oldMetrics.keySet());
+    allKeys.addAll(newMetrics.keySet());
+
+    for (SchemaMetrics cfm : cfToMetrics.values()) {
+      for (String metricName : cfm.getAllMetricNames()) {
+        if (metricName.startsWith(CF_PREFIX + CF_PREFIX)) {
+          throw new AssertionError("Column family prefix used twice: " +
+              metricName);
+        }
+
+        final long oldValue = getLong(oldMetrics, metricName);
+        final long newValue = getLong(newMetrics, metricName);
+        final long delta = newValue - oldValue;
+        if (oldValue != newValue) {
+          // Debug output for the unit test
+          System.err.println("Metric=" + metricName + ", delta=" + delta);
+        }
+
+        if (cfm != ALL_SCHEMA_METRICS) {
+          // Re-calculate values of metrics with no column family (or CF/table)
+          // specified based on all metrics with CF (or CF/table) specified.
+          final String aggregateMetricName =
+              cfTableMetricRE.matcher(metricName).replaceAll("");
+          putLong(allCfDeltas, aggregateMetricName,
+              getLong(allCfDeltas, aggregateMetricName) + delta);
+        }
+
+        Matcher matcher = BLOCK_CATEGORY_RE.matcher(metricName);
+        if (matcher.find()) {
+           // Only process per-block-category metrics
+          String metricNoBlockCategory = matcher.replaceAll("");
+          putLong(allBlockCategoryDeltas, metricNoBlockCategory,
+              getLong(allBlockCategoryDeltas, metricNoBlockCategory) + delta);
+        }
+      }
+    }
+
+    StringBuilder errors = new StringBuilder();
+    for (String key : ALL_SCHEMA_METRICS.getAllMetricNames()) {
+      long actual = getLong(deltas, key);
+      long expected = getLong(allCfDeltas, key);
+      if (actual != expected) {
+        if (errors.length() > 0)
+          errors.append("\n");
+        errors.append("The all-CF metric " + key + " changed by "
+            + actual + " but the aggregation of per-column-family metrics "
+            + "yields " + expected);
+      }
+    }
+
+    // Verify metrics computed for all block types based on the aggregation
+    // of per-block-type metrics.
+    for (String key : allKeys) {
+      if (BLOCK_CATEGORY_RE.matcher(key).find() ||
+          key.contains(ALL_SCHEMA_METRICS.getBloomMetricName(false)) ||
+          key.contains(ALL_SCHEMA_METRICS.getBloomMetricName(true))){
+        // Skip per-block-category metrics. Also skip bloom filters, because
+        // they are not aggregated per block type.
+        continue;
+      }
+      long actual = getLong(deltas, key);
+      long expected = getLong(allBlockCategoryDeltas, key);
+      if (actual != expected) {
+        if (errors.length() > 0)
+          errors.append("\n");
+        errors.append("The all-block-category metric " + key
+            + " changed by " + actual + " but the aggregation of "
+            + "per-block-category metrics yields " + expected);
+      }
+    }
+
+    if (errors.length() > 0) {
+      throw new AssertionError(errors.toString());
+    }
+  }
+
+  /**
+   * Creates an instance pretending both the table and column family are
+   * unknown. Used in unit tests.
+   */
+  public static SchemaMetrics getUnknownInstanceForTest() {
+    return getInstance(UNKNOWN, UNKNOWN);
+  }
+
+  /**
+   * Set the flag to use or not use table name in metric names. Used in unit
+   * tests, so the flag can be set arbitrarily.
+   */
+  public static void setUseTableNameInTest(final boolean useTableNameNew) {
+    useTableNameGlobally = useTableNameNew;
+  }
+
+}

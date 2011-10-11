@@ -35,9 +35,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 
 import org.apache.hadoop.hbase.io.DoubleOutputStream;
-import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.HFileBlockInfo;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.IOUtils;
@@ -73,8 +72,9 @@ import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.NONE;
  * The version 2 block representation in the block cache is the same as above,
  * except that the data section is always uncompressed in the cache.
  */
-public class HFileBlock implements HeapSize, HFileBlockInfo {
+public class HFileBlock extends SchemaConfigured implements Cacheable {
 
+  // Constants
   /** The size of a version 2 {@link HFile} block header */
   public static final int HEADER_SIZE = MAGIC_LENGTH + 2 * Bytes.SIZEOF_INT
       + Bytes.SIZEOF_LONG;
@@ -85,6 +85,11 @@ public class HFileBlock implements HeapSize, HFileBlockInfo {
   public static final int BYTE_BUFFER_HEAP_SIZE = (int) ClassSize.estimateBase(
       ByteBuffer.wrap(new byte[0], 0, 0).getClass(), false);
 
+  // Static counters
+  private static final AtomicLong numSeekRead = new AtomicLong();
+  private static final AtomicLong numPositionalRead = new AtomicLong();
+
+  // Instance variables
   private BlockType blockType;
   private final int onDiskSizeWithoutHeader;
   private final int uncompressedSizeWithoutHeader;
@@ -103,9 +108,6 @@ public class HFileBlock implements HeapSize, HFileBlockInfo {
    * header, or -1 if unknown.
    */
   private int nextBlockOnDiskSizeWithHeader = -1;
-
-  private static final AtomicLong numSeekRead = new AtomicLong();
-  private static final AtomicLong numPositionalRead = new AtomicLong();
 
   /**
    * Creates a new {@link HFile} block from the given fields. This constructor
@@ -137,16 +139,6 @@ public class HFileBlock implements HeapSize, HFileBlockInfo {
     if (fillHeader)
       overwriteHeader();
     this.offset = offset;
-  }
-
-  private String cfName = "cf.unknown";
-
-  public String getColumnFamilyName() {
-    return this.cfName;
-  }
-
-  public void setColumnFamilyName(String cfName) {
-    this.cfName = cfName;
   }
 
   /**
@@ -1380,16 +1372,23 @@ public class HFileBlock implements HeapSize, HFileBlockInfo {
 
   @Override
   public long heapSize() {
-    // This object, block type and byte buffer reference, on-disk and
-    // uncompressed size, next block's on-disk size, offset and previous
-    // offset, byte buffer object, and its byte array. Might also need to add
-    // some fields inside the byte buffer.
-    // Also includes size of string cfName, which has its length multiplied by
-    // two because Java characters are unicode and thus 2 bytes each.
-    return ClassSize.align(ClassSize.OBJECT + 3 * ClassSize.REFERENCE + 3
-        * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG)
-        + ClassSize.align(buf.capacity() + BYTE_BUFFER_HEAP_SIZE)
-        + ClassSize.align(ClassSize.STRING + 2 * this.cfName.length());
+    long size = ClassSize.align(
+        // This object
+        ClassSize.OBJECT +
+        // Block type and byte buffer references
+        2 * ClassSize.REFERENCE +
+        // On-disk size, uncompressed size, and next block's on-disk size
+        3 * Bytes.SIZEOF_INT +
+        // This and previous block offset
+        2 * Bytes.SIZEOF_LONG
+    );
+
+    // Byte buffer
+    size += ClassSize.align(buf.capacity() + BYTE_BUFFER_HEAP_SIZE);
+
+    // SchemaConfigured (but don't count object overhead twice).
+    size += super.heapSize() - ClassSize.OBJECT;
+    return size;
   }
 
   /**

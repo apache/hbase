@@ -25,16 +25,15 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics.
-    ColumnFamilyConfigured;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.io.RawComparator;
 
 /**
  * Common functionality needed by all versions of {@link HFile} readers.
  */
-public abstract class AbstractHFileReader extends ColumnFamilyConfigured
+public abstract class AbstractHFileReader extends SchemaConfigured
     implements HFile.Reader {
 
   /** Filesystem-level block reader for this HFile format version. */
@@ -96,14 +95,12 @@ public abstract class AbstractHFileReader extends ColumnFamilyConfigured
 
   protected FileInfo fileInfo;
 
-  protected final ColumnFamilyMetrics cfMetrics;
-
   protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long fileSize,
       final boolean closeIStream,
       final BlockCache blockCache, final boolean inMemory,
       final boolean evictOnClose) {
-    super(path);
+    super(null, path);  // We don't have configuration to pass to super.
     this.trailer = trailer;
     this.compressAlgo = trailer.getCompressionCodec();
     this.blockCache = blockCache;
@@ -114,7 +111,6 @@ public abstract class AbstractHFileReader extends ColumnFamilyConfigured
     this.evictOnClose = evictOnClose;
     this.path = path;
     this.name = path.getName();
-    cfMetrics = ColumnFamilyMetrics.getInstance(getColumnFamilyName());
   }
 
   @SuppressWarnings("serial")
@@ -320,10 +316,6 @@ public abstract class AbstractHFileReader extends ColumnFamilyConfigured
 
   public Path getPath() {
     return path;
-  }
-
-  public ColumnFamilyMetrics getColumnFamilyMetrics() {
-    return cfMetrics;
   }
 
 }

@@ -104,6 +104,9 @@ import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -316,6 +319,7 @@ public class HRegionServer implements HRegionInterface,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 
     reinitialize();
+    SchemaMetrics.configureGlobally(conf);
   }
 
   /**
@@ -1074,7 +1078,7 @@ public class HRegionServer implements HRegionInterface,
     long tmpfilesize;
     long tmpbloomsize;
     long tmpstaticsize;
-    String cfname;
+    SchemaMetrics schemaMetrics;
 
     // Note that this is a map of Doubles instead of Longs. This is because we
     // do effective integer division, which would perhaps truncate more than it
@@ -1097,19 +1101,29 @@ public class HRegionServer implements HRegionInterface,
             tmpbloomsize = store.getTotalStaticBloomSize();
             tmpstaticsize = store.getTotalStaticIndexSize();
 
-            // Note that there is only one store per CF so setting is safe
-            cfname = "cf." + store.toString();
-            this.incrMap(tempVals, cfname + ".storeFileCount", tmpfiles);
-            this.incrMap(tempVals, cfname + ".storeFileIndexSizeMB",
-                (tmpindex / (1024.0 * 1024)));
-            this.incrMap(tempVals, cfname + ".storeFileSizeMB",
-                (tmpfilesize / (1024.0 * 1024)));
-            this.incrMap(tempVals, cfname + ".staticBloomSizeKB",
-                (tmpbloomsize / 1024.0));
-            this.incrMap(tempVals, cfname + ".memstoreSizeMB",
-                (store.getMemStoreSize() / (1024.0 * 1024)));
-            this.incrMap(tempVals, cfname + ".staticIndexSizeKB",
-                tmpstaticsize / 1024.0);
+            schemaMetrics = store.getSchemaMetrics();
+            schemaMetrics.updateStoreMetric(
+                StoreMetricType.STORE_FILE_COUNT,
+                tmpfiles);
+
+            schemaMetrics.updateStoreMetric(
+                StoreMetricType.STORE_FILE_INDEX_SIZE,
+                (long) (tmpindex / (1024.0 * 1024)));
+
+            schemaMetrics.updateStoreMetric(
+                StoreMetricType.STORE_FILE_SIZE_MB,
+                (long) (tmpfilesize / (1024.0 * 1024)));
+
+            schemaMetrics.updateStoreMetric(
+                StoreMetricType.STATIC_BLOOM_SIZE_KB,
+                (long)(tmpbloomsize / 1024.0));
+
+            schemaMetrics.updateStoreMetric(StoreMetricType.MEMSTORE_SIZE_MB,
+                (long)(store.getMemStoreSize() / (1024.0 * 1024)));
+
+            schemaMetrics.updateStoreMetric(
+                StoreMetricType.STATIC_INDEX_SIZE_KB,
+                (long)(tmpstaticsize / 1024.0));
 
             storefiles += tmpfiles;
             storefileIndexSize += tmpindex;

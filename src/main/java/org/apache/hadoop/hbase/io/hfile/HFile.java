@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -144,6 +146,11 @@ public class HFile {
 
   /** Separator between HFile name and offset in block cache key */
   static final char CACHE_KEY_SEPARATOR = '_';
+
+  /**
+   *  ROOT_DIR/TABLE_NAME/REGION_NAME/CF_NAME/HFILE
+   */
+  public final static int HFILE_PATH_LENGTH = 5;
 
   // For measuring latency of "typical" reads and writes
   static volatile int readOps;
@@ -303,7 +310,7 @@ public class HFile {
   }
 
   /** An interface used by clients to open and iterate an {@link HFile}. */
-  public interface Reader extends Closeable, CachingBlockReader {
+  public interface Reader extends Closeable, CachingBlockReader, SchemaAware {
     /**
      * Returns this reader's "name". Usually the last component of the path.
      * Needs to be constant as the file is being moved to support caching on

@@ -57,13 +57,13 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.AbstractHFileReader;
-import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
@@ -617,9 +617,9 @@ public class HFileReadWriteTest {
       isCompaction = workload == Workload.MERGE;
       for (HFile.Reader reader : readers) {
         fsBlockReadMetrics.add(
-            ColumnFamilyMetrics.ALL_CF_METRICS.getBlockMetricName(
+            SchemaMetrics.ALL_SCHEMA_METRICS.getBlockMetricName(
                 BlockType.BlockCategory.ALL_CATEGORIES, isCompaction,
-                ColumnFamilyMetrics.BlockMetricType.READ_COUNT));
+                SchemaMetrics.BlockMetricType.READ_COUNT));
       }
 
       LOG.info("Using the following metrics for the number of data blocks " +

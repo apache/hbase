@@ -26,18 +26,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
-import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics.
-    ColumnFamilyConfigured;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
@@ -45,10 +42,8 @@ import org.apache.hadoop.io.Writable;
 /**
  * Common functionality needed by all versions of {@link HFile} writers.
  */
-public abstract class AbstractHFileWriter extends ColumnFamilyConfigured
+public abstract class AbstractHFileWriter extends SchemaConfigured
     implements HFile.Writer {
-
-  private static final Log LOG = LogFactory.getLog(AbstractHFileWriter.class);
 
   /** Key previously appended. Becomes the last key in the file. */
   protected byte[] lastKeyBuffer = null;
@@ -119,7 +114,7 @@ public abstract class AbstractHFileWriter extends ColumnFamilyConfigured
   public AbstractHFileWriter(Configuration conf,
       FSDataOutputStream outputStream, Path path, int blockSize,
       Compression.Algorithm compressAlgo, KeyComparator comparator) {
-    super(path);
+    super(conf, path);
     this.outputStream = outputStream;
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();

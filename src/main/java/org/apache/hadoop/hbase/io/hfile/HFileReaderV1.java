@@ -227,7 +227,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
             cacheBlock);
         if (cachedBlock != null) {
           cacheHits++;
-          cfMetrics.updateOnCacheHit(BlockCategory.META, false);
+          getSchemaMetrics().updateOnCacheHit(BlockCategory.META, false);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Cache Miss, please load.
@@ -236,13 +236,13 @@ public class HFileReaderV1 extends AbstractHFileReader {
       HFileBlock hfileBlock = fsBlockReader.readBlockData(offset,
           nextOffset - offset, metaBlockIndexReader.getRootBlockDataSize(block),
           true);
-      hfileBlock.setColumnFamilyName(this.getColumnFamilyName());
+      configureWithSchema(hfileBlock);
       hfileBlock.expectType(BlockType.META);
 
       long delta = System.currentTimeMillis() - now;
       HFile.readTime += delta;
       HFile.readOps++;
-      cfMetrics.updateOnCacheMiss(BlockCategory.META, false, delta);
+      getSchemaMetrics().updateOnCacheMiss(BlockCategory.META, false, delta);
 
       // Cache the block
       if (cacheBlock && blockCache != null) {
@@ -289,7 +289,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
             cacheBlock);
         if (cachedBlock != null) {
           cacheHits++;
-          cfMetrics.updateOnCacheHit(BlockCategory.DATA, isCompaction);
+          getSchemaMetrics().updateOnCacheHit(BlockCategory.DATA,
+              isCompaction);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Carry on, please load.
@@ -311,14 +312,15 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
       HFileBlock hfileBlock = fsBlockReader.readBlockData(offset, nextOffset
           - offset, dataBlockIndexReader.getRootBlockDataSize(block), pread);
-      hfileBlock.setColumnFamilyName(this.getColumnFamilyName());
+      configureWithSchema(hfileBlock);
       hfileBlock.expectType(BlockType.DATA);
       ByteBuffer buf = hfileBlock.getBufferWithoutHeader();
 
       long delta = System.currentTimeMillis() - now;
       HFile.readTime += delta;
       HFile.readOps++;
-      cfMetrics.updateOnCacheMiss(BlockCategory.DATA, isCompaction, delta);
+      getSchemaMetrics().updateOnCacheMiss(BlockCategory.DATA, isCompaction,
+          delta);
 
       // Cache the block
       if (cacheBlock && blockCache != null) {

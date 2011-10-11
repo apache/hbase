@@ -31,11 +31,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
-import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics;
-import org.apache.hadoop.hbase.io.hfile.ColumnFamilyMetrics.BlockMetricType;
-import org.apache.hadoop.hbase.io.hfile.HFileBlockInfo;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -273,7 +270,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @param buf block buffer
    * @param inMemory if block is in-memory
    */
-  public void cacheBlock(String blockName, HeapSize buf, boolean inMemory) {
+  public void cacheBlock(String blockName, Cacheable buf, boolean inMemory) {
     CachedBlock cb = map.get(blockName);
     if(cb != null) {
       throw new RuntimeException("Cached an already cached block");
@@ -297,7 +294,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @param blockName block name
    * @param buf block buffer
    */
-  public void cacheBlock(String blockName, HeapSize buf) {
+  public void cacheBlock(String blockName, Cacheable buf) {
     cacheBlock(blockName, buf, false);
   }
 
@@ -314,12 +311,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
     if (evict) {
       heapsize *= -1;
     }
-    if (cb.getBuffer() instanceof HFileBlockInfo) {
-      final HFileBlockInfo blockInfo = (HFileBlockInfo) cb.getBuffer();
-      ColumnFamilyMetrics cfMetrics = ColumnFamilyMetrics.getInstance(
-          blockInfo.getColumnFamilyName());
-      cfMetrics.updateBlockCacheMetrics(blockInfo.getBlockType().getCategory(),
-          heapsize, evict);
+    Cacheable cachedBlock = cb.getBuffer();
+    SchemaMetrics schemaMetrics = cachedBlock.getSchemaMetrics();
+    if (schemaMetrics != null) {
+      schemaMetrics.updateOnCachePutOrEvict(
+          cachedBlock.getBlockType().getCategory(), heapsize, evict);
     }
     return size.addAndGet(heapsize);
   }
@@ -331,7 +327,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @return buffer of specified block name, or null if not in cache
    */
   @Override
-  public HeapSize getBlock(String blockName, boolean caching) {
+  public Cacheable getBlock(String blockName, boolean caching) {
     CachedBlock cb = map.get(blockName);
     if(cb == null) {
       stats.miss(caching);

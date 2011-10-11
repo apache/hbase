@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.compress.Compressor;
@@ -471,13 +472,16 @@ public class TestHFileBlock {
       HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
           true, -1);
       assertEquals(80, HFileBlock.BYTE_BUFFER_HEAP_SIZE);
-      long expected = ClassSize.align(ClassSize.estimateBase(HFileBlock.class,
-          true))
-          + ClassSize.align(ClassSize.estimateBase(buf.getClass(), true)
-              + HFileBlock.HEADER_SIZE + size)
-          + ClassSize.align(ClassSize.estimateBase(String.class, true) + 2
-              * block.getColumnFamilyName().length());
-      assertEquals(expected, block.heapSize());
+      long byteBufferExpectedSize =
+          ClassSize.align(ClassSize.estimateBase(buf.getClass(), true)
+              + HFileBlock.HEADER_SIZE + size);
+      long hfileBlockExpectedSize =
+          ClassSize.align(ClassSize.estimateBase(HFileBlock.class, true));
+      long expected = hfileBlockExpectedSize + byteBufferExpectedSize;
+      assertEquals("Block data size: " + size + ", byte buffer expected " +
+          "size: " + byteBufferExpectedSize + ", HFileBlock class expected " +
+          "size: " + hfileBlockExpectedSize + ";", expected,
+          block.heapSize());
     }
   }
 

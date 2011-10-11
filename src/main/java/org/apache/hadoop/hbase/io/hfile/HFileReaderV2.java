@@ -180,7 +180,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           // Return a distinct 'shallow copy' of the block,
           // so pos does not get messed by the scanner
           cacheHits++;
-          cfMetrics.updateOnCacheHit(BlockCategory.META, false);
+          getSchemaMetrics().updateOnCacheHit(BlockCategory.META, false);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Cache Miss, please load.
@@ -188,12 +188,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset,
           blockSize, -1, true);
-      metaBlock.setColumnFamilyName(this.getColumnFamilyName());
+      configureWithSchema(metaBlock);
 
       long delta = System.currentTimeMillis() - now;
       HFile.readTime += delta;
       HFile.readOps++;
-      cfMetrics.updateOnCacheMiss(BlockCategory.META, false, delta);
+      getSchemaMetrics().updateOnCacheMiss(BlockCategory.META, false, delta);
 
       // Cache the block
       if (cacheBlock && blockCache != null) {
@@ -246,7 +246,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           BlockCategory blockCategory =
               cachedBlock.getBlockType().getCategory();
           cacheHits++;
-          cfMetrics.updateOnCacheHit(blockCategory, isCompaction);
+          getSchemaMetrics().updateOnCacheHit(blockCategory, isCompaction);
           return cachedBlock;
         }
         // Carry on, please load.
@@ -256,13 +256,13 @@ public class HFileReaderV2 extends AbstractHFileReader {
       long now = System.currentTimeMillis();
       HFileBlock dataBlock = fsBlockReader.readBlockData(dataBlockOffset,
           onDiskBlockSize, -1, pread);
-      dataBlock.setColumnFamilyName(this.getColumnFamilyName());
+      configureWithSchema(dataBlock);
       BlockCategory blockCategory = dataBlock.getBlockType().getCategory();
 
       long delta = System.currentTimeMillis() - now;
       HFile.readTime += delta;
       HFile.readOps++;
-      cfMetrics.updateOnCacheMiss(blockCategory, isCompaction, delta);
+      getSchemaMetrics().updateOnCacheMiss(blockCategory, isCompaction, delta);
 
       // Cache the block
       if (cacheBlock && blockCache != null) {

@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
@@ -81,6 +82,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class TestHRegion extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestHRegion.class);
 
+  private static final String COLUMN_FAMILY = "MyCF";
+
   HRegion region = null;
   private final String DIR = HBaseTestingUtility.getTestDir() +
     "/TestHRegion/";
@@ -96,11 +99,14 @@ public class TestHRegion extends HBaseTestCase {
   protected final byte[] value2 = Bytes.toBytes("value2");
   protected final byte[] row = Bytes.toBytes("rowA");
 
+  private Map<String, Long> startingMetrics;
+
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
    */
   @Override
   protected void setUp() throws Exception {
+    startingMetrics = SchemaMetrics.getMetricsSnapshot();
     super.setUp();
   }
 
@@ -108,6 +114,7 @@ public class TestHRegion extends HBaseTestCase {
   protected void tearDown() throws Exception {
     super.tearDown();
     EnvironmentEdgeManagerTestHelper.reset();
+    SchemaMetrics.validateMetricChanges(startingMetrics);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -326,10 +333,10 @@ public class TestHRegion extends HBaseTestCase {
 
   public void testFamilyWithAndWithoutColon() throws Exception {
     byte [] b = Bytes.toBytes(getName());
-    byte [] cf = Bytes.toBytes("cf");
+    byte [] cf = Bytes.toBytes(COLUMN_FAMILY);
     initHRegion(b, getName(), cf);
     Put p = new Put(b);
-    byte [] cfwithcolon = Bytes.toBytes("cf:");
+    byte [] cfwithcolon = Bytes.toBytes(COLUMN_FAMILY + ":");
     p.add(cfwithcolon, cfwithcolon, cfwithcolon);
     boolean exception = false;
     try {
@@ -343,7 +350,7 @@ public class TestHRegion extends HBaseTestCase {
   @SuppressWarnings("unchecked")
   public void testBatchPut() throws Exception {
     byte[] b = Bytes.toBytes(getName());
-    byte[] cf = Bytes.toBytes("cf");
+    byte[] cf = Bytes.toBytes(COLUMN_FAMILY);
     byte[] qual = Bytes.toBytes("qual");
     byte[] val = Bytes.toBytes("val");
     initHRegion(b, getName(), cf);

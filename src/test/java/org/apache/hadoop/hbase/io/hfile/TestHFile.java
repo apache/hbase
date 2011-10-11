@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
@@ -73,14 +74,14 @@ public class TestHFile extends HBaseTestCase {
 
   @Override
   public void setUp() throws Exception {
-    startingMetrics = ColumnFamilyMetrics.getMetricsSnapshot();
+    startingMetrics = SchemaMetrics.getMetricsSnapshot();
     super.setUp();
   }
 
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
-    ColumnFamilyMetrics.validateMetricChanges(startingMetrics);
+    SchemaMetrics.validateMetricChanges(startingMetrics);
   }
 
   // write some records into the tfile

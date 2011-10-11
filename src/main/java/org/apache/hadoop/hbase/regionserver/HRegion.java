@@ -29,6 +29,7 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +80,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -276,13 +278,17 @@ public class HRegion implements HeapSize { // , Writable{
   public static String createMutationSignature(Set<byte[]> families) {
     int limit = families.size();
     if (1 == limit) {
-      return "cf." + Bytes.toString(families.iterator().next());
+      return SchemaMetrics.CF_PREFIX +
+          Bytes.toString(families.iterator().next());
     }
 
-    StringBuilder sb = new StringBuilder("cf.");
+    List<byte[]> sortedFamilies = new ArrayList<byte[]>(families);
+    Collections.sort(sortedFamilies, Bytes.BYTES_COMPARATOR);
+
+    StringBuilder sb = new StringBuilder(SchemaMetrics.CF_PREFIX);
 
     int MAX_SIZE = 256;
-    for (byte[] family : families) {
+    for (byte[] family : sortedFamilies) {
       if (sb.length() > MAX_SIZE) {
         sb.append("__more");
         break;
@@ -309,7 +315,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return the string to print out in metrics
    */
   public static String createMutationSignature(byte[] family) {
-    return "cf." + Bytes.toString(family);
+    return SchemaMetrics.CF_PREFIX + Bytes.toString(family);
   }
 
   public static void incrNumericMetric(String key, long amount) {
@@ -354,6 +360,16 @@ public class HRegion implements HeapSize { // , Writable{
     if (m == null)
       return 0;
     return m.get();
+  }
+
+  public static Pair<Long, Integer> getTimeVaryingMetric(String key) {
+    Pair<AtomicLong, AtomicInteger> pair = timeVaryingMetrics.get(key);
+    if (pair == null) {
+      return new Pair<Long, Integer>(0L, 0);
+    }
+
+    return new Pair<Long, Integer>(pair.getFirst().get(),
+        pair.getSecond().get());
   }
 
   static long getNumericPersistentMetric(String key) {
@@ -1812,7 +1828,7 @@ public class HRegion implements HeapSize { // , Writable{
             if (!signature.equals(HRegion.createMutationSignature(put
                 .getFamilyMap().keySet()))) {
               isSignatureClear = false;
-              signature = "cf.__unknown";
+              signature = SchemaMetrics.CF_UNKNOWN_PREFIX;
             }
           }
         }
@@ -1874,7 +1890,7 @@ public class HRegion implements HeapSize { // , Writable{
       // do after lock
       long after = EnvironmentEdgeManager.currentTimeMillis();
       if (null == signature) {
-        signature = "cf.__badfamily";
+        signature = SchemaMetrics.CF_BAD_FAMILY_PREFIX;
       }
       HRegion.incrTimeVaryingMetric(signature + ".multiput_", after - now);
 

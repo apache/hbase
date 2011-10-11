@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 
 /**
@@ -33,14 +32,14 @@ public interface BlockCache {
    * @param buf The block contents wrapped in a ByteBuffer.
    * @param inMemory Whether block should be treated as in-memory
    */
-  public void cacheBlock(String blockName, HeapSize buf, boolean inMemory);
+  public void cacheBlock(String blockName, Cacheable buf, boolean inMemory);
 
   /**
    * Add block to cache (defaults to not in-memory).
    * @param blockName Zero-based file block number.
    * @param buf The block contents wrapped in a ByteBuffer.
    */
-  public void cacheBlock(String blockName, HeapSize buf);
+  public void cacheBlock(String blockName, Cacheable buf);
 
   /**
    * Fetch block from cache.
@@ -48,7 +47,7 @@ public interface BlockCache {
    * @param caching true if the caller caches blocks on a miss
    * @return Block or null if block is not in the cache.
    */
-  public HeapSize getBlock(String blockName, boolean caching);
+  public Cacheable getBlock(String blockName, boolean caching);
 
   /**
    * Evict block from cache.
