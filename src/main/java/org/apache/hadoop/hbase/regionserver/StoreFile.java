@@ -1023,7 +1023,11 @@ public class StoreFile {
 
     private boolean passesBloomFilter(Scan scan,
         final SortedSet<byte[]> columns) {
-      if (this.bloomFilter == null || !scan.isGetScan()) {
+      // Cache Bloom filter as a local variable in case it is set to null by
+      // another thread on an IO error.
+      BloomFilter bloomFilter = this.bloomFilter;
+
+      if (bloomFilter == null || !scan.isGetScan()) {
         return true;
       }
 
@@ -1086,13 +1090,13 @@ public class StoreFile {
               exists = false;
             } else {
               exists =
-                  this.bloomFilter.contains(key, 0, key.length, bloom) ||
-                  this.bloomFilter.contains(rowBloomKey, 0, rowBloomKey.length,
+                  bloomFilter.contains(key, 0, key.length, bloom) ||
+                  bloomFilter.contains(rowBloomKey, 0, rowBloomKey.length,
                       bloom);
             }
           } else {
             exists = !keyIsAfterLast
-                && this.bloomFilter.contains(key, 0, key.length, bloom);
+                && bloomFilter.contains(key, 0, key.length, bloom);
           }
 
           if (exists)
