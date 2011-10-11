@@ -26,9 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -43,9 +41,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.Compression;
@@ -326,7 +322,7 @@ public class Store implements HeapSize {
       LOG.info("Validating hfile at " + srcPath + " for inclusion in "
           + "store " + this + " region " + this.region);
       reader = new HFile.Reader(srcPath.getFileSystem(conf),
-          srcPath, null, false);
+          srcPath, null, false, false);
       reader.loadFileInfo();
 
       byte[] firstKey = reader.getFirstRowKey();
@@ -458,7 +454,8 @@ public class Store implements HeapSize {
       final long logCacheFlushId,
       TimeRangeTracker snapshotTimeRangeTracker)
       throws IOException {
-    StoreFile.Writer writer = null;
+    StoreFile.Writer writer;
+    String fileName;
     long flushed = 0;
     // Don't flush if there are no entries.
     if (set.size() == 0) {
@@ -472,6 +469,7 @@ public class Store implements HeapSize {
       // A. Write the map out to the disk
       writer = createWriterInTmp(set.size());
       writer.setTimeRangeTracker(snapshotTimeRangeTracker);
+      fileName = writer.getPath().getName();
       int entries = 0;
       try {
         for (KeyValue kv: set) {
@@ -490,7 +488,7 @@ public class Store implements HeapSize {
     }
 
     // Write-out finished successfully, move into the right spot
-    Path dstPath = StoreFile.getUniqueFile(fs, homedir);
+    Path dstPath = new Path(homedir, fileName);
     LOG.info("Renaming flushed file at " + writer.getPath() + " to " + dstPath);
     fs.rename(writer.getPath(), dstPath);
 
@@ -515,7 +513,8 @@ public class Store implements HeapSize {
   throws IOException {
     return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
         this.compression, this.comparator, this.conf,
-        this.family.getBloomFilterType(), maxKeyCount);
+        this.family.getBloomFilterType(), maxKeyCount,
+        conf.getBoolean("hbase.rs.cacheblocksonwrite", false));
   }
 
   /*
@@ -1051,15 +1050,15 @@ public class Store implements HeapSize {
     // be if all cells were expired or deleted).
     StoreFile result = null;
     if (compactedFile != null) {
-      Path p = null;
-      try {
-        p = StoreFile.rename(this.fs, compactedFile.getPath(),
-          StoreFile.getRandomFilename(fs, this.homedir));
-      } catch (IOException e) {
-        LOG.error("Failed move of compacted file " + compactedFile.getPath(), e);
-        return null;
+      // Move file into the right spot
+      Path origPath = compactedFile.getPath();
+      Path dstPath = new Path(homedir, origPath.getName());
+      LOG.info("Renaming compacted file at " + origPath + " to " + dstPath);
+      if (!fs.rename(origPath, dstPath)) {
+        LOG.error("Failed move of compacted file " + origPath + " to " +
+            dstPath);
       }
-      result = new StoreFile(this.fs, p, blockcache, this.conf,
+      result = new StoreFile(this.fs, dstPath, blockcache, this.conf,
           this.family.getBloomFilterType(), this.inMemory);
       result.createReader();
     }

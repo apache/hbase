@@ -19,6 +19,23 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
+import java.nio.ByteBuffer;
+import java.text.NumberFormat;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -47,24 +64,6 @@ import org.apache.hadoop.util.StringUtils;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryUsage;
-import java.nio.ByteBuffer;
-import java.text.NumberFormat;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.SortedSet;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
@@ -159,7 +158,7 @@ public class StoreFile {
   /*
    * Regex that will work for straight filenames and for reference names.
    * If reference, then the regex has more than just one group.  Group 1 is
-   * this files id.  Group 2 the referenced region name, etc.
+   * this file's id.  Group 2 the referenced region name, etc.
    */
   private static final Pattern REF_NAME_PARSER =
     Pattern.compile("^([0-9a-f]+)(?:\\.(.+))?$");
@@ -167,8 +166,6 @@ public class StoreFile {
   // StoreFile.Reader
   private volatile Reader reader;
 
-  // Used making file ids.
-  private final static Random rand = new Random();
   private final Configuration conf;
   private final BloomType bloomType;
 
@@ -398,7 +395,8 @@ public class StoreFile {
           getBlockCache(), this.reference);
     } else {
       this.reader = new Reader(this.fs, this.path, getBlockCache(),
-          this.inMemory);
+          this.inMemory,
+          this.conf.getBoolean("hbase.rs.evictblocksonclose", true));
     }
 
     // Load up indices and fileinfo.
@@ -409,7 +407,7 @@ public class StoreFile {
       // By convention, if halfhfile, top half has a sequence number > bottom
       // half. Thats why we add one in below. Its done for case the two halves
       // are ever merged back together --rare.  Without it, on open of store,
-      // since store files are distingushed by sequence id, the one half would
+      // since store files are distinguished by sequence id, the one half would
       // subsume the other.
       this.sequenceid = Bytes.toLong(b);
       if (isReference()) {
@@ -548,7 +546,8 @@ public class StoreFile {
                                               final int blocksize)
       throws IOException {
 
-    return createWriter(fs, dir, blocksize, null, null, null, BloomType.NONE, 0);
+    return createWriter(fs, dir, blocksize, null, null, null, BloomType.NONE, 0,
+        false);
   }
 
   /**
@@ -573,7 +572,8 @@ public class StoreFile {
                                               final KeyValue.KVComparator c,
                                               final Configuration conf,
                                               BloomType bloomType,
-                                              long maxKeySize)
+                                              long maxKeySize,
+                                              final boolean cacheOnWrite)
       throws IOException {
 
     if (!fs.exists(dir)) {
@@ -586,7 +586,8 @@ public class StoreFile {
 
     return new Writer(fs, path, blocksize,
         algorithm == null? HFile.DEFAULT_COMPRESSION_ALGORITHM: algorithm,
-        conf, c == null? KeyValue.COMPARATOR: c, bloomType, maxKeySize);
+        conf, c == null? KeyValue.COMPARATOR: c, bloomType, maxKeySize,
+            cacheOnWrite);
   }
 
   /**
@@ -600,7 +601,7 @@ public class StoreFile {
       throw new IOException("Expecting " + dir.toString() +
         " to be a directory");
     }
-    return fs.getFileStatus(dir).isDir()? getRandomFilename(fs, dir): dir;
+    return getRandomFilename(fs, dir);
   }
 
   /**
@@ -627,20 +628,14 @@ public class StoreFile {
                                 final Path dir,
                                 final String suffix)
       throws IOException {
-    long id = -1;
-    Path p = null;
-    do {
-      id = Math.abs(rand.nextLong());
-      p = new Path(dir, Long.toString(id) +
-        ((suffix == null || suffix.length() <= 0)? "": suffix));
-    } while(fs.exists(p));
-    return p;
+    return new Path(dir, UUID.randomUUID().toString().replaceAll("-", "")
+        + ((suffix == null || suffix.length() <= 0) ? "" : suffix));
   }
 
   /**
    * Write out a split reference.
    *
-   * Package local so it doesnt leak out of regionserver.
+   * Package local so it does not leak out of regionserver.
    *
    * @param fs
    * @param splitDir Presumes path format is actually
@@ -701,16 +696,19 @@ public class StoreFile {
      * @param comparator key comparator
      * @param bloomType bloom filter setting
      * @param maxKeys maximum amount of keys to add (for blooms)
+     * @param cacheOnWrite whether to cache blocks as we write file
      * @throws IOException problem writing to FS
      */
     public Writer(FileSystem fs, Path path, int blocksize,
         Compression.Algorithm compress, final Configuration conf,
-        final KVComparator comparator, BloomType bloomType, long maxKeys)
+        final KVComparator comparator, BloomType bloomType, long maxKeys,
+        boolean cacheOnWrite)
         throws IOException {
 
       writer = new HFile.Writer(
 		fs, path, blocksize, HFile.getBytesPerChecksum(conf, fs.getConf()),
-		compress, comparator.getRawComparator());
+		compress, comparator.getRawComparator(),
+		cacheOnWrite ? StoreFile.getBlockCache(conf) : null);
 
       this.kvComparator = comparator;
 
@@ -918,9 +916,10 @@ public class StoreFile {
     private final String bloomAccessedMetric;
     private final String bloomSkippedMetric;
 
-    public Reader(FileSystem fs, Path path, BlockCache blockCache, boolean inMemory)
+    public Reader(FileSystem fs, Path path, BlockCache blockCache,
+        boolean inMemory, boolean evictOnClose)
         throws IOException {
-      reader = new HFile.Reader(fs, path, blockCache, inMemory);
+      reader = new HFile.Reader(fs, path, blockCache, inMemory, evictOnClose);
 
       // prepare the text (key) for the metrics
       bloomAccessedMetric = reader.cfName + ".keyMaybeInBloomCnt";

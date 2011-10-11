@@ -97,7 +97,7 @@ public class HBaseTestingUtility {
   public static final String TEST_DIRECTORY_KEY = "test.build.data";
 
   /**
-   * Default parent direccounttory for test output.
+   * Default parent directory for test output.
    */
   public static final String DEFAULT_TEST_DIRECTORY = "target/build/data";
 

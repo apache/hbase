@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -56,10 +58,17 @@ public class TestReplicationSource {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniDFSCluster(1);
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    oldLogDir = new Path(fs.getHomeDirectory(),
-        HConstants.HREGION_OLDLOGDIR_NAME);
-    logDir = new Path(fs.getHomeDirectory(),
-        HConstants.HREGION_LOGDIR_NAME);
+
+    oldLogDir = TEST_UTIL.getTestDir(HConstants.HREGION_OLDLOGDIR_NAME);
+    fs.mkdirs(oldLogDir);
+    logDir = TEST_UTIL.getTestDir(HConstants.HREGION_LOGDIR_NAME);
+    fs.mkdirs(logDir);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    fs.delete(oldLogDir, true);
+    fs.delete(logDir, true);
   }
 
   /**

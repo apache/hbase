@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
+
 /**
  * Block cache interface.
  * TODO: Add filename or hash of filename to block cache key.
@@ -47,6 +49,19 @@ public interface BlockCache {
    * @return Block or null if block is not in the cache.
    */
   public ByteBuffer getBlock(String blockName);
+
+  /**
+   * Evict block from cache.
+   * @param blockName Block name to evict
+   * @return true if block existed and was evicted, false if not
+   */
+  public boolean evictBlock(String blockName);
+
+  /**
+   * Get the statistics for this block cache.
+   * @return
+   */
+  public CacheStats getStats();
 
   /**
    * Shutdown the cache.

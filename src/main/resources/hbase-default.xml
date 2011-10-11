@@ -422,6 +422,22 @@
       </description>
   </property>
   <property>
+      <name>hbase.rs.cacheblocksonwrite</name>
+      <value>false</value>
+      <description>
+          Whether an HFile block should be added to the block cache when the
+          block is finished.
+      </description>
+  </property>
+  <property>
+      <name>hbase.rs.evictblocksonclose</name>
+      <value>false</value>
+      <description>
+          Specifies if all blocks in an HFile should be evicted from the block
+          cache at the time the file is closed.
+      </description>
+  </property>
+  <property>
     <name>hbase.hash.type</name>
     <value>murmur</value>
     <description>The hashing algorithm for use in HashFunction. Two values are

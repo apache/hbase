@@ -20,10 +20,11 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -48,10 +49,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -283,6 +284,14 @@ public class HFile {
     // May be null if we were passed a stream.
     private Path path = null;
 
+    // Block cache to optionally fill on write
+    private BlockCache blockCache;
+
+    // Additional byte array output stream used to fill block cache
+    private ByteArrayOutputStream baos;
+    private DataOutputStream baosDos;
+    private int blockNumber = 0;
+
     /**
      * Constructor that uses all defaults for compression and block size.
      * @param fs
@@ -292,7 +301,7 @@ public class HFile {
     public Writer(FileSystem fs, Path path)
     throws IOException {
       this(fs, path, DEFAULT_BLOCKSIZE, DEFAULT_BYTES_PER_CHECKSUM,
-		(Compression.Algorithm) null, null);
+		(Compression.Algorithm) null, null, null);
     }
 
     /**
@@ -312,7 +321,7 @@ public class HFile {
       this(fs, path, blocksize, bytesPerChecksum,
         compress == null? DEFAULT_COMPRESSION_ALGORITHM:
           Compression.getCompressionAlgorithmByName(compress),
-        comparator);
+        comparator, null);
     }
 
     /**
@@ -327,7 +336,7 @@ public class HFile {
      */
     public Writer(FileSystem fs, Path path, int blocksize, int bytesPerChecksum,
       Compression.Algorithm compress,
-      final KeyComparator comparator)
+      final KeyComparator comparator, BlockCache blockCache)
     throws IOException {
       this(fs.create(path,
 		FsPermission.getDefault(),
@@ -339,8 +348,9 @@ public class HFile {
           null),
           blocksize, compress, comparator);
       this.closeOutputStream = true;
-      this.name = path.toString();
+      this.name = path.getName();
       this.path = path;
+      this.blockCache = blockCache;
     }
 
     /**
@@ -405,6 +415,17 @@ public class HFile {
 
       writeTime += System.currentTimeMillis() - now;
       writeOps++;
+
+      if (blockCache != null) {
+        baosDos.flush();
+        byte [] bytes = baos.toByteArray();
+        ByteBuffer blockToCache = ByteBuffer.wrap(bytes, DATABLOCKMAGIC.length,
+            bytes.length - DATABLOCKMAGIC.length);
+        String blockName = name + blockNumber;
+        blockCache.cacheBlock(blockName, blockToCache);
+        baosDos.close();
+      }
+      blockNumber++;
     }
 
     /*
@@ -417,6 +438,11 @@ public class HFile {
       this.out = getCompressingStream();
       this.out.write(DATABLOCKMAGIC);
       firstKey = null;
+      if (blockCache != null) {
+        this.baos = new ByteArrayOutputStream();
+        this.baosDos = new DataOutputStream(baos);
+        this.baosDos.write(DATABLOCKMAGIC);
+      }
     }
 
     /*
@@ -519,8 +545,9 @@ public class HFile {
 
     @Override
     public String toString() {
-      return "writer=" + this.name + ", compression=" +
-        this.compressAlgo.getName();
+      return "writer=" + (path != null ? path.toString() : null) +
+          ", name=" + this.name +
+          ", compression=" + this.compressAlgo.getName();
     }
 
     /**
@@ -586,6 +613,13 @@ public class HFile {
       this.lastKeyOffset = koffset;
       this.lastKeyLength = klength;
       this.entryCount ++;
+      // If we are pre-caching blocks on write, fill byte array stream
+      if (blockCache != null) {
+        this.baosDos.writeInt(klength);
+        this.baosDos.writeInt(vlength);
+        this.baosDos.write(key, koffset, klength);
+        this.baosDos.write(value, voffset, vlength);
+      }
     }
 
     /*
@@ -774,10 +808,12 @@ public class HFile {
     // Whether file is from in-memory store
     private boolean inMemory = false;
 
-    // Name for this object used when logging or in toString.  Is either
-    // the result of a toString on the stream or else is toString of passed
-    // file Path plus metadata key/value pairs.
-    protected String name;
+    // Whether blocks of file should be evicted on close of file
+    private final boolean evictOnClose;
+
+    // Path of file and file name to be used for block names
+    private final Path path;
+    private final String name;
 
     // table qualified cfName for this HFile.
     // This is used to report stats on a per-table/CF basis
@@ -837,12 +873,13 @@ public class HFile {
      * @param cache block cache. Pass null if none.
      * @throws IOException
      */
-    public Reader(FileSystem fs, Path path, BlockCache cache, boolean inMemory)
+    public Reader(FileSystem fs, Path path, BlockCache cache, boolean inMemory,
+        boolean evictOnClose)
     throws IOException {
-      this(fs.open(path), fs.getFileStatus(path).getLen(), cache, inMemory);
+      this(path, fs.open(path), fs.getFileStatus(path).getLen(), cache,
+          inMemory, evictOnClose);
       this.closeIStream = true;
-      this.name = path.toString();
-      this.parsePath(this.name);
+      this.parsePath(this.path.toString());
     }
 
     /**
@@ -853,21 +890,26 @@ public class HFile {
      * stream.
      * @param size Length of the stream.
      * @param cache block cache. Pass null if none.
+     * @param inMemory whether blocks should be marked as in-memory in cache
+     * @param evictOnClose whether blocks in cache should be evicted on close
      * @throws IOException
      */
-    public Reader(final FSDataInputStream fsdis, final long size,
-        final BlockCache cache, final boolean inMemory) {
+    public Reader(Path path, final FSDataInputStream fsdis, final long size,
+        final BlockCache cache, final boolean inMemory,
+        final boolean evictOnClose) {
       this.cache = cache;
       this.fileSize = size;
       this.istream = fsdis;
       this.closeIStream = false;
-      this.name = this.istream == null? "": this.istream.toString();
       this.inMemory = inMemory;
+      this.evictOnClose = evictOnClose;
+      this.path = path;
+      this.name = path.getName();
     }
 
     @Override
     public String toString() {
-      return "reader=" + this.name +
+      return "reader=" + this.path.toString() +
           (!isFileInfoLoaded()? "":
             ", compression=" + this.compressAlgo.getName() +
             ", inMemory=" + this.inMemory +
@@ -1329,6 +1371,14 @@ public class HFile {
     }
 
     public void close() throws IOException {
+      if (evictOnClose && this.cache != null) {
+        int numEvicted = 0;
+        for (int i=0; i<blockIndex.count; i++) {
+          if (this.cache.evictBlock(name + i)) numEvicted++;
+        }
+        LOG.debug("On close of file " + name + " evicted " + numEvicted +
+            " block(s) of " + blockIndex.count + " total blocks");
+      }
       if (this.closeIStream && this.istream != null) {
         this.istream.close();
         this.istream = null;
@@ -1337,6 +1387,10 @@ public class HFile {
 
     public String getName() {
       return name;
+    }
+
+    public Path getPath() {
+      return path;
     }
 
     /*
@@ -2060,7 +2114,7 @@ public class HFile {
           continue;
         }
         // create reader and load file info
-        HFile.Reader reader = new HFile.Reader(fs, file, null, false);
+        HFile.Reader reader = new HFile.Reader(fs, file, null, false, false);
 
         Map<byte[],byte[]> fileInfo = reader.loadFileInfo();
         int count = 0;
