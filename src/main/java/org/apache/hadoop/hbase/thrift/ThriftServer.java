@@ -84,6 +84,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import java.nio.ByteBuffer;
+
 /**
  * ThriftServer - this class starts up a Thrift server which implements the
  * Hbase API specified in the Hbase.thrift IDL file.
@@ -108,7 +110,6 @@ public class ThriftServer {
       protected Map<String, HTable> initialValue() {
         return new TreeMap<String, HTable>();
       }
-
     };
 
     /**
@@ -123,7 +124,7 @@ public class ThriftServer {
       byte[][] columns = new byte[cds.length][];
       for (int i = 0; i < cds.length; i++) {
         columns[i] = Bytes.add(cds[i].getName(),
-            KeyValue.COLUMN_FAMILY_DELIM_ARRAY);
+                               KeyValue.COLUMN_FAMILY_DELIM_ARRAY);
       }
       return columns;
     }
@@ -138,7 +139,7 @@ public class ThriftServer {
      * @throws IOError
      */
     protected HTable getTable(final byte[] tableName) throws IOError,
-        IOException {
+      IOException {
       String table = new String(tableName);
       Map<String, HTable> tables = threadLocalTables.get();
       if (!tables.containsKey(table)) {
@@ -192,52 +193,52 @@ public class ThriftServer {
       scannerMap = new HashMap<Integer, ResultScanner>();
     }
 
-    public void enableTable(final byte[] tableName) throws IOError {
+    public void enableTable(ByteBuffer tableName) throws IOError {
       try{
-        admin.enableTable(tableName);
+        admin.enableTable(tableName.array());
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
     }
 
-    public void disableTable(final byte[] tableName) throws IOError{
+    public void disableTable(ByteBuffer tableName) throws IOError{
       try{
-        admin.disableTable(tableName);
+        admin.disableTable(tableName.array());
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
     }
 
-    public boolean isTableEnabled(final byte[] tableName) throws IOError {
+    public boolean isTableEnabled(ByteBuffer tableName) throws IOError {
       try {
-        return HTable.isTableEnabled(tableName);
+        return HTable.isTableEnabled(tableName.array());
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
     }
 
-    public void compact(byte[] tableNameOrRegionName) throws IOError {
+    public void compact(ByteBuffer tableNameOrRegionName) throws IOError {
       try{
-        admin.compact(tableNameOrRegionName);
+        admin.compact(tableNameOrRegionName.array());
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
     }
 
-    public void majorCompact(byte[] tableNameOrRegionName) throws IOError {
+    public void majorCompact(ByteBuffer tableNameOrRegionName) throws IOError {
       try{
-        admin.majorCompact(tableNameOrRegionName);
+        admin.majorCompact(tableNameOrRegionName.array());
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
     }
 
-    public List<byte[]> getTableNames() throws IOError {
+    public List<ByteBuffer> getTableNames() throws IOError {
       try {
         HTableDescriptor[] tables = this.admin.listTables();
-        ArrayList<byte[]> list = new ArrayList<byte[]>(tables.length);
+        List<ByteBuffer> list = new ArrayList<ByteBuffer>(tables.length);
         for (int i = 0; i < tables.length; i++) {
-          list.add(tables[i].getName());
+          list.add(ByteBuffer.wrap(tables[i].getName()));
         }
         return list;
       } catch (IOException e) {
@@ -245,19 +246,19 @@ public class ThriftServer {
       }
     }
 
-    public List<TRegionInfo> getTableRegions(byte[] tableName)
+    public List<TRegionInfo> getTableRegions(ByteBuffer tableName)
     throws IOError {
       try{
-        HTable table = getTable(tableName);
+        HTable table = getTable(tableName.array());
         Map<HRegionInfo, HServerAddress> regionsInfo = table.getRegionsInfo();
         List<TRegionInfo> regions = new ArrayList<TRegionInfo>();
 
         for (HRegionInfo regionInfo : regionsInfo.keySet()){
           TRegionInfo region = new TRegionInfo();
-          region.startKey = regionInfo.getStartKey();
-          region.endKey = regionInfo.getEndKey();
+          region.setStartKey(regionInfo.getStartKey());
+          region.setEndKey(regionInfo.getEndKey());
           region.id = regionInfo.getRegionId();
-          region.name = regionInfo.getRegionName();
+          region.setName(regionInfo.getRegionName());
           region.version = regionInfo.getVersion();
           regions.add(region);
         }
@@ -268,13 +269,13 @@ public class ThriftServer {
     }
 
     @Deprecated
-    public List<TCell> get(byte[] tableName, byte[] row, byte[] column)
+    public List<TCell> get(ByteBuffer tableName, ByteBuffer row, ByteBuffer column)
         throws IOError {
-      byte [][] famAndQf = KeyValue.parseColumn(column);
+      byte [][] famAndQf = KeyValue.parseColumn(column.array());
       if(famAndQf.length == 1) {
-        return get(tableName, row, famAndQf[0], new byte[0]);
+        return get(tableName.array(), row.array(), famAndQf[0], new byte[0]);
       }
-      return get(tableName, row, famAndQf[0], famAndQf[1]);
+      return get(tableName.array(), row.array(), famAndQf[0], famAndQf[1]);
     }
 
     public List<TCell> get(byte [] tableName, byte [] row, byte [] family,
@@ -295,20 +296,20 @@ public class ThriftServer {
     }
 
     @Deprecated
-    public List<TCell> getVer(byte[] tableName, byte[] row,
-        byte[] column, int numVersions) throws IOError {
-      byte [][] famAndQf = KeyValue.parseColumn(column);
+    public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row,
+                              ByteBuffer column, int numVersions) throws IOError {
+      byte [][] famAndQf = KeyValue.parseColumn(column.array());
       if(famAndQf.length == 1) {
         return getVer(tableName, row, famAndQf[0], new byte[0], numVersions);
       }
       return getVer(tableName, row, famAndQf[0], famAndQf[1], numVersions);
     }
 
-    public List<TCell> getVer(byte [] tableName, byte [] row, byte [] family,
-        byte [] qualifier, int numVersions) throws IOError {
+    public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row, byte [] family,
+                              byte [] qualifier, int numVersions) throws IOError {
       try {
-        HTable table = getTable(tableName);
-        Get get = new Get(row);
+        HTable table = getTable(tableName.array());
+        Get get = new Get(row.array());
         get.addColumn(family, qualifier);
         get.setMaxVersions(numVersions);
         Result result = table.get(get);
@@ -319,9 +320,9 @@ public class ThriftServer {
     }
 
     @Deprecated
-    public List<TCell> getVerTs(byte[] tableName, byte[] row,
-        byte[] column, long timestamp, int numVersions) throws IOError {
-      byte [][] famAndQf = KeyValue.parseColumn(column);
+    public List<TCell> getVerTs(ByteBuffer tableName, ByteBuffer row,
+                                ByteBuffer column, long timestamp, int numVersions) throws IOError {
+      byte [][] famAndQf = KeyValue.parseColumn(column.array());
       if(famAndQf.length == 1) {
         return getVerTs(tableName, row, famAndQf[0], new byte[0], timestamp,
             numVersions);
@@ -330,11 +331,11 @@ public class ThriftServer {
           numVersions);
     }
 
-    public List<TCell> getVerTs(byte [] tableName, byte [] row, byte [] family,
+    public List<TCell> getVerTs(ByteBuffer tableName, ByteBuffer row, byte [] family,
         byte [] qualifier, long timestamp, int numVersions) throws IOError {
       try {
-        HTable table = getTable(tableName);
-        Get get = new Get(row);
+        HTable table = getTable(tableName.array());
+        Get get = new Get(row.array());
         get.addColumn(family, qualifier);
         get.setTimeRange(Long.MIN_VALUE, timestamp);
         get.setMaxVersions(numVersions);
@@ -345,42 +346,42 @@ public class ThriftServer {
       }
     }
 
-    public List<TRowResult> getRow(byte[] tableName, byte[] row)
-        throws IOError {
+    public List<TRowResult> getRow(ByteBuffer tableName, ByteBuffer row)
+      throws IOError {
       return getRowWithColumnsTs(tableName, row, null,
                                  HConstants.LATEST_TIMESTAMP);
     }
 
-    public List<TRowResult> getRowWithColumns(byte[] tableName, byte[] row,
-        List<byte[]> columns) throws IOError {
+    public List<TRowResult> getRowWithColumns(ByteBuffer tableName, ByteBuffer row,
+                                              List<ByteBuffer> columns) throws IOError {
       return getRowWithColumnsTs(tableName, row, columns,
                                  HConstants.LATEST_TIMESTAMP);
     }
 
-    public List<TRowResult> getRowTs(byte[] tableName, byte[] row,
-        long timestamp) throws IOError {
-      return getRowWithColumnsTs(tableName, row, null,
-                                 timestamp);
+    public List<TRowResult> getRowTs(ByteBuffer tableName, ByteBuffer row,
+                                     long timestamp) throws IOError {
+      return getRowWithColumnsTs(tableName, row, null, timestamp);
     }
 
-    public List<TRowResult> getRowWithColumnsTs(byte[] tableName, byte[] row,
-        List<byte[]> columns, long timestamp) throws IOError {
+    public List<TRowResult> getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row,
+                                                List<ByteBuffer> columns, long timestamp)
+      throws IOError {
       try {
-        HTable table = getTable(tableName);
+        HTable table = getTable(tableName.array());
         if (columns == null) {
-          Get get = new Get(row);
+          Get get = new Get(row.array());
           get.setTimeRange(Long.MIN_VALUE, timestamp);
           Result result = table.get(get);
           return ThriftUtilities.rowResultFromHBase(result);
         }
-        byte[][] columnArr = columns.toArray(new byte[columns.size()][]);
-        Get get = new Get(row);
-        for(byte [] column : columnArr) {
-          byte [][] famAndQf = KeyValue.parseColumn(column);
+        ByteBuffer[] columnArr = columns.toArray(new ByteBuffer[columns.size()]);
+        Get get = new Get(row.array());
+        for(ByteBuffer column : columnArr) {
+          byte [][] famAndQf = KeyValue.parseColumn(column.array());
           if (famAndQf.length == 1) {
               get.addFamily(famAndQf[0]);
           } else {
-              get.addColumn(famAndQf[0], famAndQf[1]);
+            get.addColumn(famAndQf[0], famAndQf[1]);
           }
         }
         get.setTimeRange(Long.MIN_VALUE, timestamp);
@@ -391,17 +392,17 @@ public class ThriftServer {
       }
     }
 
-    public void deleteAll(byte[] tableName, byte[] row, byte[] column)
-        throws IOError {
+    public void deleteAll(ByteBuffer tableName, ByteBuffer row, ByteBuffer column)
+      throws IOError {
       deleteAllTs(tableName, row, column, HConstants.LATEST_TIMESTAMP);
     }
 
-    public void deleteAllTs(byte[] tableName, byte[] row, byte[] column,
-        long timestamp) throws IOError {
+    public void deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column,
+                            long timestamp) throws IOError {
       try {
-        HTable table = getTable(tableName);
-        Delete delete  = new Delete(row);
-        byte [][] famAndQf = KeyValue.parseColumn(column);
+        HTable table = getTable(tableName.array());
+        Delete delete  = new Delete(row.array());
+        byte [][] famAndQf = KeyValue.parseColumn(column.array());
         if (famAndQf.length == 1) {
           delete.deleteFamily(famAndQf[0], timestamp);
         } else {
@@ -414,29 +415,29 @@ public class ThriftServer {
       }
     }
 
-    public void deleteAllRow(byte[] tableName, byte[] row) throws IOError {
+    public void deleteAllRow(ByteBuffer tableName, ByteBuffer row) throws IOError {
       deleteAllRowTs(tableName, row, HConstants.LATEST_TIMESTAMP);
     }
 
-    public void deleteAllRowTs(byte[] tableName, byte[] row, long timestamp)
-        throws IOError {
+    public void deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp)
+      throws IOError {
       try {
-        HTable table = getTable(tableName);
-        Delete delete  = new Delete(row, timestamp, null);
+        HTable table = getTable(tableName.array());
+        Delete delete  = new Delete(row.array(), timestamp, null);
         table.delete(delete);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
     }
 
-    public void createTable(byte[] tableName,
-        List<ColumnDescriptor> columnFamilies) throws IOError,
-        IllegalArgument, AlreadyExists {
+    public void createTable(ByteBuffer tableName,
+                            List<ColumnDescriptor> columnFamilies) throws IOError,
+      IllegalArgument, AlreadyExists {
       try {
-        if (admin.tableExists(tableName)) {
+        if (admin.tableExists(tableName.array())) {
           throw new AlreadyExists("table name already in use");
         }
-        HTableDescriptor desc = new HTableDescriptor(tableName);
+        HTableDescriptor desc = new HTableDescriptor(tableName.array());
         for (ColumnDescriptor col : columnFamilies) {
           HColumnDescriptor colDesc = ThriftUtilities.colDescFromThrift(col);
           desc.addFamily(colDesc);
@@ -449,37 +450,38 @@ public class ThriftServer {
       }
     }
 
-    public void deleteTable(byte[] tableName) throws IOError {
+    public void deleteTable(ByteBuffer tableName) throws IOError {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("deleteTable: table=" + new String(tableName));
+        LOG.debug("deleteTable: table=" + new String(tableName.array()));
       }
       try {
-        if (!admin.tableExists(tableName)) {
+        if (!admin.tableExists(tableName.array())) {
           throw new IOError("table does not exist");
         }
-        admin.deleteTable(tableName);
+        admin.deleteTable(tableName.array());
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
     }
 
-    public void mutateRow(byte[] tableName, byte[] row,
-        List<Mutation> mutations) throws IOError, IllegalArgument {
+    public void mutateRow(ByteBuffer tableName, ByteBuffer row,
+                          List<Mutation> mutations) throws IOError, IllegalArgument {
       mutateRowTs(tableName, row, mutations, HConstants.LATEST_TIMESTAMP);
     }
 
-    public void mutateRowTs(byte[] tableName, byte[] row,
-        List<Mutation> mutations, long timestamp) throws IOError, IllegalArgument {
+    public void mutateRowTs(ByteBuffer tableName, ByteBuffer row,
+                            List<Mutation> mutations, long timestamp)
+      throws IOError, IllegalArgument {
       HTable table = null;
       try {
-        table = getTable(tableName);
-        Put put = new Put(row, timestamp, null);
+        table = getTable(tableName.array());
+        Put put = new Put(row.array(), timestamp, null);
 
-        Delete delete = new Delete(row);
+        Delete delete = new Delete(row.array());
 
         // I apologize for all this mess :)
         for (Mutation m : mutations) {
-          byte[][] famAndQf = KeyValue.parseColumn(m.column);
+          byte[][] famAndQf = KeyValue.parseColumn(m.column.array());
           if (m.isDelete) {
             if (famAndQf.length == 1) {
               delete.deleteFamily(famAndQf[0], timestamp);
@@ -488,9 +490,9 @@ public class ThriftServer {
             }
           } else {
             if(famAndQf.length == 1) {
-              put.add(famAndQf[0], new byte[0], m.value);
+              put.add(famAndQf[0], new byte[0], m.value.array());
             } else {
-              put.add(famAndQf[0], famAndQf[1], m.value);
+              put.add(famAndQf[0], famAndQf[1], m.value.array());
             }
           }
         }
@@ -505,23 +507,25 @@ public class ThriftServer {
       }
     }
 
-    public void mutateRows(byte[] tableName, List<BatchMutation> rowBatches)
-        throws IOError, IllegalArgument, TException {
+    public void mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches)
+      throws IOError, IllegalArgument, TException {
       mutateRowsTs(tableName, rowBatches, HConstants.LATEST_TIMESTAMP);
     }
 
-    public void mutateRowsTs(byte[] tableName, List<BatchMutation> rowBatches, long timestamp)
-        throws IOError, IllegalArgument, TException {
+    public void mutateRowsTs(ByteBuffer tableName, List<BatchMutation> rowBatches,
+                             long timestamp)
+      throws IOError, IllegalArgument, TException {
       List<Put> puts = new ArrayList<Put>();
       List<Delete> deletes = new ArrayList<Delete>();
 
       for (BatchMutation batch : rowBatches) {
-        byte[] row = batch.row;
+        ByteBuffer row = batch.row;
         List<Mutation> mutations = batch.mutations;
-        Delete delete = new Delete(row);
-        Put put = new Put(row, timestamp, null);
+
+        Delete delete = new Delete(row.array());
+        Put put = new Put(row.array(), timestamp, null);
         for (Mutation m : mutations) {
-          byte[][] famAndQf = KeyValue.parseColumn(m.column);
+          byte[][] famAndQf = KeyValue.parseColumn(m.column.array());
           if (m.isDelete) {
             // no qualifier, family only.
             if (famAndQf.length == 1) {
@@ -531,9 +535,9 @@ public class ThriftServer {
             }
           } else {
             if(famAndQf.length == 1) {
-              put.add(famAndQf[0], new byte[0], m.value);
+              put.add(famAndQf[0], new byte[0], m.value.array());
             } else {
-              put.add(famAndQf[0], famAndQf[1], m.value);
+              put.add(famAndQf[0], famAndQf[1], m.value.array());
             }
           }
         }
@@ -545,7 +549,7 @@ public class ThriftServer {
 
       HTable table = null;
       try {
-        table = getTable(tableName);
+        table = getTable(tableName.array());
         if (!puts.isEmpty())
           table.put(puts);
         for (Delete del : deletes) {
@@ -559,18 +563,19 @@ public class ThriftServer {
     }
 
     @Deprecated
-    public long atomicIncrement(byte[] tableName, byte[] row, byte[] column,
-        long amount) throws IOError, IllegalArgument, TException {
-      byte [][] famAndQf = KeyValue.parseColumn(column);
+    public long atomicIncrement(ByteBuffer tableName, ByteBuffer row, ByteBuffer column,
+                                long amount) throws IOError, IllegalArgument, TException {
+      byte [][] famAndQf = KeyValue.parseColumn(column.array());
       if(famAndQf.length == 1) {
-        return atomicIncrement(tableName, row, famAndQf[0], new byte[0],
-            amount);
+        return atomicIncrement(tableName.array(), row.array(), famAndQf[0], new byte[0],
+                               amount);
       }
-      return atomicIncrement(tableName, row, famAndQf[0], famAndQf[1], amount);
+      return atomicIncrement(tableName.array(), row.array(), famAndQf[0], famAndQf[1],
+                             amount);
     }
 
     public long atomicIncrement(byte [] tableName, byte [] row, byte [] family,
-        byte [] qualifier, long amount)
+                                byte [] qualifier, long amount)
     throws IOError, IllegalArgument, TException {
       HTable table;
       try {
@@ -609,38 +614,41 @@ public class ThriftServer {
         }
         return ThriftUtilities.rowResultFromHBase(results);
     }
+
     public List<TRowResult> scannerGet(int id) throws IllegalArgument, IOError {
         return scannerGetList(id,1);
     }
-    public int scannerOpen(byte[] tableName, byte[] startRow,
-            List<byte[]> columns) throws IOError {
-        try {
-          HTable table = getTable(tableName);
-          Scan scan = new Scan(startRow);
-          if(columns != null && columns.size() != 0) {
-            for(byte [] column : columns) {
-              byte [][] famQf = KeyValue.parseColumn(column);
-              if(famQf.length == 1) {
-                scan.addFamily(famQf[0]);
-              } else {
-                scan.addColumn(famQf[0], famQf[1]);
-              }
+
+    public int scannerOpen(ByteBuffer tableName, ByteBuffer startRow,
+                           List<ByteBuffer> columns) throws IOError {
+      try {
+        HTable table = getTable(tableName.array());
+        Scan scan = new Scan(startRow.array());
+        if(columns != null && columns.size() != 0) {
+          for(ByteBuffer column : columns) {
+            byte [][] famQf = KeyValue.parseColumn(column.array());
+            if(famQf.length == 1) {
+              scan.addFamily(famQf[0]);
+            } else {
+              scan.addColumn(famQf[0], famQf[1]);
             }
           }
-          return addScanner(table.getScanner(scan));
-        } catch (IOException e) {
-          throw new IOError(e.getMessage());
         }
+        return addScanner(table.getScanner(scan));
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
     }
 
-    public int scannerOpenWithStop(byte[] tableName, byte[] startRow,
-        byte[] stopRow, List<byte[]> columns) throws IOError, TException {
+    public int scannerOpenWithStop(ByteBuffer tableName, ByteBuffer startRow,
+                                   ByteBuffer stopRow, List<ByteBuffer> columns)
+      throws IOError, TException {
       try {
-        HTable table = getTable(tableName);
-        Scan scan = new Scan(startRow, stopRow);
+        HTable table = getTable(tableName.array());
+        Scan scan = new Scan(startRow.array(), stopRow.array());
         if(columns != null && columns.size() != 0) {
-          for(byte [] column : columns) {
-            byte [][] famQf = KeyValue.parseColumn(column);
+          for(ByteBuffer column : columns) {
+            byte [][] famQf = KeyValue.parseColumn(column.array());
             if(famQf.length == 1) {
               scan.addFamily(famQf[0]);
             } else {
@@ -655,16 +663,17 @@ public class ThriftServer {
     }
 
     @Override
-    public int scannerOpenWithPrefix(byte[] tableName, byte[] startAndPrefix, List<byte[]> columns) throws IOError, TException {
+    public int scannerOpenWithPrefix(ByteBuffer tableName, ByteBuffer startAndPrefix,
+                                     List<ByteBuffer> columns) throws IOError, TException {
       try {
-        HTable table = getTable(tableName);
-        Scan scan = new Scan(startAndPrefix);
+        HTable table = getTable(tableName.array());
+        Scan scan = new Scan(startAndPrefix.array());
         Filter f = new WhileMatchFilter(
-            new PrefixFilter(startAndPrefix));
+          new PrefixFilter(startAndPrefix.array()));
         scan.setFilter(f);
         if(columns != null && columns.size() != 0) {
-          for(byte [] column : columns) {
-            byte [][] famQf = KeyValue.parseColumn(column);
+          for(ByteBuffer column : columns) {
+            byte [][] famQf = KeyValue.parseColumn(column.array());
             if(famQf.length == 1) {
               scan.addFamily(famQf[0]);
             } else {
@@ -678,15 +687,16 @@ public class ThriftServer {
       }
     }
 
-    public int scannerOpenTs(byte[] tableName, byte[] startRow,
-        List<byte[]> columns, long timestamp) throws IOError, TException {
+    public int scannerOpenTs(ByteBuffer tableName, ByteBuffer startRow,
+                             List<ByteBuffer> columns, long timestamp)
+      throws IOError, TException {
       try {
-        HTable table = getTable(tableName);
-        Scan scan = new Scan(startRow);
+        HTable table = getTable(tableName.array());
+        Scan scan = new Scan(startRow.array());
         scan.setTimeRange(Long.MIN_VALUE, timestamp);
-        if(columns != null && columns.size() != 0) {
-          for(byte [] column : columns) {
-            byte [][] famQf = KeyValue.parseColumn(column);
+        if(columns != null && !columns.isEmpty()) {
+          for(ByteBuffer column : columns) {
+            byte [][] famQf = KeyValue.parseColumn(column.array());
             if(famQf.length == 1) {
               scan.addFamily(famQf[0]);
             } else {
@@ -700,16 +710,17 @@ public class ThriftServer {
       }
     }
 
-    public int scannerOpenWithStopTs(byte[] tableName, byte[] startRow,
-        byte[] stopRow, List<byte[]> columns, long timestamp)
-        throws IOError, TException {
+    public int scannerOpenWithStopTs(ByteBuffer tableName, ByteBuffer startRow,
+                                     ByteBuffer stopRow, List<ByteBuffer> columns,
+                                     long timestamp)
+      throws IOError, TException {
       try {
-        HTable table = getTable(tableName);
-        Scan scan = new Scan(startRow, stopRow);
+        HTable table = getTable(tableName.array());
+        Scan scan = new Scan(startRow.array(), stopRow.array());
         scan.setTimeRange(Long.MIN_VALUE, timestamp);
-        if(columns != null && columns.size() != 0) {
-          for(byte [] column : columns) {
-            byte [][] famQf = KeyValue.parseColumn(column);
+        if(columns != null && !columns.isEmpty()) {
+          for(ByteBuffer column : columns) {
+            byte [][] famQf = KeyValue.parseColumn(column.array());
             if(famQf.length == 1) {
               scan.addFamily(famQf[0]);
             } else {
@@ -724,13 +735,13 @@ public class ThriftServer {
       }
     }
 
-    public Map<byte[], ColumnDescriptor> getColumnDescriptors(
-        byte[] tableName) throws IOError, TException {
+    public Map<ByteBuffer, ColumnDescriptor> getColumnDescriptors(ByteBuffer tableName)
+      throws IOError, TException {
       try {
-        TreeMap<byte[], ColumnDescriptor> columns =
-          new TreeMap<byte[], ColumnDescriptor>(Bytes.BYTES_COMPARATOR);
+        Map<ByteBuffer, ColumnDescriptor> columns =
+          new TreeMap<ByteBuffer, ColumnDescriptor>();
 
-        HTable table = getTable(tableName);
+        HTable table = getTable(tableName.array());
         HTableDescriptor desc = table.getTableDescriptor();
 
         for (HColumnDescriptor e : desc.getFamilies()) {
@@ -757,6 +768,7 @@ public class ThriftServer {
             true);
       System.exit(exitCode);
   }
+
 
   private static final String DEFAULT_LISTEN_PORT = "9090";
 

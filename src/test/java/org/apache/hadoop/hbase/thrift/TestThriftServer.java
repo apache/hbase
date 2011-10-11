@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,16 +38,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestThriftServer extends HBaseClusterTestCase {
 
   // Static names for tables, columns, rows, and values
-  private static byte[] tableAname = Bytes.toBytes("tableA");
-  private static byte[] tableBname = Bytes.toBytes("tableB");
-  private static byte[] columnAname = Bytes.toBytes("columnA:");
-  private static byte[] columnBname = Bytes.toBytes("columnB:");
-  private static byte[] rowAname = Bytes.toBytes("rowA");
-  private static byte[] rowBname = Bytes.toBytes("rowB");
-  private static byte[] valueAname = Bytes.toBytes("valueA");
-  private static byte[] valueBname = Bytes.toBytes("valueB");
-  private static byte[] valueCname = Bytes.toBytes("valueC");
-  private static byte[] valueDname = Bytes.toBytes("valueD");
+  private static ByteBuffer tableAname = ByteBuffer.wrap(Bytes.toBytes("tableA"));
+  private static ByteBuffer tableBname = ByteBuffer.wrap(Bytes.toBytes("tableB"));
+  private static ByteBuffer columnAname = ByteBuffer.wrap(Bytes.toBytes("columnA:"));
+  private static ByteBuffer columnBname = ByteBuffer.wrap(Bytes.toBytes("columnB:"));
+  private static ByteBuffer rowAname = ByteBuffer.wrap(Bytes.toBytes("rowA"));
+  private static ByteBuffer rowBname = ByteBuffer.wrap(Bytes.toBytes("rowB"));
+  private static ByteBuffer valueAname = ByteBuffer.wrap(Bytes.toBytes("valueA"));
+  private static ByteBuffer valueBname = ByteBuffer.wrap(Bytes.toBytes("valueB"));
+  private static ByteBuffer valueCname = ByteBuffer.wrap(Bytes.toBytes("valueC"));
+  private static ByteBuffer valueDname = ByteBuffer.wrap(Bytes.toBytes("valueD"));
 
   /**
    * Runs all of the tests under a single JUnit test method.  We
@@ -112,12 +113,10 @@ public class TestThriftServer extends HBaseClusterTestCase {
     handler.mutateRow(tableAname, rowAname, getMutations());
 
     // Assert that the changes were made
-    assertTrue(Bytes.equals(valueAname,
-      handler.get(tableAname, rowAname, columnAname).get(0).value));
+    assertEquals(valueAname, handler.get(tableAname, rowAname, columnAname).get(0).value);
     TRowResult rowResult1 = handler.getRow(tableAname, rowAname).get(0);
-    assertTrue(Bytes.equals(rowAname, rowResult1.row));
-    assertTrue(Bytes.equals(valueBname,
-      rowResult1.columns.get(columnBname).value));
+    assertEquals(rowAname, rowResult1.row);
+    assertEquals(valueBname, rowResult1.columns.get(columnBname).value);
 
     // Apply a few BatchMutations for rowA and rowB
     // rowAmutations.add(new Mutation(true, columnAname, null));
@@ -132,16 +131,16 @@ public class TestThriftServer extends HBaseClusterTestCase {
     // Assert that changes were made to rowA
     List<TCell> cells = handler.get(tableAname, rowAname, columnAname);
     assertFalse(cells.size() > 0);
-    assertTrue(Bytes.equals(valueCname, handler.get(tableAname, rowAname, columnBname).get(0).value));
+    assertEquals(valueCname, handler.get(tableAname, rowAname, columnBname).get(0).value);
     List<TCell> versions = handler.getVer(tableAname, rowAname, columnBname, MAXVERSIONS);
-    assertTrue(Bytes.equals(valueCname, versions.get(0).value));
-    assertTrue(Bytes.equals(valueBname, versions.get(1).value));
+    assertEquals(valueCname, versions.get(0).value);
+    assertEquals(valueBname, versions.get(1).value);
 
     // Assert that changes were made to rowB
     TRowResult rowResult2 = handler.getRow(tableAname, rowBname).get(0);
-    assertTrue(Bytes.equals(rowBname, rowResult2.row));
-    assertTrue(Bytes.equals(valueCname, rowResult2.columns.get(columnAname).value));
-	  assertTrue(Bytes.equals(valueDname, rowResult2.columns.get(columnBname).value));
+    assertEquals(rowBname, rowResult2.row);
+    assertEquals(valueCname, rowResult2.columns.get(columnAname).value);
+    assertEquals(valueDname, rowResult2.columns.get(columnBname).value);
 
     // Apply some deletes
     handler.deleteAll(tableAname, rowAname, columnBname);
@@ -189,29 +188,29 @@ public class TestThriftServer extends HBaseClusterTestCase {
 
     // Assert that the timestamp-related methods retrieve the correct data
     assertEquals(2, handler.getVerTs(tableAname, rowAname, columnBname, time2,
-      MAXVERSIONS).size());
+                                     MAXVERSIONS).size());
     assertEquals(1, handler.getVerTs(tableAname, rowAname, columnBname, time1,
-      MAXVERSIONS).size());
+                                     MAXVERSIONS).size());
 
     TRowResult rowResult1 = handler.getRowTs(tableAname, rowAname, time1).get(0);
     TRowResult rowResult2 = handler.getRowTs(tableAname, rowAname, time2).get(0);
     // columnA was completely deleted
     //assertTrue(Bytes.equals(rowResult1.columns.get(columnAname).value, valueAname));
-    assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueBname));
-    assertTrue(Bytes.equals(rowResult2.columns.get(columnBname).value, valueCname));
+    assertEquals(rowResult1.columns.get(columnBname).value, valueBname);
+    assertEquals(rowResult2.columns.get(columnBname).value, valueCname);
 
     // ColumnAname has been deleted, and will never be visible even with a getRowTs()
     assertFalse(rowResult2.columns.containsKey(columnAname));
 
-    List<byte[]> columns = new ArrayList<byte[]>();
+    List<ByteBuffer> columns = new ArrayList<ByteBuffer>();
     columns.add(columnBname);
 
     rowResult1 = handler.getRowWithColumns(tableAname, rowAname, columns).get(0);
-    assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueCname));
+    assertEquals(rowResult1.columns.get(columnBname).value, valueCname);
     assertFalse(rowResult1.columns.containsKey(columnAname));
 
     rowResult1 = handler.getRowWithColumnsTs(tableAname, rowAname, columns, time1).get(0);
-    assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueBname));
+    assertEquals(rowResult1.columns.get(columnBname).value, valueBname);
     assertFalse(rowResult1.columns.containsKey(columnAname));
 
     // Apply some timestamped deletes
@@ -228,7 +227,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
     assertEquals(1, size);
 
     // should be available....
-    assertTrue(Bytes.equals(handler.get(tableAname, rowAname, columnBname).get(0).value, valueCname));
+    assertEquals(handler.get(tableAname, rowAname, columnBname).get(0).value, valueCname);
 
     assertEquals(0, handler.getRow(tableAname, rowBname).size());
 
@@ -265,18 +264,18 @@ public class TestThriftServer extends HBaseClusterTestCase {
     // Test a scanner on all rows and all columns, no timestamp
     int scanner1 = handler.scannerOpen(tableAname, rowAname, getColumnList(true, true));
     TRowResult rowResult1a = handler.scannerGet(scanner1).get(0);
-    assertTrue(Bytes.equals(rowResult1a.row, rowAname));
+    assertEquals(rowResult1a.row, rowAname);
     // This used to be '1'.  I don't know why when we are asking for two columns
     // and when the mutations above would seem to add two columns to the row.
     // -- St.Ack 05/12/2009
     assertEquals(rowResult1a.columns.size(), 1);
-    assertTrue(Bytes.equals(rowResult1a.columns.get(columnBname).value, valueCname));
+    assertEquals(rowResult1a.columns.get(columnBname).value, valueCname);
 
     TRowResult rowResult1b = handler.scannerGet(scanner1).get(0);
-    assertTrue(Bytes.equals(rowResult1b.row, rowBname));
+    assertEquals(rowResult1b.row, rowBname);
     assertEquals(rowResult1b.columns.size(), 2);
-    assertTrue(Bytes.equals(rowResult1b.columns.get(columnAname).value, valueCname));
-    assertTrue(Bytes.equals(rowResult1b.columns.get(columnBname).value, valueDname));
+    assertEquals(rowResult1b.columns.get(columnAname).value, valueCname);
+    assertEquals(rowResult1b.columns.get(columnBname).value, valueDname);
     closeScanner(scanner1, handler);
 
     // Test a scanner on all rows and all columns, with timestamp
@@ -285,20 +284,20 @@ public class TestThriftServer extends HBaseClusterTestCase {
     assertEquals(rowResult2a.columns.size(), 1);
     // column A deleted, does not exist.
     //assertTrue(Bytes.equals(rowResult2a.columns.get(columnAname).value, valueAname));
-    assertTrue(Bytes.equals(rowResult2a.columns.get(columnBname).value, valueBname));
+    assertEquals(rowResult2a.columns.get(columnBname).value, valueBname);
     closeScanner(scanner2, handler);
 
     // Test a scanner on the first row and first column only, no timestamp
     int scanner3 = handler.scannerOpenWithStop(tableAname, rowAname, rowBname,
-        getColumnList(true, false));
+                                               getColumnList(true, false));
     closeScanner(scanner3, handler);
 
     // Test a scanner on the first row and second column only, with timestamp
     int scanner4 = handler.scannerOpenWithStopTs(tableAname, rowAname, rowBname,
-        getColumnList(false, true), time1);
+                                                 getColumnList(false, true), time1);
     TRowResult rowResult4a = handler.scannerGet(scanner4).get(0);
     assertEquals(rowResult4a.columns.size(), 1);
-    assertTrue(Bytes.equals(rowResult4a.columns.get(columnBname).value, valueBname));
+    assertEquals(rowResult4a.columns.get(columnBname).value, valueBname);
 
     // Teardown
     handler.disableTable(tableAname);
@@ -320,7 +319,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
 
     // A slightly customized ColumnDescriptor (only 2 versions)
     ColumnDescriptor cDescB = new ColumnDescriptor(columnBname, 2, "NONE",
-        false, "NONE", 0, 0, false, -1);
+                                                   false, "NONE", 0, 0, false, -1);
     cDescriptors.add(cDescB);
 
     return cDescriptors;
@@ -332,8 +331,8 @@ public class TestThriftServer extends HBaseClusterTestCase {
    * @param includeB whether or not to include columnB
    * @return a List of column names for use in retrieving a scanner
    */
-  private List<byte[]> getColumnList(boolean includeA, boolean includeB) {
-    List<byte[]> columnList = new ArrayList<byte[]>();
+  private List<ByteBuffer> getColumnList(boolean includeA, boolean includeB) {
+    List<ByteBuffer> columnList = new ArrayList<ByteBuffer>();
     if (includeA) columnList.add(columnAname);
     if (includeB) columnList.add(columnBname);
     return columnList;
