@@ -162,7 +162,7 @@ public class StoreFile {
    * this files id.  Group 2 the referenced region name, etc.
    */
   private static final Pattern REF_NAME_PARSER =
-    Pattern.compile("^(\\d+)(?:\\.(.+))?$");
+    Pattern.compile("^([0-9a-f]+)(?:\\.(.+))?$");
 
   // StoreFile.Reader
   private volatile Reader reader;
