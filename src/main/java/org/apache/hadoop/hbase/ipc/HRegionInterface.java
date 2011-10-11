@@ -19,9 +19,13 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.Restartable;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiPut;
@@ -32,16 +36,13 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
-import java.io.IOException;
-import java.util.List;
-
 /**
  * Clients interact with HRegionServers using a handle to the HRegionInterface.
  *
  * <p>NOTE: if you change the interface, you must change the RPC version
  * number in HBaseRPCProtocolVersion
  */
-public interface HRegionInterface extends HBaseRPCProtocolVersion {
+public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
   /**
    * Get metainfo about an HRegion
    *

@@ -180,7 +180,19 @@ case $startStop in
     thiscmd=$0
     args=$@
     # stop the command
-    $thiscmd --config "${HBASE_CONF_DIR}" stop $command $args &
+    case $command in
+      (regionserver)
+        echo -n "Stopping regionserver for a restart"
+        $bin/hbase org.jruby.Main $bin/restart_regionserver.rb &
+        while kill -0 `cat $pid` > /dev/null 2>&1; do
+          echo -n "."
+          sleep 1;
+        done
+        ;;
+      (*)
+        $thiscmd --config "${HBASE_CONF_DIR}" stop $command $args &
+        ;;
+    esac
     wait_until_done $!
     # start the command
     $thiscmd --config "${HBASE_CONF_DIR}" start $command $args &

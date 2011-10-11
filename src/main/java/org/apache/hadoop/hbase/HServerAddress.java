@@ -19,14 +19,14 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.WritableComparable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * HServerAddress is a "label" for a HBase server made of host and port number.
@@ -154,6 +154,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   // Writable
   //
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     String bindAddress = in.readUTF();
     int port = in.readInt();
@@ -168,6 +169,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     }
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     if (address == null) {
       out.writeUTF("");
@@ -182,6 +184,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   // Comparable
   //
 
+  @Override
   public int compareTo(HServerAddress o) {
     // Addresses as Strings may not compare though address is for the one
     // server with only difference being that one address has hostname

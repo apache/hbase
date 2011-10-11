@@ -19,6 +19,19 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -41,18 +54,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo,
@@ -273,6 +274,9 @@ public class ServerManager {
       if (msgs[0].isType(HMsg.Type.MSG_REPORT_EXITING)) {
         processRegionServerExit(info, msgs);
         return HMsg.EMPTY_HMSG_ARRAY;
+      } else if (msgs[0].isType(HMsg.Type.MSG_REPORT_EXITING_FOR_RESTART)) {
+        processRegionServerRestart(serverInfo, msgs);
+        return HMsg.EMPTY_HMSG_ARRAY;
       } else if (msgs[0].isType(HMsg.Type.MSG_REPORT_QUIESCED)) {
         LOG.info("Region server " + info.getServerName() + " quiesced");
         this.quiescedServers.incrementAndGet();
@@ -334,6 +338,42 @@ public class ServerManager {
     } else {
       return processRegionServerAllsWell(info, mostLoadedRegions, msgs);
     }
+  }
+
+  /**
+   * Region server is going down for a restart, trying to preserve locality of
+   * its regions for a fixed amount of time.
+   *
+   * @param serverInfo
+   *          the server that is restarting
+   * @param msgs
+   *          the initial restart message, followed by the regions it was
+   *          serving
+   */
+  private void processRegionServerRestart(final HServerInfo serverInfo,
+      HMsg msgs[]) {
+
+    Set<HRegionInfo> regions = new TreeSet<HRegionInfo>();
+
+    // skipping first message
+    for (int i = 1; i < msgs.length; ++i) {
+      if (msgs[i].getRegionInfo().isMetaRegion()
+          || msgs[i].getRegionInfo().isRootRegion()) {
+        continue;
+      }
+      regions.add(msgs[i].getRegionInfo());
+    }
+
+    LOG.info("Region server " + serverInfo.getServerName()
+        + ": MSG_REPORT_EXITING_FOR_RESTART");
+
+    // set info for restarting -- maybe not do this if regions is empty...
+    // CRUCIAL that this is done before calling processRegionServerExit
+    master.getRegionManager().addRegionServerForRestart(serverInfo, regions);
+
+    // process normal HRegion closing
+    msgs[0] = new HMsg(HMsg.Type.MSG_REPORT_EXITING);
+    processRegionServerExit(serverInfo, msgs);
   }
 
   /*
@@ -721,9 +761,24 @@ public class ServerManager {
     int numServers = 0;
     double averageLoad = 0.0;
     synchronized (serversToLoad) {
-      numServers = serversToLoad.size();
-      for (HServerLoad load : serversToLoad.values()) {
-        totalLoad += load.getNumberOfRegions();
+      // numServers = serversToLoad.size();
+      // the above was not accurate as a server is first removed from the
+      // serversToServerInfo map, then from the serversToLoad map
+      numServers = serversToServerInfo.size();
+      for (Map.Entry<String, HServerLoad> entry : serversToLoad.entrySet()) {
+        HServerInfo hsi = serversToServerInfo.get(entry.getKey());
+        if (null != hsi) {
+          if (!this.master.getRegionManager().isServerRestarting(hsi)) {
+            totalLoad += entry.getValue().getNumberOfRegions();
+          } else {
+            // server is being processed for a restart, ignore for loadbalancing
+            // purposes
+          }
+        } else {
+          // this server has already been removed from the serversToServerInfo
+          // map, but not from the serversToLoad one yet, thus ignore it for
+          // loadbalancing purposes
+        }
       }
       averageLoad = (double)totalLoad / (double)numServers;
     }
@@ -827,6 +882,7 @@ public class ServerManager {
       this.server = hsi;
     }
 
+    @Override
     public void process(WatchedEvent event) {
       if (!event.getType().equals(EventType.NodeDeleted)) {
         LOG.warn("Unexpected event=" + event);

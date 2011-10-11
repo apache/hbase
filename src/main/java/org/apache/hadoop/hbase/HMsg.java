@@ -137,6 +137,14 @@ public class HMsg implements Writable {
      * Run major compaction on a specific column family within a region.
      */
     MSG_REGION_CF_MAJOR_COMPACT,
+
+    /**
+     * Region server is going down for restart
+     *
+     * Note that this message is followed by MSG_REPORT_CLOSE messages for each
+     * region the region server was serving, unless it was told to quiesce.
+     */
+    MSG_REPORT_EXITING_FOR_RESTART,
   }
 
   private Type type = null;
@@ -302,6 +310,7 @@ public class HMsg implements Writable {
   /**
    * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
    */
+  @Override
   public void write(DataOutput out) throws IOException {
      out.writeInt(this.type.ordinal());
      this.info.write(out);
@@ -320,6 +329,7 @@ public class HMsg implements Writable {
   /**
    * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
    */
+  @Override
   public void readFields(DataInput in) throws IOException {
      int ordinal = in.readInt();
      this.type = HMsg.Type.values()[ordinal];

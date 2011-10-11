@@ -66,7 +66,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -76,15 +78,13 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.Leases;
+import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.HMsg.Type;
-import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiPut;
@@ -132,6 +132,8 @@ public class HRegionServer implements HRegionInterface,
     HBaseRPCErrorHandler, Runnable, Watcher, Stoppable {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
+  private static final HMsg REPORT_RESTARTING = new HMsg(
+      Type.MSG_REPORT_EXITING_FOR_RESTART);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
   private static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg [] {};
 
@@ -147,6 +149,8 @@ public class HRegionServer implements HRegionInterface,
   // Go down hard.  Used if file system becomes unavailable and also in
   // debugging and unit tests.
   protected volatile boolean abortRequested;
+
+  protected volatile boolean restartRequested;
 
   private volatile boolean killed = false;
 
@@ -317,6 +321,7 @@ public class HRegionServer implements HRegionInterface,
    * @throws IOException
    */
   private void reinitialize() throws IOException {
+    this.restartRequested = false;
     this.abortRequested = false;
     this.stopRequested.set(false);
 
@@ -386,6 +391,7 @@ public class HRegionServer implements HRegionInterface,
    * Either way we need to update our knowledge of the master.
    * @param event WatchedEvent from ZooKeeper.
    */
+  @Override
   public void process(WatchedEvent event) {
     EventType type = event.getType();
     KeeperState state = event.getState();
@@ -436,6 +442,7 @@ public class HRegionServer implements HRegionInterface,
    * in with the HMaster, sending heartbeats & reports, and receiving HRegion
    * load/unload instructions.
    */
+  @Override
   public void run() {
     regionServerThread = Thread.currentThread();
     boolean quiesceRequested = false;
@@ -633,7 +640,11 @@ public class HRegionServer implements HRegionInterface,
       }
       try {
         HMsg[] exitMsg = new HMsg[closedRegions.size() + 1];
-        exitMsg[0] = REPORT_EXITING;
+        if (restartRequested) {
+          exitMsg[0] = REPORT_RESTARTING;
+        } else {
+          exitMsg[0] = REPORT_EXITING;
+        }
         // Tell the master what regions we are/were serving
         int i = 1;
         for (HRegion region: closedRegions) {
@@ -876,6 +887,7 @@ public class HRegionServer implements HRegionInterface,
    * @param e
    * @return True if we OOME'd and are aborting.
    */
+  @Override
   public boolean checkOOME(final Throwable e) {
     boolean stop = false;
     try {
@@ -1142,6 +1154,7 @@ public class HRegionServer implements HRegionInterface,
   private void startServiceThreads() throws IOException {
     String n = Thread.currentThread().getName();
     UncaughtExceptionHandler handler = new UncaughtExceptionHandler() {
+      @Override
       public void uncaughtException(Thread t, Throwable e) {
         abort("Uncaught exception in service thread " + t.getName(), e);
       }
@@ -1254,6 +1267,7 @@ public class HRegionServer implements HRegionInterface,
    * included in the list returned
    * @return list of HLog files
    */
+  @Override
   public List<String> getHLogsList(boolean rollCurrentHLog) throws IOException {
     if (rollCurrentHLog) this.hlog.rollWriter();
     return this.hlog.getHLogsList();
@@ -1263,12 +1277,23 @@ public class HRegionServer implements HRegionInterface,
    * Sets a flag that will cause all the HRegionServer threads to shut down
    * in an orderly fashion.  Used by unit tests.
    */
+  @Override
   public void stop() {
     this.stopRequested.set(true);
     synchronized(this) {
       // Wakes run() if it is sleeping
       notifyAll(); // FindBugs NN_NAKED_NOTIFY
     }
+  }
+
+  /**
+   * Method to set the flag that will cause
+   */
+  @Override
+  public void stopForRestart() {
+    restartRequested = true;
+    LOG.info("Going down for a restart");
+    stop();
   }
 
   /**
@@ -1446,6 +1471,7 @@ public class HRegionServer implements HRegionInterface,
       }
     }
 
+    @Override
     public void run() {
       try {
         while(!stopRequested.get()) {
@@ -1642,6 +1668,7 @@ public class HRegionServer implements HRegionInterface,
     HRegion r = HRegion.newHRegion(dir, this.hlog, this.fs, conf, regionInfo,
       this.cacheFlusher);
     long seqid = r.initialize(new Progressable() {
+      @Override
       public void progress() {
         addProcessingMessage(regionInfo);
       }
@@ -1664,6 +1691,7 @@ public class HRegionServer implements HRegionInterface,
     getOutboundMsgs().add(new HMsg(HMsg.Type.MSG_REPORT_PROCESS_OPEN, hri));
   }
 
+  @Override
   public void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
   throws IOException {
     RSZookeeperUpdater zkUpdater = null;
@@ -1800,6 +1828,7 @@ public class HRegionServer implements HRegionInterface,
   // HRegionInterface
   //
 
+  @Override
   public HRegionInfo getRegionInfo(final byte [] regionName)
   throws NotServingRegionException {
     requestCount.incrementAndGet();
@@ -1807,6 +1836,7 @@ public class HRegionServer implements HRegionInterface,
   }
 
 
+  @Override
   public Result getClosestRowBefore(final byte [] regionName,
     final byte [] row, final byte [] family)
   throws IOException {
@@ -1825,6 +1855,7 @@ public class HRegionServer implements HRegionInterface,
   }
 
   /** {@inheritDoc} */
+  @Override
   public Result get(byte [] regionName, Get get) throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
@@ -1836,6 +1867,7 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
+  @Override
   public boolean exists(byte [] regionName, Get get) throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
@@ -1848,6 +1880,7 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
+  @Override
   public void put(final byte [] regionName, final Put put)
   throws IOException {
     if (put.getRow() == null)
@@ -1867,6 +1900,7 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
+  @Override
   public int put(final byte[] regionName, final List<Put> puts)
   throws IOException {
     checkOpen();
@@ -1927,6 +1961,7 @@ public class HRegionServer implements HRegionInterface,
    * @throws IOException
    * @return true if the new put was execute, false otherwise
    */
+  @Override
   public boolean checkAndPut(final byte[] regionName, final byte [] row,
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Put put) throws IOException{
@@ -1945,6 +1980,7 @@ public class HRegionServer implements HRegionInterface,
    * @throws IOException
    * @return true if the new put was execute, false otherwise
    */
+  @Override
   public boolean checkAndDelete(final byte[] regionName, final byte [] row,
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Delete delete) throws IOException{
@@ -1956,6 +1992,7 @@ public class HRegionServer implements HRegionInterface,
   // remote scanner interface
   //
 
+  @Override
   public long openScanner(byte [] regionName, Scan scan)
   throws IOException {
     checkOpen();
@@ -1987,6 +2024,7 @@ public class HRegionServer implements HRegionInterface,
     return scannerId;
   }
 
+  @Override
   public Result next(final long scannerId) throws IOException {
     Result [] res = next(scannerId, 1);
     if(res == null || res.length == 0) {
@@ -1995,6 +2033,7 @@ public class HRegionServer implements HRegionInterface,
     return res[0];
   }
 
+  @Override
   public Result [] next(final long scannerId, int nbRows) throws IOException {
     try {
       String scannerName = String.valueOf(scannerId);
@@ -2046,6 +2085,7 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
+  @Override
   public void close(final long scannerId) throws IOException {
     try {
       checkOpen();
@@ -2072,6 +2112,7 @@ public class HRegionServer implements HRegionInterface,
       this.scannerName = n;
     }
 
+    @Override
     public void leaseExpired() {
       LOG.info("Scanner " + this.scannerName + " lease expired");
       InternalScanner s = scanners.remove(this.scannerName);
@@ -2088,6 +2129,7 @@ public class HRegionServer implements HRegionInterface,
   //
   // Methods that do the actual work for the remote API
   //
+  @Override
   public void delete(final byte [] regionName, final Delete delete)
   throws IOException {
     checkOpen();
@@ -2105,6 +2147,7 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
+  @Override
   public int delete(final byte[] regionName, final List<Delete> deletes)
   throws IOException {
     // Count of Deletes processed.
@@ -2136,6 +2179,7 @@ public class HRegionServer implements HRegionInterface,
     return -1;
   }
 
+  @Override
   public long lockRow(byte [] regionName, byte [] row)
   throws IOException {
     checkOpen();
@@ -2194,6 +2238,7 @@ public class HRegionServer implements HRegionInterface,
     return rl;
   }
 
+  @Override
   public void unlockRow(byte [] regionName, long lockId)
   throws IOException {
     checkOpen();
@@ -2248,6 +2293,7 @@ public class HRegionServer implements HRegionInterface,
       this.region = region;
     }
 
+    @Override
     public void leaseExpired() {
       LOG.info("Row Lock " + this.lockName + " lease expired");
       Integer r = rowlocks.remove(this.lockName);
@@ -2289,10 +2335,12 @@ public class HRegionServer implements HRegionInterface,
     return Collections.unmodifiableCollection(onlineRegions.values());
   }
 
+  @Override
   public HRegion [] getOnlineRegionsAsArray() {
     return getOnlineRegions().toArray(new HRegion[0]);
   }
 
+  @Override
   public List<String> getStoreFileList(byte[] regionName, byte[] columnFamily)
     throws IllegalArgumentException {
 	  HRegion region = getOnlineRegion(regionName);
@@ -2316,6 +2364,7 @@ public class HRegionServer implements HRegionInterface,
   /**
   * Flushes the given region
   */
+  @Override
   public void flushRegion(byte[] regionName)
     throws IllegalArgumentException, IOException {
     HRegion region = getOnlineRegion(regionName);
@@ -2415,6 +2464,7 @@ public class HRegionServer implements HRegionInterface,
     // we'll sort the regions in reverse
     SortedMap<Long, HRegion> sortedRegions = new TreeMap<Long, HRegion>(
         new Comparator<Long>() {
+          @Override
           public int compare(Long a, Long b) {
             return -1 * a.compareTo(b);
           }
@@ -2529,6 +2579,7 @@ public class HRegionServer implements HRegionInterface,
     return regionsToCheck;
   }
 
+  @Override
   public long getProtocolVersion(final String protocol,
       final long clientVersion)
   throws IOException {
@@ -2572,6 +2623,7 @@ public class HRegionServer implements HRegionInterface,
   public HServerInfo getServerInfo() { return this.serverInfo; }
 
   /** {@inheritDoc} */
+  @Override
   public long incrementColumnValue(byte [] regionName, byte [] row,
       byte [] family, byte [] qualifier, long amount, boolean writeToWAL)
   throws IOException {
@@ -2595,6 +2647,7 @@ public class HRegionServer implements HRegionInterface,
   }
 
   /** {@inheritDoc} */
+  @Override
   public HRegionInfo[] getRegionsAssignment() throws IOException {
     HRegionInfo[] regions = new HRegionInfo[onlineRegions.size()];
     Iterator<HRegion> ite = onlineRegions.values().iterator();
@@ -2605,6 +2658,7 @@ public class HRegionServer implements HRegionInterface,
   }
 
   /** {@inheritDoc} */
+  @Override
   public HServerInfo getHServerInfo() throws IOException {
     return serverInfo;
   }
@@ -2636,6 +2690,7 @@ public class HRegionServer implements HRegionInterface,
     return resp;
   }
 
+  @Override
   public String toString() {
     return this.serverInfo.toString();
   }

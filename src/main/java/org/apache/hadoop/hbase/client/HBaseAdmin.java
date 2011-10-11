@@ -19,6 +19,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.InterruptedIOException;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Set;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -28,6 +37,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RegionException;
@@ -44,14 +54,6 @@ import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Provides an interface to manage HBase database table metadata + general
@@ -1099,8 +1101,24 @@ public class HBaseAdmin {
   }
 
   /**
+   * Stop the designated RegionServer for a restart.
+   *
+   * @param hsa
+   *          the address of the RegionServer to stop
+   * @throws IOException
+   *           if a remote or network exception occurs
+   */
+  public synchronized void stopRegionServerForRestart(final HServerAddress hsa)
+      throws IOException {
+    HRegionInterface rs = this.connection.getHRegionConnection(hsa);
+      LOG.info("Restarting RegionServer" + hsa.toString());
+      rs.stopForRestart();
+  }
+
+  /**
    * @return cluster status
-   * @throws IOException if a remote or network exception occurs
+   * @throws IOException
+   *           if a remote or network exception occurs
    */
   public ClusterStatus getClusterStatus() throws IOException {
     if (this.master == null) {

@@ -31,14 +31,19 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
@@ -48,8 +53,8 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -96,6 +101,34 @@ public class RegionManager {
    */
    final SortedMap<String, RegionState> regionsInTransition =
     Collections.synchronizedSortedMap(new TreeMap<String, RegionState>());
+
+  // RESTARTING LOGIC
+
+  /**
+   * Thread to handle timeout of restarting Region Servers
+   */
+  private final RestartingServerHandler restartingServerHandlerThread;
+
+  /**
+   * Map from all the restarting servers to the set of non-META / non-ROOT
+   * regions they were serving
+   */
+  private final Map<HServerAddress, Set<HRegionInfo>>
+     restartingServersToRegions =
+ new ConcurrentHashMap<HServerAddress, Set<HRegionInfo>>();
+
+  /**
+   * Set of all regions being held for restart. It is needed to maintain sync if
+   * multiple servers restart at the same time
+   */
+  private final Set<HRegionInfo> restartingRegions =
+    new TreeSet<HRegionInfo>();
+
+   /**
+    * Map from all restarting servers to their restart time.
+    */
+   private final DelayQueue<RestartingServer> restartingServers =
+     new DelayQueue<RestartingServer>();
 
    // regions in transition are also recorded in ZK using the zk wrapper
    final ZooKeeperWrapper zkWrapper;
@@ -171,6 +204,9 @@ public class RegionManager {
     // Scans the meta table
     metaScannerThread = new MetaScanner(master);
 
+    // scans for restarting regions timeout
+    this.restartingServerHandlerThread = new RestartingServerHandler();
+
     zooKeeperNumRetries = conf.getInt(HConstants.ZOOKEEPER_RETRIES,
         HConstants.DEFAULT_ZOOKEEPER_RETRIES);
     zooKeeperPause = conf.getInt(HConstants.ZOOKEEPER_PAUSE,
@@ -180,6 +216,8 @@ public class RegionManager {
   }
 
   void start() {
+    Threads.setDaemonThreadRunning(restartingServerHandlerThread,
+      "RegionManager.restartingServerHandler");
     Threads.setDaemonThreadRunning(rootScannerThread,
       "RegionManager.rootScanner");
     Threads.setDaemonThreadRunning(metaScannerThread,
@@ -259,9 +297,17 @@ public class RegionManager {
     if (assignmentByLocality) {
       quickStartRegionServerSet.add(hostName);
     }
+
+    // this variable keeps track of the code path to go through; if true, than
+    // the server we are examining was registered as restarting and thus we
+    // should assign all the regions to it directly; else, we should go through
+    // the normal code path
+    MutableBoolean restaringServerAndOnTime = new MutableBoolean(false);
+
     // get the region set to be assigned to this region server
     regionsToAssign = regionsAwaitingAssignment(info.getServerAddress(),
-        isSingleServer, assignmentByLocality, holdRegionForBestRegionServer,
+        isSingleServer, restaringServerAndOnTime, assignmentByLocality,
+        holdRegionForBestRegionServer,
         quickStartRegionServerSet);
 
     if (regionsToAssign.size() == 0) {
@@ -273,7 +319,8 @@ public class RegionManager {
     } else {
       // if there's only one server or assign the region by locality,
       // just give the regions to this server
-      if (isSingleServer || assignmentByLocality) {
+      if (isSingleServer || assignmentByLocality
+          || restaringServerAndOnTime.booleanValue()) {
         assignRegionsToOneServer(regionsToAssign, info, returnMsgs);
       } else {
         // otherwise, give this server a few regions taking into account the
@@ -455,12 +502,42 @@ public class RegionManager {
    * the monitor for RegionManager
    */
   private Set<RegionState> regionsAwaitingAssignment(HServerAddress addr,
-      boolean isSingleServer, boolean assignmentByLocality,
-      boolean holdRegionForBestRegionserver,
+      boolean isSingleServer, MutableBoolean restaringServerAndOnTime,
+      boolean assignmentByLocality, boolean holdRegionForBestRegionserver,
       Set<String> quickStartRegionServerSet) {
 
     // set of regions we want to assign to this server
     Set<RegionState> regionsToAssign = new HashSet<RegionState>();
+
+    // check if server is restarting
+    // take its information away as you this method is synchronized on
+    // regionsInTransition
+    Set<HRegionInfo> regions = unholdRestartingServer(addr);
+    if (null != regions) {
+      restaringServerAndOnTime.setValue(true);
+      LOG.debug("RegionServer " + addr.getHostname()
+          + " should receive regions " + regions
+          + " coming back from restart");
+      // One could use regionsInTransition.keySet().containsAll(regions) but
+      // this provides more control and probably the same complexity. Also, this
+      // gives direct logging of precise errors
+      for (HRegionInfo ri : regions) {
+        // no need for sync as caller owns monitor
+        RegionState state = regionsInTransition.get(ri.getRegionNameAsString());
+        if (null == state || !state.isUnassigned()) {
+          LOG.error("Region "
+              + ri
+              + (null == state ? " is not in transition" : " is now in state "
+                  + state)
+              + " and is no longer available for assigning to previously owning RS "
+              + addr.getHostname());
+        } else {
+          regionsToAssign.add(state);
+        }
+      }
+      // return its initial regions ASAP
+      return regionsToAssign;
+    }
 
     boolean isMetaServer = isMetaServer(addr);
     boolean isRootServer = isRootServer(addr);
@@ -513,6 +590,11 @@ public class RegionManager {
           continue;
         }
 
+        // if we are holding it, don't give it away to any other server
+        if (restartingRegions.contains(s.getRegionInfo())) {
+          continue;
+        }
+
         if (assignmentByLocality && !i.isRootRegion() && !i.isMetaRegion()) {
           String preferredHost =
             this.master.getPreferredRegionToRegionServerMapping().get(name);
@@ -525,6 +607,7 @@ public class RegionManager {
             continue;
           }
         }
+
         if (s.isUnassigned()) {
           regionsToAssign.add(s);
         }
@@ -614,6 +697,7 @@ public class RegionManager {
    * PathFilter that accepts hbase tables only.
    */
   static class TableDirFilter implements PathFilter {
+    @Override
     public boolean accept(final Path path) {
       // skip the region servers' log dirs && version file
       // HBASE-1112 want to separate the log dirs from table's data dirs by a
@@ -629,6 +713,7 @@ public class RegionManager {
    * PathFilter that accepts all but compaction.dir names.
    */
   static class RegionDirFilter implements PathFilter {
+    @Override
     public boolean accept(Path path) {
       return !path.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME);
     }
@@ -1814,11 +1899,162 @@ public class RegionManager {
       return Bytes.toString(getRegionName()).hashCode();
     }
 
+    @Override
     public int compareTo(RegionState o) {
       if (o == null) {
         return 1;
       }
       return Bytes.compareTo(getRegionName(), o.getRegionName());
     }
+  }
+
+  private class RestartingServerHandler extends Thread {
+    public RestartingServerHandler() {
+    }
+
+    @Override
+    public void run() {
+      LOG.debug("Started RestartingServerHandler");
+      while (!master.getClosed().get()) {
+        try {
+          // check if any servers' waiting time expired
+          RestartingServer server = restartingServers.poll(
+              master.getConfiguration().getInt(
+                  HConstants.THREAD_WAKE_FREQUENCY, 30 * 1000),
+              TimeUnit.MILLISECONDS);
+          Set<HRegionInfo> regions;
+
+          if (null == server) {
+            continue;
+          }
+
+          regions = unholdRestartingServer(server.getServer()
+              .getServerAddress());
+          if (null != regions) {
+            LOG.info("RegionServer "
+                + server.getServer()
+                + " failed to report back after restart! Redistributing all of its regions "
+                + regions);
+          } else {
+            // the server came back and restarted properly
+          }
+        } catch (InterruptedException e) {
+          // no problem, just continue
+          continue;
+        }
+      }
+    }
+  }
+
+  private class RestartingServer implements Delayed {
+    private long creationTime;
+    private HServerInfo server;
+    private long millisecondDelay;
+
+    RestartingServer(HServerInfo server, long creationTime,
+        long millisecondDelay) {
+      this.server = server;
+      this.creationTime = creationTime;
+      this.millisecondDelay = millisecondDelay;
+    }
+
+    /**
+     * Method to get the server info back
+     *
+     * @return the server info for this respective regionserver
+     */
+    public HServerInfo getServer() {
+      return this.server;
+    }
+
+    @Override
+    public int compareTo(Delayed arg0) {
+      long delta = this.getDelay(TimeUnit.MILLISECONDS)
+          - arg0.getDelay(TimeUnit.MILLISECONDS);
+      return (this.equals(arg0) ? 0 : (delta > 0 ? 1 : (delta < 0 ? -1 : 0)));
+    }
+
+    @Override
+    public long getDelay(TimeUnit unit) {
+      return unit.convert(
+          (this.creationTime + millisecondDelay) - System.currentTimeMillis(),
+          TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o instanceof RestartingServer) {
+        return ((RestartingServer) o).getServer().equals(this.server);
+      }
+
+      return false;
+    }
+  }
+
+  /**
+   * Method used to do housekeeping for holding regions for a RegionServer going
+   * down for a restart
+   *
+   * @param regionServer
+   *          the RegionServer going down for a restart
+   * @param regions
+   *          the HRegions it was previously serving
+   */
+  public void addRegionServerForRestart(final HServerInfo regionServer,
+      Set<HRegionInfo> regions) {
+    addRegionServerForRestart(regionServer, regions, master.getConfiguration()
+        .getLong("hbase.regionserver.restart.regionHoldPeriod", 60 * 1000));
+  }
+
+  /**
+   * Method used to do housekeeping for holding regions for a RegionServer going
+   * down for a restart
+   *
+   * @param regionServer
+   *          the RegionServer going down for a restart
+   * @param regions
+   *          the HRegions it was previously serving
+   * @param millisecondDelay
+   *          the delay to wait until redistributing the regions from holding
+   */
+  public void addRegionServerForRestart(final HServerInfo regionServer,
+      Set<HRegionInfo> regions, long millisecondDelay) {
+
+    LOG.debug("Holding for server  " + regionServer + " regions " + regions
+        + " for this much time " + millisecondDelay + " ms");
+
+    restartingServersToRegions.put(regionServer.getServerAddress(), regions);
+    synchronized (restartingRegions) {
+      restartingRegions.addAll(regions);
+    }
+
+    RestartingServer serv = new RestartingServer(regionServer,
+        System.currentTimeMillis(), millisecondDelay);
+    restartingServers.put(serv);
+  }
+
+  /**
+   * Removes all the information being held for restart purposes for this
+   * particular regionserver
+   *
+   * @param addr
+   *          the address of the regionserver that went down for a restart
+   * @return the regions this regionserver was holding or null if this method
+   *         already got called before
+   */
+  private Set<HRegionInfo> unholdRestartingServer(final HServerAddress addr) {
+    Set<HRegionInfo> regions = restartingServersToRegions.remove(addr);
+    if (null != regions) {
+      // no longer hold the regions
+      synchronized (restartingRegions) {
+        restartingRegions.removeAll(regions);
+      }
+    }
+
+    return regions;
+  }
+
+  public boolean isServerRestarting(final HServerInfo hsi) {
+    return restartingServersToRegions.containsKey(hsi.getServerAddress());
   }
 }
