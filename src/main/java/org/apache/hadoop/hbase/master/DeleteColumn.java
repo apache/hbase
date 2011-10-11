@@ -19,60 +19,44 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
-
 /** Instantiated to remove a column family from a table */
 class DeleteColumn extends ColumnOperation {
-  private final byte [] columnName;
-  private static final Log LOG = LogFactory.getLog(DeleteColumn.class);
+  private final byte [] columnDeletion;
 
   DeleteColumn(final HMaster master, final byte [] tableName,
-    final byte [] columnName)
+    final byte [] columnDeletion)
   throws IOException {
     super(master, tableName);
-    this.columnName = columnName;
+    this.columnDeletion = columnDeletion;
   }
 
   @Override
-  protected void postProcessMeta(MetaRegion m, HRegionInterface server)
-  throws IOException {
-    Set<HRegionInfo> regionsToReopen = new HashSet<HRegionInfo>();
-    for (HRegionInfo i: regionsToProcess) {
-      i.getTableDesc().removeFamily(columnName);
-      updateRegionInfo(server, m.getRegionName(), i);
-      // Delete the directories used by the column
-      Path tabledir =
-        new Path(this.master.getRootDir(), i.getTableDesc().getNameAsString());
-      this.master.getFileSystem().
-        delete(Store.getStoreHomedir(tabledir, i.getEncodedName(),
-        this.columnName), true);
-      // Ignore regions that are split or disabled,
-      // as we do not want to reopen them
-      if (!(i.isSplit() || i.isOffline())) {
-        regionsToReopen.add(i);
-      }
-    }
-    if (regionsToReopen.size() > 0) {
-      this.master.getRegionManager().getThrottledReopener(Bytes.toString(tableName)).
-      addRegionsToReopen(regionsToReopen);
-    }
+  protected void postProcess(HRegionInfo hri) throws IOException {
+    // Delete the directories used by the column
+    Path tabledir = new Path(
+        this.master.getRootDir(), hri.getTableDesc().getNameAsString());
+    this.master.getFileSystem().
+      delete(Store.getStoreHomedir(tabledir, hri.getEncodedName(),
+            columnDeletion), true);
   }
+
   @Override
-  protected void processScanItem(String serverName, final HRegionInfo info)
-      throws IOException {
-    if (isEnabled(info)) {
-      LOG.debug("Performing online schema change (region not disabled): "
-          + info.getRegionNameAsString());
+  protected void updateTableDescriptor(HTableDescriptor desc)
+  throws IOException {
+    if (!desc.hasFamily(columnDeletion)) {
+      // we have an error.
+      throw new InvalidColumnNameException("Column family '" +
+        Bytes.toStringBinary(columnDeletion) +
+        "' doesn't exist, so cannot be deleted.");
     }
+    desc.removeFamily(columnDeletion);
   }
 }

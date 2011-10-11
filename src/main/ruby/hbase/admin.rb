@@ -20,15 +20,17 @@
 
 include Java
 
+java_import java.util.ArrayList
+
 java_import org.apache.hadoop.hbase.client.HBaseAdmin
 java_import org.apache.zookeeper.ZooKeeperMain
 java_import org.apache.hadoop.hbase.HColumnDescriptor
 java_import org.apache.hadoop.hbase.HTableDescriptor
 java_import org.apache.hadoop.hbase.io.hfile.Compression
 java_import org.apache.hadoop.hbase.regionserver.StoreFile
+java_import org.apache.hadoop.hbase.util.Pair
 java_import org.apache.hadoop.hbase.HRegionInfo
 java_import org.apache.zookeeper.ZooKeeper
-java_import org.apache.hadoop.hbase.util.Pair
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
@@ -244,6 +246,9 @@ module Hbase
       htd = @admin.getTableDescriptor(table_name.to_java_bytes)
 
       # Process all args
+      columnsToAdd = ArrayList.new()
+      columnsToMod = ArrayList.new()
+      columnsToDel = ArrayList.new()
       args.each do |arg|
         # Normalize args to support column name only alter specs
         arg = { NAME => arg } if arg.kind_of?(String)
@@ -258,29 +263,16 @@ module Hbase
 
           # If column already exist, then try to alter it. Create otherwise.
           if htd.hasFamily(column_name.to_java_bytes)
-            @admin.modifyColumn(table_name, column_name, descriptor)
-            if wait == true
-              puts "Updating all regions with the new schema..."
-              alter_status(table_name)
-            end
+            columnsToMod.add(Pair.new(column_name, descriptor))
           else
-            @admin.addColumn(table_name, descriptor)
-            if wait == true
-              puts "Updating all regions with the new schema..."
-              alter_status(table_name)
-            end
+            columnsToAdd.add(descriptor)
           end
           next
         end
-
         # Delete column family
         if method == "delete"
           raise(ArgumentError, "NAME parameter missing for delete method") unless arg[NAME]
-          @admin.deleteColumn(table_name, arg[NAME])
-          if wait == true
-            puts "Updating all regions with the new schema..."
-            alter_status(table_name)
-          end
+          columnsToDel.add(arg[NAME])
           next
         end
 
@@ -298,6 +290,12 @@ module Hbase
 
         # Unknown method
         raise ArgumentError, "Unknown method: #{method}"
+      end
+      # now batch process alter requests
+      @admin.alterTable(table_name, columnsToAdd, columnsToMod, columnsToDel)
+      if wait == true
+        puts "Updating all regions with the new schema..."
+        alter_status(table_name)
       end
     end
 

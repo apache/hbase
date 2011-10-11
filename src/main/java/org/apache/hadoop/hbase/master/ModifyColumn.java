@@ -19,62 +19,34 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.io.IOException;
-import java.util.Set;
-import java.util.HashSet;
+
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /** Instantiated to modify an existing column family on a table */
 class ModifyColumn extends ColumnOperation {
-  private final HColumnDescriptor descriptor;
-  private final byte [] columnName;
-  private static final Log LOG = LogFactory.getLog(ModifyColumn.class);
+  private final HColumnDescriptor newColumn;
+  private final byte [] oldColumnName;
 
   ModifyColumn(final HMaster master, final byte [] tableName,
-    final byte [] columnName, HColumnDescriptor descriptor)
+    final byte [] oldColumnName, HColumnDescriptor newColumn)
   throws IOException {
     super(master, tableName);
-    this.descriptor = descriptor;
-    this.columnName = columnName;
+    this.newColumn = newColumn;
+    this.oldColumnName = oldColumnName;
   }
 
   @Override
-  protected void postProcessMeta(MetaRegion m, HRegionInterface server)
+  protected void updateTableDescriptor(HTableDescriptor desc)
   throws IOException {
-    Set<HRegionInfo> regionsToReopen = new HashSet<HRegionInfo>();
-    for (HRegionInfo i: regionsToProcess) {
-      if (i.getTableDesc().hasFamily(columnName)) {
-        i.getTableDesc().addFamily(descriptor);
-        updateRegionInfo(server, m.getRegionName(), i);
-        // Ignore regions that are split or disabled,
-        // as we do not want to reopen them
-        if (!(i.isSplit() || i.isOffline())) {
-          regionsToReopen.add(i);
-        }
-      } else { // otherwise, we have an error.
-        throw new InvalidColumnNameException("Column family '" +
-          Bytes.toString(columnName) +
-          "' doesn't exist, so cannot be modified.");
-      }
+    if (!desc.hasFamily(oldColumnName)) {
+      // we have an error.
+      throw new InvalidColumnNameException("Column family '" +
+        Bytes.toStringBinary(oldColumnName) +
+        "' doesn't exist, so cannot be modified.");
     }
-    if (regionsToReopen.size() > 0) {
-      this.master.getRegionManager().getThrottledReopener(Bytes.toString(tableName)).
-                    addRegionsToReopen(regionsToReopen);
-    }
-  }
-
-  @Override
-  protected void processScanItem(String serverName, final HRegionInfo info)
-      throws IOException {
-    if (isEnabled(info)) {
-      LOG.debug("Performing online schema change (region not disabled): "
-          + info.getRegionNameAsString());
-    }
+    desc.addFamily(newColumn);
   }
 }

@@ -23,7 +23,9 @@ import java.io.InterruptedIOException;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
@@ -576,6 +578,69 @@ public class HBaseAdmin {
   }
 
   /**
+   * Batch alter a table. Only takes regions offline once and performs a single
+   * update to .META.
+   * Asynchronous operation.
+   *
+   * @param tableName name of the table to add column to
+   * @param columnAdditions column descriptors to add to the table
+   * @param columnModifications pairs of column names with new descriptors
+   * @param columnDeletions column names to delete from the table
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void alterTable(final String tableName,
+      List<HColumnDescriptor> columnAdditions,
+      List<Pair<String, HColumnDescriptor>> columnModifications,
+      List<String> columnDeletions) throws IOException {
+    // convert all of the strings to bytes and pass to the bytes method
+    List<Pair<byte [], HColumnDescriptor>> modificationsBytes =
+      new ArrayList<Pair<byte [], HColumnDescriptor>>(
+          columnModifications.size());
+    List<byte []> deletionsBytes =
+      new ArrayList<byte []>(columnDeletions.size());
+
+    for(Pair<String, HColumnDescriptor> c : columnModifications) {
+      modificationsBytes.add(new Pair<byte [], HColumnDescriptor>(
+            Bytes.toBytes(c.getFirst()), c.getSecond()));
+    }
+    for(String c : columnDeletions) {
+      deletionsBytes.add(Bytes.toBytes(c));
+    }
+
+    alterTable(Bytes.toBytes(tableName), columnAdditions, modificationsBytes,
+        deletionsBytes);
+  }
+
+  /**
+   * Batch alter a table. Only takes regions offline once and performs a single
+   * update to .META.
+   * Any of the three lists can be null, in which case those types of
+   * alterations will be ignored.
+   * Asynchronous operation.
+   *
+   * @param tableName name of the table to add column to
+   * @param columnAdditions column descriptors to add to the table
+   * @param columnModifications pairs of column names with new descriptors
+   * @param columnDeletions column names to delete from the table
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void alterTable(final byte [] tableName,
+      List<HColumnDescriptor> columnAdditions,
+      List<Pair<byte[], HColumnDescriptor>> columnModifications,
+      List<byte[]> columnDeletions) throws IOException {
+    if (this.master == null) {
+      throw new MasterNotRunningException("master has been shut down");
+    }
+    HTableDescriptor.isLegalTableName(tableName);
+    try {
+      this.master.alterTable(tableName, columnAdditions, columnModifications,
+          columnDeletions);
+    } catch (RemoteException e) {
+      throw RemoteExceptionHandler.decodeRemoteException(e);
+    }
+  }
+
+  /**
    * Get the status of alter command - indicates how many regions have received
    * the updated schema Asynchronous operation.
    *
@@ -607,7 +672,7 @@ public class HBaseAdmin {
    */
   public void addColumn(final String tableName, HColumnDescriptor column)
   throws IOException {
-    addColumn(Bytes.toBytes(tableName), column);
+    alterTable(Bytes.toBytes(tableName), Arrays.asList(column), null, null);
   }
 
   /**
@@ -620,15 +685,7 @@ public class HBaseAdmin {
    */
   public void addColumn(final byte [] tableName, HColumnDescriptor column)
   throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
-    HTableDescriptor.isLegalTableName(tableName);
-    try {
-      this.master.addColumn(tableName, column);
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    }
+    alterTable(tableName, Arrays.asList(column), null, null);
   }
 
   /**
@@ -641,7 +698,8 @@ public class HBaseAdmin {
    */
   public void deleteColumn(final String tableName, final String columnName)
   throws IOException {
-    deleteColumn(Bytes.toBytes(tableName), Bytes.toBytes(columnName));
+    alterTable(Bytes.toBytes(tableName), null, null,
+        Arrays.asList(Bytes.toBytes(columnName)));
   }
 
   /**
@@ -652,17 +710,10 @@ public class HBaseAdmin {
    * @param columnName name of column to be deleted
    * @throws IOException if a remote or network exception occurs
    */
-  public void deleteColumn(final byte [] tableName, final byte [] columnName)
+  public void deleteColumn(final byte [] tableName,
+      final byte [] columnName)
   throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
-    HTableDescriptor.isLegalTableName(tableName);
-    try {
-      this.master.deleteColumn(tableName, columnName);
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    }
+    alterTable(tableName, null, null, Arrays.asList(columnName));
   }
 
   /**
@@ -677,8 +728,9 @@ public class HBaseAdmin {
   public void modifyColumn(final String tableName, final String columnName,
       HColumnDescriptor descriptor)
   throws IOException {
-    modifyColumn(Bytes.toBytes(tableName), Bytes.toBytes(columnName),
-      descriptor);
+    alterTable(Bytes.toBytes(tableName), null, Arrays.asList(
+          new Pair<byte [], HColumnDescriptor>(Bytes.toBytes(columnName),
+            descriptor)), null);
   }
 
   /**
@@ -693,15 +745,8 @@ public class HBaseAdmin {
   public void modifyColumn(final byte [] tableName, final byte [] columnName,
     HColumnDescriptor descriptor)
   throws IOException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
-    HTableDescriptor.isLegalTableName(tableName);
-    try {
-      this.master.modifyColumn(tableName, columnName, descriptor);
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    }
+    alterTable(tableName, null, Arrays.asList(
+          new Pair<byte [], HColumnDescriptor>(columnName, descriptor)), null);
   }
 
   /**

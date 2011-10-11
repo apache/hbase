@@ -25,6 +25,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -970,12 +971,15 @@ public class HMaster extends Thread implements HMasterInterface,
   }
 
   @Override
-  public void addColumn(byte [] tableName, HColumnDescriptor column)
-  throws IOException {
+  public void alterTable(final byte [] tableName,
+      List<HColumnDescriptor> columnAdditions,
+      List<Pair<byte[], HColumnDescriptor>> columnModifications,
+      List<byte[]> columnDeletions) throws IOException {
     ThrottledRegionReopener reopener = this.regionManager.
             createThrottledReopener(Bytes.toString(tableName));
-    // Regions are added to the reopener in AddColumn
-    new AddColumn(this, tableName, column).process();
+    // Regions are added to the reopener in MultiColumnOperation
+    new MultiColumnOperation(this, tableName, columnAdditions,
+        columnModifications, columnDeletions).process();
     reopener.reOpenRegionsThrottle();
   }
 
@@ -992,24 +996,24 @@ public class HMaster extends Thread implements HMasterInterface,
   }
 
   @Override
+  public void addColumn(byte [] tableName, HColumnDescriptor column)
+  throws IOException {
+    alterTable(tableName, Arrays.asList(column), null, null);
+  }
+
+  @Override
   public void modifyColumn(byte [] tableName, byte [] columnName,
     HColumnDescriptor descriptor)
   throws IOException {
-    ThrottledRegionReopener reopener = this.regionManager.
-                     createThrottledReopener(Bytes.toString(tableName));
-    // Regions are added to the reopener in ModifyColumn
-    new ModifyColumn(this, tableName, columnName, descriptor).process();
-    reopener.reOpenRegionsThrottle();
+    alterTable(tableName, null, Arrays.asList(
+          new Pair<byte [], HColumnDescriptor>(columnName, descriptor)), null);
   }
 
   @Override
   public void deleteColumn(final byte [] tableName, final byte [] c)
   throws IOException {
-    ThrottledRegionReopener reopener = this.regionManager.
-                    createThrottledReopener(Bytes.toString(tableName));
-    // Regions are added to the reopener in DeleteColumn
-    new DeleteColumn(this, tableName, KeyValue.parseColumn(c)[0]).process();
-    reopener.reOpenRegionsThrottle();
+    alterTable(tableName, null, null,
+        Arrays.asList(KeyValue.parseColumn(c)[0]));
   }
 
   @Override

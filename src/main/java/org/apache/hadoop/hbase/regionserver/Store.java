@@ -158,6 +158,7 @@ public class Store implements HeapSize {
     this.fs = fs;
     this.homedir = getStoreHomedir(basedir, info.getEncodedName(), family.getName());
     if (!this.fs.exists(this.homedir)) {
+      LOG.info("No directory exists for family " + family + "; creating one");
       if (!this.fs.mkdirs(this.homedir))
         throw new IOException("Failed create of: " + this.homedir.toString());
     }

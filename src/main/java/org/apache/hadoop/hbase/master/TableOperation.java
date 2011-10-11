@@ -120,7 +120,8 @@ abstract class TableOperation {
 
           tableExists = true;
           if(tableOp instanceof AddColumn || tableOp instanceof ModifyColumn ||
-              tableOp instanceof DeleteColumn) {
+              tableOp instanceof DeleteColumn ||
+              tableOp instanceof MultiColumnOperation) {
             regionsToProcess.add(info);
           }
           if (!isBeingServed(serverName) || !isEnabled(info)) {
