@@ -1197,6 +1197,10 @@ public class StoreFile {
       return reader.indexSize();
     }
 
+    public String getColumnFamilyName() {
+      return reader.getColumnFamilyName();
+    }
+
     public BloomType getBloomFilterType() {
       return this.bloomFilterType;
     }

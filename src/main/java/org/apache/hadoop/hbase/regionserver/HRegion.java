@@ -250,6 +250,11 @@ public class HRegion implements HeapSize { // , Writable{
   public static final ConcurrentMap<String, AtomicLong>
     numericMetrics = new ConcurrentHashMap<String, AtomicLong>();
 
+  // for simple numeric metrics (current block cache size)
+  // These ones are not reset to zero when queried, unlike the previous.
+  public static final ConcurrentMap<String, AtomicLong>
+    numericPersistentMetrics = new ConcurrentHashMap<String, AtomicLong>();
+
   // Used for metrics where we want track a metrics (such as latency)
   // over a number of operations.
   public static final ConcurrentMap<String,
@@ -315,11 +320,18 @@ public class HRegion implements HeapSize { // , Writable{
     oldVal.addAndGet(amount);
   }
 
-  static long getNumericMetric(String key) {
-    AtomicLong m = numericMetrics.get(key);
-    if (m == null)
-      return 0;
-    return m.get();
+  public static void setNumericMetric(String key, long amount) {
+    numericMetrics.put(key, new AtomicLong(amount));
+  }
+
+  public static void incrNumericPersistentMetric(String key, long amount) {
+    AtomicLong oldVal = numericPersistentMetrics.get(key);
+    if (oldVal == null) {
+      oldVal = numericPersistentMetrics.putIfAbsent(key, new AtomicLong(amount));
+      if (oldVal == null)
+        return;
+    }
+    oldVal.addAndGet(amount);
   }
 
   public static void incrTimeVaryingMetric(String key, long amount) {
@@ -333,6 +345,20 @@ public class HRegion implements HeapSize { // , Writable{
     }
     oldVal.getFirst().addAndGet(amount);  // total time
     oldVal.getSecond().incrementAndGet(); // increment ops by 1
+  }
+
+  static long getNumericMetric(String key) {
+    AtomicLong m = numericMetrics.get(key);
+    if (m == null)
+      return 0;
+    return m.get();
+  }
+
+  static long getNumericPersistentMetric(String key) {
+    AtomicLong m = numericPersistentMetrics.get(key);
+    if (m == null)
+      return 0;
+    return m.get();
   }
 
   public static final long getWriteOps() {
@@ -1158,7 +1184,9 @@ public class HRegion implements HeapSize { // , Writable{
     // rows then)
     this.updatesLock.writeLock().lock();
     final long currentMemStoreSize = this.memstoreSize.get();
-    List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(stores.size());
+    //copy the array of per column family memstore values
+    List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(
+        stores.size());
     try {
       sequenceId = (wal == null)? myseqid: wal.startCacheFlush();
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);

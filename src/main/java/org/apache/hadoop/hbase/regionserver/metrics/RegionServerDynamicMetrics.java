@@ -135,6 +135,11 @@ public class RegionServerDynamicMetrics implements Updater {
     for (Entry<String, AtomicLong> entry : HRegion.numericMetrics.entrySet()) {
       this.setNumericMetric(entry.getKey(), entry.getValue().getAndSet(0));
     }
+    /* get dynamically created numeric metrics, and push the metrics.
+     * These ones aren't to be reset; they are cumulative. */
+    for (Entry<String, AtomicLong> entry : HRegion.numericPersistentMetrics.entrySet()) {
+      this.setNumericMetric(entry.getKey(), entry.getValue().get());
+    }
     /* get dynamically created time varying metrics, and push the metrics */
     for (Entry<String, Pair<AtomicLong, AtomicInteger>> entry :
           HRegion.timeVaryingMetrics.entrySet()) {

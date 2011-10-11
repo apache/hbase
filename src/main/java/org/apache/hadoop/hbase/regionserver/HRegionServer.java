@@ -31,11 +31,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
@@ -55,6 +57,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang.mutable.MutableDouble;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -992,6 +995,24 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
+  /**
+   * Help function for metrics() that increments a map value if it exists.
+   *
+   * @param map
+   *          The map to work with
+   * @param key
+   *          the string key
+   * @param val
+   *          the value to add or set the map key to
+   */
+  protected void incrMap(Map<String, MutableDouble> map, String key, double val) {
+    if (map.get(key) != null) {
+      map.get(key).add(val);
+    } else {
+      map.put(key, new MutableDouble(val));
+    }
+  }
+
   protected void metrics() {
     this.metrics.regions.set(this.onlineRegions.size());
     this.metrics.incrementRequests(this.requestCount.get());
@@ -1004,6 +1025,21 @@ public class HRegionServer implements HRegionInterface,
     long storefileIndexSize = 0;
     long totalStaticIndexSize = 0;
     long totalStaticBloomSize = 0;
+
+    long tmpfiles;
+    long tmpindex;
+    long tmpfilesize;
+    long tmpbloomsize;
+    long tmpstaticsize;
+    String cfname;
+
+    // Note that this is a map of Doubles instead of Longs. This is because we
+    // do effective integer division, which would perhaps truncate more than it
+    // should because we do it only on one part of our sum at a time. Rather
+    // than dividing at the end, where it is difficult to know the proper
+    // factor, everything is exact then truncated.
+    Map<String, MutableDouble> tempVals = new HashMap<String, MutableDouble>();
+
     synchronized (this.onlineRegions) {
       for (Map.Entry<Integer, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
@@ -1012,13 +1048,36 @@ public class HRegionServer implements HRegionInterface,
           stores += r.stores.size();
           for(Map.Entry<byte [], Store> ee: r.stores.entrySet()) {
             Store store = ee.getValue();
-            storefiles += store.getStorefilesCount();
-            storefileIndexSize += store.getStorefilesIndexSize();
-            totalStaticIndexSize += store.getTotalStaticIndexSize();
-            totalStaticBloomSize += store.getTotalStaticBloomSize();
+            tmpfiles = store.getStorefilesCount();
+            tmpindex = store.getStorefilesIndexSize();
+            tmpfilesize = store.getStorefilesSize();
+            tmpbloomsize = store.getTotalStaticBloomSize();
+            tmpstaticsize = store.getTotalStaticIndexSize();
+
+            // Note that there is only one store per CF so setting is safe
+            cfname = "cf." + store.toString();
+            this.incrMap(tempVals, cfname + ".storeFileCount", tmpfiles);
+            this.incrMap(tempVals, cfname + ".storeFileIndexSizeMB",
+                (tmpindex / (1024.0 * 1024)));
+            this.incrMap(tempVals, cfname + ".storeFileSizeMB",
+                (tmpfilesize / (1024.0 * 1024)));
+            this.incrMap(tempVals, cfname + ".staticBloomSizeKB",
+                (tmpbloomsize / 1024.0));
+            this.incrMap(tempVals, cfname + ".memstoreSizeMB",
+                (store.getMemStoreSize() / (1024.0 * 1024)));
+            this.incrMap(tempVals, cfname + ".staticIndexSizeKB",
+                tmpstaticsize / 1024.0);
+
+            storefiles += tmpfiles;
+            storefileIndexSize += tmpindex;
+            totalStaticIndexSize += tmpstaticsize;
+            totalStaticBloomSize += tmpbloomsize;
           }
         }
       }
+    }
+    for (Entry<String, MutableDouble> e : tempVals.entrySet()) {
+      HRegion.setNumericMetric(e.getKey(), e.getValue().longValue());
     }
     this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);

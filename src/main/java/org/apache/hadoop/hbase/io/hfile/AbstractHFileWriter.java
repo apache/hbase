@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,6 +44,8 @@ import org.apache.hadoop.io.Writable;
  * Common functionality needed by all versions of {@link HFile} writers.
  */
 public abstract class AbstractHFileWriter implements HFile.Writer {
+
+  private static final Log LOG = LogFactory.getLog(AbstractHFileWriter.class);
 
   /** Key previously appended. Becomes the last key in the file. */
   protected byte[] lastKeyBuffer = null;
@@ -91,6 +95,13 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   /** May be null if we were passed a stream. */
   protected final Path path;
 
+  // table qualified cfName for this HFile.
+  // This is used to report stats on a per-table/CF basis
+
+  // Note that this is gotten from the path, which can be null, so this can
+  // remain unknown
+  public String cfName = "cf.unknown";
+
   /** Whether to cache key/value data blocks on write */
   protected final boolean cacheDataBlocksOnWrite;
 
@@ -131,6 +142,20 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
 
     if (cacheDataBlocksOnWrite || cacheIndexBlocksOnWrite)
       initBlockCache();
+
+    if (path != null)
+      parsePath(path.toString());
+  }
+
+  public void parsePath(String path) {
+    String splits[] = path.split("/");
+    if (splits.length < 2) {
+      LOG.warn("Could not determine the table and column family of the " +
+          "HFile path " + path);
+      return;
+    }
+
+    cfName = "cf." + splits[splits.length - 2];
   }
 
   /**
@@ -235,6 +260,11 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   @Override
   public Path getPath() {
     return path;
+  }
+
+  @Override
+  public String getColumnFamilyName() {
+    return cfName;
   }
 
   @Override

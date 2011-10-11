@@ -189,7 +189,7 @@ public class HFileReaderV2 extends AbstractHFileReader implements
 
       HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset,
           blockSize, -1, true);
-
+      metaBlock.setColumnFamilyName(this.getColumnFamilyName());
       long delta = System.currentTimeMillis() - now;
       HRegion.incrTimeVaryingMetric(fsReadTimeMetric, delta);
       HFile.readTime += delta;
@@ -282,6 +282,7 @@ public class HFileReaderV2 extends AbstractHFileReader implements
       long now = System.currentTimeMillis();
       HFileBlock dataBlock = fsBlockReader.readBlockData(dataBlockOffset,
           onDiskBlockSize, -1, pread);
+      dataBlock.setColumnFamilyName(this.getColumnFamilyName());
 
       long delta = System.currentTimeMillis() - now;
       HFile.readTime += delta;

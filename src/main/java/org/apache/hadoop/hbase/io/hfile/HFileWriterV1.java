@@ -198,10 +198,11 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     if (cacheDataBlocksOnWrite) {
       baosDos.flush();
       byte[] bytes = baos.toByteArray();
-      blockCache.cacheBlock(HFile.getBlockCacheKey(name, blockBegin),
-          new HFileBlock(BlockType.DATA,
-              (int) (outputStream.getPos() - blockBegin), bytes.length, -1,
-              ByteBuffer.wrap(bytes, 0, bytes.length), true, blockBegin));
+      HFileBlock cBlock = new HFileBlock(BlockType.DATA,
+          (int) (outputStream.getPos() - blockBegin), bytes.length, -1,
+          ByteBuffer.wrap(bytes, 0, bytes.length), true, blockBegin);
+      cBlock.setColumnFamilyName(this.getColumnFamilyName());
+      blockCache.cacheBlock(HFile.getBlockCacheKey(name, blockBegin),cBlock);
       baosDos.close();
     }
     blockNumber++;

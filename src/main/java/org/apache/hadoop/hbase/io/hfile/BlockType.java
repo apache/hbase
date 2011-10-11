@@ -37,49 +37,55 @@ public enum BlockType {
   // Scanned block section
 
   /** Data block, both versions */
-  DATA("DATABLK*"),
+  DATA("DATABLK*", BlockCategory.DATA),
 
   /** Version 2 leaf index block. Appears in the data block section */
-  LEAF_INDEX("IDXLEAF2"),
+  LEAF_INDEX("IDXLEAF2", BlockCategory.INDEX),
 
   /** Bloom filter block, version 2 */
-  BLOOM_CHUNK("BLMFBLK2"),
+  BLOOM_CHUNK("BLMFBLK2", BlockCategory.BLOOM),
 
   // Non-scanned block section
 
   /** Meta blocks */
-  META("METABLKc"),
+  META("METABLKc", BlockCategory.META),
 
   /** Intermediate-level version 2 index in the non-data block section */
-  INTERMEDIATE_INDEX("IDXINTE2"),
+  INTERMEDIATE_INDEX("IDXINTE2", BlockCategory.INDEX),
 
   // Load-on-open section.
 
   /** Root index block, also used for the single-level meta index, version 2 */
-  ROOT_INDEX("IDXROOT2"),
+  ROOT_INDEX("IDXROOT2", BlockCategory.INDEX),
 
   /** File info, version 2 */
-  FILE_INFO("FILEINF2"),
+  FILE_INFO("FILEINF2", BlockCategory.META),
 
   /** Bloom filter metadata, version 2 */
-  BLOOM_META("BLMFMET2"),
+  BLOOM_META("BLMFMET2", BlockCategory.BLOOM),
 
   // Trailer
 
   /** Fixed file trailer, both versions (always just a magic string) */
-  TRAILER("TRABLK\"$"),
+  TRAILER("TRABLK\"$", BlockCategory.META),
 
   // Legacy blocks
 
   /** Block index magic string in version 1 */
-  INDEX_V1("IDXBLK)+");
+  INDEX_V1("IDXBLK)+", BlockCategory.INDEX);
+
+  public enum BlockCategory {
+    DATA, META, INDEX, BLOOM
+  }
 
   public static final int MAGIC_LENGTH = 8;
 
   private final byte[] magic;
+  private final BlockCategory metricCat;
 
-  private BlockType(String magicStr) {
+  private BlockType(String magicStr, BlockCategory metricCat) {
     magic = magicStr.getBytes();
+    this.metricCat = metricCat;
     assert magic.length == MAGIC_LENGTH;
   }
 
@@ -93,6 +99,10 @@ public enum BlockType {
 
   public void write(ByteBuffer buf) {
     buf.put(magic);
+  }
+
+  public String getMetricName(){
+    return metricCat.toString();
   }
 
   public static BlockType parse(byte[] buf, int offset, int length)

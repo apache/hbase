@@ -499,6 +499,13 @@ public class Store implements HeapSize {
       this.conf, this.family.getBloomFilterType(), this.inMemory);
     StoreFile.Reader r = sf.createReader();
     this.storeSize += r.length();
+    // This increments the metrics associated with total flushed bytes for this
+    // family. The overall flush count is stored in the static metrics and
+    // retrieved from HRegion.recentFlushes, which is set within
+    // HRegion.internalFlushcache, which indirectly calls this to actually do
+    // the flushing through the StoreFlusherImpl class
+    HRegion.incrNumericPersistentMetric("cf." + this.toString() + ".flushSize",
+        flushed);
     if(LOG.isInfoEnabled()) {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
         ", sequenceid=" + logCacheFlushId +
@@ -1545,6 +1552,13 @@ public class Store implements HeapSize {
       size += r.getTotalBloomSize();
     }
     return size;
+  }
+
+  /**
+   * @return The size of this store's memstore, in bytes
+   */
+  long getMemStoreSize() {
+    return this.memstore.heapSize();
   }
 
   /**

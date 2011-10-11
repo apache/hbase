@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 
 import org.apache.hadoop.hbase.io.DoubleOutputStream;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.hfile.HFileBlockInfo;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -71,7 +72,7 @@ import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.NONE;
  * The version 2 block representation in the block cache is the same as above,
  * except that the data section is always uncompressed in the cache.
  */
-public class HFileBlock implements HeapSize {
+public class HFileBlock implements HeapSize, HFileBlockInfo {
 
   /** The size of a version 2 {@link HFile} block header */
   public static final int HEADER_SIZE = MAGIC_LENGTH + 2 * Bytes.SIZEOF_INT
@@ -132,6 +133,16 @@ public class HFileBlock implements HeapSize {
     if (fillHeader)
       overwriteHeader();
     this.offset = offset;
+  }
+
+  private String cfName = "cf.unknown";
+
+  public String getColumnFamilyName() {
+    return this.cfName;
+  }
+
+  public void setColumnFamilyName(String cfName) {
+    this.cfName = cfName;
   }
 
   /**
@@ -1419,5 +1430,4 @@ public class HFileBlock implements HeapSize {
   public int getNextBlockOnDiskSizeWithHeader() {
     return nextBlockOnDiskSizeWithHeader;
   }
-
 }
