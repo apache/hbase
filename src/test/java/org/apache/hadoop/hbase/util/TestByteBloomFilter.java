@@ -23,7 +23,6 @@ package org.apache.hadoop.hbase.util;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
-import java.util.BitSet;
 
 import junit.framework.TestCase;
 
@@ -78,9 +77,10 @@ public class TestByteBloomFilter extends TestCase {
   
   public void testBloomFold() throws Exception {
     // test: foldFactor < log(max/actual)
-    ByteBloomFilter b = new ByteBloomFilter(1003, (float)0.01, Hash.MURMUR_HASH, 2);
+    ByteBloomFilter b = new ByteBloomFilter(1003, (float) 0.01,
+        Hash.MURMUR_HASH, 2);
     b.allocBloom();
-    int origSize = b.getByteSize();
+    long origSize = b.getByteSize();
     assertEquals(1204, origSize);
     for (int i = 0; i < 12; ++i) {
       b.add(Bytes.toBytes(i));
@@ -106,7 +106,7 @@ public class TestByteBloomFilter extends TestCase {
     ByteBloomFilter b = new ByteBloomFilter(10*1000*1000, (float)err, Hash.MURMUR_HASH, 3);
     b.allocBloom();
     long startTime =  System.currentTimeMillis();
-    int origSize = b.getByteSize();
+    long origSize = b.getByteSize();
     for (int i = 0; i < 1*1000*1000; ++i) {
       b.add(Bytes.toBytes(i));
     }
@@ -138,4 +138,27 @@ public class TestByteBloomFilter extends TestCase {
 
     // test: foldFactor > log(max/actual)
   }
+
+  public void testSizing() {
+    int bitSize = 8 * 128 * 1024; // 128 KB
+    double errorRate = 0.025; // target false positive rate
+
+    // How many keys can we store in a Bloom filter of this size maintaining
+    // the given false positive rate, not taking into account that the n
+    long maxKeys = ByteBloomFilter.idealMaxKeys(bitSize, errorRate);
+    assertEquals(136570, maxKeys);
+
+    // A reverse operation: how many bits would we need to store this many keys
+    // and keep the same low false positive rate?
+    long bitSize2 = ByteBloomFilter.computeBitSize(maxKeys, errorRate);
+
+    // The bit size comes out a little different due to rounding.
+    assertTrue(Math.abs(bitSize2 - bitSize) * 1.0 / bitSize < 1e-5);
+  }
+
+  public void testFoldableByteSize() {
+    assertEquals(128, ByteBloomFilter.computeFoldableByteSize(1000, 5));
+    assertEquals(640, ByteBloomFilter.computeFoldableByteSize(5001, 4));
+  }
+
 }
