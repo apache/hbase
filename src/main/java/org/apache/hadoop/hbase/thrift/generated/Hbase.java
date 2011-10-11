@@ -211,6 +211,52 @@ public class Hbase {
     public List<TRowResult> getRowWithColumnsTs(byte[] tableName, byte[] row, List<byte[]> columns, long timestamp) throws IOError, TException;
 
     /**
+     * Get multiple rows with the same columns or timestamps for all.
+     * This returns latest entries, all columns and cfs.
+     *
+     * @return TRowResult containing the row and map of columns to TCells
+     *
+     * @param tableName
+     * @param rows
+     */
+    public List<TRowResult> getRows(byte[] tableName, List<byte[]> rows) throws IOError, TException;
+
+    /**
+     * Get multiple rows only up to a certain timestamp
+     *
+     * @return TRowResult containing the row and map of columns to TCells
+     *
+     * @param tableName
+     * @param rows
+     * @param timestamp
+     */
+    public List<TRowResult> getRowsTs(byte[] tableName, List<byte[]> rows, long timestamp) throws IOError, TException;
+
+    /**
+     * Get multiple rows only with particular cf:qualifier pairs on all rows
+     *
+     * @return TRowResult containing the row and map of columns to TCells
+     *
+     * @param tableName
+     * @param rows
+     * @param families
+     */
+    public List<TRowResult> getRowsWithColumns(byte[] tableName, List<byte[]> rows, List<byte[]> families) throws IOError, TException;
+
+    /**
+     * Get multiple rows only with particular cf:qualifier pairs on all rows
+     * and only up to a particular timestamp.
+     *
+     * @return TRowResult containing the row and map of columns to TCells
+     *
+     * @param tableName
+     * @param rows
+     * @param families
+     * @param timestamp
+     */
+    public List<TRowResult> getRowsWithColumnsTs(byte[] tableName, List<byte[]> rows, List<byte[]> families, long timestamp) throws IOError, TException;
+
+    /**
      * Apply a series of mutations (updates/deletes) to a row in a
      * single transaction.  If an exception is thrown, then the
      * transaction is aborted.  Default current timestamp is used, and
@@ -265,6 +311,43 @@ public class Hbase {
      * @param timestamp timestamp
      */
     public void mutateRowsTs(byte[] tableName, List<BatchMutation> rowBatches, long timestamp) throws IOError, IllegalArgument, TException;
+
+    /**
+     * Applies a list of mutations to a single row only if the value for
+     * row, cf[:qualifier] equals valueCheck
+     *
+     * Accepts null or '' for valueCheck, in which case entry for
+     * row, cf[:qualifier] must not exist.
+     *
+     * @return bool whether the check passed and mutations were applied
+     *
+     * @param tableName name of table
+     *
+     * @param row row key
+     *
+     * @param columnCheck
+     * @param valueCheck
+     * @param mutations list of mutation commands
+     */
+    public boolean checkAndMutateRow(byte[] tableName, byte[] row, byte[] columnCheck, byte[] valueCheck, List<Mutation> mutations) throws IOError, IllegalArgument, TException;
+
+    /**
+     * Same as above, but the puts and deletes are added at specified timestamp.
+     *
+     * NOTE: No way to specify what timerange to query for the checked value;
+     * it will look for most recent entry (the default Get behavior).
+     *
+     * @param tableName name of table
+     *
+     * @param row row key
+     *
+     * @param columnCheck
+     * @param valueCheck
+     * @param mutations list of mutation commands
+     *
+     * @param timestamp timestamp
+     */
+    public boolean checkAndMutateRowTs(byte[] tableName, byte[] row, byte[] columnCheck, byte[] valueCheck, List<Mutation> mutations, long timestamp) throws IOError, IllegalArgument, TException;
 
     /**
      * Atomically increment the column value specified.  Returns the next value post increment.
@@ -1204,6 +1287,158 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRowWithColumnsTs failed: unknown result");
     }
 
+    public List<TRowResult> getRows(byte[] tableName, List<byte[]> rows) throws IOError, TException
+    {
+      send_getRows(tableName, rows);
+      return recv_getRows();
+    }
+
+    public void send_getRows(byte[] tableName, List<byte[]> rows) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("getRows", TMessageType.CALL, seqid_));
+      getRows_args args = new getRows_args();
+      args.tableName = tableName;
+      args.rows = rows;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public List<TRowResult> recv_getRows() throws IOError, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      getRows_result result = new getRows_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      if (result.io != null) {
+        throw result.io;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRows failed: unknown result");
+    }
+
+    public List<TRowResult> getRowsTs(byte[] tableName, List<byte[]> rows, long timestamp) throws IOError, TException
+    {
+      send_getRowsTs(tableName, rows, timestamp);
+      return recv_getRowsTs();
+    }
+
+    public void send_getRowsTs(byte[] tableName, List<byte[]> rows, long timestamp) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("getRowsTs", TMessageType.CALL, seqid_));
+      getRowsTs_args args = new getRowsTs_args();
+      args.tableName = tableName;
+      args.rows = rows;
+      args.timestamp = timestamp;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public List<TRowResult> recv_getRowsTs() throws IOError, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      getRowsTs_result result = new getRowsTs_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      if (result.io != null) {
+        throw result.io;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRowsTs failed: unknown result");
+    }
+
+    public List<TRowResult> getRowsWithColumns(byte[] tableName, List<byte[]> rows, List<byte[]> families) throws IOError, TException
+    {
+      send_getRowsWithColumns(tableName, rows, families);
+      return recv_getRowsWithColumns();
+    }
+
+    public void send_getRowsWithColumns(byte[] tableName, List<byte[]> rows, List<byte[]> families) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("getRowsWithColumns", TMessageType.CALL, seqid_));
+      getRowsWithColumns_args args = new getRowsWithColumns_args();
+      args.tableName = tableName;
+      args.rows = rows;
+      args.families = families;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public List<TRowResult> recv_getRowsWithColumns() throws IOError, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      getRowsWithColumns_result result = new getRowsWithColumns_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      if (result.io != null) {
+        throw result.io;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRowsWithColumns failed: unknown result");
+    }
+
+    public List<TRowResult> getRowsWithColumnsTs(byte[] tableName, List<byte[]> rows, List<byte[]> families, long timestamp) throws IOError, TException
+    {
+      send_getRowsWithColumnsTs(tableName, rows, families, timestamp);
+      return recv_getRowsWithColumnsTs();
+    }
+
+    public void send_getRowsWithColumnsTs(byte[] tableName, List<byte[]> rows, List<byte[]> families, long timestamp) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("getRowsWithColumnsTs", TMessageType.CALL, seqid_));
+      getRowsWithColumnsTs_args args = new getRowsWithColumnsTs_args();
+      args.tableName = tableName;
+      args.rows = rows;
+      args.families = families;
+      args.timestamp = timestamp;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public List<TRowResult> recv_getRowsWithColumnsTs() throws IOError, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      getRowsWithColumnsTs_result result = new getRowsWithColumnsTs_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      if (result.io != null) {
+        throw result.io;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRowsWithColumnsTs failed: unknown result");
+    }
+
     public void mutateRow(byte[] tableName, byte[] row, List<Mutation> mutations) throws IOError, IllegalArgument, TException
     {
       send_mutateRow(tableName, row, mutations);
@@ -1354,6 +1589,93 @@ public class Hbase {
         throw result.ia;
       }
       return;
+    }
+
+    public boolean checkAndMutateRow(byte[] tableName, byte[] row, byte[] columnCheck, byte[] valueCheck, List<Mutation> mutations) throws IOError, IllegalArgument, TException
+    {
+      send_checkAndMutateRow(tableName, row, columnCheck, valueCheck, mutations);
+      return recv_checkAndMutateRow();
+    }
+
+    public void send_checkAndMutateRow(byte[] tableName, byte[] row, byte[] columnCheck, byte[] valueCheck, List<Mutation> mutations) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("checkAndMutateRow", TMessageType.CALL, seqid_));
+      checkAndMutateRow_args args = new checkAndMutateRow_args();
+      args.tableName = tableName;
+      args.row = row;
+      args.columnCheck = columnCheck;
+      args.valueCheck = valueCheck;
+      args.mutations = mutations;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public boolean recv_checkAndMutateRow() throws IOError, IllegalArgument, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      checkAndMutateRow_result result = new checkAndMutateRow_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      if (result.io != null) {
+        throw result.io;
+      }
+      if (result.ia != null) {
+        throw result.ia;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "checkAndMutateRow failed: unknown result");
+    }
+
+    public boolean checkAndMutateRowTs(byte[] tableName, byte[] row, byte[] columnCheck, byte[] valueCheck, List<Mutation> mutations, long timestamp) throws IOError, IllegalArgument, TException
+    {
+      send_checkAndMutateRowTs(tableName, row, columnCheck, valueCheck, mutations, timestamp);
+      return recv_checkAndMutateRowTs();
+    }
+
+    public void send_checkAndMutateRowTs(byte[] tableName, byte[] row, byte[] columnCheck, byte[] valueCheck, List<Mutation> mutations, long timestamp) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("checkAndMutateRowTs", TMessageType.CALL, seqid_));
+      checkAndMutateRowTs_args args = new checkAndMutateRowTs_args();
+      args.tableName = tableName;
+      args.row = row;
+      args.columnCheck = columnCheck;
+      args.valueCheck = valueCheck;
+      args.mutations = mutations;
+      args.timestamp = timestamp;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public boolean recv_checkAndMutateRowTs() throws IOError, IllegalArgument, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      checkAndMutateRowTs_result result = new checkAndMutateRowTs_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      if (result.io != null) {
+        throw result.io;
+      }
+      if (result.ia != null) {
+        throw result.ia;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "checkAndMutateRowTs failed: unknown result");
     }
 
     public long atomicIncrement(byte[] tableName, byte[] row, byte[] column, long value) throws IOError, IllegalArgument, TException
@@ -2061,10 +2383,16 @@ public class Hbase {
       processMap_.put("getRowWithColumns", new getRowWithColumns());
       processMap_.put("getRowTs", new getRowTs());
       processMap_.put("getRowWithColumnsTs", new getRowWithColumnsTs());
+      processMap_.put("getRows", new getRows());
+      processMap_.put("getRowsTs", new getRowsTs());
+      processMap_.put("getRowsWithColumns", new getRowsWithColumns());
+      processMap_.put("getRowsWithColumnsTs", new getRowsWithColumnsTs());
       processMap_.put("mutateRow", new mutateRow());
       processMap_.put("mutateRowTs", new mutateRowTs());
       processMap_.put("mutateRows", new mutateRows());
       processMap_.put("mutateRowsTs", new mutateRowsTs());
+      processMap_.put("checkAndMutateRow", new checkAndMutateRow());
+      processMap_.put("checkAndMutateRowTs", new checkAndMutateRowTs());
       processMap_.put("atomicIncrement", new atomicIncrement());
       processMap_.put("deleteAll", new deleteAll());
       processMap_.put("deleteAllTs", new deleteAllTs());
@@ -2591,6 +2919,118 @@ public class Hbase {
 
     }
 
+    private class getRows implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        getRows_args args = new getRows_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        getRows_result result = new getRows_result();
+        try {
+          result.success = iface_.getRows(args.tableName, args.rows);
+        } catch (IOError io) {
+          result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getRows", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getRows");
+          oprot.writeMessageBegin(new TMessage("getRows", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
+        }
+        oprot.writeMessageBegin(new TMessage("getRows", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class getRowsTs implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        getRowsTs_args args = new getRowsTs_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        getRowsTs_result result = new getRowsTs_result();
+        try {
+          result.success = iface_.getRowsTs(args.tableName, args.rows, args.timestamp);
+        } catch (IOError io) {
+          result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getRowsTs", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getRowsTs");
+          oprot.writeMessageBegin(new TMessage("getRowsTs", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
+        }
+        oprot.writeMessageBegin(new TMessage("getRowsTs", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class getRowsWithColumns implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        getRowsWithColumns_args args = new getRowsWithColumns_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        getRowsWithColumns_result result = new getRowsWithColumns_result();
+        try {
+          result.success = iface_.getRowsWithColumns(args.tableName, args.rows, args.families);
+        } catch (IOError io) {
+          result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getRowsWithColumns", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getRowsWithColumns");
+          oprot.writeMessageBegin(new TMessage("getRowsWithColumns", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
+        }
+        oprot.writeMessageBegin(new TMessage("getRowsWithColumns", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class getRowsWithColumnsTs implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        getRowsWithColumnsTs_args args = new getRowsWithColumnsTs_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        getRowsWithColumnsTs_result result = new getRowsWithColumnsTs_result();
+        try {
+          result.success = iface_.getRowsWithColumnsTs(args.tableName, args.rows, args.families, args.timestamp);
+        } catch (IOError io) {
+          result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getRowsWithColumnsTs", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getRowsWithColumnsTs");
+          oprot.writeMessageBegin(new TMessage("getRowsWithColumnsTs", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
+        }
+        oprot.writeMessageBegin(new TMessage("getRowsWithColumnsTs", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
     private class mutateRow implements ProcessFunction {
       public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
       {
@@ -2704,6 +3144,68 @@ public class Hbase {
           return;
         }
         oprot.writeMessageBegin(new TMessage("mutateRowsTs", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class checkAndMutateRow implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        checkAndMutateRow_args args = new checkAndMutateRow_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        checkAndMutateRow_result result = new checkAndMutateRow_result();
+        try {
+          result.success = iface_.checkAndMutateRow(args.tableName, args.row, args.columnCheck, args.valueCheck, args.mutations);
+          result.setSuccessIsSet(true);
+        } catch (IOError io) {
+          result.io = io;
+        } catch (IllegalArgument ia) {
+          result.ia = ia;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing checkAndMutateRow", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing checkAndMutateRow");
+          oprot.writeMessageBegin(new TMessage("checkAndMutateRow", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
+        }
+        oprot.writeMessageBegin(new TMessage("checkAndMutateRow", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class checkAndMutateRowTs implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        checkAndMutateRowTs_args args = new checkAndMutateRowTs_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        checkAndMutateRowTs_result result = new checkAndMutateRowTs_result();
+        try {
+          result.success = iface_.checkAndMutateRowTs(args.tableName, args.row, args.columnCheck, args.valueCheck, args.mutations, args.timestamp);
+          result.setSuccessIsSet(true);
+        } catch (IOError io) {
+          result.io = io;
+        } catch (IllegalArgument ia) {
+          result.ia = ia;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing checkAndMutateRowTs", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing checkAndMutateRowTs");
+          oprot.writeMessageBegin(new TMessage("checkAndMutateRowTs", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
+        }
+        oprot.writeMessageBegin(new TMessage("checkAndMutateRowTs", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
@@ -16466,6 +16968,3650 @@ public class Hbase {
 
   }
 
+  public static class getRows_args implements TBase<getRows_args._Fields>, java.io.Serializable, Cloneable, Comparable<getRows_args>   {
+    private static final TStruct STRUCT_DESC = new TStruct("getRows_args");
+
+    private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
+    private static final TField ROWS_FIELD_DESC = new TField("rows", TType.LIST, (short)2);
+
+    public byte[] tableName;
+    public List<byte[]> rows;
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROWS((short)2, "rows");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRING)));
+      put(_Fields.ROWS, new FieldMetaData("rows", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
+              new FieldValueMetaData(TType.STRING))));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(getRows_args.class, metaDataMap);
+    }
+
+    public getRows_args() {
+    }
+
+    public getRows_args(
+      byte[] tableName,
+      List<byte[]> rows)
+    {
+      this();
+      this.tableName = tableName;
+      this.rows = rows;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public getRows_args(getRows_args other) {
+      if (other.isSetTableName()) {
+        this.tableName = other.tableName;
+      }
+      if (other.isSetRows()) {
+        List<byte[]> __this__rows = new ArrayList<byte[]>();
+        for (byte[] other_element : other.rows) {
+          __this__rows.add(other_element);
+        }
+        this.rows = __this__rows;
+      }
+    }
+
+    public getRows_args deepCopy() {
+      return new getRows_args(this);
+    }
+
+    @Deprecated
+    public getRows_args clone() {
+      return new getRows_args(this);
+    }
+
+    public byte[] getTableName() {
+      return this.tableName;
+    }
+
+    public getRows_args setTableName(byte[] tableName) {
+      this.tableName = tableName;
+      return this;
+    }
+
+    public void unsetTableName() {
+      this.tableName = null;
+    }
+
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
+    public boolean isSetTableName() {
+      return this.tableName != null;
+    }
+
+    public void setTableNameIsSet(boolean value) {
+      if (!value) {
+        this.tableName = null;
+      }
+    }
+
+    public int getRowsSize() {
+      return (this.rows == null) ? 0 : this.rows.size();
+    }
+
+    public java.util.Iterator<byte[]> getRowsIterator() {
+      return (this.rows == null) ? null : this.rows.iterator();
+    }
+
+    public void addToRows(byte[] elem) {
+      if (this.rows == null) {
+        this.rows = new ArrayList<byte[]>();
+      }
+      this.rows.add(elem);
+    }
+
+    public List<byte[]> getRows() {
+      return this.rows;
+    }
+
+    public getRows_args setRows(List<byte[]> rows) {
+      this.rows = rows;
+      return this;
+    }
+
+    public void unsetRows() {
+      this.rows = null;
+    }
+
+    /** Returns true if field rows is set (has been asigned a value) and false otherwise */
+    public boolean isSetRows() {
+      return this.rows != null;
+    }
+
+    public void setRowsIsSet(boolean value) {
+      if (!value) {
+        this.rows = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
+        if (value == null) {
+          unsetTableName();
+        } else {
+          setTableName((byte[])value);
+        }
+        break;
+
+      case ROWS:
+        if (value == null) {
+          unsetRows();
+        } else {
+          setRows((List<byte[]>)value);
+        }
+        break;
+
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return getTableName();
+
+      case ROWS:
+        return getRows();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return isSetTableName();
+      case ROWS:
+        return isSetRows();
+      }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRows_args)
+        return this.equals((getRows_args)that);
+      return false;
+    }
+
+    public boolean equals(getRows_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && this.isSetTableName();
+      boolean that_present_tableName = true && that.isSetTableName();
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_rows = true && this.isSetRows();
+      boolean that_present_rows = true && that.isSetRows();
+      if (this_present_rows || that_present_rows) {
+        if (!(this_present_rows && that_present_rows))
+          return false;
+        if (!this.rows.equals(that.rows))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_rows = true && (isSetRows());
+      builder.append(present_rows);
+      if (present_rows)
+        builder.append(rows);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getRows_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getRows_args typedOther = (getRows_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRows()).compareTo(isSetRows());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(rows, typedOther.rows);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) {
+          break;
+        }
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROWS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list66 = iprot.readListBegin();
+                  this.rows = new ArrayList<byte[]>(_list66.size);
+                  for (int _i67 = 0; _i67 < _list66.size; ++_i67)
+                  {
+                    byte[] _elem68;
+                    _elem68 = iprot.readBinary();
+                    this.rows.add(_elem68);
+                  }
+                  iprot.readListEnd();
+                }
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
+        }
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
+      if (this.tableName != null) {
+        oprot.writeFieldBegin(TABLE_NAME_FIELD_DESC);
+        oprot.writeBinary(this.tableName);
+        oprot.writeFieldEnd();
+      }
+      if (this.rows != null) {
+        oprot.writeFieldBegin(ROWS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRING, this.rows.size()));
+          for (byte[] _iter69 : this.rows)
+          {
+            oprot.writeBinary(_iter69);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getRows_args(");
+      boolean first = true;
+
+      sb.append("tableName:");
+      if (this.tableName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.tableName);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("rows:");
+      if (this.rows == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.rows);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+    }
+
+  }
+
+  public static class getRows_result implements TBase<getRows_result._Fields>, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("getRows_result");
+
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
+    private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
+
+    public List<TRowResult> success;
+    public IOError io;
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
+              new StructMetaData(TType.STRUCT, TRowResult.class))));
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(getRows_result.class, metaDataMap);
+    }
+
+    public getRows_result() {
+    }
+
+    public getRows_result(
+      List<TRowResult> success,
+      IOError io)
+    {
+      this();
+      this.success = success;
+      this.io = io;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public getRows_result(getRows_result other) {
+      if (other.isSetSuccess()) {
+        List<TRowResult> __this__success = new ArrayList<TRowResult>();
+        for (TRowResult other_element : other.success) {
+          __this__success.add(new TRowResult(other_element));
+        }
+        this.success = __this__success;
+      }
+      if (other.isSetIo()) {
+        this.io = new IOError(other.io);
+      }
+    }
+
+    public getRows_result deepCopy() {
+      return new getRows_result(this);
+    }
+
+    @Deprecated
+    public getRows_result clone() {
+      return new getRows_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<TRowResult> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(TRowResult elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<TRowResult>();
+      }
+      this.success.add(elem);
+    }
+
+    public List<TRowResult> getSuccess() {
+      return this.success;
+    }
+
+    public getRows_result setSuccess(List<TRowResult> success) {
+      this.success = success;
+      return this;
+    }
+
+    public void unsetSuccess() {
+      this.success = null;
+    }
+
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
+    public boolean isSetSuccess() {
+      return this.success != null;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      if (!value) {
+        this.success = null;
+      }
+    }
+
+    public IOError getIo() {
+      return this.io;
+    }
+
+    public getRows_result setIo(IOError io) {
+      this.io = io;
+      return this;
+    }
+
+    public void unsetIo() {
+      this.io = null;
+    }
+
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
+    public boolean isSetIo() {
+      return this.io != null;
+    }
+
+    public void setIoIsSet(boolean value) {
+      if (!value) {
+        this.io = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((List<TRowResult>)value);
+        }
+        break;
+
+      case IO:
+        if (value == null) {
+          unsetIo();
+        } else {
+          setIo((IOError)value);
+        }
+        break;
+
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return getSuccess();
+
+      case IO:
+        return getIo();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return isSetSuccess();
+      case IO:
+        return isSetIo();
+      }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRows_result)
+        return this.equals((getRows_result)that);
+      return false;
+    }
+
+    public boolean equals(getRows_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && this.isSetSuccess();
+      boolean that_present_success = true && that.isSetSuccess();
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && this.isSetIo();
+      boolean that_present_io = true && that.isSetIo();
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) {
+          break;
+        }
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list70 = iprot.readListBegin();
+                  this.success = new ArrayList<TRowResult>(_list70.size);
+                  for (int _i71 = 0; _i71 < _list70.size; ++_i71)
+                  {
+                    TRowResult _elem72;
+                    _elem72 = new TRowResult();
+                    _elem72.read(iprot);
+                    this.success.add(_elem72);
+                  }
+                  iprot.readListEnd();
+                }
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
+        }
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      oprot.writeStructBegin(STRUCT_DESC);
+
+      if (this.isSetSuccess()) {
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
+          for (TRowResult _iter73 : this.success)
+          {
+            _iter73.write(oprot);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      } else if (this.isSetIo()) {
+        oprot.writeFieldBegin(IO_FIELD_DESC);
+        this.io.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getRows_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      if (this.success == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.success);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("io:");
+      if (this.io == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.io);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+    }
+
+  }
+
+  public static class getRowsTs_args implements TBase<getRowsTs_args._Fields>, java.io.Serializable, Cloneable, Comparable<getRowsTs_args>   {
+    private static final TStruct STRUCT_DESC = new TStruct("getRowsTs_args");
+
+    private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
+    private static final TField ROWS_FIELD_DESC = new TField("rows", TType.LIST, (short)2);
+    private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)3);
+
+    public byte[] tableName;
+    public List<byte[]> rows;
+    public long timestamp;
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROWS((short)2, "rows"),
+      TIMESTAMP((short)3, "timestamp");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    private static final int __TIMESTAMP_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRING)));
+      put(_Fields.ROWS, new FieldMetaData("rows", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
+              new FieldValueMetaData(TType.STRING))));
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.I64)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(getRowsTs_args.class, metaDataMap);
+    }
+
+    public getRowsTs_args() {
+    }
+
+    public getRowsTs_args(
+      byte[] tableName,
+      List<byte[]> rows,
+      long timestamp)
+    {
+      this();
+      this.tableName = tableName;
+      this.rows = rows;
+      this.timestamp = timestamp;
+      setTimestampIsSet(true);
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public getRowsTs_args(getRowsTs_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
+      if (other.isSetTableName()) {
+        this.tableName = other.tableName;
+      }
+      if (other.isSetRows()) {
+        List<byte[]> __this__rows = new ArrayList<byte[]>();
+        for (byte[] other_element : other.rows) {
+          __this__rows.add(other_element);
+        }
+        this.rows = __this__rows;
+      }
+      this.timestamp = other.timestamp;
+    }
+
+    public getRowsTs_args deepCopy() {
+      return new getRowsTs_args(this);
+    }
+
+    @Deprecated
+    public getRowsTs_args clone() {
+      return new getRowsTs_args(this);
+    }
+
+    public byte[] getTableName() {
+      return this.tableName;
+    }
+
+    public getRowsTs_args setTableName(byte[] tableName) {
+      this.tableName = tableName;
+      return this;
+    }
+
+    public void unsetTableName() {
+      this.tableName = null;
+    }
+
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
+    public boolean isSetTableName() {
+      return this.tableName != null;
+    }
+
+    public void setTableNameIsSet(boolean value) {
+      if (!value) {
+        this.tableName = null;
+      }
+    }
+
+    public int getRowsSize() {
+      return (this.rows == null) ? 0 : this.rows.size();
+    }
+
+    public java.util.Iterator<byte[]> getRowsIterator() {
+      return (this.rows == null) ? null : this.rows.iterator();
+    }
+
+    public void addToRows(byte[] elem) {
+      if (this.rows == null) {
+        this.rows = new ArrayList<byte[]>();
+      }
+      this.rows.add(elem);
+    }
+
+    public List<byte[]> getRows() {
+      return this.rows;
+    }
+
+    public getRowsTs_args setRows(List<byte[]> rows) {
+      this.rows = rows;
+      return this;
+    }
+
+    public void unsetRows() {
+      this.rows = null;
+    }
+
+    /** Returns true if field rows is set (has been asigned a value) and false otherwise */
+    public boolean isSetRows() {
+      return this.rows != null;
+    }
+
+    public void setRowsIsSet(boolean value) {
+      if (!value) {
+        this.rows = null;
+      }
+    }
+
+    public long getTimestamp() {
+      return this.timestamp;
+    }
+
+    public getRowsTs_args setTimestamp(long timestamp) {
+      this.timestamp = timestamp;
+      setTimestampIsSet(true);
+      return this;
+    }
+
+    public void unsetTimestamp() {
+      __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
+    }
+
+    /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
+    public boolean isSetTimestamp() {
+      return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
+    }
+
+    public void setTimestampIsSet(boolean value) {
+      __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
+        if (value == null) {
+          unsetTableName();
+        } else {
+          setTableName((byte[])value);
+        }
+        break;
+
+      case ROWS:
+        if (value == null) {
+          unsetRows();
+        } else {
+          setRows((List<byte[]>)value);
+        }
+        break;
+
+      case TIMESTAMP:
+        if (value == null) {
+          unsetTimestamp();
+        } else {
+          setTimestamp((Long)value);
+        }
+        break;
+
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return getTableName();
+
+      case ROWS:
+        return getRows();
+
+      case TIMESTAMP:
+        return new Long(getTimestamp());
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return isSetTableName();
+      case ROWS:
+        return isSetRows();
+      case TIMESTAMP:
+        return isSetTimestamp();
+      }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRowsTs_args)
+        return this.equals((getRowsTs_args)that);
+      return false;
+    }
+
+    public boolean equals(getRowsTs_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && this.isSetTableName();
+      boolean that_present_tableName = true && that.isSetTableName();
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_rows = true && this.isSetRows();
+      boolean that_present_rows = true && that.isSetRows();
+      if (this_present_rows || that_present_rows) {
+        if (!(this_present_rows && that_present_rows))
+          return false;
+        if (!this.rows.equals(that.rows))
+          return false;
+      }
+
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_rows = true && (isSetRows());
+      builder.append(present_rows);
+      if (present_rows)
+        builder.append(rows);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getRowsTs_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getRowsTs_args typedOther = (getRowsTs_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRows()).compareTo(isSetRows());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(rows, typedOther.rows);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) {
+          break;
+        }
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROWS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list74 = iprot.readListBegin();
+                  this.rows = new ArrayList<byte[]>(_list74.size);
+                  for (int _i75 = 0; _i75 < _list74.size; ++_i75)
+                  {
+                    byte[] _elem76;
+                    _elem76 = iprot.readBinary();
+                    this.rows.add(_elem76);
+                  }
+                  iprot.readListEnd();
+                }
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case TIMESTAMP:
+              if (field.type == TType.I64) {
+                this.timestamp = iprot.readI64();
+                setTimestampIsSet(true);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
+        }
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
+      if (this.tableName != null) {
+        oprot.writeFieldBegin(TABLE_NAME_FIELD_DESC);
+        oprot.writeBinary(this.tableName);
+        oprot.writeFieldEnd();
+      }
+      if (this.rows != null) {
+        oprot.writeFieldBegin(ROWS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRING, this.rows.size()));
+          for (byte[] _iter77 : this.rows)
+          {
+            oprot.writeBinary(_iter77);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
+      oprot.writeI64(this.timestamp);
+      oprot.writeFieldEnd();
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getRowsTs_args(");
+      boolean first = true;
+
+      sb.append("tableName:");
+      if (this.tableName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.tableName);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("rows:");
+      if (this.rows == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.rows);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("timestamp:");
+      sb.append(this.timestamp);
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+    }
+
+  }
+
+  public static class getRowsTs_result implements TBase<getRowsTs_result._Fields>, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("getRowsTs_result");
+
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
+    private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
+
+    public List<TRowResult> success;
+    public IOError io;
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
+              new StructMetaData(TType.STRUCT, TRowResult.class))));
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(getRowsTs_result.class, metaDataMap);
+    }
+
+    public getRowsTs_result() {
+    }
+
+    public getRowsTs_result(
+      List<TRowResult> success,
+      IOError io)
+    {
+      this();
+      this.success = success;
+      this.io = io;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public getRowsTs_result(getRowsTs_result other) {
+      if (other.isSetSuccess()) {
+        List<TRowResult> __this__success = new ArrayList<TRowResult>();
+        for (TRowResult other_element : other.success) {
+          __this__success.add(new TRowResult(other_element));
+        }
+        this.success = __this__success;
+      }
+      if (other.isSetIo()) {
+        this.io = new IOError(other.io);
+      }
+    }
+
+    public getRowsTs_result deepCopy() {
+      return new getRowsTs_result(this);
+    }
+
+    @Deprecated
+    public getRowsTs_result clone() {
+      return new getRowsTs_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<TRowResult> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(TRowResult elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<TRowResult>();
+      }
+      this.success.add(elem);
+    }
+
+    public List<TRowResult> getSuccess() {
+      return this.success;
+    }
+
+    public getRowsTs_result setSuccess(List<TRowResult> success) {
+      this.success = success;
+      return this;
+    }
+
+    public void unsetSuccess() {
+      this.success = null;
+    }
+
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
+    public boolean isSetSuccess() {
+      return this.success != null;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      if (!value) {
+        this.success = null;
+      }
+    }
+
+    public IOError getIo() {
+      return this.io;
+    }
+
+    public getRowsTs_result setIo(IOError io) {
+      this.io = io;
+      return this;
+    }
+
+    public void unsetIo() {
+      this.io = null;
+    }
+
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
+    public boolean isSetIo() {
+      return this.io != null;
+    }
+
+    public void setIoIsSet(boolean value) {
+      if (!value) {
+        this.io = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((List<TRowResult>)value);
+        }
+        break;
+
+      case IO:
+        if (value == null) {
+          unsetIo();
+        } else {
+          setIo((IOError)value);
+        }
+        break;
+
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return getSuccess();
+
+      case IO:
+        return getIo();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return isSetSuccess();
+      case IO:
+        return isSetIo();
+      }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRowsTs_result)
+        return this.equals((getRowsTs_result)that);
+      return false;
+    }
+
+    public boolean equals(getRowsTs_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && this.isSetSuccess();
+      boolean that_present_success = true && that.isSetSuccess();
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && this.isSetIo();
+      boolean that_present_io = true && that.isSetIo();
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) {
+          break;
+        }
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list78 = iprot.readListBegin();
+                  this.success = new ArrayList<TRowResult>(_list78.size);
+                  for (int _i79 = 0; _i79 < _list78.size; ++_i79)
+                  {
+                    TRowResult _elem80;
+                    _elem80 = new TRowResult();
+                    _elem80.read(iprot);
+                    this.success.add(_elem80);
+                  }
+                  iprot.readListEnd();
+                }
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
+        }
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      oprot.writeStructBegin(STRUCT_DESC);
+
+      if (this.isSetSuccess()) {
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
+          for (TRowResult _iter81 : this.success)
+          {
+            _iter81.write(oprot);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      } else if (this.isSetIo()) {
+        oprot.writeFieldBegin(IO_FIELD_DESC);
+        this.io.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getRowsTs_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      if (this.success == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.success);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("io:");
+      if (this.io == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.io);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+    }
+
+  }
+
+  public static class getRowsWithColumns_args implements TBase<getRowsWithColumns_args._Fields>, java.io.Serializable, Cloneable, Comparable<getRowsWithColumns_args>   {
+    private static final TStruct STRUCT_DESC = new TStruct("getRowsWithColumns_args");
+
+    private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
+    private static final TField ROWS_FIELD_DESC = new TField("rows", TType.LIST, (short)2);
+    private static final TField FAMILIES_FIELD_DESC = new TField("families", TType.LIST, (short)3);
+
+    public byte[] tableName;
+    public List<byte[]> rows;
+    public List<byte[]> families;
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROWS((short)2, "rows"),
+      FAMILIES((short)3, "families");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRING)));
+      put(_Fields.ROWS, new FieldMetaData("rows", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
+              new FieldValueMetaData(TType.STRING))));
+      put(_Fields.FAMILIES, new FieldMetaData("families", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
+              new FieldValueMetaData(TType.STRING))));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(getRowsWithColumns_args.class, metaDataMap);
+    }
+
+    public getRowsWithColumns_args() {
+    }
+
+    public getRowsWithColumns_args(
+      byte[] tableName,
+      List<byte[]> rows,
+      List<byte[]> families)
+    {
+      this();
+      this.tableName = tableName;
+      this.rows = rows;
+      this.families = families;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public getRowsWithColumns_args(getRowsWithColumns_args other) {
+      if (other.isSetTableName()) {
+        this.tableName = other.tableName;
+      }
+      if (other.isSetRows()) {
+        List<byte[]> __this__rows = new ArrayList<byte[]>();
+        for (byte[] other_element : other.rows) {
+          __this__rows.add(other_element);
+        }
+        this.rows = __this__rows;
+      }
+      if (other.isSetFamilies()) {
+        List<byte[]> __this__families = new ArrayList<byte[]>();
+        for (byte[] other_element : other.families) {
+          __this__families.add(other_element);
+        }
+        this.families = __this__families;
+      }
+    }
+
+    public getRowsWithColumns_args deepCopy() {
+      return new getRowsWithColumns_args(this);
+    }
+
+    @Deprecated
+    public getRowsWithColumns_args clone() {
+      return new getRowsWithColumns_args(this);
+    }
+
+    public byte[] getTableName() {
+      return this.tableName;
+    }
+
+    public getRowsWithColumns_args setTableName(byte[] tableName) {
+      this.tableName = tableName;
+      return this;
+    }
+
+    public void unsetTableName() {
+      this.tableName = null;
+    }
+
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
+    public boolean isSetTableName() {
+      return this.tableName != null;
+    }
+
+    public void setTableNameIsSet(boolean value) {
+      if (!value) {
+        this.tableName = null;
+      }
+    }
+
+    public int getRowsSize() {
+      return (this.rows == null) ? 0 : this.rows.size();
+    }
+
+    public java.util.Iterator<byte[]> getRowsIterator() {
+      return (this.rows == null) ? null : this.rows.iterator();
+    }
+
+    public void addToRows(byte[] elem) {
+      if (this.rows == null) {
+        this.rows = new ArrayList<byte[]>();
+      }
+      this.rows.add(elem);
+    }
+
+    public List<byte[]> getRows() {
+      return this.rows;
+    }
+
+    public getRowsWithColumns_args setRows(List<byte[]> rows) {
+      this.rows = rows;
+      return this;
+    }
+
+    public void unsetRows() {
+      this.rows = null;
+    }
+
+    /** Returns true if field rows is set (has been asigned a value) and false otherwise */
+    public boolean isSetRows() {
+      return this.rows != null;
+    }
+
+    public void setRowsIsSet(boolean value) {
+      if (!value) {
+        this.rows = null;
+      }
+    }
+
+    public int getFamiliesSize() {
+      return (this.families == null) ? 0 : this.families.size();
+    }
+
+    public java.util.Iterator<byte[]> getFamiliesIterator() {
+      return (this.families == null) ? null : this.families.iterator();
+    }
+
+    public void addToFamilies(byte[] elem) {
+      if (this.families == null) {
+        this.families = new ArrayList<byte[]>();
+      }
+      this.families.add(elem);
+    }
+
+    public List<byte[]> getFamilies() {
+      return this.families;
+    }
+
+    public getRowsWithColumns_args setFamilies(List<byte[]> families) {
+      this.families = families;
+      return this;
+    }
+
+    public void unsetFamilies() {
+      this.families = null;
+    }
+
+    /** Returns true if field families is set (has been asigned a value) and false otherwise */
+    public boolean isSetFamilies() {
+      return this.families != null;
+    }
+
+    public void setFamiliesIsSet(boolean value) {
+      if (!value) {
+        this.families = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
+        if (value == null) {
+          unsetTableName();
+        } else {
+          setTableName((byte[])value);
+        }
+        break;
+
+      case ROWS:
+        if (value == null) {
+          unsetRows();
+        } else {
+          setRows((List<byte[]>)value);
+        }
+        break;
+
+      case FAMILIES:
+        if (value == null) {
+          unsetFamilies();
+        } else {
+          setFamilies((List<byte[]>)value);
+        }
+        break;
+
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return getTableName();
+
+      case ROWS:
+        return getRows();
+
+      case FAMILIES:
+        return getFamilies();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return isSetTableName();
+      case ROWS:
+        return isSetRows();
+      case FAMILIES:
+        return isSetFamilies();
+      }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRowsWithColumns_args)
+        return this.equals((getRowsWithColumns_args)that);
+      return false;
+    }
+
+    public boolean equals(getRowsWithColumns_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && this.isSetTableName();
+      boolean that_present_tableName = true && that.isSetTableName();
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_rows = true && this.isSetRows();
+      boolean that_present_rows = true && that.isSetRows();
+      if (this_present_rows || that_present_rows) {
+        if (!(this_present_rows && that_present_rows))
+          return false;
+        if (!this.rows.equals(that.rows))
+          return false;
+      }
+
+      boolean this_present_families = true && this.isSetFamilies();
+      boolean that_present_families = true && that.isSetFamilies();
+      if (this_present_families || that_present_families) {
+        if (!(this_present_families && that_present_families))
+          return false;
+        if (!this.families.equals(that.families))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_rows = true && (isSetRows());
+      builder.append(present_rows);
+      if (present_rows)
+        builder.append(rows);
+
+      boolean present_families = true && (isSetFamilies());
+      builder.append(present_families);
+      if (present_families)
+        builder.append(families);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getRowsWithColumns_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getRowsWithColumns_args typedOther = (getRowsWithColumns_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRows()).compareTo(isSetRows());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(rows, typedOther.rows);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetFamilies()).compareTo(isSetFamilies());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(families, typedOther.families);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) {
+          break;
+        }
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROWS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list82 = iprot.readListBegin();
+                  this.rows = new ArrayList<byte[]>(_list82.size);
+                  for (int _i83 = 0; _i83 < _list82.size; ++_i83)
+                  {
+                    byte[] _elem84;
+                    _elem84 = iprot.readBinary();
+                    this.rows.add(_elem84);
+                  }
+                  iprot.readListEnd();
+                }
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case FAMILIES:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list85 = iprot.readListBegin();
+                  this.families = new ArrayList<byte[]>(_list85.size);
+                  for (int _i86 = 0; _i86 < _list85.size; ++_i86)
+                  {
+                    byte[] _elem87;
+                    _elem87 = iprot.readBinary();
+                    this.families.add(_elem87);
+                  }
+                  iprot.readListEnd();
+                }
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
+        }
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
+      if (this.tableName != null) {
+        oprot.writeFieldBegin(TABLE_NAME_FIELD_DESC);
+        oprot.writeBinary(this.tableName);
+        oprot.writeFieldEnd();
+      }
+      if (this.rows != null) {
+        oprot.writeFieldBegin(ROWS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRING, this.rows.size()));
+          for (byte[] _iter88 : this.rows)
+          {
+            oprot.writeBinary(_iter88);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      if (this.families != null) {
+        oprot.writeFieldBegin(FAMILIES_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRING, this.families.size()));
+          for (byte[] _iter89 : this.families)
+          {
+            oprot.writeBinary(_iter89);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getRowsWithColumns_args(");
+      boolean first = true;
+
+      sb.append("tableName:");
+      if (this.tableName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.tableName);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("rows:");
+      if (this.rows == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.rows);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("families:");
+      if (this.families == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.families);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+    }
+
+  }
+
+  public static class getRowsWithColumns_result implements TBase<getRowsWithColumns_result._Fields>, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("getRowsWithColumns_result");
+
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
+    private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
+
+    public List<TRowResult> success;
+    public IOError io;
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
+              new StructMetaData(TType.STRUCT, TRowResult.class))));
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(getRowsWithColumns_result.class, metaDataMap);
+    }
+
+    public getRowsWithColumns_result() {
+    }
+
+    public getRowsWithColumns_result(
+      List<TRowResult> success,
+      IOError io)
+    {
+      this();
+      this.success = success;
+      this.io = io;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public getRowsWithColumns_result(getRowsWithColumns_result other) {
+      if (other.isSetSuccess()) {
+        List<TRowResult> __this__success = new ArrayList<TRowResult>();
+        for (TRowResult other_element : other.success) {
+          __this__success.add(new TRowResult(other_element));
+        }
+        this.success = __this__success;
+      }
+      if (other.isSetIo()) {
+        this.io = new IOError(other.io);
+      }
+    }
+
+    public getRowsWithColumns_result deepCopy() {
+      return new getRowsWithColumns_result(this);
+    }
+
+    @Deprecated
+    public getRowsWithColumns_result clone() {
+      return new getRowsWithColumns_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<TRowResult> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(TRowResult elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<TRowResult>();
+      }
+      this.success.add(elem);
+    }
+
+    public List<TRowResult> getSuccess() {
+      return this.success;
+    }
+
+    public getRowsWithColumns_result setSuccess(List<TRowResult> success) {
+      this.success = success;
+      return this;
+    }
+
+    public void unsetSuccess() {
+      this.success = null;
+    }
+
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
+    public boolean isSetSuccess() {
+      return this.success != null;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      if (!value) {
+        this.success = null;
+      }
+    }
+
+    public IOError getIo() {
+      return this.io;
+    }
+
+    public getRowsWithColumns_result setIo(IOError io) {
+      this.io = io;
+      return this;
+    }
+
+    public void unsetIo() {
+      this.io = null;
+    }
+
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
+    public boolean isSetIo() {
+      return this.io != null;
+    }
+
+    public void setIoIsSet(boolean value) {
+      if (!value) {
+        this.io = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((List<TRowResult>)value);
+        }
+        break;
+
+      case IO:
+        if (value == null) {
+          unsetIo();
+        } else {
+          setIo((IOError)value);
+        }
+        break;
+
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return getSuccess();
+
+      case IO:
+        return getIo();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return isSetSuccess();
+      case IO:
+        return isSetIo();
+      }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRowsWithColumns_result)
+        return this.equals((getRowsWithColumns_result)that);
+      return false;
+    }
+
+    public boolean equals(getRowsWithColumns_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && this.isSetSuccess();
+      boolean that_present_success = true && that.isSetSuccess();
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && this.isSetIo();
+      boolean that_present_io = true && that.isSetIo();
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) {
+          break;
+        }
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list90 = iprot.readListBegin();
+                  this.success = new ArrayList<TRowResult>(_list90.size);
+                  for (int _i91 = 0; _i91 < _list90.size; ++_i91)
+                  {
+                    TRowResult _elem92;
+                    _elem92 = new TRowResult();
+                    _elem92.read(iprot);
+                    this.success.add(_elem92);
+                  }
+                  iprot.readListEnd();
+                }
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
+        }
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      oprot.writeStructBegin(STRUCT_DESC);
+
+      if (this.isSetSuccess()) {
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
+          for (TRowResult _iter93 : this.success)
+          {
+            _iter93.write(oprot);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      } else if (this.isSetIo()) {
+        oprot.writeFieldBegin(IO_FIELD_DESC);
+        this.io.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getRowsWithColumns_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      if (this.success == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.success);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("io:");
+      if (this.io == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.io);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+    }
+
+  }
+
+  public static class getRowsWithColumnsTs_args implements TBase<getRowsWithColumnsTs_args._Fields>, java.io.Serializable, Cloneable, Comparable<getRowsWithColumnsTs_args>   {
+    private static final TStruct STRUCT_DESC = new TStruct("getRowsWithColumnsTs_args");
+
+    private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
+    private static final TField ROWS_FIELD_DESC = new TField("rows", TType.LIST, (short)2);
+    private static final TField FAMILIES_FIELD_DESC = new TField("families", TType.LIST, (short)3);
+    private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)4);
+
+    public byte[] tableName;
+    public List<byte[]> rows;
+    public List<byte[]> families;
+    public long timestamp;
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROWS((short)2, "rows"),
+      FAMILIES((short)3, "families"),
+      TIMESTAMP((short)4, "timestamp");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    private static final int __TIMESTAMP_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRING)));
+      put(_Fields.ROWS, new FieldMetaData("rows", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
+              new FieldValueMetaData(TType.STRING))));
+      put(_Fields.FAMILIES, new FieldMetaData("families", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
+              new FieldValueMetaData(TType.STRING))));
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.I64)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(getRowsWithColumnsTs_args.class, metaDataMap);
+    }
+
+    public getRowsWithColumnsTs_args() {
+    }
+
+    public getRowsWithColumnsTs_args(
+      byte[] tableName,
+      List<byte[]> rows,
+      List<byte[]> families,
+      long timestamp)
+    {
+      this();
+      this.tableName = tableName;
+      this.rows = rows;
+      this.families = families;
+      this.timestamp = timestamp;
+      setTimestampIsSet(true);
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public getRowsWithColumnsTs_args(getRowsWithColumnsTs_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
+      if (other.isSetTableName()) {
+        this.tableName = other.tableName;
+      }
+      if (other.isSetRows()) {
+        List<byte[]> __this__rows = new ArrayList<byte[]>();
+        for (byte[] other_element : other.rows) {
+          __this__rows.add(other_element);
+        }
+        this.rows = __this__rows;
+      }
+      if (other.isSetFamilies()) {
+        List<byte[]> __this__families = new ArrayList<byte[]>();
+        for (byte[] other_element : other.families) {
+          __this__families.add(other_element);
+        }
+        this.families = __this__families;
+      }
+      this.timestamp = other.timestamp;
+    }
+
+    public getRowsWithColumnsTs_args deepCopy() {
+      return new getRowsWithColumnsTs_args(this);
+    }
+
+    @Deprecated
+    public getRowsWithColumnsTs_args clone() {
+      return new getRowsWithColumnsTs_args(this);
+    }
+
+    public byte[] getTableName() {
+      return this.tableName;
+    }
+
+    public getRowsWithColumnsTs_args setTableName(byte[] tableName) {
+      this.tableName = tableName;
+      return this;
+    }
+
+    public void unsetTableName() {
+      this.tableName = null;
+    }
+
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
+    public boolean isSetTableName() {
+      return this.tableName != null;
+    }
+
+    public void setTableNameIsSet(boolean value) {
+      if (!value) {
+        this.tableName = null;
+      }
+    }
+
+    public int getRowsSize() {
+      return (this.rows == null) ? 0 : this.rows.size();
+    }
+
+    public java.util.Iterator<byte[]> getRowsIterator() {
+      return (this.rows == null) ? null : this.rows.iterator();
+    }
+
+    public void addToRows(byte[] elem) {
+      if (this.rows == null) {
+        this.rows = new ArrayList<byte[]>();
+      }
+      this.rows.add(elem);
+    }
+
+    public List<byte[]> getRows() {
+      return this.rows;
+    }
+
+    public getRowsWithColumnsTs_args setRows(List<byte[]> rows) {
+      this.rows = rows;
+      return this;
+    }
+
+    public void unsetRows() {
+      this.rows = null;
+    }
+
+    /** Returns true if field rows is set (has been asigned a value) and false otherwise */
+    public boolean isSetRows() {
+      return this.rows != null;
+    }
+
+    public void setRowsIsSet(boolean value) {
+      if (!value) {
+        this.rows = null;
+      }
+    }
+
+    public int getFamiliesSize() {
+      return (this.families == null) ? 0 : this.families.size();
+    }
+
+    public java.util.Iterator<byte[]> getFamiliesIterator() {
+      return (this.families == null) ? null : this.families.iterator();
+    }
+
+    public void addToFamilies(byte[] elem) {
+      if (this.families == null) {
+        this.families = new ArrayList<byte[]>();
+      }
+      this.families.add(elem);
+    }
+
+    public List<byte[]> getFamilies() {
+      return this.families;
+    }
+
+    public getRowsWithColumnsTs_args setFamilies(List<byte[]> families) {
+      this.families = families;
+      return this;
+    }
+
+    public void unsetFamilies() {
+      this.families = null;
+    }
+
+    /** Returns true if field families is set (has been asigned a value) and false otherwise */
+    public boolean isSetFamilies() {
+      return this.families != null;
+    }
+
+    public void setFamiliesIsSet(boolean value) {
+      if (!value) {
+        this.families = null;
+      }
+    }
+
+    public long getTimestamp() {
+      return this.timestamp;
+    }
+
+    public getRowsWithColumnsTs_args setTimestamp(long timestamp) {
+      this.timestamp = timestamp;
+      setTimestampIsSet(true);
+      return this;
+    }
+
+    public void unsetTimestamp() {
+      __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
+    }
+
+    /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
+    public boolean isSetTimestamp() {
+      return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
+    }
+
+    public void setTimestampIsSet(boolean value) {
+      __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
+        if (value == null) {
+          unsetTableName();
+        } else {
+          setTableName((byte[])value);
+        }
+        break;
+
+      case ROWS:
+        if (value == null) {
+          unsetRows();
+        } else {
+          setRows((List<byte[]>)value);
+        }
+        break;
+
+      case FAMILIES:
+        if (value == null) {
+          unsetFamilies();
+        } else {
+          setFamilies((List<byte[]>)value);
+        }
+        break;
+
+      case TIMESTAMP:
+        if (value == null) {
+          unsetTimestamp();
+        } else {
+          setTimestamp((Long)value);
+        }
+        break;
+
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return getTableName();
+
+      case ROWS:
+        return getRows();
+
+      case FAMILIES:
+        return getFamilies();
+
+      case TIMESTAMP:
+        return new Long(getTimestamp());
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return isSetTableName();
+      case ROWS:
+        return isSetRows();
+      case FAMILIES:
+        return isSetFamilies();
+      case TIMESTAMP:
+        return isSetTimestamp();
+      }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRowsWithColumnsTs_args)
+        return this.equals((getRowsWithColumnsTs_args)that);
+      return false;
+    }
+
+    public boolean equals(getRowsWithColumnsTs_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && this.isSetTableName();
+      boolean that_present_tableName = true && that.isSetTableName();
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_rows = true && this.isSetRows();
+      boolean that_present_rows = true && that.isSetRows();
+      if (this_present_rows || that_present_rows) {
+        if (!(this_present_rows && that_present_rows))
+          return false;
+        if (!this.rows.equals(that.rows))
+          return false;
+      }
+
+      boolean this_present_families = true && this.isSetFamilies();
+      boolean that_present_families = true && that.isSetFamilies();
+      if (this_present_families || that_present_families) {
+        if (!(this_present_families && that_present_families))
+          return false;
+        if (!this.families.equals(that.families))
+          return false;
+      }
+
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_rows = true && (isSetRows());
+      builder.append(present_rows);
+      if (present_rows)
+        builder.append(rows);
+
+      boolean present_families = true && (isSetFamilies());
+      builder.append(present_families);
+      if (present_families)
+        builder.append(families);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getRowsWithColumnsTs_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getRowsWithColumnsTs_args typedOther = (getRowsWithColumnsTs_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRows()).compareTo(isSetRows());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(rows, typedOther.rows);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetFamilies()).compareTo(isSetFamilies());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(families, typedOther.families);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) {
+          break;
+        }
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROWS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list94 = iprot.readListBegin();
+                  this.rows = new ArrayList<byte[]>(_list94.size);
+                  for (int _i95 = 0; _i95 < _list94.size; ++_i95)
+                  {
+                    byte[] _elem96;
+                    _elem96 = iprot.readBinary();
+                    this.rows.add(_elem96);
+                  }
+                  iprot.readListEnd();
+                }
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case FAMILIES:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list97 = iprot.readListBegin();
+                  this.families = new ArrayList<byte[]>(_list97.size);
+                  for (int _i98 = 0; _i98 < _list97.size; ++_i98)
+                  {
+                    byte[] _elem99;
+                    _elem99 = iprot.readBinary();
+                    this.families.add(_elem99);
+                  }
+                  iprot.readListEnd();
+                }
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case TIMESTAMP:
+              if (field.type == TType.I64) {
+                this.timestamp = iprot.readI64();
+                setTimestampIsSet(true);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
+        }
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
+      if (this.tableName != null) {
+        oprot.writeFieldBegin(TABLE_NAME_FIELD_DESC);
+        oprot.writeBinary(this.tableName);
+        oprot.writeFieldEnd();
+      }
+      if (this.rows != null) {
+        oprot.writeFieldBegin(ROWS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRING, this.rows.size()));
+          for (byte[] _iter100 : this.rows)
+          {
+            oprot.writeBinary(_iter100);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      if (this.families != null) {
+        oprot.writeFieldBegin(FAMILIES_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRING, this.families.size()));
+          for (byte[] _iter101 : this.families)
+          {
+            oprot.writeBinary(_iter101);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
+      oprot.writeI64(this.timestamp);
+      oprot.writeFieldEnd();
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getRowsWithColumnsTs_args(");
+      boolean first = true;
+
+      sb.append("tableName:");
+      if (this.tableName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.tableName);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("rows:");
+      if (this.rows == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.rows);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("families:");
+      if (this.families == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.families);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("timestamp:");
+      sb.append(this.timestamp);
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+    }
+
+  }
+
+  public static class getRowsWithColumnsTs_result implements TBase<getRowsWithColumnsTs_result._Fields>, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("getRowsWithColumnsTs_result");
+
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
+    private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
+
+    public List<TRowResult> success;
+    public IOError io;
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
+              new StructMetaData(TType.STRUCT, TRowResult.class))));
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(getRowsWithColumnsTs_result.class, metaDataMap);
+    }
+
+    public getRowsWithColumnsTs_result() {
+    }
+
+    public getRowsWithColumnsTs_result(
+      List<TRowResult> success,
+      IOError io)
+    {
+      this();
+      this.success = success;
+      this.io = io;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public getRowsWithColumnsTs_result(getRowsWithColumnsTs_result other) {
+      if (other.isSetSuccess()) {
+        List<TRowResult> __this__success = new ArrayList<TRowResult>();
+        for (TRowResult other_element : other.success) {
+          __this__success.add(new TRowResult(other_element));
+        }
+        this.success = __this__success;
+      }
+      if (other.isSetIo()) {
+        this.io = new IOError(other.io);
+      }
+    }
+
+    public getRowsWithColumnsTs_result deepCopy() {
+      return new getRowsWithColumnsTs_result(this);
+    }
+
+    @Deprecated
+    public getRowsWithColumnsTs_result clone() {
+      return new getRowsWithColumnsTs_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<TRowResult> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(TRowResult elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<TRowResult>();
+      }
+      this.success.add(elem);
+    }
+
+    public List<TRowResult> getSuccess() {
+      return this.success;
+    }
+
+    public getRowsWithColumnsTs_result setSuccess(List<TRowResult> success) {
+      this.success = success;
+      return this;
+    }
+
+    public void unsetSuccess() {
+      this.success = null;
+    }
+
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
+    public boolean isSetSuccess() {
+      return this.success != null;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      if (!value) {
+        this.success = null;
+      }
+    }
+
+    public IOError getIo() {
+      return this.io;
+    }
+
+    public getRowsWithColumnsTs_result setIo(IOError io) {
+      this.io = io;
+      return this;
+    }
+
+    public void unsetIo() {
+      this.io = null;
+    }
+
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
+    public boolean isSetIo() {
+      return this.io != null;
+    }
+
+    public void setIoIsSet(boolean value) {
+      if (!value) {
+        this.io = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((List<TRowResult>)value);
+        }
+        break;
+
+      case IO:
+        if (value == null) {
+          unsetIo();
+        } else {
+          setIo((IOError)value);
+        }
+        break;
+
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return getSuccess();
+
+      case IO:
+        return getIo();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return isSetSuccess();
+      case IO:
+        return isSetIo();
+      }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRowsWithColumnsTs_result)
+        return this.equals((getRowsWithColumnsTs_result)that);
+      return false;
+    }
+
+    public boolean equals(getRowsWithColumnsTs_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && this.isSetSuccess();
+      boolean that_present_success = true && that.isSetSuccess();
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && this.isSetIo();
+      boolean that_present_io = true && that.isSetIo();
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) {
+          break;
+        }
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list102 = iprot.readListBegin();
+                  this.success = new ArrayList<TRowResult>(_list102.size);
+                  for (int _i103 = 0; _i103 < _list102.size; ++_i103)
+                  {
+                    TRowResult _elem104;
+                    _elem104 = new TRowResult();
+                    _elem104.read(iprot);
+                    this.success.add(_elem104);
+                  }
+                  iprot.readListEnd();
+                }
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
+        }
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      oprot.writeStructBegin(STRUCT_DESC);
+
+      if (this.isSetSuccess()) {
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
+          for (TRowResult _iter105 : this.success)
+          {
+            _iter105.write(oprot);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      } else if (this.isSetIo()) {
+        oprot.writeFieldBegin(IO_FIELD_DESC);
+        this.io.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getRowsWithColumnsTs_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      if (this.success == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.success);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("io:");
+      if (this.io == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.io);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+    }
+
+  }
+
   public static class mutateRow_args implements TBase<mutateRow_args._Fields>, java.io.Serializable, Cloneable, Comparable<mutateRow_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("mutateRow_args");
 
@@ -16915,14 +21061,14 @@ public class Hbase {
             case MUTATIONS:
               if (field.type == TType.LIST) {
                 {
-                  TList _list66 = iprot.readListBegin();
-                  this.mutations = new ArrayList<Mutation>(_list66.size);
-                  for (int _i67 = 0; _i67 < _list66.size; ++_i67)
+                  TList _list106 = iprot.readListBegin();
+                  this.mutations = new ArrayList<Mutation>(_list106.size);
+                  for (int _i107 = 0; _i107 < _list106.size; ++_i107)
                   {
-                    Mutation _elem68;
-                    _elem68 = new Mutation();
-                    _elem68.read(iprot);
-                    this.mutations.add(_elem68);
+                    Mutation _elem108;
+                    _elem108 = new Mutation();
+                    _elem108.read(iprot);
+                    this.mutations.add(_elem108);
                   }
                   iprot.readListEnd();
                 }
@@ -16958,9 +21104,9 @@ public class Hbase {
         oprot.writeFieldBegin(MUTATIONS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.mutations.size()));
-          for (Mutation _iter69 : this.mutations)
+          for (Mutation _iter109 : this.mutations)
           {
-            _iter69.write(oprot);
+            _iter109.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -17919,14 +22065,14 @@ public class Hbase {
             case MUTATIONS:
               if (field.type == TType.LIST) {
                 {
-                  TList _list70 = iprot.readListBegin();
-                  this.mutations = new ArrayList<Mutation>(_list70.size);
-                  for (int _i71 = 0; _i71 < _list70.size; ++_i71)
+                  TList _list110 = iprot.readListBegin();
+                  this.mutations = new ArrayList<Mutation>(_list110.size);
+                  for (int _i111 = 0; _i111 < _list110.size; ++_i111)
                   {
-                    Mutation _elem72;
-                    _elem72 = new Mutation();
-                    _elem72.read(iprot);
-                    this.mutations.add(_elem72);
+                    Mutation _elem112;
+                    _elem112 = new Mutation();
+                    _elem112.read(iprot);
+                    this.mutations.add(_elem112);
                   }
                   iprot.readListEnd();
                 }
@@ -17970,9 +22116,9 @@ public class Hbase {
         oprot.writeFieldBegin(MUTATIONS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.mutations.size()));
-          for (Mutation _iter73 : this.mutations)
+          for (Mutation _iter113 : this.mutations)
           {
-            _iter73.write(oprot);
+            _iter113.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -18767,14 +22913,14 @@ public class Hbase {
             case ROW_BATCHES:
               if (field.type == TType.LIST) {
                 {
-                  TList _list74 = iprot.readListBegin();
-                  this.rowBatches = new ArrayList<BatchMutation>(_list74.size);
-                  for (int _i75 = 0; _i75 < _list74.size; ++_i75)
+                  TList _list114 = iprot.readListBegin();
+                  this.rowBatches = new ArrayList<BatchMutation>(_list114.size);
+                  for (int _i115 = 0; _i115 < _list114.size; ++_i115)
                   {
-                    BatchMutation _elem76;
-                    _elem76 = new BatchMutation();
-                    _elem76.read(iprot);
-                    this.rowBatches.add(_elem76);
+                    BatchMutation _elem116;
+                    _elem116 = new BatchMutation();
+                    _elem116.read(iprot);
+                    this.rowBatches.add(_elem116);
                   }
                   iprot.readListEnd();
                 }
@@ -18805,9 +22951,9 @@ public class Hbase {
         oprot.writeFieldBegin(ROW_BATCHES_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.rowBatches.size()));
-          for (BatchMutation _iter77 : this.rowBatches)
+          for (BatchMutation _iter117 : this.rowBatches)
           {
-            _iter77.write(oprot);
+            _iter117.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -19670,14 +23816,14 @@ public class Hbase {
             case ROW_BATCHES:
               if (field.type == TType.LIST) {
                 {
-                  TList _list78 = iprot.readListBegin();
-                  this.rowBatches = new ArrayList<BatchMutation>(_list78.size);
-                  for (int _i79 = 0; _i79 < _list78.size; ++_i79)
+                  TList _list118 = iprot.readListBegin();
+                  this.rowBatches = new ArrayList<BatchMutation>(_list118.size);
+                  for (int _i119 = 0; _i119 < _list118.size; ++_i119)
                   {
-                    BatchMutation _elem80;
-                    _elem80 = new BatchMutation();
-                    _elem80.read(iprot);
-                    this.rowBatches.add(_elem80);
+                    BatchMutation _elem120;
+                    _elem120 = new BatchMutation();
+                    _elem120.read(iprot);
+                    this.rowBatches.add(_elem120);
                   }
                   iprot.readListEnd();
                 }
@@ -19716,9 +23862,9 @@ public class Hbase {
         oprot.writeFieldBegin(ROW_BATCHES_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.rowBatches.size()));
-          for (BatchMutation _iter81 : this.rowBatches)
+          for (BatchMutation _iter121 : this.rowBatches)
           {
-            _iter81.write(oprot);
+            _iter121.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -20119,6 +24265,2476 @@ public class Hbase {
       StringBuilder sb = new StringBuilder("mutateRowsTs_result(");
       boolean first = true;
 
+      sb.append("io:");
+      if (this.io == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.io);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("ia:");
+      if (this.ia == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.ia);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+    }
+
+  }
+
+  public static class checkAndMutateRow_args implements TBase<checkAndMutateRow_args._Fields>, java.io.Serializable, Cloneable, Comparable<checkAndMutateRow_args>   {
+    private static final TStruct STRUCT_DESC = new TStruct("checkAndMutateRow_args");
+
+    private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
+    private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
+    private static final TField COLUMN_CHECK_FIELD_DESC = new TField("columnCheck", TType.STRING, (short)3);
+    private static final TField VALUE_CHECK_FIELD_DESC = new TField("valueCheck", TType.STRING, (short)4);
+    private static final TField MUTATIONS_FIELD_DESC = new TField("mutations", TType.LIST, (short)5);
+
+    /**
+     * name of table
+     */
+    public byte[] tableName;
+    /**
+     * row key
+     */
+    public byte[] row;
+    public byte[] columnCheck;
+    public byte[] valueCheck;
+    /**
+     * list of mutation commands
+     */
+    public List<Mutation> mutations;
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
+      TABLE_NAME((short)1, "tableName"),
+      /**
+       * row key
+       */
+      ROW((short)2, "row"),
+      COLUMN_CHECK((short)3, "columnCheck"),
+      VALUE_CHECK((short)4, "valueCheck"),
+      /**
+       * list of mutation commands
+       */
+      MUTATIONS((short)5, "mutations");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRING)));
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRING)));
+      put(_Fields.COLUMN_CHECK, new FieldMetaData("columnCheck", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRING)));
+      put(_Fields.VALUE_CHECK, new FieldMetaData("valueCheck", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRING)));
+      put(_Fields.MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
+              new StructMetaData(TType.STRUCT, Mutation.class))));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(checkAndMutateRow_args.class, metaDataMap);
+    }
+
+    public checkAndMutateRow_args() {
+    }
+
+    public checkAndMutateRow_args(
+      byte[] tableName,
+      byte[] row,
+      byte[] columnCheck,
+      byte[] valueCheck,
+      List<Mutation> mutations)
+    {
+      this();
+      this.tableName = tableName;
+      this.row = row;
+      this.columnCheck = columnCheck;
+      this.valueCheck = valueCheck;
+      this.mutations = mutations;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public checkAndMutateRow_args(checkAndMutateRow_args other) {
+      if (other.isSetTableName()) {
+        this.tableName = other.tableName;
+      }
+      if (other.isSetRow()) {
+        this.row = other.row;
+      }
+      if (other.isSetColumnCheck()) {
+        this.columnCheck = other.columnCheck;
+      }
+      if (other.isSetValueCheck()) {
+        this.valueCheck = other.valueCheck;
+      }
+      if (other.isSetMutations()) {
+        List<Mutation> __this__mutations = new ArrayList<Mutation>();
+        for (Mutation other_element : other.mutations) {
+          __this__mutations.add(new Mutation(other_element));
+        }
+        this.mutations = __this__mutations;
+      }
+    }
+
+    public checkAndMutateRow_args deepCopy() {
+      return new checkAndMutateRow_args(this);
+    }
+
+    @Deprecated
+    public checkAndMutateRow_args clone() {
+      return new checkAndMutateRow_args(this);
+    }
+
+    /**
+     * name of table
+     */
+    public byte[] getTableName() {
+      return this.tableName;
+    }
+
+    /**
+     * name of table
+     */
+    public checkAndMutateRow_args setTableName(byte[] tableName) {
+      this.tableName = tableName;
+      return this;
+    }
+
+    public void unsetTableName() {
+      this.tableName = null;
+    }
+
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
+    public boolean isSetTableName() {
+      return this.tableName != null;
+    }
+
+    public void setTableNameIsSet(boolean value) {
+      if (!value) {
+        this.tableName = null;
+      }
+    }
+
+    /**
+     * row key
+     */
+    public byte[] getRow() {
+      return this.row;
+    }
+
+    /**
+     * row key
+     */
+    public checkAndMutateRow_args setRow(byte[] row) {
+      this.row = row;
+      return this;
+    }
+
+    public void unsetRow() {
+      this.row = null;
+    }
+
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
+    public boolean isSetRow() {
+      return this.row != null;
+    }
+
+    public void setRowIsSet(boolean value) {
+      if (!value) {
+        this.row = null;
+      }
+    }
+
+    public byte[] getColumnCheck() {
+      return this.columnCheck;
+    }
+
+    public checkAndMutateRow_args setColumnCheck(byte[] columnCheck) {
+      this.columnCheck = columnCheck;
+      return this;
+    }
+
+    public void unsetColumnCheck() {
+      this.columnCheck = null;
+    }
+
+    /** Returns true if field columnCheck is set (has been asigned a value) and false otherwise */
+    public boolean isSetColumnCheck() {
+      return this.columnCheck != null;
+    }
+
+    public void setColumnCheckIsSet(boolean value) {
+      if (!value) {
+        this.columnCheck = null;
+      }
+    }
+
+    public byte[] getValueCheck() {
+      return this.valueCheck;
+    }
+
+    public checkAndMutateRow_args setValueCheck(byte[] valueCheck) {
+      this.valueCheck = valueCheck;
+      return this;
+    }
+
+    public void unsetValueCheck() {
+      this.valueCheck = null;
+    }
+
+    /** Returns true if field valueCheck is set (has been asigned a value) and false otherwise */
+    public boolean isSetValueCheck() {
+      return this.valueCheck != null;
+    }
+
+    public void setValueCheckIsSet(boolean value) {
+      if (!value) {
+        this.valueCheck = null;
+      }
+    }
+
+    public int getMutationsSize() {
+      return (this.mutations == null) ? 0 : this.mutations.size();
+    }
+
+    public java.util.Iterator<Mutation> getMutationsIterator() {
+      return (this.mutations == null) ? null : this.mutations.iterator();
+    }
+
+    public void addToMutations(Mutation elem) {
+      if (this.mutations == null) {
+        this.mutations = new ArrayList<Mutation>();
+      }
+      this.mutations.add(elem);
+    }
+
+    /**
+     * list of mutation commands
+     */
+    public List<Mutation> getMutations() {
+      return this.mutations;
+    }
+
+    /**
+     * list of mutation commands
+     */
+    public checkAndMutateRow_args setMutations(List<Mutation> mutations) {
+      this.mutations = mutations;
+      return this;
+    }
+
+    public void unsetMutations() {
+      this.mutations = null;
+    }
+
+    /** Returns true if field mutations is set (has been asigned a value) and false otherwise */
+    public boolean isSetMutations() {
+      return this.mutations != null;
+    }
+
+    public void setMutationsIsSet(boolean value) {
+      if (!value) {
+        this.mutations = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
+        if (value == null) {
+          unsetTableName();
+        } else {
+          setTableName((byte[])value);
+        }
+        break;
+
+      case ROW:
+        if (value == null) {
+          unsetRow();
+        } else {
+          setRow((byte[])value);
+        }
+        break;
+
+      case COLUMN_CHECK:
+        if (value == null) {
+          unsetColumnCheck();
+        } else {
+          setColumnCheck((byte[])value);
+        }
+        break;
+
+      case VALUE_CHECK:
+        if (value == null) {
+          unsetValueCheck();
+        } else {
+          setValueCheck((byte[])value);
+        }
+        break;
+
+      case MUTATIONS:
+        if (value == null) {
+          unsetMutations();
+        } else {
+          setMutations((List<Mutation>)value);
+        }
+        break;
+
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return getTableName();
+
+      case ROW:
+        return getRow();
+
+      case COLUMN_CHECK:
+        return getColumnCheck();
+
+      case VALUE_CHECK:
+        return getValueCheck();
+
+      case MUTATIONS:
+        return getMutations();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return isSetTableName();
+      case ROW:
+        return isSetRow();
+      case COLUMN_CHECK:
+        return isSetColumnCheck();
+      case VALUE_CHECK:
+        return isSetValueCheck();
+      case MUTATIONS:
+        return isSetMutations();
+      }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof checkAndMutateRow_args)
+        return this.equals((checkAndMutateRow_args)that);
+      return false;
+    }
+
+    public boolean equals(checkAndMutateRow_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && this.isSetTableName();
+      boolean that_present_tableName = true && that.isSetTableName();
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && this.isSetRow();
+      boolean that_present_row = true && that.isSetRow();
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_columnCheck = true && this.isSetColumnCheck();
+      boolean that_present_columnCheck = true && that.isSetColumnCheck();
+      if (this_present_columnCheck || that_present_columnCheck) {
+        if (!(this_present_columnCheck && that_present_columnCheck))
+          return false;
+        if (!java.util.Arrays.equals(this.columnCheck, that.columnCheck))
+          return false;
+      }
+
+      boolean this_present_valueCheck = true && this.isSetValueCheck();
+      boolean that_present_valueCheck = true && that.isSetValueCheck();
+      if (this_present_valueCheck || that_present_valueCheck) {
+        if (!(this_present_valueCheck && that_present_valueCheck))
+          return false;
+        if (!java.util.Arrays.equals(this.valueCheck, that.valueCheck))
+          return false;
+      }
+
+      boolean this_present_mutations = true && this.isSetMutations();
+      boolean that_present_mutations = true && that.isSetMutations();
+      if (this_present_mutations || that_present_mutations) {
+        if (!(this_present_mutations && that_present_mutations))
+          return false;
+        if (!this.mutations.equals(that.mutations))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_columnCheck = true && (isSetColumnCheck());
+      builder.append(present_columnCheck);
+      if (present_columnCheck)
+        builder.append(columnCheck);
+
+      boolean present_valueCheck = true && (isSetValueCheck());
+      builder.append(present_valueCheck);
+      if (present_valueCheck)
+        builder.append(valueCheck);
+
+      boolean present_mutations = true && (isSetMutations());
+      builder.append(present_mutations);
+      if (present_mutations)
+        builder.append(mutations);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(checkAndMutateRow_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      checkAndMutateRow_args typedOther = (checkAndMutateRow_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumnCheck()).compareTo(isSetColumnCheck());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(columnCheck, typedOther.columnCheck);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetValueCheck()).compareTo(isSetValueCheck());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(valueCheck, typedOther.valueCheck);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetMutations()).compareTo(isSetMutations());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(mutations, typedOther.mutations);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) {
+          break;
+        }
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMN_CHECK:
+              if (field.type == TType.STRING) {
+                this.columnCheck = iprot.readBinary();
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case VALUE_CHECK:
+              if (field.type == TType.STRING) {
+                this.valueCheck = iprot.readBinary();
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case MUTATIONS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list122 = iprot.readListBegin();
+                  this.mutations = new ArrayList<Mutation>(_list122.size);
+                  for (int _i123 = 0; _i123 < _list122.size; ++_i123)
+                  {
+                    Mutation _elem124;
+                    _elem124 = new Mutation();
+                    _elem124.read(iprot);
+                    this.mutations.add(_elem124);
+                  }
+                  iprot.readListEnd();
+                }
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
+        }
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
+      if (this.tableName != null) {
+        oprot.writeFieldBegin(TABLE_NAME_FIELD_DESC);
+        oprot.writeBinary(this.tableName);
+        oprot.writeFieldEnd();
+      }
+      if (this.row != null) {
+        oprot.writeFieldBegin(ROW_FIELD_DESC);
+        oprot.writeBinary(this.row);
+        oprot.writeFieldEnd();
+      }
+      if (this.columnCheck != null) {
+        oprot.writeFieldBegin(COLUMN_CHECK_FIELD_DESC);
+        oprot.writeBinary(this.columnCheck);
+        oprot.writeFieldEnd();
+      }
+      if (this.valueCheck != null) {
+        oprot.writeFieldBegin(VALUE_CHECK_FIELD_DESC);
+        oprot.writeBinary(this.valueCheck);
+        oprot.writeFieldEnd();
+      }
+      if (this.mutations != null) {
+        oprot.writeFieldBegin(MUTATIONS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRUCT, this.mutations.size()));
+          for (Mutation _iter125 : this.mutations)
+          {
+            _iter125.write(oprot);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("checkAndMutateRow_args(");
+      boolean first = true;
+
+      sb.append("tableName:");
+      if (this.tableName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.tableName);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("row:");
+      if (this.row == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.row);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("columnCheck:");
+      if (this.columnCheck == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.columnCheck);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("valueCheck:");
+      if (this.valueCheck == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.valueCheck);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("mutations:");
+      if (this.mutations == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.mutations);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+    }
+
+  }
+
+  public static class checkAndMutateRow_result implements TBase<checkAndMutateRow_result._Fields>, java.io.Serializable, Cloneable, Comparable<checkAndMutateRow_result>   {
+    private static final TStruct STRUCT_DESC = new TStruct("checkAndMutateRow_result");
+
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.BOOL, (short)0);
+    private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
+    private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
+
+    public boolean success;
+    public IOError io;
+    public IllegalArgument ia;
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io"),
+      IA((short)2, "ia");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.BOOL)));
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRUCT)));
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(checkAndMutateRow_result.class, metaDataMap);
+    }
+
+    public checkAndMutateRow_result() {
+    }
+
+    public checkAndMutateRow_result(
+      boolean success,
+      IOError io,
+      IllegalArgument ia)
+    {
+      this();
+      this.success = success;
+      setSuccessIsSet(true);
+      this.io = io;
+      this.ia = ia;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public checkAndMutateRow_result(checkAndMutateRow_result other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
+      this.success = other.success;
+      if (other.isSetIo()) {
+        this.io = new IOError(other.io);
+      }
+      if (other.isSetIa()) {
+        this.ia = new IllegalArgument(other.ia);
+      }
+    }
+
+    public checkAndMutateRow_result deepCopy() {
+      return new checkAndMutateRow_result(this);
+    }
+
+    @Deprecated
+    public checkAndMutateRow_result clone() {
+      return new checkAndMutateRow_result(this);
+    }
+
+    public boolean isSuccess() {
+      return this.success;
+    }
+
+    public checkAndMutateRow_result setSuccess(boolean success) {
+      this.success = success;
+      setSuccessIsSet(true);
+      return this;
+    }
+
+    public void unsetSuccess() {
+      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
+    }
+
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
+    public boolean isSetSuccess() {
+      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
+    }
+
+    public IOError getIo() {
+      return this.io;
+    }
+
+    public checkAndMutateRow_result setIo(IOError io) {
+      this.io = io;
+      return this;
+    }
+
+    public void unsetIo() {
+      this.io = null;
+    }
+
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
+    public boolean isSetIo() {
+      return this.io != null;
+    }
+
+    public void setIoIsSet(boolean value) {
+      if (!value) {
+        this.io = null;
+      }
+    }
+
+    public IllegalArgument getIa() {
+      return this.ia;
+    }
+
+    public checkAndMutateRow_result setIa(IllegalArgument ia) {
+      this.ia = ia;
+      return this;
+    }
+
+    public void unsetIa() {
+      this.ia = null;
+    }
+
+    /** Returns true if field ia is set (has been asigned a value) and false otherwise */
+    public boolean isSetIa() {
+      return this.ia != null;
+    }
+
+    public void setIaIsSet(boolean value) {
+      if (!value) {
+        this.ia = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((Boolean)value);
+        }
+        break;
+
+      case IO:
+        if (value == null) {
+          unsetIo();
+        } else {
+          setIo((IOError)value);
+        }
+        break;
+
+      case IA:
+        if (value == null) {
+          unsetIa();
+        } else {
+          setIa((IllegalArgument)value);
+        }
+        break;
+
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return new Boolean(isSuccess());
+
+      case IO:
+        return getIo();
+
+      case IA:
+        return getIa();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return isSetSuccess();
+      case IO:
+        return isSetIo();
+      case IA:
+        return isSetIa();
+      }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof checkAndMutateRow_result)
+        return this.equals((checkAndMutateRow_result)that);
+      return false;
+    }
+
+    public boolean equals(checkAndMutateRow_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true;
+      boolean that_present_success = true;
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (this.success != that.success)
+          return false;
+      }
+
+      boolean this_present_io = true && this.isSetIo();
+      boolean that_present_io = true && that.isSetIo();
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_ia = true && this.isSetIa();
+      boolean that_present_ia = true && that.isSetIa();
+      if (this_present_ia || that_present_ia) {
+        if (!(this_present_ia && that_present_ia))
+          return false;
+        if (!this.ia.equals(that.ia))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(checkAndMutateRow_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      checkAndMutateRow_result typedOther = (checkAndMutateRow_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIa()).compareTo(isSetIa());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(ia, typedOther.ia);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) {
+          break;
+        }
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.BOOL) {
+                this.success = iprot.readBool();
+                setSuccessIsSet(true);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IA:
+              if (field.type == TType.STRUCT) {
+                this.ia = new IllegalArgument();
+                this.ia.read(iprot);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
+        }
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      oprot.writeStructBegin(STRUCT_DESC);
+
+      if (this.isSetSuccess()) {
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+        oprot.writeBool(this.success);
+        oprot.writeFieldEnd();
+      } else if (this.isSetIo()) {
+        oprot.writeFieldBegin(IO_FIELD_DESC);
+        this.io.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetIa()) {
+        oprot.writeFieldBegin(IA_FIELD_DESC);
+        this.ia.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("checkAndMutateRow_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      sb.append(this.success);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("io:");
+      if (this.io == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.io);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("ia:");
+      if (this.ia == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.ia);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+    }
+
+  }
+
+  public static class checkAndMutateRowTs_args implements TBase<checkAndMutateRowTs_args._Fields>, java.io.Serializable, Cloneable, Comparable<checkAndMutateRowTs_args>   {
+    private static final TStruct STRUCT_DESC = new TStruct("checkAndMutateRowTs_args");
+
+    private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
+    private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
+    private static final TField COLUMN_CHECK_FIELD_DESC = new TField("columnCheck", TType.STRING, (short)3);
+    private static final TField VALUE_CHECK_FIELD_DESC = new TField("valueCheck", TType.STRING, (short)4);
+    private static final TField MUTATIONS_FIELD_DESC = new TField("mutations", TType.LIST, (short)5);
+    private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)6);
+
+    /**
+     * name of table
+     */
+    public byte[] tableName;
+    /**
+     * row key
+     */
+    public byte[] row;
+    public byte[] columnCheck;
+    public byte[] valueCheck;
+    /**
+     * list of mutation commands
+     */
+    public List<Mutation> mutations;
+    /**
+     * timestamp
+     */
+    public long timestamp;
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
+      TABLE_NAME((short)1, "tableName"),
+      /**
+       * row key
+       */
+      ROW((short)2, "row"),
+      COLUMN_CHECK((short)3, "columnCheck"),
+      VALUE_CHECK((short)4, "valueCheck"),
+      /**
+       * list of mutation commands
+       */
+      MUTATIONS((short)5, "mutations"),
+      /**
+       * timestamp
+       */
+      TIMESTAMP((short)6, "timestamp");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    private static final int __TIMESTAMP_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRING)));
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRING)));
+      put(_Fields.COLUMN_CHECK, new FieldMetaData("columnCheck", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRING)));
+      put(_Fields.VALUE_CHECK, new FieldMetaData("valueCheck", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRING)));
+      put(_Fields.MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
+              new StructMetaData(TType.STRUCT, Mutation.class))));
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.I64)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(checkAndMutateRowTs_args.class, metaDataMap);
+    }
+
+    public checkAndMutateRowTs_args() {
+    }
+
+    public checkAndMutateRowTs_args(
+      byte[] tableName,
+      byte[] row,
+      byte[] columnCheck,
+      byte[] valueCheck,
+      List<Mutation> mutations,
+      long timestamp)
+    {
+      this();
+      this.tableName = tableName;
+      this.row = row;
+      this.columnCheck = columnCheck;
+      this.valueCheck = valueCheck;
+      this.mutations = mutations;
+      this.timestamp = timestamp;
+      setTimestampIsSet(true);
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public checkAndMutateRowTs_args(checkAndMutateRowTs_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
+      if (other.isSetTableName()) {
+        this.tableName = other.tableName;
+      }
+      if (other.isSetRow()) {
+        this.row = other.row;
+      }
+      if (other.isSetColumnCheck()) {
+        this.columnCheck = other.columnCheck;
+      }
+      if (other.isSetValueCheck()) {
+        this.valueCheck = other.valueCheck;
+      }
+      if (other.isSetMutations()) {
+        List<Mutation> __this__mutations = new ArrayList<Mutation>();
+        for (Mutation other_element : other.mutations) {
+          __this__mutations.add(new Mutation(other_element));
+        }
+        this.mutations = __this__mutations;
+      }
+      this.timestamp = other.timestamp;
+    }
+
+    public checkAndMutateRowTs_args deepCopy() {
+      return new checkAndMutateRowTs_args(this);
+    }
+
+    @Deprecated
+    public checkAndMutateRowTs_args clone() {
+      return new checkAndMutateRowTs_args(this);
+    }
+
+    /**
+     * name of table
+     */
+    public byte[] getTableName() {
+      return this.tableName;
+    }
+
+    /**
+     * name of table
+     */
+    public checkAndMutateRowTs_args setTableName(byte[] tableName) {
+      this.tableName = tableName;
+      return this;
+    }
+
+    public void unsetTableName() {
+      this.tableName = null;
+    }
+
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
+    public boolean isSetTableName() {
+      return this.tableName != null;
+    }
+
+    public void setTableNameIsSet(boolean value) {
+      if (!value) {
+        this.tableName = null;
+      }
+    }
+
+    /**
+     * row key
+     */
+    public byte[] getRow() {
+      return this.row;
+    }
+
+    /**
+     * row key
+     */
+    public checkAndMutateRowTs_args setRow(byte[] row) {
+      this.row = row;
+      return this;
+    }
+
+    public void unsetRow() {
+      this.row = null;
+    }
+
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
+    public boolean isSetRow() {
+      return this.row != null;
+    }
+
+    public void setRowIsSet(boolean value) {
+      if (!value) {
+        this.row = null;
+      }
+    }
+
+    public byte[] getColumnCheck() {
+      return this.columnCheck;
+    }
+
+    public checkAndMutateRowTs_args setColumnCheck(byte[] columnCheck) {
+      this.columnCheck = columnCheck;
+      return this;
+    }
+
+    public void unsetColumnCheck() {
+      this.columnCheck = null;
+    }
+
+    /** Returns true if field columnCheck is set (has been asigned a value) and false otherwise */
+    public boolean isSetColumnCheck() {
+      return this.columnCheck != null;
+    }
+
+    public void setColumnCheckIsSet(boolean value) {
+      if (!value) {
+        this.columnCheck = null;
+      }
+    }
+
+    public byte[] getValueCheck() {
+      return this.valueCheck;
+    }
+
+    public checkAndMutateRowTs_args setValueCheck(byte[] valueCheck) {
+      this.valueCheck = valueCheck;
+      return this;
+    }
+
+    public void unsetValueCheck() {
+      this.valueCheck = null;
+    }
+
+    /** Returns true if field valueCheck is set (has been asigned a value) and false otherwise */
+    public boolean isSetValueCheck() {
+      return this.valueCheck != null;
+    }
+
+    public void setValueCheckIsSet(boolean value) {
+      if (!value) {
+        this.valueCheck = null;
+      }
+    }
+
+    public int getMutationsSize() {
+      return (this.mutations == null) ? 0 : this.mutations.size();
+    }
+
+    public java.util.Iterator<Mutation> getMutationsIterator() {
+      return (this.mutations == null) ? null : this.mutations.iterator();
+    }
+
+    public void addToMutations(Mutation elem) {
+      if (this.mutations == null) {
+        this.mutations = new ArrayList<Mutation>();
+      }
+      this.mutations.add(elem);
+    }
+
+    /**
+     * list of mutation commands
+     */
+    public List<Mutation> getMutations() {
+      return this.mutations;
+    }
+
+    /**
+     * list of mutation commands
+     */
+    public checkAndMutateRowTs_args setMutations(List<Mutation> mutations) {
+      this.mutations = mutations;
+      return this;
+    }
+
+    public void unsetMutations() {
+      this.mutations = null;
+    }
+
+    /** Returns true if field mutations is set (has been asigned a value) and false otherwise */
+    public boolean isSetMutations() {
+      return this.mutations != null;
+    }
+
+    public void setMutationsIsSet(boolean value) {
+      if (!value) {
+        this.mutations = null;
+      }
+    }
+
+    /**
+     * timestamp
+     */
+    public long getTimestamp() {
+      return this.timestamp;
+    }
+
+    /**
+     * timestamp
+     */
+    public checkAndMutateRowTs_args setTimestamp(long timestamp) {
+      this.timestamp = timestamp;
+      setTimestampIsSet(true);
+      return this;
+    }
+
+    public void unsetTimestamp() {
+      __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
+    }
+
+    /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
+    public boolean isSetTimestamp() {
+      return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
+    }
+
+    public void setTimestampIsSet(boolean value) {
+      __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
+        if (value == null) {
+          unsetTableName();
+        } else {
+          setTableName((byte[])value);
+        }
+        break;
+
+      case ROW:
+        if (value == null) {
+          unsetRow();
+        } else {
+          setRow((byte[])value);
+        }
+        break;
+
+      case COLUMN_CHECK:
+        if (value == null) {
+          unsetColumnCheck();
+        } else {
+          setColumnCheck((byte[])value);
+        }
+        break;
+
+      case VALUE_CHECK:
+        if (value == null) {
+          unsetValueCheck();
+        } else {
+          setValueCheck((byte[])value);
+        }
+        break;
+
+      case MUTATIONS:
+        if (value == null) {
+          unsetMutations();
+        } else {
+          setMutations((List<Mutation>)value);
+        }
+        break;
+
+      case TIMESTAMP:
+        if (value == null) {
+          unsetTimestamp();
+        } else {
+          setTimestamp((Long)value);
+        }
+        break;
+
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return getTableName();
+
+      case ROW:
+        return getRow();
+
+      case COLUMN_CHECK:
+        return getColumnCheck();
+
+      case VALUE_CHECK:
+        return getValueCheck();
+
+      case MUTATIONS:
+        return getMutations();
+
+      case TIMESTAMP:
+        return new Long(getTimestamp());
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return isSetTableName();
+      case ROW:
+        return isSetRow();
+      case COLUMN_CHECK:
+        return isSetColumnCheck();
+      case VALUE_CHECK:
+        return isSetValueCheck();
+      case MUTATIONS:
+        return isSetMutations();
+      case TIMESTAMP:
+        return isSetTimestamp();
+      }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof checkAndMutateRowTs_args)
+        return this.equals((checkAndMutateRowTs_args)that);
+      return false;
+    }
+
+    public boolean equals(checkAndMutateRowTs_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && this.isSetTableName();
+      boolean that_present_tableName = true && that.isSetTableName();
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && this.isSetRow();
+      boolean that_present_row = true && that.isSetRow();
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_columnCheck = true && this.isSetColumnCheck();
+      boolean that_present_columnCheck = true && that.isSetColumnCheck();
+      if (this_present_columnCheck || that_present_columnCheck) {
+        if (!(this_present_columnCheck && that_present_columnCheck))
+          return false;
+        if (!java.util.Arrays.equals(this.columnCheck, that.columnCheck))
+          return false;
+      }
+
+      boolean this_present_valueCheck = true && this.isSetValueCheck();
+      boolean that_present_valueCheck = true && that.isSetValueCheck();
+      if (this_present_valueCheck || that_present_valueCheck) {
+        if (!(this_present_valueCheck && that_present_valueCheck))
+          return false;
+        if (!java.util.Arrays.equals(this.valueCheck, that.valueCheck))
+          return false;
+      }
+
+      boolean this_present_mutations = true && this.isSetMutations();
+      boolean that_present_mutations = true && that.isSetMutations();
+      if (this_present_mutations || that_present_mutations) {
+        if (!(this_present_mutations && that_present_mutations))
+          return false;
+        if (!this.mutations.equals(that.mutations))
+          return false;
+      }
+
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_columnCheck = true && (isSetColumnCheck());
+      builder.append(present_columnCheck);
+      if (present_columnCheck)
+        builder.append(columnCheck);
+
+      boolean present_valueCheck = true && (isSetValueCheck());
+      builder.append(present_valueCheck);
+      if (present_valueCheck)
+        builder.append(valueCheck);
+
+      boolean present_mutations = true && (isSetMutations());
+      builder.append(present_mutations);
+      if (present_mutations)
+        builder.append(mutations);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(checkAndMutateRowTs_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      checkAndMutateRowTs_args typedOther = (checkAndMutateRowTs_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumnCheck()).compareTo(isSetColumnCheck());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(columnCheck, typedOther.columnCheck);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetValueCheck()).compareTo(isSetValueCheck());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(valueCheck, typedOther.valueCheck);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetMutations()).compareTo(isSetMutations());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(mutations, typedOther.mutations);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) {
+          break;
+        }
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMN_CHECK:
+              if (field.type == TType.STRING) {
+                this.columnCheck = iprot.readBinary();
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case VALUE_CHECK:
+              if (field.type == TType.STRING) {
+                this.valueCheck = iprot.readBinary();
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case MUTATIONS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list126 = iprot.readListBegin();
+                  this.mutations = new ArrayList<Mutation>(_list126.size);
+                  for (int _i127 = 0; _i127 < _list126.size; ++_i127)
+                  {
+                    Mutation _elem128;
+                    _elem128 = new Mutation();
+                    _elem128.read(iprot);
+                    this.mutations.add(_elem128);
+                  }
+                  iprot.readListEnd();
+                }
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case TIMESTAMP:
+              if (field.type == TType.I64) {
+                this.timestamp = iprot.readI64();
+                setTimestampIsSet(true);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
+        }
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
+      if (this.tableName != null) {
+        oprot.writeFieldBegin(TABLE_NAME_FIELD_DESC);
+        oprot.writeBinary(this.tableName);
+        oprot.writeFieldEnd();
+      }
+      if (this.row != null) {
+        oprot.writeFieldBegin(ROW_FIELD_DESC);
+        oprot.writeBinary(this.row);
+        oprot.writeFieldEnd();
+      }
+      if (this.columnCheck != null) {
+        oprot.writeFieldBegin(COLUMN_CHECK_FIELD_DESC);
+        oprot.writeBinary(this.columnCheck);
+        oprot.writeFieldEnd();
+      }
+      if (this.valueCheck != null) {
+        oprot.writeFieldBegin(VALUE_CHECK_FIELD_DESC);
+        oprot.writeBinary(this.valueCheck);
+        oprot.writeFieldEnd();
+      }
+      if (this.mutations != null) {
+        oprot.writeFieldBegin(MUTATIONS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRUCT, this.mutations.size()));
+          for (Mutation _iter129 : this.mutations)
+          {
+            _iter129.write(oprot);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
+      oprot.writeI64(this.timestamp);
+      oprot.writeFieldEnd();
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("checkAndMutateRowTs_args(");
+      boolean first = true;
+
+      sb.append("tableName:");
+      if (this.tableName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.tableName);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("row:");
+      if (this.row == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.row);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("columnCheck:");
+      if (this.columnCheck == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.columnCheck);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("valueCheck:");
+      if (this.valueCheck == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.valueCheck);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("mutations:");
+      if (this.mutations == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.mutations);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("timestamp:");
+      sb.append(this.timestamp);
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+    }
+
+  }
+
+  public static class checkAndMutateRowTs_result implements TBase<checkAndMutateRowTs_result._Fields>, java.io.Serializable, Cloneable, Comparable<checkAndMutateRowTs_result>   {
+    private static final TStruct STRUCT_DESC = new TStruct("checkAndMutateRowTs_result");
+
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.BOOL, (short)0);
+    private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
+    private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
+
+    public boolean success;
+    public IOError io;
+    public IllegalArgument ia;
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io"),
+      IA((short)2, "ia");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.BOOL)));
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRUCT)));
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT,
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(checkAndMutateRowTs_result.class, metaDataMap);
+    }
+
+    public checkAndMutateRowTs_result() {
+    }
+
+    public checkAndMutateRowTs_result(
+      boolean success,
+      IOError io,
+      IllegalArgument ia)
+    {
+      this();
+      this.success = success;
+      setSuccessIsSet(true);
+      this.io = io;
+      this.ia = ia;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public checkAndMutateRowTs_result(checkAndMutateRowTs_result other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
+      this.success = other.success;
+      if (other.isSetIo()) {
+        this.io = new IOError(other.io);
+      }
+      if (other.isSetIa()) {
+        this.ia = new IllegalArgument(other.ia);
+      }
+    }
+
+    public checkAndMutateRowTs_result deepCopy() {
+      return new checkAndMutateRowTs_result(this);
+    }
+
+    @Deprecated
+    public checkAndMutateRowTs_result clone() {
+      return new checkAndMutateRowTs_result(this);
+    }
+
+    public boolean isSuccess() {
+      return this.success;
+    }
+
+    public checkAndMutateRowTs_result setSuccess(boolean success) {
+      this.success = success;
+      setSuccessIsSet(true);
+      return this;
+    }
+
+    public void unsetSuccess() {
+      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
+    }
+
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
+    public boolean isSetSuccess() {
+      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
+    }
+
+    public IOError getIo() {
+      return this.io;
+    }
+
+    public checkAndMutateRowTs_result setIo(IOError io) {
+      this.io = io;
+      return this;
+    }
+
+    public void unsetIo() {
+      this.io = null;
+    }
+
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
+    public boolean isSetIo() {
+      return this.io != null;
+    }
+
+    public void setIoIsSet(boolean value) {
+      if (!value) {
+        this.io = null;
+      }
+    }
+
+    public IllegalArgument getIa() {
+      return this.ia;
+    }
+
+    public checkAndMutateRowTs_result setIa(IllegalArgument ia) {
+      this.ia = ia;
+      return this;
+    }
+
+    public void unsetIa() {
+      this.ia = null;
+    }
+
+    /** Returns true if field ia is set (has been asigned a value) and false otherwise */
+    public boolean isSetIa() {
+      return this.ia != null;
+    }
+
+    public void setIaIsSet(boolean value) {
+      if (!value) {
+        this.ia = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((Boolean)value);
+        }
+        break;
+
+      case IO:
+        if (value == null) {
+          unsetIo();
+        } else {
+          setIo((IOError)value);
+        }
+        break;
+
+      case IA:
+        if (value == null) {
+          unsetIa();
+        } else {
+          setIa((IllegalArgument)value);
+        }
+        break;
+
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return new Boolean(isSuccess());
+
+      case IO:
+        return getIo();
+
+      case IA:
+        return getIa();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return isSetSuccess();
+      case IO:
+        return isSetIo();
+      case IA:
+        return isSetIa();
+      }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof checkAndMutateRowTs_result)
+        return this.equals((checkAndMutateRowTs_result)that);
+      return false;
+    }
+
+    public boolean equals(checkAndMutateRowTs_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true;
+      boolean that_present_success = true;
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (this.success != that.success)
+          return false;
+      }
+
+      boolean this_present_io = true && this.isSetIo();
+      boolean that_present_io = true && that.isSetIo();
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_ia = true && this.isSetIa();
+      boolean that_present_ia = true && that.isSetIa();
+      if (this_present_ia || that_present_ia) {
+        if (!(this_present_ia && that_present_ia))
+          return false;
+        if (!this.ia.equals(that.ia))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(checkAndMutateRowTs_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      checkAndMutateRowTs_result typedOther = (checkAndMutateRowTs_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIa()).compareTo(isSetIa());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(ia, typedOther.ia);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) {
+          break;
+        }
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.BOOL) {
+                this.success = iprot.readBool();
+                setSuccessIsSet(true);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IA:
+              if (field.type == TType.STRUCT) {
+                this.ia = new IllegalArgument();
+                this.ia.read(iprot);
+              } else {
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
+        }
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      oprot.writeStructBegin(STRUCT_DESC);
+
+      if (this.isSetSuccess()) {
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+        oprot.writeBool(this.success);
+        oprot.writeFieldEnd();
+      } else if (this.isSetIo()) {
+        oprot.writeFieldBegin(IO_FIELD_DESC);
+        this.io.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetIa()) {
+        oprot.writeFieldBegin(IA_FIELD_DESC);
+        this.ia.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("checkAndMutateRowTs_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      sb.append(this.success);
+      first = false;
+      if (!first) sb.append(", ");
       sb.append("io:");
       if (this.io == null) {
         sb.append("null");
@@ -24843,13 +31459,13 @@ public class Hbase {
             case COLUMNS:
               if (field.type == TType.LIST) {
                 {
-                  TList _list82 = iprot.readListBegin();
-                  this.columns = new ArrayList<byte[]>(_list82.size);
-                  for (int _i83 = 0; _i83 < _list82.size; ++_i83)
+                  TList _list130 = iprot.readListBegin();
+                  this.columns = new ArrayList<byte[]>(_list130.size);
+                  for (int _i131 = 0; _i131 < _list130.size; ++_i131)
                   {
-                    byte[] _elem84;
-                    _elem84 = iprot.readBinary();
-                    this.columns.add(_elem84);
+                    byte[] _elem132;
+                    _elem132 = iprot.readBinary();
+                    this.columns.add(_elem132);
                   }
                   iprot.readListEnd();
                 }
@@ -24885,9 +31501,9 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter85 : this.columns)
+          for (byte[] _iter133 : this.columns)
           {
-            oprot.writeBinary(_iter85);
+            oprot.writeBinary(_iter133);
           }
           oprot.writeListEnd();
         }
@@ -26646,13 +33262,13 @@ public class Hbase {
             case COLUMNS:
               if (field.type == TType.LIST) {
                 {
-                  TList _list86 = iprot.readListBegin();
-                  this.columns = new ArrayList<byte[]>(_list86.size);
-                  for (int _i87 = 0; _i87 < _list86.size; ++_i87)
+                  TList _list134 = iprot.readListBegin();
+                  this.columns = new ArrayList<byte[]>(_list134.size);
+                  for (int _i135 = 0; _i135 < _list134.size; ++_i135)
                   {
-                    byte[] _elem88;
-                    _elem88 = iprot.readBinary();
-                    this.columns.add(_elem88);
+                    byte[] _elem136;
+                    _elem136 = iprot.readBinary();
+                    this.columns.add(_elem136);
                   }
                   iprot.readListEnd();
                 }
@@ -26693,9 +33309,9 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter89 : this.columns)
+          for (byte[] _iter137 : this.columns)
           {
-            oprot.writeBinary(_iter89);
+            oprot.writeBinary(_iter137);
           }
           oprot.writeListEnd();
         }
@@ -27577,13 +34193,13 @@ public class Hbase {
             case COLUMNS:
               if (field.type == TType.LIST) {
                 {
-                  TList _list90 = iprot.readListBegin();
-                  this.columns = new ArrayList<byte[]>(_list90.size);
-                  for (int _i91 = 0; _i91 < _list90.size; ++_i91)
+                  TList _list138 = iprot.readListBegin();
+                  this.columns = new ArrayList<byte[]>(_list138.size);
+                  for (int _i139 = 0; _i139 < _list138.size; ++_i139)
                   {
-                    byte[] _elem92;
-                    _elem92 = iprot.readBinary();
-                    this.columns.add(_elem92);
+                    byte[] _elem140;
+                    _elem140 = iprot.readBinary();
+                    this.columns.add(_elem140);
                   }
                   iprot.readListEnd();
                 }
@@ -27619,9 +34235,9 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter93 : this.columns)
+          for (byte[] _iter141 : this.columns)
           {
-            oprot.writeBinary(_iter93);
+            oprot.writeBinary(_iter141);
           }
           oprot.writeListEnd();
         }
@@ -28590,13 +35206,13 @@ public class Hbase {
             case COLUMNS:
               if (field.type == TType.LIST) {
                 {
-                  TList _list94 = iprot.readListBegin();
-                  this.columns = new ArrayList<byte[]>(_list94.size);
-                  for (int _i95 = 0; _i95 < _list94.size; ++_i95)
+                  TList _list142 = iprot.readListBegin();
+                  this.columns = new ArrayList<byte[]>(_list142.size);
+                  for (int _i143 = 0; _i143 < _list142.size; ++_i143)
                   {
-                    byte[] _elem96;
-                    _elem96 = iprot.readBinary();
-                    this.columns.add(_elem96);
+                    byte[] _elem144;
+                    _elem144 = iprot.readBinary();
+                    this.columns.add(_elem144);
                   }
                   iprot.readListEnd();
                 }
@@ -28640,9 +35256,9 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter97 : this.columns)
+          for (byte[] _iter145 : this.columns)
           {
-            oprot.writeBinary(_iter97);
+            oprot.writeBinary(_iter145);
           }
           oprot.writeListEnd();
         }
@@ -29710,13 +36326,13 @@ public class Hbase {
             case COLUMNS:
               if (field.type == TType.LIST) {
                 {
-                  TList _list98 = iprot.readListBegin();
-                  this.columns = new ArrayList<byte[]>(_list98.size);
-                  for (int _i99 = 0; _i99 < _list98.size; ++_i99)
+                  TList _list146 = iprot.readListBegin();
+                  this.columns = new ArrayList<byte[]>(_list146.size);
+                  for (int _i147 = 0; _i147 < _list146.size; ++_i147)
                   {
-                    byte[] _elem100;
-                    _elem100 = iprot.readBinary();
-                    this.columns.add(_elem100);
+                    byte[] _elem148;
+                    _elem148 = iprot.readBinary();
+                    this.columns.add(_elem148);
                   }
                   iprot.readListEnd();
                 }
@@ -29765,9 +36381,9 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter101 : this.columns)
+          for (byte[] _iter149 : this.columns)
           {
-            oprot.writeBinary(_iter101);
+            oprot.writeBinary(_iter149);
           }
           oprot.writeListEnd();
         }
@@ -34614,14 +41230,14 @@ public class Hbase {
             case SUCCESS:
               if (field.type == TType.LIST) {
                 {
-                  TList _list102 = iprot.readListBegin();
-                  this.success = new ArrayList<TRowResult>(_list102.size);
-                  for (int _i103 = 0; _i103 < _list102.size; ++_i103)
+                  TList _list150 = iprot.readListBegin();
+                  this.success = new ArrayList<TRowResult>(_list150.size);
+                  for (int _i151 = 0; _i151 < _list150.size; ++_i151)
                   {
-                    TRowResult _elem104;
-                    _elem104 = new TRowResult();
-                    _elem104.read(iprot);
-                    this.success.add(_elem104);
+                    TRowResult _elem152;
+                    _elem152 = new TRowResult();
+                    _elem152.read(iprot);
+                    this.success.add(_elem152);
                   }
                   iprot.readListEnd();
                 }
@@ -34662,9 +41278,9 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (TRowResult _iter105 : this.success)
+          for (TRowResult _iter153 : this.success)
           {
-            _iter105.write(oprot);
+            _iter153.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -35478,14 +42094,14 @@ public class Hbase {
             case SUCCESS:
               if (field.type == TType.LIST) {
                 {
-                  TList _list106 = iprot.readListBegin();
-                  this.success = new ArrayList<TRowResult>(_list106.size);
-                  for (int _i107 = 0; _i107 < _list106.size; ++_i107)
+                  TList _list154 = iprot.readListBegin();
+                  this.success = new ArrayList<TRowResult>(_list154.size);
+                  for (int _i155 = 0; _i155 < _list154.size; ++_i155)
                   {
-                    TRowResult _elem108;
-                    _elem108 = new TRowResult();
-                    _elem108.read(iprot);
-                    this.success.add(_elem108);
+                    TRowResult _elem156;
+                    _elem156 = new TRowResult();
+                    _elem156.read(iprot);
+                    this.success.add(_elem156);
                   }
                   iprot.readListEnd();
                 }
@@ -35526,9 +42142,9 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (TRowResult _iter109 : this.success)
+          for (TRowResult _iter157 : this.success)
           {
-            _iter109.write(oprot);
+            _iter157.write(oprot);
           }
           oprot.writeListEnd();
         }

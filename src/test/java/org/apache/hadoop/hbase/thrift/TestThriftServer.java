@@ -62,6 +62,8 @@ public class TestThriftServer extends HBaseClusterTestCase {
     doTestTableMutations();
     doTestTableTimestampsAndColumns();
     doTestTableScanners();
+    doTestTableMultiGet();
+    doTestTableCheckAndMutate();
   }
 
   /**
@@ -306,9 +308,113 @@ public class TestThriftServer extends HBaseClusterTestCase {
   }
 
   /**
+   * Tests some of the getRows*() calls.
    *
-   * @return a List of ColumnDescriptors for use in creating a table.  Has one
-   * default ColumnDescriptor and one ColumnDescriptor with fewer versions
+   * @throws Exception
+   */
+  public void doTestTableMultiGet() throws Exception {
+    // Setup
+    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler();
+    handler.createTable(tableAname, getColumnDescriptors());
+
+    // Apply timestamped Mutations to rowA
+    long time1 = System.currentTimeMillis();
+    handler.mutateRowTs(tableAname, rowAname, getMutations(), time1);
+
+    // Sleep to assure that 'time1' and 'time2' will be different even with a
+    // coarse grained system timer.
+    Thread.sleep(1000);
+
+    // Apply timestamped BatchMutations for rowA and rowB
+    long time2 = System.currentTimeMillis();
+    handler.mutateRowsTs(tableAname, getBatchMutations(), time2);
+
+    time1 += 1;
+
+    // test getting the two rows with a multiget
+    List<byte[]> rows = new ArrayList<byte[]>();
+    rows.add(rowAname);
+    rows.add(rowBname);
+
+    List<TRowResult> results = handler.getRows(tableAname, rows);
+    assertEquals(results.get(0).row, rowAname);
+    assertEquals(results.get(1).row, rowBname);
+
+    assertEquals(results.get(0).columns.get(columnBname).value, valueCname);
+    assertEquals(results.get(1).columns.get(columnAname).value, valueCname);
+    assertEquals(results.get(1).columns.get(columnBname).value, valueDname);
+
+    // Teardown
+    handler.disableTable(tableAname);
+    handler.deleteTable(tableAname);
+  }
+
+  /**
+   * Test some of the checkAndMutate calls
+   *
+   * @throws Exception
+   */
+  public void doTestTableCheckAndMutate() throws Exception {
+    // Setup
+    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler();
+    handler.createTable(tableAname, getColumnDescriptors());
+
+    // Apply timestamped Mutations to rowA
+    long time1 = System.currentTimeMillis();
+    handler.checkAndMutateRowTs(tableAname, rowAname, columnAname, null,
+        getMutations(), time1);
+
+    List<TRowResult> res1 = handler.getRow(tableAname, rowAname);
+    // Check that all went according to plan
+    assertEquals(res1.get(0).columns.get(columnAname).value, valueAname);
+    assertEquals(res1.get(0).columns.get(columnBname).value, valueBname);
+
+    // Sleep to assure that 'time1' and 'time2' will be different even with a
+    // coarse grained system timer.
+    Thread.sleep(1000);
+
+    // Apply later timestamped mutations to rowA
+    long time2 = System.currentTimeMillis();
+
+    // Mess stuff up; shouldn't pass, null check value
+    handler.checkAndMutateRowTs(tableAname, rowAname, columnAname, null,
+        getMutations2(), time2);
+    handler.checkAndMutateRowTs(tableAname, rowAname, columnBname, null,
+        getMutations2(), time2);
+
+    // Check that all still the same!
+    assertEquals(res1.get(0).columns.get(columnAname).value, valueAname);
+    assertEquals(res1.get(0).columns.get(columnBname).value, valueBname);
+
+    // Mess stuff up; shouldn't pass, wrong check value
+    handler.checkAndMutateRowTs(tableAname, rowAname, columnAname,
+        Bytes.toBytes("randovalue1"), getMutations2(), time2);
+    handler.checkAndMutateRowTs(tableAname, rowAname, columnBname,
+        Bytes.toBytes("randovalue2"), getMutations2(), time2);
+
+    // Check that all still the same!
+    assertEquals(res1.get(0).columns.get(columnAname).value, valueAname);
+    assertEquals(res1.get(0).columns.get(columnBname).value, valueBname);
+
+    // Now actually change things
+    handler.checkAndMutateRowTs(tableAname, rowAname, columnAname, valueAname,
+        getMutations2(), time2);
+
+    res1 = handler.getRow(tableAname, rowAname);
+
+    // Check that actually changed!
+    assertEquals(res1.get(0).columns.get(columnAname).value, valueCname);
+    assertEquals(res1.get(0).columns.get(columnBname).value, valueDname);
+    // Teardown
+    handler.disableTable(tableAname);
+    handler.deleteTable(tableAname);
+  }
+
+  /**
+   *
+   * @return a List of ColumnDescriptors for use in creating a table. Has one
+   *         default ColumnDescriptor and one ColumnDescriptor with fewer
+   *         versions
    */
   private List<ColumnDescriptor> getColumnDescriptors() {
     ArrayList<ColumnDescriptor> cDescriptors = new ArrayList<ColumnDescriptor>();
@@ -353,11 +459,21 @@ public class TestThriftServer extends HBaseClusterTestCase {
 
   /**
    *
-   * @return a List of BatchMutations with the following effects:
-   * (rowA, columnA): delete
-   * (rowA, columnB): place valueC
-   * (rowB, columnA): place valueC
-   * (rowB, columnB): place valueD
+   * @return a List of Mutations for a row, with columnA having valueC and
+   *         columnB having valueD
+   */
+  private List<Mutation> getMutations2() {
+    List<Mutation> mutations = new ArrayList<Mutation>();
+    mutations.add(new Mutation(false, columnAname, valueCname));
+    mutations.add(new Mutation(false, columnBname, valueDname));
+    return mutations;
+  }
+
+  /**
+   *
+   * @return a List of BatchMutations with the following effects: (rowA,
+   *         columnA): delete (rowA, columnB): place valueC (rowB, columnA):
+   *         place valueC (rowB, columnB): place valueD
    */
   private List<BatchMutation> getBatchMutations() {
     List<BatchMutation> batchMutations = new ArrayList<BatchMutation>();

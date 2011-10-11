@@ -111,6 +111,9 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
    */
   public Result get(byte [] regionName, Get get) throws IOException;
 
+  public Result[] get(byte[] regionName, List<Get> gets)
+      throws IOException;
+
   /**
    * Perform exists operation.
    * @param regionName name of region to get from

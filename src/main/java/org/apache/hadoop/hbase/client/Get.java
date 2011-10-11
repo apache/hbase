@@ -66,7 +66,7 @@ import java.util.TreeSet;
  * <p>
  * To add a filter, execute {@link #setFilter(Filter) setFilter}.
  */
-public class Get extends Operation implements Writable {
+public class Get extends Operation implements Writable, Row, Comparable<Row> {
   private static final byte GET_VERSION = (byte)2;
 
   private byte [] row = null;
@@ -367,6 +367,10 @@ public class Get extends Operation implements Writable {
     }
     map.put("totalColumns", colCount);
     return map;
+  }
+
+  public int compareTo(Row p) {
+    return Bytes.compareTo(this.getRow(), p.getRow());
   }
 
   //Writable

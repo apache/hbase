@@ -377,6 +377,52 @@ service Hbase {
   ) throws (1:IOError io)
 
   /**
+   * Get multiple rows with the same columns or timestamps for all.
+   * This returns latest entries, all columns and cfs.
+   *
+   * @return TRowResult containing the row and map of columns to TCells
+   */
+  list<TRowResult> getRows(
+    1:Text tableName,
+    2:list<Text> rows,
+  ) throws (1:IOError io)
+
+  /**
+   * Get multiple rows only up to a certain timestamp
+   *
+   * @return TRowResult containing the row and map of columns to TCells
+   */
+  list<TRowResult> getRowsTs(
+    1:Text tableName,
+    2:list<Text> rows,
+    3:i64 timestamp
+  ) throws (1:IOError io)
+
+  /**
+   * Get multiple rows only with particular cf:qualifier pairs on all rows
+   *
+   * @return TRowResult containing the row and map of columns to TCells
+   */
+  list<TRowResult> getRowsWithColumns(
+    1:Text tableName,
+    2:list<Text> rows,
+    3:list<Text> families
+  ) throws (1:IOError io)
+
+  /**
+   * Get multiple rows only with particular cf:qualifier pairs on all rows
+   * and only up to a particular timestamp.
+   *
+   * @return TRowResult containing the row and map of columns to TCells
+   */
+  list<TRowResult> getRowsWithColumnsTs(
+    1:Text tableName,
+    2:list<Text> rows,
+    3:list<Text> families
+    4:i64 timestamp
+  ) throws (1:IOError io)
+
+  /**
    * Apply a series of mutations (updates/deletes) to a row in a
    * single transaction.  If an exception is thrown, then the
    * transaction is aborted.  Default current timestamp is used, and
@@ -442,6 +488,50 @@ service Hbase {
 
     /** timestamp */
     3:i64 timestamp
+  ) throws (1:IOError io, 2:IllegalArgument ia)
+
+  /**
+   * Applies a list of mutations to a single row only if the value for
+   * row, cf[:qualifier] equals valueCheck
+   *
+   * Accepts null or '' for valueCheck, in which case entry for
+   * row, cf[:qualifier] must not exist.
+   *
+   * @return bool whether the check passed and mutations were applied
+   */
+  bool checkAndMutateRow(
+    /** name of table */
+    1:Text tableName,
+
+    /** row key */
+    2:Text row,
+
+    3:Text columnCheck,
+    4:Text valueCheck,
+    /** list of mutation commands */
+    5:list<Mutation> mutations,
+  ) throws (1:IOError io, 2:IllegalArgument ia)
+
+  /**
+   * Same as above, but the puts and deletes are added at specified timestamp.
+   *
+   * NOTE: No way to specify what timerange to query for the checked value;
+   * it will look for most recent entry (the default Get behavior).
+   */
+  bool checkAndMutateRowTs(
+    /** name of table */
+    1:Text tableName,
+
+    /** row key */
+    2:Text row,
+
+    3:Text columnCheck,
+    4:Text valueCheck,
+    /** list of mutation commands */
+    5:list<Mutation> mutations,
+
+    /** timestamp */
+    6:i64 timestamp
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**

@@ -32,8 +32,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
@@ -3376,19 +3378,24 @@ public class TestFromClientSide {
   }
 
   @Test
-  public void testRowsPut() throws IOException {
+  public void testRowsPutMultiGet() throws IOException {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
     final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
     final int NB_BATCH_ROWS = 10;
-    final byte[] value = Bytes.toBytes("abcd");
+    final String value = "abcd";
     HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRowsPut"),
       new byte[][] {CONTENTS_FAMILY, SMALL_FAMILY });
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
+    ArrayList<Get> rowsGets = new ArrayList<Get>();
     for (int i = 0; i < NB_BATCH_ROWS; i++) {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
-      put.add(CONTENTS_FAMILY, null, value);
+      put.add(CONTENTS_FAMILY, null, Bytes.toBytes(value + i));
       rowsUpdate.add(put);
+
+      Get get = new Get(row);
+      get.addFamily(CONTENTS_FAMILY);
+      rowsGets.add(get);
     }
     table.put(rowsUpdate);
     Scan scan = new Scan();
@@ -3399,6 +3406,28 @@ public class TestFromClientSide {
     Result row : scanner)
       nbRows++;
     assertEquals(NB_BATCH_ROWS, nbRows);
+
+    // now multi get!!
+    Result[] reses = table.get(rowsGets);
+    assertEquals(NB_BATCH_ROWS, reses.length);
+    int i = 0;
+    for (Result r : reses) {
+      assertEquals(r.getValue(CONTENTS_FAMILY, null).length, 5);
+      assertEquals(new String(r.getValue(CONTENTS_FAMILY, null)), value + i);
+      i++;
+    }
+
+    // make sure order is preserved by multi get!
+    Collections.reverse(rowsGets);
+    reses = table.get(rowsGets);
+    assertEquals(NB_BATCH_ROWS, reses.length);
+    i = 1;
+    for (Result r : reses) {
+      assertEquals(r.getValue(CONTENTS_FAMILY, null).length, 5);
+      assertEquals(new String(r.getValue(CONTENTS_FAMILY, null)), value
+          + (NB_BATCH_ROWS - i));
+      i++;
+    }
   }
 
   @Test

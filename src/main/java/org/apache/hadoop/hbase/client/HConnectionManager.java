@@ -1289,7 +1289,7 @@ public class HConnectionManager {
      * Helper class for batch updates.
      * Holds code shared doing batch puts and batch deletes.
      */
-    private abstract class Batch {
+    private abstract class Batch<T> {
       final HConnection c;
 
       private Batch(final HConnection c) {
@@ -1306,7 +1306,7 @@ public class HConnectionManager {
        * @throws RuntimeException other undefined exception
        */
       abstract int doCall(final List<? extends Row> currentList,
-        final byte [] row, final byte [] tableName)
+          final byte[] row, final byte[] tableName, T ret)
       throws IOException, RuntimeException;
 
       /**
@@ -1316,7 +1316,7 @@ public class HConnectionManager {
        * @return Count of how many added or -1 if all added.
        * @throws IOException if a remote or network exception occurs
        */
-      int process(final List<? extends Row> list, final byte[] tableName)
+      int process(final List<? extends Row> list, final byte[] tableName, T ret)
       throws IOException {
         byte [] region = getRegionName(tableName, list.get(0).getRow(), false);
         byte [] currentRegion = region;
@@ -1324,6 +1324,9 @@ public class HConnectionManager {
         boolean retryOnlyOne = false;
         List<Row> currentList = new ArrayList<Row>();
         int i, tries;
+        if (list.size() > 1) {
+          Collections.sort(list);
+        }
         for (i = 0, tries = 0; i < list.size() && tries < numRetries; i++) {
           Row row = list.get(i);
           currentList.add(row);
@@ -1334,7 +1337,7 @@ public class HConnectionManager {
             region = getRegionName(tableName, list.get(i + 1).getRow(), false);
           }
           if (!Bytes.equals(currentRegion, region) || isLastRow || retryOnlyOne) {
-            int index = doCall(currentList, row.getRow(), tableName);
+            int index = doCall(currentList, row.getRow(), tableName, ret);
             // index is == -1 if all processed successfully, else its index
             // of last record successfully processed.
             if (index != -1) {
@@ -1370,7 +1373,7 @@ public class HConnectionManager {
        * @return Region name that holds passed row <code>r</code>
        * @throws IOException
        */
-      private byte [] getRegionName(final byte [] t, final byte [] r,
+      private byte[] getRegionName(final byte[] t, final byte[] r,
         final boolean re)
       throws IOException {
         HRegionLocation location = getRegionLocationForRowWithRetries(t, r, re);
@@ -1383,7 +1386,7 @@ public class HConnectionManager {
        * @param tries
        * @return New value for tries.
        */
-      private int doBatchPause(final byte [] currentRegion, final int tries) {
+      private int doBatchPause(final byte[] currentRegion, final int tries) {
         int localTries = tries;
         long sleepTime = getPauseTime(tries);
         if (LOG.isDebugEnabled()) {
@@ -1405,12 +1408,11 @@ public class HConnectionManager {
       final byte[] tableName)
     throws IOException {
       if (list.isEmpty()) return 0;
-      if (list.size() > 1) Collections.sort(list);
-      Batch b = new Batch(this) {
+      Batch<Object> b = new Batch<Object>(this) {
         @SuppressWarnings("unchecked")
         @Override
         int doCall(final List<? extends Row> currentList, final byte [] row,
-          final byte [] tableName)
+            final byte[] tableName, Object whatevs)
         throws IOException, RuntimeException {
           final List<Put> puts = (List<Put>)currentList;
           return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
@@ -1421,19 +1423,51 @@ public class HConnectionManager {
           });
         }
       };
-      return b.process(list, tableName);
+      return b.process(list, tableName, new Object());
+    }
+
+    public Result[] processBatchOfGets(final List<Get> list,
+        final byte[] tableName)
+        throws IOException {
+      if (list.isEmpty()) {
+        return null;
+      }
+
+      final List<Get> origList = new ArrayList<Get>(list);
+      Batch<Result[]> b = new Batch<Result[]>(this) {
+        @SuppressWarnings("unchecked")
+        @Override
+        int doCall(final List<? extends Row> currentList,
+            final byte[] row,
+            final byte[] tableName, Result[] res) throws IOException,
+            RuntimeException {
+          final List<Get> gets = (List<Get>) currentList;
+          Result[] tmp = getRegionServerWithRetries(new ServerCallable<Result[]>(
+              this.c, tableName, row) {
+            public Result[] call() throws IOException {
+              return server.get(location.getRegionInfo().getRegionName(), gets);
+            }
+          });
+          for (int i = 0; i < tmp.length; i++) {
+            res[origList.indexOf(gets.get(i))] = tmp[i];
+          }
+          return tmp.length == currentList.size() ? -1 : tmp.length;
+        }
+      };
+      Result[] results = new Result[list.size()];
+      b.process(list, tableName, results);
+      return results;
     }
 
     public int processBatchOfDeletes(final List<Delete> list,
       final byte[] tableName)
     throws IOException {
       if (list.isEmpty()) return 0;
-      if (list.size() > 1) Collections.sort(list);
-      Batch b = new Batch(this) {
+      Batch<Object> b = new Batch<Object>(this) {
         @SuppressWarnings("unchecked")
         @Override
         int doCall(final List<? extends Row> currentList, final byte [] row,
-          final byte [] tableName)
+            final byte[] tableName, Object whatevs)
         throws IOException, RuntimeException {
           final List<Delete> deletes = (List<Delete>)currentList;
           return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
@@ -1445,7 +1479,7 @@ public class HConnectionManager {
             });
           }
         };
-        return b.process(list, tableName);
+      return b.process(list, tableName, new Object());
       }
 
     void close(boolean stopProxy) {

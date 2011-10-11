@@ -519,6 +519,10 @@ public class HTable implements HTableInterface {
     );
   }
 
+  public Result[] get(List<Get> gets) throws IOException {
+    return connection.processBatchOfGets(gets, tableName);
+  }
+
   public void delete(final Delete delete)
   throws IOException {
     connection.getRegionServerWithRetries(

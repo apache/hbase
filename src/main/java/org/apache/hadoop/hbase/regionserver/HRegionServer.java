@@ -1868,6 +1868,25 @@ public class HRegionServer implements HRegionInterface,
   }
 
   @Override
+  public Result[] get(byte[] regionName, List<Get> gets)
+      throws IOException {
+    checkOpen();
+    requestCount.addAndGet(gets.size());
+    Result[] rets = new Result[gets.size()];
+    try {
+      HRegion region = getRegion(regionName);
+      int i = 0;
+      for (Get get : gets) {
+        rets[i] = region.get(get, getLockFromId(get.getLockId()));
+        i++;
+      }
+      return rets;
+    } catch(Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
+    }
+  }
+
+  @Override
   public boolean exists(byte [] regionName, Get get) throws IOException {
     checkOpen();
     requestCount.incrementAndGet();

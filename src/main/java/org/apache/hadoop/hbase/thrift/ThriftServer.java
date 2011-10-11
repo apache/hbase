@@ -398,6 +398,56 @@ public class ThriftServer {
       deleteAllTs(tableName, row, column, HConstants.LATEST_TIMESTAMP);
     }
 
+    @Override
+    public List<TRowResult> getRows(byte[] tableName, List<byte[]> rows)
+        throws IOError {
+      return getRowsWithColumnsTs(tableName, rows, null,
+          HConstants.LATEST_TIMESTAMP);
+    }
+
+    @Override
+    public List<TRowResult> getRowsWithColumns(byte[] tableName,
+        List<byte[]> rows, List<byte[]> columns) throws IOError {
+      return getRowsWithColumnsTs(tableName, rows, columns,
+          HConstants.LATEST_TIMESTAMP);
+    }
+
+    @Override
+    public List<TRowResult> getRowsTs(byte[] tableName, List<byte[]> rows,
+        long timestamp) throws IOError {
+      return getRowsWithColumnsTs(tableName, rows, null, timestamp);
+    }
+
+    @Override
+    public List<TRowResult> getRowsWithColumnsTs(byte[] tableName,
+        List<byte[]> rows, List<byte[]> columns, long timestamp) throws IOError {
+      try {
+        List<Get> gets = new ArrayList<Get>(rows.size());
+        HTable table = getTable(tableName);
+        // For now, don't support ragged gets, with different columns per row
+        // Probably pretty sensible indefinitely anyways.
+        for (byte[] row : rows) {
+          Get get = new Get(row);
+          if (columns != null) {
+            for (byte[] column : columns) {
+              byte[][] famAndQf = KeyValue.parseColumn(column);
+              if (famAndQf.length == 1) {
+                get.addFamily(famAndQf[0]);
+              } else {
+                get.addColumn(famAndQf[0], famAndQf[1]);
+              }
+            }
+            get.setTimeRange(Long.MIN_VALUE, timestamp);
+          }
+          gets.add(get);
+        }
+        Result[] result = table.get(gets);
+        return ThriftUtilities.rowResultFromHBase(result);
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
+    }
+
     public void deleteAllTs(byte[] tableName, byte[] row, byte[] column,
         long timestamp) throws IOError {
       try {
@@ -553,6 +603,76 @@ public class ThriftServer {
         for (Delete del : deletes) {
           table.delete(del);
         }
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      } catch (IllegalArgumentException e) {
+        throw new IllegalArgument(e.getMessage());
+      }
+    }
+
+    /**
+     * Warning; the puts and deletes are NOT atomic together and so a lot of
+     * weird things can happen if you expect that to be the case!!
+     *
+     * A valueCheck of null means that the row can't exist before being put.
+     * This is kind of a stupid thing to enforce when deleting, for obvious
+     * reasons.
+     */
+    @Override
+    public boolean checkAndMutateRow(byte[] tableName, byte[] row,
+        byte[] columnCheck, byte[] valueCheck, List<Mutation> mutations)
+        throws IOError, IllegalArgument {
+      return checkAndMutateRowTs(tableName, row, columnCheck, valueCheck,
+          mutations, HConstants.LATEST_TIMESTAMP);
+    }
+
+    @Override
+    public boolean checkAndMutateRowTs(byte[] tableName, byte[] row,
+        byte[] columnCheck, byte[] valueCheck,
+        List<Mutation> mutations,
+        long timestamp) throws IOError, IllegalArgument {
+      HTable table;
+      try {
+        table = getTable(tableName);
+        Put put = new Put(row, timestamp, null);
+
+        Delete delete = new Delete(row);
+
+        for (Mutation m : mutations) {
+          byte[][] famAndQf = KeyValue.parseColumn(m.column);
+          if (m.isDelete) {
+            if (famAndQf.length == 1) {
+              delete.deleteFamily(famAndQf[0], timestamp);
+            } else {
+              delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
+            }
+          } else {
+            if (famAndQf.length == 1) {
+              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, m.value);
+            } else {
+              put.add(famAndQf[0], famAndQf[1], m.value);
+            }
+          }
+        }
+        byte[][] famAndQfCheck = KeyValue.parseColumn(columnCheck);
+
+        if (!delete.isEmpty() && !put.isEmpty()) {
+          // can't do both, not atomic, not good idea!
+          throw new IllegalArgumentException(
+              "Single Thrift CheckAndMutate call cannot do both puts and deletes.");
+        }
+        if (!delete.isEmpty()) {
+          return table.checkAndDelete(row, famAndQfCheck[0],
+                  famAndQfCheck.length != 1 ? famAndQfCheck[1]
+                      : HConstants.EMPTY_BYTE_ARRAY, valueCheck, delete);
+        }
+        if (!put.isEmpty()) {
+          return table.checkAndPut(row, famAndQfCheck[0],
+                  famAndQfCheck.length != 1 ? famAndQfCheck[1]
+                      : HConstants.EMPTY_BYTE_ARRAY, valueCheck, put);
+        }
+        throw new IllegalArgumentException(
+            "Thrift CheckAndMutate call must do either put or delete.");
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       } catch (IllegalArgumentException e) {
