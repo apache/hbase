@@ -120,7 +120,7 @@ public class HBaseUtils
    * @return Byte array of size (numberOfSplits-1) corresponding to the
    * boundaries between splits.
    */
-  private static byte[][] splitKeysMD5(int numberOfSplits) {
+  public static byte[][] splitKeysMD5(int numberOfSplits) {
     BigInteger max = new BigInteger(MAXMD5, 16);
     BigInteger[] bigIntegerSplits = split(max, numberOfSplits);
     byte[][] byteSplits = convertToBytes(bigIntegerSplits);
