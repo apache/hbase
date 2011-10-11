@@ -74,11 +74,14 @@ public class CompactSplitThread {
         60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
     this.largeCompactions
         .setRejectedExecutionHandler(new CompactionRequest.Rejection());
-    this.smallCompactions = (smallThreads <= 0) ? null
-        : new ThreadPoolExecutor(smallThreads, smallThreads, 60,
-          TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
-    this.smallCompactions
-        .setRejectedExecutionHandler(new CompactionRequest.Rejection());
+    if (smallThreads <= 0) {
+      this.smallCompactions = null;
+    } else {
+      this.smallCompactions = new ThreadPoolExecutor(smallThreads, smallThreads,
+          60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
+      this.smallCompactions
+          .setRejectedExecutionHandler(new CompactionRequest.Rejection());
+    }
     this.splits = (ThreadPoolExecutor) Executors
         .newFixedThreadPool(splitThreads);
   }
