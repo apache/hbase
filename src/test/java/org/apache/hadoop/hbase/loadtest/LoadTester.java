@@ -51,6 +51,10 @@ public class LoadTester {
 
   // global HBase configuration for the JVM - referenced by all classes.
   private Configuration config;
+
+  // for admin operations use a config with higher timeouts
+  private Configuration adminConfig;
+
   // startup options
   public static Options options = new Options();
 
@@ -69,6 +73,12 @@ public class LoadTester {
       this.inputFilename = inputFilename;
     }
     this.config = HBaseUtils.getHBaseConfFromZkNode(zkNodeName);
+
+    // for admin operations create a similar config, except
+    // set the RPC timeout much higher (5 mins).
+    this.adminConfig = HBaseUtils.getHBaseConfFromZkNode(zkNodeName);
+    this.adminConfig.setInt("hbase.rpc.timeout", 5 * 60 * 1000);
+
     LOG.info("Adding hbase.zookeeper.quorum = "
         + config.get("hbase.zookeeper.quorum"));
     if (tableNameString == null) {
@@ -202,7 +212,7 @@ public class LoadTester {
       LOG.info(dashedLine);
       LOG.info("Creating table if not exists................................");
     }
-    return HBaseUtils.createTableIfNotExists(config, tableName,
+    return HBaseUtils.createTableIfNotExists(adminConfig, tableName,
         familyProperties, regionsPerServer);
   }
 
@@ -211,7 +221,7 @@ public class LoadTester {
       LOG.info(dashedLine);
       LOG.info("Deleting table if it exists......");
     }
-    return HBaseUtils.deleteTable(config, tableName);
+    return HBaseUtils.deleteTable(adminConfig, tableName);
   }
 
   public void startAction(MultiThreadedAction action, String actionType,
