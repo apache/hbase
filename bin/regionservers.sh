@@ -66,9 +66,9 @@ for regionserver in `cat "$HOSTLIST"`; do
   else # run each command serially
     ssh $HBASE_SSH_OPTS $regionserver $"${@// /\\ }" \
       2>&1 | sed "s/^/$regionserver: /"
-  fi
-  if [ "$HBASE_SLAVE_SLEEP" != "" ]; then
-    sleep $HBASE_SLAVE_SLEEP
+    if [ "$HBASE_SLAVE_SLEEP" != "" ]; then
+      sleep $HBASE_SLAVE_SLEEP
+    fi
   fi
 done
 
