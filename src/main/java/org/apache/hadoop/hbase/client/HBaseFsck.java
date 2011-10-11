@@ -178,17 +178,21 @@ public class HBaseFsck {
       errors.reportError("Version file does not exist in root dir " + rootDir);
     }
 
+    // level 1:  <HBASE_DIR>/*
     for (FileStatus tableDir : tableDirs) {
       String tableName = tableDir.getPath().getName();
+      // ignore hidden files
       if (tableName.startsWith(".") &&
           !tableName.equals( Bytes.toString(HConstants.META_TABLE_NAME)))
         continue;
+      // level 2: <HBASE_DIR>/<table>/*
       FileStatus[] regionDirs = fs.listStatus(tableDir.getPath());
       for (FileStatus regionDir : regionDirs) {
-        String finalComponent = regionDir.getPath().getName();
-        if (finalComponent.startsWith(".")) continue;
+        String encodedName = regionDir.getPath().getName();
 
-        String encodedName = finalComponent;
+        // ignore directories that aren't numeric
+        if (!encodedName.matches("^\\d+$")) continue;
+
         HbckInfo hbi = getOrCreateInfo(encodedName);
         hbi.foundRegionDir = regionDir;
       }
