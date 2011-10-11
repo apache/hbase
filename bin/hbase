@@ -259,6 +259,8 @@ elif [ "$COMMAND" = "zookeeper" ] ; then
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_ZOOKEEPER_OPTS"
   fi
+elif [ "$COMMAND" = "zkcli" ] ; then
+  CLASS='org.apache.zookeeper.ZooKeeperMain'
 else
   CLASS=$COMMAND
 fi
