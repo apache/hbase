@@ -55,7 +55,9 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -715,7 +717,7 @@ public class FSUtils {
    * @throws IOException
    *           in case of file system errors or interrupts
    */
-  public static Map<String, String> getRegionLocalityMappingFromFS(
+  public static MapWritable getRegionLocalityMappingFromFS(
       final FileSystem fs, final Path rootPath, int threadPoolSize,
       final Configuration conf) throws IOException {
     return getRegionLocalityMappingFromFS(fs, rootPath, threadPoolSize, conf,
@@ -740,13 +742,12 @@ public class FSUtils {
    * @throws IOException
    *           in case of file system errors or interrupts
    */
-  public static Map<String, String> getRegionLocalityMappingFromFS(
+  public static MapWritable getRegionLocalityMappingFromFS(
       final FileSystem fs, final Path rootPath, int threadPoolSize,
       final Configuration conf, final String desiredTable)
       throws IOException {
     // region name to its best locality region server mapping
-    Map<String, String> regionToBestLocalityRSMapping =
-       new ConcurrentHashMap<String,  String>();
+    MapWritable regionToBestLocalityRSMapping = new MapWritable();
 
     long startTime = System.currentTimeMillis();
     Path queryPath;
@@ -919,10 +920,10 @@ class FSRegionScanner implements Runnable {
    * The locality mapping returned by the above getRegionLocalityMappingFromFS
    * method
    */
-  static private Map<String, String> regionToBestLocalityRSMapping;
+  static private MapWritable regionToBestLocalityRSMapping;
 
   static void setRegionToBestLocalityRSMapping(
-      Map<String, String> regionToBestLocalityRSMapping) {
+      MapWritable regionToBestLocalityRSMapping) {
     FSRegionScanner.regionToBestLocalityRSMapping =
       regionToBestLocalityRSMapping;
   }
@@ -1019,8 +1020,9 @@ class FSRegionScanner implements Runnable {
             hostToRun = hostToRun.substring(0, hostToRun.length()-1);
           }
           String name = tableName + ":" + regionPath.getName();
-          regionToBestLocalityRSMapping.put(name,hostToRun);
-
+          synchronized (regionToBestLocalityRSMapping) {
+            regionToBestLocalityRSMapping.put(new Text(name), new Text(hostToRun));
+          }
           this.numerOfFinishedRegions++;
         } catch (IOException e) {
           LOG.warn("Problem scanning file system", e);

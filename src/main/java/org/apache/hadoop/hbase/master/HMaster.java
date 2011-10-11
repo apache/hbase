@@ -19,7 +19,14 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
@@ -125,6 +132,7 @@ public class HMaster extends Thread implements HMasterInterface,
   //instance into web context.
   public static final String MASTER = "master";
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
+  private static final String LOCALITY_SNAPSHOT_FILE_NAME = "regionLocality-snapshot";
 
   // We start out with closed flag on.  Its set to off after construction.
   // Use AtomicBoolean rather than plain boolean because we want other threads
@@ -173,7 +181,7 @@ public class HMaster extends Thread implements HMasterInterface,
   boolean isClusterStartup;
 
   private long masterStartupTime = 0;
-  private Map<String, String> preferredRegionToRegionServerMapping = null;
+  private MapWritable preferredRegionToRegionServerMapping = null;
   private long applyPreferredAssignmentPeriod = 0l;
   private long holdRegionForBestLocalityPeriod = 0l;
 
@@ -297,7 +305,7 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.masterStartupTime;
   }
 
-  public Map<String, String> getPreferredRegionToRegionServerMapping() {
+  public MapWritable getPreferredRegionToRegionServerMapping() {
     return preferredRegionToRegionServerMapping;
   }
 
@@ -634,22 +642,114 @@ public class HMaster extends Thread implements HMasterInterface,
       this.holdRegionForBestLocalityPeriod =
         conf.getLong("hbase.master.holdRegionForBestLocality.period",
             1 * 60 * 1000);
-      LOG.debug("get preferredRegionToHostMapping; expecting pause here");
-      try {
-        this.preferredRegionToRegionServerMapping = FSUtils
-            .getRegionLocalityMappingFromFS(fs, rootdir,
-                conf.getInt("hbase.master.localityCheck.threadPoolSize", 5),
-                conf);
-      } catch (Exception e) {
-        LOG.error("Got unexpected exception when getting " +
-            "preferredRegionToHostMapping : " + e.toString());
-        // do not pause the master's construction
-        preferredRegionToRegionServerMapping = null;
+
+      // try to get the locality map from disk
+      this.preferredRegionToRegionServerMapping = getRegionLocalityFromSnapshot(conf);
+
+      // if we were not successful, let's reevaluate it
+      if (this.preferredRegionToRegionServerMapping == null) {
+        this.preferredRegionToRegionServerMapping = reevaluateRegionLocality(conf, null, conf.getInt("hbase.master.localityCheck.threadPoolSize", 5));
       }
+
     }
     // get the start time stamp after scanning the dfs
     masterStartupTime = System.currentTimeMillis();
   }
+
+  public static MapWritable getRegionLocalityFromSnapshot(Configuration conf) {
+    String region_assignment_snapshot_dir =
+      conf.get("hbase.tmp.dir");
+    if (region_assignment_snapshot_dir == null) {
+      return null;
+    }
+
+    String region_assignment_snapshot =
+      region_assignment_snapshot_dir + "/" + LOCALITY_SNAPSHOT_FILE_NAME;
+
+    long refresh_interval =
+      conf.getLong("hbase.master.regionLocality.snapshot.validity_time_ms",
+          24 * 60 * 60 * 1000);
+
+    File snapshotFile = new File(region_assignment_snapshot);
+    try {
+      if (!snapshotFile.exists()) {
+          LOG.info("preferredRegionToRegionServerMapping snapshot not found. File Path: "
+              + region_assignment_snapshot);
+          return null;
+      }
+
+      long time_elapsed = System.currentTimeMillis() - snapshotFile.lastModified();
+
+      MapWritable regionLocalityMap = null;
+      if (time_elapsed < refresh_interval) {
+        // load the information from disk
+        LOG.debug("Loading preferredRegionToRegionServerMapping from "
+            + region_assignment_snapshot);
+        regionLocalityMap = new MapWritable();
+        regionLocalityMap.readFields(
+            new DataInputStream(new FileInputStream(region_assignment_snapshot)));
+        return regionLocalityMap;
+      }
+      else {
+        LOG.info("Too long since last evaluated region-assignments. "
+            + "Ignoring saved region-assignemnt."
+            + " time_elapsed (ms) = " + time_elapsed + " refresh_interval is " + refresh_interval);
+      }
+      return null;
+    }
+    catch (IOException e) {
+      LOG.error("Error loading the preferredRegionToRegionServerMapping  file: " +
+          region_assignment_snapshot +  " from Disk : " + e.toString());
+      // do not pause the master's construction
+      return null;
+    }
+
+  }
+
+  /*
+   * Save a copy of the MapWritable regionLocalityMap.
+   * The exact location to be stored is fetched from the Configuration given:
+   * ${hbase.tmp.dir}/regionLocality-snapshot
+   */
+  public static MapWritable reevaluateRegionLocality(Configuration conf, String tablename, int poolSize) {
+    MapWritable regionLocalityMap = null;
+
+    LOG.debug("Evaluate preferredRegionToRegionServerMapping; expecting pause here");
+    try {
+      regionLocalityMap = FSUtils
+            .getRegionLocalityMappingFromFS(FileSystem.get(conf), FSUtils.getRootDir(conf),
+                poolSize,
+                conf,
+                tablename);
+    } catch (Exception e) {
+      LOG.error("Got unexpected exception when evaluating " +
+          "preferredRegionToRegionServerMapping : " + e.toString());
+      // do not pause the master's construction
+      return null;
+    }
+
+    String tmp_path = conf.get("hbase.tmp.dir");
+    if (tmp_path == null) {
+      LOG.info("Could not save preferredRegionToRegionServerMapping  " +
+          " config paramater hbase.tmp.dir is not set.");
+      return regionLocalityMap;
+    }
+
+    String region_assignment_snapshot = tmp_path
+      + "/" + LOCALITY_SNAPSHOT_FILE_NAME;
+    // write the preferredRegionAssignment to disk
+    try {
+      LOG.info("Saving preferredRegionToRegionServerMapping  " +
+          "to file " + region_assignment_snapshot );
+      regionLocalityMap.write(new DataOutputStream(
+          new FileOutputStream(region_assignment_snapshot)));
+    } catch (IOException e) {
+        LOG.error("Error saving preferredRegionToRegionServerMapping  " +
+            "to file " + region_assignment_snapshot +  " : " + e.toString());
+    }
+    return regionLocalityMap;
+  }
+
 
   /*
    * Joins cluster.  Checks to see if this instance of HBase is fresh or the

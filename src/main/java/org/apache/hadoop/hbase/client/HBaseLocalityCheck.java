@@ -1,5 +1,7 @@
 package org.apache.hadoop.hbase.client;
 
+import java.io.DataOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -14,21 +16,20 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseFsck.HbckInfo;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 
 public class HBaseLocalityCheck {
   private static final Log LOG = LogFactory.getLog(HBaseLocalityCheck.class
       .getName());
 
-  private final FileSystem fs;
-  private final Path rootdir;
-  private Map<String, String> preferredRegionToRegionServerMapping = null;
+  private Map<Writable, Writable> preferredRegionToRegionServerMapping = null;
   private Configuration conf;
   /**
    * The table we want to get locality for, or null in case we wanted a check
@@ -48,8 +49,6 @@ public class HBaseLocalityCheck {
    */
   public HBaseLocalityCheck(Configuration conf, final String tableName) throws IOException {
     this.conf = conf;
-    this.rootdir = FSUtils.getRootDir(conf);
-    this.fs = FileSystem.get(conf);
     this.tableName = tableName;
   }
 
@@ -74,26 +73,25 @@ public class HBaseLocalityCheck {
     LOG.info("Locality information by region");
 
     // Get the locality info for each region by scanning the file system
-    preferredRegionToRegionServerMapping = FSUtils
-        .getRegionLocalityMappingFromFS(fs, rootdir,
-            conf.getInt("hbase.client.localityCheck.threadPoolSize", 2), conf,
-            tableName);
+    preferredRegionToRegionServerMapping = HMaster.reevaluateRegionLocality(conf,
+        tableName,
+        conf.getInt("hbase.client.localityCheck.threadPoolSize", 2));
 
     Map<String, AtomicInteger> tableToRegionCountMap =
       new HashMap<String, AtomicInteger>();
     Map<String, AtomicInteger> tableToRegionsWithLocalityMap =
       new HashMap<String, AtomicInteger>();
 
-    for (Map.Entry<String, String> entry :
+    for (Map.Entry<Writable, Writable> entry :
         preferredRegionToRegionServerMapping.entrySet()) {
       // get region name and table
-      String name = entry.getKey();
+      String name = ((Text)entry.getKey()).toString();
       int spliterIndex =name.lastIndexOf(":");
       String regionName = name.substring(spliterIndex+1);
       String tableName = name.substring(0, spliterIndex);
 
       //get region server hostname
-      String bestHostName = entry.getValue();
+      String bestHostName = ((Text)entry.getValue()).toString();
       localityMatch = false;
       HbckInfo region = regionInfo.get(regionName);
       if (region != null && region.deployedOn != null &&
@@ -135,7 +133,9 @@ public class HBaseLocalityCheck {
           " ;" + " # Local Regions " + totalRegionsWithLocality + " rate = "
           + rate + " %");
     }
+
   }
+
 
   public static void main(String[] args) throws IOException,
       InterruptedException {

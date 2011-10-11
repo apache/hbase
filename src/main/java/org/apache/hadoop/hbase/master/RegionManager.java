@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.io.Text;
 
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
@@ -601,7 +602,7 @@ public class RegionManager {
         }
         if (assignmentByLocality && !i.isRootRegion() && !i.isMetaRegion()) {
           String preferredHost =
-            this.master.getPreferredRegionToRegionServerMapping().get(name);
+            this.master.getPreferredRegionToRegionServerMapping().get(new Text(name)).toString();
 
           if (preferredHost != null) {
             if (hostName.startsWith(preferredHost)) {
