@@ -601,10 +601,11 @@ public class RegionManager {
           }
         }
         if (assignmentByLocality && !i.isRootRegion() && !i.isMetaRegion()) {
-          String preferredHost =
-            this.master.getPreferredRegionToRegionServerMapping().get(new Text(name)).toString();
+          Text preferredHostNameTxt =
+            (Text)this.master.getPreferredRegionToRegionServerMapping().get(new Text(name));
 
-          if (preferredHost != null) {
+          if (preferredHostNameTxt != null) {
+            String preferredHost = preferredHostNameTxt.toString();
             if (hostName.startsWith(preferredHost)) {
               LOG.debug("Doing Preferred Region Assignment for : " + name +
                   " to the " + hostName);
