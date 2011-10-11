@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.NoServerForRegionException;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -400,33 +401,42 @@ public class RegionSplitter {
 
       // when a daughter region is opened, a compaction is triggered
       // wait until compaction completes for both daughter regions
-      LinkedList<HRegionInfo> check = Lists.newLinkedList();
-      check.add(table.getRegionLocation(start).getRegionInfo());
-      check.add(table.getRegionLocation(split).getRegionInfo());
-      for (HRegionInfo hri : check.toArray(new HRegionInfo[] {})) {
-        boolean refFound = false;
-        String startKey = Bytes.toStringBinary(hri.getStartKey());
-        // check every Column Family for that region
-        for (HColumnDescriptor c : hri.getTableDesc().getFamilies()) {
-          Path cfDir = Store.getStoreHomedir(tableDir, hri.getEncodedName(), c
-              .getName());
-          if (fs.exists(cfDir)) {
-            for (FileStatus file : fs.listStatus(cfDir)) {
-              refFound |= StoreFile.isReference(file.getPath());
-              if (refFound) break;
+      try {
+        LinkedList<HRegionInfo> check = Lists.newLinkedList();
+        check.add(table.getRegionLocation(start).getRegionInfo());
+        check.add(table.getRegionLocation(split).getRegionInfo());
+        for (HRegionInfo hri : check.toArray(new HRegionInfo[] {})) {
+          boolean refFound = false;
+          String startKey = Bytes.toStringBinary(hri.getStartKey());
+          // check every Column Family for that region
+          for (HColumnDescriptor c : hri.getTableDesc().getFamilies()) {
+            Path cfDir = Store.getStoreHomedir(tableDir, hri.getEncodedName(),
+                c.getName());
+            if (fs.exists(cfDir)) {
+              for (FileStatus file : fs.listStatus(cfDir)) {
+                refFound |= StoreFile.isReference(file.getPath());
+                if (refFound)
+                  break;
+              }
             }
+            if (refFound)
+              break;
           }
-          if (refFound) break;
+          // compaction is completed when all reference files are gone
+          if (!refFound) {
+            check.remove(hri);
+          }
         }
-        // compaction is completed when all reference files are gone
-        if (!refFound) {
-          check.remove(hri);
+        if (check.isEmpty()) {
+          finished.add(region);
+        } else {
+          physicalSplitting.add(region);
         }
-      }
-      if (check.isEmpty()) {
-        finished.add(region);
-      } else {
+      } catch (NoServerForRegionException nsfre) {
+        LOG.debug("No Server Exception thrown for: "
+            + Bytes.toStringBinary(start));
         physicalSplitting.add(region);
+        table.clearRegionCache();
       }
     }
 
