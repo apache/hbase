@@ -172,11 +172,6 @@ public class HRegion implements HeapSize { // , Writable{
   final Path regiondir;
   KeyValue.KVComparator comparator;
 
-  /*
-   * Set this when scheduling compaction if want the next compaction to be a
-   * major compaction.  Cleared each time through compaction code.
-   */
-  private volatile boolean forceMajorCompaction = false;
   private Pair<Long,Long> lastCompactInfo = null;
 
   /*
@@ -781,11 +776,9 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   void setForceMajorCompaction(final boolean b) {
-    this.forceMajorCompaction = b;
-  }
-
-  boolean getForceMajorCompaction() {
-    return this.forceMajorCompaction;
+    for (Store h: stores.values()) {
+      h.setForceMajorCompaction(b);
+    }
   }
 
   /**
@@ -799,13 +792,14 @@ public class HRegion implements HeapSize { // , Writable{
    * conflicts with a region split, and that cannot happen because the region
    * server does them sequentially and not in parallel.
    *
-   * @return mid key if split is needed
+   * @param majorCompaction True to force a major compaction regardless of thresholds
+   * @return split row if split is needed
    * @throws IOException e
    */
-  public byte [] compactStores() throws IOException {
-    boolean majorCompaction = this.forceMajorCompaction;
-    this.forceMajorCompaction = false;
-    return compactStores(majorCompaction);
+  byte [] compactStores(final boolean majorCompaction)
+  throws IOException {
+    this.setForceMajorCompaction(majorCompaction);
+    return compactStores();
   }
 
   /*
@@ -823,7 +817,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return split row if split is needed
    * @throws IOException e
    */
-  byte [] compactStores(final boolean majorCompaction)
+  byte [] compactStores()
   throws IOException {
     if (this.closing.get() || this.closed.get()) {
       LOG.debug("Skipping compaction on " + this + " because closing/closed");
@@ -847,8 +841,7 @@ public class HRegion implements HeapSize { // , Writable{
               return splitRow;
           }
         }
-        LOG.info("Starting" + (majorCompaction? " major " : " ") +
-            "compaction on region " + this);
+        LOG.info("Starting compaction on region " + this);
         long startTime = EnvironmentEdgeManager.currentTimeMillis();
         doRegionCompactionPrep();
         long lastCompactSize = 0;
@@ -856,7 +849,7 @@ public class HRegion implements HeapSize { // , Writable{
         boolean completed = false;
         try {
           for (Store store: stores.values()) {
-            final Store.StoreSize ss = store.compact(majorCompaction);
+            final Store.StoreSize ss = store.compact();
             lastCompactSize += store.getLastCompactSize();
             if (ss != null && ss.getSize() > maxSize) {
               maxSize = ss.getSize();
@@ -3144,7 +3137,7 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      (4 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN + ClassSize.ARRAY +
+      (4 * Bytes.SIZEOF_LONG) + ClassSize.ARRAY +
       (23 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
