@@ -142,12 +142,9 @@
 
   <repositories>
     <repository>
-      <id>mirror.facebook.net</id>
-      <name>facebook mirror</name>
-      <url>http://mirror.facebook.net/maven/repository/</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
+      <id>nicolas fb releases</id>
+      <name>Nicolas Spiegelberg FB binary repo</name>
+      <url>http://people.apache.org/~nspiegelberg/mvn/</url>
       <releases>
         <enabled>true</enabled>
       </releases>
@@ -178,17 +175,6 @@
       <id>codehaus</id>
       <name>Codehaus Public</name>
       <url>http://repository.codehaus.org/</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-    <repository>
-      <id>temp-hadoop</id>
-      <name>Hadoop 0.20.1/2 packaging, thrift, zk</name>
-      <url>http://people.apache.org/~rawson/repo/</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -444,7 +430,7 @@
     <compileSource>1.6</compileSource>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hbase.version>0.21.0-SNAPSHOT</hbase.version>
-    <hadoop.version>0.20-append-r1057313</hadoop.version>
+    <hadoop.version>0.20-fb</hadoop.version>
 
     <commons-cli.version>1.2</commons-cli.version>
     <commons-logging.version>1.1.1</commons-logging.version>
