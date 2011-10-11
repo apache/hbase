@@ -3970,7 +3970,7 @@ public class TestFromClientSide {
     } else {
       admin.compact(TABLE, FAMILY);
     }
-    Thread.sleep(6000);
+    Thread.sleep(10000);
 
     // The number of store files after compaction should be lesser.
     it1 = map.entrySet().iterator();
@@ -4018,7 +4018,7 @@ public class TestFromClientSide {
     } else {
       admin.compact(regionName, FAMILY);
     }
-    Thread.sleep(6000);
+    Thread.sleep(10000);
 
     // The number of store files after compaction should be lesser.
     int afterCompaction = server.getStoreFileList(regionName, FAMILY).size();
@@ -4067,7 +4067,7 @@ public class TestFromClientSide {
       admin.compact(regionName, family1);
       admin.compact(regionName, family2);
     }
-    Thread.sleep(6000);
+    Thread.sleep(10000);
 
     // The number of store files after compaction should be lesser.
     int afterCompactionF1 = server.getStoreFileList(regionName, family1).size();
