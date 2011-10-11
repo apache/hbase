@@ -57,36 +57,16 @@ public class SequenceFileLogWriter implements HLog.Writer {
 
   @Override
   public void init(FileSystem fs, Path path, Configuration conf)
-      throws IOException {
+  throws IOException {
     // Create a SF.Writer instance.
     try {
-      // reflection for a version of SequenceFile.createWriter that doesn't
-      // automatically create the parent directory (see HBASE-2312)
-      this.writer = (SequenceFile.Writer) SequenceFile.class
-        .getMethod("createWriter", new Class[] {FileSystem.class,
-            Configuration.class, Path.class, Class.class, Class.class,
-            Integer.TYPE, Short.TYPE, Long.TYPE, Boolean.TYPE,
-            CompressionType.class, CompressionCodec.class, Metadata.class})
-        .invoke(null, new Object[] {fs, conf, path, HLog.getKeyClass(conf),
-            WALEdit.class,
-            new Integer(fs.getConf().getInt("io.file.buffer.size", 4096)),
-            new Short((short)
-              conf.getInt("hbase.regionserver.hlog.replication",
-              fs.getDefaultReplication())),
-            new Long(conf.getLong("hbase.regionserver.hlog.blocksize",
-                fs.getDefaultBlockSize())),
-            new Boolean(false) /*createParent*/,
-            SequenceFile.CompressionType.NONE, new DefaultCodec(),
-            new Metadata()
-            });
+	this.generateWriter(fs,path,conf);
     } catch (InvocationTargetException ite) {
       // function was properly called, but threw it's own exception
       throw new IOException(ite.getCause());
     } catch (Exception e) {
       // ignore all other exceptions. related to reflection failure
     }
-
-
 
     // if reflection failed, use the old createWriter
     if (this.writer == null) {
@@ -177,5 +157,57 @@ public class SequenceFileLogWriter implements HLog.Writer {
    */
   public OutputStream getDFSCOutputStream() {
     return this.dfsClient_out;
+  }
+
+  // To be backward compatible; we still need to call the old sequence file
+  // interface.
+  private void generateWriter(FileSystem fs, Path path, Configuration conf)
+  throws InvocationTargetException, Exception {
+	boolean forceSync =
+		conf.getBoolean("hbase.regionserver.hlog.writer.forceSync", false);
+	if (forceSync) {
+      // call the new create api with force sync flag
+      this.writer = (SequenceFile.Writer) SequenceFile.class
+        .getMethod("createWriter", new Class[] {FileSystem.class,
+            Configuration.class, Path.class, Class.class, Class.class,
+            Integer.TYPE, Short.TYPE, Long.TYPE, Boolean.TYPE,
+            CompressionType.class, CompressionCodec.class, Metadata.class,
+            Boolean.TYPE})
+        .invoke(null, new Object[] {fs, conf, path, HLog.getKeyClass(conf),
+            WALEdit.class,
+            new Integer(fs.getConf().getInt("io.file.buffer.size", 4096)),
+            new Short((short)
+              conf.getInt("hbase.regionserver.hlog.replication",
+              fs.getDefaultReplication())),
+            new Long(conf.getLong("hbase.regionserver.hlog.blocksize",
+                fs.getDefaultBlockSize())),
+            new Boolean(false) /*createParent*/,
+            SequenceFile.CompressionType.NONE, new DefaultCodec(),
+            new Metadata(),
+            forceSync
+            });
+
+	} else {
+		// still need to keep old interface to be backward compatible
+      // reflection for a version of SequenceFile.createWriter that doesn't
+      // automatically create the parent directory (see HBASE-2312)
+      this.writer = (SequenceFile.Writer) SequenceFile.class
+        .getMethod("createWriter", new Class[] {FileSystem.class,
+            Configuration.class, Path.class, Class.class, Class.class,
+            Integer.TYPE, Short.TYPE, Long.TYPE, Boolean.TYPE,
+            CompressionType.class, CompressionCodec.class, Metadata.class})
+        .invoke(null, new Object[] {fs, conf, path, HLog.getKeyClass(conf),
+            WALEdit.class,
+            new Integer(fs.getConf().getInt("io.file.buffer.size", 4096)),
+            new Short((short)
+              conf.getInt("hbase.regionserver.hlog.replication",
+              fs.getDefaultReplication())),
+            new Long(conf.getLong("hbase.regionserver.hlog.blocksize",
+                fs.getDefaultBlockSize())),
+            new Boolean(false) /*createParent*/,
+            SequenceFile.CompressionType.NONE, new DefaultCodec(),
+            new Metadata()
+            });
+	}
   }
 }
