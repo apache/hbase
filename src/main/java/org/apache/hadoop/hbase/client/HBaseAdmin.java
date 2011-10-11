@@ -771,6 +771,11 @@ public class HBaseAdmin {
     modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_SPLIT);
   }
 
+  public void split(final String tableNameOrRegionName,
+    final String splitPoint) throws IOException {
+    split(Bytes.toBytes(tableNameOrRegionName), Bytes.toBytes(splitPoint));
+  }
+
   /**
    * Split a table or an individual region.
    * Asynchronous operation.

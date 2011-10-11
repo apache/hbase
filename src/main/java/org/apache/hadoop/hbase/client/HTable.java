@@ -169,7 +169,7 @@ public class HTable implements HTableInterface {
    * @return the number of region servers that are currently running
    * @throws IOException if a remote or network exception occurs
    */
-  int getCurrentNrHRS() throws IOException {
+  public int getCurrentNrHRS() throws IOException {
     return HConnectionManager
       .getClientZooKeeperWatcher(this.configuration)
       .getZooKeeperWrapper()
@@ -280,6 +280,14 @@ public class HTable implements HTableInterface {
    */
   public void setScannerCaching(int scannerCaching) {
     this.scannerCaching = scannerCaching;
+  }
+
+  /**
+   * Explicitly clears the region cache to fetch the latest value from META.
+   * This is a power user function: avoid unless you know the ramifications.
+   */
+  public void clearRegionCache() {
+    this.connection.clearRegionCache();
   }
 
   public HTableDescriptor getTableDescriptor() throws IOException {
