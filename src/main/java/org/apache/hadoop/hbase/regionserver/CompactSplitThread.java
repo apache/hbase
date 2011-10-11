@@ -97,6 +97,9 @@ class CompactSplitThread extends Thread {
                   split(r, midKey);
                 } else if (hadCompaction) {
                   compactionQueue.add(r);
+                } else if (r.getCompactPriority() < PRIORITY_USER) {
+                  // degenerate case. recursively enqueue blocked regions
+                  compactionQueue.add(r);
                 }
               }
             }
