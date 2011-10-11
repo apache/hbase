@@ -150,6 +150,12 @@ public class RegionServerMetrics implements Updater {
     new MetricsTimeVaryingRate("fsSyncLatency", registry);
 
   /**
+   * filesystem group sync latency
+   */
+  public final MetricsTimeVaryingRate fsGroupSyncLatency =
+    new MetricsTimeVaryingRate("fsGroupSyncLatency", registry);
+
+  /**
    * time each scheduled compaction takes
    */
   protected final PersistentMetricsTimeVaryingRate compactionTime =
@@ -247,6 +253,8 @@ public class RegionServerMetrics implements Updater {
       }
       ops = HLog.getSyncOps();
       if (ops != 0) this.fsSyncLatency.inc(ops, HLog.getSyncTime());
+      ops = HLog.getGSyncOps();
+      if (ops != 0) this.fsGroupSyncLatency.inc(ops, HLog.getGSyncTime());
       // HFile metrics
       ops = HFile.getReadOps();
       if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTime());
@@ -261,6 +269,7 @@ public class RegionServerMetrics implements Updater {
       this.fsReadLatency.pushMetric(this.metricsRecord);
       this.fsWriteLatency.pushMetric(this.metricsRecord);
       this.fsSyncLatency.pushMetric(this.metricsRecord);
+      this.fsGroupSyncLatency.pushMetric(this.metricsRecord);
       this.compactionTime.pushMetric(this.metricsRecord);
       this.compactionSize.pushMetric(this.metricsRecord);
       this.flushTime.pushMetric(this.metricsRecord);
@@ -274,6 +283,7 @@ public class RegionServerMetrics implements Updater {
     this.fsReadLatency.resetMinMax();
     this.fsWriteLatency.resetMinMax();
     this.fsSyncLatency.resetMinMax();
+    this.fsGroupSyncLatency.resetMinMax();
   }
 
   /**

@@ -249,12 +249,14 @@ public class HLog implements Syncable {
   }
 
   // For measuring latency of writes
-  private static volatile int writeOps;
-  private static volatile long writeTime;
-  private static volatile long writeSize;
+  private static volatile int writeOps = 0;
+  private static volatile long writeTime = 0;
+  private static volatile long writeSize = 0;
   // For measuring latency of syncs
-  private static volatile int syncOps;
-  private static volatile long syncTime;
+  private static volatile int syncOps = 0;
+  private static volatile long syncTime = 0;
+  private static volatile int gsyncOps = 0;
+  private static volatile long gsyncTime = 0;
 
   public static volatile long lastSplitTime = 0;
   public static volatile long lastSplitSize = 0;
@@ -286,6 +288,18 @@ public class HLog implements Syncable {
   public static long getSyncTime() {
     long ret = syncTime;
     syncTime = 0;
+    return ret;
+  }
+
+  public static int getGSyncOps() {
+    int ret = gsyncOps;
+    gsyncOps = 0;
+    return ret;
+  }
+
+  public static long getGSyncTime() {
+    long ret = gsyncTime;
+    gsyncTime = 0;
     return ret;
   }
 
@@ -846,6 +860,7 @@ public class HLog implements Syncable {
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
     }
+    long start = System.currentTimeMillis();
     synchronized (this.updateLock) {
       long seqNum = obtainSeqNum();
       // The 'lastSeqWritten' map holds the sequence number of the oldest
@@ -861,8 +876,15 @@ public class HLog implements Syncable {
       // Only count 1 row as an unflushed entry.
       this.unflushedEntries.incrementAndGet();
     }
+    writeTime += System.currentTimeMillis() - start;
+    writeOps++;
+
     // sync txn to file system
+    start = System.currentTimeMillis();
     this.sync(info.isMetaRegion());
+    gsyncTime += System.currentTimeMillis() - start;
+    gsyncOps++;
+
   }
 
   /**
@@ -1067,8 +1089,6 @@ public class HLog implements Syncable {
       long now = System.currentTimeMillis();
       this.writer.append(new HLog.Entry(logKey, logEdit));
       long took = System.currentTimeMillis() - now;
-      writeTime += took;
-      writeOps++;
       long len = 0;
       for(KeyValue kv : logEdit.getKeyValues()) {
         len += kv.getLength();
@@ -1146,13 +1166,6 @@ public class HLog implements Syncable {
         HLogKey key = makeKey(regionName, tableName, logSeqId,
             System.currentTimeMillis());
         this.writer.append(new Entry(key, edit));
-        writeTime += System.currentTimeMillis() - now;
-        writeOps++;
-        long len = 0;
-        for(KeyValue kv : edit.getKeyValues()) {
-          len += kv.getLength();
-        }
-        writeSize += len;
         this.numEntries.incrementAndGet();
         Long seq = this.lastSeqWritten.get(regionName);
         if (seq != null && logSeqId >= seq.longValue()) {
