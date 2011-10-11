@@ -861,7 +861,7 @@ public class HFile {
       this.fsMetaBlockReadCntMetric =
         this.cfName + ".fsMetaBlockReadCnt";
       this.fsMetaBlockReadCacheHitCntMetric =
-        this.cfName + "fsMetaBlockReadCacheHitCnt";
+        this.cfName + ".fsMetaBlockReadCacheHitCnt";
     }
 
     /**
