@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -219,6 +220,19 @@ public class HBaseFsck {
 
         HbckInfo hbi = getOrCreateInfo(encodedName);
         hbi.foundRegionDir = regionDir;
+
+        // Set a flag if this region contains only edits
+        // This is special case if a region is left after split
+        hbi.onlyEdits = true;
+        FileStatus[] subDirs = fs.listStatus(regionDir.getPath());
+        Path ePath = HLog.getRegionDirRecoveredEditsDir(regionDir.getPath());
+        for (FileStatus subDir : subDirs) {
+          String sdName = subDir.getPath().getName();
+          if (!sdName.startsWith(".") && !sdName.equals(ePath.getName())) {
+            hbi.onlyEdits = false;
+            break;
+          }
+        }
       }
     }
   }
@@ -317,8 +331,10 @@ public class HBaseFsck {
       hbi.foundRegionDir.getModificationTime() + timelag > System.currentTimeMillis();
 
     // ========== First the healthy cases =============
+    if (hbi.onlyEdits) {
+      return;
+    }
     if (inMeta && inHdfs && isDeployed && deploymentMatchesMeta && shouldBeDeployed) {
-      //LOG.debug("Region " + descriptiveName + " healthy");
       return;
     } else if (inMeta && !shouldBeDeployed && !isDeployed) {
       // offline regions shouldn't cause complaints
@@ -403,6 +419,7 @@ public class HBaseFsck {
       if (hbi.metaEntry.regionServer == null) continue;
       if (hbi.foundRegionDir == null) continue;
       if (hbi.deployedOn.size() != 1) continue;
+      if (hbi.onlyEdits) continue;
 
       // We should be safe here
       String tableName = hbi.metaEntry.getTableDesc().getNameAsString();
@@ -463,13 +480,15 @@ public class HBaseFsck {
       while (true) {
         // Check if chain is broken
         if (!edges.containsKey(last)) {
-          errors.detail("Chain of regions in table " + tableName + " is broken.");
+          errors.detail("Chain of regions in table " + tableName +
+                        " is broken.");
           return false;
         }
         next = edges.get(last);
         // Found a cycle
         if (visited.contains(next)) {
-          errors.detail("Chain of regions in table " + tableName + " has a cycle.");
+          errors.detail("Chain of regions in table " + tableName +
+                        " has a cycle.");
           return false;
         }
         // Mark next node as visited
@@ -478,15 +497,15 @@ public class HBaseFsck {
         if (next.length == 0) {
           // If we have visited all elements we are fine
           if (edges.size() != visited.size()) {
-            errors.detail("Chain of regions in table " + tableName + " contains " +
-                         "less elements than are listed in META.");
+            errors.detail("Chain of regions in table " + tableName +
+                          " contains less elements than are listed in META.");
             return false;
           }
           return true;
         }
         last = next;
       }
-      // How shouldn't be here
+      // How did we get here?
     }
   }
 
@@ -682,6 +701,7 @@ public class HBaseFsck {
    * Maintain information about a particular region.
    */
   static class HbckInfo {
+    boolean onlyEdits = false;
     MetaEntry metaEntry = null;
     FileStatus foundRegionDir = null;
     List<HServerAddress> deployedOn = Lists.newArrayList();
@@ -743,7 +763,8 @@ public class HBaseFsck {
     }
 
     public int summarize() {
-      System.out.println(Integer.toString(errorCount) + " inconsistencies detected.");
+      System.out.println(Integer.toString(errorCount) +
+                         " inconsistencies detected.");
       if (errorCount == 0) {
         System.out.println("Status: OK");
         return 0;
@@ -777,25 +798,26 @@ public class HBaseFsck {
   }
 
   /**
-   * Display the full report from fsck. This displays all live and dead region servers ,
-   * and all known regions.
+   * Display the full report from fsck.
+   * This displays all live and dead region servers, and all known regions.
    */
   void displayFullReport() {
     details = true;
   }
 
   /**
-   * Set summary mode. Print only summary of the tables and status (OK or INCONSISTENT)
+   * Set summary mode.
+   * Print only summary of the tables and status (OK or INCONSISTENT)
    */
   void setSummary() {
     summary = true;
   }
 
   /**
-   * Check if we should rerun fsck again. This checks if we've tried to fix
-   * something and we should rerun fsck tool again.
-   * Display the full report from fsck. This displays all live and dead region servers ,
-   * and all known regions.
+   * Check if we should rerun fsck again. This checks if we've tried to
+   * fix something and we should rerun fsck tool again.
+   * Display the full report from fsck. This displays all live and dead
+   * region servers, and all known regions.
    */
   void setShouldRerun() {
     rerun = true;
