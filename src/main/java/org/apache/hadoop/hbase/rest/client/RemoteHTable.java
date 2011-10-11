@@ -254,6 +254,10 @@ public class RemoteHTable implements HTableInterface {
     client.shutdown();
   }
 
+	public Result[] get(List<Get> gets) throws IOException {
+    throw new IOException("multi get is not supported here");
+	}
+
   public Result get(Get get) throws IOException {
     TimeRange range = get.getTimeRange();
     String spec = buildRowSpec(get.getRow(), get.getFamilyMap(),
