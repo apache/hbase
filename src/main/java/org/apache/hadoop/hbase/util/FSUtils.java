@@ -36,11 +36,14 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.io.SequenceFile;
 
 import java.io.DataInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -601,7 +604,7 @@ public class FSUtils {
    */
   public static void recoverFileLease(final FileSystem fs, final Path p, Configuration conf)
   throws IOException{
-    if (!isAppendSupported(conf)) {
+      if (!isAppendSupported(conf)) {
       LOG.warn("Running on HDFS without append enabled may result in data loss");
       return;
     }
@@ -610,11 +613,61 @@ public class FSUtils {
     if (!(fs instanceof DistributedFileSystem)) {
       return;
     }
-    DistributedFileSystem dfs = (DistributedFileSystem)fs;
-    LOG.info("Recovering file" + p);
+    long startWaiting = System.currentTimeMillis();
+
+    boolean discardlastBlock =  conf.getBoolean("hbase.regionserver.discardLastNonExistantBlock",
+        true);
+    LOG.info("Recovering file" + p + ", discard last block: " + discardlastBlock);
 
     // Trying recovery
-    while (!dfs.recoverLease(p)) {
+    boolean recovered = false;
+    while (!recovered) {
+      try {
+        try {
+          if (fs instanceof DistributedFileSystem) {
+            DistributedFileSystem dfs = (DistributedFileSystem)fs;
+            try {
+              DistributedFileSystem.class.getMethod("recoverLease",
+                  new Class[] {Path.class, Boolean.class}).
+                  invoke(dfs, p, new Boolean(discardlastBlock));
+            } catch (NoSuchMethodException nsme) {
+              DistributedFileSystem.class.getMethod("recoverLease",
+                  new Class[] {Path.class}).invoke(dfs, p);
+            }
+          } else {
+            throw new Exception("Not a DistributedFileSystem");
+          }
+        } catch (InvocationTargetException ite) {
+          // function was properly called, but threw it's own exception
+          throw (IOException) ite.getCause();
+        } catch (Exception e) {
+          LOG.debug("Failed fs.recoverLease invocation, " + e.toString() +
+              ", trying fs.append instead");
+          FSDataOutputStream out = fs.append(p);
+          out.close();
+        }
+        recovered = true;
+      } catch (IOException e) {
+        e = RemoteExceptionHandler.checkIOException(e);
+        if (e instanceof AlreadyBeingCreatedException) {
+          // We expect that we'll get this message while the lease is still
+          // within its soft limit, but if we get it past that, it means
+          // that the RS is holding onto the file even though it lost its
+          // znode. We could potentially abort after some time here.
+          long waitedFor = System.currentTimeMillis() - startWaiting;
+          if (waitedFor > FSConstants.LEASE_SOFTLIMIT_PERIOD) {
+            LOG.warn("Waited " + waitedFor + "ms for lease recovery on " + p +
+                ":" + e.getMessage());
+          }
+        } else if (e instanceof LeaseExpiredException &&
+            e.getMessage().contains("File does not exist")) {
+          // This exception comes out instead of FNFE, fix it
+          throw new FileNotFoundException(
+              "The given HLog wasn't found at " + p.toString());
+        } else {
+          throw new IOException("Failed to open " + p + " for append", e);
+        }
+      }
       try {
         Thread.sleep(1000);
       } catch (InterruptedException ex) {
