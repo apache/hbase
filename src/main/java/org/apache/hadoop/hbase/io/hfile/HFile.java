@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.BufferedInputStream;
 import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -1090,9 +1091,11 @@ public class HFile {
         // bunch of data w/o regard to whether decompressor is coming to end of a
         // decompression.
         InputStream is = this.compressAlgo.createDecompressionStream(
-          new BoundedRangeFileInputStream(this.istream, offset, compressedSize,
-            pread),
-          decompressor, 0);
+            new BufferedInputStream(
+                new BoundedRangeFileInputStream(this.istream, offset, compressedSize,
+                                                pread),
+                Math.min(65536, compressedSize)),
+            decompressor, 0);
         buf = ByteBuffer.allocate(decompressedSize);
         IOUtils.readFully(is, buf.array(), 0, buf.capacity());
         is.close();
