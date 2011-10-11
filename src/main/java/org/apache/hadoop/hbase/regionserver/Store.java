@@ -731,7 +731,24 @@ public class Store implements HeapSize {
    * @return True if we should run a major compaction.
    */
   boolean isMajorCompaction() throws IOException {
-    return isMajorCompaction(storefiles);
+    for (StoreFile sf : this.storefiles) {
+      if (sf.getReader() == null) {
+        LOG.debug("StoreFile " + sf + " has null Reader");
+        return false;
+      }
+    }
+
+    List<StoreFile> candidates = new ArrayList<StoreFile>(this.storefiles);
+
+    // exclude files above the max compaction threshold
+    // except: save all references. we MUST compact them
+    int pos = 0;
+    while (pos < candidates.size() &&
+           candidates.get(pos).getReader().length() > this.maxCompactSize &&
+           !candidates.get(pos).isReference()) ++pos;
+    candidates.subList(0, pos).clear();
+
+    return isMajorCompaction(candidates);
   }
 
   /*
@@ -764,7 +781,6 @@ public class Store implements HeapSize {
             StringUtils.formatTimeDiff(now, lowTimestamp));
         }
         result = true;
-        this.majorCompactionTime = getNextMajorCompactTime();
       }
     }
     return result;
@@ -836,13 +852,16 @@ public class Store implements HeapSize {
       filesToCompact.subList(0, pos).clear();
     }
 
-    // major compact on user action or age (caveat: we have too many files)
-    boolean majorcompaction = (forcemajor || isMajorCompaction(filesToCompact))
-      && filesToCompact.size() < this.maxFilesToCompact;
-
     if (filesToCompact.isEmpty()) {
       LOG.debug(this.storeNameStr + ": no store files to compact");
       return filesToCompact;
+    }
+
+    // major compact on user action or age (caveat: we have too many files)
+    boolean majorcompaction = (forcemajor || isMajorCompaction(filesToCompact))
+      && filesToCompact.size() < this.maxFilesToCompact;
+    if (majorcompaction) {
+      this.majorCompactionTime = getNextMajorCompactTime();
     }
 
     if (!majorcompaction && !hasReferences(filesToCompact)) {
