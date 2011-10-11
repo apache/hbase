@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -14,6 +13,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseFsck.HbckInfo;
@@ -54,8 +54,10 @@ public class HBaseLocalityCheck {
     LOG.info("Locality information by region");
 
     // Get the locality info for each region by scanning the file system
-    preferredRegionToRegionServerMapping =
-      FSUtils.getRegionLocalityMappingFromFS(fs, rootdir);
+    preferredRegionToRegionServerMapping = FSUtils
+        .getRegionLocalityMappingFromFS(fs, rootdir,
+            conf.getInt("hbase.client.localityCheck.threadPoolSize", 2),
+            conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 60 * 1000));
 
     Map<String, AtomicInteger> tableToRegionCountMap =
       new HashMap<String, AtomicInteger>();

@@ -36,8 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.FileStatus;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
@@ -45,6 +44,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.Modify;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -65,17 +66,16 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.HConstants.Modify;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
-import org.apache.hadoop.hbase.executor.HBaseExecutorService;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.executor.HBaseExecutorService;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
@@ -428,6 +428,7 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.address;
   }
 
+  @Override
   public long getProtocolVersion(String protocol, long clientVersion) {
     return HBaseRPCProtocolVersion.versionID;
   }
@@ -634,10 +635,12 @@ public class HMaster extends Thread implements HMasterInterface,
             1 * 60 * 1000);
       LOG.debug("get preferredRegionToHostMapping; expecting pause here");
       try {
-        this.preferredRegionToRegionServerMapping =
-          FSUtils.getRegionLocalityMappingFromFS(fs, rootdir);
+        this.preferredRegionToRegionServerMapping = FSUtils
+            .getRegionLocalityMappingFromFS(fs, rootdir,
+                conf.getInt("hbase.master.localityCheck.threadPoolSize", 5),
+                threadWakeFrequency);
       } catch (Exception e) {
-        LOG.equals("Got unexpected exception when getting " +
+        LOG.error("Got unexpected exception when getting " +
             "preferredRegionToHostMapping : " + e.toString());
         // do not pause the master's construction
         preferredRegionToRegionServerMapping = null;
@@ -815,6 +818,7 @@ public class HMaster extends Thread implements HMasterInterface,
     this.serverManager.notifyServers();
   }
 
+  @Override
   public MapWritable regionServerStartup(final HServerInfo serverInfo)
   throws IOException {
     // Set the ip into the passed in serverInfo.  Its ip is more than likely
@@ -845,6 +849,7 @@ public class HMaster extends Thread implements HMasterInterface,
     return mw;
   }
 
+  @Override
   public HMsg [] regionServerReport(HServerInfo serverInfo, HMsg msgs[],
     HRegionInfo[] mostLoadedRegions)
   throws IOException {
@@ -864,16 +869,19 @@ public class HMaster extends Thread implements HMasterInterface,
     return msgs;
   }
 
+  @Override
   public boolean isMasterRunning() {
     return !this.closed.get();
   }
 
+  @Override
   public void shutdown() {
     LOG.info("Cluster shutdown requested. Starting to quiesce servers");
     this.shutdownRequested.set(true);
     this.zooKeeperWrapper.setClusterState(false);
   }
 
+  @Override
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)
   throws IOException {
     if (!isMasterRunning()) {
@@ -952,6 +960,7 @@ public class HMaster extends Thread implements HMasterInterface,
     regionManager.metaScannerThread.triggerNow();
   }
 
+  @Override
   public void deleteTable(final byte [] tableName) throws IOException {
     if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
       throw new IOException("Can't delete root table");
@@ -960,22 +969,26 @@ public class HMaster extends Thread implements HMasterInterface,
     LOG.info("deleted table: " + Bytes.toString(tableName));
   }
 
+  @Override
   public void addColumn(byte [] tableName, HColumnDescriptor column)
   throws IOException {
     new AddColumn(this, tableName, column).process();
   }
 
+  @Override
   public void modifyColumn(byte [] tableName, byte [] columnName,
     HColumnDescriptor descriptor)
   throws IOException {
     new ModifyColumn(this, tableName, columnName, descriptor).process();
   }
 
+  @Override
   public void deleteColumn(final byte [] tableName, final byte [] c)
   throws IOException {
     new DeleteColumn(this, tableName, KeyValue.parseColumn(c)[0]).process();
   }
 
+  @Override
   public void enableTable(final byte [] tableName) throws IOException {
     if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
       throw new IOException("Can't enable root table");
@@ -983,6 +996,7 @@ public class HMaster extends Thread implements HMasterInterface,
     new ChangeTableState(this, tableName, true).process();
   }
 
+  @Override
   public void disableTable(final byte [] tableName) throws IOException {
     if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
       throw new IOException("Can't disable root table");
@@ -1130,6 +1144,7 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.connection.getHTableDescriptor(tableName);
   }
 
+  @Override
   public void modifyTable(final byte[] tableName, HConstants.Modify op,
       Writable[] args)
   throws IOException {
@@ -1270,6 +1285,7 @@ public class HMaster extends Thread implements HMasterInterface,
   /**
    * @return cluster status
    */
+  @Override
   public ClusterStatus getClusterStatus() {
     ClusterStatus status = new ClusterStatus();
     status.setHBaseVersion(VersionInfo.getVersion());
