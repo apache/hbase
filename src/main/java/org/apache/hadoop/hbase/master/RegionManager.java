@@ -234,16 +234,27 @@ public class RegionManager {
     boolean isSingleServer = this.master.numServers() == 1;
     // have to add . at the end of host name
     String hostName = info.getHostname();
+    boolean holdRegionForBestRegionServer = false;
+    boolean assignmentByLocality = false;
 
-    long masterRunningTime = System.currentTimeMillis()
-        - this.master.getMasterStartupTime();
-    boolean assignmentByLocality = ((masterRunningTime < this.master
-        .getApplyPreferredAssignmentPeriod()) &&
-        this.master.getPreferredRegionToRegionServerMapping() != null) ?
-        true : false;
+    // only check assignmentByLocality when the
+    // PreferredRegionToRegionServerMapping is not null;
+    if (this.master.getPreferredRegionToRegionServerMapping() != null) {
+      long masterRunningTime = System.currentTimeMillis()
+              - this.master.getMasterStartupTime();
+      holdRegionForBestRegionServer =
+        masterRunningTime < this.master.getHoldRegionForBestLocalityPeriod();
+      assignmentByLocality =
+        masterRunningTime < this.master.getApplyPreferredAssignmentPeriod();
 
-    boolean holdRegionForBestRegionServer =
-      (masterRunningTime < this.master.getHoldRegionForBestLocalityPeriod());
+      // once it has passed the ApplyPreferredAssignmentPeriod, clear up
+      // the quickStartRegionServerSet and PreferredRegionToRegionServerMapping
+      // and it won't check the assignmentByLocality anymore.
+      if (!assignmentByLocality) {
+        quickStartRegionServerSet = null;
+        this.master.clearPreferredRegionToRegionServerMapping();
+      }
+    }
 
     if (assignmentByLocality) {
       quickStartRegionServerSet.add(hostName);

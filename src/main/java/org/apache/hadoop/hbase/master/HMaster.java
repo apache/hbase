@@ -169,8 +169,8 @@ public class HMaster extends Thread implements HMasterInterface,
   // True if this is the master that started the cluster.
   boolean isClusterStartup;
 
-  private long masterStartupTime;
-  private Map<String, String> preferredRegionToRegionServerMapping;
+  private long masterStartupTime = 0;
+  private Map<String, String> preferredRegionToRegionServerMapping = null;
   private long applyPreferredAssignmentPeriod = 0l;
   private long holdRegionForBestLocalityPeriod = 0l;
 
@@ -280,33 +280,6 @@ public class HMaster extends Thread implements HMasterInterface,
     // We're almost open for business
     this.closed.set(false);
     LOG.info("HMaster w/ hbck initialized on " + this.address.toString());
-
-    // assign the regions based on the region locality in this period of time
-    this.applyPreferredAssignmentPeriod =
-      conf.getLong("hbase.master.applyPreferredAssignment.period", 5 * 60 * 1000);
-
-    // if a region's best region server hasn't checked in for this much time
-    // since master startup, then the master is free to assign this region
-    // out to any region server
-    this.holdRegionForBestLocalityPeriod =
-      conf.getLong("hbase.master.holdRegionForBestLocality.period",
-          1 * 60 * 1000);
-
-    // disable scanning dfs by setting applyPreferredAssignmentPeriod to 0
-    if (applyPreferredAssignmentPeriod > 0) {
-      try {
-        LOG.debug("get preferredRegionToHostMapping; expecting pause here");
-        this.preferredRegionToRegionServerMapping =
-          FSUtils.getRegionLocalityMappingFromFS(fs, rootdir);
-      } catch (Exception e) {
-        LOG.equals("Got unexpected exception when getting " +
-			"preferredRegionToHostMapping : " + e.toString());
-        // do not pause the master's construction
-        preferredRegionToRegionServerMapping = null;
-      }
-    }
-    // get the start time stamp after scanning the dfs
-    masterStartupTime = System.currentTimeMillis();
   }
 
   public long getApplyPreferredAssignmentPeriod() {
@@ -324,6 +297,11 @@ public class HMaster extends Thread implements HMasterInterface,
   public Map<String, String> getPreferredRegionToRegionServerMapping() {
     return preferredRegionToRegionServerMapping;
   }
+
+  public void clearPreferredRegionToRegionServerMapping() {
+    preferredRegionToRegionServerMapping = null;
+  }
+
   /**
    * Returns true if this master process was responsible for starting the
    * cluster.
@@ -564,6 +542,7 @@ public class HMaster extends Thread implements HMasterInterface,
   public void run() {
    try {
      joinCluster();
+     initPreferredAssignment();
      startServiceThreads();
    }catch (IOException e) {
      LOG.fatal("Unhandled exception. Master quits.", e);
@@ -627,6 +606,35 @@ public class HMaster extends Thread implements HMasterInterface,
     this.zooKeeperWrapper.close();
     HBaseExecutorService.shutdown();
     LOG.info("HMaster main thread exiting");
+  }
+
+  private void initPreferredAssignment() {
+    // assign the regions based on the region locality in this period of time
+    this.applyPreferredAssignmentPeriod =
+      conf.getLong("hbase.master.applyPreferredAssignment.period",
+          5 * 60 * 1000);
+
+    // disable scanning dfs by setting applyPreferredAssignmentPeriod to 0
+    if (applyPreferredAssignmentPeriod > 0) {
+      // if a region's best region server hasn't checked in for this much time
+      // since master startup, then the master is free to assign this region
+      // out to any region server
+      this.holdRegionForBestLocalityPeriod =
+        conf.getLong("hbase.master.holdRegionForBestLocality.period",
+            1 * 60 * 1000);
+      LOG.debug("get preferredRegionToHostMapping; expecting pause here");
+      try {
+        this.preferredRegionToRegionServerMapping =
+          FSUtils.getRegionLocalityMappingFromFS(fs, rootdir);
+      } catch (Exception e) {
+        LOG.equals("Got unexpected exception when getting " +
+            "preferredRegionToHostMapping : " + e.toString());
+        // do not pause the master's construction
+        preferredRegionToRegionServerMapping = null;
+      }
+    }
+    // get the start time stamp after scanning the dfs
+    masterStartupTime = System.currentTimeMillis();
   }
 
   /*
