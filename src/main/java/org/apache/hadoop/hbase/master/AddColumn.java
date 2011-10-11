@@ -22,12 +22,18 @@ package org.apache.hadoop.hbase.master;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 /** Instantiated to add a column family to a table */
 class AddColumn extends ColumnOperation {
   private final HColumnDescriptor newColumn;
+  private static final Log LOG = LogFactory.getLog(AddColumn.class);
 
   AddColumn(final HMaster master, final byte [] tableName,
     final HColumnDescriptor newColumn)
@@ -39,12 +45,31 @@ class AddColumn extends ColumnOperation {
   @Override
   protected void postProcessMeta(MetaRegion m, HRegionInterface server)
   throws IOException {
-    for (HRegionInfo i: unservedRegions) {
+    Set<HRegionInfo> regionsToReopen = new HashSet<HRegionInfo>();
+    for (HRegionInfo i : regionsToProcess) {
       // All we need to do to add a column is add it to the table descriptor.
       // When the region is brought on-line, it will find the column missing
       // and create it.
       i.getTableDesc().addFamily(newColumn);
       updateRegionInfo(server, m.getRegionName(), i);
+      // Ignore regions that are split or disabled,
+      // as we do not want to reopen them
+      if (!(i.isSplit() || i.isOffline())) {
+        regionsToReopen.add(i);
+      }
+    }
+    if (regionsToReopen.size() > 0) {
+      this.master.getRegionManager().getThrottledReopener(Bytes.toString(tableName)).
+                    addRegionsToReopen(regionsToReopen);
+    }
+  }
+
+  @Override
+  protected void processScanItem(String serverName, final HRegionInfo info)
+      throws IOException {
+    if (isEnabled(info)) {
+      LOG.debug("Performing online schema change (region not disabled): "
+          + info.getRegionNameAsString());
     }
   }
 }

@@ -505,6 +505,9 @@ public class ServerManager {
 
         case MSG_REPORT_CLOSE:
           processRegionClose(region);
+            this.master.getRegionManager().getThrottledReopener(
+                  region.getTableDesc().getNameAsString()).
+                  addPreferredAssignmentForReopen(region, serverInfo);
           break;
 
         case MSG_REPORT_SPLIT:
@@ -666,6 +669,7 @@ public class ServerManager {
           this.master.getRegionServerOperationQueue().put(op);
         }
       }
+      this.master.getRegionManager().notifyRegionReopened(region);
     }
   }
 
@@ -768,11 +772,11 @@ public class ServerManager {
       for (Map.Entry<String, HServerLoad> entry : serversToLoad.entrySet()) {
         HServerInfo hsi = serversToServerInfo.get(entry.getKey());
         if (null != hsi) {
-          if (!this.master.getRegionManager().isServerRestarting(hsi)) {
+          if (!this.master.getRegionManager().hasPreferredAssignment(hsi.getServerAddress())) {
             totalLoad += entry.getValue().getNumberOfRegions();
           } else {
-            // server is being processed for a restart, ignore for loadbalancing
-            // purposes
+            // Master has held some regions for this server, ignore this server
+            // for loadbalancing purposes
           }
         } else {
           // this server has already been removed from the serversToServerInfo

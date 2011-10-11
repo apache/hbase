@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MetaUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.Writable;
@@ -572,6 +573,28 @@ public class HBaseAdmin {
    */
   public boolean isTableAvailable(String tableName) throws IOException {
     return connection.isTableAvailable(Bytes.toBytes(tableName));
+  }
+
+  /**
+   * Get the status of alter command - indicates how many regions have received
+   * the updated schema Asynchronous operation.
+   *
+   * @param tableName
+   *          name of the table to get the status of
+   * @return List indicating the number of regions updated List.get(0) is the
+   *         regions that are yet to be updated List.get(1) is the total number
+   *         of regions of the table
+   * @throws IOException
+   *           if a remote or network exception occurs
+   */
+  public Pair<Integer, Integer> getAlterStatus(final byte[] tableName)
+      throws IOException {
+    HTableDescriptor.isLegalTableName(tableName);
+    try {
+      return this.master.getAlterStatus(tableName);
+    } catch (RemoteException e) {
+      throw RemoteExceptionHandler.decodeRemoteException(e);
+    }
   }
 
   /**

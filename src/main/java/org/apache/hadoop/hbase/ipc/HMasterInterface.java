@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Writable;
 
 import java.io.IOException;
@@ -135,4 +136,16 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @param region region to clear from transition map
    */
   public void clearFromTransition(HRegionInfo region);
+
+  /**
+   * Used by the client to get the number of regions that have received the
+   * updated schema
+   *
+   * @param tableName
+   * @return Pair getFirst() is the number of regions pending an update
+   *              getSecond() total number of regions of the table
+   * @throws IOException
+   */
+  public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
+      throws IOException;
 }

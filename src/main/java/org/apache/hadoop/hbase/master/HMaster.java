@@ -972,20 +972,44 @@ public class HMaster extends Thread implements HMasterInterface,
   @Override
   public void addColumn(byte [] tableName, HColumnDescriptor column)
   throws IOException {
+    ThrottledRegionReopener reopener = this.regionManager.
+            createThrottledReopener(Bytes.toString(tableName));
+    // Regions are added to the reopener in AddColumn
     new AddColumn(this, tableName, column).process();
+    reopener.reOpenRegionsThrottle();
+  }
+
+  public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
+      throws IOException {
+    Pair <Integer, Integer> p = new Pair<Integer, Integer>(0,0);
+    if (regionManager.getThrottledReopener(Bytes.toString(tableName)) != null) {
+      p = regionManager.getThrottledReopener(
+                    Bytes.toString(tableName)).getReopenStatus();
+    } else {
+      // Table is not reopening any regions return (0,0)
+    }
+    return p;
   }
 
   @Override
   public void modifyColumn(byte [] tableName, byte [] columnName,
     HColumnDescriptor descriptor)
   throws IOException {
+    ThrottledRegionReopener reopener = this.regionManager.
+                     createThrottledReopener(Bytes.toString(tableName));
+    // Regions are added to the reopener in ModifyColumn
     new ModifyColumn(this, tableName, columnName, descriptor).process();
+    reopener.reOpenRegionsThrottle();
   }
 
   @Override
   public void deleteColumn(final byte [] tableName, final byte [] c)
   throws IOException {
+    ThrottledRegionReopener reopener = this.regionManager.
+                    createThrottledReopener(Bytes.toString(tableName));
+    // Regions are added to the reopener in DeleteColumn
     new DeleteColumn(this, tableName, KeyValue.parseColumn(c)[0]).process();
+    reopener.reOpenRegionsThrottle();
   }
 
   @Override
@@ -1010,7 +1034,7 @@ public class HMaster extends Thread implements HMasterInterface,
    * currently deployed.
    * TODO: Redo so this method does not duplicate code with subsequent methods.
    */
-  List<Pair<HRegionInfo,HServerAddress>> getTableRegions(
+  public List<Pair<HRegionInfo,HServerAddress>> getTableRegions(
       final byte [] tableName)
   throws IOException {
     final ArrayList<Pair<HRegionInfo, HServerAddress>> result =

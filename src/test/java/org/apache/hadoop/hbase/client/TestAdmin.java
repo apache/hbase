@@ -20,12 +20,14 @@
 package org.apache.hadoop.hbase.client;
 
 
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -36,11 +38,15 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -267,9 +273,11 @@ public class TestAdmin {
     } catch (RetriesExhaustedException e) {
       ok = true;
     }
+    // with online schema change it is possible to add column
+    // without disabling the table
     assertEquals(true, ok);
     this.admin.enableTable(table);
-
+    ok = true;
     //Test that table is enabled
     try {
       ht.get(get);
@@ -429,11 +437,6 @@ public class TestAdmin {
     }
     this.admin.addColumn(tableName, new HColumnDescriptor("col2"));
     this.admin.enableTable(tableName);
-    try {
-      this.admin.deleteColumn(tableName, Bytes.toBytes("col2"));
-    } catch(TableNotDisabledException e) {
-      // Expected
-    }
     this.admin.disableTable(tableName);
     this.admin.deleteColumn(tableName, Bytes.toBytes("col2"));
     this.admin.deleteTable(tableName);
@@ -622,5 +625,56 @@ public class TestAdmin {
 
     assertEquals(htd.compareTo(confirmedHtd), 0);
   }
+
+  @Test
+  public void testOnlineChangeTableSchema() throws IOException,
+      InterruptedException {
+    final byte[] tableName = Bytes.toBytes("changeTableSchemaOnline");
+    HTableDescriptor[] tables = admin.listTables();
+    int numTables = tables.length;
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    tables = this.admin.listTables();
+    assertEquals(numTables + 1, tables.length);
+
+    HTableDescriptor htd = this.admin.getTableDescriptor(tableName);
+
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    HTable table = new HTable(master.getConfiguration(),
+        tableName);
+    Map<HRegionInfo, HServerAddress> hriToHsa = table.getRegionsInfo();
+
+    // Try adding a column
+    this.admin.enableTable(tableName);
+    assertFalse(this.admin.isTableDisabled(tableName));
+    final String xtracolName = "xtracol";
+    HColumnDescriptor xtracol = new HColumnDescriptor(xtracolName);
+    xtracol.setValue(xtracolName, xtracolName);
+    boolean expectedException = false;
+    try {
+      this.admin.addColumn(tableName, xtracol);
+    } catch (TableNotDisabledException re) {
+      expectedException = true;
+    }
+    // Add column should work even if the table is enabled
+    assertFalse(expectedException);
+
+    // wait for all regions to reopen
+    while (this.admin.getAlterStatus(tableName).getFirst() != 0) {
+      Thread.sleep(100);
+    }
+    // get the table descriptor from META
+    htd = this.admin.getTableDescriptor(tableName);
+    List<Pair<HRegionInfo,HServerAddress>> regionToRegionServer = master.getTableRegions(tableName);
+    // check if all regions have the column the correct schema.
+    for (Pair<HRegionInfo, HServerAddress> p : regionToRegionServer) {
+      HRegionInfo regionInfo = p.getFirst();
+      HTableDescriptor modifiedHtd = regionInfo.getTableDesc();
+      // ensure that the Htable descriptor on the master and the region servers
+      // of all regions is the same
+      assertTrue(htd.equals(modifiedHtd));
+    }
+
+  }
+
 }
 

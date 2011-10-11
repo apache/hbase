@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * This is a customized version of the polymorphic hadoop
@@ -175,6 +176,10 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
 
     addToMap(KeyOnlyFilter.class, code++);
     addToMap(ColumnRangeFilter.class, code++);
+
+    // Online schema change
+    addToMap(Integer.class, code++);
+    addToMap(Pair.class, code++);
   }
 
   private Class<?> declaredClass;
@@ -274,6 +279,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     if (code == null ) {
       if ( List.class.isAssignableFrom(c)) {
         code = CLASS_TO_CODE.get(List.class);
+      } else if (Pair.class.isAssignableFrom(c)) {
+        code = CLASS_TO_CODE.get(Pair.class);
       }
     }
     if (code == null) {
@@ -356,6 +363,10 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
         writeObject(out, list.get(i),
                   list.get(i).getClass(), conf);
       }
+    } else if (Pair.class.isAssignableFrom(declClass)) {
+      Pair pair = (Pair) instanceObj;
+      writeObject(out, pair.getFirst(), pair.getFirst().getClass(), conf);
+      writeObject(out, pair.getSecond(), pair.getSecond().getClass(), conf);
     } else if (declClass == String.class) {   // String
       Text.writeString(out, (String)instanceObj);
     } else if (declClass.isPrimitive()) {     // primitive type
@@ -379,6 +390,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       } else {
         throw new IllegalArgumentException("Not a primitive: "+declClass);
       }
+    } else if (declClass == Integer.class) { // Integer
+      out.writeInt(((Integer) instanceObj).intValue());
     } else if (declClass.isEnum()) {         // enum
       Text.writeString(out, ((Enum)instanceObj).name());
     } else if (Writable.class.isAssignableFrom(declClass)) { // Writable
@@ -447,6 +460,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       } else {
         throw new IllegalArgumentException("Not a primitive: "+declaredClass);
       }
+    } else if (declaredClass == Integer.class) { // Integer
+      instance = Integer.valueOf(in.readInt());
     } else if (declaredClass.isArray()) {              // array
       if (declaredClass.equals(byte [].class)) {
         instance = Bytes.readByteArray(in);
@@ -465,6 +480,10 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       for (int i = 0; i < length; i++) {
         ((ArrayList)instance).add(readObject(in, conf));
       }
+    } else if (Pair.class.isAssignableFrom(declaredClass)) { // Pair
+      instance = new Pair();
+      ((Pair) instance).setFirst(readObject(in, conf));
+      ((Pair) instance).setSecond(readObject(in, conf));
     } else if (declaredClass == String.class) {        // String
       instance = Text.readString(in);
     } else if (declaredClass.isEnum()) {         // enum

@@ -19,8 +19,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -46,6 +48,7 @@ abstract class TableOperation {
   protected final byte [] tableName;
   // Do regions in order.
   protected final Set<HRegionInfo> unservedRegions = new TreeSet<HRegionInfo>();
+  protected final Set<HRegionInfo> regionsToProcess = new TreeSet<HRegionInfo>();
   protected HMaster master;
 
   protected TableOperation(final HMaster master, final byte [] tableName)
@@ -71,8 +74,10 @@ abstract class TableOperation {
   }
 
   private class ProcessTableOperation extends RetryableMetaOperation<Boolean> {
-    ProcessTableOperation(MetaRegion m, HMaster master) {
+    TableOperation tableOp;
+    ProcessTableOperation(MetaRegion m, HMaster master, TableOperation operation) {
       super(m, master);
+      tableOp = operation;
     }
 
     public Boolean call() throws IOException {
@@ -114,6 +119,10 @@ abstract class TableOperation {
           }
 
           tableExists = true;
+          if(tableOp instanceof AddColumn || tableOp instanceof ModifyColumn ||
+              tableOp instanceof DeleteColumn) {
+            regionsToProcess.add(info);
+          }
           if (!isBeingServed(serverName) || !isEnabled(info)) {
             unservedRegions.add(info);
           }
@@ -154,7 +163,7 @@ abstract class TableOperation {
     // Prevent meta scanner from running
     synchronized(master.getRegionManager().metaScannerThread.scannerLock) {
       for (MetaRegion m: metaRegions) {
-        new ProcessTableOperation(m, master).doWithRetries();
+        new ProcessTableOperation(m, master, this).doWithRetries();
       }
     }
   }
