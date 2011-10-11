@@ -51,33 +51,10 @@ class CompactSplitThread extends Thread {
   private final PriorityCompactionQueue compactionQueue =
     new PriorityCompactionQueue();
 
-  /** The priorities for a compaction request. */
-  public enum Priority implements Comparable<Priority> {
-    //NOTE: All priorities should be numbered consecutively starting with 1.
-    //The highest priority should be 1 followed by all lower priorities.
-    //Priorities can be changed at anytime without requiring any changes to the
-    //queue.
-
-    /** HIGH_BLOCKING should only be used when an operation is blocked until a
-     * compact / split is done (e.g. a MemStore can't flush because it has
-     * "too many store files" and is blocking until a compact / split is done)
-     */
-    HIGH_BLOCKING(1),
-    /** A normal compaction / split request */
-    NORMAL(2),
-    /** A low compaction / split request -- not currently used */
-    LOW(3);
-
-    int value;
-
-    Priority(int value) {
-      this.value = value;
-    }
-
-    int getInt() {
-      return value;
-    }
-  }
+  /* The default priority for user-specified compaction requests.
+   * The user gets top priority unless we have blocking compactions (Pri <= 0)
+   */
+  public static final int PRIORITY_USER = 1;
 
   /** @param server */
   public CompactSplitThread(HRegionServer server) {
@@ -104,11 +81,23 @@ class CompactSplitThread extends Thread {
               if (r.getLastCompactInfo() != null) {  // compaction aborted?
                 this.server.getMetrics().addCompaction(r.getLastCompactInfo());
               }
-              LOG.debug("Just finished a compaction. " +
-                        " Current Compaction Queue Size: " +
-                        getCompactionQueueSize());
-              if (midKey != null && !this.server.isStopRequested()) {
-                split(r, midKey);
+              if (LOG.isDebugEnabled()) {
+                HRegion next = this.compactionQueue.peek();
+                LOG.debug("Just finished a compaction. " +
+                          " Current Compaction Queue: size=" +
+                          getCompactionQueueSize() +
+                          ((next != null) ?
+                              ", topPri=" + next.getCompactPriority() : ""));
+              }
+              if (!this.server.isStopRequested()) {
+                // requests that were added during compaction will have a
+                // stale priority. remove and re-insert to update priority
+                boolean hadCompaction = compactionQueue.remove(r);
+                if (midKey != null) {
+                  split(r, midKey);
+                } else if (hadCompaction) {
+                  compactionQueue.add(r);
+                }
               }
             }
           } finally {
@@ -143,19 +132,13 @@ class CompactSplitThread extends Thread {
    */
   public synchronized void requestCompaction(final HRegion r,
       final String why) {
-    requestCompaction(r, false, why, Priority.NORMAL);
+    requestCompaction(r, false, why, r.getCompactPriority());
   }
 
   public synchronized void requestCompaction(final HRegion r,
-      final String why, Priority p) {
+      final String why, int p) {
     requestCompaction(r, false, why, p);
   }
-
-  public synchronized void requestCompaction(final HRegion r,
-      final boolean force, final String why) {
-    requestCompaction(r, force, why, Priority.NORMAL);
-  }
-
 
   /**
    * @param r HRegion store belongs to
@@ -163,7 +146,7 @@ class CompactSplitThread extends Thread {
    * @param why Why compaction requested -- used in debug messages
    */
   public synchronized void requestCompaction(final HRegion r,
-      final boolean force, final String why, Priority priority) {
+      final boolean force, final String why, int priority) {
 
     boolean addedToQueue = false;
 
@@ -171,7 +154,10 @@ class CompactSplitThread extends Thread {
       return;
     }
 
-    r.setForceMajorCompaction(force);
+    // tell the region to major-compact (and don't downgrade it)
+    if (force) {
+      r.setForceMajorCompaction(force);
+    }
 
     addedToQueue = compactionQueue.add(r, priority);
 

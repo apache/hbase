@@ -1351,7 +1351,8 @@ public class HRegionServer implements HRegionInterface,
               region.shouldSplit(true);
               // force a compaction; split will be side-effect.
               compactSplitThread.requestCompaction(region,
-                e.msg.getType().name());
+                false, e.msg.getType().name(),
+                CompactSplitThread.PRIORITY_USER);
               break;
 
             case MSG_REGION_MAJOR_COMPACT:
@@ -1360,7 +1361,8 @@ public class HRegionServer implements HRegionInterface,
               region = getRegion(info.getRegionName());
               compactSplitThread.requestCompaction(region,
                 e.msg.isType(Type.MSG_REGION_MAJOR_COMPACT),
-                e.msg.getType().name());
+                e.msg.getType().name(),
+                CompactSplitThread.PRIORITY_USER);
               break;
 
             case MSG_REGION_FLUSH:
