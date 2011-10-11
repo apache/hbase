@@ -290,6 +290,8 @@ public class ImportTsv {
     }
 
     TableMapReduceUtil.addDependencyJars(job);
+    TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+        com.google.common.base.Function.class /* Guava used by TsvParser */);
     return job;
   }
 

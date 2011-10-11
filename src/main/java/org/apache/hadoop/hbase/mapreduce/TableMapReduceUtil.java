@@ -49,8 +49,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.zookeeper.ZooKeeper;
 
-import com.google.common.base.Function;
-
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
  */
@@ -247,7 +245,6 @@ public class TableMapReduceUtil {
     try {
       addDependencyJars(job.getConfiguration(),
           ZooKeeper.class,
-          Function.class, // Guava collections
           job.getMapOutputKeyClass(),
           job.getMapOutputValueClass(),
           job.getOutputKeyClass(),

@@ -53,8 +53,6 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.google.common.base.Preconditions;
-
 /**
  * Writes HFiles. Passed KeyValues must arrive in order.
  * Currently, can only write files to a single column family at a
@@ -74,8 +72,10 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     Configuration conf = context.getConfiguration();
     final FileSystem fs = outputdir.getFileSystem(conf);
     // These configs. are from hbase-*.xml
-    final long maxsize = conf.getLong("hbase.hregion.max.filesize", 268435456);
-    final int blocksize = conf.getInt("hfile.min.blocksize.size", 65536);
+    final long maxsize = conf.getLong("hbase.hregion.max.filesize",
+        HConstants.DEFAULT_MAX_FILE_SIZE);
+    final int blocksize = conf.getInt("hfile.min.blocksize.size",
+        HFile.DEFAULT_BLOCKSIZE);
     // Invented config.  Add to hbase-*.xml if other than default compression.
     final String compression = conf.get("hfile.compression",
       Compression.Algorithm.NONE.getName());
@@ -87,48 +87,77 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
         new TreeMap<byte [], WriterLength>(Bytes.BYTES_COMPARATOR);
       private byte [] previousRow = HConstants.EMPTY_BYTE_ARRAY;
       private final byte [] now = Bytes.toBytes(System.currentTimeMillis());
+      private boolean rollRequested = false;
 
       public void write(ImmutableBytesWritable row, KeyValue kv)
       throws IOException {
+        // null input == user explicitly wants to flush
+        if (row == null && kv == null) {
+          rollWriters();
+          return;
+        }
+
+        byte [] rowKey = kv.getRow();
         long length = kv.getLength();
         byte [] family = kv.getFamily();
         WriterLength wl = this.writers.get(family);
-        if (wl == null || ((length + wl.written) >= maxsize) &&
-            Bytes.compareTo(this.previousRow, 0, this.previousRow.length,
-              kv.getBuffer(), kv.getRowOffset(), kv.getRowLength()) != 0) {
-          // Get a new writer.
-          Path basedir = new Path(outputdir, Bytes.toString(family));
-          if (wl == null) {
-            wl = new WriterLength();
-            this.writers.put(family, wl);
-            if (this.writers.size() > 1) throw new IOException("One family only");
-            // If wl == null, first file in family.  Ensure family dir exits.
-            if (!fs.exists(basedir)) fs.mkdirs(basedir);
-          }
-          wl.writer = getNewWriter(wl.writer, basedir);
-          LOG.info("Writer=" + wl.writer.getPath() +
-            ((wl.written == 0)? "": ", wrote=" + wl.written));
-          wl.written = 0;
+
+        // If this is a new column family, verify that the directory exists
+        if (wl == null) {
+          fs.mkdirs(new Path(outputdir, Bytes.toString(family)));
         }
+
+        // If any of the HFiles for the column families has reached
+        // maxsize, we need to roll all the writers
+        if (wl != null && wl.written + length >= maxsize) {
+          this.rollRequested = true;
+        }
+
+        // This can only happen once a row is finished though
+        if (rollRequested && Bytes.compareTo(this.previousRow, rowKey) != 0) {
+          rollWriters();
+        }
+
+        // create a new HLog writer, if necessary
+        if (wl == null || wl.writer == null) {
+          wl = getNewWriter(family);
+        }
+
+        // we now have the proper HLog writer. full steam ahead
         kv.updateLatestStamp(this.now);
         wl.writer.append(kv);
         wl.written += length;
+
         // Copy the row so we know when a row transition.
-        this.previousRow = kv.getRow();
+        this.previousRow = rowKey;
       }
 
-      /* Create a new HFile.Writer. Close current if there is one.
-       * @param writer
-       * @param familydir
-       * @return A new HFile.Writer.
+      private void rollWriters() throws IOException {
+        for (WriterLength wl : this.writers.values()) {
+          if (wl.writer != null) {
+            LOG.info("Writer=" + wl.writer.getPath() +
+                ((wl.written == 0)? "": ", wrote=" + wl.written));
+            close(wl.writer);
+          }
+          wl.writer = null;
+          wl.written = 0;
+        }
+        this.rollRequested = false;
+      }
+
+      /* Create a new HFile.Writer.
+       * @param family
+       * @return A WriterLength, containing a new HFile.Writer.
        * @throws IOException
        */
-      private HFile.Writer getNewWriter(final HFile.Writer writer,
-          final Path familydir)
-      throws IOException {
-        close(writer);
-        return new HFile.Writer(fs,  StoreFile.getUniqueFile(fs, familydir),
-          blocksize, bytesPerChecksum, compression, KeyValue.KEY_COMPARATOR);
+      private WriterLength getNewWriter(byte[] family) throws IOException {
+        WriterLength wl = new WriterLength();
+        Path familydir = new Path(outputdir, Bytes.toString(family));
+        wl.writer = new HFile.Writer(fs,
+          StoreFile.getUniqueFile(fs, familydir), blocksize,
+          bytesPerChecksum, compression, KeyValue.KEY_COMPARATOR);
+        this.writers.put(family, wl);
+        return wl;
       }
 
       private void close(final HFile.Writer w) throws IOException {
@@ -145,8 +174,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
 
       public void close(TaskAttemptContext c)
       throws IOException, InterruptedException {
-        for (Map.Entry<byte [], WriterLength> e: this.writers.entrySet()) {
-          close(e.getValue().writer);
+        for (WriterLength wl: this.writers.values()) {
+          close(wl.writer);
         }
       }
     };
@@ -183,7 +212,9 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    */
   private static void writePartitions(Configuration conf, Path partitionsPath,
       List<ImmutableBytesWritable> startKeys) throws IOException {
-    Preconditions.checkArgument(!startKeys.isEmpty(), "No regions passed");
+    if (startKeys.isEmpty()) {
+      throw new IllegalArgumentException("No regions passed");
+    }
 
     // We're generating a list of split points, and we don't ever
     // have keys < the first region (which has an empty start key)
@@ -193,10 +224,11 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       new TreeSet<ImmutableBytesWritable>(startKeys);
 
     ImmutableBytesWritable first = sorted.first();
-    Preconditions.checkArgument(
-        first.equals(HConstants.EMPTY_BYTE_ARRAY),
-        "First region of table should have empty start key. Instead has: %s",
-        Bytes.toStringBinary(first.get()));
+    if (!first.equals(HConstants.EMPTY_BYTE_ARRAY)) {
+      throw new IllegalArgumentException(
+          "First region of table should have empty start key. Instead has: "
+          + Bytes.toStringBinary(first.get()));
+    }
     sorted.remove(first);
 
     // Write the actual file
