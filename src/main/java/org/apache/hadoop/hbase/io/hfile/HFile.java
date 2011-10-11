@@ -1350,6 +1350,10 @@ public class HFile {
       return this.comparator;
     }
 
+    public Compression.Algorithm getCompressionAlgorithm() {
+      return this.compressAlgo;
+    }
+
     /**
      * @return index size
      */
