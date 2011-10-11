@@ -1066,6 +1066,15 @@ public class KeyValue implements Writable, HeapSize {
         this.bytes, o, l) == 0;
   }
 
+  public boolean matchingRow(final byte [] row) {
+    return matchingRow(row, 0, row.length);
+  }
+
+  public boolean matchingRow(final byte[] row, int offset, int length) {
+    return Bytes.compareTo(row, offset, length,
+        this.bytes, getRowOffset(), getRowLength()) == 0;
+  }
+
   /**
    * @param column Column minus its delimiter
    * @return True if column matches.
