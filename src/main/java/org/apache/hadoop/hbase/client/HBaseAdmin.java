@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -44,11 +45,13 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Provides an interface to manage HBase database table metadata + general
@@ -229,7 +232,7 @@ public class HBaseAdmin {
    * and attempt-at-creation).
    * @throws IOException
    */
-  public void createTable(HTableDescriptor desc, byte [][] splitKeys)
+  public void createTable(final HTableDescriptor desc, byte [][] splitKeys)
   throws IOException {
     HTableDescriptor.isLegalTableName(desc.getName());
     if(splitKeys != null && splitKeys.length > 1) {
@@ -244,22 +247,52 @@ public class HBaseAdmin {
       }
     }
     createTableAsync(desc, splitKeys);
-    for (int tries = 0; tries < numRetries; tries++) {
-      try {
-        // Wait for new table to come on-line
-        connection.locateRegion(desc.getName(), HConstants.EMPTY_START_ROW);
-        break;
-
-      } catch (RegionException e) {
-        if (tries == numRetries - 1) {
-          // Ran out of tries
-          throw e;
+    int numRegs = splitKeys == null ? 1 : splitKeys.length + 1;
+    int prevRegCount = 0;
+    for (int tries = 0; tries < numRetries; ++tries) {
+      // Wait for new table to come on-line
+      final AtomicInteger actualRegCount = new AtomicInteger(0);
+      MetaScannerVisitor visitor = new MetaScannerVisitor() {
+        @Override
+        public boolean processRow(Result rowResult) throws IOException {
+          HRegionInfo info = Writables.getHRegionInfo(
+              rowResult.getValue(HConstants.CATALOG_FAMILY,
+                  HConstants.REGIONINFO_QUALIFIER));
+          if (!(Bytes.equals(info.getTableDesc().getName(), desc.getName()))) {
+            return false;
+          }
+          String hostAndPort = null;
+          byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.SERVER_QUALIFIER);
+          // Make sure that regions are assigned to server
+          if (value != null && value.length > 0) {
+            hostAndPort = Bytes.toString(value);
+          }
+          if (!(info.isOffline() || info.isSplit()) && hostAndPort != null) {
+            actualRegCount.incrementAndGet();
+          }
+          return true;
         }
-      }
-      try {
-        Thread.sleep(getPauseTime(tries));
-      } catch (InterruptedException e) {
-        // continue
+      };
+      MetaScanner.metaScan(conf, visitor, desc.getName());
+      if (actualRegCount.get() != numRegs) {
+        if (tries == numRetries - 1) {
+          throw new RegionOfflineException("Only " + actualRegCount.get() +
+              " of " + numRegs + " regions are online; retries exhausted.");
+        }
+        try { // Sleep
+          Thread.sleep(getPauseTime(tries));
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException("Interrupted when opening" +
+              " regions; " + actualRegCount.get() + " of " + numRegs +
+              " regions processed so far");
+        }
+        if (actualRegCount.get() > prevRegCount) { // Making progress
+          prevRegCount = actualRegCount.get();
+          tries = -1;
+        }
+      } else {
+        return;
       }
     }
   }
