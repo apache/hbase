@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockInfo;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -174,6 +175,32 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
 
   /**
+   * Constructor that takes parameters from configuration.
+   * @param maxSize
+   * @param blockSize
+   * @param conf
+   */
+  public LruBlockCache(long maxSize, long blockSize, Configuration conf) {
+    this(maxSize, blockSize,
+        conf.getBoolean("hbase.rs.blockcache.lru.evictionthread", true),
+        (int)Math.ceil(1.2*maxSize/blockSize),
+        conf.getFloat("hbase.rs.blockcache.lru.map.factor",
+            DEFAULT_LOAD_FACTOR),
+        conf.getInt("hbase.rs.blockcache.lru.map.concurrency",
+            DEFAULT_CONCURRENCY_LEVEL),
+        conf.getFloat("hbase.rs.blockcache.lru.watermark.low",
+            DEFAULT_MIN_FACTOR),
+        conf.getFloat("hbase.rs.blockcache.lru.watermark.high",
+            DEFAULT_ACCEPTABLE_FACTOR),
+        conf.getFloat("hbase.rs.blockcache.lru.bucket.single",
+            DEFAULT_SINGLE_FACTOR),
+        conf.getFloat("hbase.rs.blockcache.lru.bucket.multi",
+            DEFAULT_MULTI_FACTOR),
+        conf.getFloat("hbase.rs.blockcache.lru.bucket.inmemory",
+            DEFAULT_MEMORY_FACTOR));
+  }
+
+  /**
    * Configurable constructor.  Use this constructor if not using defaults.
    * @param maxSize maximum size of this cache, in bytes
    * @param blockSize expected average size of blocks, in bytes
@@ -191,9 +218,10 @@ public class LruBlockCache implements BlockCache, HeapSize {
       int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
       float minFactor, float acceptableFactor,
       float singleFactor, float multiFactor, float memoryFactor) {
-    if(singleFactor + multiFactor + memoryFactor != 1) {
-      throw new IllegalArgumentException("Single, multi, and memory factors " +
-          " should total 1.0");
+    if (Math.abs(singleFactor + multiFactor + memoryFactor - 1.0) > 1e-8) {
+      throw new IllegalArgumentException("Single, multi, and memory factors "
+          + " should total 1.0: singleFactor=" + singleFactor
+          + ", multiFactor=" + multiFactor + ", memoryFactor=" + memoryFactor);
     }
     if(minFactor >= acceptableFactor) {
       throw new IllegalArgumentException("minFactor must be smaller than acceptableFactor");

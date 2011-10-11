@@ -382,7 +382,8 @@ public class StoreFile {
     long cacheSize = (long)(mu.getMax() * cachePercentage);
     LOG.info("Allocating LruBlockCache with maximum size " +
       StringUtils.humanReadableInt(cacheSize));
-    hfileBlockCache = new LruBlockCache(cacheSize, DEFAULT_BLOCKSIZE_SMALL);
+    hfileBlockCache = new LruBlockCache(cacheSize, DEFAULT_BLOCKSIZE_SMALL,
+        conf);
     return hfileBlockCache;
   }
 
