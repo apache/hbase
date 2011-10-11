@@ -855,6 +855,8 @@ public class HMaster extends Thread implements HMasterInterface,
     for(HRegionInfo newRegion : newRegions) {
       regionManager.createRegion(newRegion, srvr, metaRegionName);
     }
+    // kick off a meta scan right away to assign the newly created regions
+    regionManager.metaScannerThread.triggerNow();
   }
 
   public void deleteTable(final byte [] tableName) throws IOException {

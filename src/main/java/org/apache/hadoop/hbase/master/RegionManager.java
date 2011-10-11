@@ -755,8 +755,9 @@ public class RegionManager {
     region.close();
     region.getLog().closeAndDelete();
 
-    // 5. Get it assigned to a server
-    setUnassigned(info, true);
+    // After all regions are created, the caller will schedule
+    // the meta scanner to run immediately and assign out the
+    // regions.
   }
 
   /**
