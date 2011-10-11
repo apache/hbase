@@ -28,10 +28,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
@@ -43,6 +43,7 @@ import org.apache.commons.cli.PatternOptionBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -58,9 +59,11 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Joiner;
@@ -93,6 +96,7 @@ public class HBaseFsck {
   FixState fix = FixState.NONE; // do we want to try fixing the errors?
   private boolean rerun = false; // if we tried to fix something rerun hbck
   private static boolean summary = false; // if we want to print less output
+  private static boolean checkRegionInfo = false;
   private static boolean promptResponse = false;  // "no" to all prompt questions
   private int numThreads = MAX_NUM_THREADS;
 
@@ -215,11 +219,74 @@ public class HBaseFsck {
     // Check integrity
     checkIntegrity();
 
+    // Check if information in .regioninfo and .META. is consistent
+    if (checkRegionInfo) {
+      checkRegionInfo();
+    }
+
     // Print table summary
     printTableSummary();
 
     return errors.summarize();
   }
+
+  /**
+   * Read the .regioninfo for all regions of the table and compare with the
+   * corresponding entry in .META.
+   * Entry in .regioninfo should be consistent with the entry in .META.
+   *
+   */
+  void checkRegionInfo() {
+    Path tableDir = null;
+
+    try {
+      for (HbckInfo hbi : regionInfo.values()) {
+        tableDir = HTableDescriptor.getTableDir(FSUtils.getRootDir(conf),
+			  hbi.metaEntry.getTableDesc().getName());
+
+        Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
+        FileSystem fs = rootDir.getFileSystem(conf);
+
+        Path regionPath = HRegion.getRegionDir(tableDir,
+                          hbi.metaEntry.getEncodedName());
+        Path regionInfoPath = new Path(regionPath, HRegion.REGIONINFO_FILE);
+        if (fs.exists(regionInfoPath) &&
+		        fs.getFileStatus(regionInfoPath).getLen() > 0) {
+          FSDataInputStream in = fs.open(regionInfoPath);
+          HRegionInfo f_hri = null;
+          try {
+            f_hri = new HRegionInfo();
+            f_hri.readFields(in);
+          } catch (IOException ex) {
+            errors.reportError("Could not read .regioninfo file at "
+	                       + regionInifoPath);
+          } finally {
+            in.close();
+          }
+          HbckInfo hbckinfo = regionInfo.get(f_hri.getEncodedName());
+          HRegionInfo m_hri = hbckinfo.metaEntry;
+          if(!f_hri.equals(m_hri)) {
+            errors.reportError("Table name: " +
+                    f_hri.getTableDesc().getNameAsString() +
+                    " RegionInfo for "+ f_hri.getRegionNameAsString() +
+                    " inconsistent in .META. and .regioninfo");
+          }
+        } else {
+          if (!fs.exists(regionInfoPath)) {
+            errors.reportError(".regioninfo not found at "
+                              + regionInfoPath.toString());
+          } else if (fs.getFileStatus(regionInfoPath).getLen() <= 0) {
+            errors.reportError(".regioninfo file is empty (path =  "
+	                    + regionInfoPath + ")");
+          }
+        }
+      }
+    } catch (IOException e) {
+      errors.reportError("Error in comparing .regioninfo and .META."
+                         + e.getMessage());
+    }
+  }
+
 
   /**
    * Scan HDFS for all regions, recording their information into
@@ -1116,6 +1183,7 @@ public class HBaseFsck {
     opt.addOption("w", false, "Try to fix warnings as well as errors.");
     opt.addOption("summary", false, "Print only summary of the tables and status.");
     opt.addOption("detail", false, "Display full report of all regions.");
+    opt.addOption("checkRegionInfo", false, "Check if .regioninfo is consistent with .META.");
     opt.addOption("h", false, "Display this help");
     CommandLine cmd = new GnuParser().parse(opt, args);
 
@@ -1174,6 +1242,9 @@ public class HBaseFsck {
     }
     if (cmd.equals("summary")) {
         fsck.setSummary();
+    }
+    if (cmd.hasOption("checkRegionInfo")) {
+      checkRegionInfo = true;
     }
 
     int code = -1;
