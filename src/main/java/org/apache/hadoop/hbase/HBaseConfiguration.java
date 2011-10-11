@@ -60,8 +60,10 @@ public class HBaseConfiguration extends Configuration {
   }
 
   public static Configuration addHbaseResources(Configuration conf) {
+    // the sequence matters
     conf.addResource("hbase-default.xml");
     conf.addResource("hbase-site.xml");
+    conf.addResource("hbase-site-custom.xml");
     return conf;
   }
 
