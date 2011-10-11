@@ -41,14 +41,12 @@ LOG = LogFactory.getLog(NAME)
 c = HBaseConfiguration.new()
 c.set("fs.default.name", c.get(HConstants::HBASE_DIR))
 
-table = HTable.new(c, Bytes.toBytes(tableName))
-td = table.getTableDescriptor()
-
 LOG.info("Scanning META")
 metaTable = HTable.new(c, HConstants::META_TABLE_NAME)
 tableNameMetaPrefix = tableName + HConstants::META_ROW_DELIMITER.chr
 scan = Scan.new(Bytes.toBytes(tableNameMetaPrefix + HConstants::META_ROW_DELIMITER.chr))
 scanner = metaTable.getScanner(scan)
+first = true
 while (result = scanner.next())
   rowid = Bytes.toString(result.getRow())
   rowidStr = java.lang.String.new(rowid)
@@ -57,6 +55,10 @@ while (result = scanner.next())
     break
   end
   rtd = getTD(result)
+  if first
+    td = rtd
+    first = false
+  end
   if !td.equals(rtd)
     LOG.warn("Meta table descriptor not consistent: " + rowid)
     LOG.info("Original Table desc: " + td.toString())
