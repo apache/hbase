@@ -189,13 +189,7 @@ public class Store implements HeapSize {
     this.blockingStoreFileCount =
       conf.getInt("hbase.hstore.blockingStoreFiles", -1);
 
-    this.majorCompactionTime =
-      conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 86400000);
-    if (family.getValue(HConstants.MAJOR_COMPACTION_PERIOD) != null) {
-      String strCompactionTime =
-        family.getValue(HConstants.MAJOR_COMPACTION_PERIOD);
-      this.majorCompactionTime = (new Long(strCompactionTime)).longValue();
-    }
+    this.majorCompactionTime = getNextMajorCompactTime();
 
     this.maxFilesToCompact = conf.getInt("hbase.hstore.compaction.max", 10);
     this.minCompactSize = this.region.memstoreFlushSize * 3 / 2; // +50% pad
@@ -830,12 +824,35 @@ public class Store implements HeapSize {
       } else {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Major compaction triggered on store " + this.storeNameStr +
-            "; time since last major compaction " + (now - lowTimestamp) + "ms");
+            "; time since last major compaction " +
+            StringUtils.formatTimeDiff(now, lowTimestamp));
         }
         result = true;
+        this.majorCompactionTime = getNextMajorCompactTime();
       }
     }
     return result;
+  }
+
+  long getNextMajorCompactTime() {
+    // default = 24hrs
+    long ret = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24);
+    if (family.getValue(HConstants.MAJOR_COMPACTION_PERIOD) != null) {
+      String strCompactionTime =
+        family.getValue(HConstants.MAJOR_COMPACTION_PERIOD);
+      ret = (new Long(strCompactionTime)).longValue();
+    }
+
+    if (ret > 0) {
+      // default = 20% = +/- 4.8 hrs
+      double jitterPct =  conf.getFloat("hbase.hregion.majorcompaction.jitter",
+          0.20F);
+      if (jitterPct > 0) {
+        long jitter = Math.round(ret * jitterPct);
+        ret += jitter - Math.round(2L * jitter * Math.random());
+      }
+    }
+    return ret;
   }
 
   /**
