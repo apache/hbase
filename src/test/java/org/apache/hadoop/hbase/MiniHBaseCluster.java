@@ -288,6 +288,14 @@ public class MiniHBaseCluster {
   }
 
   /**
+   * Adds a new master to the cluster and starts the master thread. Useful if
+   * the existing master dies and a live master is needed for cleanup.
+   */
+  public void startNewMaster() throws IOException {
+    hbaseCluster.addMaster().start();
+  }
+
+  /**
    * Cause a region server to exit doing basic clean up only on its way out.
    * @param serverNumber  Used as index into a list.
    */

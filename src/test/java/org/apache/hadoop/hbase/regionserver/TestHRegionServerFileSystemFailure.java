@@ -96,9 +96,9 @@ public class TestHRegionServerFileSystemFailure {
     // Bring namenode, hbasemaster back up so we cleanup properly.
     TEST_UTIL.getDFSCluster().restartNameNode();
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    if (!master.isAlive()) {
-      master = HMaster.constructMaster(MiniHBaseCluster.MiniHBaseClusterMaster.class, conf);
-      master.start();
+    if (master.isClosed()) {
+      // Master died, we need to re-start it.
+      TEST_UTIL.getMiniHBaseCluster().startNewMaster();
     }
   }
 }

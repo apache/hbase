@@ -210,17 +210,38 @@ public class JVMClusterUtil {
         }
       }
     }
-    // regionServerThreads can never be null because they are initialized when
-    // the class is constructed.
-    for(Thread t: regionservers) {
-      if (t.isAlive()) {
-        try {
-          t.join();
-        } catch (InterruptedException e) {
-          // continue
+
+    boolean interrupted = false;
+    try {
+      // regionServerThreads can never be null because they are initialized when
+      // the class is constructed.
+      for (Thread t : regionservers) {
+        if (t.isAlive()) {
+          try {
+            t.join();
+          } catch (InterruptedException e) {
+            interrupted = true;
+          }
         }
       }
+
+      if (masters != null) {
+        for (JVMClusterUtil.MasterThread t : masters) {
+          while (t.isAlive()) {
+            try {
+              t.join();
+            } catch (InterruptedException e) {
+              interrupted = true;
+            }
+          }
+        }
+      }
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
     }
+
     LOG.info("Shutdown of " +
         ((masters != null) ? masters.size() : "0") + " master(s) and " +
         ((regionservers != null) ? regionservers.size() : "0") +
