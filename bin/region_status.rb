@@ -4,14 +4,28 @@
 #
 # To use this script, run:
 #
-#  ${HBASE_HOME}/bin/hbase org.jruby.Main region_status.rb [wait]
+#  ${HBASE_HOME}/bin/hbase org.jruby.Main region_status.rb [wait] [--table <table_name>]
 
-SHOULD_WAIT=ARGV[0] == 'wait'
 
+require 'optparse'
+
+usage = 'Usage : ./hbase org.jruby.Main region_status.rb [wait]' +
+  '[--table <table_name>]\n'
+OptionParser.new do |o|
+  o.banner = usage
+  o.on('-t', '--table TABLENAME', 'Only process TABLENAME') do |tablename|
+    $tablename = tablename
+  end
+  o.on('-h', '--help', 'Display help message') { puts o; exit }
+  o.parse!
+end
+
+SHOULD_WAIT = ARGV[0] == 'wait'
 if ARGV[0] and not SHOULD_WAIT
-  print "USAGE: #{$0} [wait] \n"
+  print usage
   exit 1
 end
+
 
 require 'java'
 
@@ -49,7 +63,14 @@ meta_count = 0
 server_count = 0
 
 # scan META to see how many regions we should have
-scan = Scan.new
+if $tablename.nil?
+  scan = Scan.new
+else
+  tableNameMetaPrefix = $tablename + HConstants::META_ROW_DELIMITER.chr
+  scan = Scan.new(
+    (tableNameMetaPrefix + HConstants::META_ROW_DELIMITER.chr).to_java_bytes
+  )
+end
 scan.cache_blocks = false
 scan.caching = 10
 scan.setFilter(FirstKeyOnlyFilter.new)
@@ -70,20 +91,36 @@ while true
   end
 end
 while iter.hasNext
-  row = iter.next
-  region = Writables.getHRegionInfo row.getValue(INFO, REGION_INFO)
+  result = iter.next
+  rowid = Bytes.toString(result.getRow())
+  rowidStr = java.lang.String.new(rowid)
+  if not $tablename.nil? and not rowidStr.startsWith(tableNameMetaPrefix)
+    # Gone too far, break
+    break
+  end
+  region = Writables.getHRegionInfo result.getValue(INFO, REGION_INFO)
   if not region.isOffline
     # only include regions that should be online
     meta_count += 1
   end
 end
 scanner.close
-# META count does not include the -ROOT- and .META. regions *doh*
-meta_count += 2
+# If we're trying to see the status of all HBase tables, we need to include the
+# -ROOT- & .META. tables, that are not included in our scan
+if $tablename.nil?
+  meta_count += 2
+end
 
 # query the master to see how many regions are on region servers
+if not $tablename.nil?
+  $tableq = HTable.new config, $tablename.to_java_bytes
+end
 while true
-  server_count = admin.getClusterStatus().getRegionsCount()
+  if $tablename.nil?
+    server_count = admin.getClusterStatus().getRegionsCount()
+  else
+    server_count = $tableq.getRegionsInfo().size()
+  end
   print "Region Status: #{server_count} / #{meta_count}\n"
   if SHOULD_WAIT and server_count < meta_count
     #continue this loop until server & meta count match
