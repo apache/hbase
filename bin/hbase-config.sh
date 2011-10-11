@@ -117,6 +117,7 @@ HBASE_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.authenticate=fals
 # HBASE_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.access.file=$HBASE_HOME/conf/jmxremote.access"
 HBASE_MASTER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8090"
 HBASE_REGIONSERVER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8091"
+HBASE_ZOOKEEPER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8092"
 
 # YourKit Java Profiling
 # Note that you need to have yjpagent.so & yjp.jar on your computer and have
@@ -144,5 +145,5 @@ if [ -z "$HBASE_REGIONSERVER_OPTS" ]; then
   export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_DBG_OPTS $HBASE_REGIONSERVER_JMX_OPTS"
 fi
 if [ -z "$HBASE_ZOOKEEPER_OPTS" ]; then
-  export HBASE_ZOOKEEPER_OPTS="$HBASE_ZOOKEEPER_DBG_OPTS"
+  export HBASE_ZOOKEEPER_OPTS="$HBASE_ZOOKEEPER_DBG_OPTS $HBASE_ZOOKEEPER_JMX_OPTS"
 fi
