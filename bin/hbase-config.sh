@@ -125,7 +125,8 @@ HBASE_ZOOKEEPER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=80
 # export LD_LIBRARY_PATH=/usr/local/hadoop/:$LD_LIBRARY_PATH
 HBASE_YOURKIT_PROFILE="-agentlib:yjpagent"
 
-HBASE_GC_OPTIONS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:$HBASE_HOME/logs/gc-hbase.log"
+HBASE_GC_LOG=$HBASE_LOG_DIR/gc-hbase.log
+HBASE_GC_OPTIONS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:$HBASE_GC_LOG"
 
 HBASE_MASTER_JDWP_OPTIONS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8070"
 HBASE_REGIONSERVER_JDWP_OPTIONS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8071"

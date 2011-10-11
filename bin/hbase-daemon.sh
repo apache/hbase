@@ -137,6 +137,8 @@ case $startStop in
     fi
 
     hbase_rotate_log $logout
+    hbase_rotate_log $HBASE_GC_LOG
+
     echo starting $command, logging to $logout
     # Add to the command log file vital stats on our environment.
     echo "`date` Starting $command on `hostname`" >> $loglog
