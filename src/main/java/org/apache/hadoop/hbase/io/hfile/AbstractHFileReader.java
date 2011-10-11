@@ -327,13 +327,21 @@ public abstract class AbstractHFileReader implements HFile.Reader {
     protected ByteBuffer blockBuffer;
 
     protected boolean cacheBlocks;
-    protected boolean pread;
-    protected boolean isCompaction;
+    protected final boolean pread;
+    protected final boolean isCompaction;
 
     protected int currKeyLen;
     protected int currValueLen;
 
     protected int blockFetches;
+
+    public Scanner(final HFile.Reader reader, final boolean cacheBlocks,
+        final boolean pread, final boolean isCompaction) {
+      this.reader = reader;
+      this.cacheBlocks = cacheBlocks;
+      this.pread = pread;
+      this.isCompaction = isCompaction;
+    }
 
     @Override
     public Reader getReader() {

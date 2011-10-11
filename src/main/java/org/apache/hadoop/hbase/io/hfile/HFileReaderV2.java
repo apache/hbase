@@ -204,12 +204,20 @@ public class HFileReaderV2 extends AbstractHFileReader implements
     }
   }
 
+  /**
+   * Implements the "basic block reader" API, used mainly by
+   * {@link HFileBlockIndex.BlockIndexReader} in
+   * {@link HFileBlockIndex.BlockIndexReader#seekToDataBlock(byte[], int, int,
+   * HFileBlock)} in a random-read access pattern.
+   */
   @Override
   public HFileBlock readBlockData(long offset, long onDiskSize,
       int uncompressedSize, boolean pread) throws IOException {
     if (onDiskSize >= Integer.MAX_VALUE) {
       throw new IOException("Invalid on-disk size: " + onDiskSize);
     }
+
+    // Assuming we are not doing a compaction.
     return readBlock(offset, (int) onDiskSize, true, pread, false);
   }
 
@@ -225,7 +233,7 @@ public class HFileReaderV2 extends AbstractHFileReader implements
    * @throws IOException
    */
   public HFileBlock readBlock(long dataBlockOffset, int onDiskBlockSize,
-      boolean cacheBlock, final boolean pread, final boolean isCompaction)
+      boolean cacheBlock, boolean pread, final boolean isCompaction)
       throws IOException {
     if (dataBlockIndexReader == null) {
       throw new IOException("Block index not loaded");
@@ -273,7 +281,7 @@ public class HFileReaderV2 extends AbstractHFileReader implements
       // Load block from filesystem.
       long now = System.currentTimeMillis();
       HFileBlock dataBlock = fsBlockReader.readBlockData(dataBlockOffset,
-          onDiskBlockSize, -1, true);
+          onDiskBlockSize, -1, pread);
 
       long delta = System.currentTimeMillis() - now;
       HFile.readTime += delta;
@@ -337,10 +345,7 @@ public class HFileReaderV2 extends AbstractHFileReader implements
 
     public ScannerV2(HFileReaderV2 r, boolean cacheBlocks,
         final boolean pread, final boolean isCompaction) {
-      this.reader = r;
-      this.cacheBlocks = cacheBlocks;
-      this.pread = pread;
-      this.isCompaction = isCompaction;
+      super(r, cacheBlocks, pread, isCompaction);
     }
 
     @Override
@@ -449,7 +454,7 @@ public class HFileReaderV2 extends AbstractHFileReader implements
         curBlock = reader.readBlock(curBlock.getOffset()
             + curBlock.getOnDiskSizeWithHeader(),
             curBlock.getNextBlockOnDiskSizeWithHeader(), cacheBlocks, pread,
-            false);
+            isCompaction);
       } while (!curBlock.getBlockType().equals(BlockType.DATA));
 
       return curBlock;
