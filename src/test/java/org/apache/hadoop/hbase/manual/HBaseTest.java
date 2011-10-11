@@ -44,8 +44,8 @@ import org.apache.log4j.Logger;
 public class HBaseTest
 {
   static {
-      // make the root logger display only errors
-      Logger.getRootLogger().setLevel(Level.DEBUG);
+      // make the root logger display only errors & warnings
+      Logger.getRootLogger().setLevel(Level.WARN);
       // enable debugging for our package
       Logger.getLogger("org.apache.hadoop.hbase.manual").setLevel(Level.DEBUG);
       Logger.getLogger("org.apache.hadoop.hbase.client").setLevel(Level.INFO);
