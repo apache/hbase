@@ -185,6 +185,9 @@ public class HMaster extends Thread implements HMasterInterface,
   private long applyPreferredAssignmentPeriod = 0l;
   private long holdRegionForBestLocalityPeriod = 0l;
 
+  // flag set after we become the active master (used for testing)
+  private volatile boolean isActiveMaster = false;
+
   /**
    * Constructor
    * @param conf configuration
@@ -268,6 +271,7 @@ public class HMaster extends Thread implements HMasterInterface,
     }
 
     this.zkMasterAddressWatcher.writeAddressToZooKeeper(this.address, true);
+    isActiveMaster = true;
     this.regionServerOperationQueue =
       new RegionServerOperationQueue(this.conf, this.closed);
 
@@ -489,7 +493,7 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.fs;
   }
 
-  AtomicBoolean getShutdownRequested() {
+  public AtomicBoolean getShutdownRequested() {
     return this.shutdownRequested;
   }
 
@@ -497,7 +501,7 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.closed;
   }
 
-  boolean isClosed() {
+  public boolean isClosed() {
     return this.closed.get();
   }
 
@@ -1646,7 +1650,7 @@ public class HMaster extends Thread implements HMasterInterface,
               Integer.toString(clientPort));
             // Need to have the zk cluster shutdown when master is shutdown.
             // Run a subclass that does the zk cluster shutdown on its way out.
-            LocalHBaseCluster cluster = new LocalHBaseCluster(conf, 1,
+            LocalHBaseCluster cluster = new LocalHBaseCluster(conf, 1, 1,
               LocalHMaster.class, HRegionServer.class);
             ((LocalHMaster)cluster.getMaster()).setZKCluster(zooKeeperCluster);
             cluster.startup();
@@ -1705,6 +1709,22 @@ public class HMaster extends Thread implements HMasterInterface,
   }
 
   /**
+   * Report whether this master is currently the active master or not.
+   * If not active master, we are parked on ZK waiting to become active.
+   *
+   * This method is used for testing.
+   *
+   * @return true if active master, false if not.
+   */
+  public boolean isActiveMaster() {
+    return isActiveMaster;
+  }
+
+  public String getServerName() {
+    return address.toString();
+  }
+
+  /**
    * Main program
    * @param args
    */
@@ -1717,4 +1737,9 @@ public class HMaster extends Thread implements HMasterInterface,
     this.regionManager.clearFromInTransition(region.getRegionName());
     LOG.info("Cleared region " + region + " from transition map");
   }
+
+  public void stopMaster() {
+    closed.set(true);
+  }
+
 }

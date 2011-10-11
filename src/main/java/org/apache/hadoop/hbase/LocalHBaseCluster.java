@@ -56,14 +56,17 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
  */
 public class LocalHBaseCluster {
   static final Log LOG = LogFactory.getLog(LocalHBaseCluster.class);
-  private final HMaster master;
-  private final List<JVMClusterUtil.RegionServerThread> regionThreads;
+  private final List<JVMClusterUtil.MasterThread> masterThreads =
+    new CopyOnWriteArrayList<JVMClusterUtil.MasterThread>();
+  private final List<JVMClusterUtil.RegionServerThread> regionThreads =
+    new CopyOnWriteArrayList<JVMClusterUtil.RegionServerThread>();
   private final static int DEFAULT_NO = 1;
   /** local mode */
   public static final String LOCAL = "local";
   /** 'local:' */
   public static final String LOCAL_COLON = LOCAL + ":";
   private final Configuration conf;
+  private final Class<? extends HMaster> masterClass;
   private final Class<? extends HRegionServer> regionServerClass;
 
   /**
@@ -85,7 +88,8 @@ public class LocalHBaseCluster {
    */
   public LocalHBaseCluster(final Configuration conf, final int noRegionServers)
   throws IOException {
-    this(conf, noRegionServers, HMaster.class, getRegionServerImplementation(conf));
+    this(conf, 1, noRegionServers, HMaster.class,
+        getRegionServerImplementation(conf));
   }
 
   @SuppressWarnings("unchecked")
@@ -98,27 +102,34 @@ public class LocalHBaseCluster {
    * Constructor.
    * @param conf Configuration to use.  Post construction has the master's
    * address.
+   * @param noMasters Count of masters to start.
    * @param noRegionServers Count of regionservers to start.
-   * @param masterClass
+   * @param masterClass master implementation to use if not specified by conf
+   * @param regionServerClass RS implementation to use if not specified by conf
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  public LocalHBaseCluster(final Configuration conf,
+  public LocalHBaseCluster(final Configuration conf, final int noMasters,
     final int noRegionServers, final Class<? extends HMaster> masterClass,
     final Class<? extends HRegionServer> regionServerClass)
   throws IOException {
     this.conf = conf;
-    // Create the master
-    this.master = HMaster.constructMaster(masterClass, conf);
-    // Start the HRegionServers.  Always have region servers come up on
-    // port '0' so there won't be clashes over default port as unit tests
-    // start/stop ports at different times during the life of the test.
+    // Always have masters and regionservers come up on port '0' so we don't
+    // clash over default ports.
+    conf.set(HConstants.MASTER_PORT, "0");
     conf.set(HConstants.REGIONSERVER_PORT, "0");
-    this.regionThreads =
-      new CopyOnWriteArrayList<JVMClusterUtil.RegionServerThread>();
+    // Start the HMasters.
+    this.masterClass =
+      (Class<? extends HMaster>)conf.getClass(HConstants.MASTER_IMPL,
+          masterClass);
+    for (int i = 0; i < noMasters; i++) {
+      addMaster(new Configuration(conf), i);
+    }
+    // Start the HRegionServers.
     this.regionServerClass =
       (Class<? extends HRegionServer>)conf.getClass(HConstants.REGION_SERVER_IMPL,
        regionServerClass);
+
     for (int i = 0; i < noRegionServers; i++) {
       addRegionServer(i);
     }
@@ -136,6 +147,22 @@ public class LocalHBaseCluster {
     return rst;
   }
 
+  public JVMClusterUtil.MasterThread addMaster() throws IOException {
+    return addMaster(new Configuration(conf), this.masterThreads.size());
+  }
+
+  public JVMClusterUtil.MasterThread addMaster(Configuration c, final int index)
+  throws IOException {
+    // Create each master with its own Configuration instance so each has
+    // its HConnection instance rather than share (see HBASE_INSTANCES down in
+    // the guts of HConnectionManager.
+    JVMClusterUtil.MasterThread mt =
+      JVMClusterUtil.createMasterThread(c,
+        this.masterClass, index);
+    this.masterThreads.add(mt);
+    return mt;
+  }
+
   /**
    * @param serverNumber
    * @return region server
@@ -148,7 +175,10 @@ public class LocalHBaseCluster {
    * @return the HMaster thread
    */
   public HMaster getMaster() {
-    return this.master;
+    if (masterThreads.size() != 1) {
+      throw new AssertionError("one master expected");
+    }
+    return this.masterThreads.get(0).getMaster();
   }
 
   /**
@@ -211,11 +241,15 @@ public class LocalHBaseCluster {
         }
       }
     }
-    if (this.master != null && this.master.isAlive()) {
-      try {
-        this.master.join();
-      } catch(InterruptedException e) {
-        // continue
+    if (this.masterThreads != null) {
+      for (Thread t : this.masterThreads) {
+        if (t.isAlive()) {
+          try {
+            t.join();
+          } catch (InterruptedException e) {
+            // continue
+          }
+        }
       }
     }
   }
@@ -223,15 +257,15 @@ public class LocalHBaseCluster {
   /**
    * Start the cluster.
    */
-  public void startup() {
-    JVMClusterUtil.startup(this.master, this.regionThreads);
+  public void startup() throws IOException {
+    JVMClusterUtil.startup(this.masterThreads, this.regionThreads);
   }
 
   /**
    * Shut down the mini HBase cluster
    */
   public void shutdown() {
-    JVMClusterUtil.shutdown(this.master, this.regionThreads);
+    JVMClusterUtil.shutdown(this.masterThreads, this.regionThreads);
   }
 
   /**

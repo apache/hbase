@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -75,12 +76,13 @@ public class JVMClusterUtil {
    * Call 'start' on the returned thread to make it run.
    * @param c Configuration to use.
    * @param hrsc Class to create.
-   * @param index Used distingushing the object returned.
+   * @param index Used distinguishing the object returned.
    * @throws IOException
    * @return Region server added.
    */
-  public static JVMClusterUtil.RegionServerThread createRegionServerThread(final Configuration c,
-    final Class<? extends HRegionServer> hrsc, final int index)
+  public static JVMClusterUtil.RegionServerThread createRegionServerThread(
+      final Configuration c, final Class<? extends HRegionServer> hrsc,
+      final int index)
   throws IOException {
       HRegionServer server;
       try {
@@ -94,57 +96,134 @@ public class JVMClusterUtil {
   }
 
   /**
+   * Datastructure to hold Master Thread and Master instance
+   */
+  public static class MasterThread extends Thread {
+    private final HMaster master;
+
+    public MasterThread(final HMaster m, final int index) {
+      super(m, "Master:" + index);
+      this.master = m;
+    }
+
+    /** @return the master */
+    public HMaster getMaster() {
+      return this.master;
+    }
+
+    /**
+     * Block until the master has come online, indicating it is ready
+     * to be used.
+     */
+    public void waitForServerOnline() {
+      // The server is marked online after init begins but before race to become
+      // the active master.
+      while (!this.master.isMasterRunning() &&
+          !this.master.getShutdownRequested().get()) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          // continue waiting
+        }
+      }
+    }
+  }
+
+  /**
+   * Creates a {@link MasterThread}.
+   * Call 'start' on the returned thread to make it run.
+   * @param c Configuration to use.
+   * @param hmc Class to create.
+   * @param index Used distinguishing the object returned.
+   * @throws IOException
+   * @return Master added.
+   */
+  public static JVMClusterUtil.MasterThread createMasterThread(
+      final Configuration c, final Class<? extends HMaster> hmc,
+      final int index)
+  throws IOException {
+    HMaster server;
+    try {
+      server = hmc.getConstructor(Configuration.class).newInstance(c);
+    } catch (InvocationTargetException ite) {
+      Throwable target = ite.getTargetException();
+      throw new RuntimeException("Failed construction of Master: " +
+        hmc.toString() + ((target.getCause() != null)?
+          target.getCause().getMessage(): ""), target);
+    } catch (Exception e) {
+      IOException ioe = new IOException();
+      ioe.initCause(e);
+      throw ioe;
+    }
+    return new JVMClusterUtil.MasterThread(server, index);
+  }
+
+  /**
    * Start the cluster.
    * @param m
    * @param regionServers
    * @return Address to use contacting master.
    */
-  public static String startup(final HMaster m,
-      final List<JVMClusterUtil.RegionServerThread> regionservers) {
-    if (m != null) m.start();
+  public static String startup(final List<JVMClusterUtil.MasterThread> masters,
+      final List<JVMClusterUtil.RegionServerThread> regionservers) throws IOException {
+    if (masters != null) {
+      for (JVMClusterUtil.MasterThread t : masters) {
+        t.start();
+      }
+    }
     if (regionservers != null) {
       for (JVMClusterUtil.RegionServerThread t: regionservers) {
         t.start();
       }
     }
-    return m == null? null: m.getMasterAddress().toString();
+    if (masters == null || masters.isEmpty()) {
+      return null;
+    }
+    // Wait for an active master
+    while (true) {
+      for (JVMClusterUtil.MasterThread t : masters) {
+        if (t.master.isActiveMaster()) {
+          return t.master.getServerName().toString();
+        }
+      }
+      try {
+        Thread.sleep(1000);
+      } catch(InterruptedException e) {
+        // Keep waiting
+      }
+    }
   }
 
   /**
    * @param master
    * @param regionservers
    */
-  public static void shutdown(final HMaster master,
+  public static void shutdown(final List<MasterThread> masters,
       final List<RegionServerThread> regionservers) {
     LOG.debug("Shutting down HBase Cluster");
-    if (master != null) {
-      master.shutdown();
+    if (masters != null) {
+      for (JVMClusterUtil.MasterThread t : masters) {
+        if (t.master.isActiveMaster()) {
+          t.master.shutdown();
+        } else {
+          t.master.stopMaster();
+        }
+      }
     }
     // regionServerThreads can never be null because they are initialized when
     // the class is constructed.
-      for(Thread t: regionservers) {
-        if (t.isAlive()) {
-          try {
-            t.join();
-          } catch (InterruptedException e) {
-            // continue
-          }
-        }
-      }
-    if (master != null) {
-      while (master.isAlive()) {
+    for(Thread t: regionservers) {
+      if (t.isAlive()) {
         try {
-          // The below has been replaced to debug sometime hangs on end of
-          // tests.
-          // this.master.join():
-          Threads.threadDumpingIsAlive(master);
-        } catch(InterruptedException e) {
+          t.join();
+        } catch (InterruptedException e) {
           // continue
         }
       }
     }
-    LOG.info("Shutdown " +
-      ((regionservers != null)? master.getName(): "0 masters") +
-      " " + regionservers.size() + " region server(s)");
+    LOG.info("Shutdown of " +
+        ((masters != null) ? masters.size() : "0") + " master(s) and " +
+        ((regionservers != null) ? regionservers.size() : "0") +
+        " regionserver(s) complete");
   }
 }

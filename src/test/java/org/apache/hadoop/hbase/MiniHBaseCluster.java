@@ -67,14 +67,27 @@ public class MiniHBaseCluster {
    * @throws IOException
    */
   public MiniHBaseCluster(Configuration conf, int numRegionServers)
-  throws IOException {
+  throws IOException, InterruptedException {
+    this(conf, 1, numRegionServers);
+  }
+
+  /**
+   * Start a MiniHBaseCluster.
+   * @param conf Configuration to be used for cluster
+   * @param numMasters initial number of masters to start.
+   * @param numRegionServers initial number of region servers to start.
+   * @throws IOException
+   */
+  public MiniHBaseCluster(Configuration conf, int numMasters,
+      int numRegionServers)
+  throws IOException, InterruptedException {
     this.conf = conf;
     conf.set(HConstants.MASTER_PORT, "0");
     conf.setLong("hbase.master.applyPreferredAssignment.period",
         PREFERRED_ASSIGNMENT);
     conf.setLong("hbase.master.holdRegionForBestLocality.period",
         PREFERRED_ASSIGNMENT / 5);
-    init(numRegionServers);
+    init(numMasters, numRegionServers);
   }
 
   /**
@@ -232,10 +245,11 @@ public class MiniHBaseCluster {
     }
   }
 
-  private void init(final int nRegionNodes) throws IOException {
+  private void init(final int nMasterNodes, final int nRegionNodes)
+  throws IOException {
     try {
       // start up a LocalHBaseCluster
-      hbaseCluster = new LocalHBaseCluster(conf, nRegionNodes,
+      hbaseCluster = new LocalHBaseCluster(conf, nMasterNodes, nRegionNodes,
           MiniHBaseCluster.MiniHBaseClusterMaster.class,
           MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
       hbaseCluster.startup();
