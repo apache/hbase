@@ -119,9 +119,10 @@ public class HBaseFsck {
     connection = admin.getConnection();
 
     numThreads = conf.getInt("hbasefsck.numthreads", numThreads);
-    executor = new ThreadPoolExecutor(0, numThreads,
+    executor = new ThreadPoolExecutor(numThreads, numThreads,
           THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
           new LinkedBlockingQueue<Runnable>());
+    executor.allowCoreThreadTimeOut(true);
   }
 
   public TreeMap<String, HbckInfo> getRegionInfo() {
