@@ -723,35 +723,48 @@ public class FSUtils {
     LOG.debug("Query Path: " + queryPath + " ; # list of files: " +
         statusList.length);
 
+		if (statusList == null) {
+			return regionToBestLocalityRSMapping;
+		}
     for (FileStatus regionStatus : statusList) {
       if(!regionStatus.isDir()) {
         continue;
       }
 
-      // get the region name; it may get some noise data
+			// get the region name; it may get some noise data
       Path regionPath = regionStatus.getPath();
       String regionName = regionPath.getName();
       if (!regionName.toLowerCase().matches("[0-9a-f]+")) {
         continue;
       }
-      //get table name
-      String tableName = regionPath.getParent().getName();
+      // ignore the empty directory
+      FileStatus[] cfList = fs.listStatus(regionPath);
+      if (cfList == null) {
+				continue;
+			}
 
+			//get table name
+      String tableName = regionPath.getParent().getName();
       int totalBlkCount = 0;
       blockCountMap.clear();
 
       // for each cf, get all the blocks information
-      FileStatus[] cfList = fs.listStatus(regionPath);
-      for (FileStatus cfStatus : cfList) {
+			for (FileStatus cfStatus : cfList) {
         if (!cfStatus.isDir()) {
           // skip because this is not a CF directory
           continue;
         }
         FileStatus[] storeFileLists = fs.listStatus(cfStatus.getPath());
+				if (storeFileLists == null) {
+					continue;
+				}
         for (FileStatus storeFile : storeFileLists) {
           BlockLocation[] blkLocations =
             fs.getFileBlockLocations(storeFile, 0, storeFile.getLen());
-          totalBlkCount += blkLocations.length;
+					if (blkLocations == null) {
+						continue;
+					}
+					totalBlkCount += blkLocations.length;
           for(BlockLocation blk: blkLocations) {
             for (String host: blk.getHosts()) {
               AtomicInteger count = blockCountMap.get(host);
