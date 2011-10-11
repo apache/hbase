@@ -1221,7 +1221,8 @@ public class HRegionServer implements HRegionInterface,
           false);
       while (true) {
         try {
-          this.infoServer = new InfoServer("regionserver", addr, port, false);
+          this.infoServer = new InfoServer("regionserver", addr, port, false,
+              conf);
           this.infoServer.setAttribute("regionserver", this);
           this.infoServer.start();
           break;

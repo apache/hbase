@@ -38,7 +38,7 @@
 <body>
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
 <h1 id="page_title">Master: <%=master.getMasterAddress().getHostname()%>:<%=master.getMasterAddress().getPort()%></h1>
-<p id="links_menu"><a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a>, <a href="/taskmonitor">Task Monitor</a></p>
+<p id="links_menu"><a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a>, <a href="/taskmonitor">Task Monitor</a>, <a href="/conf">HBase Configuration</a></p>
 
 <!-- Various warnings that cluster admins should be aware of -->
 <% if (JvmVersion.isBadJvmVersion()) { %>
