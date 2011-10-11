@@ -1342,6 +1342,10 @@ public class StoreFile {
     void disableBloomFilterForTesting() {
       bloomFilter = null;
     }
+
+    public long getMaxTimestamp() {
+      return timeRangeTracker.maximumTimestamp;
+    }
   }
 
   /**

@@ -63,12 +63,6 @@ public class ScanQueryMatcher {
   protected byte [] row;
 
   /**
-   * True if we are only interested in the given exact set of columns. In that
-   * case we can use Bloom filters to avoid unnecessary disk seeks.
-   */
-  private boolean exactColumnQuery;
-
-  /**
    * Constructs a ScanQueryMatcher for a Scan.
    * @param scan
    * @param family
@@ -97,12 +91,6 @@ public class ScanQueryMatcher {
       // We can share the ExplicitColumnTracker, diff is we reset
       // between rows, not between storefiles.
       this.columns = new ExplicitColumnTracker(columns,maxVersions);
-
-      // Set the "exact column query" flag to enable row-column Bloom filter
-      // optimization. We avoid checking row-column Bloom filters twice for
-      // single-column get queries, because they are already being checked
-      // in StoreFile.shouldSeek.
-      exactColumnQuery = !(scan.isGetScan() && columns.size() == 1);
     }
   }
 
@@ -331,10 +319,6 @@ public class ScanQueryMatcher {
         kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
         null, 0, 0,
         null, 0, 0);
-  }
-
-  public boolean isExactColumnQuery() {
-    return exactColumnQuery;
   }
 
   /**

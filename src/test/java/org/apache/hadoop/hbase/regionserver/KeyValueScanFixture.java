@@ -34,7 +34,7 @@ import java.util.List;
  * to the provided comparator, and then the whole thing pretends
  * to be a store file scanner.
  */
-public class KeyValueScanFixture extends AbstractKeyValueScanner {
+public class KeyValueScanFixture extends NonLazyKeyValueScanner {
   ArrayList<KeyValue> data;
   Iterator<KeyValue> iter = null;
   KeyValue current = null;

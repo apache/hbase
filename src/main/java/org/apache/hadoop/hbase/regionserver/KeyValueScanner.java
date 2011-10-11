@@ -57,16 +57,6 @@ public interface KeyValueScanner {
   public boolean reseek(KeyValue key) throws IOException;
 
   /**
-   * Similar to {@link #seek} (or {@link #reseek} if forward is true) but only
-   * does a seek operation after checking that it is really necessary for the
-   * row/column combination specified by the kv parameter. This function was
-   * added to avoid unnecessary disk seeks on multi-column get queries using
-   * Bloom filter checking. Should only be used for queries where the set of
-   * columns is specified exactly.
-   */
-  public boolean seekExactly(KeyValue kv, boolean forward) throws IOException;
-
-  /**
    * Get the sequence id associated with this KeyValueScanner. This is required
    * for comparing multiple files to find out which one has the latest data.
    * The default implementation for this would be to return 0. A file having
@@ -78,4 +68,37 @@ public interface KeyValueScanner {
    * Close the KeyValue scanner.
    */
   public void close();
+
+  // "Lazy scanner" optimizations
+
+  /**
+   * Similar to {@link #seek} (or {@link #reseek} if forward is true) but only
+   * does a seek operation after checking that it is really necessary for the
+   * row/column combination specified by the kv parameter. This function was
+   * added to avoid unnecessary disk seeks by checking row-column Bloom filters
+   * before a seek on multi-column get/scan queries, and to optimize by looking
+   * up more recent files first.
+   * @param forward do a forward-only "reseek" instead of a random-access seek
+   * @param useBloom whether to enable multi-column Bloom filter optimization
+   */
+  public boolean requestSeek(KeyValue kv, boolean forward, boolean useBloom)
+      throws IOException;
+
+  /**
+   * We optimize our store scanners by checking the most recent store file
+   * first, so we sometimes pretend we have done a seek but delay it until the
+   * store scanner bubbles up to the top of the key-value heap. This method is
+   * then used to ensure the top store file scanner is seeked.
+   */
+  public boolean realSeekDone();
+
+  /**
+   * Does the real seek operation in case it was skipped by
+   * {@link #seekToRowCol(KeyValue, boolean)}. Note that this function should
+   * be never called on scanners that always do real seek operations (i.e. most
+   * of the scanners). The easiest way to achieve this is to call
+   * {@link #realSeekDone()} first.
+   */
+  public void enforceSeek() throws IOException;
+
 }

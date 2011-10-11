@@ -1740,6 +1740,21 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * Creates the first KV with the row/family/qualifier of this KV and the
+   * given timestamp. Uses the "maximum" KV type that guarantees that the new
+   * KV is the lowest possible for this combination of row, family, qualifier,
+   * and timestamp. This KV's own timestamp is ignored. While this function
+   * copies the value from this KV, it is normally used on key-only KVs.
+   */
+  public KeyValue createFirstOnRowColTS(long ts) {
+    return new KeyValue(
+        bytes, getRowOffset(), getRowLength(),
+        bytes, getFamilyOffset(), getFamilyLength(),
+        bytes, getQualifierOffset(), getQualifierLength(),
+        ts, Type.Maximum, bytes, getValueOffset(), getValueLength());
+  }
+
+  /**
    * @param b
    * @return A KeyValue made of a byte array that holds the key-only part.
    * Needed to convert hfile index members to KeyValues.
