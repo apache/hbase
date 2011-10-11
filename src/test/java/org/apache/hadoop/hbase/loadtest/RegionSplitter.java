@@ -336,19 +336,6 @@ public class RegionSplitter {
           HBaseAdmin admin = new HBaseAdmin(table.getConfiguration());
           admin.split(table.getTableName(), split);
 
-          // wait for one of the daughter regions to come online
-          boolean daughterOnline = false;
-          while (!daughterOnline) {
-            LOG.debug("Waiting for daughter region to come online...");
-            Thread.sleep(30 * 1000); // sleep
-            table.clearRegionCache();
-            HRegionInfo hri = table.getRegionLocation(split).getRegionInfo();
-            daughterOnline = Bytes.equals(hri.getStartKey(), split)
-                           && !hri.isOffline();
-          }
-          LOG.debug("Daughter region is online.");
-          splitOut.writeChars("- " + dr.getFirst().toString(16) +
-                              " " + dr.getSecond().toString(16) + "\n");
           splitCount++;
           if (splitCount % 10 == 0) {
             long tDiff = (System.currentTimeMillis() - startTime) / splitCount;
@@ -359,52 +346,14 @@ public class RegionSplitter {
 
           // if we have too many outstanding splits, wait for oldest ones to finish
           outstanding.addLast(Pair.newPair(start, split));
+
           if (outstanding.size() > MAX_OUTSTANDING) {
-            Pair<byte[], byte[]> reg = outstanding.removeFirst();
-            String outStart= Bytes.toStringBinary(reg.getFirst());
-            String outSplit = Bytes.toStringBinary(reg.getSecond());
-            LOG.debug("Waiting for " + outStart + " " + outSplit +
-                      " to finish compaction");
-            // when a daughter region is opened, a compaction is triggered
-            // wait until compaction completes for both daughter regions
-            LinkedList<HRegionInfo> check = Lists.newLinkedList();
-            // figure out where this region should be in HDFS
-            check.add(table.getRegionLocation(reg.getFirst()).getRegionInfo());
-            check.add(table.getRegionLocation(reg.getSecond()).getRegionInfo());
-            while (!check.isEmpty()) {
-              // compaction is completed when all reference files are gone
-              for (HRegionInfo hri: check.toArray(new HRegionInfo[]{})) {
-                boolean refFound = false;
-                String startKey= Bytes.toStringBinary(hri.getStartKey());
-                // check every Column Family for that region
-                for (HColumnDescriptor c : hri.getTableDesc().getFamilies()) {
-                  Path cfDir = Store.getStoreHomedir(
-                    tableDir, hri.getEncodedName(), c.getName());
-                  if (fs.exists(cfDir)) {
-                    for (FileStatus file : fs.listStatus(cfDir)) {
-                      refFound |= StoreFile.isReference(file.getPath());
-                      if (refFound) {
-                        LOG.debug("Reference still exists for " + startKey +
-                                  " at " + file.getPath());
-                        break;
-                      }
-                    }
-                  }
-                  if (refFound) break;
-                }
-                if (!refFound) {
-                  check.remove(hri);
-                  LOG.debug("- finished compaction of " + startKey);
-                }
-              }
-              // sleep in between requests
-              if (!check.isEmpty()) {
-                LOG.debug("Waiting for " + check.size() + " compactions");
-                Thread.sleep(30 * 1000);
-              }
-            }
+            waitForSplit(outstanding.removeFirst(), table, splitOut);
           }
         }
+      }
+      while (!outstanding.isEmpty()) {
+        waitForSplit(outstanding.removeFirst(), table, splitOut);
       }
       LOG.debug("All regions have been sucesfully split!");
     } finally {
@@ -418,6 +367,77 @@ public class RegionSplitter {
       splitOut.close();
     }
     fs.delete(splitFile, false);
+  }
+
+  private static void waitForSplit(Pair<byte[], byte[]> region, HTable table,
+      FSDataOutputStream splitOut) throws IOException, InterruptedException {
+    byte[] start = region.getFirst();
+    byte[] split = region.getSecond();
+    String outStart = Bytes.toStringBinary(region.getFirst());
+    String outSplit = Bytes.toStringBinary(region.getSecond());
+
+    // wait for one of the daughter regions to come online
+    while (true) {
+      table.clearRegionCache();
+      HRegionInfo hri = table.getRegionLocation(split).getRegionInfo();
+      if (Bytes.equals(hri.getStartKey(), split) && !hri.isOffline())
+        break;
+      LOG.debug("Waiting for daughter region at " + outSplit
+          + " to come online...");
+      Thread.sleep(30 * 1000); // sleep
+    }
+    LOG.debug("Daughter region at " + outSplit + " is online.");
+    BigInteger biStart = convertToBigInteger(start);
+    BigInteger biSplit = convertToBigInteger(split);
+    if (biSplit == BigInteger.ZERO) { biSplit = MAXMD5_INT; }
+    splitOut.writeChars("- " + biStart.toString(16) +
+                        " "  + biSplit.toString(16) + "\n");
+
+    // when a daughter region is opened, a compaction is triggered
+    // wait until compaction completes for both daughter regions
+    LOG.debug("Waiting for " + outStart + " " + outSplit
+        + " to finish compaction");
+    Path hbDir = new Path(table.getConfiguration().get(HConstants.HBASE_DIR));
+    Path tableDir = HTableDescriptor.getTableDir(hbDir, table.getTableName());
+    Path splitFile = new Path(tableDir, "_balancedSplit");
+    FileSystem fs = FileSystem.get(table.getConfiguration());
+    // figure out where this region should be in HDFS
+    LinkedList<HRegionInfo> check = Lists.newLinkedList();
+    check.add(table.getRegionLocation(start).getRegionInfo());
+    check.add(table.getRegionLocation(split).getRegionInfo());
+    while (!check.isEmpty()) {
+      // compaction is completed when all reference files are gone
+      for (HRegionInfo hri : check.toArray(new HRegionInfo[] {})) {
+        boolean refFound = false;
+        String startKey = Bytes.toStringBinary(hri.getStartKey());
+        // check every Column Family for that region
+        for (HColumnDescriptor c : hri.getTableDesc().getFamilies()) {
+          Path cfDir = Store.getStoreHomedir(tableDir, hri.getEncodedName(), c
+              .getName());
+          if (fs.exists(cfDir)) {
+            for (FileStatus file : fs.listStatus(cfDir)) {
+              refFound |= StoreFile.isReference(file.getPath());
+              if (refFound) {
+                LOG.debug("Reference still exists for " + startKey + " at "
+                    + file.getPath());
+                break;
+              }
+            }
+          }
+          if (refFound)
+            break;
+        }
+        if (!refFound) {
+          check.remove(hri);
+          LOG.debug("- finished compaction of " + startKey);
+        }
+      }
+      // sleep in between requests
+      if (!check.isEmpty()) {
+        LOG.debug("Waiting for " + check.size() + " compactions");
+        Thread.sleep(30 * 1000);
+      }
+    }
   }
 
   private static Set<Pair<BigInteger, BigInteger>> getSplits(String tblName)
