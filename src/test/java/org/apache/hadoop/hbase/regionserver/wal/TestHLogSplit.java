@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -38,6 +40,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -47,14 +50,19 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
+ *
+ */
+/**
  * Testing {@link HLog} splitting code.
  */
 public class TestHLogSplit {
+  private static final Log LOG = LogFactory.getLog(TestHLogSplit.class);
 
   private Configuration conf;
   private FileSystem fs;
@@ -117,6 +125,8 @@ public class TestHLogSplit {
     for (FileStatus dir : entries){
       fs.delete(dir.getPath(), true);
     }
+    // create the HLog directory because recursive log creates are not allowed
+    fs.mkdirs(hlogDir);
     seq = 0;
     regions = new ArrayList<String>();
     Collections.addAll(regions, "bbb", "ccc");
@@ -508,6 +518,77 @@ public class TestHLogSplit {
     HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     assertEquals(0, compareHLogSplitDirs(firstSplitPath, splitPath));
+  }
+
+  /* HBASE-2312: tests the case where a RegionServer enters a GC pause or goes
+   * renegade due to Connect/ZK bugs.  When the master declares it dead, HDFS
+   * should deny writes and prevent it from rolling HLogs so Log Splitting can
+   * safely commence on the master.
+   * */
+  @Test
+  public void testLogRollAfterSplitStart() throws IOException {
+    // set flush interval to a large number so it doesn't interrupt us
+    final String F_INTERVAL = "hbase.regionserver.optionallogflushinterval";
+    long oldFlushInterval = conf.getLong(F_INTERVAL, 1000);
+    conf.setLong(F_INTERVAL, 1000*1000*100);
+    HLog log = null;
+    Path thisTestsDir = new Path(hbaseDir, "testLogRollAfterSplitStart");
+    Path rsSplitDir = new Path(thisTestsDir.getParent(),
+                               thisTestsDir.getName()
+                               + HConstants.HLOG_SPLITTING_EXT);
+
+    try {
+      // put some entries in an HLog
+      byte [] tableName = Bytes.toBytes(this.getClass().getName());
+      HRegionInfo regioninfo = new HRegionInfo(new HTableDescriptor(tableName),
+          HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false);
+      log = new HLog(fs, thisTestsDir, oldLogDir, conf, null);
+      final int total = 20;
+      for (int i = 0; i < total; i++) {
+        WALEdit kvs = new WALEdit();
+        kvs.add(new KeyValue(Bytes.toBytes(i), tableName, tableName));
+        log.append(regioninfo, tableName, kvs, System.currentTimeMillis());
+      }
+      // Send the data to HDFS datanodes and close the HDFS writer
+      log.sync(true);
+      log.cleanupCurrentWriter(log.getFilenum());
+
+      /* code taken from ProcessServerShutdown.process()
+       * handles RS shutdowns (as observed by the Master)
+       */
+      // rename the directory so a rogue RS doesn't create more HLogs
+      fs.rename(thisTestsDir, rsSplitDir);
+      LOG.debug("Renamed region directory: " + rsSplitDir);
+
+      // Process the old log files
+      // TODO: find a way a keep the log.writer around and call this
+      //       currently, you look like the current leaseholder
+      HLog.splitLog(hbaseDir, rsSplitDir, oldLogDir, fs, conf);
+
+      // Now, try to write more data.
+      // verify that this fails and the subsequent roll of the HLog also fails
+      try {
+        log.rollWriter();
+        Assert.fail("rollWriter() did not throw any exception.");
+      } catch (IOException ioe) {
+        if (ioe.getCause().getMessage().contains("FileNotFound")) {
+          LOG.info("Got the expected exception: ", ioe.getCause());
+        } else {
+          Assert.fail("Unexpected exception: " + ioe);
+        }
+      }
+    } finally {
+      conf.setLong(F_INTERVAL, oldFlushInterval);
+      if (log != null) {
+        log.close();
+      }
+      if (fs.exists(thisTestsDir)) {
+        fs.delete(thisTestsDir, true);
+      }
+      if (fs.exists(rsSplitDir)) {
+        fs.delete(rsSplitDir, true);
+      }
+    }
   }
 
   /**

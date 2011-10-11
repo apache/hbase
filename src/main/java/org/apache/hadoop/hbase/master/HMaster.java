@@ -656,7 +656,8 @@ public class HMaster extends Thread implements HMasterInterface,
       return;
     }
     for (FileStatus status : logFolders) {
-      String serverName = status.getPath().getName();
+      Path logDir = status.getPath();
+      String serverName = logDir.getName();
       LOG.info("Found log folder : " + serverName);
       if(this.serverManager.getServerInfo(serverName) == null) {
         LOG.info("Log folder doesn't belong " +
@@ -664,9 +665,18 @@ public class HMaster extends Thread implements HMasterInterface,
         long splitTime = 0, splitSize = 0;
 
         this.splitLogLock.lock();
-        Path logDir =
-          new Path(this.rootdir, HLog.getHLogDirectoryName(serverName));
         try {
+          // rename the directory so a rogue RS doesn't create more HLogs
+          if (!serverName.endsWith(HConstants.HLOG_SPLITTING_EXT)) {
+            Path splitDir = new Path(logDir.getParent(),
+                                     logDir.getName()
+                                     + HConstants.HLOG_SPLITTING_EXT);
+            if (!this.fs.rename(logDir, splitDir)) {
+              throw new IOException("Failed fs.rename of " + logDir);
+            }
+            logDir = splitDir;
+            LOG.debug("Renamed region directory: " + splitDir);
+          }
           HLog.splitLog(this.rootdir, logDir, oldLogDir, this.fs, getConfiguration());
           splitTime = HLog.lastSplitTime;
           splitSize = HLog.lastSplitSize;

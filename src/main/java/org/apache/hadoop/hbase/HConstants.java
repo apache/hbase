@@ -148,6 +148,9 @@ public final class HConstants {
   /** Used to construct the name of the compaction directory during compaction */
   public static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
 
+  /** File Extension used while splitting an HLog into regions (HBASE-2312) */
+  public static final String HLOG_SPLITTING_EXT = "-splitting";
+
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
 

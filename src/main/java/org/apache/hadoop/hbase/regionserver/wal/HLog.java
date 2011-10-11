@@ -658,13 +658,14 @@ public class HLog implements Syncable {
    * @return Path to current writer or null if none.
    * @throws IOException
    */
-  private Path cleanupCurrentWriter(final long currentfilenum)
+  Path cleanupCurrentWriter(final long currentfilenum)
   throws IOException {
     Path oldFile = null;
     if (this.writer != null) {
       // Close the current writer, get a new one.
       try {
         this.writer.close();
+        this.writer = null;
       } catch (IOException e) {
         // Failed close of log file.  Means we're losing edits.  For now,
         // shut ourselves down to minimize loss.  Alternative is to try and
@@ -745,7 +746,9 @@ public class HLog implements Syncable {
         if (LOG.isDebugEnabled()) {
           LOG.debug("closing hlog writer in " + this.dir.toString());
         }
-        this.writer.close();
+        if (this.writer != null) {
+          this.writer.close();
+        }
       }
     } finally {
       cacheFlushLock.unlock();

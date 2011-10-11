@@ -411,6 +411,14 @@ public class TestStore extends TestCase {
 		blockSize, bytesPerChecksum, progress), faultPos);
     }
 
+    @Override
+    public FSDataOutputStream createNonRecursive(Path f,
+        FsPermission permission, boolean overwrite,
+        int bufferSize, short replication, long blockSize,
+        Progressable progress) throws IOException {
+      return create(f, permission, overwrite, bufferSize,
+          replication, blockSize, progress);
+    }
   }
 
   static class FaultyOutputStream extends FSDataOutputStream {

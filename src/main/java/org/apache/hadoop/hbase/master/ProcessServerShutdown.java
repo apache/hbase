@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -54,7 +55,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   private List<MetaRegion> metaRegions;
 
   private Path rsLogDir;
-  private boolean logSplit;
+  private boolean isSplitFinished;
   private boolean rootRescanned;
   private HServerAddress deadServerAddress;
 
@@ -76,7 +77,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     super(master);
     this.deadServer = serverInfo.getServerName();
     this.deadServerAddress = serverInfo.getServerAddress();
-    this.logSplit = false;
+    this.isSplitFinished = false;
     this.rootRescanned = false;
     this.rsLogDir =
       new Path(master.getRootDir(), HLog.getHLogDirectoryName(serverInfo));
@@ -286,21 +287,38 @@ class ProcessServerShutdown extends RegionServerOperation {
   @Override
   protected boolean process() throws IOException {
     LOG.info("Process shutdown of server " + this.deadServer +
-      ": logSplit: " + logSplit + ", rootRescanned: " + rootRescanned +
+      ": logSplit: " + isSplitFinished + ", rootRescanned: " + rootRescanned +
       ", numberOfMetaRegions: " + master.getRegionManager().numMetaRegions() +
       ", onlineMetaRegions.size(): " +
       master.getRegionManager().numOnlineMetaRegions());
-    if (!logSplit) {
-      // Process the old log file
-      if (this.master.getFileSystem().exists(rsLogDir)) {
-        long splitTime = 0, splitSize = 0;
+    if (!isSplitFinished) {
+      long splitTime = 0, splitSize = 0;
+      FileSystem fs = this.master.getFileSystem();
+      // we rename during split, so check both names
+      Path rsSplitDir = new Path(rsLogDir.getParent(),
+                                 rsLogDir.getName()
+                                 + HConstants.HLOG_SPLITTING_EXT);
+      boolean logDirExists = fs.exists(rsLogDir);
+      boolean splitDirExists = fs.exists(rsSplitDir);
+      assert !(logDirExists && splitDirExists)
+        : "Both files shouldn't exist: " + rsLogDir + " and " + rsSplitDir;
 
+      if (logDirExists || splitDirExists) {
         if (!master.splitLogLock.tryLock()) {
           return false;
         }
         try {
-          HLog.splitLog(master.getRootDir(), rsLogDir,
-              this.master.getOldLogDir(), this.master.getFileSystem(),
+          // rename the directory so a rogue RS doesn't create more HLogs
+          if (logDirExists) {
+            if (!fs.rename(rsLogDir, rsSplitDir)) {
+              throw new IOException("Failed fs.rename of " + rsLogDir);
+            }
+            LOG.debug("Renamed region directory: " + rsSplitDir);
+          }
+
+          // Process the old log files
+          HLog.splitLog(master.getRootDir(), rsSplitDir,
+            this.master.getOldLogDir(), this.master.getFileSystem(),
             this.master.getConfiguration());
           splitTime = HLog.lastSplitTime;
           splitSize = HLog.lastSplitSize;
@@ -310,7 +328,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
         this.master.getMetrics().addSplit(splitTime, splitSize);
       }
-      logSplit = true;
+      isSplitFinished = true;
     }
     LOG.info("Log split complete, meta reassignment and scanning:");
     if (this.isRootServer) {
