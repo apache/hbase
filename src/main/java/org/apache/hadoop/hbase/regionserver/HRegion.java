@@ -273,7 +273,7 @@ public class HRegion implements HeapSize { // , Writable{
    *          the ordered set of column families
    * @return a string to print out in metrics
    */
-  private String createMutationSignature(Set<byte[]> families) {
+  public static String createMutationSignature(Set<byte[]> families) {
     int limit = families.size();
     if (1 == limit) {
       return "cf." + Bytes.toString(families.iterator().next());
@@ -308,7 +308,7 @@ public class HRegion implements HeapSize { // , Writable{
    *          the family to convert
    * @return the string to print out in metrics
    */
-  private String createMutationSignature(byte[] family) {
+  public static String createMutationSignature(byte[] family) {
     return "cf." + Bytes.toString(family);
   }
 
@@ -1611,7 +1611,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // do after lock
     long after = EnvironmentEdgeManager.currentTimeMillis();
-    String signature = this.createMutationSignature(familyMap.keySet());
+    String signature = HRegion.createMutationSignature(familyMap.keySet());
     HRegion.incrTimeVaryingMetric(signature + ".delete_", after - now);
 
     if (flush) {
@@ -1805,10 +1805,11 @@ public class HRegion implements HeapSize { // , Writable{
         // else, if all have been consistent so far, check if it still holds
         // all else, designate failure signature and mark as unclear
         if (null == signature) {
-          signature = this.createMutationSignature(put.getFamilyMap().keySet());
+          signature = HRegion.createMutationSignature(put.getFamilyMap()
+              .keySet());
         } else {
           if (isSignatureClear) {
-            if (!signature.equals(this.createMutationSignature(put
+            if (!signature.equals(HRegion.createMutationSignature(put
                 .getFamilyMap().keySet()))) {
               isSignatureClear = false;
               signature = "cf.__unknown";
@@ -2094,7 +2095,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // do after lock
     long after = EnvironmentEdgeManager.currentTimeMillis();
-    String signature = this.createMutationSignature(familyMap.keySet());
+    String signature = HRegion.createMutationSignature(familyMap.keySet());
     HRegion.incrTimeVaryingMetric(signature + ".put_", after - now);
 
     if (flush) {
@@ -3370,7 +3371,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // do after lock
     long after = EnvironmentEdgeManager.currentTimeMillis();
-    String signature = this.createMutationSignature(get.familySet());
+    String signature = HRegion.createMutationSignature(get.familySet());
     HRegion.incrTimeVaryingMetric(signature + ".get_", after - now);
 
     return results;
@@ -3443,7 +3444,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // do after lock
     long after = EnvironmentEdgeManager.currentTimeMillis();
-    String signature = this.createMutationSignature(family);
+    String signature = HRegion.createMutationSignature(family);
     HRegion.incrTimeVaryingMetric(signature + ".increment_", after - before);
 
     if (flush) {

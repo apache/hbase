@@ -20,16 +20,17 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NavigableSet;
+
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NavigableSet;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Scanner scans both the memstore and the HStore. Coalesce KeyValue stream
@@ -43,7 +44,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   private boolean cacheBlocks;
   private int countPerRow = 0;
   private int storeLimit;
-
+  private String metricNameGetsize;
   // Used to indicate that the scanner has closed (see HBASE-1107)
   // Doesnt need to be volatile because it's always accessed via synchronized methods
   private boolean closing = false;
@@ -63,6 +64,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns)
                               throws IOException {
     this.store = store;
+    initializeMetricNames();
+
     this.cacheBlocks = scan.getCacheBlocks();
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
         columns, store.ttl, store.comparator.getRawComparator(),
@@ -104,6 +107,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
                             boolean retainDeletesInOutput)
       throws IOException {
     this.store = store;
+    this.initializeMetricNames();
+
     this.cacheBlocks = false;
     this.isGet = false;
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
@@ -127,6 +132,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       final List<KeyValueScanner> scanners)
         throws IOException {
     this.store = null;
+    this.initializeMetricNames();
+
     this.isGet = false;
     this.cacheBlocks = scan.getCacheBlocks();
     this.matcher = new ScanQueryMatcher(scan, colFamily, columns, ttl,
@@ -138,6 +145,23 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       scanner.seek(matcher.getStartKey());
     }
     heap = new KeyValueHeap(scanners, comparator);
+  }
+
+  /**
+   * Method used internally to initialize metric names throughout the
+   * constructors.
+   *
+   * To be called after the store variable has been initialized!
+   */
+  private void initializeMetricNames() {
+    byte[] family;
+    if (null != this.store) {
+      family = this.store.getFamily().getName();
+    } else {
+      family = Bytes.toBytes("__unknown");
+    }
+    String mutationSignature = HRegion.createMutationSignature(family);
+    this.metricNameGetsize = mutationSignature + ".getsize";
   }
 
   /*
@@ -186,6 +210,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     return scanners;
   }
 
+  @Override
   public synchronized KeyValue peek() {
     if (this.heap == null) {
       return this.lastTop;
@@ -193,11 +218,13 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     return this.heap.peek();
   }
 
+  @Override
   public KeyValue next() {
     // throw runtime exception perhaps?
     throw new RuntimeException("Never call StoreScanner.next()");
   }
 
+  @Override
   public synchronized void close() {
     if (this.closing) return;
     this.closing = true;
@@ -210,6 +237,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     this.lastTop = null; // If both are null, we are closed.
   }
 
+  @Override
   public synchronized boolean seek(KeyValue key) throws IOException {
     if (this.heap == null) {
 
@@ -227,6 +255,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    * @param limit
    * @return true if there are more rows, false if scanner is done
    */
+  @Override
   public synchronized boolean next(List<KeyValue> outResult, int limit) throws IOException {
     //DebugPrint.println("SS.next");
 
@@ -269,6 +298,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
             break LOOP;
           }
 
+          HRegion.incrNumericMetric(this.metricNameGetsize, copyKv.getLength());
           results.add(copyKv);
           this.heap.next();
           if (limit > 0 && (results.size() == limit)) {
@@ -333,11 +363,13 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     return false;
   }
 
+  @Override
   public synchronized boolean next(List<KeyValue> outResult) throws IOException {
     return next(outResult, -1);
   }
 
   // Implementation of ChangedReadersObserver
+  @Override
   public synchronized void updateReaders() throws IOException {
     if (this.closing) return;
 
