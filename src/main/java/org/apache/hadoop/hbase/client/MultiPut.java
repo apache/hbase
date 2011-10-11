@@ -88,8 +88,8 @@ public class MultiPut implements Writable {
     for (List<Put> items : puts.values()) {
       sb.append("#puts:" + items.size() + " <");
       for (Put p : items) {
-        sb.append(p.toStringMax(4096));
-        if (sb.length() > 4096 * 2) {
+        sb.append(p.toStringMax(512));
+        if (sb.length() > 512 * 2) {
           sb.append("....<output truncated>...");
           return sb.toString();
         }
