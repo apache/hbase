@@ -63,8 +63,26 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     private int storefileSizeMB;
     /** the current size of the memstore for the region, in MB */
     private int memstoreSizeMB;
-    /** the current total size of storefile indexes for the region, in MB */
+
+    /**
+     * The current total size of root-level store file indexes for the region,
+     * in MB. The same as {@link #rootIndexSizeKB} but in MB.
+     */
     private int storefileIndexSizeMB;
+
+    /** The current total size of root-level indexes for the region, in KB */
+    private int rootIndexSizeKB;
+
+    /**
+     * The total size of all index blocks, not just the root level, in KB.
+     */
+    private int totalStaticIndexSizeKB;
+
+    /**
+     * The total size of all Bloom filter blocks, not just loaded into the
+     * block cache, in KB.
+     */
+    private int totalStaticBloomSizeKB;
 
     /**
      * Constructor, for Writable
@@ -83,13 +101,18 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
      */
     public RegionLoad(final byte[] name, final int stores,
         final int storefiles, final int storefileSizeMB,
-        final int memstoreSizeMB, final int storefileIndexSizeMB) {
+        final int memstoreSizeMB, final int storefileIndexSizeMB,
+        final int rootIndexSizeKB, final int totalStaticIndexSizeKB,
+        final int totalStaticBloomSizeKB) {
       this.name = name;
       this.stores = stores;
       this.storefiles = storefiles;
       this.storefileSizeMB = storefileSizeMB;
       this.memstoreSizeMB = memstoreSizeMB;
       this.storefileIndexSizeMB = storefileIndexSizeMB;
+      this.rootIndexSizeKB = rootIndexSizeKB;
+      this.totalStaticIndexSizeKB = totalStaticIndexSizeKB;
+      this.totalStaticBloomSizeKB = totalStaticBloomSizeKB;
     }
 
     // Getters
@@ -191,6 +214,9 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       this.storefileSizeMB = in.readInt();
       this.memstoreSizeMB = in.readInt();
       this.storefileIndexSizeMB = in.readInt();
+      this.rootIndexSizeKB = in.readInt();
+      this.totalStaticIndexSizeKB = in.readInt();
+      this.totalStaticBloomSizeKB = in.readInt();
     }
 
     public void write(DataOutput out) throws IOException {
@@ -201,6 +227,9 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       out.writeInt(storefileSizeMB);
       out.writeInt(memstoreSizeMB);
       out.writeInt(storefileIndexSizeMB);
+      out.writeInt(rootIndexSizeKB);
+      out.writeInt(totalStaticIndexSizeKB);
+      out.writeInt(totalStaticBloomSizeKB);
     }
 
     /**
@@ -218,6 +247,12 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
         Integer.valueOf(this.memstoreSizeMB));
       sb = Strings.appendKeyValue(sb, "storefileIndexSizeMB",
         Integer.valueOf(this.storefileIndexSizeMB));
+      sb = Strings.appendKeyValue(sb, "rootIndexSizeKB",
+          Integer.valueOf(this.rootIndexSizeKB));
+      sb = Strings.appendKeyValue(sb, "totalStaticIndexSizeKB",
+          Integer.valueOf(this.totalStaticIndexSizeKB));
+      sb = Strings.appendKeyValue(sb, "totalStaticBloomSizeKB",
+          Integer.valueOf(this.totalStaticBloomSizeKB));
       return sb.toString();
     }
   }
@@ -457,9 +492,12 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   @Deprecated
   public void addRegionInfo(final byte[] name, final int stores,
       final int storefiles, final int storefileSizeMB,
-      final int memstoreSizeMB, final int storefileIndexSizeMB) {
+      final int memstoreSizeMB, final int storefileIndexSizeMB,
+      final int rootIndexSizeKB, final int totalStaticIndexSizeKB,
+      final int totalStaticBloomSizeKB) {
     this.regionLoad.add(new HServerLoad.RegionLoad(name, stores, storefiles,
-      storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB));
+      storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, rootIndexSizeKB,
+      totalStaticIndexSizeKB, totalStaticBloomSizeKB));
   }
 
   // Writable

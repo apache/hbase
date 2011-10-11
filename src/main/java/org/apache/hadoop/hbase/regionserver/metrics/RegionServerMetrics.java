@@ -109,10 +109,24 @@ public class RegionServerMetrics implements Updater {
   public final MetricsIntValue storefiles = new MetricsIntValue("storefiles", registry);
 
   /**
-   * Sum of all the storefile index sizes in this regionserver in MB
+   * Sum of all the storefile index sizes in this regionserver in MB. This is
+   * a legacy metric to be phased out as we fully transition to multi-level
+   * block indexes.
    */
   public final MetricsIntValue storefileIndexSizeMB =
     new MetricsIntValue("storefileIndexSizeMB", registry);
+
+  /** The total size of block index root levels in this regionserver in KB. */
+  public final MetricsIntValue rootIndexSizeKB =
+    new MetricsIntValue("rootIndexSizeKB", registry);
+
+  /** Total size of all block indexes (not necessarily loaded in memory) */
+  public final MetricsIntValue totalStaticIndexSizeKB =
+    new MetricsIntValue("totalStaticIndexSizeKB", registry);
+
+  /** Total size of all Bloom filters (not necessarily loaded in memory) */
+  public final MetricsIntValue totalStaticBloomSizeKB =
+    new MetricsIntValue("totalStaticBloomSizeKB", registry);
 
   /**
    * Sum of all the memstore sizes in this regionserver in MB
@@ -241,6 +255,9 @@ public class RegionServerMetrics implements Updater {
       this.stores.pushMetric(this.metricsRecord);
       this.storefiles.pushMetric(this.metricsRecord);
       this.storefileIndexSizeMB.pushMetric(this.metricsRecord);
+      this.rootIndexSizeKB.pushMetric(this.metricsRecord);
+      this.totalStaticIndexSizeKB.pushMetric(this.metricsRecord);
+      this.totalStaticBloomSizeKB.pushMetric(this.metricsRecord);
       this.memstoreSizeMB.pushMetric(this.metricsRecord);
       this.regions.pushMetric(this.metricsRecord);
       this.requests.pushMetric(this.metricsRecord);
@@ -371,6 +388,12 @@ public class RegionServerMetrics implements Updater {
       Integer.valueOf(this.storefiles.get()));
     sb = Strings.appendKeyValue(sb, "storefileIndexSize",
       Integer.valueOf(this.storefileIndexSizeMB.get()));
+    sb = Strings.appendKeyValue(sb, "rootIndexSizeKB",
+        Integer.valueOf(this.rootIndexSizeKB.get()));
+    sb = Strings.appendKeyValue(sb, "totalStaticIndexSizeKB",
+        Integer.valueOf(this.totalStaticIndexSizeKB.get()));
+    sb = Strings.appendKeyValue(sb, "totalStaticBloomSizeKB",
+        Integer.valueOf(this.totalStaticBloomSizeKB.get()));
     sb = Strings.appendKeyValue(sb, "memstoreSize",
       Integer.valueOf(this.memstoreSizeMB.get()));
     sb = Strings.appendKeyValue(sb, "compactionQueueSize",

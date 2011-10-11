@@ -770,18 +770,33 @@ public class HRegionServer implements HRegionInterface,
     int storefileSizeMB = 0;
     int memstoreSizeMB = (int)(r.memstoreSize.get()/1024/1024);
     int storefileIndexSizeMB = 0;
+    int rootIndexSizeKB = 0;
+    int totalStaticIndexSizeKB = 0;
+    int totalStaticBloomSizeKB = 0;
     synchronized (r.stores) {
       stores += r.stores.size();
       for (Store store: r.stores.values()) {
         storefiles += store.getStorefilesCount();
+
         storefileSizeMB +=
           (int)(store.getStorefilesSize()/1024/1024);
+
         storefileIndexSizeMB +=
           (int)(store.getStorefilesIndexSize()/1024/1024);
+
+        rootIndexSizeKB +=
+            (int) (store.getStorefilesIndexSize() / 1024);
+
+        totalStaticIndexSizeKB +=
+          (int) (store.getTotalStaticIndexSize() / 1024);
+
+        totalStaticBloomSizeKB +=
+          (int) (store.getTotalStaticBloomSize() / 1024);
       }
     }
     return new HServerLoad.RegionLoad(name, stores, storefiles,
-      storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB);
+      storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, rootIndexSizeKB,
+      totalStaticIndexSizeKB, totalStaticBloomSizeKB);
   }
 
   /**
@@ -987,6 +1002,8 @@ public class HRegionServer implements HRegionInterface,
     int storefiles = 0;
     long memstoreSize = 0;
     long storefileIndexSize = 0;
+    long totalStaticIndexSize = 0;
+    long totalStaticBloomSize = 0;
     synchronized (this.onlineRegions) {
       for (Map.Entry<Integer, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
@@ -997,6 +1014,8 @@ public class HRegionServer implements HRegionInterface,
             Store store = ee.getValue();
             storefiles += store.getStorefilesCount();
             storefileIndexSize += store.getStorefilesIndexSize();
+            totalStaticIndexSize += store.getTotalStaticIndexSize();
+            totalStaticBloomSize += store.getTotalStaticBloomSize();
           }
         }
       }
@@ -1004,7 +1023,14 @@ public class HRegionServer implements HRegionInterface,
     this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);
     this.metrics.memstoreSizeMB.set((int)(memstoreSize/(1024*1024)));
-    this.metrics.storefileIndexSizeMB.set((int)(storefileIndexSize/(1024*1024)));
+    this.metrics.storefileIndexSizeMB.set(
+        (int) (storefileIndexSize / (1024 * 1024)));
+    this.metrics.rootIndexSizeKB.set(
+        (int) (storefileIndexSize / 1024));
+    this.metrics.totalStaticIndexSizeKB.set(
+        (int) (totalStaticIndexSize / 1024));
+    this.metrics.totalStaticBloomSizeKB.set(
+        (int) (totalStaticBloomSize / 1024));
     this.metrics.compactionQueueSize.set(compactSplitThread.
       getCompactionQueueSize());
 
