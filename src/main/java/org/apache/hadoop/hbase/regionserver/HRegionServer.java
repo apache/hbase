@@ -168,6 +168,10 @@ public class HRegionServer implements HRegionInterface,
   protected final Map<Integer, HRegion> onlineRegions =
     new ConcurrentHashMap<Integer, HRegion>();
 
+  // This a list of regions that we need to re-try closing.
+  protected final Map<Integer, HRegion> retryCloseRegions = Collections
+      .synchronizedMap(new HashMap<Integer, HRegion>());
+
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final LinkedBlockingQueue<HMsg> outboundMsgs =
     new LinkedBlockingQueue<HMsg>();
@@ -1658,8 +1662,17 @@ public class HRegionServer implements HRegionInterface,
       zkUpdater.startRegionCloseEvent(null, false);
     }
     HRegion region = this.removeFromOnlineRegions(hri);
+    if (region == null) {
+      region = this.removeFromRetryCloseRegions(hri);
+    }
     if (region != null) {
-      region.close();
+      try {
+        region.close();
+      } catch (IOException e) {
+        // If region closing fails, add it to retry map.
+        this.addToRetryCloseRegions(region);
+        throw e;
+      }
       if(reportWhenCompleted) {
         if(zkUpdater != null) {
           HMsg hmsg = new HMsg(HMsg.Type.MSG_REPORT_CLOSE, hri, null);
@@ -2329,6 +2342,31 @@ public class HRegionServer implements HRegionInterface,
       this.lock.writeLock().unlock();
     }
     return toReturn;
+  }
+
+  /**
+   * This method removes HRegion corresponding to hri from the Map of regions to
+   * retry closing.
+   *
+   * @param hri
+   *          the HRegionInfo corresponding to the HRegion to-be-removed.
+   * @return the removed HRegion, or null if the HRegion was not in
+   *         onlineRegions.
+   */
+  HRegion removeFromRetryCloseRegions(HRegionInfo hri) {
+    return this.retryCloseRegions.remove(Bytes.mapKey(hri.getRegionName()));
+  }
+
+  /**
+   * This method adds HRegion corresponding to hri from the Map of regions to
+   * retry closing
+   *
+   * @param hri
+   *          the HRegionInfo corresponding to the HRegion to-be-added.
+   */
+  void addToRetryCloseRegions(HRegion hr) {
+    this.retryCloseRegions.put(
+        Bytes.mapKey(hr.getRegionInfo().getRegionName()), hr);
   }
 
   /**

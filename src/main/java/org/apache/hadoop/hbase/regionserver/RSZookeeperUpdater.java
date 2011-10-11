@@ -12,6 +12,7 @@ import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.CreateMode;
@@ -60,13 +61,32 @@ public class RSZookeeperUpdater {
   public void startRegionCloseEvent(HMsg hmsg, boolean updatePeriodically) throws IOException {
     // if this ZNode already exists, something is wrong
     if(zkWrapper.exists(regionZNode, true)) {
-      String msg = "ZNode " + regionZNode + " already exists in ZooKeeper, will NOT close region.";
-      LOG.error(msg);
-      throw new IOException(msg);
-    }
+      zkWrapper.sync(regionZNode);
 
-    // create the region node in the unassigned directory first
-    zkWrapper.createZNodeIfNotExists(regionZNode, null, CreateMode.PERSISTENT, true);
+      // Get RS which created the node.
+      RegionTransitionEventData rsData = null;
+      Stat stat = new Stat();
+      byte[] data = zkWrapper.readZNode(regionZNode, stat);
+      rsData = new RegionTransitionEventData();
+      Writables.getWritable(data, rsData);
+
+      // If the RS that created this node is not the current RS, then throw an
+      // Exception since some other RS is trying to close the region, otherwise
+      // continue since the current RS is re-trying to close the region.
+      if (!rsData.getRsName().equals(regionServerName)) {
+        String msg = "ZNode " + regionZNode
+            + " already exists in ZooKeeper, was created by " +
+            rsData.getRsName() + " hence regionserver " +
+            regionServerName + " cannot close it";
+        LOG.error(msg);
+        throw new IOException(msg);
+      }
+      this.zkVersion = stat.getVersion();
+    } else {
+      // create the region node in the unassigned directory first
+      zkWrapper.createZNodeIfNotExists(regionZNode, null, CreateMode.PERSISTENT,
+          true);
+    }
 
     // update the data for "regionName" ZNode in unassigned to CLOSING
     updateZKWithEventData(HBaseEventType.RS2ZK_REGION_CLOSING, hmsg);
