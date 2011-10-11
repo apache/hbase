@@ -212,7 +212,16 @@ class MemStoreFlusher extends Thread implements FlushRequester {
           LOG.warn("Region " + region.getRegionNameAsString() + " has too many " +
             "store files; delaying flush up to " + this.blockingWaitTime + "ms");
         }
-        if (!this.server.compactSplitThread.requestSplit(region)) {
+
+        /* If a split has been requested, we avoid scheduling a compaction
+         * request because we'll have to compact after the split anyway.
+         * However, if the region has reference files (from a previous split),
+         * we do need to let the compactions go through so that half file
+         * references to parent regions are removed, and we can split this
+         * region further.
+         */
+        if (!this.server.compactSplitThread.requestSplit(region)
+            || region.hasReferences()) {
           this.server.compactSplitThread.requestCompaction(region, getName());
         }
         // Put back on the queue.  Have it come back out of the queue

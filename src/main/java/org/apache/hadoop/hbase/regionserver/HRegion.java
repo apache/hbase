@@ -972,7 +972,9 @@ public class HRegion implements HeapSize { // , Writable{
    * to be split.
    */
   public byte[] compactStores() throws IOException {
-    for(Store s : getStores().values()) {
+
+    // first compact all stores
+    for (Store s : getStores().values()) {
       CompactionRequest cr = s.requestCompaction();
       if(cr != null) {
         try {
@@ -981,6 +983,15 @@ public class HRegion implements HeapSize { // , Writable{
           s.finishRequest(cr);
         }
       }
+    }
+
+    // if for some reason we still have references, we can't split further
+    if (hasReferences()) {
+      return null;
+    }
+
+    // check if we need to split now; and if so find the midkey
+    for (Store s : getStores().values()) {
       byte[] splitRow = s.checkSplit();
       if (splitRow != null) {
         return splitRow;
