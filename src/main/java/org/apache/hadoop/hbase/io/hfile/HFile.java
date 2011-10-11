@@ -1909,7 +1909,8 @@ public class HFile {
       CommandLineParser parser = new PosixParser();
       CommandLine cmd = parser.parse(options, args);
       boolean verbose = cmd.hasOption("v");
-      boolean printKeyValue = cmd.hasOption("p");
+      boolean printValue = cmd.hasOption("p");
+      boolean printKey = cmd.hasOption("pk") || printValue;
       boolean printMeta = cmd.hasOption("m");
       boolean checkRow = cmd.hasOption("k");
       boolean checkFamily = cmd.hasOption("a");
@@ -1955,7 +1956,7 @@ public class HFile {
 
         Map<byte[],byte[]> fileInfo = reader.loadFileInfo();
         int count = 0;
-        if (verbose || printKeyValue || checkRow || checkFamily) {
+        if (verbose || printKey || checkRow || checkFamily) {
           // scan over file and read key/value's and check if requested
           HFileScanner scanner = reader.getScanner(false, false);
           scanner.seekTo();
@@ -1963,9 +1964,12 @@ public class HFile {
           do {
             KeyValue kv = scanner.getKeyValue();
             // dump key value
-            if (printKeyValue) {
-              System.out.println("K: " + kv +
-                  " V: " + Bytes.toStringBinary(kv.getValue()));
+            if (printKey) {
+              System.out.print("K: " + kv);
+              if (printValue) {
+                System.out.print(" V: " + Bytes.toStringBinary(kv.getValue()));
+              }
+              System.out.println();
             }
             // check if rows are in order
             if (checkRow && pkv != null) {
@@ -1996,7 +2000,7 @@ public class HFile {
           } while (scanner.next());
         }
 
-        if (verbose || printKeyValue) {
+        if (verbose || printKey) {
           System.out.println("Scanned kv count -> " + count);
         }
 
