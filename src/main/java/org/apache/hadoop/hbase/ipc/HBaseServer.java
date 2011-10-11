@@ -88,12 +88,17 @@ public abstract class HBaseServer {
   private static final int MAX_QUEUE_SIZE_PER_HANDLER = 100;
 
   private static final String WARN_RESPONSE_SIZE =
-      "hbase.ipc.warn.response.size";
+    "hbase.ipc.warn.response.size";
 
-  /** Default value for above param */
+  private static final String WARN_RESPONSE_TIME =
+    "hbase.ipc.warn.response.time";
+
+  /** Default value for above params */
   private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
+  private static final int DEFAULT_WARN_RESPONSE_TIME = 1000; // milliseconds
 
   private final int warnResponseSize;
+  private final int warnResponseTime;
 
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseServer");
@@ -920,7 +925,7 @@ public abstract class HBaseServer {
           String errorClass = null;
           String error = null;
           Writable value = null;
-
+          long now = System.currentTimeMillis();
           CurCall.set(call);
           UserGroupInformation previous = UserGroupInformation.getCurrentUGI();
           UserGroupInformation.setCurrentUser(call.connection.ticket);
@@ -963,12 +968,16 @@ public abstract class HBaseServer {
             WritableUtils.writeString(out, errorClass);
             WritableUtils.writeString(out, error);
           }
-
-          if (buf.size() > warnResponseSize) {
-            LOG.warn(getName()+", responseTooLarge for: "+call+": Size: "
-                     + StringUtils.humanReadableInt(buf.size()));
+          long took = System.currentTimeMillis() - now;
+          if ((buf.size() > warnResponseSize) ||
+              (took > warnResponseTime)) {
+            LOG.warn(getName() + ": "
+                + ((buf.size() > warnResponseSize) ? "(responseTooLarge) " : "")
+                + ((took > warnResponseTime) ? "(responseTooSlow) " : "")
+                + call +
+                ": Size: " + StringUtils.humanReadableInt(buf.size()) +
+                ": Time (ms): " + took);
           }
-
 
           call.setResponse(buf.getByteBuffer());
           responder.doRespond(call);
@@ -1034,8 +1043,10 @@ public abstract class HBaseServer {
     this.tcpKeepAlive = conf.getBoolean("ipc.server.tcpkeepalive", true);
 
     this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
-                                        DEFAULT_WARN_RESPONSE_SIZE);
+        DEFAULT_WARN_RESPONSE_SIZE);
 
+    this.warnResponseTime = conf.getInt(WARN_RESPONSE_TIME,
+        DEFAULT_WARN_RESPONSE_TIME);
 
     // Create the responder here
     responder = new Responder();
