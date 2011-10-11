@@ -587,8 +587,8 @@ public class HBaseRPC {
       this.verbose = verbose;
       this.warnResponseTime = conf.getInt(WARN_RESPONSE_TIME,
           DEFAULT_WARN_RESPONSE_TIME);
-    this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
-        DEFAULT_WARN_RESPONSE_SIZE);
+      this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
+          DEFAULT_WARN_RESPONSE_SIZE);
     }
 
     @Override
