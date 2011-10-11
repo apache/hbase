@@ -43,6 +43,7 @@ public class MultiThreadedReader extends MultiThreadedAction
   Set<HBaseReader> readers_ = new HashSet<HBaseReader>();
 
   public MultiThreadedReader(HBaseConfiguration conf, byte[] tableName, byte[] columnFamily) {
+    super("R");
     tableName_ = tableName;
     columnFamily_ = columnFamily;
     conf_ = conf;

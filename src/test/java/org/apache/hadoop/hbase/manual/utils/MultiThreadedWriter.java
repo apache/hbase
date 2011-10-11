@@ -56,6 +56,7 @@ public class MultiThreadedWriter extends MultiThreadedAction
   public static List<Long> failedKeySet_ = Collections.synchronizedList(new ArrayList<Long>());
 
   public MultiThreadedWriter(HBaseConfiguration conf, byte[] tableName, byte[] columnFamily) {
+    super("W");
     tableName_ = tableName;
     columnFamily_ = columnFamily;
     conf_ = conf;

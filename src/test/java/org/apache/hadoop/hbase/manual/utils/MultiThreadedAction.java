@@ -19,16 +19,19 @@
  */
 package org.apache.hadoop.hbase.manual.utils;
 
+import java.lang.management.ManagementFactory;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 
-
-public abstract class MultiThreadedAction
+public abstract class MultiThreadedAction implements MultiThreadedActionMBean
 {
   private static final Log LOG = LogFactory.getLog(MultiThreadedAction.class);
   public static int numThreads_ = 1;
@@ -48,6 +51,95 @@ public abstract class MultiThreadedAction
   public Random random_ = new Random();
   public HBaseConfiguration conf_;
 
+  private AtomicLong priorKeysPerSecondCumulativeKeys_ = new AtomicLong(0);
+  private AtomicLong priorKeysPerSecondTime_ = new AtomicLong(System.currentTimeMillis());
+  private AtomicLong priorColumnsPerSecondCumulativeColumns_ = new AtomicLong(0);
+  private AtomicLong priorColumnsPerSecondTime_ = new AtomicLong(System.currentTimeMillis());
+  private AtomicLong priorLatencyCumulativeKeys_ = new AtomicLong(0);
+  private AtomicLong priorLatencyCumulativeLatency_ = new AtomicLong(0);
+  private final long startTime = System.currentTimeMillis();
+
+  public MultiThreadedAction(String id) {
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    try {
+      ObjectName name = new ObjectName("LoadTester:name=" + id);
+      mbs.registerMBean(this, name);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  public long getKeysPerSecond() {
+    long currentTime = System.currentTimeMillis();
+    long priorTime = priorKeysPerSecondTime_.getAndSet(currentTime);
+    long currentKeys = numKeys_.get();
+    long priorKeys = priorKeysPerSecondCumulativeKeys_.getAndSet(currentKeys);
+    long timeDelta = currentTime - priorTime;
+    if (timeDelta == 0) {
+      return 0;
+    }
+    return 1000 * (currentKeys - priorKeys) / timeDelta;
+  }
+
+  public long getColumnsPerSecond() {
+    long currentTime = System.currentTimeMillis();
+    long priorTime = priorColumnsPerSecondTime_.getAndSet(currentTime);
+    long currentColumns = numCols_.get();
+    long priorColumns = priorColumnsPerSecondCumulativeColumns_.getAndSet(currentColumns);
+    long timeDelta = currentTime - priorTime;
+    if (timeDelta == 0) {
+      return 0;
+    }
+    return 1000 * (currentColumns - priorColumns) / timeDelta;
+  }
+
+  public long getAverageLatency() {
+    long currentLatency = cumulativeOpTime_.get();
+    long priorLatency = priorLatencyCumulativeLatency_.getAndSet(currentLatency);
+    long currentKeys = numKeys_.get();
+    long priorKeys = priorLatencyCumulativeKeys_.getAndSet(currentKeys);
+    long keyDelta = currentKeys - priorKeys;
+    if (keyDelta == 0) {
+      return 0;
+    }
+    return (currentLatency - priorLatency) / keyDelta;
+  }
+
+  public long getCumulativeKeysPerSecond() {
+    long timeDelta = System.currentTimeMillis() - startTime;
+    if (timeDelta == 0) {
+      return 0;
+    }
+    return 1000 * numKeys_.get() / timeDelta;
+  }
+
+  public long getCumulativeKeys() {
+    return numKeys_.get();
+  }
+
+  public long getCumulativeColumns() {
+    return numCols_.get();
+  }
+
+  public long getCumulativeAverageLatency() {
+    if (numKeys_.get() == 0) {
+      return 0;
+    }
+    return cumulativeOpTime_.get() / numKeys_.get();
+  }
+
+  public long getCumulativeErrors() {
+    return numErrors_.get();
+  }
+
+  public long getCumulativeOpFailures() {
+    return numOpFailures_.get();
+  }
+
+  public long getCumulativeKeysVerified() {
+    return numKeysVerified_.get();
+  }
+
   public void startReporter(String id) {
     (new ProgressReporter(id)).start();
   }
@@ -66,6 +158,7 @@ public abstract class MultiThreadedAction
 
       long priorNumKeys = 0;
       long priorCumulativeOpTime = 0;
+      int priorAverageKeysPerSecond = 0;
 
       while(numThreadsWorking_.get() != 0) {
         String threadsLeft = "[" + id_ + ":" + numThreadsWorking_.get() + "] ";
@@ -79,6 +172,7 @@ public abstract class MultiThreadedAction
 
           long numKeysDelta = numKeys - priorNumKeys;
           long cumulativeOpTimeDelta = cumulativeOpTime - priorCumulativeOpTime;
+          double averageKeysPerSecond = (time > 0) ? (numKeys * 1000 / time) : 0;
 
           LOG.info(threadsLeft + "Keys = " + numKeys +
                    ", cols = " + DisplayFormatUtils.formatNumber(numCols_.get()) +
@@ -96,8 +190,15 @@ public abstract class MultiThreadedAction
                    ((numErrors_.get()>0)?(", ERRORS = " + numErrors_.get()):"")
                    );
 
+          // Write stats in a format that can be interpretted as counters by
+          // streaming map-reduce jobs.
+          System.err.println("reporter:counter:numKeys," + id_ + "," + numKeysDelta);
+          System.err.println("reporter:counter:numCols," + id_ + "," + numCols_.get());
+          System.err.println("reporter:counter:avgKeysPerSecond," + id_ + "," + ((int)averageKeysPerSecond - priorAverageKeysPerSecond));
+
           priorNumKeys = numKeys;
           priorCumulativeOpTime = cumulativeOpTime;
+          priorAverageKeysPerSecond = (int)averageKeysPerSecond;
         }
         try {
           Thread.sleep(reportingInterval);
