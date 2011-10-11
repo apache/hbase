@@ -218,10 +218,12 @@ public class Store implements HeapSize {
     this.peakStartHour = conf.getInt("hbase.peak.start.hour", -1);
     this.peakEndHour = conf.getInt("hbase.peak.end.hour", -1);
     if (!isValidHour(this.peakStartHour) || !isValidHour(this.peakEndHour)) {
+      if (!(this.peakStartHour == -1 && this.peakEndHour == -1)) {
+        LOG.warn("Invalid start/end hour for peak hour : start = " +
+            this.peakStartHour + " end = " + this.peakEndHour +
+            ". Valid numbers are [0-23]");
+      }
       this.peakStartHour = this.peakEndHour = -1;
-      LOG.warn("Invalid start/end hour for peak hour : start = " +
-          this.peakStartHour + " end = " + this.peakEndHour +
-          ". Valid numbers are [0-23]");
     }
   }
 
