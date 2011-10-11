@@ -638,7 +638,7 @@ public class HMaster extends Thread implements HMasterInterface,
         this.preferredRegionToRegionServerMapping = FSUtils
             .getRegionLocalityMappingFromFS(fs, rootdir,
                 conf.getInt("hbase.master.localityCheck.threadPoolSize", 5),
-                threadWakeFrequency);
+                conf);
       } catch (Exception e) {
         LOG.error("Got unexpected exception when getting " +
             "preferredRegionToHostMapping : " + e.toString());

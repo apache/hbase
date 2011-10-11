@@ -709,23 +709,87 @@ public class FSUtils {
    *          the root path to start from
    * @param threadPoolSize
    *          the thread pool size to use
-   * @param threadWakeFrequency
-   *          the wake frequency to perform stat printing
+   * @param conf
+   *          the configuration to use
    * @return the mapping to consider as best possible assignment
    * @throws IOException
    *           in case of file system errors or interrupts
    */
   public static Map<String, String> getRegionLocalityMappingFromFS(
       final FileSystem fs, final Path rootPath, int threadPoolSize,
-      final int threadWakeFrequency)
+      final Configuration conf) throws IOException {
+    return getRegionLocalityMappingFromFS(fs, rootPath, threadPoolSize, conf,
+        null);
+  }
+
+  /**
+   * This function is to scan the root path of the file system to get the
+   * mapping between the region name and its best locality region server
+   *
+   * @param fs
+   *          the file system to use
+   * @param rootPath
+   *          the root path to start from
+   * @param threadPoolSize
+   *          the thread pool size to use
+   * @param conf
+   *          the configuration to use
+   * @param desiredTable
+   *          the table you wish to scan locality for
+   * @return the mapping to consider as best possible assignment
+   * @throws IOException
+   *           in case of file system errors or interrupts
+   */
+  public static Map<String, String> getRegionLocalityMappingFromFS(
+      final FileSystem fs, final Path rootPath, int threadPoolSize,
+      final Configuration conf, final String desiredTable)
       throws IOException {
     // region name to its best locality region server mapping
     Map<String, String> regionToBestLocalityRSMapping =
        new ConcurrentHashMap<String,  String>();
 
     long startTime = System.currentTimeMillis();
-    Path queryPath = new Path(rootPath.toString() + "/*/*/");
-    FileStatus[] statusList = fs.globStatus(queryPath);
+    Path queryPath;
+    if (null == desiredTable) {
+      queryPath = new Path(rootPath.toString() + "/*/*/");
+    } else {
+      queryPath = new Path(rootPath.toString() + "/" + desiredTable + "/*/");
+    }
+
+    // reject all paths that are not appropriate
+    PathFilter pathFilter = new PathFilter() {
+      @Override
+      public boolean accept(Path path) {
+        // this is the region name; it may get some noise data
+        if (null == path) {
+          return false;
+        }
+
+        // no parent?
+        Path parent = path.getParent();
+        if (null == parent) {
+          return false;
+        }
+
+        // not part of a table?
+        if (parent.getName().startsWith(".")
+            && !parent.getName().equals(".META.")) {
+          return false;
+        }
+
+        String regionName = path.getName();
+        if (null == regionName) {
+          return false;
+        }
+
+        if (!regionName.toLowerCase().matches("[0-9a-f]+")) {
+          return false;
+        }
+        return true;
+      }
+    };
+
+    FileStatus[] statusList = fs.globStatus(queryPath, pathFilter);
 
     LOG.debug("Query Path: " + queryPath + " ; # list of files: " +
         statusList.length);
@@ -768,7 +832,6 @@ public class FSUtils {
       }
 
       // ignore all file status items that are not of interest
-      int current = 0;
       for (FileStatus regionStatus : statusList) {
         if (null == regionStatus) {
           continue;
@@ -778,10 +841,8 @@ public class FSUtils {
           continue;
         }
 
-        // get the region name; it may get some noise data
         Path regionPath = regionStatus.getPath();
-        String regionName = regionPath.getName();
-        if (!regionName.toLowerCase().matches("[0-9a-f]+")) {
+        if (null == regionPath) {
           continue;
         }
 
@@ -789,9 +850,8 @@ public class FSUtils {
         // threads get things to do; can create empty buckets in the rare case
         // in which we end up getting less region paths than we have threads to
         // handle them
-        buckets.get(current % threadPoolSize).add(regionPath);
+        buckets.get(totalGoodRegionFiles % threadPoolSize).add(regionPath);
         ++totalGoodRegionFiles;
-        ++current;
       }
 
       // start each thread in executor service
@@ -801,6 +861,8 @@ public class FSUtils {
     } finally {
       if (null != tpe && null != parallelTasks) {
         tpe.shutdown();
+        int threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+            60 * 1000);
         try {
           // here we wait until TPE terminates, which is either naturally or by
           // exceptions in the execution of the threads
@@ -813,7 +875,7 @@ public class FSUtils {
 
             // printing out rough estimate, so as to not introduce
             // AtomicInteger
-            LOG.info("Locality checking is underway: { THREADS : "
+            LOG.info("Locality checking is underway: { Threads completed : "
                 + tpe.getCompletedTaskCount() + "/" + parallelTasks.length
                 + " , Scanned Regions : " + filesDone + "/"
                 + totalGoodRegionFiles + " }");
@@ -837,6 +899,8 @@ public class FSUtils {
  * Thread to be used for
  */
 class FSRegionScanner implements Runnable {
+  static private final Log LOG = LogFactory.getLog(FSRegionScanner.class);
+
   /**
    * The shared block count map
    */
@@ -888,11 +952,11 @@ class FSRegionScanner implements Runnable {
     try {
       for (Path regionPath : paths) {
         try {
+          // empty the map for each region
+          blockCountMap.clear();
 
-          // break here in case this for loop selects some of the null-pading
-          // elements at the end of the receiving arrays
           if (null == regionPath) {
-            break;
+            continue;
           }
           //get table name
           String tableName = regionPath.getParent().getName();
@@ -959,8 +1023,10 @@ class FSRegionScanner implements Runnable {
 
           this.numerOfFinishedRegions++;
         } catch (IOException e) {
+          LOG.warn("Problem scanning file system", e);
           continue;
         } catch (RuntimeException e) {
+          LOG.warn("Problem scanning file system", e);
           continue;
         }
       }
@@ -969,6 +1035,4 @@ class FSRegionScanner implements Runnable {
       assert this.numerOfFinishedRegions <= this.paths.size();
     }
   }
-  // we can use the error mechanism to stop the whole process if we want,
-  // instead of continuing on errors...
 }

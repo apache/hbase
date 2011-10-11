@@ -7,30 +7,50 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseFsck.HbckInfo;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 public class HBaseLocalityCheck {
+  private static final Log LOG = LogFactory.getLog(HBaseLocalityCheck.class
+      .getName());
+
   private final FileSystem fs;
   private final Path rootdir;
   private Map<String, String> preferredRegionToRegionServerMapping = null;
   private Configuration conf;
-  private static final Log LOG =
-    LogFactory.getLog(HBaseLocalityCheck.class.getName());
+  /**
+   * The table we want to get locality for, or null in case we wanted a check
+   * over all
+   */
+  private final String tableName;
 
-  public HBaseLocalityCheck(Configuration conf) throws IOException {
+  /**
+   * Default constructor
+   *
+   * @param conf
+   *          the configuration object to use
+   * @param tableName
+   *          the tableName we wish to get locality check over, or null if all
+   * @throws IOException
+   *           in case of file system issues
+   */
+  public HBaseLocalityCheck(Configuration conf, final String tableName) throws IOException {
     this.conf = conf;
     this.rootdir = FSUtils.getRootDir(conf);
     this.fs = FileSystem.get(conf);
+    this.tableName = tableName;
   }
 
   /**
@@ -56,8 +76,8 @@ public class HBaseLocalityCheck {
     // Get the locality info for each region by scanning the file system
     preferredRegionToRegionServerMapping = FSUtils
         .getRegionLocalityMappingFromFS(fs, rootdir,
-            conf.getInt("hbase.client.localityCheck.threadPoolSize", 2),
-            conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 60 * 1000));
+            conf.getInt("hbase.client.localityCheck.threadPoolSize", 2), conf,
+            tableName);
 
     Map<String, AtomicInteger> tableToRegionCountMap =
       new HashMap<String, AtomicInteger>();
@@ -121,10 +141,51 @@ public class HBaseLocalityCheck {
       InterruptedException {
     long startTime = System.currentTimeMillis();
     Configuration conf = HBaseConfiguration.create();
-    HBaseLocalityCheck localck = new HBaseLocalityCheck(conf);
+    String tableName = null;
+    Options opt = new Options();
+    opt.addOption("D", true, "Override HBase Configuration Settings");
+    opt.addOption("table", true,
+        "Specify one precise table to scan for locality");
+    try {
+      CommandLine cmd = new GnuParser().parse(opt, args);
+
+      if (cmd.hasOption("D")) {
+        for (String confOpt : cmd.getOptionValues("D")) {
+          String[] kv = confOpt.split("=", 2);
+          if (kv.length == 2) {
+            conf.set(kv[0], kv[1]);
+            LOG.debug("-D configuration override: " + kv[0] + "=" + kv[1]);
+          } else {
+            throw new ParseException("-D option format invalid: " + confOpt);
+          }
+        }
+      }
+
+      if (cmd.hasOption("table")) {
+        tableName = cmd.getOptionValue("table");
+      }
+    } catch (ParseException e) {
+      LOG.error("Could not parse", e);
+      printUsageAndExit();
+    }
+
+    HBaseLocalityCheck localck = new HBaseLocalityCheck(conf, tableName);
     localck.showTableLocality();
     LOG.info("Locality Summary takes " +
         (System.currentTimeMillis() - startTime) + " ms to run" );
     Runtime.getRuntime().exit(0);
+  }
+
+  private static void printUsageAndExit() {
+    printUsageAndExit(null);
+  }
+
+  private static void printUsageAndExit(final String message) {
+    if (message != null) {
+      System.err.println(message);
+    }
+    System.err
+        .println("Usage: hbase localityck [-D <conf.param=value>]* [-table <tableName>]");
+    System.exit(0);
   }
 }
