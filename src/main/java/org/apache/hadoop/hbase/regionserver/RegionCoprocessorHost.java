@@ -947,6 +947,34 @@ public class RegionCoprocessorHost
   }
 
   /**
+   * @param append append object
+   * @return result to return to client if default operation should be
+   * bypassed, null otherwise
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  public Result preAppend(Append append)
+      throws IOException {
+    boolean bypass = false;
+    Result result = new Result();
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionObserver)env.getInstance()).preAppend(ctx, append, result);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return bypass ? result : null;
+  }
+
+  /**
    * @param increment increment object
    * @return result to return to client if default operation should be
    * bypassed, null otherwise
@@ -972,6 +1000,29 @@ public class RegionCoprocessorHost
       }
     }
     return bypass ? result : null;
+  }
+
+  /**
+   * @param append Append object
+   * @param result the result returned by postAppend
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  public void postAppend(final Append append, Result result)
+      throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionObserver)env.getInstance()).postAppend(ctx, append, result);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
   }
 
   /**

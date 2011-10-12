@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -455,6 +456,38 @@ public interface RegionObserver extends Coprocessor {
   long postIncrementColumnValue(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final long amount, final boolean writeToWAL, final long result)
+    throws IOException;
+
+  /**
+   * Called before Append
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions
+   * <p>
+   * Call CoprocessorEnvironment#complete to skip any subsequent chained
+   * coprocessors
+   * @param c the environment provided by the region server
+   * @param append Append object
+   * @param result The result to return to the client if default processing
+   * is bypassed. Can be modified. Will not be used if default processing
+   * is not bypassed.
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void preAppend(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Append append, final Result result)
+    throws IOException;
+
+  /**
+   * Called after Append
+   * <p>
+   * Call CoprocessorEnvironment#complete to skip any subsequent chained
+   * coprocessors
+   * @param c the environment provided by the region server
+   * @param append Append object
+   * @param result the result returned by increment, can be modified
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void postAppend(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Append append, final Result result)
     throws IOException;
 
   /**

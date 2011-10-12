@@ -203,4 +203,22 @@ public abstract class Mutation extends OperationWithAttributes {
     }
     return new UUID(Bytes.toLong(attr,0), Bytes.toLong(attr, Bytes.SIZEOF_LONG));
   }
+
+  /**
+   * @return the total number of KeyValues
+   */
+  public int size() {
+    int size = 0;
+    for(List<KeyValue> kvList : this.familyMap.values()) {
+      size += kvList.size();
+    }
+    return size;
+  }
+
+  /**
+   * @return the number of different families
+   */
+  public int numFamilies() {
+    return familyMap.size();
+  }
 }

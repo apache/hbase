@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -208,6 +209,19 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
    */
   public long incrementColumnValue(byte [] regionName, byte [] row,
       byte [] family, byte [] qualifier, long amount, boolean writeToWAL)
+  throws IOException;
+
+  /**
+   * Appends values to one or more columns values in a row. Optionally
+   * Returns the updated keys after the append.
+   * <p>
+   * This operation does not appear atomic to readers. Appends are done
+   * under a row lock but readers do not take row locks.
+   * @param regionName region name
+   * @param append Append operation
+   * @return changed cells (maybe null)
+   */
+  public Result append(byte[] regionName, Append append)
   throws IOException;
 
   /**

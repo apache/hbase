@@ -262,6 +262,21 @@ public interface HTableInterface {
       byte[] value, Delete delete) throws IOException;
 
   /**
+   * Appends values to one or more columns within a single row.
+   * <p>
+   * This operation does not appear atomic to readers.  Appends are done
+   * under a single row lock, so write operations to a row are synchronized, but
+   * readers do not take row locks so get and scan operations can see this
+   * operation partially completed.
+   *
+   * @param append object that specifies the columns and amounts to be used
+   *                  for the increment operations
+   * @throws IOException e
+   * @return values of columns after the append operation (maybe null)
+   */
+  public Result append(final Append append) throws IOException;
+
+  /**
    * Increments one or more columns within a single row.
    * <p>
    * This operation does not appear atomic to readers.  Increments are done

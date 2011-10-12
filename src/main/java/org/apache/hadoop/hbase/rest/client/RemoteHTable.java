@@ -596,6 +596,10 @@ public class RemoteHTable implements HTableInterface {
     throw new IOException("Increment not supported");
   }
 
+  public Result append(Append append) throws IOException {
+    throw new IOException("Append not supported");
+  }
+
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount) throws IOException {
     throw new IOException("incrementColumnValue not supported");

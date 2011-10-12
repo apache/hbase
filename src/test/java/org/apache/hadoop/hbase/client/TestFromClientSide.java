@@ -3913,6 +3913,29 @@ public class TestFromClientSide {
     assertTrue(scan.getFamilyMap().containsKey(FAMILY));
   }
 
+  @Test
+  public void testAppend() throws Exception {
+    LOG.info("Starting testAppend");
+    final byte [] TABLENAME = Bytes.toBytes("testAppend");
+    HTable t = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    byte[] v1 = Bytes.toBytes("42");
+    byte[] v2 = Bytes.toBytes("23");
+    byte [][] QUALIFIERS = new byte [][] {
+        Bytes.toBytes("a"), Bytes.toBytes("b")
+    };
+    Append a = new Append(ROW);
+    a.add(FAMILY, QUALIFIERS[0], v1);
+    a.add(FAMILY, QUALIFIERS[1], v2);
+    a.setReturnResults(false);
+    assertNullResult(t.append(a));
+
+    a = new Append(ROW);
+    a.add(FAMILY, QUALIFIERS[0], v2);
+    a.add(FAMILY, QUALIFIERS[1], v1);
+    Result r = t.append(a);
+    assertEquals(0, Bytes.compareTo(Bytes.add(v1,v2), r.getValue(FAMILY, QUALIFIERS[0])));
+    assertEquals(0, Bytes.compareTo(Bytes.add(v2,v1), r.getValue(FAMILY, QUALIFIERS[1])));
+  }
  
   @Test
   public void testIncrement() throws Exception {

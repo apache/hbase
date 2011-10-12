@@ -394,6 +394,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
 
       @Override
+      public Result append(Append append) throws IOException {
+        return table.append(append);
+      }
+
+      @Override
       public Result increment(Increment increment) throws IOException {
         return table.increment(increment);
       }
