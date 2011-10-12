@@ -49,19 +49,9 @@
     <revhistory>
       <revision>
         <date />
-        <revdescription>Adding first cuts at Configuration, Getting Started, Data Model</revdescription>
+        <revdescription>HBase version</revdescription>
         <revnumber>
           <?eval ${project.version}?>
-        </revnumber>
-      </revision>
-      <revision>
-        <date>
-        5 October 2010
-        </date>
-        <authorinitials>stack</authorinitials>
-        <revdescription>Initial layout</revdescription>
-        <revnumber>
-          0.89.20100924
         </revnumber>
       </revision>
     </revhistory>
@@ -2532,6 +2522,22 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
    </informaltable>
    <para/></section></section></appendix>
 
+  <appendix xml:id="asf" ><title>HBase and the Apache Software Foundation</title>
+    <para>HBase is a project in the Apache Software Foundation and as such there are responsibilities to the ASF to ensure
+    a healthy project.
+       <section xml:id="asf.devprocess"><title>ASF Development Process</title>
+        <para>See the <link xlink:href="http://www.apache.org/dev/#committers">Apache Development Process page</link> 
+        for all sorts of information on how the ASF is structured (e.g., PMC, committers, contributors), to tips on contributing
+        and getting involved, and how open-source works at ASF.     
+        </para>
+       </section>
+       <section xml:id="asf.reporting"><title>ASF Board Reporting</title>
+         <para>Once a quarter, each project in the ASF portfolio submits a report to the ASF board.  This is done by the HBase project
+         lead and the committers.  See <link xlink:href="http://www.apache.org/foundation/board/reporting">ASF board reporting</link> for more information.
+         </para>
+       </section>
+    </para>
+  </appendix>
 
   <index xml:id="book_index">
   <title>Index</title>
