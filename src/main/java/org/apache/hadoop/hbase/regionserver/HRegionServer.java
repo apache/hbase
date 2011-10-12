@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Action;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -124,7 +125,6 @@ import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -2830,6 +2830,37 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       e.printStackTrace();
     }
     return null;
+  }
+
+  @Override
+  public Result append(byte[] regionName, Append append)
+  throws IOException {
+    checkOpen();
+    if (regionName == null) {
+      throw new IOException("Invalid arguments to increment " +
+      "regionName is null");
+    }
+    requestCount.incrementAndGet();
+    try {
+      HRegion region = getRegion(regionName);
+      Integer lock = getLockFromId(append.getLockId());
+      Append appVal = append;
+      Result resVal;
+      if (region.getCoprocessorHost() != null) {
+        resVal = region.getCoprocessorHost().preAppend(appVal);
+        if (resVal != null) {
+          return resVal;
+        }
+      }
+      resVal = region.append(appVal, lock, append.getWriteToWAL());
+      if (region.getCoprocessorHost() != null) {
+        region.getCoprocessorHost().postAppend(appVal, resVal);
+      }
+      return resVal;
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
   }
 
   @Override

@@ -740,6 +740,25 @@ public class HTable implements HTableInterface, Closeable {
    * {@inheritDoc}
    */
   @Override
+  public Result append(final Append append) throws IOException {
+    if (append.numFamilies() == 0) {
+      throw new IOException(
+          "Invalid arguments to append, no columns specified");
+    }
+    return connection.getRegionServerWithRetries(
+        new ServerCallable<Result>(connection, tableName, append.getRow(), operationTimeout) {
+          public Result call() throws IOException {
+            return server.append(
+                location.getRegionInfo().getRegionName(), append);
+          }
+        }
+    );    
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
   public Result increment(final Increment increment) throws IOException {
     if (!increment.hasFamilies()) {
       throw new IOException(

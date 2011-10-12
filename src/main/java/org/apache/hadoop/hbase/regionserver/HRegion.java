@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -3501,6 +3502,149 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     return results;
+  }
+
+  // TODO: There's a lot of boiler plate code identical
+  // to increment... See how to better unify that.
+  /**
+   * 
+   * Perform one or more append operations on a row.
+   * <p>
+   * Appends performed are done under row lock but reads do not take locks out
+   * so this can be seen partially complete by gets and scans.
+   * 
+   * @param append
+   * @param lockid
+   * @param returnResult
+   * @param writeToWAL
+   * @return new keyvalues after increment
+   * @throws IOException
+   */
+  public Result append(Append append, Integer lockid, boolean writeToWAL)
+      throws IOException {
+    // TODO: Use RWCC to make this set of appends atomic to reads
+    byte[] row = append.getRow();
+    checkRow(row, "append");
+    boolean flush = false;
+    WALEdit walEdits = null;
+    List<KeyValue> allKVs = new ArrayList<KeyValue>(append.size());
+    List<KeyValue> kvs = new ArrayList<KeyValue>(append.size());
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long size = 0;
+    long txid = 0;
+
+    // Lock row
+    startRegionOperation();
+    this.writeRequestsCount.increment();
+    try {
+      Integer lid = getLock(lockid, row, true);
+      this.updatesLock.readLock().lock();
+      try {
+        // Process each family
+        for (Map.Entry<byte[], List<KeyValue>> family : append.getFamilyMap()
+            .entrySet()) {
+
+          Store store = stores.get(family.getKey());
+
+          // Get previous values for all columns in this family
+          Get get = new Get(row);
+          for (KeyValue kv : family.getValue()) {
+            get.addColumn(family.getKey(), kv.getQualifier());
+          }
+          List<KeyValue> results = get(get, false);
+
+          // Iterate the input columns and update existing values if they were
+          // found, otherwise add new column initialized to the append value
+
+          // Avoid as much copying as possible. Every byte is copied at most
+          // once.
+          // Would be nice if KeyValue had scatter/gather logic
+          int idx = 0;
+          for (KeyValue kv : family.getValue()) {
+            KeyValue newKV;
+            if (idx < results.size()
+                && results.get(idx).matchingQualifier(kv.getBuffer(),
+                    kv.getQualifierOffset(), kv.getQualifierLength())) {
+              KeyValue oldKv = results.get(idx);
+              // allocate an empty kv once
+              newKV = new KeyValue(row.length, kv.getFamilyLength(),
+                  kv.getQualifierLength(), now, KeyValue.Type.Put,
+                  oldKv.getValueLength() + kv.getValueLength());
+              // copy in the value
+              System.arraycopy(oldKv.getBuffer(), oldKv.getValueOffset(),
+                  newKV.getBuffer(), newKV.getValueOffset(),
+                  oldKv.getValueLength());
+              System.arraycopy(kv.getBuffer(), kv.getValueOffset(),
+                  newKV.getBuffer(),
+                  newKV.getValueOffset() + oldKv.getValueLength(),
+                  kv.getValueLength());
+              idx++;
+            } else {
+              // allocate an empty kv once
+              newKV = new KeyValue(row.length, kv.getFamilyLength(),
+                  kv.getQualifierLength(), now, KeyValue.Type.Put,
+                  kv.getValueLength());
+              // copy in the value
+              System.arraycopy(kv.getBuffer(), kv.getValueOffset(),
+                  newKV.getBuffer(), newKV.getValueOffset(),
+                  kv.getValueLength());
+            }
+            // copy in row, family, and qualifier
+            System.arraycopy(kv.getBuffer(), kv.getRowOffset(),
+                newKV.getBuffer(), newKV.getRowOffset(), kv.getRowLength());
+            System.arraycopy(kv.getBuffer(), kv.getFamilyOffset(),
+                newKV.getBuffer(), newKV.getFamilyOffset(),
+                kv.getFamilyLength());
+            System.arraycopy(kv.getBuffer(), kv.getQualifierOffset(),
+                newKV.getBuffer(), newKV.getQualifierOffset(),
+                kv.getQualifierLength());
+
+            kvs.add(newKV);
+
+            // Append update to WAL
+            if (writeToWAL) {
+              if (walEdits == null) {
+                walEdits = new WALEdit();
+              }
+              walEdits.add(newKV);
+            }
+          }
+
+          // Write the KVs for this family into the store
+          size += store.upsert(kvs);
+          allKVs.addAll(kvs);
+          kvs.clear();
+        }
+
+        // Actually write to WAL now
+        if (writeToWAL) {
+          // Using default cluster id, as this can only happen in the orginating
+          // cluster. A slave cluster receives the final value (not the delta)
+          // as a Put.
+          txid = this.log.appendNoSync(regionInfo,
+              this.htableDescriptor.getName(), walEdits,
+              HConstants.DEFAULT_CLUSTER_ID, now, this.htableDescriptor);
+        }
+
+        size = this.addAndGetGlobalMemstoreSize(size);
+        flush = isFlushSize(size);
+      } finally {
+        this.updatesLock.readLock().unlock();
+        releaseRowLock(lid);
+      }
+      if (writeToWAL) {
+        this.log.sync(txid); // sync the transaction log outside the rowlock
+      }
+    } finally {
+      closeRegionOperation();
+    }
+
+    if (flush) {
+      // Request a cache flush. Do it outside update lock.
+      requestFlush();
+    }
+
+    return append.isReturnResults() ? new Result(allKVs) : null;
   }
 
   /**

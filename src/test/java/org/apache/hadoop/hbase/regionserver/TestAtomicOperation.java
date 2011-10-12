@@ -1,6 +1,4 @@
 /**
- * Copyright 2010 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,72 +19,32 @@ package org.apache.hadoop.hbase.regionserver;
 
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MultithreadedTestUtil;
-import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.filter.FilterList;
-import org.apache.hadoop.hbase.filter.NullComparator;
-import org.apache.hadoop.hbase.filter.PrefixFilter;
-import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
-import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.PairOfSameType;
-import org.apache.hadoop.hbase.util.Threads;
-import org.junit.Test;
-
-import com.google.common.collect.Lists;
 
 
 /**
- * Testing of HRegion.incrementColumnValue
- *
+ * Testing of HRegion.incrementColumnValue, HRegion.increment,
+ * and HRegion.append
  */
-public class TestIncrement extends HBaseTestCase {
-  static final Log LOG = LogFactory.getLog(TestIncrement.class);
+public class TestAtomicOperation extends HBaseTestCase {
+  static final Log LOG = LogFactory.getLog(TestAtomicOperation.class);
 
   HRegion region = null;
   private final String DIR = HBaseTestingUtility.getTestDir() +
@@ -122,6 +80,29 @@ public class TestIncrement extends HBaseTestCase {
   // New tests that doesn't spin up a mini cluster but rather just test the
   // individual code pieces in the HRegion. 
   //////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Test basic append operation.
+   * More tests in
+   * @see org.apache.hadoop.hbase.client.TestFromClientSide#testAppend()
+   */
+  public void testAppend() throws IOException {
+    initHRegion(tableName, getName(), fam1);
+    String v1 = "Ultimate Answer to the Ultimate Question of Life,"+
+    " The Universe, and Everything";
+    String v2 = " is... 42.";
+    Append a = new Append(row);
+    a.setReturnResults(false);
+    a.add(fam1, qual1, Bytes.toBytes(v1));
+    a.add(fam1, qual2, Bytes.toBytes(v2));
+    assertNull(region.append(a, null, true));
+    a = new Append(row);
+    a.add(fam1, qual1, Bytes.toBytes(v2));
+    a.add(fam1, qual2, Bytes.toBytes(v1));
+    Result result = region.append(a, null, true);
+    assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1+v2), result.getValue(fam1, qual1)));
+    assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2+v1), result.getValue(fam1, qual2)));
+  }
 
   /**
    * Test one increment command.
