@@ -146,6 +146,8 @@ mvn verify
         <title>Getting Involved</title>
         <para>HBase gets better only when people contribute!
         </para>
+        <para>As HBase is an Apache Software Foundation project, see <xref linkend="asf"/> for more information about how the ASF functions.
+        </para>
         <section xml:id="mailing.list">
           <title>Mailing Lists</title>
           <para>Sign up for the dev-list and the user-list.  See the 
