@@ -185,7 +185,7 @@ public class TestMasterFailover {
     cluster.shutdown();
     ZooKeeperWatcher zkw = 
       HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL,
-        metaRegion, regionServer);
+        metaRegion, regionServer.getServerName());
 
     TEST_UTIL.startMiniHBaseCluster(1, 1);
 
