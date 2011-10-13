@@ -607,6 +607,7 @@ Release 0.92.0 - Unreleased
                required (Roman Shaposhnik)
    HBASE-4520  Better handling of Bloom filter type discrepancy between HFile
                and CF config (Mikhail Bautin)
+   HBASE-4558  Refactor TestOpenedRegionHandler and TestOpenRegionHandler.(Ram)
        
 
   TASKS
