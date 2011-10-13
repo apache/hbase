@@ -410,8 +410,9 @@ public class ZKUtil {
       for(String node : nodes) {
         String nodePath = ZKUtil.joinZNode(baseNode, node);
         if(!zkw.getNodes().contains(nodePath)) {
-          byte [] data = ZKUtil.getDataAndWatch(zkw, nodePath);
-          newNodes.add(new NodeAndData(nodePath, data));
+          Stat stat = new Stat();
+          byte [] data = ZKUtil.getDataAndWatch(zkw, nodePath, stat);
+          newNodes.add(new NodeAndData(nodePath, data, stat.getVersion()));
           zkw.getNodes().add(nodePath);
         }
       }
@@ -425,15 +426,20 @@ public class ZKUtil {
   public static class NodeAndData {
     private String node;
     private byte [] data;
-    public NodeAndData(String node, byte [] data) {
+    private int version;
+    public NodeAndData(String node, byte [] data, int version) {
       this.node = node;
       this.data = data;
+      this.version = version;
     }
     public String getNode() {
       return node;
     }
     public byte [] getData() {
       return data;
+    }
+    public int getVersion(){
+      return version;
     }
     @Override
     public String toString() {
@@ -545,9 +551,31 @@ public class ZKUtil {
    */
   public static byte [] getDataAndWatch(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
+    return getDataInternal(zkw, znode, null, true);
+  }
+  
+  /**
+   * Get the data at the specified znode and set a watch.
+   *
+   * Returns the data and sets a watch if the node exists.  Returns null and no
+   * watch is set if the node does not exist or there is an exception.
+   *
+   * @param zkw zk reference
+   * @param znode path of node
+   * @return data of the specified znode, or null
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static byte[] getDataAndWatch(ZooKeeperWatcher zkw, String znode,
+      Stat stat) throws KeeperException {
+    return getDataInternal(zkw, znode, stat, true);
+  }
+  
+  private static byte[] getDataInternal(ZooKeeperWatcher zkw, String znode, Stat stat,
+      boolean watcherSet)
+      throws KeeperException {
     try {
-      byte [] data = zkw.getZooKeeper().getData(znode, zkw, null);
-      logRetrievedMsg(zkw, znode, data, true);
+      byte [] data = zkw.getZooKeeper().getData(znode, zkw, stat);
+      logRetrievedMsg(zkw, znode, data, watcherSet);
       return data;
     } catch (KeeperException.NoNodeException e) {
       LOG.debug(zkw.prefix("Unable to get data of znode " + znode + " " +

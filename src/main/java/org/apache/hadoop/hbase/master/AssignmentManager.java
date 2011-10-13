@@ -303,7 +303,9 @@ public class AssignmentManager extends ZooKeeperListener {
       final HRegionInfo regionInfo,
       final Map<String, List<Pair<HRegionInfo,Result>>> deadServers)
   throws KeeperException, IOException {
-    RegionTransitionData data = ZKAssign.getData(watcher, encodedRegionName);
+    Stat stat = new Stat();
+    RegionTransitionData data = ZKAssign.getDataAndWatch(watcher,
+        encodedRegionName, stat);
     if (data == null) return false;
     HRegionInfo hri = regionInfo;
     if (hri == null) {
@@ -312,13 +314,14 @@ public class AssignmentManager extends ZooKeeperListener {
       if (p == null) return false;
       hri = p.getFirst();
     }
-    processRegionsInTransition(data, hri, deadServers);
+    processRegionsInTransition(data, hri, deadServers, stat.getVersion());
     return true;
   }
 
   void processRegionsInTransition(final RegionTransitionData data,
       final HRegionInfo regionInfo,
-      final Map<String, List<Pair<HRegionInfo,Result>>> deadServers)
+      final Map<String, List<Pair<HRegionInfo, Result>>> deadServers,
+      int expectedVersion)
   throws KeeperException {
     String encodedRegionName = regionInfo.getEncodedName();
     LOG.info("Processing region " + regionInfo.getRegionNameAsString() +
@@ -388,7 +391,8 @@ public class AssignmentManager extends ZooKeeperListener {
               " in list of online servers; skipping registration of open of " +
               regionInfo.getRegionNameAsString());
           } else {
-            new OpenedRegionHandler(master, this, regionInfo, hsi).process();
+            new OpenedRegionHandler(master, this, regionInfo, hsi,
+                expectedVersion).process();
           }
         }
         break;
@@ -454,8 +458,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * This deals with skipped transitions (we got a CLOSED but didn't see CLOSING
    * yet).
    * @param data
+   * @param expectedVersion
    */
-  private void handleRegion(final RegionTransitionData data) {
+  private void handleRegion(final RegionTransitionData data, int expectedVersion) {
     synchronized(regionsInTransition) {
       if (data == null || data.getServerName() == null) {
         LOG.warn("Unexpected NULL input " + data);
@@ -552,7 +557,8 @@ public class AssignmentManager extends ZooKeeperListener {
           regionState.update(RegionState.State.OPEN, data.getStamp());
           this.executorService.submit(
             new OpenedRegionHandler(master, this, regionState.getRegion(),
-              this.serverManager.getServerInfo(data.getServerName())));
+              this.serverManager.getServerInfo(
+              data.getServerName()), expectedVersion));
           break;
       }
     }
@@ -616,11 +622,13 @@ public class AssignmentManager extends ZooKeeperListener {
     if(path.startsWith(watcher.assignmentZNode)) {
       synchronized(regionsInTransition) {
         try {
-          RegionTransitionData data = ZKAssign.getData(watcher, path);
+          Stat stat = new Stat();
+          RegionTransitionData data = ZKAssign.getDataAndWatch(watcher, path,
+              stat);
           if(data == null) {
             return;
           }
-          handleRegion(data);
+          handleRegion(data, stat.getVersion());
         } catch (KeeperException e) {
           master.abort("Unexpected ZK exception reading unassigned node data", e);
         }
@@ -645,11 +653,13 @@ public class AssignmentManager extends ZooKeeperListener {
     if(path.startsWith(watcher.assignmentZNode)) {
       synchronized(regionsInTransition) {
         try {
-          RegionTransitionData data = ZKAssign.getData(watcher, path);
+          Stat stat = new Stat();
+          RegionTransitionData data = ZKAssign.getDataAndWatch(watcher, path,
+              stat);
           if(data == null) {
             return;
           }
-          handleRegion(data);
+          handleRegion(data, stat.getVersion());
         } catch (KeeperException e) {
           master.abort("Unexpected ZK exception reading unassigned node data", e);
         }
@@ -679,7 +689,8 @@ public class AssignmentManager extends ZooKeeperListener {
               watcher.assignmentZNode);
           for(NodeAndData newNode : newNodes) {
             LOG.debug("Handling new unassigned node: " + newNode);
-            handleRegion(RegionTransitionData.fromBytes(newNode.getData()));
+            handleRegion(RegionTransitionData.fromBytes(newNode.getData()),
+                newNode.getVersion());
           }
         } catch(KeeperException e) {
           master.abort("Unexpected ZK exception reading unassigned children", e);
