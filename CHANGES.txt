@@ -354,6 +354,7 @@ Release 0.92.0 - Unreleased
    HBASE-4555  TestShell seems passed, but actually errors seen in test output
                file (Mingjie Lai)
    HBASE-4582  Store.java cleanup (failing TestHeapSize and has warnings)
+   HBASE-4556  Fix all incorrect uses of InternalScanner.next(...) (Lars H)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
