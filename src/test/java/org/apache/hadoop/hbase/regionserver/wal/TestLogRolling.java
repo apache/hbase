@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -462,11 +463,10 @@ public class TestLogRolling  {
 
     // roll all datanodes in the pipeline
     dfsCluster.restartDataNodes();
-    Thread.sleep(10000);
+    Thread.sleep(1000);
     dfsCluster.waitActive();
     LOG.info("Data Nodes restarted");
 
-    //this.log.sync();
     // this write should succeed, but trigger a log roll
     writeData(table, 1003);
     long newFilenum = log.getFilenum();
@@ -474,12 +474,11 @@ public class TestLogRolling  {
     assertTrue("Missing datanode should've triggered a log roll",
         newFilenum > oldFilenum && newFilenum > curTime);
 
-    //this.log.sync();
     writeData(table, 1004);
 
     // roll all datanode again
     dfsCluster.restartDataNodes();
-    Thread.sleep(10000);
+    Thread.sleep(1000);
     dfsCluster.waitActive();
     LOG.info("Data Nodes restarted");
 
@@ -535,6 +534,12 @@ public class TestLogRolling  {
       }
     } finally {
       scanner.close();
+    }
+
+    // verify that no region servers aborted
+    for (JVMClusterUtil.RegionServerThread rsThread:
+        TEST_UTIL.getHBaseCluster().getRegionServerThreads()) {
+      assertFalse(rsThread.getRegionServer().isAborted());
     }
   }
 }

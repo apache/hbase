@@ -133,6 +133,7 @@ public class HLog implements Syncable {
   private final String prefix;
   private final AtomicLong unflushedEntries = new AtomicLong(0);
   private volatile long syncedTillHere = 0;
+  private long lastDeferredTxid;
   private final Path oldLogDir;
   private boolean logRollRunning;
 
@@ -196,6 +197,7 @@ public class HLog implements Syncable {
 
   //number of transactions in the current Hlog.
   private final AtomicInteger numEntries = new AtomicInteger(0);
+
   // If live datanode count is lower than the default replicas value,
   // RollWriter will be triggered in each sync(So the RollWriter will be
   // triggered one by one in a short time). Using it as a workaround to slow
@@ -813,9 +815,12 @@ public class HLog implements Syncable {
       } catch (IOException e) {
         LOG.error("Failed close of HLog writer", e);
         int errors = closeErrorCount.incrementAndGet();
-        if (errors <= closeErrorsTolerated) {
+        if (errors <= closeErrorsTolerated && !hasDeferredEntries()) {
           LOG.warn("Riding over HLog close failure! error count="+errors);
         } else {
+          if (hasDeferredEntries()) {
+            LOG.error("Aborting due to unflushed edits in HLog");
+          }
           // Failed close of log file.  Means we're losing edits.  For now,
           // shut ourselves down to minimize loss.  Alternative is to try and
           // keep going.  See HBASE-930.
@@ -990,6 +995,9 @@ public class HLog implements Syncable {
       doWrite(regionInfo, logKey, logEdit, htd);
       txid = this.unflushedEntries.incrementAndGet();
       this.numEntries.incrementAndGet();
+      if (htd.isDeferredLogFlush()) {
+        lastDeferredTxid = txid;
+      }
     }
 
     // Sync if catalog region, and if not then check if that table supports
@@ -1068,6 +1076,9 @@ public class HLog implements Syncable {
         doWrite(info, logKey, edits, htd);
         this.numEntries.incrementAndGet();
         txid = this.unflushedEntries.incrementAndGet();
+        if (htd.isDeferredLogFlush()) {
+          lastDeferredTxid = txid;
+        }
       }
       // Sync if catalog region, and if not then check if that table supports
       // deferred log flushing
@@ -1787,6 +1798,11 @@ public class HLog implements Syncable {
    */
   public WALCoprocessorHost getCoprocessorHost() {
     return coprocessorHost;
+  }
+
+  /** Provide access to currently deferred sequence num for tests */
+  boolean hasDeferredEntries() {
+    return lastDeferredTxid > syncedTillHere;
   }
 
   /**
