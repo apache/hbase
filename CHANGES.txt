@@ -363,6 +363,8 @@ Release 0.92.0 - Unreleased
                Hadoop 0.23 (todd)
    HBASE-3446  ProcessServerShutdown fails if META moves, orphaning lots of
                regions
+   HBASE-4589  CacheOnWrite broken in some cases because it can conflict
+               with evictOnClose (jgray)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
