@@ -74,6 +74,8 @@ Release 0.90.5 - Unreleased
                sources running
    HBASE-4540  OpenedRegionHandler is not enforcing atomicity of the operation it is performing(Ram)
    HBASE-4540  Addendum for TestMasterFailOver (Ram) - Breaks the build
+   HBASE-4282  Ensure RegionServer aborts when WAL close fails with
+               deferred flush edits
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

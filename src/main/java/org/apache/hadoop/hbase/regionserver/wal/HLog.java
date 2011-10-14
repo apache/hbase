@@ -193,6 +193,8 @@ public class HLog implements Syncable {
 
   // number of transactions in the current Hlog.
   private final AtomicInteger numEntries = new AtomicInteger(0);
+  // last deferred-flush WAL edit sequence number
+  private long lastDeferredSeq;
 
   // If live datanode count is lower than the default replicas value,
   // RollWriter will be triggered in each sync(So the RollWriter will be
@@ -773,9 +775,12 @@ public class HLog implements Syncable {
       } catch (IOException e) {
         LOG.error("Failed close of HLog writer", e);
         int errors = closeErrorCount.incrementAndGet();
-        if (errors <= closeErrorsTolerated) {
+        if (errors <= closeErrorsTolerated && lastDeferredSeq == 0) {
           LOG.warn("Riding over HLog close failure! error count="+errors);
         } else {
+          if (lastDeferredSeq > 0) {
+            LOG.error("Aborting due to unflushed edits in HLog");
+          }
           // Failed close of log file.  Means we're losing edits.  For now,
           // shut ourselves down to minimize loss.  Alternative is to try and
           // keep going.  See HBASE-930.
@@ -932,6 +937,9 @@ public class HLog implements Syncable {
         Long.valueOf(seqNum));
       doWrite(regionInfo, logKey, logEdit);
       this.numEntries.incrementAndGet();
+      if (regionInfo.getTableDesc().isDeferredLogFlush()) {
+        lastDeferredSeq = seqNum;
+      }
     }
 
     // Sync if catalog region, and if not then check if that table supports
@@ -987,6 +995,9 @@ public class HLog implements Syncable {
       HLogKey logKey = makeKey(hriKey, tableName, seqNum, now);
       doWrite(info, logKey, edits);
       this.numEntries.incrementAndGet();
+      if (info.getTableDesc().isDeferredLogFlush()) {
+        lastDeferredSeq = seqNum;
+      }
     }
     // Sync if catalog region, and if not then check if that table supports
     // deferred log flushing
@@ -1034,10 +1045,12 @@ public class HLog implements Syncable {
 
   @Override
   public void sync() throws IOException {
+    long currentDeferredSeq;
     synchronized (this.updateLock) {
       if (this.closed) {
         return;
       }
+      currentDeferredSeq = lastDeferredSeq;
     }
     try {
       long now = System.currentTimeMillis();
@@ -1052,6 +1065,9 @@ public class HLog implements Syncable {
         if (!syncSuccessful) {
           // HBASE-4387, retry with updateLock held
           this.writer.sync();
+        }
+        if (currentDeferredSeq == lastDeferredSeq) {
+          lastDeferredSeq = 0;  // reset
         }
         syncTime += System.currentTimeMillis() - now;
         syncOps++;
@@ -1548,6 +1564,11 @@ public class HLog implements Syncable {
     HLogSplitter logSplitter = HLogSplitter.createLogSplitter(
         conf, baseDir, p, oldLogDir, fs);
     logSplitter.splitLog();
+  }
+
+  /** Provide access to currently deferred sequence num for tests */
+  long getLastDeferredSeq() {
+    return lastDeferredSeq;
   }
 
   /**
