@@ -27,6 +27,7 @@ import java.io.PrintWriter;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -145,6 +146,8 @@ public class ZooKeeperWrapper implements Watcher {
   private Set<String> unassignedZNodesWatched = new HashSet<String>();
 
   private List<Watcher> listeners = Collections.synchronizedList(new ArrayList<Watcher>());
+  
+  private int zkDumpConnectionTimeOut;
 
   // return the singleton given the name of the instance
   public static ZooKeeperWrapper getInstance(Configuration conf, String name) {
@@ -204,8 +207,10 @@ public class ZooKeeperWrapper implements Watcher {
     rgnsInTransitZNode  = getZNode(parentZNode, regionsInTransitZNodeName);
     masterElectionZNode = getZNode(parentZNode, masterAddressZNodeName);
     clusterStateZNode   = getZNode(parentZNode, stateZNodeName);
-    int retryNum = conf.getInt("zookeeper.connection.retry.num",3);
-    int retryFreq = conf.getInt("zookeeper.connection.retry.freq",1000);
+    int retryNum = conf.getInt("zookeeper.connection.retry.num", 6);
+    int retryFreq = conf.getInt("zookeeper.connection.retry.freq", 1000);
+    zkDumpConnectionTimeOut = conf.getInt("zookeeper.dump.connection.timeout", 
+        1000);
     connectToZk(retryNum,retryFreq);
   }
 
@@ -366,7 +371,7 @@ public class ZooKeeperWrapper implements Watcher {
     for (String server : servers) {
       sb.append("\n    - ").append(server);
       try {
-        String[] stat = getServerStats(server);
+        String[] stat = getServerStats(server, this.zkDumpConnectionTimeOut);
         for (String s : stat) {
           sb.append("\n        ").append(s);
         }
@@ -374,18 +379,6 @@ public class ZooKeeperWrapper implements Watcher {
         sb.append("\n        ERROR: ").append(e.getMessage());
       }
     }
-  }
-
-  /**
-   * Gets the statistics from the given server. Uses a 1 minute timeout.
-   *
-   * @param server  The server to get the statistics from.
-   * @return The array of response strings.
-   * @throws IOException When the socket communication fails.
-   */
-  public String[] getServerStats(String server)
-  throws IOException {
-    return getServerStats(server, 60 * 1000);
   }
 
   /**
@@ -399,17 +392,24 @@ public class ZooKeeperWrapper implements Watcher {
   public String[] getServerStats(String server, int timeout)
   throws IOException {
     String[] sp = server.split(":");
-    Socket socket = new Socket(sp[0],
-      sp.length > 1 ? Integer.parseInt(sp[1]) : 2181);
+    String host = sp[0];
+    int port = sp.length > 1 ? Integer.parseInt(sp[1]) : 
+      HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT;
+    
+    Socket socket = new Socket(); 
+    InetSocketAddress sockAddr = new InetSocketAddress(host, port);
+    socket.connect(sockAddr, timeout); 
     socket.setSoTimeout(timeout);
+
     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
     BufferedReader in = new BufferedReader(new InputStreamReader(
       socket.getInputStream()));
     out.println("stat");
     out.flush();
+    
     ArrayList<String> res = new ArrayList<String>();
     while (true) {
-      String line = in.readLine();
+      String line = in.readLine();    
       if (line != null) res.add(line);
       else break;
     }

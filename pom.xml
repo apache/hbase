@@ -445,7 +445,7 @@
     <junit.version>4.8.1</junit.version>
     <mockito-all.version>1.8.4</mockito-all.version>
     <log4j.version>1.2.15</log4j.version>
-    <zookeeper.version>3.3.1</zookeeper.version>
+    <zookeeper.version>3.3.3</zookeeper.version>
 
     <commons-httpclient.version>3.1</commons-httpclient.version>
     <commons-lang.version>2.5</commons-lang.version>
@@ -517,7 +517,7 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.apache.hadoop</groupId>
+        <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
         <version>${zookeeper.version}</version>
       </dependency>
@@ -622,7 +622,7 @@
     </dependency>
 
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
     </dependency>
 

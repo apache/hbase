@@ -9,10 +9,7 @@
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
-  Configuration conf = master.getConfiguration();
-  HBaseAdmin hbadmin = new HBaseAdmin(conf);
-  HConnection connection = hbadmin.getConnection();
-  ZooKeeperWrapper wrapper = connection.getZooKeeperWrapper();
+  ZooKeeperWrapper wrapper = master.getZooKeeperWrapper();
 %>
 
 <?xml version="1.0" encoding="UTF-8" ?>
