@@ -409,4 +409,15 @@ htable.close();</programlisting></para>
        </para>
      </section>
   </section>  <!--  deleting -->
+  
+  <section xml:id="perf.ec2"><title>Amazon EC2</title>
+  <para>Performance questions are common on Amazon EC2 environments because it is is a shared environment.  You will
+  not see the same throughput as a dedicated server.  In terms of running tests on EC2, run them several times for the same
+  reason (i.e., it's a shared environment and you don't know what else is happening on the server).
+  </para>
+  <para>If you are running on EC2 and post performance questions on the dist-list, please state this fact up-front that
+   because EC2 issues are practically a separate class of performance issues.
+  
+  </para>
+  </section>
 </chapter>
