@@ -338,4 +338,29 @@ public class TestBlocksRead extends HBaseTestCase {
     verifyData(kvs[1], "row", "col2", 12);
     verifyData(kvs[2], "row", "col3", 13);
   }
+  
+  @Test
+  public void testLazySeekBlocksReadWithDelete() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testLazySeekBlocksReadWithDelete");
+    byte [] FAMILY = Bytes.toBytes("cf1");
+    byte [][] FAMILIES = new byte[][] { FAMILY };
+    KeyValue kvs[];
+
+    HBaseConfiguration conf = getConf();
+    initHRegion(TABLE, getName(), conf, FAMILIES);
+    
+    deleteFamily(FAMILY, "row", 200);
+    for (int i = 0 ; i < 100; i++) {
+      putData(FAMILY, "row", "col"+i, i);
+    }
+    putData(FAMILY, "row", "col99", 201);
+
+    region.flushcache();
+    kvs = getData(FAMILY, "row", Arrays.asList("col0"), 2);
+    assertEquals(0, kvs.length);
+    
+    kvs = getData(FAMILY, "row", Arrays.asList("col99"), 2);
+    assertEquals(1, kvs.length);
+    verifyData(kvs[0], "row", "col99", 201);
+  }
 }

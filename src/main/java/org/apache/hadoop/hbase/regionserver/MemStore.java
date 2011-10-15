@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 
 /**
  * The MemStore holds in-memory modifications to the Store.  Modifications
@@ -465,6 +466,15 @@ public class MemStore implements HeapSize {
     }
   }
 
+  /**
+   * @return scanner on snapshot
+   */
+  public static List<KeyValueScanner> getSnapshotScanners(
+      SortedSet<KeyValue> snapshot, KeyValue.KVComparator comparator) {
+    return Collections.<KeyValueScanner>singletonList(
+        new CollectionBackedScanner(snapshot, comparator));
+  }
+  
   /**
    * Check if this memstore may contain the required keys
    * @param scan

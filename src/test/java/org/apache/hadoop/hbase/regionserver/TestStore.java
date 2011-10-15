@@ -92,6 +92,8 @@ public class TestStore extends TestCase {
 
   private static final String DIR = HBaseTestingUtility.getTestDir() + "/TestStore/";
 
+  private static final int MAX_VERSION = 4;
+
   /**
    * Setup
    * @throws IOException
@@ -121,8 +123,10 @@ public class TestStore extends TestCase {
     Path logdir = new Path(DIR+methodName+"/logs");
     Path oldLogDir = new Path(basedir, HConstants.HREGION_OLDLOGDIR_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
+    // with HBASE-4241, lower versions are collected on flush
+    hcd.setMaxVersions(TestStore.MAX_VERSION);
     FileSystem fs = FileSystem.get(conf);
-
+    
     fs.delete(logdir, true);
 
     HTableDescriptor htd = new HTableDescriptor(table);
@@ -549,6 +553,8 @@ public class TestStore extends TestCase {
       this.store.add(kv);
     }
 
+    assertEquals(Math.max(timestamps1.length, timestamps2.length), 
+        TestStore.MAX_VERSION);
     List<KeyValue> result;
     Get get = new Get(Bytes.toBytes(1));
     get.addColumn(family,qf1);

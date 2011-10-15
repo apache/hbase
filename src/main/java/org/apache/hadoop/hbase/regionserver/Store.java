@@ -475,7 +475,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @return StoreFile created.
    * @throws IOException
    */
-  private StoreFile internalFlushCache(final SortedSet<KeyValue> set,
+  private StoreFile internalFlushCache(final SortedSet<KeyValue> snapshot,
       final long logCacheFlushId,
       TimeRangeTracker snapshotTimeRangeTracker,
       MonitoredTask status) throws IOException {
@@ -483,36 +483,53 @@ public class Store extends SchemaConfigured implements HeapSize {
     String fileName;
     long flushed = 0;
     // Don't flush if there are no entries.
-    if (set.size() == 0) {
+    if (snapshot.size() == 0) {
       return null;
     }
-    long oldestTimestamp = System.currentTimeMillis() - ttl;
-    // TODO:  We can fail in the below block before we complete adding this
-    // flush to list of store files.  Add cleanup of anything put on filesystem
-    // if we fail.
-    synchronized (flushLock) {
-      status.setStatus("Flushing " + this + ": creating writer");
-      // A. Write the map out to the disk
-      writer = createWriterInTmp(set.size());
-      writer.setTimeRangeTracker(snapshotTimeRangeTracker);
-      fileName = writer.getPath().getName();
-      int entries = 0;
-      try {
-        for (KeyValue kv: set) {
-          if (!isExpired(kv, oldestTimestamp)) {
-            writer.append(kv);
-            entries++;
-            flushed += this.memstore.heapSizeChange(kv, true);
-          }
+    
+    // Use a store scanner from snapshot to find out which rows to flush
+    // Note that we need to retain deletes.
+    Scan scan = new Scan();
+    scan.setMaxVersions(family.getMaxVersions());
+    InternalScanner scanner = new StoreScanner(this, scan, 
+        MemStore.getSnapshotScanners(snapshot, this.comparator), true);
+    
+    try {
+      // TODO:  We can fail in the below block before we complete adding this
+      // flush to list of store files.  Add cleanup of anything put on filesystem
+      // if we fail.
+      synchronized (flushLock) {
+        status.setStatus("Flushing " + this + ": creating writer");
+        // A. Write the map out to the disk
+        writer = createWriterInTmp(snapshot.size());
+        writer.setTimeRangeTracker(snapshotTimeRangeTracker);
+        fileName = writer.getPath().getName();
+        int entries = 0;
+        try {
+          final List<KeyValue> kvs = new ArrayList<KeyValue>();
+          boolean hasMore;
+          do {
+            hasMore = scanner.next(kvs);
+            if (!kvs.isEmpty()) {
+              for (KeyValue kv : kvs) {
+                writer.append(kv);
+                entries++;
+                flushed += this.memstore.heapSizeChange(kv, true);
+              }
+              kvs.clear();
+            }
+          } while (hasMore);
+        } finally {
+          // Write out the log sequence number that corresponds to this output
+          // hfile.  The hfile is current up to and including logCacheFlushId.
+          status.setStatus("Flushing " + this + ": appending metadata");
+          writer.appendMetadata(logCacheFlushId, false);
+          status.setStatus("Flushing " + this + ": closing flushed file");
+          writer.close();
         }
-      } finally {
-        // Write out the log sequence number that corresponds to this output
-        // hfile.  The hfile is current up to and including logCacheFlushId.
-        status.setStatus("Flushing " + this + ": appending metadata");
-        writer.appendMetadata(logCacheFlushId, false);
-        status.setStatus("Flushing " + this + ": closing flushed file");
-        writer.close();
       }
+    } finally {
+      scanner.close();
     }
 
     Path dstPath = new Path(homedir, fileName);

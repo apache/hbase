@@ -29,6 +29,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 
 
 public class TestKeyValueHeap extends HBaseTestCase {
@@ -67,25 +68,36 @@ public class TestKeyValueHeap extends HBaseTestCase {
     //Cases that need to be checked are:
     //1. The "smallest" KeyValue is in the same scanners as current
     //2. Current scanner gets empty
-
+    KeyValue startKV;
+    Scanner scanner;
+    
     List<KeyValue> l1 = new ArrayList<KeyValue>();
-    l1.add(new KeyValue(row1, fam1, col5, data));
+    startKV = new KeyValue(row1, fam1, col5, data);
+    l1.add(startKV);
     l1.add(new KeyValue(row2, fam1, col1, data));
     l1.add(new KeyValue(row2, fam1, col2, data));
-    scanners.add(new Scanner(l1));
+    scanner = new Scanner(l1);
+    scanner.seek(startKV);
+    scanners.add(scanner);
 
     List<KeyValue> l2 = new ArrayList<KeyValue>();
+    startKV = new KeyValue(row1, fam1, col1, data);
     l2.add(new KeyValue(row1, fam1, col1, data));
     l2.add(new KeyValue(row1, fam1, col2, data));
-    scanners.add(new Scanner(l2));
+    scanner = new Scanner(l2);
+    scanner.seek(startKV);
+    scanners.add(scanner);
 
     List<KeyValue> l3 = new ArrayList<KeyValue>();
+    startKV = new KeyValue(row1, fam1, col3, data);
     l3.add(new KeyValue(row1, fam1, col3, data));
     l3.add(new KeyValue(row1, fam1, col4, data));
     l3.add(new KeyValue(row1, fam2, col1, data));
     l3.add(new KeyValue(row1, fam2, col2, data));
     l3.add(new KeyValue(row2, fam1, col3, data));
-    scanners.add(new Scanner(l3));
+    scanner = new Scanner(l3);
+    scanner.seek(startKV);
+    scanners.add(scanner);
 
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(new KeyValue(row1, fam1, col1, data));
@@ -129,25 +141,36 @@ public class TestKeyValueHeap extends HBaseTestCase {
     //Cases:
     //1. Seek KeyValue that is not in scanner
     //2. Check that smallest that is returned from a seek is correct
-
+    KeyValue startKV ;
+    Scanner scanner;
+    
     List<KeyValue> l1 = new ArrayList<KeyValue>();
-    l1.add(new KeyValue(row1, fam1, col5, data));
+    startKV = new KeyValue(row1, fam1, col5, data);
+    l1.add(startKV);
     l1.add(new KeyValue(row2, fam1, col1, data));
     l1.add(new KeyValue(row2, fam1, col2, data));
-    scanners.add(new Scanner(l1));
+    scanner = new Scanner(l1);
+    scanner.seek(startKV);
+    scanners.add(scanner);
 
     List<KeyValue> l2 = new ArrayList<KeyValue>();
+    startKV = new KeyValue(row1, fam1, col1, data);
     l2.add(new KeyValue(row1, fam1, col1, data));
     l2.add(new KeyValue(row1, fam1, col2, data));
-    scanners.add(new Scanner(l2));
+    scanner = new Scanner(l2);
+    scanner.seek(startKV);
+    scanners.add(scanner);
 
     List<KeyValue> l3 = new ArrayList<KeyValue>();
+    startKV = new KeyValue(row1, fam1, col3, data);
     l3.add(new KeyValue(row1, fam1, col3, data));
     l3.add(new KeyValue(row1, fam1, col4, data));
     l3.add(new KeyValue(row1, fam2, col1, data));
     l3.add(new KeyValue(row1, fam2, col2, data));
     l3.add(new KeyValue(row2, fam1, col3, data));
-    scanners.add(new Scanner(l3));
+    scanner = new Scanner(l3);
+    scanner.seek(startKV);
+    scanners.add(scanner);
 
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(new KeyValue(row2, fam1, col1, data));
@@ -175,25 +198,36 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
   public void testScannerLeak() throws IOException {
     // Test for unclosed scanners (HBASE-1927)
-
+    KeyValue startKV ;
+    Scanner scanner;
+    
     List<KeyValue> l1 = new ArrayList<KeyValue>();
-    l1.add(new KeyValue(row1, fam1, col5, data));
+    startKV = new KeyValue(row1, fam1, col5, data);
+    l1.add(startKV);
     l1.add(new KeyValue(row2, fam1, col1, data));
     l1.add(new KeyValue(row2, fam1, col2, data));
-    scanners.add(new Scanner(l1));
+    scanner = new Scanner(l1);
+    scanner.seek(startKV);
+    scanners.add(scanner);
 
     List<KeyValue> l2 = new ArrayList<KeyValue>();
+    startKV = new KeyValue(row1, fam1, col1, data);
     l2.add(new KeyValue(row1, fam1, col1, data));
     l2.add(new KeyValue(row1, fam1, col2, data));
-    scanners.add(new Scanner(l2));
+    scanner = new Scanner(l2);
+    scanner.seek(startKV);
+    scanners.add(scanner);
 
     List<KeyValue> l3 = new ArrayList<KeyValue>();
+    startKV = new KeyValue(row1, fam1, col3, data);
     l3.add(new KeyValue(row1, fam1, col3, data));
     l3.add(new KeyValue(row1, fam1, col4, data));
     l3.add(new KeyValue(row1, fam2, col1, data));
     l3.add(new KeyValue(row1, fam2, col2, data));
     l3.add(new KeyValue(row2, fam1, col3, data));
-    scanners.add(new Scanner(l3));
+    scanner = new Scanner(l3);
+    scanner.seek(startKV);
+    scanners.add(scanner);
 
     List<KeyValue> l4 = new ArrayList<KeyValue>();
     scanners.add(new Scanner(l4));
@@ -203,66 +237,15 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
     while(kvh.next() != null);
 
-    for(KeyValueScanner scanner : scanners) {
-      assertTrue(((Scanner)scanner).isClosed());
+    for(KeyValueScanner kvScanner : scanners) {
+      assertTrue(((Scanner)kvScanner).isClosed());
     }
   }
 
-  private static class Scanner extends NonLazyKeyValueScanner {
-    private Iterator<KeyValue> iter;
-    private KeyValue current;
-    private boolean closed = false;
-
+  private static class Scanner extends CollectionBackedScanner {
+    
     public Scanner(List<KeyValue> list) {
-      Collections.sort(list, KeyValue.COMPARATOR);
-      iter = list.iterator();
-      if(iter.hasNext()){
-        current = iter.next();
-      }
-    }
-
-    public KeyValue peek() {
-      return current;
-    }
-
-    public KeyValue next() {
-      KeyValue oldCurrent = current;
-      if(iter.hasNext()){
-        current = iter.next();
-      } else {
-        current = null;
-      }
-      return oldCurrent;
-    }
-
-    public void close(){
-      closed = true;
-    }
-
-    public boolean isClosed() {
-      return closed;
-    }
-
-    public boolean seek(KeyValue seekKv) {
-      while(iter.hasNext()){
-        KeyValue next = iter.next();
-        int ret = KeyValue.COMPARATOR.compare(next, seekKv);
-        if(ret >= 0){
-          current = next;
-          return true;
-        }
-      }
-      return false;
-    }
-
-    @Override
-    public boolean reseek(KeyValue key) throws IOException {
-      return seek(key);
-    }
-
-    @Override
-    public long getSequenceID() {
-      return 0;
+     super(list,KeyValue.COMPARATOR);
     }
   }
 
