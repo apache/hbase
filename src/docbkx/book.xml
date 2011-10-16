@@ -1316,7 +1316,7 @@ scan.setFilter(filter);
     <section xml:id="master"><title>Master</title>
        <para><code>HMaster</code> is the implementation of the Master Server.  The Master server
        is responsible for monitoring all RegionServer instances in the cluster, and is
-       the interface for all metadata changes.
+       the interface for all metadata changes.  In a distributed cluster, the Master typically runs on the <xref linkend="arch.hdfs.nn" />.
        </para>
        <section xml:id="master.startup"><title>Startup Behavior</title>
          <para>If run in a multi-Master environment, all Masters compete to run the cluster.  If the active
@@ -1352,7 +1352,8 @@ scan.setFilter(filter);
 
      </section>
      <section xml:id="regionserver.arch"><title>RegionServer</title>
-       <para><code>HRegionServer</code> is the RegionServer implementation.  It is responsible for serving and managing regions.  
+       <para><code>HRegionServer</code> is the RegionServer implementation.  It is responsible for serving and managing regions.
+       In a distributed cluster, a RegionServer runs on a <xref linkend="arch.hdfs.dn" />.  
        </para>
        <section xml:id="regionserver.arch.api"><title>Interface</title>
          <para>The methods exposed by <code>HRegionRegionInterface</code> contain both data-oriented and region-maintenance methods:
@@ -1711,6 +1712,27 @@ scan.setFilter(filter);
      </section>   <!--  bloom  -->  
      
     </section>
+    
+    <section xml:id="arch.hdfs"><title>HDFS</title>
+       <para>As HBase runs on HDFS (and each StoreFile is written as a file on HDFS),
+        it is important to have an understanding of the HDFS Architecture
+         especially in terms of how it stores files, handles failovers, and replicates blocks.
+       </para>
+       <para>See the Hadoop documentation on <link xlink:href="http://hadoop.apache.org/common/docs/current/hdfs_design.html">HDFS Architecture</link>
+       for more information.
+       </para>
+       <section xml:id="arch.hdfs.nn"><title>NameNode</title>
+         <para>The NameNode is responsible for maintaining the filesystem metadata.  See the above HDFS Architecture link
+         for more information.
+         </para>
+       </section>
+       <section xml:id="arch.hdfs.dn"><title>DataNode</title>
+         <para>The DataNodes are responsible for storing HDFS blocks.  See the above HDFS Architecture link
+         for more information.
+         </para>
+       </section>
+    </section>       
+    
   </chapter>   <!--  architecture -->
   
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="external_apis.xml" />
@@ -1889,15 +1911,15 @@ hbase> describe 't1'</programlisting>
             </answer>
         </qandaentry>
     </qandadiv>
-    <qandadiv xml:id="ec2"><title>EC2</title>
+    <qandadiv xml:id="ec2"><title>Amazon EC2</title>
         <qandaentry>
             <question><para>
-            Why doesn't my remote java connection into my ec2 cluster work?
+            I am running HBase on Amazon EC2 and...
             </para></question>
             <answer>
                 <para>
-          See Andrew's answer here, up on the user list: <link xlink:href="http://search-hadoop.com/m/sPdqNFAwyg2">Remote Java client connection into EC2 instance</link>.
-                </para>
+ 	            See Troubleshooting <xref linkend="trouble.ec2" /> and Performance <xref linkend="perf.ec2" /> sections.                
+               </para>
             </answer>
         </qandaentry>
     </qandadiv>

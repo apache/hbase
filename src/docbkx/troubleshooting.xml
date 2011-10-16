@@ -793,6 +793,13 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
              <para>Questions on HBase and Amazon EC2 come up frequently on the HBase dist-list. Search for old threads using <link xlink:href="http://search-hadoop.com/">Search Hadoop</link>
              </para>
           </section>
+          <section xml:id="trouble.ec2.connection">
+             <title>Remote Java Connection into EC2 Cluster Not Working</title>
+             <para>
+             See Andrew's answer here, up on the user list: <link xlink:href="http://search-hadoop.com/m/sPdqNFAwyg2">Remote Java client connection into EC2 instance</link>.
+             </para>
+          </section>
+          
     </section>
     
   </chapter>
