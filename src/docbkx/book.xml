@@ -421,7 +421,8 @@ put.add(Bytes.toBytes("cf"), Bytes.toBytes("attr1"), explicitTimeInMs, Bytes.toB
 htable.put(put);
 </programlisting>
           Caution:  the version timestamp is internally by HBase for things like time-to-live calculations.  
-          It's usually best to avoid setting the timestamp yourself.
+          It's usually best to avoid setting this timestamp yourself.  Prefer using a separate 
+          timestamp attribute of the row, or have the timestamp a part of the rowkey, or both.
           </para>
           </section>
           
@@ -1614,25 +1615,27 @@ scan.setFilter(filter);
           <para>Even though these are for the same row, a KeyValue is created for each column:</para>
           <para>Key portion for Put #1:
            <itemizedlist>
-             <listitem>rowlength (4)</listitem>
-             <listitem>row (row1)</listitem>
-             <listitem>columnfamilylength (2)</listitem>
-             <listitem>columnfamily (cf)</listitem>
-             <listitem>columnqualifier (attr1)</listitem>
-             <listitem>timestamp (server time of Put)</listitem>
-             <listitem>keytype (Put)</listitem>
+             <listitem>rowlength <code>------------&gt; 4</code></listitem>
+             <listitem>row <code>-----------------&gt; row1</code></listitem>
+             <listitem>columnfamilylength <code>---&gt; 2</code></listitem>
+             <listitem>columnfamily <code>--------&gt; cf</code></listitem>
+             <listitem>columnqualifier <code>------&gt; attr1</code></listitem>
+             <listitem>timestamp <code>-----------&gt; server time of Put</code></listitem>
+             <listitem>keytype <code>-------------&gt; Put</code></listitem>
            </itemizedlist>
           </para>
           <para>Key portion for Put #2:
            <itemizedlist>
-             <listitem>rowlength (4)</listitem>
-             <listitem>row (row1)</listitem>
-             <listitem>columnfamilylength (2)</listitem>
-             <listitem>columnfamily (cf)</listitem>
-             <listitem>columnqualifier (attr2)</listitem>
-             <listitem>timestamp (server time of Put)</listitem>
-             <listitem>keytype (Put)</listitem>
+             <listitem>rowlength <code>------------&gt; 4</code></listitem>
+             <listitem>row <code>-----------------&gt; row1</code></listitem>
+             <listitem>columnfamilylength <code>---&gt; 2</code></listitem>
+             <listitem>columnfamily <code>--------&gt; cf</code></listitem>
+             <listitem>columnqualifier <code>------&gt; attr2</code></listitem>
+             <listitem>timestamp <code>-----------&gt; server time of Put</code></listitem>
+             <listitem>keytype <code>-------------&gt; Put</code></listitem>
            </itemizedlist>
+           <!--  trying to get the above arrows to line up at the same horizontal position has proven
+           harder than I thought -->
           </para>
         </section>
        <para>It is critical to understand that the rowkey, ColumnFamily, and column (aka columnqualifier) are embedded within
