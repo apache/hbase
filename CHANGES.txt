@@ -734,6 +734,8 @@ Release 0.90.5 - Unreleased
    HBASE-4537  TestUser imports breaking build against secure Hadoop
    HBASE-4501  [replication] Shutting down a stream leaves recovered
                sources running
+   HBASE-4563  When error occurs in this.parent.close(false) of split,
+               the split region cannot write or read (bluedavy via Lars H)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
