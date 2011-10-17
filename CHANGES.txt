@@ -365,6 +365,8 @@ Release 0.92.0 - Unreleased
                regions
    HBASE-4589  CacheOnWrite broken in some cases because it can conflict
                with evictOnClose (jgray)
+   HBASE-4579  CST.requestCompaction semantics changed, logs are now
+               spammed when too many store files
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
