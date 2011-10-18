@@ -167,7 +167,8 @@ class StoreScanner extends NonLazyKeyValueScanner
     // but now we get them in ascending order, which I think is
     // actually more correct, since memstore get put at the end.
     List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks, isGet);
+        .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks, isGet,
+            false);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
     scanners.addAll(sfScanners);

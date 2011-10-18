@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 
@@ -169,6 +170,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
     // single-level.
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
       metaLoads.incrementAndGet();
+      HRegion.incrNumericMetric(fsMetaBlockReadCntMetric, 1);
 
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
@@ -182,6 +184,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           // Return a distinct 'shallow copy' of the block,
           // so pos does not get messed by the scanner
           cacheHits.incrementAndGet();
+          HRegion.incrNumericMetric(fsMetaBlockReadCacheHitCntMetric, 1);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Cache Miss, please load.
@@ -189,8 +192,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset,
           blockSize, -1, true);
+      metaBlock.setColumnFamilyName(this.getColumnFamilyName());
 
-      HFile.readTimeNano.addAndGet(System.nanoTime() - startTimeNs);
+      long delta = System.nanoTime() - startTimeNs;
+      HRegion.incrTimeVaryingMetric(fsReadTimeNanoMetric, delta);
+      HFile.readTimeNano.addAndGet(delta);
       HFile.readOps.incrementAndGet();
 
       // Cache the block
@@ -246,6 +252,13 @@ public class HFileReaderV2 extends AbstractHFileReader {
         if (cachedBlock != null) {
           cacheHits.incrementAndGet();
 
+          if (isCompaction) {
+            HRegion.incrNumericMetric(
+                this.compactionBlockReadCacheHitCntMetric, 1);
+          } else {
+            HRegion.incrNumericMetric(this.fsBlockReadCacheHitCntMetric, 1);
+          }
+
           return cachedBlock;
         }
         // Carry on, please load.
@@ -255,9 +268,16 @@ public class HFileReaderV2 extends AbstractHFileReader {
       long startTimeNs = System.nanoTime();
       HFileBlock dataBlock = fsBlockReader.readBlockData(dataBlockOffset,
           onDiskBlockSize, -1, pread);
+      dataBlock.setColumnFamilyName(this.getColumnFamilyName());
 
-      HFile.readTimeNano.addAndGet(System.nanoTime() - startTimeNs);
+      long delta = System.nanoTime() - startTimeNs;
+      HFile.readTimeNano.addAndGet(delta);
       HFile.readOps.incrementAndGet();
+      if (isCompaction) {
+        HRegion.incrTimeVaryingMetric(this.compactionReadTimeNanoMetric, delta);
+      } else {
+        HRegion.incrTimeVaryingMetric(this.fsReadTimeNanoMetric, delta);
+      }
 
       // Cache the block
       if (cacheBlock) {

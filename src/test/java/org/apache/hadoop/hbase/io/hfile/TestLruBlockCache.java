@@ -529,7 +529,7 @@ public class TestLruBlockCache extends TestCase {
     /** Size of the cache block holding this item. Used for verification. */
     public long cacheBlockHeapSize() {
       return CachedBlock.PER_BLOCK_OVERHEAD
-          + ClassSize.align(blockName.length())
+          + ClassSize.align(2 * blockName.length())
           + ClassSize.align(size);
     }
 

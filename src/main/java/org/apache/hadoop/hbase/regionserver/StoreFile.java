@@ -969,11 +969,21 @@ public class StoreFile {
     private final HFile.Reader reader;
     protected TimeRangeTracker timeRangeTracker = null;
     protected long sequenceID = -1;
+    private final String bloomAccessedMetric;
+    private final String bloomSkippedMetric;
+
     private byte[] lastBloomKey;
 
     public Reader(FileSystem fs, Path path, CacheConfig cacheConf)
         throws IOException {
       reader = HFile.createReader(fs, path, cacheConf);
+
+      // prepare the text (key) for the metrics
+      bloomAccessedMetric = reader.getColumnFamilyName() +
+          ".keyMaybeInBloomCnt";
+      bloomSkippedMetric = reader.getColumnFamilyName() +
+          ".keyNotInBloomCnt";
+
       bloomFilterType = BloomType.NONE;
     }
 
@@ -982,6 +992,8 @@ public class StoreFile {
      */
     Reader() {
       this.reader = null;
+      bloomAccessedMetric = "";
+      bloomSkippedMetric = "";
     }
 
     public RawComparator<byte []> getComparator() {
@@ -989,14 +1001,32 @@ public class StoreFile {
     }
 
     /**
-     * Get a scanner to scan over this StoreFile.
+     * Get a scanner to scan over this StoreFile. Do not use
+     * this overload if using this scanner for compactions.
      *
      * @param cacheBlocks should this scanner cache blocks?
      * @param pread use pread (for highly concurrent small readers)
      * @return a scanner
      */
-    public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread) {
-      return new StoreFileScanner(this, getScanner(cacheBlocks, pread));
+    public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
+                                               boolean pread) {
+      return getStoreFileScanner(cacheBlocks, pread, false);
+    }
+
+    /**
+     * Get a scanner to scan over this StoreFile.
+     *
+     * @param cacheBlocks should this scanner cache blocks?
+     * @param pread use pread (for highly concurrent small readers)
+     * @param isCompaction is scanner being used for compaction?
+     * @return a scanner
+     */
+    public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
+                                               boolean pread,
+                                               boolean isCompaction) {
+      return new StoreFileScanner(this,
+                                 getScanner(cacheBlocks, pread,
+                                            isCompaction));
     }
 
     /**
@@ -1010,7 +1040,26 @@ public class StoreFile {
      */
     @Deprecated
     public HFileScanner getScanner(boolean cacheBlocks, boolean pread) {
-      return reader.getScanner(cacheBlocks, pread);
+      return getScanner(cacheBlocks, pread, false);
+    }
+
+    /**
+     * Warning: Do not write further code which depends on this call. Instead
+     * use getStoreFileScanner() which uses the StoreFileScanner class/interface
+     * which is the preferred way to scan a store with higher level concepts.
+     *
+     * @param cacheBlocks
+     *          should we cache the blocks?
+     * @param pread
+     *          use pread (for concurrent small readers)
+     * @param isCompaction
+     *          is scanner being used for compaction?
+     * @return the underlying HFileScanner
+     */
+    @Deprecated
+    public HFileScanner getScanner(boolean cacheBlocks, boolean pread,
+        boolean isCompaction) {
+      return reader.getScanner(cacheBlocks, pread, isCompaction);
     }
 
     public void close(boolean evictOnClose) throws IOException {
@@ -1175,6 +1224,10 @@ public class StoreFile {
                 && this.bloomFilter.contains(key, 0, key.length, bloom);
           }
 
+          if (exists)
+            HRegion.incrNumericMetric(bloomAccessedMetric, 1);
+          else
+            HRegion.incrNumericMetric(bloomSkippedMetric, 1);
           return exists;
         }
       } catch (IOException e) {
@@ -1271,6 +1324,10 @@ public class StoreFile {
 
     public long indexSize() {
       return reader.indexSize();
+    }
+
+    public String getColumnFamilyName() {
+      return reader.getColumnFamilyName();
     }
 
     public BloomType getBloomFilterType() {

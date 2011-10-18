@@ -42,12 +42,14 @@ import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.commons.lang.mutable.MutableDouble;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -122,6 +124,7 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
+import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -241,6 +244,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private final LinkedList<byte[]> reservedSpace = new LinkedList<byte[]>();
 
   private RegionServerMetrics metrics;
+  private RegionServerDynamicMetrics dynamicMetrics;
 
   // Compactions
   public CompactSplitThread compactSplitThread;
@@ -914,6 +918,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       this.hlog = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
+      this.dynamicMetrics = RegionServerDynamicMetrics.newInstance();
       startServiceThreads();
       LOG.info("Serving as " + this.serverNameFromMasterPOV +
         ", RPC listening on " + this.isa +
@@ -1236,6 +1241,24 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
+  /**
+   * Help function for metrics() that increments a map value if it exists.
+   *
+   * @param map
+   *          The map to work with
+   * @param key
+   *          the string key
+   * @param val
+   *          the value to add or set the map key to
+   */
+  protected void incrMap(Map<String, MutableDouble> map, String key, double val) {
+    if (map.get(key) != null) {
+      map.get(key).add(val);
+    } else {
+      map.put(key, new MutableDouble(val));
+    }
+  }
+
   protected void metrics() {
     this.metrics.regions.set(this.onlineRegions.size());
     this.metrics.incrementRequests(this.requestCount.get());
@@ -1252,24 +1275,62 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       new HDFSBlocksDistribution();
     long totalStaticIndexSize = 0;
     long totalStaticBloomSize = 0;
-    for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
-        HRegion r = e.getValue();
-        memstoreSize += r.memstoreSize.get();
-        readRequestsCount += r.readRequestsCount.get();
-        writeRequestsCount += r.writeRequestsCount.get();
-        synchronized (r.stores) {
-          stores += r.stores.size();
-          for (Map.Entry<byte[], Store> ee : r.stores.entrySet()) {
-            Store store = ee.getValue();
-            storefiles += store.getStorefilesCount();
-            storefileIndexSize += store.getStorefilesIndexSize();
-            totalStaticIndexSize += store.getTotalStaticIndexSize();
-            totalStaticBloomSize += store.getTotalStaticBloomSize();
-          }
-        }
 
-        hdfsBlocksDistribution.add(r.getHDFSBlocksDistribution());
+    long tmpfiles;
+    long tmpindex;
+    long tmpfilesize;
+    long tmpbloomsize;
+    long tmpstaticsize;
+    String cfname;
+
+    // Note that this is a map of Doubles instead of Longs. This is because we
+    // do effective integer division, which would perhaps truncate more than it
+    // should because we do it only on one part of our sum at a time. Rather
+    // than dividing at the end, where it is difficult to know the proper
+    // factor, everything is exact then truncated.
+    Map<String, MutableDouble> tempVals = new HashMap<String, MutableDouble>();
+
+    for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
+      HRegion r = e.getValue();
+      memstoreSize += r.memstoreSize.get();
+      readRequestsCount += r.readRequestsCount.get();
+      writeRequestsCount += r.writeRequestsCount.get();
+      synchronized (r.stores) {
+        stores += r.stores.size();
+        for (Map.Entry<byte[], Store> ee : r.stores.entrySet()) {
+          Store store = ee.getValue();
+          tmpfiles = store.getStorefilesCount();
+          tmpindex = store.getStorefilesIndexSize();
+          tmpfilesize = store.getStorefilesSize();
+          tmpbloomsize = store.getTotalStaticBloomSize();
+          tmpstaticsize = store.getTotalStaticIndexSize();
+
+          // Note that there is only one store per CF so setting is safe
+          cfname = "cf." + store.toString();
+          this.incrMap(tempVals, cfname + ".storeFileCount", tmpfiles);
+          this.incrMap(tempVals, cfname + ".storeFileIndexSizeMB",
+              (tmpindex / (1024.0 * 1024)));
+          this.incrMap(tempVals, cfname + ".storeFileSizeMB",
+              (tmpfilesize / (1024.0 * 1024)));
+          this.incrMap(tempVals, cfname + ".staticBloomSizeKB",
+              (tmpbloomsize / 1024.0));
+          this.incrMap(tempVals, cfname + ".memstoreSizeMB",
+              (store.getMemStoreSize() / (1024.0 * 1024)));
+          this.incrMap(tempVals, cfname + ".staticIndexSizeKB",
+              tmpstaticsize / 1024.0);
+
+          storefiles += tmpfiles;
+          storefileIndexSize += tmpindex;
+          totalStaticIndexSize += tmpstaticsize;
+          totalStaticBloomSize += tmpbloomsize;
+        }
       }
+
+      hdfsBlocksDistribution.add(r.getHDFSBlocksDistribution());
+    }
+    for (Entry<String, MutableDouble> e : tempVals.entrySet()) {
+      HRegion.setNumericMetric(e.getKey(), e.getValue().longValue());
+    }
     this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);
     this.metrics.memstoreSizeMB.set((int) (memstoreSize / (1024 * 1024)));

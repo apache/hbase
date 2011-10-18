@@ -71,14 +71,27 @@ class StoreFileScanner implements KeyValueScanner {
    * set of store files.
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(
-      Collection<StoreFile> filesToCompact,
+      Collection<StoreFile> files,
       boolean cacheBlocks,
       boolean usePread) throws IOException {
+    return getScannersForStoreFiles(files, cacheBlocks,
+                                   usePread, false);
+  }
+
+  /**
+   * Return an array of scanners corresponding to the given
+   * set of store files.
+   */
+  public static List<StoreFileScanner> getScannersForStoreFiles(
+      Collection<StoreFile> files,
+      boolean cacheBlocks,
+      boolean usePread,
+      boolean isCompaction) throws IOException {
     List<StoreFileScanner> scanners =
-      new ArrayList<StoreFileScanner>(filesToCompact.size());
-    for (StoreFile file : filesToCompact) {
+      new ArrayList<StoreFileScanner>(files.size());
+    for (StoreFile file : files) {
       StoreFile.Reader r = file.createReader();
-      scanners.add(r.getStoreFileScanner(cacheBlocks, usePread));
+      scanners.add(r.getStoreFileScanner(cacheBlocks, usePread, isCompaction));
     }
     return scanners;
   }

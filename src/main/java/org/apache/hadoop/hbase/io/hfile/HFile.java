@@ -176,6 +176,8 @@ public class HFile {
     /** @return the path to this {@link HFile} */
     Path getPath();
 
+    String getColumnFamilyName();
+
     void appendMetaBlock(String bloomFilterMetaKey, Writable metaWriter);
 
     /**

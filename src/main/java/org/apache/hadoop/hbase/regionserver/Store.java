@@ -536,6 +536,14 @@ public class Store implements HeapSize {
     StoreFile.Reader r = sf.createReader();
     this.storeSize += r.length();
     this.totalUncompressedBytes += r.getTotalUncompressedBytes();
+
+    // This increments the metrics associated with total flushed bytes for this
+    // family. The overall flush count is stored in the static metrics and
+    // retrieved from HRegion.recentFlushes, which is set within
+    // HRegion.internalFlushcache, which indirectly calls this to actually do
+    // the flushing through the StoreFlusherImpl class
+    HRegion.incrNumericPersistentMetric("cf." + this.toString() + ".flushSize",
+        flushed);
     if(LOG.isInfoEnabled()) {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
         ", sequenceid=" + logCacheFlushId +
@@ -1122,7 +1130,7 @@ public class Store implements HeapSize {
 
     // For each file, obtain a scanner:
     List<StoreFileScanner> scanners = StoreFileScanner
-      .getScannersForStoreFiles(filesToCompact, false, false);
+      .getScannersForStoreFiles(filesToCompact, false, false, true);
 
     // Make the instantiation lazy in case compaction produces no product; i.e.
     // where all source cells are expired or deleted.
@@ -1417,7 +1425,7 @@ public class Store implements HeapSize {
       firstOnRow = new KeyValue(lastKV.getRow(), HConstants.LATEST_TIMESTAMP);
     }
     // Get a scanner that caches blocks and that uses pread.
-    HFileScanner scanner = r.getHFileReader().getScanner(true, true);
+    HFileScanner scanner = r.getHFileReader().getScanner(true, true, false);
     // Seek scanner.  If can't seek it, return.
     if (!seekToScanner(scanner, firstOnRow, firstKV)) return;
     // If we found candidate on firstOnRow, just return. THIS WILL NEVER HAPPEN!
@@ -1698,6 +1706,13 @@ public class Store implements HeapSize {
       size += r.getTotalBloomSize();
     }
     return size;
+  }
+
+  /**
+   * @return The size of this store's memstore, in bytes
+   */
+  long getMemStoreSize() {
+    return this.memstore.heapSize();
   }
 
   /**

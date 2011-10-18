@@ -41,6 +41,7 @@ import java.util.Random;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -273,6 +274,55 @@ public class HRegion implements HeapSize { // , Writable{
   public final static String REGIONINFO_FILE = ".regioninfo";
   private HTableDescriptor htableDescriptor = null;
   private RegionSplitPolicy splitPolicy;
+
+  // for simple numeric metrics (# of blocks read from block cache)
+  public static final ConcurrentMap<String, AtomicLong> numericMetrics = new ConcurrentHashMap<String, AtomicLong>();
+
+  // for simple numeric metrics (current block cache size)
+  // These ones are not reset to zero when queried, unlike the previous.
+  public static final ConcurrentMap<String, AtomicLong> numericPersistentMetrics = new ConcurrentHashMap<String, AtomicLong>();
+
+  // Used for metrics where we want track a metrics (such as latency)
+  // over a number of operations.
+  public static final ConcurrentMap<String, Pair<AtomicLong, AtomicInteger>> timeVaryingMetrics = new ConcurrentHashMap<String, Pair<AtomicLong, AtomicInteger>>();
+
+  public static void incrNumericMetric(String key, long amount) {
+    AtomicLong oldVal = numericMetrics.get(key);
+    if (oldVal == null) {
+      oldVal = numericMetrics.putIfAbsent(key, new AtomicLong(amount));
+      if (oldVal == null)
+        return;
+    }
+    oldVal.addAndGet(amount);
+  }
+
+  public static void setNumericMetric(String key, long amount) {
+    numericMetrics.put(key, new AtomicLong(amount));
+  }
+
+  public static void incrTimeVaryingMetric(String key, long amount) {
+    Pair<AtomicLong, AtomicInteger> oldVal = timeVaryingMetrics.get(key);
+    if (oldVal == null) {
+      oldVal = timeVaryingMetrics.putIfAbsent(key,
+          new Pair<AtomicLong, AtomicInteger>(new AtomicLong(amount),
+              new AtomicInteger(1)));
+      if (oldVal == null)
+        return;
+    }
+    oldVal.getFirst().addAndGet(amount); // total time
+    oldVal.getSecond().incrementAndGet(); // increment ops by 1
+  }
+
+  public static void incrNumericPersistentMetric(String key, long amount) {
+    AtomicLong oldVal = numericPersistentMetrics.get(key);
+    if (oldVal == null) {
+      oldVal = numericPersistentMetrics
+          .putIfAbsent(key, new AtomicLong(amount));
+      if (oldVal == null)
+        return;
+    }
+    oldVal.addAndGet(amount);
+  }
 
   /**
    * Should only be used for testing purposes
