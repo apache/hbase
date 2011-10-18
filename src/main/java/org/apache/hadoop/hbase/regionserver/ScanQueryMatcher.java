@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
@@ -181,15 +182,21 @@ public class ScanQueryMatcher {
       }
     }
 
-    if (!this.deletes.isEmpty() &&
-        deletes.isDeleted(bytes, offset, qualLength, timestamp)) {
+    if (!this.deletes.isEmpty()) {
+      DeleteResult deleteResult = deletes.isDeleted(bytes, offset, qualLength,
+          timestamp);
 
-      // May be able to optimize the SKIP here, if we matched
-      // due to a DelFam, we can skip to next row
-      // due to a DelCol, we can skip to next col
-      // But it requires more info out of isDelete().
-      // needful -> million column challenge.
-      return MatchCode.SKIP;
+      switch (deleteResult) {
+        case FAMILY_DELETED:
+        case COLUMN_DELETED:
+          return getNextRowOrNextColumn(bytes, offset, qualLength);
+        case VERSION_DELETED:
+          return MatchCode.SKIP;
+        case NOT_DELETED:
+          break;
+        default:
+          throw new RuntimeException("UNEXPECTED");
+        }
     }
 
     int timestampComparison = tr.compare(timestamp);

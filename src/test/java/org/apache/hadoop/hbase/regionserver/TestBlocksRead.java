@@ -291,16 +291,14 @@ public class TestBlocksRead extends HBaseTestCase {
     deleteFamily(FAMILY, "row", 6);
     region.flushcache();
 
-    // Expected blocks read: 6. Why? [TODO]
-    // With lazy seek, would have expected this to be lower.
-    // At least is shouldn't be worse than before.
-    kvs = getData(FAMILY, "row", "col1", 5);
+    // Expected blocks read: 2. [HBASE-4585]
+    kvs = getData(FAMILY, "row", "col1", 2);
     assertEquals(0, kvs.length);
-    kvs = getData(FAMILY, "row", "col2", 5);
+    kvs = getData(FAMILY, "row", "col2", 3);
     assertEquals(0, kvs.length);
     kvs = getData(FAMILY, "row", "col3", 2);
     assertEquals(0, kvs.length);
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 6);
+    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 4);
     assertEquals(0, kvs.length);
 
     // File 5: Delete with post data timestamp and insert some older
@@ -312,11 +310,8 @@ public class TestBlocksRead extends HBaseTestCase {
     putData(FAMILY, "row", "col3", 9);
     region.flushcache();
 
-    // Expected blocks read: 10. Why? [TODO]
-    // With lazy seek, would have expected this to be lower.
-    // At least is shouldn't be worse than before.
-    //
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 10);
+    // Expected blocks read: 5. [HBASE-4585]
+    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 5);
     assertEquals(0, kvs.length);
 
     // File 6: Put back new data
@@ -325,13 +320,7 @@ public class TestBlocksRead extends HBaseTestCase {
     putData(FAMILY, "row", "col3", 13);
     region.flushcache();
 
-    // Expected blocks read: 9. Why? [TOD0]
-    //
-    // [Would have expected this to be 8.
-    //  Six to go to the top of each file for delete marker. On file 6, the
-    //  top block would serve "col1". And we should need two more to
-    //  serve col2 and col3 from file 6.
-    //
+    // Expected blocks read: 5. [HBASE-4585]
     kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 5);
     assertEquals(3, kvs.length);
     verifyData(kvs[0], "row", "col1", 11);
