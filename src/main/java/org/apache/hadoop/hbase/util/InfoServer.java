@@ -57,7 +57,7 @@ public class InfoServer extends HttpServer {
   public InfoServer(String name, String bindAddress, int port, boolean findPort,
       final Configuration c)
   throws IOException {
-    super(name, bindAddress, port, findPort, HBaseConfiguration.create());
+    super(name, bindAddress, port, findPort, c);
     this.config = c;
     fixupLogsServletLocation();
   }

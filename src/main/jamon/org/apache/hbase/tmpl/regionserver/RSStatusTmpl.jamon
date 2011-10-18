@@ -34,6 +34,7 @@ org.apache.hadoop.hbase.HConstants;
 org.apache.hadoop.hbase.HServerInfo;
 org.apache.hadoop.hbase.HServerLoad;
 org.apache.hadoop.hbase.HRegionInfo;
+org.apache.hadoop.hbase.HBaseConfiguration;
 </%import>
 <%if format.equals("json") %>
   <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>
@@ -66,7 +67,10 @@ org.apache.hadoop.hbase.HRegionInfo;
   <a href="/logs/">Local logs</a>,
   <a href="/stacks">Thread Dump</a>,
   <a href="/logLevel">Log Level</a>,
-  <a href="/dump">Debug dump</a>
+  <a href="/dump">Debug dump</a>,
+<%if HBaseConfiguration.isShowConfInServlet() %>
+  <a href="/conf">HBase Configuration</a>
+</%if>
 </p>
 <hr id="head_rule" />
 

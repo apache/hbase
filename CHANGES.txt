@@ -16,6 +16,7 @@ Release 0.93.0 - Unreleased
                CacheConf class (jgray)
    HBASE-4102  atomicAppend: A put that appends to the latest version of a cell (Lars H)
    HBASE-4469  Avoid top row seek by looking up bloomfilter (liyin via jgray)
+   HBASE-4418  Show all the hbase configuration in the web ui
 
   BUG FIXES
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)
