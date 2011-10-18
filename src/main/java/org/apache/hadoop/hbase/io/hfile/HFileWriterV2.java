@@ -220,9 +220,10 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     HFile.writeOps.incrementAndGet();
 
     if (cacheConf.shouldCacheDataOnWrite()) {
+      HFileBlock blockForCaching = fsBlockWriter.getBlockForCaching();
+      blockForCaching.setColumnFamilyName(this.getColumnFamilyName());
       cacheConf.getBlockCache().cacheBlock(
-          HFile.getBlockCacheKey(name, lastDataBlockOffset),
-          fsBlockWriter.getBlockForCaching());
+          HFile.getBlockCacheKey(name, lastDataBlockOffset), blockForCaching);
     }
   }
 
@@ -240,9 +241,10 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
         if (cacheThisBlock) {
           // Cache this block on write.
+          HFileBlock cBlock = fsBlockWriter.getBlockForCaching();
+          cBlock.setColumnFamilyName(this.getColumnFamilyName());
           cacheConf.getBlockCache().cacheBlock(
-              HFile.getBlockCacheKey(name, offset),
-              fsBlockWriter.getBlockForCaching());
+              HFile.getBlockCacheKey(name, offset), cBlock);
         }
       }
     }

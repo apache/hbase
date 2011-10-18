@@ -41,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -266,7 +267,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
       throw new RuntimeException("Cached an already cached block");
     }
     cb = new CachedBlock(blockName, buf, count.incrementAndGet(), inMemory);
-    long newSize = size.addAndGet(cb.heapSize());
+    long newSize = updateSizeMetrics(cb, false);
     map.put(blockName, cb);
     elements.incrementAndGet();
     if(newSize > acceptableSize() && !evictionInProgress) {
@@ -286,6 +287,30 @@ public class LruBlockCache implements BlockCache, HeapSize {
    */
   public void cacheBlock(String blockName, Cacheable buf) {
     cacheBlock(blockName, buf, false);
+  }
+
+  /**
+   * Helper function that updates the local size counter and also updates any
+   * per-cf or per-blocktype metrics it can discern from given
+   * {@link CachedBlock}
+   *
+   * @param cb
+   * @param evict
+   */
+  protected long updateSizeMetrics(CachedBlock cb, boolean evict) {
+    long heapsize = cb.heapSize();
+    if (evict) {
+      heapsize *= -1;
+    }
+    if (cb.getBuffer() instanceof HFileBlockInfo) {
+      HFileBlockInfo cb_hfbi = (HFileBlockInfo) cb.getBuffer();
+      HRegion.incrNumericPersistentMetric(cb_hfbi.getColumnFamilyName()
+          + ".blockCacheSize", heapsize);
+      HRegion.incrNumericPersistentMetric("bt."
+          + cb_hfbi.getBlockType().getMetricName() + ".blockCacheSize",
+          heapsize);
+    }
+    return size.addAndGet(heapsize);
   }
 
   /**
@@ -340,7 +365,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
   protected long evictBlock(CachedBlock block) {
     map.remove(block.getName());
-    size.addAndGet(-1 * block.heapSize());
+    updateSizeMetrics(block, true);
     elements.decrementAndGet();
     stats.evicted();
     return block.heapSize();

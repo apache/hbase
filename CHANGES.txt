@@ -696,6 +696,7 @@ Release 0.92.0 - Unreleased
    HBASE-4292  Add a debugging dump servlet to the master and regionserver
                (todd)
    HBASE-4057  Implement HBase version of "show processlist" (Riley Patterson)
+   HBASE-4219  Per Column Family Metrics
 
 Release 0.90.5 - Unreleased
 

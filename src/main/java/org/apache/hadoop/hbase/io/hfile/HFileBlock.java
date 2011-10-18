@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 
 import org.apache.hadoop.hbase.io.DoubleOutputStream;
+import org.apache.hadoop.hbase.io.hfile.HFileBlockInfo;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -73,7 +74,7 @@ import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.NONE;
  * The version 2 block representation in the block cache is the same as above,
  * except that the data section is always uncompressed in the cache.
  */
-public class HFileBlock implements Cacheable {
+public class HFileBlock implements Cacheable, HFileBlockInfo {
 
   /** The size of a version 2 {@link HFile} block header */
   public static final int HEADER_SIZE = MAGIC_LENGTH + 2 * Bytes.SIZEOF_INT
@@ -154,6 +155,16 @@ public class HFileBlock implements Cacheable {
     if (fillHeader)
       overwriteHeader();
     this.offset = offset;
+  }
+
+  private String cfStatsPrefix = "cf.unknown";
+
+  public String getColumnFamilyName() {
+    return this.cfStatsPrefix;
+  }
+
+  public void setColumnFamilyName(String cfName) {
+    this.cfStatsPrefix = cfName;
   }
 
   /**
@@ -423,8 +434,8 @@ public class HFileBlock implements Cacheable {
     // If we are on heap, then we add the capacity of buf.
     if (buf != null) {
       return ClassSize.align(ClassSize.OBJECT + 2 * ClassSize.REFERENCE + 3
-          * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG + BYTE_BUFFER_HEAP_SIZE)
-          + ClassSize.align(buf.capacity());
+          * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG)
+          + ClassSize.align(BYTE_BUFFER_HEAP_SIZE + buf.capacity());
     } else {
 
       return ClassSize.align(ClassSize.OBJECT + 2 * ClassSize.REFERENCE + 3

@@ -95,6 +95,19 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   /** Prefix of the form cf.<column_family_name> for statistics counters. */
   private final String cfStatsPrefix;
 
+  // various metrics that we want to track on a per-cf basis
+  public String fsReadTimeNanoMetric = "";
+  public String compactionReadTimeNanoMetric = "";
+
+  public String fsBlockReadCntMetric = "";
+  public String compactionBlockReadCntMetric = "";
+
+  public String fsBlockReadCacheHitCntMetric = "";
+  public String compactionBlockReadCacheHitCntMetric = "";
+
+  public String fsMetaBlockReadCntMetric = "";
+  public String fsMetaBlockReadCacheHitCntMetric = "";
+
   protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long fileSize,
       final boolean closeIStream,
@@ -108,6 +121,20 @@ public abstract class AbstractHFileReader implements HFile.Reader {
     this.path = path;
     this.name = path.getName();
     cfStatsPrefix = "cf." + parseCfNameFromPath(path.toString());
+
+    fsReadTimeNanoMetric = cfStatsPrefix + ".fsReadNano";
+    compactionReadTimeNanoMetric = cfStatsPrefix + ".compactionReadNano";
+
+    fsBlockReadCntMetric = cfStatsPrefix + ".fsBlockReadCnt";
+    fsBlockReadCacheHitCntMetric = cfStatsPrefix + ".fsBlockReadCacheHitCnt";
+
+    compactionBlockReadCntMetric = cfStatsPrefix + ".compactionBlockReadCnt";
+    compactionBlockReadCacheHitCntMetric = cfStatsPrefix
+        + ".compactionBlockReadCacheHitCnt";
+
+    fsMetaBlockReadCntMetric = cfStatsPrefix + ".fsMetaBlockReadCnt";
+    fsMetaBlockReadCacheHitCntMetric = cfStatsPrefix
+        + ".fsMetaBlockReadCacheHitCnt";
   }
 
   @SuppressWarnings("serial")
