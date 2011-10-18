@@ -122,4 +122,20 @@ public class HBaseConfiguration extends Configuration {
       destConf.set(e.getKey(), e.getValue());
     }
   }
+  
+  /**
+   * 
+   * @return whether to show HBase Configuration in servlet
+   */
+  public static boolean isShowConfInServlet() {
+    boolean isShowConf = false;
+    try {
+      if (Class.forName("org.apache.hadoop.conf.ConfServlet") != null) {
+        isShowConf = true;  
+      }
+    } catch (Exception e) {
+      
+    }
+    return isShowConf;
+  }
 }

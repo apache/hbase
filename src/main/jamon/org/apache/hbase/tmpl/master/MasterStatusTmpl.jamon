@@ -42,6 +42,7 @@ org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.client.HBaseAdmin;
 org.apache.hadoop.hbase.client.HConnectionManager;
 org.apache.hadoop.hbase.HTableDescriptor;
+org.apache.hadoop.hbase.HBaseConfiguration;
 </%import>
 <%if format.equals("json") %>
   <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>
@@ -62,7 +63,10 @@ org.apache.hadoop.hbase.HTableDescriptor;
   <a href="/logs/">Local logs</a>,
   <a href="/stacks">Thread Dump</a>,
   <a href="/logLevel">Log Level</a>,
-  <a href="/dump">Debug dump</a>
+  <a href="/dump">Debug dump</a>,
+<%if HBaseConfiguration.isShowConfInServlet()%>
+  <a href="/conf">HBase Configuration</a>
+</%if>
 </p>
 
 <!-- Various warnings that cluster admins should be aware of -->
