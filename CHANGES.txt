@@ -1,5 +1,8 @@
 HBase Change Log
 Release 0.93.0 - Unreleased
+  NEW FEATURE
+   HBASE-4460  Support running an embedded ThriftServer within a RegionServer (jgray)
+
   IMPROVEMENT
    HBASE-4132  Extend the WALActionsListener API to accomodate log archival
                (dhruba borthakur)
