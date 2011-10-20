@@ -643,6 +643,8 @@ Release 0.92.0 - Unreleased
    HBASE-3581  hbase rpc should send size of response
    HBASE-4585  Avoid seek operation when current kv is deleted(Liyin Tang)
    HBASE-4486  Improve Javadoc for HTableDescriptor (Akash Ashok)
+   HBASE-4604  hbase.client.TestHTablePool could start a single
+               cluster instead of one per method (nkeywal)
        
 
   TASKS
