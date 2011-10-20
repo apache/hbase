@@ -300,6 +300,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // Cache configuration and block cache reference
   private final CacheConfig cacheConfig;
 
+  // reference to the Thrift Server.
+  volatile private HRegionThriftServer thriftServer;
+
   /**
    * The server name the Master sees us as.  Its made from the hostname the
    * master passes us, port, and server startcode. Gets set after registration
@@ -617,6 +620,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
         HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD),
         this.threadWakeFrequency);
+
+    // Create the thread for the ThriftServer.
+    if (conf.getBoolean("hbase.regionserver.export.thrift", false)) {
+      thriftServer = new HRegionThriftServer(this, conf);
+      thriftServer.start();
+      LOG.info("Started Thrift API from Region Server.");
+    }
   }
 
   /**
@@ -685,6 +695,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
     }
     // Run shutdown.
+    if (this.thriftServer != null) this.thriftServer.shutdown();
     this.leases.closeAfterLeasesExpire();
     this.rpcServer.stop();
     if (this.splitLogWorker != null) {

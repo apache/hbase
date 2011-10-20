@@ -195,12 +195,12 @@ public class ThriftServer {
      * Constructs an HBaseHandler object.
      * @throws IOException
      */
-    HBaseHandler()
+    protected HBaseHandler()
     throws IOException {
       this(HBaseConfiguration.create());
     }
 
-    HBaseHandler(final Configuration c)
+    protected HBaseHandler(final Configuration c)
     throws IOException {
       this.conf = c;
       admin = new HBaseAdmin(conf);
