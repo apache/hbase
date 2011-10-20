@@ -59,7 +59,7 @@ public class TestSlabCache {
     cache.shutdown();
   }
 
-  @Ignore @Test
+  @Test
   public void testElementPlacement() {
     assertEquals(cache.getHigherBlock(BLOCK_SIZE).getKey().intValue(),
         (BLOCK_SIZE * 11 / 10));
@@ -67,28 +67,28 @@ public class TestSlabCache {
         .intValue(), (BLOCK_SIZE * 21 / 10));
   }
 
-  @Ignore @Test
+ @Test
   public void testCacheSimple() throws Exception {
     CacheTestUtils.testCacheSimple(cache, BLOCK_SIZE, NUM_QUERIES);
   }
 
-  @Ignore @Test
+  @Test
   public void testCacheMultiThreaded() throws Exception {
     CacheTestUtils.testCacheMultiThreaded(cache, BLOCK_SIZE, NUM_THREADS,
         NUM_QUERIES, 0.80);
   }
 
-  @Ignore @Test
+  @Test
   public void testCacheMultiThreadedSingleKey() throws Exception {
     CacheTestUtils.hammerSingleKey(cache, BLOCK_SIZE, NUM_THREADS, NUM_QUERIES);
   }
 
-  @Ignore @Test
+  @Test
   public void testCacheMultiThreadedEviction() throws Exception {
     CacheTestUtils.hammerEviction(cache, BLOCK_SIZE, 10, NUM_QUERIES);
   }
 
-  @Ignore @Test
+  @Test
   /*Just checks if ranges overlap*/
   public void testStatsArithmetic(){
     SlabStats test = cache.requestStats;
@@ -99,7 +99,7 @@ public class TestSlabCache {
     }
   }
 
-  @Ignore @Test
+  @Test
   public void testHeapSizeChanges(){
     CacheTestUtils.testHeapSizeChanges(cache, BLOCK_SIZE);
   }
