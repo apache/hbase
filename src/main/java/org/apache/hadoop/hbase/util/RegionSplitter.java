@@ -35,6 +35,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -138,10 +139,11 @@ public class RegionSplitter {
   /**
    * A generic interface for the RegionSplitter code to use for all it's
    * functionality. Note that the original authors of this code use
-   * {@link MD5StringSplit} to partition their table and set it as default, but
+   * {@link HexStringSplit} to partition their table and set it as default, but
    * provided this for your custom algorithm. To use, create a new derived class
-   * from this interface and call the RegionSplitter class with the argument: <br>
-   * <b>-D split.algorithm=<your_class_path></b>
+   * from this interface and call {@link RegionSplitter#createPresplitTable} or
+   * {@link RegionSplitter#rollingSplit(String, String, Configuration)} with the
+   * argument splitClassName giving the name of your class.
    */
   public static interface SplitAlgorithm {
     /**
@@ -158,12 +160,13 @@ public class RegionSplitter {
     /**
      * Split an entire table.
      *
-     * @param numberOfSplits
+     * @param numRegions
      *          number of regions to split the table into
      *
-     * @return array of split keys for the initial regions of the table
+     * @return array of split keys for the initial regions of the table. The length of the
+     * returned array should be numRegions-1.
      */
-    byte[][] split(int numberOfSplits);
+    byte[][] split(int numRegions);
 
     /**
      * In HBase, the first row is represented by an empty byte array. This might
@@ -208,21 +211,29 @@ public class RegionSplitter {
    * <p>
    * <ul>
    * <li>create a table named 'myTable' with 60 pre-split regions containing 2
-   * column families 'test' & 'rs' bin/hbase
+   * column families 'test' & 'rs', assuming the keys are hex-encoded ASCII:
    * <ul>
-   * <li>org.apache.hadoop.hbase.util.RegionSplitter -c 60 -f test:rs myTable
+   * <li>bin/hbase org.apache.hadoop.hbase.util.RegionSplitter -c 60 -f test:rs
+   * myTable HexStringSplit
    * </ul>
    * <li>perform a rolling split of 'myTable' (i.e. 60 => 120 regions), # 2
-   * outstanding splits at a time bin/hbase
+   * outstanding splits at a time, assuming keys are uniformly distributed
+   * bytes:
    * <ul>
-   * <li>org.apache.hadoop.hbase.util.RegionSplitter -r -o 2 myTable
+   * <li>bin/hbase org.apache.hadoop.hbase.util.RegionSplitter -r -o 2 myTable
+   * UniformSplit
    * </ul>
    * </ul>
    *
+   * There are two SplitAlgorithms built into RegionSplitter, HexStringSplit
+   * and UniformSplit. These are different strategies for choosing region
+   * boundaries. See their source code for details.
+   *
    * @param args
-   *          Usage: RegionSplitter &lt;TABLE&gt; &lt;-c &lt;# regions&gt; -f
-   *          &lt;family:family:...&gt; | -r [-o &lt;# outstanding
-   *          splits&gt;]&gt; [-D &lt;conf.param=value&gt;]
+   *          Usage: RegionSplitter &lt;TABLE&gt; &lt;SPLITALGORITHM&gt;
+   *          &lt;-c &lt;# regions&gt; -f &lt;family:family:...&gt; | -r
+   *          [-o &lt;# outstanding splits&gt;]&gt;
+   *          [-D &lt;conf.param=value&gt;]
    * @throws IOException
    *           HBase IO problem
    * @throws InterruptedException
@@ -277,35 +288,35 @@ public class RegionSplitter {
     boolean rollingSplit = cmd.hasOption("r");
     boolean oneOperOnly = createTable ^ rollingSplit;
 
-    if (1 != cmd.getArgList().size() || !oneOperOnly || cmd.hasOption("h")) {
-      new HelpFormatter().printHelp("RegionSplitter <TABLE>", opt);
+    if (2 != cmd.getArgList().size() || !oneOperOnly || cmd.hasOption("h")) {
+      new HelpFormatter().printHelp("RegionSplitter <TABLE> <SPLITALGORITHM>\n"+
+		  "SPLITALGORITHM is a java class name of a class implementing " +
+		  "SplitAlgorithm, or one of the special strings HexStringSplit " +
+		  "or UniformSplit, which are built-in split algorithms. " +
+		  "HexStringSplit treats keys as hexadecimal ASCII, and " +
+		  "UniformSplit treats keys as arbitrary bytes.", opt);
       return;
     }
     String tableName = cmd.getArgs()[0];
+    String splitClass = cmd.getArgs()[1];
 
     if (createTable) {
       conf.set("split.count", cmd.getOptionValue("c"));
-      createPresplitTable(tableName, cmd.getOptionValue("f").split(":"), conf);
+      createPresplitTable(tableName, splitClass, cmd.getOptionValue("f").split(":"), conf);
     }
 
     if (rollingSplit) {
       if (cmd.hasOption("o")) {
         conf.set("split.outstanding", cmd.getOptionValue("o"));
       }
-      rollingSplit(tableName, conf);
+      rollingSplit(tableName, splitClass, conf);
     }
   }
 
-  static void createPresplitTable(String tableName, String[] columnFamilies,
-      Configuration conf) throws IOException, InterruptedException {
-    Class<? extends SplitAlgorithm> splitClass = conf.getClass(
-        "split.algorithm", MD5StringSplit.class, SplitAlgorithm.class);
-    SplitAlgorithm splitAlgo;
-    try {
-      splitAlgo = splitClass.newInstance();
-    } catch (Exception e) {
-      throw new IOException("Problem loading split algorithm: ", e);
-    }
+  static void createPresplitTable(String tableName, String splitClassName,
+          String[] columnFamilies, Configuration conf) throws IOException,
+          InterruptedException {
+    SplitAlgorithm splitAlgo = newSplitAlgoInstance(conf, splitClassName);
     final int splitCount = conf.getInt("split.count", 0);
     Preconditions.checkArgument(splitCount > 1, "Split count must be > 1");
 
@@ -340,16 +351,9 @@ public class RegionSplitter {
     LOG.debug("Finished creating table with " + splitCount + " regions");
   }
 
-  static void rollingSplit(String tableName, Configuration conf)
-      throws IOException, InterruptedException {
-    Class<? extends SplitAlgorithm> splitClass = conf.getClass(
-        "split.algorithm", MD5StringSplit.class, SplitAlgorithm.class);
-    SplitAlgorithm splitAlgo;
-    try {
-      splitAlgo = splitClass.newInstance();
-    } catch (Exception e) {
-      throw new IOException("Problem loading split algorithm: ", e);
-    }
+  static void rollingSplit(String tableName, String splitClassName,
+          Configuration conf) throws IOException, InterruptedException {
+    SplitAlgorithm splitAlgo = newSplitAlgoInstance(conf, splitClassName);
     final int minOS = conf.getInt("split.outstanding", 2);
 
     HTable table = new HTable(conf, tableName);
@@ -541,6 +545,41 @@ public class RegionSplitter {
     fs.delete(splitFile, false);
   }
 
+  /**
+   * @throws IOException if the specified SplitAlgorithm class couldn't be
+   * instantiated
+   */
+  static SplitAlgorithm newSplitAlgoInstance(Configuration conf,
+          String splitClassName) throws IOException {
+    Class<?> splitClass;
+
+    // For split algorithms builtin to RegionSplitter, the user can specify
+    // their simple class name instead of a fully qualified class name.
+    if(splitClassName.equals(HexStringSplit.class.getSimpleName())) {
+      splitClass = HexStringSplit.class;
+    } else if (splitClassName.equals(UniformSplit.class.getSimpleName())) {
+      splitClass = UniformSplit.class;
+    } else {
+      try {
+        splitClass = conf.getClassByName(splitClassName);
+      } catch (ClassNotFoundException e) {
+        throw new IOException("Couldn't load split class " + splitClassName, e);
+      }
+      if(splitClass == null) {
+        throw new IOException("Failed loading split class " + splitClassName);
+      }
+      if(!SplitAlgorithm.class.isAssignableFrom(splitClass)) {
+        throw new IOException(
+                "Specified split class doesn't implement SplitAlgorithm");
+      }
+    }
+    try {
+      return splitClass.asSubclass(SplitAlgorithm.class).newInstance();
+    } catch (Exception e) {
+      throw new IOException("Problem loading split algorithm: ", e);
+    }
+  }
+
   static LinkedList<Pair<byte[], byte[]>> splitScan(
       LinkedList<Pair<byte[], byte[]>> regionList, HTable table,
       SplitAlgorithm splitAlgo)
@@ -714,16 +753,20 @@ public class RegionSplitter {
   }
 
   /**
-   * MD5StringSplit is the default {@link SplitAlgorithm} for creating pre-split
-   * tables. The format of MD5StringSplit is the ASCII representation of an MD5
-   * checksum. Row are long values in the range <b>"00000000" => "7FFFFFFF"</b>
-   * and are left-padded with zeros to keep the same order lexographically as if
-   * they were binary.
+   * HexStringSplit is one possible {@link SplitAlgorithm} for choosing region
+   * boundaries. The format of a HexStringSplit region boundary is the
+   * ASCII representation of an MD5 checksum, or any other uniformly distributed
+   * bytes. Row are hex-encoded long values in the range <b>"00000000" =>
+   * "FFFFFFFF"</b> and are left-padded with zeros to keep the same order
+   * lexicographically as if they were binary.
+   *
+   * This split algorithm is only appropriate if you will use hex strings as
+   * keys.
    */
-  public static class MD5StringSplit implements SplitAlgorithm {
-    final static String MAXMD5 = "7FFFFFFF";
-    final static BigInteger MAXMD5_INT = new BigInteger(MAXMD5, 16);
-    final static int rowComparisonLength = MAXMD5.length();
+  public static class HexStringSplit implements SplitAlgorithm {
+    final static String MAXHEX = "FFFFFFFF";
+    final static BigInteger MAXHEX_INT = new BigInteger(MAXHEX, 16);
+    final static int rowComparisonLength = MAXHEX.length();
 
     public byte[] split(byte[] start, byte[] end) {
       BigInteger s = convertToBigInteger(start);
@@ -734,10 +777,10 @@ public class RegionSplitter {
 
     public byte[][] split(int n) {
       BigInteger[] splits = new BigInteger[n - 1];
-      BigInteger sizeOfEachSplit = MAXMD5_INT.divide(BigInteger.valueOf(n));
+      BigInteger sizeOfEachSplit = MAXHEX_INT.divide(BigInteger.valueOf(n));
       for (int i = 1; i < n; i++) {
         // NOTE: this means the last region gets all the slop.
-        // This is not a big deal if we're assuming n << MAXMD5
+        // This is not a big deal if we're assuming n << MAXHEX
         splits[i - 1] = sizeOfEachSplit.multiply(BigInteger.valueOf(i));
       }
       return convertToBytes(splits);
@@ -748,7 +791,7 @@ public class RegionSplitter {
     }
 
     public byte[] lastRow() {
-      return convertToByte(MAXMD5_INT);
+      return convertToByte(MAXHEX_INT);
     }
 
     public byte[] strToRow(String in) {
@@ -806,4 +849,54 @@ public class RegionSplitter {
     }
   }
 
+  /**
+   * A SplitAlgorithm that divides the space of possible keys evenly. Useful
+   * when the keys are approximately uniform random bytes (e.g. hashes).
+   * You probably shouldn't use this if your keys are ASCII, or if your keys
+   * tend to have similar prefixes.
+   */
+  public static class UniformSplit implements SplitAlgorithm {
+	static final byte xFF = (byte)0xFF;
+    static final byte[] firstRowBytes = ArrayUtils.EMPTY_BYTE_ARRAY;
+    static final byte[] lastRowBytes =
+            new byte[] {xFF, xFF, xFF, xFF, xFF, xFF, xFF, xFF};
+    public byte[] split(byte[] start, byte[] end) {
+      return Bytes.split(start, end, 1)[1];
+    }
+
+    @Override
+    public byte[][] split(int numRegions) {
+      byte[][] splitKeysPlusEndpoints = Bytes.split(firstRowBytes, lastRowBytes,
+              numRegions-1);
+      byte[][] splitAtKeys = new byte[splitKeysPlusEndpoints.length-2][];
+      System.arraycopy(splitKeysPlusEndpoints, 1, splitAtKeys, 0,
+              splitKeysPlusEndpoints.length-2);
+      return splitAtKeys;
+    }
+
+    @Override
+    public byte[] firstRow() {
+      return firstRowBytes;
+    }
+
+    @Override
+    public byte[] lastRow() {
+      return lastRowBytes;
+    }
+
+    @Override
+    public byte[] strToRow(String input) {
+      return Bytes.toBytesBinary(input);
+    }
+
+    @Override
+    public String rowToStr(byte[] row) {
+      return Bytes.toStringBinary(row);
+    }
+
+    @Override
+    public String separator() {
+      return ",";
+    }
+  }
 }
