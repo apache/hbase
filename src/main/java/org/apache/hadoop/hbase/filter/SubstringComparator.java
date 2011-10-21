@@ -64,8 +64,9 @@ public class SubstringComparator extends WritableByteArrayComparable {
   }
 
   @Override
-  public int compareTo(byte[] value) {
-    return Bytes.toString(value).toLowerCase().contains(substr) ? 0 : 1;
+  public int compareTo(byte[] value, int offset, int length) {
+    return Bytes.toString(value, offset, length).toLowerCase().contains(substr) ? 0
+        : 1;
   }
 
   @Override

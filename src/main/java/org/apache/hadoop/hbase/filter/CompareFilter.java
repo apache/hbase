@@ -20,13 +20,11 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;
@@ -102,12 +100,10 @@ public abstract class CompareFilter extends FilterBase {
   protected boolean doCompare(final CompareOp compareOp,
       final WritableByteArrayComparable comparator, final byte [] data,
       final int offset, final int length) {
-      if (compareOp == CompareOp.NO_OP) {
-	  return true;
-      }
-    int compareResult =
-      comparator.compareTo(Arrays.copyOfRange(data, offset,
-        offset + length));
+    if (compareOp == CompareOp.NO_OP) {
+      return true;
+    }
+    int compareResult = comparator.compareTo(data, offset, length);
     switch (compareOp) {
       case LESS:
         return compareResult <= 0;
