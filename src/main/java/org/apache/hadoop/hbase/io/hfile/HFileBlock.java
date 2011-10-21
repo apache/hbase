@@ -433,12 +433,11 @@ public class HFileBlock implements Cacheable, HFileBlockInfo {
 
     // If we are on heap, then we add the capacity of buf.
     if (buf != null) {
-      return ClassSize.align(ClassSize.OBJECT + 2 * ClassSize.REFERENCE + 3
-          * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG)
-          + ClassSize.align(BYTE_BUFFER_HEAP_SIZE + buf.capacity());
+      return ClassSize.align(ClassSize.OBJECT + 3 * ClassSize.REFERENCE + 3
+          * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG + BYTE_BUFFER_HEAP_SIZE)
+          + ClassSize.align(buf.capacity());
     } else {
-
-      return ClassSize.align(ClassSize.OBJECT + 2 * ClassSize.REFERENCE + 3
+      return ClassSize.align(ClassSize.OBJECT + 3 * ClassSize.REFERENCE + 3
           * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG + BYTE_BUFFER_HEAP_SIZE);
     }
   }
