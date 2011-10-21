@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -54,7 +55,7 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
     for(byte [] qualifier : qualifiers) {
       ScanQueryMatcher.MatchCode mc = tracker.checkColumn(qualifier, 0,
-          qualifier.length, 1);
+          qualifier.length, 1, KeyValue.Type.Put.getCode());
       actual.add(mc);
     }
 
@@ -87,7 +88,7 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
     long timestamp = 0;
     for(byte [] qualifier : qualifiers) {
       MatchCode mc = tracker.checkColumn(qualifier, 0, qualifier.length,
-          ++timestamp);
+          ++timestamp, KeyValue.Type.Put.getCode());
       actual.add(mc);
     }
 
@@ -110,7 +111,8 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
     try {
       for(byte [] qualifier : qualifiers) {
-        tracker.checkColumn(qualifier, 0, qualifier.length, 1);
+        tracker.checkColumn(qualifier, 0, qualifier.length, 1,
+            KeyValue.Type.Put.getCode());
       }
     } catch (Exception e) {
       ok = true;

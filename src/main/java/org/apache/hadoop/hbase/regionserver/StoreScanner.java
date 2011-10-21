@@ -20,9 +20,10 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 
@@ -86,12 +87,14 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @throws IOException
    */
   StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns)
-                              throws IOException {
+  throws IOException {
     this(store, scan.getCacheBlocks(), scan, columns);
-    matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
-        columns, store.ttl, store.comparator.getRawComparator(),
-        store.minVersions, store.versionsToReturn(scan.getMaxVersions()),
-        false);
+    if (columns != null && scan.isRaw()) {
+      throw new DoNotRetryIOException(
+          "Cannot specify any column for a raw scan");
+    }
+    matcher = new ScanQueryMatcher(scan, store.scanInfo, columns,
+        ScanType.USER_SCAN, HConstants.LATEST_TIMESTAMP);
 
     // Pass columns to try to filter out unnecessary StoreFiles.
     List<KeyValueScanner> scanners = getScanners(scan, columns);
@@ -124,12 +127,12 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @param scan the spec
    * @param scanners ancilliary scanners
    */
-  StoreScanner(Store store, Scan scan, List<? extends KeyValueScanner> scanners,
-      boolean retainDeletesInOutput) throws IOException {
+  StoreScanner(Store store, Scan scan,
+      List<? extends KeyValueScanner> scanners, ScanType scanType,
+      long earliestPutTs) throws IOException {
     this(store, false, scan, null);
-    matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
-        null, store.ttl, store.comparator.getRawComparator(), store.minVersions,
-        store.versionsToReturn(scan.getMaxVersions()), retainDeletesInOutput);
+    matcher = new ScanQueryMatcher(scan, store.scanInfo, null, scanType,
+        earliestPutTs);
 
     // Seek all scanners to the initial key
     for(KeyValueScanner scanner : scanners) {
@@ -141,20 +144,18 @@ class StoreScanner extends NonLazyKeyValueScanner
   }
 
   // Constructor for testing.
-  StoreScanner(final Scan scan, final byte [] colFamily, final long ttl,
-      final KeyValue.KVComparator comparator,
-      final NavigableSet<byte[]> columns,
-      final List<KeyValueScanner> scanners)
-        throws IOException {
+  StoreScanner(final Scan scan, Store.ScanInfo scanInfo,
+      StoreScanner.ScanType scanType, final NavigableSet<byte[]> columns,
+      final List<KeyValueScanner> scanners) throws IOException {
     this(null, scan.getCacheBlocks(), scan, columns);
-    this.matcher = new ScanQueryMatcher(scan, colFamily, columns, ttl,
-        comparator.getRawComparator(), 0, scan.getMaxVersions(), false);
+    this.matcher = new ScanQueryMatcher(scan, scanInfo, columns, scanType,
+        HConstants.LATEST_TIMESTAMP);
 
     // Seek all scanners to the initial key
-    for(KeyValueScanner scanner : scanners) {
+    for (KeyValueScanner scanner : scanners) {
       scanner.seek(matcher.getStartKey());
     }
-    heap = new KeyValueHeap(scanners, comparator);
+    heap = new KeyValueHeap(scanners, scanInfo.getComparator());
   }
 
   /*
@@ -476,5 +477,13 @@ class StoreScanner extends NonLazyKeyValueScanner
     lazySeekEnabledGlobally = enable;
   }
 
+  /**
+   * Enum to distinguish general scan types.
+   */
+  public static enum ScanType {
+    MAJOR_COMPACT,
+    MINOR_COMPACT,
+    USER_SCAN
+  }
 }
 

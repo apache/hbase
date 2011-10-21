@@ -22,9 +22,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -32,17 +31,17 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Keeps track of the columns for a scan if they are not explicitly specified
  */
 public class ScanWildcardColumnTracker implements ColumnTracker {
-  private static final Log LOG =
-    LogFactory.getLog(ScanWildcardColumnTracker.class);
   private byte [] columnBuffer = null;
   private int columnOffset = 0;
   private int columnLength = 0;
   private int currentCount = 0;
   private int maxVersions;
   private int minVersions;
-  /* Keeps track of the latest timestamp included for current column.
+  /* Keeps track of the latest timestamp and type included for current column.
    * Used to eliminate duplicates. */
   private long latestTSOfCurrentColumn;
+  private byte latestTypeOfCurrentColumn;
+
   private long oldestStamp;
 
   /**
@@ -58,41 +57,38 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   }
 
   /**
-   * Can only return INCLUDE or SKIP, since returning "NEXT" or
-   * "DONE" would imply we have finished with this row, when
-   * this class can't figure that out.
-   *
-   * @param bytes
-   * @param offset
-   * @param length
-   * @param timestamp
-   * @return The match code instance.
+   * {@inheritDoc}
+   * This receives puts *and* deletes.
+   * Deletes do not count as a version, but rather take the version
+   * of the previous put (so eventually all but the last can be reclaimed).
    */
   @Override
   public MatchCode checkColumn(byte[] bytes, int offset, int length,
-      long timestamp) throws IOException {
+      long timestamp, byte type) throws IOException {
+    
     if (columnBuffer == null) {
       // first iteration.
       resetBuffer(bytes, offset, length);
-      return checkVersion(++currentCount, timestamp);
+      // do not count a delete marker as another version
+      return checkVersion(type, timestamp);
     }
     int cmp = Bytes.compareTo(bytes, offset, length,
         columnBuffer, columnOffset, columnLength);
     if (cmp == 0) {
       //If column matches, check if it is a duplicate timestamp
-      if (sameAsPreviousTS(timestamp)) {
+      if (sameAsPreviousTSAndType(timestamp, type)) {
         return ScanQueryMatcher.MatchCode.SKIP;
       }
-      return checkVersion(++currentCount, timestamp);
+      return checkVersion(type, timestamp);
     }
 
-    resetTS();
+    resetTSAndType();
 
     // new col > old col
     if (cmp > 0) {
       // switched columns, lets do something.x
       resetBuffer(bytes, offset, length);
-      return checkVersion(++currentCount, timestamp);
+      return checkVersion(type, timestamp);
     }
 
     // new col < oldcol
@@ -112,13 +108,25 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     currentCount = 0;
   }
 
-  private MatchCode checkVersion(int version, long timestamp) {
-    if (version > maxVersions) {
+  /**
+   * Check whether this version should be retained.
+   * There are 4 variables considered:
+   * If this version is past max versions -> skip it
+   * If this kv has expired or was deleted, check min versions
+   * to decide whther to skip it or not.
+   *
+   * Increase the version counter unless this is a delete
+   */
+  private MatchCode checkVersion(byte type, long timestamp) {
+    if (!KeyValue.isDelete(type)) {
+      currentCount++;
+    }
+    if (currentCount > maxVersions) {
       return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL; // skip to next col
     }
     // keep the KV if required by minversions or it is not expired, yet
-    if (version <= minVersions || !isExpired(timestamp)) {
-      setTS(timestamp);
+    if (currentCount <= minVersions || !isExpired(timestamp)) {
+      setTSAndType(timestamp, type);
       return ScanQueryMatcher.MatchCode.INCLUDE;
     } else {
       return MatchCode.SEEK_NEXT_COL;
@@ -136,19 +144,21 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   @Override
   public void reset() {
     columnBuffer = null;
-    resetTS();
+    resetTSAndType();
   }
 
-  private void resetTS() {
+  private void resetTSAndType() {
     latestTSOfCurrentColumn = HConstants.LATEST_TIMESTAMP;
+    latestTypeOfCurrentColumn = 0;
   }
 
-  private void setTS(long timestamp) {
+  private void setTSAndType(long timestamp, byte type) {
     latestTSOfCurrentColumn = timestamp;
+    latestTypeOfCurrentColumn = type;
   }
 
-  private boolean sameAsPreviousTS(long timestamp) {
-    return timestamp == latestTSOfCurrentColumn;
+  private boolean sameAsPreviousTSAndType(long timestamp, byte type) {
+    return timestamp == latestTSOfCurrentColumn && type == latestTypeOfCurrentColumn;
   }
 
   private boolean isExpired(long timestamp) {

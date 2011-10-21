@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -97,16 +98,14 @@ public class ExplicitColumnTracker implements ColumnTracker {
   }
 
   /**
-   * Checks against the parameters of the query and the columns which have
-   * already been processed by this query.
-   * @param bytes KeyValue buffer
-   * @param offset offset to the start of the qualifier
-   * @param length length of the qualifier
-   * @param timestamp timestamp of the key being checked
-   * @return MatchCode telling ScanQueryMatcher what action to take
+   * {@inheritDoc}
    */
+  @Override
   public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset,
-      int length, long timestamp) {
+      int length, long timestamp, byte type) {
+    // delete markers should never be passed to an
+    // *Explicit*ColumnTracker
+    assert !KeyValue.isDelete(type);
     do {
       // No more columns left, we are done with this query
       if(this.columns.size() == 0) {
@@ -143,12 +142,12 @@ public class ExplicitColumnTracker implements ColumnTracker {
           if (this.columns.size() == this.index) {
             // We have served all the requested columns.
             this.column = null;
-	    return ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
+            return ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
           } else {
-	    // We are done with current column; advance to next column
-	    // of interest.
+            // We are done with current column; advance to next column
+            // of interest.
             this.column = this.columns.get(this.index);
-	    return ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL;
+            return ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL;
           }
         } else {
           setTS(timestamp);

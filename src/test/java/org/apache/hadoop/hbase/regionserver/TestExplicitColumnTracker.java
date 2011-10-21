@@ -27,6 +27,7 @@ import java.util.TreeSet;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -54,7 +55,8 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     long timestamp = 0;
     //"Match"
     for(byte [] col : scannerColumns){
-      result.add(exp.checkColumn(col, 0, col.length, ++timestamp));
+      result.add(exp.checkColumn(col, 0, col.length, ++timestamp,
+          KeyValue.Type.Put.getCode()));
     }
 
     assertEquals(expected.size(), result.size());
@@ -166,13 +168,13 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
         Long.MAX_VALUE);
     for (int i = 0; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
-      explicit.checkColumn(col, 0, col.length, 1);
+      explicit.checkColumn(col, 0, col.length, 1, KeyValue.Type.Put.getCode());
     }
     explicit.update();
 
     for (int i = 1; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
-      explicit.checkColumn(col, 0, col.length, 1);
+      explicit.checkColumn(col, 0, col.length, 1, KeyValue.Type.Put.getCode());
     }
   }
 

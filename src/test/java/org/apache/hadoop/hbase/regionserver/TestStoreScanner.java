@@ -24,16 +24,13 @@ import junit.framework.TestCase;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.Store.ScanInfo;
+import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.mockito.Mockito;
-import org.mockito.stubbing.OngoingStubbing;
-
-import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
@@ -42,6 +39,9 @@ import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixtu
 public class TestStoreScanner extends TestCase {
   private static final String CF_STR = "cf";
   final byte [] CF = Bytes.toBytes(CF_STR);
+  private ScanInfo scanInfo = new ScanInfo(CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE, false,
+      KeyValue.COMPARATOR);
+  private ScanType scanType = ScanType.USER_SCAN;
 
   /*
    * Test utility for building a NavigableSet for scanners.
@@ -74,9 +74,8 @@ public class TestStoreScanner extends TestCase {
     Scan scanSpec = new Scan(Bytes.toBytes(r1));
     scanSpec.setTimeRange(0, 6);
     scanSpec.setMaxVersions();
-    StoreScanner scan =
-      new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
-        KeyValue.COMPARATOR, getCols("a"), scanners);
+    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
+        getCols("a"), scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(5, results.size());
@@ -85,8 +84,8 @@ public class TestStoreScanner extends TestCase {
     scanSpec = new Scan(Bytes.toBytes(r1));
     scanSpec.setTimeRange(1, 3);
     scanSpec.setMaxVersions();
-    scan = new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
-      KeyValue.COMPARATOR, getCols("a"), scanners);
+    scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
+        scanners);
     results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
@@ -94,8 +93,8 @@ public class TestStoreScanner extends TestCase {
     scanSpec = new Scan(Bytes.toBytes(r1));
     scanSpec.setTimeRange(5, 10);
     scanSpec.setMaxVersions();
-    scan = new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
-      KeyValue.COMPARATOR, getCols("a"), scanners);
+    scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
+        scanners);
     results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
@@ -104,8 +103,8 @@ public class TestStoreScanner extends TestCase {
     scanSpec = new Scan(Bytes.toBytes(r1));
     scanSpec.setTimeRange(0, 10);
     scanSpec.setMaxVersions(3);
-    scan = new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
-      KeyValue.COMPARATOR, getCols("a"), scanners);
+    scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
+        scanners);
     results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(3, results.size());
@@ -124,10 +123,8 @@ public class TestStoreScanner extends TestCase {
 
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     // this only uses maxVersions (default=1) and TimeRange (default=all)
-    StoreScanner scan =
-      new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
-          KeyValue.COMPARATOR, getCols("a"),
-          scanners);
+    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
+        getCols("a"), scanners);
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
@@ -153,10 +150,8 @@ public class TestStoreScanner extends TestCase {
 
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     // this only uses maxVersions (default=1) and TimeRange (default=all)
-    StoreScanner scan =
-      new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
-          KeyValue.COMPARATOR, getCols("a"),
-          scanners);
+    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
+        getCols("a"), scanners);
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     scan.next(results);
@@ -183,9 +178,8 @@ public class TestStoreScanner extends TestCase {
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
-    StoreScanner scan =
-      new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          getCols("a"), scanners);
+    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
+        getCols("a"), scanners);
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertFalse(scan.next(results));
@@ -204,9 +198,8 @@ public class TestStoreScanner extends TestCase {
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
-    StoreScanner scan =
-      new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          getCols("a"), scanners);
+    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
+        getCols("a"), scanners);
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
@@ -232,9 +225,8 @@ public class TestStoreScanner extends TestCase {
     };
     List<KeyValueScanner> scanners = scanFixture(kvs1, kvs2);
 
-    StoreScanner scan =
-      new StoreScanner(new Scan(Bytes.toBytes("R1")), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          getCols("a"), scanners);
+    StoreScanner scan = new StoreScanner(new Scan(Bytes.toBytes("R1")),
+        scanInfo, scanType, getCols("a"), scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     // the two put at ts=now will be masked by the 1 delete, and
     // since the scan default returns 1 version we'll return the newest
@@ -258,9 +250,8 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs1, kvs2);
 
     Scan scanSpec = new Scan(Bytes.toBytes("R1")).setMaxVersions(2);
-    StoreScanner scan =
-      new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          getCols("a"), scanners);
+    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
+        getCols("a"), scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
@@ -275,9 +266,8 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.DeleteColumn, "dont-care"),
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
-    StoreScanner scan =
-      new StoreScanner(new Scan(Bytes.toBytes("R1")), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          null, scanners);
+    StoreScanner scan = new StoreScanner(new Scan(Bytes.toBytes("R1")),
+        scanInfo, scanType, null, scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
@@ -305,9 +295,8 @@ public class TestStoreScanner extends TestCase {
 
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
-    StoreScanner scan =
-      new StoreScanner(new Scan().setMaxVersions(2), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          null, scanners);
+    StoreScanner scan = new StoreScanner(new Scan().setMaxVersions(2),
+        scanInfo, scanType, null, scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(5, results.size());
@@ -334,9 +323,9 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
-    StoreScanner scan =
-      new StoreScanner(new Scan().setMaxVersions(Integer.MAX_VALUE), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          null, scanners);
+    StoreScanner scan = new StoreScanner(
+        new Scan().setMaxVersions(Integer.MAX_VALUE), scanInfo, scanType, null,
+        scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(0, results.size());
@@ -355,9 +344,8 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "b", 5, KeyValue.Type.Put, "dont-care")
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
-    StoreScanner scan =
-      new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          null, scanners);
+    StoreScanner scan = new StoreScanner(new Scan(), scanInfo, scanType, null,
+        scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
@@ -379,9 +367,8 @@ public class TestStoreScanner extends TestCase {
 
   public void testSkipColumn() throws IOException {
     List<KeyValueScanner> scanners = scanFixture(kvs);
-    StoreScanner scan =
-      new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          getCols("a", "d"), scanners);
+    StoreScanner scan = new StoreScanner(new Scan(), scanInfo, scanType,
+        getCols("a", "d"), scanners);
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
@@ -417,8 +404,11 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scan = new Scan();
     scan.setMaxVersions(1);
+    ScanInfo scanInfo = new ScanInfo(CF, 0, 1, 500, false,
+        KeyValue.COMPARATOR);
+    ScanType scanType = ScanType.USER_SCAN;
     StoreScanner scanner =
-      new StoreScanner(scan, CF, 500, KeyValue.COMPARATOR,
+      new StoreScanner(scan, scanInfo, scanType,
           null, scanners);
 
     List<KeyValue> results = new ArrayList<KeyValue>();
@@ -440,10 +430,8 @@ public class TestStoreScanner extends TestCase {
 
   public void testScannerReseekDoesntNPE() throws Exception {
     List<KeyValueScanner> scanners = scanFixture(kvs);
-    StoreScanner scan =
-        new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-            getCols("a", "d"), scanners);
-
+    StoreScanner scan = new StoreScanner(new Scan(), scanInfo, scanType,
+        getCols("a", "d"), scanners);
 
     // Previously a updateReaders twice in a row would cause an NPE.  In test this would also
     // normally cause an NPE because scan.store is null.  So as long as we get through these
@@ -467,9 +455,8 @@ public class TestStoreScanner extends TestCase {
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
-    StoreScanner scan =
-      new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          getCols("a"), scanners);
+    StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
+        getCols("a"), scanners);
     assertNull(scan.peek());
   }
 }

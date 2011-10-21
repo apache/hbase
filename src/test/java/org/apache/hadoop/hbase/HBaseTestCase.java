@@ -198,7 +198,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected HTableDescriptor createTableDescriptor(final String name,
       final int versions) {
     return createTableDescriptor(name, HColumnDescriptor.DEFAULT_MIN_VERSIONS,
-        versions, HConstants.FOREVER);
+        versions, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
   }
 
   /**
@@ -209,21 +209,21 @@ public abstract class HBaseTestCase extends TestCase {
    * @return Column descriptor.
    */
   protected HTableDescriptor createTableDescriptor(final String name,
-      final int minVersions, final int versions, final int ttl) {
+      final int minVersions, final int versions, final int ttl, boolean keepDeleted) {
     HTableDescriptor htd = new HTableDescriptor(name);
     htd.addFamily(new HColumnDescriptor(fam1, minVersions, versions,
-      HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-      HColumnDescriptor.DEFAULT_BLOCKSIZE, ttl,
-      HColumnDescriptor.DEFAULT_BLOOMFILTER,
-      HConstants.REPLICATION_SCOPE_LOCAL));
+        keepDeleted, HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
+        HColumnDescriptor.DEFAULT_BLOCKSIZE, ttl,
+        HColumnDescriptor.DEFAULT_BLOOMFILTER,
+        HConstants.REPLICATION_SCOPE_LOCAL));
     htd.addFamily(new HColumnDescriptor(fam2, minVersions, versions,
-        HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
+        keepDeleted, HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
         HColumnDescriptor.DEFAULT_BLOCKSIZE, ttl,
         HColumnDescriptor.DEFAULT_BLOOMFILTER,
         HConstants.REPLICATION_SCOPE_LOCAL));
     htd.addFamily(new HColumnDescriptor(fam3, minVersions, versions,
-        HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE,  ttl,
+        keepDeleted, HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
+        HColumnDescriptor.DEFAULT_BLOCKSIZE, ttl,
         HColumnDescriptor.DEFAULT_BLOOMFILTER,
         HConstants.REPLICATION_SCOPE_LOCAL));
     return htd;

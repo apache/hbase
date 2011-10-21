@@ -2,6 +2,7 @@ HBase Change Log
 Release 0.93.0 - Unreleased
   NEW FEATURE
    HBASE-4460  Support running an embedded ThriftServer within a RegionServer (jgray)
+   HBASE-4536  Allow CF to retain deleted rows (Lars H)
 
   IMPROVEMENT
    HBASE-4132  Extend the WALActionsListener API to accomodate log archival

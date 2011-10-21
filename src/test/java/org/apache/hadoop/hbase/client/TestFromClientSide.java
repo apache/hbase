@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -71,10 +72,8 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -129,6 +128,82 @@ public class TestFromClientSide {
   }
 
   /**
+   * Basic client side validation of HBASE-4536
+   */
+   @Test
+   public void testKeepDeletedCells() throws Exception {
+     final byte[] TABLENAME = Bytes.toBytes("testKeepDeletesCells");
+     final byte[] FAMILY = Bytes.toBytes("family");
+     final byte[] C0 = Bytes.toBytes("c0");
+
+     final byte[] T1 = Bytes.toBytes("T1");
+     final byte[] T2 = Bytes.toBytes("T2");
+     final byte[] T3 = Bytes.toBytes("T3");
+     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY,
+         HColumnDescriptor.DEFAULT_MIN_VERSIONS,
+         HColumnDescriptor.DEFAULT_VERSIONS,
+         true,
+         HColumnDescriptor.DEFAULT_COMPRESSION,
+         HColumnDescriptor.DEFAULT_IN_MEMORY,
+         HColumnDescriptor.DEFAULT_BLOCKCACHE,
+         HColumnDescriptor.DEFAULT_BLOCKSIZE,
+         HColumnDescriptor.DEFAULT_TTL,
+         HColumnDescriptor.DEFAULT_BLOOMFILTER,
+         HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+
+     HTableDescriptor desc = new HTableDescriptor(TABLENAME);
+     desc.addFamily(hcd);
+     TEST_UTIL.getHBaseAdmin().createTable(desc);
+     Configuration c = TEST_UTIL.getConfiguration();
+     HTable h = new HTable(c, TABLENAME);
+
+     long ts = System.currentTimeMillis();
+     Put p = new Put(T1, ts);
+     p.add(FAMILY, C0, T1);
+     h.put(p);
+     p = new Put(T1, ts+2);
+     p.add(FAMILY, C0, T2);
+     h.put(p);
+     p = new Put(T1, ts+4);
+     p.add(FAMILY, C0, T3);
+     h.put(p);
+
+     Delete d = new Delete(T1, ts+2, null);
+     h.delete(d);
+
+     d = new Delete(T1, ts+3, null);
+     d.deleteColumns(FAMILY, C0, ts+3);
+     h.delete(d);
+
+     Get g = new Get(T1);
+     // does *not* include the delete
+     g.setTimeRange(0, ts+3);
+     Result r = h.get(g);
+     assertArrayEquals(T2, r.getValue(FAMILY, C0));
+
+     Scan s = new Scan(T1);
+     s.setTimeRange(0, ts+3);
+     s.setMaxVersions();
+     ResultScanner scanner = h.getScanner(s);
+     KeyValue[] kvs = scanner.next().raw();
+     assertArrayEquals(T2, kvs[0].getValue());
+     assertArrayEquals(T1, kvs[1].getValue());
+     scanner.close();
+
+     s = new Scan(T1);
+     s.setRaw(true);
+     s.setMaxVersions();
+     scanner = h.getScanner(s);
+     kvs = scanner.next().raw();
+     assertTrue(kvs[0].isDeleteFamily());
+     assertArrayEquals(T3, kvs[1].getValue());
+     assertTrue(kvs[2].isDelete());
+     assertArrayEquals(T2, kvs[3].getValue());
+     assertArrayEquals(T1, kvs[4].getValue());
+     scanner.close();
+   }
+
+   /**
    * HBASE-2468 use case 1 and 2: region info de/serialization
    */
    @Test

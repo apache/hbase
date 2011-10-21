@@ -49,7 +49,7 @@ public class TestMinVersions extends HBaseTestCase {
    * Verify behavior of getClosestBefore(...)
    */
   public void testGetClosestBefore() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 1, 1000, 1);
+    HTableDescriptor htd = createTableDescriptor(getName(), 1, 1000, 1, false);
     HRegion region = createNewHRegion(htd, null, null);
 
     long ts = System.currentTimeMillis() - 2000; // 2s in the past
@@ -92,7 +92,7 @@ public class TestMinVersions extends HBaseTestCase {
    */
   public void testStoreMemStore() throws Exception {
     // keep 3 versions minimum
-    HTableDescriptor htd = createTableDescriptor(getName(), 3, 1000, 1);
+    HTableDescriptor htd = createTableDescriptor(getName(), 3, 1000, 1, false);
     HRegion region = createNewHRegion(htd, null, null);
 
     long ts = System.currentTimeMillis() - 2000; // 2s in the past
@@ -141,7 +141,7 @@ public class TestMinVersions extends HBaseTestCase {
    * Make sure the Deletes behave as expected with minimum versions
    */
   public void testDelete() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 3, 1000, 1);
+    HTableDescriptor htd = createTableDescriptor(getName(), 3, 1000, 1, false);
     HRegion region = createNewHRegion(htd, null, null);
 
     long ts = System.currentTimeMillis() - 2000; // 2s in the past
@@ -193,7 +193,7 @@ public class TestMinVersions extends HBaseTestCase {
    * Make sure the memstor behaves correctly with minimum versions
    */
   public void testMemStore() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 2, 1000, 1);
+    HTableDescriptor htd = createTableDescriptor(getName(), 2, 1000, 1, false);
     HRegion region = createNewHRegion(htd, null, null);
 
     long ts = System.currentTimeMillis() - 2000; // 2s in the past
@@ -262,7 +262,7 @@ public class TestMinVersions extends HBaseTestCase {
    */
   public void testBaseCase() throws Exception {
     // 1 version minimum, 1000 versions maximum, ttl = 1s
-    HTableDescriptor htd = createTableDescriptor(getName(), 2, 1000, 1);
+    HTableDescriptor htd = createTableDescriptor(getName(), 2, 1000, 1, false);
     HRegion region = createNewHRegion(htd, null, null);
 
     long ts = System.currentTimeMillis() - 2000; // 2s in the past
@@ -347,7 +347,7 @@ public class TestMinVersions extends HBaseTestCase {
    * minimum versions enabled.
    */
   public void testFilters() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 2, 1000, 1);
+    HTableDescriptor htd = createTableDescriptor(getName(), 2, 1000, 1, false);
     HRegion region = createNewHRegion(htd, null, null);
     final byte [] c1 = COLUMNS[1];
 
@@ -408,7 +408,7 @@ public class TestMinVersions extends HBaseTestCase {
     g.setMaxVersions();
     r = region.get(g, null);
     checkResult(r, c0, T2);
-}
+  }
 
   private void checkResult(Result r, byte[] col, byte[] ... vals) {
     assertEquals(r.size(), vals.length);
