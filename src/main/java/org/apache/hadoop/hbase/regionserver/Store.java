@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -95,9 +97,7 @@ public class Store implements HeapSize {
   final Configuration conf;
   final CacheConfig cacheConf;
   // ttl in milliseconds.
-  protected long ttl;
-  protected int minVersions;
-  protected int maxVersions;
+  private long ttl;
   long majorCompactionTime;
   private final int minFilesToCompact;
   private final int maxFilesToCompact;
@@ -119,6 +119,8 @@ public class Store implements HeapSize {
   private CompactionProgress progress;
   private final int compactionKVMax;
 
+  // not private for testing
+  /* package */ScanInfo scanInfo;
   /*
    * List of store files inside this store. This is an immutable list that
    * is atomically replaced when its contents change.
@@ -183,8 +185,9 @@ public class Store implements HeapSize {
       // second -> ms adjust for user data
       this.ttl *= 1000;
     }
-    this.minVersions = family.getMinVersions();
-    this.maxVersions = family.getMaxVersions();
+    scanInfo = new ScanInfo(family.getName(), family.getMinVersions(),
+        family.getMaxVersions(), ttl, family.getKeepDeletedCells(),
+        this.comparator);
     this.memstore = new MemStore(conf, this.comparator);
     this.storeNameStr = Bytes.toString(this.family.getName());
 
@@ -477,13 +480,13 @@ public class Store implements HeapSize {
       return null;
     }
     Scan scan = new Scan();
-    scan.setMaxVersions(maxVersions);
+    scan.setMaxVersions(scanInfo.getMaxVersions());
     // Use a store scanner to find which rows to flush.
     // Note that we need to retain deletes, hence
-    // pass true as the StoreScanner's retainDeletesInOutput argument.
-    InternalScanner scanner = new StoreScanner(this, scan,
-        Collections.singletonList(new CollectionBackedScanner(set,
-            this.comparator)), true);
+    // treat this as a minor compaction.
+    InternalScanner scanner = new StoreScanner(this, scan, Collections
+        .singletonList(new CollectionBackedScanner(set, this.comparator)),
+        ScanType.MINOR_COMPACT, HConstants.OLDEST_TIMESTAMP);
     try {
       // TODO:  We can fail in the below block before we complete adding this
       // flush to list of store files.  Add cleanup of anything put on filesystem
@@ -1108,6 +1111,7 @@ public class Store implements HeapSize {
       throws IOException {
     // calculate maximum key count after compaction (for blooms)
     int maxKeyCount = 0;
+    long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     for (StoreFile file : filesToCompact) {
       StoreFile.Reader r = file.getReader();
       if (r != null) {
@@ -1121,6 +1125,19 @@ public class Store implements HeapSize {
             ", keycount=" + keyCount +
             ", bloomtype=" + r.getBloomFilterType().toString() +
             ", size=" + StringUtils.humanReadableInt(r.length()) );
+        }
+      }
+      // For major compactions calculate the earliest put timestamp
+      // of all involved storefiles. This is used to remove 
+      // family delete marker during the compaction.
+      if (majorCompaction) {
+        byte[] tmp = r.loadFileInfo().get(StoreFile.EARLIEST_PUT_TS);
+        if (tmp == null) {
+          // there's a file with no information, must be an old one
+          // assume we have very old puts
+          earliestPutTs = HConstants.OLDEST_TIMESTAMP;
+        } else {
+          earliestPutTs = Math.min(earliestPutTs, Bytes.toLong(tmp));
         }
       }
     }
@@ -1141,7 +1158,9 @@ public class Store implements HeapSize {
         Scan scan = new Scan();
         scan.setMaxVersions(family.getMaxVersions());
         /* include deletes, unless we are doing a major compaction */
-        scanner = new StoreScanner(this, scan, scanners, !majorCompaction);
+        scanner = new StoreScanner(this, scan, scanners,
+            majorCompaction ? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT,
+            earliestPutTs);
         if (region.getCoprocessorHost() != null) {
           InternalScanner cpScanner = region.getCoprocessorHost().preCompact(
               this, scanner);
@@ -1374,7 +1393,7 @@ public class Store implements HeapSize {
     // at all (expired or not) has at least one version that will not expire.
     // Note that this method used to take a KeyValue as arguments. KeyValue
     // can be back-dated, a row key cannot.
-    long ttlToUse = this.minVersions > 0 ? Long.MAX_VALUE : this.ttl;
+    long ttlToUse = scanInfo.getMinVersions() > 0 ? Long.MAX_VALUE : this.ttl;
 
     KeyValue kv = new KeyValue(row, HConstants.LATEST_TIMESTAMP);
 
@@ -1842,15 +1861,16 @@ public class Store implements HeapSize {
     return this.cacheConf;
   }
 
-  public static final long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (17 * ClassSize.REFERENCE) +
-      (7 * Bytes.SIZEOF_LONG) + (1 * Bytes.SIZEOF_DOUBLE) +
-      (7 * Bytes.SIZEOF_INT) + (1 * Bytes.SIZEOF_BOOLEAN));
+  public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
+      + (18 * ClassSize.REFERENCE) + (7 * Bytes.SIZEOF_LONG)
+      + (1 * Bytes.SIZEOF_DOUBLE) + (5 * Bytes.SIZEOF_INT)
+      + Bytes.SIZEOF_BOOLEAN);
 
-  public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
-      ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +
-      ClassSize.CONCURRENT_SKIPLISTMAP +
-      ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + ClassSize.OBJECT);
+  public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
+      + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK
+      + ClassSize.CONCURRENT_SKIPLISTMAP
+      + ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + ClassSize.OBJECT
+      + ScanInfo.FIXED_OVERHEAD);
 
   @Override
   public long heapSize() {
@@ -1861,4 +1881,62 @@ public class Store implements HeapSize {
     return comparator;
   }
 
+  /**
+   * Immutable information for scans over a store.
+   */
+  public static class ScanInfo {
+    private byte[] family;
+    private int minVersions;
+    private int maxVersions;
+    private long ttl;
+    private boolean keepDeletedCells;
+    private KVComparator comparator;
+
+    public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
+        + (2 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_INT)
+        + Bytes.SIZEOF_LONG + Bytes.SIZEOF_BOOLEAN);
+
+    /**
+     * @param family Name of this store's column family
+     * @param minVersions Store's MIN_VERSIONS setting
+     * @param maxVersions Store's VERSIONS setting
+     * @param ttl Store's TTL (in ms)
+     * @param keepDeletedCells Store's keepDeletedCells setting
+     * @param comparator The store's comparator
+     */
+    public ScanInfo(byte[] family, int minVersions, int maxVersions, long ttl,
+        boolean keepDeletedCells, KVComparator comparator) {
+
+      this.family = family;
+      this.minVersions = minVersions;
+      this.maxVersions = maxVersions;
+      this.ttl = ttl;
+      this.keepDeletedCells = keepDeletedCells;
+      this.comparator = comparator;
+    }
+
+    public byte[] getFamily() {
+      return family;
+    }
+
+    public int getMinVersions() {
+      return minVersions;
+    }
+
+    public int getMaxVersions() {
+      return maxVersions;
+    }
+
+    public long getTtl() {
+      return ttl;
+    }
+
+    public boolean getKeepDeletedCells() {
+      return keepDeletedCells;
+    }
+
+    public KVComparator getComparator() {
+      return comparator;
+    }
+  }
 }

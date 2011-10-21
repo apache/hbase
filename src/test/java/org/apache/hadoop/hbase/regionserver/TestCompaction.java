@@ -24,13 +24,8 @@ import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import static org.junit.Assert.fail;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -240,11 +235,15 @@ public class TestCompaction extends HBaseTestCase {
 
     // Multiple versions allowed for an entry, so the delete isn't enough
     // Lower TTL and expire to ensure that all our entries have been wiped
-    final int ttlInSeconds = 1;
+    final int ttl = 1000;
     for (Store store: this.r.stores.values()) {
-      store.ttl = ttlInSeconds * 1000;
+      Store.ScanInfo old = store.scanInfo;
+      Store.ScanInfo si = new Store.ScanInfo(old.getFamily(),
+          old.getMinVersions(), old.getMaxVersions(), ttl,
+          old.getKeepDeletedCells(), old.getComparator());
+      store.scanInfo = si;
     }
-    Thread.sleep(ttlInSeconds * 1000);
+    Thread.sleep(1000);
 
     r.compactStores(true);
     int count = count();
@@ -446,11 +445,15 @@ public class TestCompaction extends HBaseTestCase {
 
       // Multiple versions allowed for an entry, so the delete isn't enough
       // Lower TTL and expire to ensure that all our entries have been wiped
-      final int ttlInSeconds = 1;
+      final int ttl = 1000;
       for (Store store: this.r.stores.values()) {
-        store.ttl = ttlInSeconds * 1000;
+        Store.ScanInfo old = store.scanInfo;
+        Store.ScanInfo si = new Store.ScanInfo(old.getFamily(),
+            old.getMinVersions(), old.getMaxVersions(), ttl,
+            old.getKeepDeletedCells(), old.getComparator());
+        store.scanInfo = si;
       }
-      Thread.sleep(ttlInSeconds * 1000);
+      Thread.sleep(ttl);
 
       r.compactStores(true);
       assertEquals(0, count());

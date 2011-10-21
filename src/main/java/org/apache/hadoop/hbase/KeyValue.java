@@ -207,6 +207,14 @@ public class KeyValue implements Writable, HeapSize {
   // the row cached
   private volatile byte [] rowCache = null;
 
+  /**
+   * @return True if a delete type, a {@link KeyValue.Type#Delete} or
+   * a {KeyValue.Type#DeleteFamily} or a {@link KeyValue.Type#DeleteColumn}
+   * KeyValue type.
+   */
+  public static boolean isDelete(byte t) {
+    return Type.Delete.getCode() <= t && t <= Type.DeleteFamily.getCode();
+  }
 
   /** Here be dragons **/
 
@@ -1038,8 +1046,7 @@ public class KeyValue implements Writable, HeapSize {
    * KeyValue type.
    */
   public boolean isDelete() {
-    int t = getType();
-    return Type.Delete.getCode() <= t && t <= Type.DeleteFamily.getCode();
+    return KeyValue.isDelete(getType());
   }
 
   /**

@@ -26,8 +26,6 @@ import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.NavigableSet;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
 
 import junit.framework.TestCase;
@@ -39,8 +37,9 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.Store.ScanInfo;
+import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Joiner;
@@ -89,8 +88,10 @@ public class TestMemStore extends TestCase {
     Scan scan = new Scan();
     List<KeyValue> result = new ArrayList<KeyValue>();
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-    StoreScanner s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
-      this.memstore.comparator, null, memstorescanners);
+    ScanInfo scanInfo = new ScanInfo(null, 0, 1, HConstants.LATEST_TIMESTAMP, false,
+        this.memstore.comparator);
+    ScanType scanType = ScanType.USER_SCAN;
+    StoreScanner s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     int count = 0;
     try {
       while (s.next(result)) {
@@ -111,8 +112,7 @@ public class TestMemStore extends TestCase {
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
     memstorescanners = this.memstore.getScanners();
     // Now assert can count same number even if a snapshot mid-scan.
-    s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
-      this.memstore.comparator, null, memstorescanners);
+    s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     count = 0;
     try {
       while (s.next(result)) {
@@ -138,8 +138,7 @@ public class TestMemStore extends TestCase {
     memstorescanners = this.memstore.getScanners();
     // Assert that new values are seen in kvset as we scan.
     long ts = System.currentTimeMillis();
-    s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
-      this.memstore.comparator, null, memstorescanners);
+    s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     count = 0;
     int snapshotIndex = 5;
     try {
@@ -553,10 +552,12 @@ public class TestMemStore extends TestCase {
     }
     //starting from each row, validate results should contain the starting row
     for (int startRowId = 0; startRowId < ROW_COUNT; startRowId++) {
-      InternalScanner scanner =
-          new StoreScanner(new Scan(Bytes.toBytes(startRowId)), FAMILY,
-              Integer.MAX_VALUE, this.memstore.comparator, null,
-              memstore.getScanners());
+      ScanInfo scanInfo = new ScanInfo(FAMILY, 0, 1, Integer.MAX_VALUE, false,
+          this.memstore.comparator);
+      ScanType scanType = ScanType.USER_SCAN;
+      InternalScanner scanner = new StoreScanner(new Scan(
+          Bytes.toBytes(startRowId)), scanInfo, scanType, null,
+          memstore.getScanners());
       List<KeyValue> results = new ArrayList<KeyValue>();
       for (int i = 0; scanner.next(results); i++) {
         int rowId = startRowId + i;

@@ -88,6 +88,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String FOREVER = "FOREVER";
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
   public static final String MIN_VERSIONS = "MIN_VERSIONS";
+  public static final String KEEP_DELETED_CELLS = "KEEP_DELETED_CELLS";
 
   /**
    * Default compression type.
@@ -115,6 +116,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * Default setting for whether to serve from memory or not.
    */
   public static final boolean DEFAULT_IN_MEMORY = false;
+
+  /**
+   * Default setting for preventing deleted from being collected immediately.
+   */
+  public static final boolean DEFAULT_KEEP_DELETED = false;
 
   /**
    * Default setting for whether to use a block cache or not.
@@ -151,6 +157,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       DEFAULT_VALUES.put(BLOCKSIZE, String.valueOf(DEFAULT_BLOCKSIZE));
       DEFAULT_VALUES.put(HConstants.IN_MEMORY, String.valueOf(DEFAULT_IN_MEMORY));
       DEFAULT_VALUES.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
+      DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
   }
 
   // Column family name
@@ -265,8 +272,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       final String compression, final boolean inMemory,
       final boolean blockCacheEnabled, final int blocksize,
       final int timeToLive, final String bloomFilter, final int scope) {
-    this(familyName, DEFAULT_MIN_VERSIONS, maxVersions, compression, inMemory,
-        blockCacheEnabled, blocksize, timeToLive, bloomFilter, scope);
+    this(familyName, DEFAULT_MIN_VERSIONS, maxVersions, DEFAULT_KEEP_DELETED,
+        compression, inMemory, blockCacheEnabled, blocksize, timeToLive,
+        bloomFilter, scope);
   }
 
   /**
@@ -275,6 +283,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * letter -- and may not contain a <code>:<code>
    * @param minVersions Minimum number of versions to keep
    * @param maxVersions Maximum number of versions to keep
+   * @param keepDeletedCells Whether to retain deleted cells until they expire
+   *        up to maxVersions versions.
    * @param compression Compression type
    * @param inMemory If true, column data should be kept in an HRegionServer's
    * cache
@@ -292,8 +302,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
    */
-  public HColumnDescriptor(final byte [] familyName, final int minVersions,
-      final int maxVersions, final String compression, final boolean inMemory,
+  public HColumnDescriptor(final byte[] familyName, final int minVersions,
+      final int maxVersions, final boolean keepDeletedCells,
+      final String compression, final boolean inMemory,
       final boolean blockCacheEnabled, final int blocksize,
       final int timeToLive, final String bloomFilter, final int scope) {
     isLegalFamilyName(familyName);
@@ -309,14 +320,15 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       if (timeToLive == HConstants.FOREVER) {
         throw new IllegalArgumentException("Minimum versions requires TTL.");
       }
-      if (minVersions > maxVersions) {
-        throw new IllegalArgumentException("Minimum versions must be <= "+
-            "maximum versions.");
+      if (minVersions >= maxVersions) {
+        throw new IllegalArgumentException("Minimum versions must be < "
+            + "maximum versions.");
       }
     }
 
     setMaxVersions(maxVersions);
     setMinVersions(minVersions);
+    setKeepDeletedCells(keepDeletedCells);
     setInMemory(inMemory);
     setBlockCacheEnabled(blockCacheEnabled);
     setTimeToLive(timeToLive);
@@ -540,6 +552,22 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public void setInMemory(boolean inMemory) {
     setValue(HConstants.IN_MEMORY, Boolean.toString(inMemory));
+  }
+
+  public boolean getKeepDeletedCells() {
+    String value = getValue(KEEP_DELETED_CELLS);
+    if (value != null) {
+      return Boolean.valueOf(value).booleanValue();
+    }
+    return DEFAULT_KEEP_DELETED;
+  }
+
+  /**
+   * @param keepDeletedRows True if deleted rows should not be collected
+   * immediately.
+   */
+  public void setKeepDeletedCells(boolean keepDeletedCells) {
+    setValue(KEEP_DELETED_CELLS, Boolean.toString(keepDeletedCells));
   }
 
   /**

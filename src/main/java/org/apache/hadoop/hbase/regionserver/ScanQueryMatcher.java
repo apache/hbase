@@ -20,6 +20,9 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.NavigableSet;
+
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
@@ -29,8 +32,7 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.IOException;
-import java.util.NavigableSet;
+import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 
 /**
  * A query matcher that is specifically designed for the scan case.
@@ -39,72 +41,104 @@ public class ScanQueryMatcher {
   // Optimization so we can skip lots of compares when we decide to skip
   // to the next row.
   private boolean stickyNextRow;
-  private byte[] stopRow;
+  private final byte[] stopRow;
 
-  protected TimeRange tr;
+  private final TimeRange tr;
 
-  protected Filter filter;
+  private final Filter filter;
 
   /** Keeps track of deletes */
-  protected DeleteTracker deletes;
-  protected boolean retainDeletesInOutput;
+  private final DeleteTracker deletes;
+
+  /*
+   * The following three booleans define how we deal with deletes.
+   * There are three different aspects:
+   * 1. Whether to keep delete markers. This is used in compactions.
+   *    Minor compactions always keep delete markers.
+   * 2. Whether to keep deleted rows. This is also used in compactions,
+   *    if the store is set to keep deleted rows. This implies keeping
+   *    the delete markers as well.
+   *    In this case deleted rows are subject to the normal max version
+   *    and TTL/min version rules just like "normal" rows.
+   * 3. Whether a scan can do time travel queries even before deleted
+   *    marker to reach deleted rows.
+   */
+  /** whether to retain delete markers */
+  private final boolean retainDeletesInOutput;
+  /** whether to return deleted rows */
+  private final boolean keepDeletedCells;
+  /** whether time range queries can see rows "behind" a delete */
+  private final boolean seePastDeleteMarkers;
+
 
   /** Keeps track of columns and versions */
-  protected ColumnTracker columns;
+  private final ColumnTracker columns;
 
   /** Key to seek to in memstore and StoreFiles */
-  protected KeyValue startKey;
+  private final KeyValue startKey;
 
   /** Row comparator for the region this query is for */
-  KeyValue.KeyComparator rowComparator;
+  private final KeyValue.KeyComparator rowComparator;
 
+  /* row is not private for tests */
   /** Row the query is on */
-  protected byte [] row;
+  byte [] row;
+  
+  /**
+   * Oldest put in any of the involved store files
+   * Used to decide whether it is ok to delete
+   * family delete marker of this store keeps
+   * deleted KVs.
+   */
+  private final long earliestPutTs;
 
   /**
-   * Constructs a ScanQueryMatcher for a Scan.
+   * Construct a QueryMatcher for a scan
    * @param scan
-   * @param family
+   * @param scanInfo The store's immutable scan info
    * @param columns
-   * @param ttl
-   * @param rowComparator
+   * @param scanType Type of the scan
+   * @param earliestPutTs Earliest put seen in any of the store files.
    */
-  public ScanQueryMatcher(Scan scan, byte [] family,
-      NavigableSet<byte[]> columns, long ttl,
-      KeyValue.KeyComparator rowComparator, int minVersions, int maxVersions,
-      boolean retainDeletesInOutput) {
+  public ScanQueryMatcher(Scan scan, Store.ScanInfo scanInfo,
+      NavigableSet<byte[]> columns, StoreScanner.ScanType scanType,
+      long earliestPutTs) {
     this.tr = scan.getTimeRange();
-    this.rowComparator = rowComparator;
+    this.rowComparator = scanInfo.getComparator().getRawComparator();
     this.deletes =  new ScanDeleteTracker();
     this.stopRow = scan.getStopRow();
-    this.startKey = KeyValue.createFirstOnRow(scan.getStartRow(), family, null);
+    this.startKey = KeyValue.createFirstOnRow(scan.getStartRow(), scanInfo.getFamily(), null);
     this.filter = scan.getFilter();
-    this.retainDeletesInOutput = retainDeletesInOutput;
+    this.earliestPutTs = earliestPutTs;
 
+    /* how to deal with deletes */
+    // keep deleted cells: if compaction or raw scan
+    this.keepDeletedCells = (scanInfo.getKeepDeletedCells() && scanType != ScanType.USER_SCAN) || scan.isRaw();
+    // retain deletes: if minor compaction or raw scan
+    this.retainDeletesInOutput = scanType == ScanType.MINOR_COMPACT || scan.isRaw();
+    // seePastDeleteMarker: user initiated scans
+    this.seePastDeleteMarkers = scanInfo.getKeepDeletedCells() && scanType == ScanType.USER_SCAN;
+
+    int maxVersions = Math.min(scan.getMaxVersions(), scanInfo.getMaxVersions());
     // Single branch to deal with two types of reads (columns vs all in family)
     if (columns == null || columns.size() == 0) {
       // use a specialized scan for wildcard column tracker.
-      this.columns = new ScanWildcardColumnTracker(minVersions, maxVersions, ttl);
+      this.columns = new ScanWildcardColumnTracker(scanInfo.getMinVersions(), maxVersions, scanInfo.getTtl());
     } else {
       // We can share the ExplicitColumnTracker, diff is we reset
       // between rows, not between storefiles.
-      this.columns = new ExplicitColumnTracker(columns, minVersions, maxVersions,
-          ttl);
+      this.columns = new ExplicitColumnTracker(columns, scanInfo.getMinVersions(), maxVersions,
+          scanInfo.getTtl());
     }
   }
 
-  public ScanQueryMatcher(Scan scan, byte [] family,
-      NavigableSet<byte[]> columns, long ttl,
-      KeyValue.KeyComparator rowComparator, int minVersions, int maxVersions) {
-      /* By default we will not include deletes */
-      /* deletes are included explicitly (for minor compaction) */
-      this(scan, family, columns, ttl, rowComparator, minVersions, maxVersions,
-          false);
-  }
-  public ScanQueryMatcher(Scan scan, byte [] family,
-      NavigableSet<byte[]> columns, long ttl,
-      KeyValue.KeyComparator rowComparator, int maxVersions) {
-    this(scan, family, columns, ttl, rowComparator, 0, maxVersions);
+  /*
+   * Constructor for tests
+   */
+  ScanQueryMatcher(Scan scan, Store.ScanInfo scanInfo,
+      NavigableSet<byte[]> columns) {
+    this(scan, scanInfo, columns, StoreScanner.ScanType.USER_SCAN,
+        HConstants.LATEST_TIMESTAMP);
   }
 
   /**
@@ -171,21 +205,50 @@ public class ScanQueryMatcher {
         return columns.getNextRowOrNextColumn(bytes, offset, qualLength);
     }
 
+    /*
+     * The delete logic is pretty complicated now.
+     * This is corroborated by the following:
+     * 1. The store might be instructed to keep deleted rows around.
+     * 2. A scan can optionally see past a delete marker now.
+     * 3. If deleted rows are kept, we have to find out when we can
+     *    remove the delete markers.
+     * 4. Family delete markers are always first (regardless of their TS)
+     * 5. Delete markers should not be counted as version
+     * 6. Delete markers affect puts of the *same* TS
+     * 7. Delete marker need to be version counted together with puts
+     *    they affect
+     */
     byte type = kv.getType();
-    if (isDelete(type)) {
-      if (tr.withinOrAfterTimeRange(timestamp)) {
-        this.deletes.add(bytes, offset, qualLength, timestamp, type);
+    if (kv.isDelete()) {
+      if (!keepDeletedCells) {
+        // first ignore delete markers if the scanner can do so, and the
+        // range does not include the marker
+        boolean includeDeleteMarker = seePastDeleteMarkers ?
+            // +1, to allow a range between a delete and put of same TS
+            tr.withinTimeRange(timestamp+1) :
+            tr.withinOrAfterTimeRange(timestamp);
+        if (includeDeleteMarker) {
+          this.deletes.add(bytes, offset, qualLength, timestamp, type);
+        }
         // Can't early out now, because DelFam come before any other keys
       }
       if (retainDeletesInOutput) {
+        // always include
         return MatchCode.INCLUDE;
-      }
-      else {
+      } else if (keepDeletedCells) {
+        if (timestamp < earliestPutTs) {
+          // keeping delete rows, but there are no puts older than
+          // this delete in the store files.
+          return columns.getNextRowOrNextColumn(bytes, offset, qualLength);
+        }
+        // else: fall through and do version counting on the
+        // delete markers
+      } else {
         return MatchCode.SKIP;
       }
-    }
-
-    if (!this.deletes.isEmpty()) {
+      // note the following next else if...
+      // delete marker are not subject to other delete markers
+    } else if (!this.deletes.isEmpty()) {
       DeleteResult deleteResult = deletes.isDeleted(bytes, offset, qualLength,
           timestamp);
       switch (deleteResult) {
@@ -228,7 +291,8 @@ public class ScanQueryMatcher {
       }
     }
 
-    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength, timestamp);
+    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength,
+        timestamp, type);
     /*
      * According to current implementation, colChecker can only be
      * SEEK_NEXT_COL, SEEK_NEXT_ROW, SKIP or INCLUDE. Therefore, always return
@@ -267,11 +331,6 @@ public class ScanQueryMatcher {
     this.columns.reset();
 
     stickyNextRow = false;
-  }
-
-  // should be in KeyValue.
-  protected boolean isDelete(byte type) {
-    return (type != KeyValue.Type.Put.getCode());
   }
 
   /**

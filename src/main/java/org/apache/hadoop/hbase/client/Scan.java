@@ -82,12 +82,13 @@ import java.util.TreeSet;
  * execute {@link #setCacheBlocks(boolean)}.
  */
 public class Scan extends OperationWithAttributes implements Writable {
+  private static final String RAW_ATTR = "_raw_";
+
   private static final byte SCAN_VERSION = (byte)2;
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
   private int batch = -1;
-
   // If application wants to collect scan metrics, it needs to
   // call scan.setAttribute(SCAN_ATTRIBUTES_ENABLE, Bytes.toBytes(Boolean.TRUE))
   static public String SCAN_ATTRIBUTES_METRICS_ENABLE =
@@ -694,5 +695,27 @@ public class Scan extends OperationWithAttributes implements Writable {
       }
     }
     return cols.toString();
+  }
+
+  /**
+   * Enable/disable "raw" mode for this scan.
+   * If "raw" is enabled the scan will return all
+   * delete marker and deleted rows that have not
+   * been collected, yet.
+   * This is mostly useful for Scan on column families
+   * that have KEEP_DELETED_ROWS enabled.
+   * It is an error to specify any column when "raw" is set.
+   * @param raw True/False to enable/disable "raw" mode.
+   */
+  public void setRaw(boolean raw) {
+    setAttribute(RAW_ATTR, Bytes.toBytes(raw));
+  }
+
+  /**
+   * @return True if this Scan is in "raw" mode.
+   */
+  public boolean isRaw() {
+    byte[] attr = getAttribute(RAW_ATTR);
+    return attr == null ? false : Bytes.toBoolean(attr);
   }
 }

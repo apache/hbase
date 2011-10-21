@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
@@ -115,6 +116,9 @@ public class StoreFile {
 
   /** Key for Timerange information in metadata*/
   public static final byte[] TIMERANGE_KEY = Bytes.toBytes("TIMERANGE");
+
+  /** Key for timestamp of earliest-put in metadata*/
+  public static final byte[] EARLIEST_PUT_TS = Bytes.toBytes("EARLIEST_PUT_TS");
 
   // Make default block size for StoreFiles 8k while testing.  TODO: FIX!
   // Need to make it 8k for testing.
@@ -737,6 +741,7 @@ public class StoreFile {
     private int lastBloomKeyOffset, lastBloomKeyLen;
     private KVComparator kvComparator;
     private KeyValue lastKv = null;
+    private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
 
     TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
     /* isTimeRangeTrackerSet keeps track if the timeRange has already been set
@@ -796,14 +801,15 @@ public class StoreFile {
       writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
       writer.appendFileInfo(MAJOR_COMPACTION_KEY,
           Bytes.toBytes(majorCompaction));
-      appendTimeRangeMetadata();
+      appendTrackedTimestampsToMetadata();
     }
 
     /**
-     * Add TimestampRange to Metadata
+     * Add TimestampRange and earliest put timestamp to Metadata
      */
-    public void appendTimeRangeMetadata() throws IOException {
+    public void appendTrackedTimestampsToMetadata() throws IOException {
       appendFileInfo(TIMERANGE_KEY,WritableUtils.toByteArray(timeRangeTracker));
+      appendFileInfo(EARLIEST_PUT_TS, Bytes.toBytes(earliestPutTs));
     }
 
     /**
@@ -816,26 +822,19 @@ public class StoreFile {
     }
 
     /**
+     * Record the earlest Put timestamp.
+     *
      * If the timeRangeTracker is not set,
      * update TimeRangeTracker to include the timestamp of this key
      * @param kv
      * @throws IOException
      */
-    public void includeInTimeRangeTracker(final KeyValue kv) {
+    public void trackTimestamps(final KeyValue kv) {
+      if (KeyValue.Type.Put.getCode() == kv.getType()) {
+        earliestPutTs = Math.min(earliestPutTs, kv.getTimestamp());
+      }
       if (!isTimeRangeTrackerSet) {
         timeRangeTracker.includeTimestamp(kv);
-      }
-    }
-
-    /**
-     * If the timeRangeTracker is not set,
-     * update TimeRangeTracker to include the timestamp of this key
-     * @param key
-     * @throws IOException
-     */
-    public void includeInTimeRangeTracker(final byte [] key) {
-      if (!isTimeRangeTrackerSet) {
-        timeRangeTracker.includeTimestamp(key);
       }
     }
 
@@ -908,7 +907,7 @@ public class StoreFile {
         }
       }
       writer.append(kv);
-      includeInTimeRangeTracker(kv);
+      trackTimestamps(kv);
     }
 
     public Path getPath() {
