@@ -90,10 +90,11 @@ public class RegexStringComparator extends WritableByteArrayComparable {
   }
 
   @Override
-  public int compareTo(byte[] value) {
+  public int compareTo(byte[] value, int offset, int length) {
     // Use find() for subsequence match instead of matches() (full sequence
     // match) to adhere to the principle of least surprise.
-    return pattern.matcher(new String(value, charset)).find() ? 0 : 1;
+    return pattern.matcher(new String(value, offset, length, charset)).find() ? 0
+        : 1;
   }
 
   @Override

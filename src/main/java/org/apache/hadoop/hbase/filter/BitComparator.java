@@ -74,8 +74,8 @@ public class BitComparator extends WritableByteArrayComparable {
   }
 
   @Override
-  public int compareTo(byte[] value) {
-    if (value.length != this.value.length) {
+  public int compareTo(byte[] value, int offset, int length) {
+    if (length != this.value.length) {
       return 1;
     }
     int b = 0;
@@ -83,13 +83,13 @@ public class BitComparator extends WritableByteArrayComparable {
     for (int i = value.length - 1; i >= 0 && b == 0; i--) {
       switch (bitOperator) {
         case AND:
-          b = (this.value[i] & value[i]) & 0xff;
+          b = (this.value[i] & value[i+offset]) & 0xff;
           break;
         case OR:
-          b = (this.value[i] | value[i]) & 0xff;
+          b = (this.value[i] | value[i+offset]) & 0xff;
           break;
         case XOR:
-          b = (this.value[i] ^ value[i]) & 0xff;
+          b = (this.value[i] ^ value[i+offset]) & 0xff;
           break;
       }
     }

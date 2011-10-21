@@ -174,10 +174,7 @@ public class SingleColumnValueFilter extends FilterBase {
 
   private boolean filterColumnValue(final byte [] data, final int offset,
       final int length) {
-    // TODO: Can this filter take a rawcomparator so don't have to make this
-    // byte array copy?
-    int compareResult =
-      this.comparator.compareTo(Arrays.copyOfRange(data, offset, offset + length));
+    int compareResult = this.comparator.compareTo(data, offset, length);
     switch (this.compareOp) {
     case LESS:
       return compareResult <= 0;

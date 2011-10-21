@@ -21,6 +21,7 @@ Release 0.93.0 - Unreleased
    HBASE-4469  Avoid top row seek by looking up bloomfilter (liyin via jgray)
    HBASE-4418  Show all the hbase configuration in the web ui
    HBASE-4489  Better key splitting in RegionSplitter
+   HBASE-4626  Filters unnecessarily copy byte arrays (Lars H)
 
   BUG FIXES
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)

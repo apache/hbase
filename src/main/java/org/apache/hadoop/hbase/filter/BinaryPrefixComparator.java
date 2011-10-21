@@ -41,13 +41,8 @@ public class BinaryPrefixComparator extends WritableByteArrayComparable {
   }
 
   @Override
-  public int compareTo(byte [] value) {
-    if (this.value.length <= value.length) {
-      return Bytes.compareTo(this.value, 0, this.value.length, value, 0,
-          this.value.length);
-    } else {
-      return Bytes.compareTo(this.value, value);
-    }
+  public int compareTo(byte [] value, int offset, int length) {
+    return Bytes.compareTo(this.value, 0, this.value.length, value, offset,
+        this.value.length <= length ? this.value.length : length);
   }
-
 }

@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.hbase.util.Bytes;
+
 /**
  * A binary comparator which lexicographically compares against the specified
  * byte array using {@link org.apache.hadoop.hbase.util.Bytes#compareTo(byte[], byte[])}.
@@ -37,4 +39,8 @@ public class BinaryComparator extends WritableByteArrayComparable {
     super(value);
   }
 
+  @Override
+  public int compareTo(byte [] value, int offset, int length) {
+    return Bytes.compareTo(this.value, 0, this.value.length, value, offset, length);
+  }
 }

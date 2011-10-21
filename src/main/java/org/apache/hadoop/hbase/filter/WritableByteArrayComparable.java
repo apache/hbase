@@ -60,7 +60,17 @@ public abstract class WritableByteArrayComparable implements Writable, Comparabl
 
   @Override
   public int compareTo(byte [] value) {
-    return Bytes.compareTo(this.value, value);
+    return compareTo(value, 0, value.length);
   }
 
+  /**
+   * Special compareTo method for subclasses, to avoid
+   * copying byte[] unnecessarily.
+   * @param value byte[] to compare
+   * @param offset offset into value
+   * @param length number of bytes to compare
+   * @return a negative integer, zero, or a positive integer as this object
+   *         is less than, equal to, or greater than the specified object.
+   */
+  public abstract int compareTo(byte [] value, int offset, int length);
 }

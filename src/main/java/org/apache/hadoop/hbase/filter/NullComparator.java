@@ -36,4 +36,8 @@ public class NullComparator extends WritableByteArrayComparable {
     return value != null ? 1 : 0;
   }
 
+  @Override
+  public int compareTo(byte[] value, int offset, int length) {
+    throw new UnsupportedOperationException();
+  }
 }
