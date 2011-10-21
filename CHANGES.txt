@@ -388,6 +388,8 @@ Release 0.92.0 - Unreleased
    HBASE-4595  HFilePrettyPrinter Scanned kv count always 0 (Matteo Bertozzi)
    HBASE-4580  Some invalid zk nodes were created when a clean cluster restarts
                (Gaojinchao)
+   HBASE-4588  The floating point arithmetic to validate memory allocation
+               configurations need to be done as integers (dhruba)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
