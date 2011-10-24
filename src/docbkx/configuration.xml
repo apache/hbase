@@ -215,7 +215,18 @@ to ensure well-formedness of your document after an edit session.
         <code>sync</code>. Hadoop 0.20.2, Hadoop 0.20.203.0, and Hadoop 0.20.204.0
 	DO NOT have this attribute.
         Currently only Hadoop versions 0.20.205.0 or any release in excess of this
-        version has a durable sync
+        version has a durable sync.  You have to explicitly enable it though by
+        setting <varname>dfs.support.append</varname> equal to true on both
+        the client side -- in <filename>hbase-site.xml</filename> though it should
+        be on in your <filename>base-default.xml</filename> file -- and on the
+        serverside in <filename>hdfs-site.xml</filename> (You will have to restart
+        your cluster after setting this configuration).  Ignore the chicken-little
+        comment you'll find in the <filename>hdfs-site.xml</filename> in the
+        description for this configuration; it says it is not enabled because there
+        are <quote>... bugs in the 'append code' and is not supported in any production
+        cluster.</quote> because it is not true (I'm sure there are bugs but the
+        append code has been running in production at large scale deploys and is on
+        by default in the offerings of hadoop by commercial vendors)
         <footnote><para>Until recently only the
         <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
         branch had a working sync but no official release was ever made from this branch.
@@ -226,7 +237,7 @@ to ensure well-formedness of your document after an edit session.
     <footnote><para>Praveen Kumar has written
             a complimentary article,
             <link xlink:href="http://praveen.kumar.in/2011/06/20/building-hadoop-and-hbase-for-hbase-maven-application-development/">Building Hadoop and HBase for HBase Maven application development</link>.
-</para></footnote>.</para>
+</para></footnote><footnote>Cloudera have <varname>dfs.support.append</varname> set to true by default.</footnote>.</para>
 
 <para>Or use the
     <link xlink:href="http://www.cloudera.com/">Cloudera</link> or
