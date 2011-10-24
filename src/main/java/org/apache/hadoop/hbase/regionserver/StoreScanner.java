@@ -196,8 +196,9 @@ class StoreScanner extends NonLazyKeyValueScanner
     List<KeyValueScanner> scanners = new LinkedList<KeyValueScanner>();
     // First the store file scanners
     if (memOnly == false) {
-      List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks, isGet);
+			List<StoreFileScanner> sfScanners = StoreFileScanner
+				.getScannersForStoreFiles(store.getStorefiles(), cacheBlocks,
+							                     isGet, false, this.matcher);
 
       // include only those scan files which pass all filters
       for (StoreFileScanner sfs : sfScanners) {
