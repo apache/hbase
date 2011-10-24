@@ -226,12 +226,11 @@ public class HBaseTestingUtility {
    * Can only create one.
    * @param dir Where to home your dfs cluster.
    * @param servers How many DNs to start.
-   * @throws Exception
    * @see {@link #shutdownMiniDFSCluster()}
    * @return The mini dfs cluster created.
    */
   public MiniDFSCluster startMiniDFSCluster(int servers, final File dir)
-  throws Exception {
+      throws IOException {
     // This does the following to home the minidfscluster
     //     base_dir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
     // Some tests also do this:
@@ -270,7 +269,7 @@ public class HBaseTestingUtility {
   }
 
   private MiniZooKeeperCluster startMiniZKCluster(final File dir)
-  throws Exception {
+      throws IOException, InterruptedException {
     if (this.zkCluster != null) {
       throw new IOException("Cluster already running at " + dir);
     }
@@ -298,7 +297,7 @@ public class HBaseTestingUtility {
    * @see {@link #shutdownMiniDFSCluster()}
    */
   public MiniHBaseCluster startMiniCluster() throws Exception {
-    return startMiniCluster(1);
+    return startMiniCluster(1, 1);
   }
 
   /**
@@ -306,16 +305,37 @@ public class HBaseTestingUtility {
    * Modifies Configuration.  Homes the cluster data directory under a random
    * subdirectory in a directory under System property test.build.data.
    * Directory is cleaned up on exit.
-   * @param servers Number of servers to start up.  We'll start this many
-   * datanodes and regionservers.  If servers is > 1, then make sure
+   * @param numSlaves Number of slaves to start up.  We'll start this many
+   * datanodes and regionservers.  If numSlaves is > 1, then make sure
    * hbase.regionserver.info.port is -1 (i.e. no ui per regionserver) otherwise
    * bind errors.
    * @throws Exception
    * @see {@link #shutdownMiniCluster()}
    * @return Mini hbase cluster instance created.
    */
-  public MiniHBaseCluster startMiniCluster(final int servers)
-  throws Exception {
+  public MiniHBaseCluster startMiniCluster(final int numSlaves)
+      throws IOException, InterruptedException {
+    return startMiniCluster(1, numSlaves);
+  }
+
+  /**
+   * Start up a minicluster of hbase, optionally dfs, and zookeeper.
+   * Modifies Configuration.  Homes the cluster data directory under a random
+   * subdirectory in a directory under System property test.build.data.
+   * Directory is cleaned up on exit.
+   * @param numMasters Number of masters to start up.  We'll start this many
+   * hbase masters.  If numMasters > 1, you can find the active/primary master
+   * with {@link MiniHBaseCluster#getMaster()}.
+   * @param numSlaves Number of slave servers to start up.  We'll start this
+   * many datanodes and regionservers.  If servers is > 1, then make sure
+   * hbase.regionserver.info.port is -1 (i.e. no ui per regionserver) otherwise
+   * bind errors.
+   * @throws Exception
+   * @see {@link #shutdownMiniCluster()}
+   * @return Mini hbase cluster instance created.
+   */
+  public MiniHBaseCluster startMiniCluster(final int numMasters,
+      final int numSlaves) throws IOException, InterruptedException {
     LOG.info("Starting up minicluster");
     // If we already put up a cluster, fail.
     isRunningCluster();
@@ -325,7 +345,7 @@ public class HBaseTestingUtility {
     System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestBuildDir.getPath());
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
-    startMiniDFSCluster(servers, this.clusterTestBuildDir);
+    startMiniDFSCluster(numSlaves, this.clusterTestBuildDir);
 
     // Mangle conf so fs parameter points to minidfs we just started up
     FileSystem fs = this.dfsCluster.getFileSystem();
@@ -344,7 +364,7 @@ public class HBaseTestingUtility {
     this.conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
-    this.hbaseCluster = new MiniHBaseCluster(this.conf, servers);
+    this.hbaseCluster = new MiniHBaseCluster(this.conf, numMasters, numSlaves);
     // Don't leave here till we've done a successful scan of the .META.
     HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());

@@ -89,14 +89,16 @@ class ZKMasterAddressWatcher implements Watcher {
    * Wait for master address to be available. This sets a watch in ZooKeeper and
    * blocks until the master address ZNode gets deleted.
    */
-  public synchronized void waitForMasterAddressAvailability() {
-    while (zookeeper.readMasterAddress(zookeeper) != null) {
+  private synchronized void waitForMasterAddressAvailability() {
+    while (!requestShutdown.get() &&
+           zookeeper.readMasterAddress(zookeeper) != null) {
       try {
         LOG.debug("Waiting for master address ZNode to be deleted " +
           "(Also watching cluster state node)");
         this.zookeeper.setClusterStateWatch();
         wait();
       } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
       }
     }
   }
@@ -112,7 +114,7 @@ class ZKMasterAddressWatcher implements Watcher {
       waitForMasterAddressAvailability();
       // Check if we need to shutdown instead of taking control
       if (this.requestShutdown.get()) {
-        LOG.debug("Won't start Master because cluster is shuting down");
+        LOG.debug("Won't start Master because of requested shutdown");
         return false;
       }
       if(this.zookeeper.writeMasterAddress(address)) {
@@ -133,4 +135,10 @@ class ZKMasterAddressWatcher implements Watcher {
   public void setZookeeper(ZooKeeperWrapper zookeeper) {
     this.zookeeper = zookeeper;
   }
+
+  synchronized void cancelMasterZNodeWait() {
+    requestShutdown.set(true);
+    notifyAll();
+  }
+
 }

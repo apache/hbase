@@ -509,4 +509,56 @@ public class MiniHBaseCluster {
   throws IOException {
     ((MiniHBaseClusterMaster)getMaster()).addMessage(hrs.getHServerInfo(), msg);
   }
+
+  /**
+   * @return List of master threads.
+   */
+  public List<HMaster> getMasters() {
+    return this.hbaseCluster.getMasters();
+  }
+
+  /**
+  * Kill the specified master cleanly. Does not result in a cluster shutdown.
+  *
+  * @param serverNumber Used as index into a list.
+  * @return the master that was stopped
+  */
+  public HMaster killMaster(int serverNumber) {
+    HMaster server = hbaseCluster.getMasters().get(serverNumber);
+    LOG.info("Killing master " + server.toString());
+    server.killMaster();
+    return server;
+  }
+
+  /**
+   * Wait for the specified master to stop. Removes this thread from list
+   * of running threads.
+   * @param serverNumber
+   * @return Name of master that just went down.
+   */
+  public String waitOnMasterStop(final int serverNumber) {
+    return this.hbaseCluster.waitOnMasterStop(serverNumber);
+  }
+
+  /**
+   * Blocks until there is an active master and that master has completed
+   * initialization.
+   *
+   * @return true if an active master becomes available.  false if there are no
+   *         masters left.
+   * @throws InterruptedException
+   */
+  public boolean waitForActiveAndReadyMaster() throws InterruptedException {
+    List<HMaster> masters;
+    while ((masters = getMasters()).size() > 0) {
+      for (HMaster master : masters) {
+        if (master.isActiveMaster()) {
+          return true;
+        }
+      }
+      Thread.sleep(200);
+    }
+    return false;
+  }
+
 }

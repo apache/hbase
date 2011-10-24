@@ -38,7 +38,20 @@ import org.apache.hadoop.hbase.util.Sleeper;
 public abstract class Chore extends Thread {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private final Sleeper sleeper;
+
+  /**
+   * This variable might belong to someone else, e.g. HMaster. Setting this
+   * variable might trigger cluster shutdown. To shut down this thread only,
+   * use {@link #threadStop}.
+   */
   protected volatile AtomicBoolean stop;
+
+  /**
+   * Unlike {@link #stop}, this indicates that the current thread should shut
+   * down. We use this flag when the master requests a shutdown of base
+   * scanners, but we don't want to shut down the whole cluster.
+   */
+  private volatile boolean threadStop = false;
 
   /**
    * @param p Period at which we should run.  Will be adjusted appropriately
@@ -59,7 +72,7 @@ public abstract class Chore extends Thread {
   public void run() {
     try {
       boolean initialChoreComplete = false;
-      while (!this.stop.get()) {
+      while (!this.stop.get() && !threadStop) {
         long startTime = System.currentTimeMillis();
         try {
           if (!initialChoreComplete) {
@@ -112,4 +125,9 @@ public abstract class Chore extends Thread {
   protected void sleep() {
     this.sleeper.sleep();
   }
+
+  protected void shutdownThisThread() {
+    threadStop = true;
+  }
+
 }

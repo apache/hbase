@@ -133,13 +133,24 @@ public class HMaster extends Thread implements HMasterInterface,
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
   private static final String LOCALITY_SNAPSHOT_FILE_NAME = "regionLocality-snapshot";
 
-  // We start out with closed flag on.  Its set to off after construction.
-  // Use AtomicBoolean rather than plain boolean because we want other threads
-  // able to set shutdown flag.  Using AtomicBoolean can pass a reference
-  // rather than have them have to know about the hosting Master class.
-  final AtomicBoolean closed = new AtomicBoolean(true);
-  // TODO: Is this separate flag necessary?
-  private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
+  /**
+   * We start out with closed flag on. Its set to off after construction. Use
+   * AtomicBoolean rather than plain boolean because we want other threads able
+   * to set this flag and trigger a cluster shutdown. Using AtomicBoolean can
+   * pass a reference rather than have them have to know about the hosting
+   * Master class. This also has disadvantages, because this instance passed
+   * to another object can be confused with another thread's own shutdown flag.
+   */
+  private final AtomicBoolean closed = new AtomicBoolean(true);
+
+  /**
+   * This flag indicates that cluster shutdown has been requested. This is
+   * different from {@link #closed} in that it is initially false, but is
+   * set to true at shutdown and remains true from then on. For killing one
+   * instance of the master, see {@link #killed}.
+   */
+  private final AtomicBoolean clusterShutdownRequested =
+      new AtomicBoolean(false);
 
   private final Configuration conf;
   private final Path rootdir;
@@ -148,7 +159,7 @@ public class HMaster extends Thread implements HMasterInterface,
   private final int numRetries;
 
   // Metrics is set when we call run.
-  private final MasterMetrics metrics;
+  private MasterMetrics metrics;
 
   final Lock splitLogLock = new ReentrantLock();
   final boolean distributedLogSplitting;
@@ -171,12 +182,12 @@ public class HMaster extends Thread implements HMasterInterface,
   private final HServerAddress address;
 
   private final ServerConnection connection;
-  private final ServerManager serverManager;
-  private final RegionManager regionManager;
+  private ServerManager serverManager;
+  private RegionManager regionManager;
 
   private long lastFragmentationQuery = -1L;
   private Map<String, Integer> fragmentation = null;
-  private final RegionServerOperationQueue regionServerOperationQueue;
+  private RegionServerOperationQueue regionServerOperationQueue;
 
   // True if this is the master that started the cluster.
   boolean isClusterStartup;
@@ -187,8 +198,13 @@ public class HMaster extends Thread implements HMasterInterface,
   private long applyPreferredAssignmentPeriod = 0l;
   private long holdRegionForBestLocalityPeriod = 0l;
 
-  // flag set after we become the active master (used for testing)
+  /** True if the master is being killed. No cluster shutdown is done. */
+  private volatile boolean killed = false;
+
+  /** Flag set after we become the active master (used for testing). */
   private volatile boolean isActiveMaster = false;
+
+  public static final String MASTER_ID_CONF_KEY = "hbase.test.master.id";
 
   /**
    * Constructor
@@ -202,7 +218,8 @@ public class HMaster extends Thread implements HMasterInterface,
     // number of RS ephemeral nodes. RS ephemeral nodes are created only after
     // the primary master has written the address to ZK. So this has to be done
     // before we race to write our address to zookeeper.
-    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
+    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
+        getZKWrapperName());
     isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
 
     // Get my address and create an rpc server instance.  The rpc-server port
@@ -254,12 +271,12 @@ public class HMaster extends Thread implements HMasterInterface,
     // TODO: Bring up the UI to redirect to active Master.
     zooKeeperWrapper.registerListener(this);
     this.zkMasterAddressWatcher =
-      new ZKMasterAddressWatcher(this.zooKeeperWrapper, this.shutdownRequested);
+      new ZKMasterAddressWatcher(this.zooKeeperWrapper, this.clusterShutdownRequested);
     zooKeeperWrapper.registerListener(zkMasterAddressWatcher);
 
     // if we're a backup master, stall until a primary to writes his address
-    if (conf.getBoolean(HConstants.MASTER_TYPE_BACKUP, HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
-
+    if (conf.getBoolean(HConstants.MASTER_TYPE_BACKUP,
+        HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
       // ephemeral node expiry will be detected between about 40 to 60 seconds;
       // plus add a little extra since only ZK leader can expire nodes, and
       // leader maybe a little  bit delayed in getting info about the pings.
@@ -275,26 +292,46 @@ public class HMaster extends Thread implements HMasterInterface,
         throw new IOException("Interrupted waiting for master address");
       }
     }
+  }
 
-    this.zkMasterAddressWatcher.writeAddressToZooKeeper(this.address, true);
+  private void stallIfBackupMaster() {
+    if (!this.zkMasterAddressWatcher.writeAddressToZooKeeper(this.address,
+        true)) {
+      LOG.info("Failed to write master address to ZooKeeper, not starting (" +
+          "closed=" + closed.get() + ")");
+      return;
+    }
+
     isActiveMaster = true;
     this.regionServerOperationQueue =
       new RegionServerOperationQueue(this.conf, this.closed);
 
     serverManager = new ServerManager(this);
 
-
     // Start the unassigned watcher - which will create the unassigned region
     // in ZK. This is needed before RegionManager() constructor tries to assign
     // the root region.
-    ZKUnassignedWatcher.start(this.conf, this);
+    try {
+      ZKUnassignedWatcher.start(this.conf, this);
+    } catch (IOException e) {
+      LOG.error("Failed to start ZK unassigned region watcher", e);
+      throw new RuntimeException(e);
+    }
+
     // start the "close region" executor service
-    HBaseEventType.RS2ZK_REGION_CLOSED.startMasterExecutorService(address.toString());
+    HBaseEventType.RS2ZK_REGION_CLOSED.startMasterExecutorService(
+        address.toString());
     // start the "open region" executor service
-    HBaseEventType.RS2ZK_REGION_OPENED.startMasterExecutorService(address.toString());
+    HBaseEventType.RS2ZK_REGION_OPENED.startMasterExecutorService(
+        address.toString());
 
     // start the region manager
-    regionManager = new RegionManager(this);
+    try {
+      regionManager = new RegionManager(this);
+    } catch (IOException e) {
+      LOG.error("Failed to instantiate region manager");
+      throw new RuntimeException(e);
+    }
 
     setName(MASTER);
     this.metrics = new MasterMetrics(MASTER, this.serverManager);
@@ -499,8 +536,8 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.fs;
   }
 
-  public AtomicBoolean getShutdownRequested() {
-    return this.shutdownRequested;
+  public AtomicBoolean getClusterShutdownRequested() {
+    return this.clusterShutdownRequested;
   }
 
   AtomicBoolean getClosed() {
@@ -562,6 +599,12 @@ public class HMaster extends Thread implements HMasterInterface,
   /** Main processing loop */
   @Override
   public void run() {
+    stallIfBackupMaster();
+
+    if (closed.get()) {
+      LOG.info("Master is closing, not starting the main loop");
+      return;
+    }
     MonitoredTask startupStatus =
       TaskMonitor.get().createStatus("Master startup");
     startupStatus.setDescription("Master startup");
@@ -581,7 +624,7 @@ public class HMaster extends Thread implements HMasterInterface,
       /* Main processing loop */
       FINISHED: while (!this.closed.get()) {
         // check if we should be shutting down
-        if (this.shutdownRequested.get()) {
+        if (clusterShutdownRequested.get()) {
           // The region servers won't all exit until we stop scanning the
           // meta regions
           this.regionManager.stopScanners();
@@ -613,13 +656,25 @@ public class HMaster extends Thread implements HMasterInterface,
     }
 
     startupStatus.cleanup();
-    if (!this.shutdownRequested.get()) {  // shutdown not by request
-      shutdown();  // indicated that master is shutting down
-      startShutdown();  // get started with shutdown: stop scanners etc.
+    if (!this.clusterShutdownRequested.get()) {  // shutdown not by request
+      if (!killed) {
+        // This would trigger a cluster shutdown, so we are not doing this when
+        // the master is being "killed" in a unit test.
+        shutdown();
+      }
+
+      // Get started with shutdown: stop scanners, etc. This does not lead to
+      // a cluster shutdown.
+      startShutdown();
+    } else if (killed) {
+      startShutdown();
     }
 
-    // Wait for all the remaining region servers to report in.
-    this.serverManager.letRegionServersShutdown();
+    if (!killed) {
+      // Wait for all the remaining region servers to report in. Only doing
+      // this when the cluster is shutting down.
+      this.serverManager.letRegionServersShutdown();
+    }
 
     /*
      * Clean up and close up shop
@@ -633,7 +688,15 @@ public class HMaster extends Thread implements HMasterInterface,
       }
     }
     this.rpcServer.stop();
-    this.regionManager.stop();
+
+    if (killed) {
+      regionManager.joinThreads();
+    } else {
+      // Compared to the above, this will clear the RS directory. We are not
+      // doing that when the master is being "killed" in a unit test.
+      regionManager.stop();
+    }
+
     this.zooKeeperWrapper.close();
     HBaseExecutorService.shutdown();
     LOG.info("HMaster main thread exiting");
@@ -965,7 +1028,7 @@ public class HMaster extends Thread implements HMasterInterface,
         // splitLogManager must be started before starting rpcServer because
         // region-servers dying will trigger log splitting
         this.splitLogManager = new SplitLogManager(zooKeeperWrapper, conf,
-            this.shutdownRequested, address.toString());
+            this.clusterShutdownRequested, address.toString());
         this.splitLogManager.finishInitialization();
       }
       // Start the server so that region servers are running before we start
@@ -991,7 +1054,7 @@ public class HMaster extends Thread implements HMasterInterface,
   }
 
   /*
-   * Start shutting down the master
+   * Start shutting down the master. This does NOT trigger a cluster shutdown.
    */
   void startShutdown() {
     this.closed.set(true);
@@ -1059,7 +1122,7 @@ public class HMaster extends Thread implements HMasterInterface,
   @Override
   public void shutdown() {
     LOG.info("Cluster shutdown requested. Starting to quiesce servers");
-    this.shutdownRequested.set(true);
+    this.clusterShutdownRequested.set(true);
     this.zooKeeperWrapper.setClusterState(false);
     if (splitLogManager != null) {
       this.splitLogManager.stop();
@@ -1736,7 +1799,7 @@ public class HMaster extends Thread implements HMasterInterface,
             cluster.startup();
           } else {
             HMaster master = constructMaster(masterClass, conf);
-            if (master.shutdownRequested.get()) {
+            if (master.clusterShutdownRequested.get()) {
               LOG.info("Won't bring the Master up as a shutdown is requested");
               return;
             }
@@ -1819,7 +1882,25 @@ public class HMaster extends Thread implements HMasterInterface,
   }
 
   public void stopMaster() {
+    LOG.info("Master stop requested, isActiveMaster=" + isActiveMaster);
     closed.set(true);
+    // If we are a backup master, we need to interrupt wait
+    if (!isActiveMaster) {
+      zkMasterAddressWatcher.cancelMasterZNodeWait();
+    }
+  }
+
+  public void killMaster() {
+    killed = true;
+    stopMaster();
+  }
+
+  boolean isKilled() {
+    return killed;
+  }
+
+  String getZKWrapperName() {
+    return HMaster.class.getName() + conf.get(MASTER_ID_CONF_KEY, "");
   }
 
   public SplitLogManager getSplitLogManager() {

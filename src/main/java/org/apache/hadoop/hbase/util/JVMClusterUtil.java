@@ -96,41 +96,7 @@ public class JVMClusterUtil {
   }
 
   /**
-   * Datastructure to hold Master Thread and Master instance
-   */
-  public static class MasterThread extends Thread {
-    private final HMaster master;
-
-    public MasterThread(final HMaster m, final int index) {
-      super(m, "Master:" + index);
-      this.master = m;
-    }
-
-    /** @return the master */
-    public HMaster getMaster() {
-      return this.master;
-    }
-
-    /**
-     * Block until the master has come online, indicating it is ready
-     * to be used.
-     */
-    public void waitForServerOnline() {
-      // The server is marked online after init begins but before race to become
-      // the active master.
-      while (!this.master.isMasterRunning() &&
-          !this.master.getShutdownRequested().get()) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          // continue waiting
-        }
-      }
-    }
-  }
-
-  /**
-   * Creates a {@link MasterThread}.
+   * Creates a {@link HMaster}.
    * Call 'start' on the returned thread to make it run.
    * @param c Configuration to use.
    * @param hmc Class to create.
@@ -138,13 +104,16 @@ public class JVMClusterUtil {
    * @throws IOException
    * @return Master added.
    */
-  public static JVMClusterUtil.MasterThread createMasterThread(
+  public static HMaster createMaster(
       final Configuration c, final Class<? extends HMaster> hmc,
       final int index)
   throws IOException {
-    HMaster server;
+    Configuration masterConf = new Configuration(c);
+    masterConf.setInt(HMaster.MASTER_ID_CONF_KEY, index);
+
+    HMaster master;
     try {
-      server = hmc.getConstructor(Configuration.class).newInstance(c);
+      master = hmc.getConstructor(Configuration.class).newInstance(masterConf);
     } catch (InvocationTargetException ite) {
       Throwable target = ite.getTargetException();
       throw new RuntimeException("Failed construction of Master: " +
@@ -155,7 +124,7 @@ public class JVMClusterUtil {
       ioe.initCause(e);
       throw ioe;
     }
-    return new JVMClusterUtil.MasterThread(server, index);
+    return master;
   }
 
   /**
@@ -164,10 +133,10 @@ public class JVMClusterUtil {
    * @param regionServers
    * @return Address to use contacting master.
    */
-  public static String startup(final List<JVMClusterUtil.MasterThread> masters,
+  public static String startup(final List<HMaster> masters,
       final List<JVMClusterUtil.RegionServerThread> regionservers) throws IOException {
     if (masters != null) {
-      for (JVMClusterUtil.MasterThread t : masters) {
+      for (HMaster t : masters) {
         t.start();
       }
     }
@@ -181,9 +150,9 @@ public class JVMClusterUtil {
     }
     // Wait for an active master
     while (true) {
-      for (JVMClusterUtil.MasterThread t : masters) {
-        if (t.master.isActiveMaster()) {
-          return t.master.getServerName().toString();
+      for (HMaster t : masters) {
+        if (t.isActiveMaster()) {
+          return t.getServerName().toString();
         }
       }
       try {
@@ -198,15 +167,17 @@ public class JVMClusterUtil {
    * @param master
    * @param regionservers
    */
-  public static void shutdown(final List<MasterThread> masters,
+  public static void shutdown(final List<HMaster> masters,
       final List<RegionServerThread> regionservers) {
     LOG.debug("Shutting down HBase Cluster");
     if (masters != null) {
-      for (JVMClusterUtil.MasterThread t : masters) {
-        if (t.master.isActiveMaster()) {
-          t.master.shutdown();
+      for (HMaster t : masters) {
+        if (t.isActiveMaster()) {
+          // This will trigger cluster shutdown.
+          t.shutdown();
         } else {
-          t.master.stopMaster();
+          // This will only stop this particular master.
+          t.stopMaster();
         }
       }
     }
@@ -226,7 +197,7 @@ public class JVMClusterUtil {
       }
 
       if (masters != null) {
-        for (JVMClusterUtil.MasterThread t : masters) {
+        for (HMaster t : masters) {
           while (t.isAlive()) {
             try {
               t.join();

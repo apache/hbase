@@ -31,7 +31,7 @@ class RootScanner extends BaseScanner {
    * @param master
    */
   public RootScanner(HMaster master) {
-    super(master, true, master.getShutdownRequested());
+    super(master, true, master.getClusterShutdownRequested());
   }
 
   /**

@@ -199,7 +199,7 @@ public class SplitLogWorker implements Runnable, Watcher {
    * try to grab every task that has been put up
    */
   private void taskLoop() {
-    while (true) {
+    while (!exitWorker) {
       int seq_start = taskReadySeq;
       List<String> paths = getTaskList();
       if (paths == null) {
@@ -213,7 +213,7 @@ public class SplitLogWorker implements Runnable, Watcher {
         // don't call ZKSplitLog.getNodeName() because that will lead to
         // double encoding of the path name
         grabTask(watcher.getZNode(watcher.splitLogZNode, paths.get(idx)));
-        if (exitWorker == true) {
+        if (exitWorker) {
           return;
         }
       }
@@ -222,9 +222,10 @@ public class SplitLogWorker implements Runnable, Watcher {
           try {
             taskReadyLock.wait();
           } catch (InterruptedException e) {
-            LOG.warn("SplitLogWorker inteurrpted while waiting for task," +
-                " exiting", e);
-            assert exitWorker == true;
+            LOG.info("SplitLogWorker interrupted while waiting for task," +
+                " exiting: " + e.toString() + (exitWorker ? "" :
+                " (ERROR: exitWorker is not set, exiting anyway)"));
+            exitWorker = true;
             return;
           }
         }

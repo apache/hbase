@@ -201,7 +201,7 @@ public class RegionManager {
 
     this.master = master;
     this.zkWrapper =
-        ZooKeeperWrapper.getInstance(conf, HMaster.class.getName());
+        ZooKeeperWrapper.getInstance(conf, master.getZKWrapperName());
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
     this.loadBalancer = new LoadBalancer(conf);
 
@@ -242,7 +242,7 @@ public class RegionManager {
 
   void reassignRootRegion() {
     unsetRootRegion();
-    if (!master.getShutdownRequested().get()) {
+    if (!master.getClusterShutdownRequested().get()) {
       synchronized (regionsInTransition) {
         String regionName = HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString();
         byte[] data = null;
@@ -781,22 +781,29 @@ public class RegionManager {
 
   /** Stop the region assigner */
   public void stop() {
+    joinThreads();
+    master.getZooKeeperWrapper().clearRSDirectory();
+    master.getZooKeeperWrapper().close();
+  }
+
+  /**
+   * Terminate all threads but don't clean up any state.
+   */
+  public void joinThreads() {
     try {
       if (rootScannerThread.isAlive()) {
         rootScannerThread.join();       // Wait for the root scanner to finish.
       }
-    } catch (Exception iex) {
+    } catch (InterruptedException iex) {
       LOG.warn("root scanner", iex);
     }
     try {
       if (metaScannerThread.isAlive()) {
         metaScannerThread.join();       // Wait for meta scanner to finish.
       }
-    } catch(Exception iex) {
+    } catch (InterruptedException iex) {
       LOG.warn("meta scanner", iex);
     }
-    master.getZooKeeperWrapper().clearRSDirectory();
-    master.getZooKeeperWrapper().close();
   }
 
   /**
@@ -1342,7 +1349,7 @@ public class RegionManager {
    */
   public void waitForRootRegionLocation() {
     synchronized (rootRegionLocation) {
-      while (!master.getShutdownRequested().get() &&
+      while (!master.getClusterShutdownRequested().get() &&
           !master.isClosed() && rootRegionLocation.get() == null) {
         // rootRegionLocation will be filled in when we get an 'open region'
         // regionServerReport message from the HRegionServer that has been

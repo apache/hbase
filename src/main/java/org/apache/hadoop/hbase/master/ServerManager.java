@@ -147,13 +147,13 @@ public class ServerManager {
       60 * 1000);
     this.minimumServerCount = c.getInt("hbase.regions.server.count.min", 0);
     this.serverMonitorThread = new ServerMonitor(metaRescanInterval,
-      this.master.getShutdownRequested());
+      this.master.getClusterShutdownRequested());
     String n = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this.serverMonitorThread,
       n + ".serverMonitor");
     this.oldLogCleaner = new OldLogsCleaner(
       c.getInt("hbase.master.meta.thread.rescanfrequency",60 * 1000),
-        this.master.getShutdownRequested(), c,
+        this.master.getClusterShutdownRequested(), c,
         master.getFileSystem(), master.getOldLogDir());
     Threads.setDaemonThreadRunning(oldLogCleaner,
       n + ".oldLogCleaner");
@@ -282,7 +282,7 @@ public class ServerManager {
         this.quiescedServers.incrementAndGet();
       }
     }
-    if (this.master.getShutdownRequested().get()) {
+    if (this.master.getClusterShutdownRequested().get()) {
       if (quiescedServers.get() >= serversToServerInfo.size()) {
         // If the only servers we know about are meta servers, then we can
         // proceed with shutdown
@@ -300,7 +300,7 @@ public class ServerManager {
         return new HMsg [] {HMsg.REGIONSERVER_QUIESCE};
       }
     }
-    if (this.master.isClosed()) {
+    if (this.master.isClosed() && !master.isKilled()) {
       // Tell server to shut down if we are shutting down.  This should
       // happen after check of MSG_REPORT_EXITING above, since region server
       // will send us one of these messages after it gets MSG_REGIONSERVER_STOP
@@ -395,7 +395,7 @@ public class ServerManager {
           ": MSG_REPORT_EXITING");
         // Get all the regions the server was serving reassigned
         // (if we are not shutting down).
-        if (!master.closed.get()) {
+        if (!master.isClosed()) {
           for (int i = 1; i < msgs.length; i++) {
             LOG.info("Processing " + msgs[i] + " from " +
               serverInfo.getServerName());

@@ -165,8 +165,9 @@ public class ZooKeeperWrapper implements Watcher {
   // creates only one instance
   public static ZooKeeperWrapper createInstance(Configuration conf, String name)
   throws IOException {
-    if (getInstance(conf, name) != null) {
-      return getInstance(conf, name);
+    ZooKeeperWrapper zkw = getInstance(conf, name);
+    if (zkw != null) {
+      return zkw;
     }
     ZooKeeperWrapper.createLock.lock();
     try {

@@ -611,6 +611,7 @@ abstract class BaseScanner extends Chore {
   public void interruptAndStop() {
     synchronized(scannerLock){
       if (isAlive()) {
+        shutdownThisThread();
         super.interrupt();
         LOG.info("Interrupted");
       }

@@ -56,8 +56,8 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
  */
 public class LocalHBaseCluster {
   static final Log LOG = LogFactory.getLog(LocalHBaseCluster.class);
-  private final List<JVMClusterUtil.MasterThread> masterThreads =
-    new CopyOnWriteArrayList<JVMClusterUtil.MasterThread>();
+  private final List<HMaster> masters =
+    new CopyOnWriteArrayList<HMaster>();
   private final List<JVMClusterUtil.RegionServerThread> regionThreads =
     new CopyOnWriteArrayList<JVMClusterUtil.RegionServerThread>();
   private final static int DEFAULT_NO = 1;
@@ -147,20 +147,18 @@ public class LocalHBaseCluster {
     return rst;
   }
 
-  public JVMClusterUtil.MasterThread addMaster() throws IOException {
-    return addMaster(new Configuration(conf), this.masterThreads.size());
+  public HMaster addMaster() throws IOException {
+    return addMaster(new Configuration(conf), this.masters.size());
   }
 
-  public JVMClusterUtil.MasterThread addMaster(Configuration c, final int index)
+  public HMaster addMaster(Configuration c, final int index)
   throws IOException {
     // Create each master with its own Configuration instance so each has
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
     // the guts of HConnectionManager.
-    JVMClusterUtil.MasterThread mt =
-      JVMClusterUtil.createMasterThread(c,
-        this.masterClass, index);
-    this.masterThreads.add(mt);
-    return mt;
+    HMaster m = JVMClusterUtil.createMaster(c, this.masterClass, index);
+    this.masters.add(m);
+    return m;
   }
 
   /**
@@ -175,10 +173,41 @@ public class LocalHBaseCluster {
    * @return the HMaster thread
    */
   public HMaster getMaster() {
-    if (masterThreads.size() != 1) {
+    if (masters.size() != 1) {
       throw new AssertionError("one master expected");
     }
-    return this.masterThreads.get(0).getMaster();
+    return this.masters.get(0);
+  }
+
+  /**
+   * @return Read-only list of master threads.
+   */
+  public List<HMaster> getMasters() {
+    return Collections.unmodifiableList(this.masters);
+  }
+
+  /**
+   * Wait for the specified master to stop
+   * Removes this thread from list of running threads.
+   * @param serverNumber
+   * @return Name of master that just went down.
+   */
+  public String waitOnMasterStop(int serverNumber) {
+    HMaster master = masters.remove(serverNumber);
+    boolean interrupted = false;
+    while (master.isAlive()) {
+      try {
+        LOG.info("Waiting on " +
+          master.getServerName().toString());
+        master.join();
+      } catch (InterruptedException e) {
+        interrupted = true;
+      }
+    }
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
+    return master.getName();
   }
 
   /**
@@ -241,8 +270,8 @@ public class LocalHBaseCluster {
         }
       }
     }
-    if (this.masterThreads != null) {
-      for (Thread t : this.masterThreads) {
+    if (this.masters != null) {
+      for (Thread t : this.masters) {
         if (t.isAlive()) {
           try {
             t.join();
@@ -258,14 +287,14 @@ public class LocalHBaseCluster {
    * Start the cluster.
    */
   public void startup() throws IOException {
-    JVMClusterUtil.startup(this.masterThreads, this.regionThreads);
+    JVMClusterUtil.startup(this.masters, this.regionThreads);
   }
 
   /**
    * Shut down the mini HBase cluster
    */
   public void shutdown() {
-    JVMClusterUtil.shutdown(this.masterThreads, this.regionThreads);
+    JVMClusterUtil.shutdown(this.masters, this.regionThreads);
   }
 
   /**

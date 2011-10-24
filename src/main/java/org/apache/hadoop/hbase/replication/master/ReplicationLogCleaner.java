@@ -49,11 +49,14 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
   private Configuration conf;
   private ReplicationZookeeperWrapper zkHelper;
   private Set<String> hlogs = new HashSet<String>();
+  private final String zkWrapperName;
 
   /**
    * Instantiates the cleaner, does nothing more.
    */
-  public ReplicationLogCleaner() {}
+  public ReplicationLogCleaner(String zkWrapperName) {
+    this.zkWrapperName = zkWrapperName;
+  }
 
   @Override
   public boolean isLogDeletable(Path filePath) {
@@ -121,8 +124,7 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
     this.ttlCleaner.setConf(conf);
     try {
       this.zkHelper = new ReplicationZookeeperWrapper(
-          ZooKeeperWrapper.createInstance(this.conf,
-              HMaster.class.getName()),
+          ZooKeeperWrapper.createInstance(this.conf, zkWrapperName),
           this.conf, new AtomicBoolean(true), null);
     } catch (IOException e) {
       LOG.error(e);
