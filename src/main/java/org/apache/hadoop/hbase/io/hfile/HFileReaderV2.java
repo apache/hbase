@@ -259,6 +259,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
             HRegion.incrNumericMetric(this.fsBlockReadCacheHitCntMetric, 1);
           }
 
+          if (cachedBlock.getBlockType() == BlockType.DATA)
+            HFile.dataBlockReadCnt.incrementAndGet();
           return cachedBlock;
         }
         // Carry on, please load.
@@ -284,6 +286,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
         cacheConf.getBlockCache().cacheBlock(cacheKey, dataBlock,
             cacheConf.isInMemory());
       }
+
+      if (dataBlock.getBlockType() == BlockType.DATA)
+        HFile.dataBlockReadCnt.incrementAndGet();
 
       return dataBlock;
     } finally {
@@ -729,9 +734,25 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * ownership of the buffer.
    */
   @Override
-  public DataInput getBloomFilterMetadata() throws IOException {
+  public DataInput getGeneralBloomFilterMetadata() throws IOException {
+    return this.getBloomFilterMetadata(BlockType.GENERAL_BLOOM_META);
+  }
+
+  @Override
+  public DataInput getDeleteBloomFilterMetadata() throws IOException {
+    return this.getBloomFilterMetadata(BlockType.DELETE_FAMILY_BLOOM_META);
+  }
+
+  private DataInput getBloomFilterMetadata(BlockType blockType)
+  throws IOException {
+    if (blockType != BlockType.GENERAL_BLOOM_META &&
+        blockType != BlockType.DELETE_FAMILY_BLOOM_META) {
+      throw new RuntimeException("Block Type: " + blockType.toString() +
+          " is not supported") ;
+    }
+
     for (HFileBlock b : loadOnOpenBlocks)
-      if (b.getBlockType() == BlockType.BLOOM_META)
+      if (b.getBlockType() == blockType)
         return b.getByteStream();
     return null;
   }

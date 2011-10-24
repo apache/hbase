@@ -1455,7 +1455,6 @@ public class HFileBlock implements Cacheable, HFileBlockInfo {
           }
         }
       }
-
       b.offset = offset;
       return b;
     }

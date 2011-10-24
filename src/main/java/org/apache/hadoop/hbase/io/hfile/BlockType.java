@@ -61,8 +61,11 @@ public enum BlockType {
   /** File info, version 2 */
   FILE_INFO("FILEINF2", BlockCategory.META),
 
-  /** Bloom filter metadata, version 2 */
-  BLOOM_META("BLMFMET2", BlockCategory.BLOOM),
+  /** General Bloom filter metadata, version 2 */
+  GENERAL_BLOOM_META("BLMFMET2", BlockCategory.BLOOM),
+
+  /** Delete Family Bloom filter metadata, version 2 */
+  DELETE_FAMILY_BLOOM_META("DFBLMET2", BlockCategory.BLOOM),
 
   // Trailer
 

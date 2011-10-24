@@ -93,6 +93,14 @@ public class ScanQueryMatcher {
   private final long earliestPutTs;
 
   /**
+   * This variable shows whether there is an null column in the query. There
+   * always exists a null column in the wildcard column query.
+   * There maybe exists a null column in the explicit column query based on the
+   * first column.
+   * */
+  private boolean hasNullColumn = true;
+
+  /**
    * Construct a QueryMatcher for a scan
    * @param scan
    * @param scanInfo The store's immutable scan info
@@ -107,7 +115,8 @@ public class ScanQueryMatcher {
     this.rowComparator = scanInfo.getComparator().getRawComparator();
     this.deletes =  new ScanDeleteTracker();
     this.stopRow = scan.getStopRow();
-    this.startKey = KeyValue.createFirstOnRow(scan.getStartRow(), scanInfo.getFamily(), null);
+    this.startKey = KeyValue.createFirstDeleteFamilyOnRow(scan.getStartRow(),
+        scanInfo.getFamily());
     this.filter = scan.getFilter();
     this.earliestPutTs = earliestPutTs;
 
@@ -122,9 +131,15 @@ public class ScanQueryMatcher {
     int maxVersions = Math.min(scan.getMaxVersions(), scanInfo.getMaxVersions());
     // Single branch to deal with two types of reads (columns vs all in family)
     if (columns == null || columns.size() == 0) {
+      // there is always a null column in the wildcard column query.
+      hasNullColumn = true;
+
       // use a specialized scan for wildcard column tracker.
       this.columns = new ScanWildcardColumnTracker(scanInfo.getMinVersions(), maxVersions, scanInfo.getTtl());
     } else {
+      // whether there is null column in the explicit column query
+      hasNullColumn = (columns.first().length == 0);
+
       // We can share the ExplicitColumnTracker, diff is we reset
       // between rows, not between storefiles.
       this.columns = new ExplicitColumnTracker(columns, scanInfo.getMinVersions(), maxVersions,
@@ -139,6 +154,14 @@ public class ScanQueryMatcher {
       NavigableSet<byte[]> columns) {
     this(scan, scanInfo, columns, StoreScanner.ScanType.USER_SCAN,
         HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   *
+   * @return  whether there is an null column in the query
+   */
+  public boolean hasNullColumnInQuery() {
+    return hasNullColumn;
   }
 
   /**

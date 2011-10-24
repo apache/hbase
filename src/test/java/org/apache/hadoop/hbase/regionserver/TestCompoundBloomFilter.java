@@ -218,7 +218,7 @@ public class TestCompoundBloomFilter {
       try {
         String fakeLookupModeStr = ", fake lookup is " + (fakeLookupEnabled ?
             "enabled" : "disabled");
-        CompoundBloomFilter cbf = (CompoundBloomFilter) r.getBloomFilter();
+        CompoundBloomFilter cbf = (CompoundBloomFilter) r.getGeneralBloomFilter();
         cbf.enableTestingStats();
         int numFalsePos = 0;
         Random rand = new Random(EVALUATION_SEED);
@@ -296,10 +296,10 @@ public class TestCompoundBloomFilter {
         HBaseTestingUtility.getTestDir(), BLOCK_SIZES[t], null, null, conf,
         cacheConf, bt, 0);
 
-    assertTrue(w.hasBloom());
-    assertTrue(w.getBloomWriter() instanceof CompoundBloomFilterWriter);
+    assertTrue(w.hasGeneralBloom());
+    assertTrue(w.getGeneralBloomWriter() instanceof CompoundBloomFilterWriter);
     CompoundBloomFilterWriter cbbf =
-        (CompoundBloomFilterWriter) w.getBloomWriter();
+        (CompoundBloomFilterWriter) w.getGeneralBloomWriter();
 
     int keyCount = 0;
     KeyValue prev = null;
