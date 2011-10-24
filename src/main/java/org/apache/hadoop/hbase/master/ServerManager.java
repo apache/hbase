@@ -506,10 +506,7 @@ public class ServerManager {
           break;
 
         case MSG_REPORT_CLOSE:
-          processRegionClose(region);
-            this.master.getRegionManager().getThrottledReopener(
-                  region.getTableDesc().getNameAsString()).
-                  addPreferredAssignmentForReopen(region, serverInfo);
+          processRegionClose(serverInfo, region);
           break;
 
         case MSG_REPORT_SPLIT:
@@ -675,11 +672,11 @@ public class ServerManager {
     }
   }
 
-  /*
+  /**
+   * @param serverInfo
    * @param region
-   * @throws Exception
    */
-  public void processRegionClose(HRegionInfo region) {
+  public void processRegionClose(HServerInfo serverInfo, HRegionInfo region) {
     synchronized (this.master.getRegionManager()) {
       if (region.isRootRegion()) {
         // Root region
@@ -709,6 +706,15 @@ public class ServerManager {
       RegionServerOperation op =
         new ProcessRegionClose(master, region, offlineRegion, reassignRegion);
       this.master.getRegionServerOperationQueue().put(op);
+
+      if (reassignRegion) {
+        // add this region back to preferred assignment
+        ThrottledRegionReopener reopener = this.master.getRegionManager().
+          getThrottledReopener(region.getTableDesc().getNameAsString());
+        if (reopener != null) {
+          reopener.addPreferredAssignmentForReopen(region, serverInfo);
+        }
+      }
     }
   }
 

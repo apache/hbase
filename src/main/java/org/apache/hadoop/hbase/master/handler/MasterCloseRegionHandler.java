@@ -20,9 +20,12 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -82,10 +85,18 @@ public class MasterCloseRegionHandler extends HBaseEventHandler
     } catch (IOException e) {
       LOG.error("Could not deserialize additional args for Close region", e);
     }
+
+    String serverName = hbEventData.getRsName();
+    HServerInfo serverInfo = serverManager.getServerInfo(serverName);
+
     // process the region close - this will cause the reopening of the
     // region as a part of the heartbeat of some RS
-    serverManager.processRegionClose(hbEventData.getHmsg().getRegionInfo());
-    LOG.info("Processed close of region " + hbEventData.getHmsg().getRegionInfo().getRegionNameAsString());
+    serverManager.processRegionClose(serverInfo,
+        hbEventData.getHmsg().getRegionInfo());
+
+    LOG.info("Processed close of region " +
+        hbEventData.getHmsg().getRegionInfo().getRegionNameAsString() +
+        " by region server: " + serverName);
   }
 
   public String getRegionName() {
