@@ -19,9 +19,13 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -31,18 +35,10 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.master.RegionManager.RegionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.master.RegionManager.RegionState;
-import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Instantiated when a server's lease has expired, meaning it has crashed.
@@ -294,43 +290,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       ", onlineMetaRegions.size(): " +
       master.getRegionManager().numOnlineMetaRegions());
     if (!isSplitFinished) {
-      long splitTime = 0, splitSize = 0, splitCount = 0;
-      FileSystem fs = this.master.getFileSystem();
-      // we rename during split, so check both names
-      Path rsSplitDir = new Path(rsLogDir.getParent(),
-                                 rsLogDir.getName()
-                                 + HConstants.HLOG_SPLITTING_EXT);
-      boolean logDirExists = fs.exists(rsLogDir);
-      boolean splitDirExists = fs.exists(rsSplitDir);
-      assert !(logDirExists && splitDirExists)
-        : "Both files shouldn't exist: " + rsLogDir + " and " + rsSplitDir;
-
-      if (logDirExists || splitDirExists) {
-        if (!master.splitLogLock.tryLock()) {
-          return false;
-        }
-        try {
-          // rename the directory so a rogue RS doesn't create more HLogs
-          if (logDirExists) {
-            if (!fs.rename(rsLogDir, rsSplitDir)) {
-              throw new IOException("Failed fs.rename of " + rsLogDir);
-            }
-            LOG.debug("Renamed region directory: " + rsSplitDir);
-          }
-          ContentSummary contentSum = fs.getContentSummary(rsSplitDir);
-          splitCount = contentSum.getFileCount();
-          splitSize = contentSum.getSpaceConsumed();
-          // Process the old log files
-          HLog.splitLog(master.getRootDir(), rsSplitDir,
-            this.master.getOldLogDir(), this.master.getFileSystem(),
-            this.master.getConfiguration());
-          splitTime = HLog.lastSplitTime;
-          this.master.getMetrics().addSplit(splitTime, splitCount, splitSize);
-        } finally {
-          master.splitLogLock.unlock();
-        }
-
-      }
+      this.master.splitLog(deadServer);
       isSplitFinished = true;
     }
     LOG.info("Log split complete, meta reassignment and scanning:");

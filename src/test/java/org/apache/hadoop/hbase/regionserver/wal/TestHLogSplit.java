@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
@@ -88,6 +88,8 @@ public class TestHLogSplit {
   private static final String HLOG_FILE_PREFIX = "hlog.dat.";
   private static List<String> regions;
   private static final String HBASE_SKIP_ERRORS = "hbase.hlog.split.skip.errors";
+  private static final Path tabledir = new Path(hbaseDir,
+      Bytes.toString(TABLE_NAME));
 
 
   static enum Corruptions {
@@ -692,6 +694,119 @@ public class TestHLogSplit {
         assertTrue("Failed to create file " + julietLog, false);
       }
     }
+  }
+
+  private CancelableProgressable reporter = new CancelableProgressable() {
+    int count = 0;
+
+    @Override
+    public boolean progress() {
+      count++;
+      LOG.debug("progress = " + count);
+      return true;
+    }
+  };
+
+  @Test
+  public void testSplitLogFileWithOneRegion() throws IOException {
+    LOG.info("testSplitLogFileWithOneRegion");
+    final String REGION = "region__1";
+    regions.removeAll(regions);
+    regions.add(REGION);
+
+    generateHLogs(1, 10, -1);
+    FileStatus logfile = fs.listStatus(hlogDir)[0];
+    fs.initialize(fs.getUri(), conf);
+    HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
+        reporter);
+    HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
+        logfile.getPath().toString(), conf);
+
+    Path originalLog = (fs.listStatus(oldLogDir))[0].getPath();
+    Path splitLog = getLogForRegion(hbaseDir, TABLE_NAME, REGION);
+
+    assertEquals(true, logsAreEqual(originalLog, splitLog));
+  }
+
+  @Test
+  public void testSplitLogFileDeletedRegionDir() throws IOException {
+    LOG.info("testSplitLogFileDeletedRegionDir");
+    final String REGION = "region__1";
+    regions.removeAll(regions);
+    regions.add(REGION);
+
+    generateHLogs(1, 10, -1);
+    FileStatus logfile = fs.listStatus(hlogDir)[0];
+    fs.initialize(fs.getUri(), conf);
+
+    Path regiondir = new Path(tabledir, REGION);
+    LOG.info("Region directory is" + regiondir);
+    fs.delete(regiondir, true);
+
+    HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
+        reporter);
+    HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
+        logfile.getPath().toString(), conf);
+    // This test passes if there are no exceptions when
+    // the region directory has been removed
+
+    assertTrue(!fs.exists(regiondir));
+  }
+
+  @Test
+  public void testSplitLogFileEmpty() throws IOException {
+    LOG.info("testSplitLogFileEmpty");
+    injectEmptyFile(".empty", true);
+    FileStatus logfile = fs.listStatus(hlogDir)[0];
+
+    fs.initialize(fs.getUri(), conf);
+
+    HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
+        reporter);
+    HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
+        logfile.getPath().toString(), conf);
+    Path tdir = HTableDescriptor.getTableDir(hbaseDir, TABLE_NAME);
+    FileStatus[] files = this.fs.listStatus(tdir);
+    assertTrue(files == null || files.length == 0);
+
+    assertEquals(0, countHLog(fs.listStatus(oldLogDir)[0].getPath(), fs, conf));
+  }
+
+  @Test
+  public void testSplitLogFileMultipleRegions() throws IOException {
+    LOG.info("testSplitLogFileMultipleRegions");
+    generateHLogs(1, 10, -1);
+    FileStatus logfile = fs.listStatus(hlogDir)[0];
+    fs.initialize(fs.getUri(), conf);
+
+    HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
+        reporter);
+    HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
+        logfile.getPath().toString(), conf);
+    for (String region : regions) {
+      Path recovered = getLogForRegion(hbaseDir, TABLE_NAME, region);
+      assertEquals(10, countHLog(recovered, fs, conf));
+    }
+  }
+
+  @Test
+  public void testSplitLogFileFirstLineCorruptionLog() throws IOException {
+    conf.setBoolean(HBASE_SKIP_ERRORS, true);
+    generateHLogs(1, 10, -1);
+    FileStatus logfile = fs.listStatus(hlogDir)[0];
+
+    corruptHLog(logfile.getPath(), Corruptions.INSERT_GARBAGE_ON_FIRST_LINE,
+        true, fs);
+
+    fs.initialize(fs.getUri(), conf);
+    HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
+        reporter);
+    HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
+        logfile.getPath().toString(), conf);
+
+    final Path corruptDir = new Path(conf.get(HConstants.HBASE_DIR), conf.get(
+        "hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt"));
+    assertEquals(1, fs.listStatus(corruptDir).length);
   }
 
   private void flushToConsole(String s) {

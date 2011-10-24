@@ -246,6 +246,9 @@ public class HRegionServer implements HRegionInterface,
 
   private ZooKeeperWrapper zooKeeperWrapper;
 
+  // Log Splitting Worker
+  private SplitLogWorker splitLogWorker;
+
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
 
@@ -604,6 +607,9 @@ public class HRegionServer implements HRegionInterface,
     this.leases.closeAfterLeasesExpire();
     this.worker.stop();
     this.server.stop();
+    if (this.splitLogWorker != null) {
+      splitLogWorker.stop();
+    }
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
       try {
@@ -1247,6 +1253,10 @@ public class HRegionServer implements HRegionInterface,
     // Start Server.  This service is like leases in that it internally runs
     // a thread.
     this.server.start();
+    // Create the log splitting worker and start it
+    this.splitLogWorker = new SplitLogWorker(this.zooKeeperWrapper,
+        this.getConfiguration(), this.serverInfo.getServerName());
+    splitLogWorker.start();
     LOG.info("HRegionServer started at: " +
       this.serverInfo.getServerAddress().toString());
   }

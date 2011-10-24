@@ -49,6 +49,7 @@ import org.mortbay.log.Log;
  * to the mappers, there are no reducers. Each mapper processes the
  * directory it receives as input.
  */
+@Deprecated
 public class HLogSplitter {
   final static String NAME = "splitlogs";
 

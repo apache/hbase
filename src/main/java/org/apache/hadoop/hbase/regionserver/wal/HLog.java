@@ -1606,7 +1606,7 @@ public class HLog implements Syncable {
     return pattern.matcher(filename).matches();
   }
 
-  private static Path getHLogArchivePath(Path oldLogDir, Path p) {
+  static Path getHLogArchivePath(Path oldLogDir, Path p) {
     return new Path(oldLogDir, p.getName());
   }
 
@@ -1756,7 +1756,8 @@ public class HLog implements Syncable {
           WriterAndPath wap = logWriters.get(region);
           for (Entry logEntry: entries) {
             if (wap == null) {
-              Path regionedits = getRegionSplitEditsPath(fs, logEntry, rootDir);
+              Path regionedits = getRegionSplitEditsPath(fs, logEntry, rootDir,
+                  true);
               if (fs.exists(regionedits)) {
                 LOG.warn("Found existing old edits file. It could be the " +
                   "result of a previous failed split attempt. Deleting " +
@@ -1799,54 +1800,66 @@ public class HLog implements Syncable {
    * @param conf
    * @throws IOException
    */
-  private static void archiveLogs(final List<Path> corruptedLogs,
-    final List<Path> processedLogs, final Path oldLogDir,
-    final FileSystem fs, final Configuration conf)
+  static void archiveLogs(final List<Path> corruptedLogs,
+      final List<Path> processedLogs, final Path oldLogDir,
+      final FileSystem fs, final Configuration conf)
   throws IOException{
     final Path corruptDir = new Path(conf.get(HConstants.HBASE_DIR),
       conf.get("hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt"));
 
-    fs.mkdirs(corruptDir);
-    fs.mkdirs(oldLogDir);
-
+    if (!fs.exists(corruptDir) && !fs.mkdirs(corruptDir)) {
+      LOG.warn("Unable to mkdir " + corruptDir);
+    }
+    if (!fs.exists(oldLogDir) && !fs.mkdirs(oldLogDir)) {
+      LOG.warn("Unable to mkdir " + oldLogDir);
+    }
     for (Path corrupted: corruptedLogs) {
       Path p = new Path(corruptDir, corrupted.getName());
-      LOG.info("Moving corrupted log " + corrupted + " to " + p);
-      fs.rename(corrupted, p);
+      if (!fs.rename(corrupted, p)) {
+        LOG.warn("Unable to move corrupted log " + corrupted + " to " + p);
+      } else {
+        LOG.info("Moving corrupted log " + corrupted + " to " + p);
+      }
     }
 
     for (Path p: processedLogs) {
       Path newPath = getHLogArchivePath(oldLogDir, p);
-      fs.rename(p, newPath);
-      LOG.info("Archived processed log " + p + " to " + newPath);
+      if (!fs.rename(p, newPath)) {
+        LOG.warn("Unable to move processed log " + p + " to " + newPath);
+      } else {
+        LOG.info("Archived processed log " + p + " to " + newPath);
+      }
     }
   }
 
-  /*
+  /**
    * Path to a file under RECOVERED_EDITS_DIR directory of the region found in
    * <code>logEntry</code> named for the sequenceid in the passed
-   * <code>logEntry</code>: e.g. /hbase/some_table/2323432434/recovered.edits/2332.
-   * This method also ensures existence of RECOVERED_EDITS_DIR under the region
-   * creating it if necessary.
+   * <code>logEntry</code>: e.g.
+   * /hbase/some_table/2323432434/recovered.edits/2332. This method also ensures
+   * existence of RECOVERED_EDITS_DIR under the region creating it if necessary.
+   *
    * @param fs
    * @param logEntry
    * @param rootDir HBase root dir.
+   * @param isCreate if true create the directory, otherwise just return the name
    * @return Path to file into which to dump split log edits.
    * @throws IOException
    */
-  private static Path getRegionSplitEditsPath(final FileSystem fs,
-      final Entry logEntry, final Path rootDir)
+  static Path getRegionSplitEditsPath(final FileSystem fs,
+      final Entry logEntry, final Path rootDir, boolean isCreate)
   throws IOException {
-    Path tableDir = HTableDescriptor.getTableDir(rootDir,
-      logEntry.getKey().getTablename());
+    Path tableDir = HTableDescriptor.getTableDir(rootDir, logEntry.getKey()
+        .getTablename());
     Path regiondir = HRegion.getRegionDir(tableDir,
-      HRegionInfo.encodeRegionName(logEntry.getKey().getRegionName()));
+        HRegionInfo.encodeRegionName(logEntry.getKey().getRegionName()));
     Path dir = getRegionDirRecoveredEditsDir(regiondir);
-    if (!fs.exists(dir)) {
+
+    if (isCreate && !fs.exists(dir)) {
       if (!fs.mkdirs(dir)) LOG.warn("mkdir failed on " + dir);
     }
-    return new Path(dir,
-      formatRecoveredEditsFileName(logEntry.getKey().getLogSeqNum()));
+    return new Path(dir, formatRecoveredEditsFileName(logEntry.getKey()
+        .getLogSeqNum()));
    }
 
   static String formatRecoveredEditsFileName(final long seqid) {

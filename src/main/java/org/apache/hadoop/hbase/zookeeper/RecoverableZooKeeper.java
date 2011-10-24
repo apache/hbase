@@ -1,25 +1,23 @@
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
-import org.apache.zookeeper.ZooKeeper.States;
-
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * http://wiki.apache.org/hadoop/ZooKeeper/ErrorHandling
@@ -396,6 +394,13 @@ public class RecoverableZooKeeper {
     }
   }
 
+  public void asyncCreate(String path, byte[] data, List<ACL> acl,
+      CreateMode createMode, final AsyncCallback.StringCallback cb,
+      final Object ctx) {
+    byte[] newData = appendMetaData(data);
+    zk.create(path, newData, acl, createMode, cb, ctx);
+  }
+
   /**
    * <p>
    * NONSEQUENTIAL create is idempotent operation.
@@ -423,11 +428,11 @@ public class RecoverableZooKeeper {
     switch (createMode) {
       case EPHEMERAL:
       case PERSISTENT:
-        return createNonSequential(path, newData, acl, createMode);
+      return createNonSequential(path, newData, acl, createMode);
 
       case EPHEMERAL_SEQUENTIAL:
       case PERSISTENT_SEQUENTIAL:
-        return createSequential(path, newData, acl, createMode);
+      return createSequential(path, newData, acl, createMode);
 
       default:
         throw new IllegalArgumentException("Unrecognized CreateMode: " +
@@ -541,7 +546,7 @@ public class RecoverableZooKeeper {
     return null;
   }
 
-  public byte[] removeMetaData(byte[] data) {
+  public static byte[] removeMetaData(byte[] data) {
     if(data == null || data.length == 0) {
       return data;
     }
@@ -623,6 +628,11 @@ public class RecoverableZooKeeper {
       }
     }
     return lockChildren;
+  }
+
+  @Override
+  public String toString() {
+    return "RZK{identifier=>" + identifier + "}";
   }
 
 }

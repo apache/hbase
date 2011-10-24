@@ -272,6 +272,11 @@ public class RegionManager {
    */
   void assignRegions(HServerInfo info, HRegionInfo[] mostLoadedRegions,
       ArrayList<HMsg> returnMsgs) {
+    if (this.master.getIsSplitLogAfterStartupDone() == false) {
+      // wait for log splitting at startup to complete. The regions will
+      // be assigned when the region server reports next
+      return;
+    }
     // the region may assigned to this region server
     Set<RegionState> regionsToAssign = null;
 

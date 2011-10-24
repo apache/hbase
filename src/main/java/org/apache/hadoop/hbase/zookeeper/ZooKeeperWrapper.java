@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
@@ -29,7 +31,10 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -39,9 +44,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.Calendar;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,14 +54,16 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.data.Stat;
 
@@ -141,6 +145,10 @@ public class ZooKeeperWrapper implements Watcher {
    */
   private final String rgnsInTransitZNode;
   /*
+   * ZNode used for log splitting work assignment
+   */
+  public final String splitLogZNode;
+  /*
    * List of ZNodes in the unassgined region that are already being watched
    */
   private Set<String> unassignedZNodesWatched = new HashSet<String>();
@@ -201,6 +209,7 @@ public class ZooKeeperWrapper implements Watcher {
     String masterAddressZNodeName = conf.get("zookeeper.znode.master", "master");
     String stateZNodeName      = conf.get("zookeeper.znode.state", "shutdown");
     String regionsInTransitZNodeName = conf.get("zookeeper.znode.regionInTransition", "UNASSIGNED");
+    String splitLogZNodeName   = conf.get("zookeeper.znode.splitlog", "splitlog");
 
     rootRegionZNode     = getZNode(parentZNode, rootServerZNodeName);
     rsZNode             = getZNode(parentZNode, rsZNodeName);
@@ -209,8 +218,9 @@ public class ZooKeeperWrapper implements Watcher {
     clusterStateZNode   = getZNode(parentZNode, stateZNodeName);
     int retryNum = conf.getInt("zookeeper.connection.retry.num", 6);
     int retryFreq = conf.getInt("zookeeper.connection.retry.freq", 1000);
-    zkDumpConnectionTimeOut = conf.getInt("zookeeper.dump.connection.timeout", 
+    zkDumpConnectionTimeOut = conf.getInt("zookeeper.dump.connection.timeout",
         1000);
+    splitLogZNode       = getZNode(parentZNode, splitLogZNodeName);
     connectToZk(retryNum,retryFreq);
   }
 
@@ -1002,22 +1012,33 @@ public class ZooKeeperWrapper implements Watcher {
   }
 
   public byte[] getData(String parentZNode, String znode) {
-    return getDataAndWatch(parentZNode, znode, null);
+    return getData(parentZNode, znode, null);
   }
 
-  public byte[] getDataAndWatch(String parentZNode,
-                                String znode, Watcher watcher) {
+  public byte[] getData(String parentZNode, String znode, Stat stat) {
+    return getDataAndWatch(parentZNode, znode, null, stat);
+  }
+
+  public byte[] getDataAndWatch(String parentZNode, String znode,
+      Watcher watcher) {
+    return getDataAndWatch(parentZNode, znode, watcher, null);
+  }
+
+  public byte[] getDataAndWatch(String parentZNode, String znode,
+      Watcher watcher, Stat stat) {
     byte[] data = null;
     try {
-      String path = joinPath(parentZNode, znode);
-      // TODO: ZK-REFACTOR: remove existance check?
+      String path = getZNode(parentZNode, znode);
+      // TODO: ZK-REFACTOR: remove existence check?
       if (checkExistenceOf(path)) {
-        data = recoverableZK.getData(path, watcher, null);
+        data = recoverableZK.getData(path, watcher, stat);
       }
     } catch (KeeperException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to read " + znode + " znode in ZooKeeper: " + e);
+      LOG.warn("<" + instanceName + ">" + "Failed to read " + znode
+          + " znode in ZooKeeper: " + e);
     } catch (InterruptedException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to read " + znode + " znode in ZooKeeper: " + e);
+      LOG.warn("<" + instanceName + ">" + "Failed to read " + znode
+          + " znode in ZooKeeper: " + e);
     }
     return data;
   }
@@ -1164,10 +1185,10 @@ public class ZooKeeperWrapper implements Watcher {
       LOG.error("<" + instanceName + ">" + "Failed to create ZNode " + fullyQualifiedZNodeName + " in ZooKeeper", e);
       return null;
     }
-      // watch the znode for deletion, data change, creation of children
-      if(watch) {
-        watchZNode(zNodeName);
-      }
+    // watch the znode for deletion, data change, creation of children
+    if (watch) {
+      watchZNode(zNodeName);
+    }
 
     return fullyQualifiedZNodeName;
   }
@@ -1369,6 +1390,289 @@ public class ZooKeeperWrapper implements Watcher {
       LOG.warn("<" + instanceName + ">" + "Failed to read " + znode + " znode in ZooKeeper: " + e);
     }
     return newNodes;
+  }
+
+  /**
+   * Check if the specified node exists. Sets no watches.
+   *
+   * Returns true if node exists, false if not. Returns an exception if there
+   * is an unexpected zookeeper exception.
+   *
+   * @param znode path of node to watch
+   * @return version of the node if it exists, -1 if does not exist
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public int checkExists(String znode)
+  throws KeeperException {
+    try {
+      Stat s = recoverableZK.exists(znode, null);
+      return s != null ? s.getVersion() : -1;
+    } catch (KeeperException e) {
+      LOG.warn(recoverableZK + " Unable to set watcher on znode (" + znode + ")", e);
+      keeperException(e);
+      return -1;
+    } catch (InterruptedException e) {
+      LOG.warn(recoverableZK + " Unable to set watcher on znode (" + znode + ")", e);
+      interruptedException(e);
+      return -1;
+    }
+  }
+
+  /**
+   * Watch the specified znode for delete/create/change events.  The watcher is
+   * set whether or not the node exists.  If the node already exists, the method
+   * returns true.  If the node does not exist, the method returns false.
+   *
+   * @param znode path of node to watch
+   * @return true if znode exists, false if does not exist or error
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public boolean watchAndCheckExists(String znode)
+  throws KeeperException {
+    try {
+      Stat s = recoverableZK.exists(znode, this);
+      LOG.debug(this + " Set watcher on existing znode " + znode);
+      return s != null;
+    } catch (KeeperException e) {
+      LOG.warn(this + " Unable to set watcher on znode " + znode, e);
+      keeperException(e);
+      return false;
+    } catch (InterruptedException e) {
+      LOG.warn(this + " Unable to set watcher on znode " + znode, e);
+      interruptedException(e);
+      return false;
+    }
+  }
+
+  /**
+   * Lists the children of the specified znode without setting any watches.
+   *
+   * Used to list the currently online regionservers and their addresses.
+   *
+   * Sets no watches at all, this method is best effort.
+   *
+   * Returns an empty list if the node has no children.  Returns null if the
+   * parent node itself does not exist.
+   *
+   * @param znode node to get children of as addresses
+   * @return list of data of children of specified znode, empty if no children,
+   *         null if parent does not exist
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public List<String> listChildrenNoWatch(String znode)
+  throws KeeperException {
+    List<String> children = null;
+    try {
+      // List the children without watching
+      children = recoverableZK.getChildren(znode, null);
+    } catch(KeeperException.NoNodeException nne) {
+      return null;
+    } catch(InterruptedException ie) {
+      interruptedException(ie);
+    }
+    return children;
+  }
+
+  /**
+   * Lists the children znodes of the specified znode.  Also sets a watch on
+   * the specified znode which will capture a NodeDeleted event on the specified
+   * znode as well as NodeChildrenChanged if any children of the specified znode
+   * are created or deleted.
+   *
+   * Returns null if the specified node does not exist.  Otherwise returns a
+   * list of children of the specified node.  If the node exists but it has no
+   * children, an empty list will be returned.
+   *
+   * @param znode path of node to list and watch children of
+   * @return list of children of the specified node, an empty list if the node
+   *          exists but has no children, and null if the node does not exist
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public List<String> listChildrenAndWatchForNewChildren(String znode)
+  throws KeeperException {
+    try {
+      List<String> children = recoverableZK.getChildren(znode, this);
+      return children;
+    } catch(KeeperException.NoNodeException ke) {
+      LOG.debug(recoverableZK + " Unable to list children of znode " + znode +
+          " because node does not exist (not an error)");
+      return null;
+    } catch (KeeperException e) {
+      LOG.warn(recoverableZK + " Unable to list children of znode " + znode, e);
+      keeperException(e);
+      return null;
+    } catch (InterruptedException e) {
+      LOG.warn(recoverableZK + " Unable to list children of znode " + znode, e);
+      interruptedException(e);
+      return null;
+    }
+  }
+
+  /**
+   * Sets the data of the existing znode to be the specified data.  The node
+   * must exist but no checks are done on the existing data or version.
+   *
+   * <p>If the node does not exist, a {@link NoNodeException} will be thrown.
+   *
+   * <p>No watches are set but setting data will trigger other watchers of this
+   * node.
+   *
+   * <p>If there is another problem, a KeeperException will be thrown.
+   *
+   * @param znode path of node
+   * @param data data to set for node
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public boolean setData(String znode, byte[] data)
+  throws KeeperException, KeeperException.NoNodeException {
+    return setData(znode, data, -1);
+  }
+
+  /**
+   * Sets the data of the existing znode to be the specified data.  Ensures that
+   * the current data has the specified expected version.
+   *
+   * <p>If the node does not exist, a {@link NoNodeException} will be thrown.
+   *
+   * <p>If their is a version mismatch, method returns null.
+   *
+   * <p>No watches are set but setting data will trigger other watchers of this
+   * node.
+   *
+   * <p>If there is another problem, a KeeperException will be thrown.
+   *
+   * @param znode path of node
+   * @param data data to set for node
+   * @param expectedVersion version expected when setting data
+   * @return true if data set, false if version mismatch
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public boolean setData(String znode, byte [] data, int expectedVersion)
+  throws KeeperException, KeeperException.NoNodeException {
+    try {
+      return recoverableZK.setData(znode, data, expectedVersion) != null;
+    } catch (InterruptedException e) {
+      interruptedException(e);
+      return false;
+    }
+  }
+
+  /**
+   * Sets the data of the existing znode to be the specified data.  Ensures that
+   * the current data has the specified expected version.
+   *
+   * <p>If the node does not exist, a {@link NoNodeException} will be thrown.
+   *
+   * <p>If their is a version mismatch, method returns null.
+   *
+   * <p>No watches are set but setting data will trigger other watchers of this
+   * node.
+   *
+   * <p>If there is another problem, a KeeperException will be thrown.
+   *
+   * @param znode path of node
+   * @param data data to set for node
+   * @param expectedVersion version expected when setting data
+   * @return stat of which returned by setData
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public Stat setDataGetStat(String znode, byte [] data, int expectedVersion)
+  throws KeeperException, KeeperException.NoNodeException, InterruptedException {
+    return recoverableZK.setData(znode, data, expectedVersion);
+  }
+
+  /**
+   * Async creates the specified node with the specified data.
+   *
+   * <p>Throws an exception if the node already exists.
+   *
+   * <p>The node created is persistent and open access.
+   *
+   * @param znode path of node to create
+   * @param data data of node to create
+   * @param cb
+   * @param ctx
+   * @throws KeeperException if unexpected zookeeper exception
+   * @throws KeeperException.NodeExistsException if node already exists
+   */
+  public void asyncCreate(String znode, byte[] data, CreateMode createMode,
+      final AsyncCallback.StringCallback cb, final Object ctx) {
+    recoverableZK.asyncCreate(znode, data, Ids.OPEN_ACL_UNSAFE,
+       createMode, cb, ctx);
+  }
+
+  /**
+   * Delete the specified node and all of it's children.
+   *
+   * Sets no watches.  Throws all exceptions besides dealing with deletion of
+   * children.
+   */
+  public void deleteNodeRecursively(String node)
+  throws KeeperException {
+    try {
+      List<String> children = listChildrenNoWatch(node);
+      if (!children.isEmpty()) {
+        for (String child : children) {
+          deleteNodeRecursively(joinPath(node, child));
+        }
+      }
+      recoverableZK.delete(node, -1);
+    } catch(InterruptedException ie) {
+      interruptedException(ie);
+    }
+  }
+
+  /**
+   * Delete all the children of the specified node but not the node itself.
+   *
+   * Sets no watches.  Throws all exceptions besides dealing with deletion of
+   * children.
+   */
+  public void deleteChildrenRecursively(String node)
+  throws KeeperException {
+    List<String> children = listChildrenNoWatch(node);
+    if (children != null && !children.isEmpty()) {
+      for (String child : children) {
+        deleteNodeRecursively(joinPath(node, child));
+      }
+    }
+  }
+
+  /**
+   * Handles InterruptedExceptions in client calls.
+   * <p>
+   * This may be temporary but for now this gives one place to deal with these.
+   * <p>
+   * TODO: Currently, this method does nothing. Is this ever expected to happen?
+   * Do we abort or can we let it run? Maybe this should be logged as WARN? It
+   * shouldn't happen?
+   * <p>
+   *
+   * @param ie
+   */
+  public void interruptedException(InterruptedException ie) {
+    LOG.debug(recoverableZK
+        + " Received InterruptedException, doing nothing here", ie);
+    // At least preserver interrupt.
+    Thread.currentThread().interrupt();
+    // no-op
+  }
+
+  /**
+   * Handles KeeperExceptions in client calls.
+   * <p>
+   * This may be temporary but for now this gives one place to deal with these.
+   * <p>
+   * TODO: Currently this method rethrows the exception to let the caller handle
+   * <p>
+   *
+   * @param ke
+   * @throws KeeperException
+   */
+  public void keeperException(KeeperException ke) throws KeeperException {
+    LOG.error(recoverableZK
+        + " Received unexpected KeeperException, re-throwing exception", ke);
+    throw ke;
   }
 
   public static class ZNodePathAndData {
