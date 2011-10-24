@@ -157,7 +157,7 @@ public class SplitLogWorker implements Runnable, Watcher {
       int res;
       // wait for master to create the splitLogZnode
       res = -1;
-      while (res == -1) {
+      while (res == -1 && !exitWorker) {
         try {
           res = watcher.checkExists(watcher.splitLogZNode);
         } catch (KeeperException e) {
@@ -171,13 +171,16 @@ public class SplitLogWorker implements Runnable, Watcher {
             " waiting for master to create one");
             Thread.sleep(1000);
           } catch (InterruptedException e) {
-            LOG.debug("Interrupted while waiting for " + watcher.splitLogZNode);
-            assert exitWorker == true;
+            LOG.debug("Interrupted while waiting for " + watcher.splitLogZNode
+                + (exitWorker ? "" : " (ERROR: exitWorker is not set)"));
+            break;
           }
         }
       }
 
-      taskLoop();
+      if (!exitWorker) {
+        taskLoop();
+      }
     } catch (Throwable t) {
       // only a logical error can cause an exception here. Printing it out
       // to make debugging easier
