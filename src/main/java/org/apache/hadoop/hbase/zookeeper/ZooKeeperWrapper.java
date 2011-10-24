@@ -1178,7 +1178,8 @@ public class ZooKeeperWrapper implements Watcher {
       recoverableZK.create(fullyQualifiedZNodeName, data, Ids.OPEN_ACL_UNSAFE, createMode);
       LOG.debug("<" + instanceName + ">" + "Created ZNode " + fullyQualifiedZNodeName + " in ZooKeeper");
     } catch (KeeperException.NodeExistsException nee) {
-      LOG.debug("<" + instanceName + "> " + "ZNode " + fullyQualifiedZNodeName + " already exists, still setting watch");
+      LOG.debug("<" + instanceName + "> " + "ZNode " + fullyQualifiedZNodeName +
+        " already exists" + (watch ? ", still setting watch" : ""));
     } catch (InterruptedException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to create ZNode " + fullyQualifiedZNodeName + " in ZooKeeper", e);
       return null;
