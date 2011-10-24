@@ -74,6 +74,9 @@ public class TestOldLogsCleaner {
   @Test
   public void testLogCleaning() throws Exception{
     Configuration c = TEST_UTIL.getConfiguration();
+    // set TTL
+    long ttl = 2000;
+    c.setLong("hbase.master.logcleaner.ttl", ttl);
     Path oldLogDir = new Path(TEST_UTIL.getTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     String fakeMachineName = URLEncoder.encode("regionserver:60020", "UTF8");
@@ -88,16 +91,18 @@ public class TestOldLogsCleaner {
     fs.mkdirs(oldLogDir);
     fs.createNewFile(new Path(oldLogDir, "a"));
     fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + "a"));
-    fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + now));
     System.out.println("Now is: " + now);
-    for (int i = 0; i < 30; i++) {
-      fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + (now - 6000000 - i) ));
+    for (int i = 1; i < 31; i++) {
+      fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + (now - i) ));
     }
-    for (FileStatus stat : fs.listStatus(oldLogDir)) {
-      System.out.println(stat.getPath().toString());
-    }
-
+    // sleep for sometime to get newer modifcation time
+    Thread.sleep(ttl);
+    fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + now));
     fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + (now + 10000) ));
+
+    for (FileStatus stat : fs.listStatus(oldLogDir)) {
+        System.out.println(stat.getPath().toString());
+      }
 
     assertEquals(34, fs.listStatus(oldLogDir).length);
 
