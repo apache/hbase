@@ -810,7 +810,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
     return new HServerLoad(requestCount.get(),(int)metrics.getRequests(),
       (int)(memory.getUsed() / 1024 / 1024),
-      (int) (memory.getMax() / 1024 / 1024), regionLoads);
+      (int) (memory.getMax() / 1024 / 1024), regionLoads,
+      this.hlog.getCoprocessorHost().getCoprocessors());
   }
 
   String getOnlineRegionsAsPrintableString() {
@@ -1010,7 +1011,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, rootIndexSizeKB,
         totalStaticIndexSizeKB, totalStaticBloomSizeKB,
         (int) r.readRequestsCount.get(), (int) r.writeRequestsCount.get(),
-        totalCompactingKVs, currentCompactedKVs);
+        totalCompactingKVs, currentCompactedKVs,
+        r.getCoprocessorHost().getCoprocessors());
   }
 
   /**
@@ -3348,5 +3350,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public byte[][] rollHLogWriter() throws IOException, FailedLogCloseException {
     HLog wal = this.getWAL();
     return wal.rollWriter(true);
+  }
+
+  // used by org/apache/hbase/tmpl/regionserver/RSStatusTmpl.jamon (HBASE-4070).
+  public String[] getCoprocessors() {
+    HServerLoad hsl = buildServerLoad();
+    return hsl == null? null: hsl.getCoprocessors();
   }
 }
