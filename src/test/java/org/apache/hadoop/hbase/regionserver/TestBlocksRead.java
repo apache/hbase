@@ -25,6 +25,7 @@ import org.junit.Test;
 
 public class TestBlocksRead extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestBlocksRead.class);
+  static final String[] BLOOM_TYPE = new String[] { "ROWCOL", "ROW", "NONE" };
 
   private HBaseConfiguration getConf() {
     HBaseConfiguration conf = new HBaseConfiguration();
@@ -35,8 +36,7 @@ public class TestBlocksRead extends HBaseTestCase {
   }
 
   HRegion region = null;
-  private final String DIR = HBaseTestingUtility.getTestDir() +
-    "/TestHRegion/";
+  private final String DIR = HBaseTestingUtility.getTestDir() + "/TestHRegion/";
 
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
@@ -54,31 +54,35 @@ public class TestBlocksRead extends HBaseTestCase {
     EnvironmentEdgeManagerTestHelper.reset();
   }
 
-  private void initHRegion (byte [] tableName, String callingMethod,
-      HBaseConfiguration conf, byte [] ... families)
-    throws IOException {
+  private void initHRegion(byte[] tableName, String callingMethod,
+      HBaseConfiguration conf, String family) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
-    for(byte [] family : families) {
-	HColumnDescriptor familyDesc =  new HColumnDescriptor(
-          family,
+    HColumnDescriptor familyDesc;
+    for (int i = 0; i < BLOOM_TYPE.length; i++) {
+      String bloomType = BLOOM_TYPE[i];
+      familyDesc = new HColumnDescriptor(
+          Bytes.toBytes(family + "_" + bloomType),
           HColumnDescriptor.DEFAULT_VERSIONS,
           HColumnDescriptor.DEFAULT_COMPRESSION,
           HColumnDescriptor.DEFAULT_IN_MEMORY,
           HColumnDescriptor.DEFAULT_BLOCKCACHE,
           1, // small block size deliberate; each kv on its own block
-          HColumnDescriptor.DEFAULT_TTL,
-          StoreFile.BloomType.ROWCOL.toString(),
+          HColumnDescriptor.DEFAULT_TTL, BLOOM_TYPE[i],
           HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       htd.addFamily(familyDesc);
     }
+
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     Path path = new Path(DIR + callingMethod);
     region = HRegion.createHRegion(info, path, conf);
   }
 
-  private void putData(byte[] cf, String row, String col, long version)
-  throws IOException {
-    putData(cf, row, col, version, version);
+  private void putData(String family, String row, String col, long version)
+      throws IOException {
+    for (int i = 0; i < BLOOM_TYPE.length; i++) {
+      putData(Bytes.toBytes(family + "_" + BLOOM_TYPE[i]), row, col, version,
+          version);
+    }
   }
 
   // generates a value to put for a row/col/version.
@@ -86,9 +90,8 @@ public class TestBlocksRead extends HBaseTestCase {
     return Bytes.toBytes("Value:" + row + "#" + col + "#" + version);
   }
 
-  private void putData(byte[] cf, String row, String col,
-                       long versionStart, long versionEnd)
-  throws IOException {
+  private void putData(byte[] cf, String row, String col, long versionStart,
+      long versionEnd) throws IOException {
     byte columnBytes[] = Bytes.toBytes(col);
     Put put = new Put(Bytes.toBytes(row));
 
@@ -98,48 +101,69 @@ public class TestBlocksRead extends HBaseTestCase {
     region.put(put);
   }
 
-  private KeyValue[] getData(byte[] cf, String row, List<String> columns,
-                             int expBlocks)
-    throws IOException {
+  private KeyValue[] getData(String family, String row, List<String> columns,
+      int expBlocks) throws IOException {
+    return getData(family, row, columns, expBlocks, expBlocks, expBlocks);
+  }
 
-    long blocksStart = getBlkAccessCount(cf);
-    Get get = new Get(Bytes.toBytes(row));
+  private KeyValue[] getData(String family, String row, List<String> columns,
+      int expBlocksRowCol, int expBlocksRow, int expBlocksNone)
+      throws IOException {
+    int[] expBlocks = new int[] { expBlocksRowCol, expBlocksRow, expBlocksNone };
+    KeyValue[] kvs = null;
 
-    for (String column : columns) {
-      get.addColumn(cf, Bytes.toBytes(column));
+    for (int i = 0; i < BLOOM_TYPE.length; i++) {
+      String bloomType = BLOOM_TYPE[i];
+      byte[] cf = Bytes.toBytes(family + "_" + bloomType);
+      long blocksStart = getBlkAccessCount(cf);
+      Get get = new Get(Bytes.toBytes(row));
+
+      for (String column : columns) {
+        get.addColumn(cf, Bytes.toBytes(column));
+      }
+
+      kvs = region.get(get, null).raw();
+      long blocksEnd = getBlkAccessCount(cf);
+      if (expBlocks[i] != -1) {
+        assertEquals("Blocks Read Check for Bloom: " + bloomType, expBlocks[i],
+            blocksEnd - blocksStart);
+      }
+      System.out.println("Blocks Read for Bloom: " + bloomType + " = "
+          + (blocksEnd - blocksStart) + "Expected = " + expBlocks[i]);
     }
-
-    KeyValue[] kvs = region.get(get, null).raw();
-    long blocksEnd = getBlkAccessCount(cf);
-    if (expBlocks != -1) {
-        assertEquals("Blocks Read Check", expBlocks, blocksEnd - blocksStart);
-    }
-    System.out.println("Blocks Read = " + (blocksEnd - blocksStart) +
-                       "Expected = " + expBlocks);
     return kvs;
   }
 
-  private KeyValue[] getData(byte[] cf, String row, String column,
-                             int expBlocks)
-    throws IOException {
-    return getData(cf, row, Arrays.asList(column), expBlocks);
+  private KeyValue[] getData(String family, String row, String column,
+      int expBlocks) throws IOException {
+    return getData(family, row, Arrays.asList(column), expBlocks, expBlocks,
+        expBlocks);
   }
 
-  private void deleteFamily(byte[] cf, String row, long version)
-    throws IOException {
+  private KeyValue[] getData(String family, String row, String column,
+      int expBlocksRowCol, int expBlocksRow, int expBlocksNone)
+      throws IOException {
+    return getData(family, row, Arrays.asList(column), expBlocksRowCol,
+        expBlocksRow, expBlocksNone);
+  }
+
+  private void deleteFamily(String family, String row, long version)
+      throws IOException {
     Delete del = new Delete(Bytes.toBytes(row));
-    del.deleteFamily(cf, version);
+    del.deleteFamily(Bytes.toBytes(family + "_ROWCOL"), version);
+    del.deleteFamily(Bytes.toBytes(family + "_ROW"), version);
+    del.deleteFamily(Bytes.toBytes(family + "_NONE"), version);
     region.delete(del, null, true);
   }
 
   private static void verifyData(KeyValue kv, String expectedRow,
-                                 String expectedCol, long expectedVersion) {
+      String expectedCol, long expectedVersion) {
     assertEquals("RowCheck", expectedRow, Bytes.toString(kv.getRow()));
     assertEquals("ColumnCheck", expectedCol, Bytes.toString(kv.getQualifier()));
     assertEquals("TSCheck", expectedVersion, kv.getTimestamp());
     assertEquals("ValueCheck",
-                 Bytes.toString(genValue(expectedRow, expectedCol, expectedVersion)),
-                 Bytes.toString(kv.getValue()));
+        Bytes.toString(genValue(expectedRow, expectedCol, expectedVersion)),
+        Bytes.toString(kv.getValue()));
   }
 
   private static long getBlkAccessCount(byte[] cf) {
@@ -150,17 +174,16 @@ public class TestBlocksRead extends HBaseTestCase {
 
   /**
    * Test # of blocks read for some simple seek cases.
+   *
    * @throws Exception
    */
   @Test
   public void testBlocksRead() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testBlocksRead");
-    byte [] FAMILY = Bytes.toBytes("cf1");
-    byte [][] FAMILIES = new byte[][] { FAMILY };
+    byte[] TABLE = Bytes.toBytes("testBlocksRead");
+    String FAMILY = "cf1";
     KeyValue kvs[];
-
     HBaseConfiguration conf = getConf();
-    initHRegion(TABLE, getName(), conf, FAMILIES);
+    initHRegion(TABLE, getName(), conf, FAMILY);
 
     putData(FAMILY, "row", "col1", 1);
     putData(FAMILY, "row", "col2", 2);
@@ -171,44 +194,31 @@ public class TestBlocksRead extends HBaseTestCase {
     putData(FAMILY, "row", "col7", 7);
     region.flushcache();
 
-    // Expected block reads: 1 (after fixes for HBASE-4433 & HBASE-4434).
-    // The top block contains our answer (including DeleteFamily if present).
-    // So we should only be reading 1 block
+    // Expected block reads: 1
+    // The top block has the KV we are
+    // interested. So only 1 seek is needed.
     kvs = getData(FAMILY, "row", "col1", 1);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col1", 1);
 
     // Expected block reads: 2
-    // The first one should be able to process any Delete marker for the
-    // row if present, and then get col1. The second one will get col2
+    // The top block and next block has the KVs we are
+    // interested. So only 2 seek is needed.
     kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2"), 2);
     assertEquals(2, kvs.length);
     verifyData(kvs[0], "row", "col1", 1);
     verifyData(kvs[1], "row", "col2", 2);
 
     // Expected block reads: 3
-    // The first one should be able to process any Delete marker at the top of the
-    // row. This will take us to the block containing col1. But that's not a column
-    // we are interested in. The two more seeks will be for col2 and col3.
+    // The first 2 seeks is to find out col2. [HBASE-4443]
+    // One additional seek for col3
+    // So 3 seeks are needed.
     kvs = getData(FAMILY, "row", Arrays.asList("col2", "col3"), 3);
     assertEquals(2, kvs.length);
     verifyData(kvs[0], "row", "col2", 2);
     verifyData(kvs[1], "row", "col3", 3);
 
-    // Expected block reads: 2
-    // Unfortunately, this is a common case when KVs are large, and occupy
-    // 1 block each.
-    // This issue has been reported as HBASE-4443.
-    // Since HBASE-4469 is fixed now, the seek for delete family marker has been
-    // optimized.
-    // Explanation of 2 seeks:
-    //  * The 1st one will be block containing col4, because we search for
-    //    row/col5/TS=Long.MAX_VAL.
-    //    This will land us in the previous block, and not the block containing
-    //    row/col5.
-    //  * The final block we read will be the actual block that contains our data.
-    // When HBASE-4443 is fixed, the number of expected blocks here should be
-    //  dropped to 1.
+    // Expected block reads: 2. [HBASE-4443]
     kvs = getData(FAMILY, "row", Arrays.asList("col5"), 2);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col5", 5);
@@ -216,17 +226,16 @@ public class TestBlocksRead extends HBaseTestCase {
 
   /**
    * Test # of blocks read (targetted at some of the cases Lazy Seek optimizes).
+   *
    * @throws Exception
    */
   @Test
   public void testLazySeekBlocksRead() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testLazySeekBlocksRead");
-    byte [] FAMILY = Bytes.toBytes("cf1");
-    byte [][] FAMILIES = new byte[][] { FAMILY };
+    byte[] TABLE = Bytes.toBytes("testLazySeekBlocksRead");
+    String FAMILY = "cf1";
     KeyValue kvs[];
-
     HBaseConfiguration conf = getConf();
-    initHRegion(TABLE, getName(), conf, FAMILIES);
+    initHRegion(TABLE, getName(), conf, FAMILY);
 
     // File 1
     putData(FAMILY, "row", "col1", 1);
@@ -239,8 +248,6 @@ public class TestBlocksRead extends HBaseTestCase {
     region.flushcache();
 
     // Expected blocks read: 1.
-    // Since HBASE-4469 is fixed now, the seek for delete family marker has been
-    // optimized.
     // File 2's top block is also the KV we are
     // interested. So only 1 seek is needed.
     kvs = getData(FAMILY, "row", Arrays.asList("col1"), 1);
@@ -248,12 +255,9 @@ public class TestBlocksRead extends HBaseTestCase {
     verifyData(kvs[0], "row", "col1", 3);
 
     // Expected blocks read: 2
-    //
-    // Since HBASE-4469 is fixed now, the seek for delete family marker has been
-    // optimized. File 2's top block has the "col1" KV we are
+    // File 2's top block has the "col1" KV we are
     // interested. We also need "col2" which is in a block
     // of its own. So, we need that block as well.
-    //
     kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2"), 2);
     assertEquals(2, kvs.length);
     verifyData(kvs[0], "row", "col1", 3);
@@ -264,26 +268,17 @@ public class TestBlocksRead extends HBaseTestCase {
     region.flushcache();
 
     // Expected blocks read: 1
-    //
-    // Since HBASE-4469 is fixed now, the seek for delete family marker has been
-    // optimized. File 3's top block has the "col3" KV we are
+    // File 3's top block has the "col3" KV we are
     // interested. So only 1 seek is needed.
-    //
     kvs = getData(FAMILY, "row", "col3", 1);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col3", 5);
 
     // Get a column from older file.
-    // Expected blocks read: 3
-    //
-    // Since HBASE-4469 is fixed now, the seek for delete family marker has been
-    // optimized.  File 2's top block has the "col1" KV we are
-    // interested.
-    //
-    // Also no need to seek to file 3 since the row-col bloom filter is enabled.
-    // Only 1 seek in File 2 is needed.
-    //
-    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 1);
+    // For ROWCOL Bloom filter: Expected blocks read: 1.
+    // For ROW Bloom filter: Expected blocks read: 2.
+    // For NONE Bloom filter: Expected blocks read: 2.
+    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 1, 2, 2);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col1", 3);
 
@@ -291,10 +286,12 @@ public class TestBlocksRead extends HBaseTestCase {
     deleteFamily(FAMILY, "row", 6);
     region.flushcache();
 
-    // Expected blocks read: 2. [HBASE-4585]
-    kvs = getData(FAMILY, "row", "col1", 2);
+    // For ROWCOL Bloom filter: Expected blocks read: 2.
+    // For ROW Bloom filter: Expected blocks read: 3.
+    // For NONE Bloom filter: Expected blocks read: 3.
+    kvs = getData(FAMILY, "row", "col1", 2, 3, 3);
     assertEquals(0, kvs.length);
-    kvs = getData(FAMILY, "row", "col2", 3);
+    kvs = getData(FAMILY, "row", "col2", 3, 4, 4);
     assertEquals(0, kvs.length);
     kvs = getData(FAMILY, "row", "col3", 2);
     assertEquals(0, kvs.length);
@@ -320,6 +317,7 @@ public class TestBlocksRead extends HBaseTestCase {
     putData(FAMILY, "row", "col3", 13);
     region.flushcache();
 
+
     // Expected blocks read: 5. [HBASE-4585]
     kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 5);
     assertEquals(3, kvs.length);
@@ -327,27 +325,25 @@ public class TestBlocksRead extends HBaseTestCase {
     verifyData(kvs[1], "row", "col2", 12);
     verifyData(kvs[2], "row", "col3", 13);
   }
-  
+
   @Test
   public void testLazySeekBlocksReadWithDelete() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testLazySeekBlocksReadWithDelete");
-    byte [] FAMILY = Bytes.toBytes("cf1");
-    byte [][] FAMILIES = new byte[][] { FAMILY };
+    byte[] TABLE = Bytes.toBytes("testLazySeekBlocksReadWithDelete");
+    String FAMILY = "cf1";
     KeyValue kvs[];
-
     HBaseConfiguration conf = getConf();
-    initHRegion(TABLE, getName(), conf, FAMILIES);
-    
+    initHRegion(TABLE, getName(), conf, FAMILY);
+
     deleteFamily(FAMILY, "row", 200);
-    for (int i = 0 ; i < 100; i++) {
-      putData(FAMILY, "row", "col"+i, i);
+    for (int i = 0; i < 100; i++) {
+      putData(FAMILY, "row", "col" + i, i);
     }
     putData(FAMILY, "row", "col99", 201);
 
     region.flushcache();
     kvs = getData(FAMILY, "row", Arrays.asList("col0"), 2);
     assertEquals(0, kvs.length);
-    
+
     kvs = getData(FAMILY, "row", Arrays.asList("col99"), 2);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col99", 201);

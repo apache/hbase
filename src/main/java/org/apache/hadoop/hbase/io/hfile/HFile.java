@@ -224,11 +224,17 @@ public class HFile {
     void addInlineBlockWriter(InlineBlockWriter bloomWriter);
 
     /**
-     * Store Bloom filter in the file. This does not deal with Bloom filter
+     * Store general Bloom filter in the file. This does not deal with Bloom filter
      * internals but is necessary, since Bloom filters are stored differently
      * in HFile version 1 and version 2.
      */
-    void addBloomFilter(BloomFilterWriter bfw);
+    void addGeneralBloomFilter(BloomFilterWriter bfw);
+
+    /**
+     * Store delete family Bloom filter in the file, which is only supported in
+     * HFile V2.
+     */
+    void addDeleteFamilyBloomFilter(BloomFilterWriter bfw) throws IOException;
   }
 
   /**
@@ -355,10 +361,18 @@ public class HFile {
     Compression.Algorithm getCompressionAlgorithm();
 
     /**
-     * Retrieves Bloom filter metadata as appropriate for each {@link HFile}
-     * version. Knows nothing about how that metadata is structured.
+     * Retrieves general Bloom filter metadata as appropriate for each
+     * {@link HFile} version.
+     * Knows nothing about how that metadata is structured.
      */
-    DataInput getBloomFilterMetadata() throws IOException;
+    DataInput getGeneralBloomFilterMetadata() throws IOException;
+
+    /**
+     * Retrieves delete family Bloom filter metadata as appropriate for each
+     * {@link HFile}  version.
+     * Knows nothing about how that metadata is structured.
+     */
+    DataInput getDeleteBloomFilterMetadata() throws IOException;
 
     Path getPath();
   }

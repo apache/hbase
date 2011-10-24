@@ -437,17 +437,23 @@ public class HFileWriterV1 extends AbstractHFileWriter {
   }
 
   /**
-   * Version 1 Bloom filters are stored in two meta blocks with two different
+   * Version 1 general Bloom filters are stored in two meta blocks with two different
    * keys.
    */
   @Override
-  public void addBloomFilter(BloomFilterWriter bfw) {
+  public void addGeneralBloomFilter(BloomFilterWriter bfw) {
     appendMetaBlock(BLOOM_FILTER_META_KEY,
         bfw.getMetaWriter());
     Writable dataWriter = bfw.getDataWriter();
     if (dataWriter != null) {
       appendMetaBlock(BLOOM_FILTER_DATA_KEY, dataWriter);
     }
+  }
+
+  @Override
+  public void addDeleteFamilyBloomFilter(BloomFilterWriter bfw)
+  throws IOException {
+    throw new IOException("Delete Bloom filter is not supported in HFile V1");
   }
 
   /**

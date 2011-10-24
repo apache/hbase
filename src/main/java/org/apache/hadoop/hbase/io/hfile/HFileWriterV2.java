@@ -434,14 +434,29 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   }
 
   @Override
-  public void addBloomFilter(final BloomFilterWriter bfw) {
+  public void addGeneralBloomFilter(final BloomFilterWriter bfw) {
+    this.addBloomFilter(bfw, BlockType.GENERAL_BLOOM_META);
+  }
+
+  @Override
+  public void addDeleteFamilyBloomFilter(final BloomFilterWriter bfw) {
+    this.addBloomFilter(bfw, BlockType.DELETE_FAMILY_BLOOM_META);
+  }
+
+  private void addBloomFilter(final BloomFilterWriter bfw,
+      final BlockType blockType) {
     if (bfw.getKeyCount() <= 0)
       return;
 
+    if (blockType != BlockType.GENERAL_BLOOM_META &&
+        blockType != BlockType.DELETE_FAMILY_BLOOM_META) {
+      throw new RuntimeException("Block Type: " + blockType.toString() +
+          "is not supported");
+    }
     additionalLoadOnOpenData.add(new BlockWritable() {
       @Override
       public BlockType getBlockType() {
-        return BlockType.BLOOM_META;
+        return blockType;
       }
 
       @Override

@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -57,6 +59,8 @@ class StoreFileScanner implements KeyValueScanner {
 
   private static final AtomicLong seekCount = new AtomicLong();
 
+  private ScanQueryMatcher matcher;
+
   /**
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
    * @param hfs HFile scanner
@@ -81,19 +85,31 @@ class StoreFileScanner implements KeyValueScanner {
   }
 
   /**
-   * Return an array of scanners corresponding to the given
-   * set of store files.
+   * Return an array of scanners corresponding to the given set of store files.
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(
-      Collection<StoreFile> files,
-      boolean cacheBlocks,
-      boolean usePread,
+      Collection<StoreFile> files, boolean cacheBlocks, boolean usePread,
       boolean isCompaction) throws IOException {
-    List<StoreFileScanner> scanners =
-      new ArrayList<StoreFileScanner>(files.size());
+    return getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction,
+        null);
+  }
+
+  /**
+   * Return an array of scanners corresponding to the given set of store files,
+   * And set the ScanQueryMatcher for each store file scanner for further
+   * optimization
+   */
+  public static List<StoreFileScanner> getScannersForStoreFiles(
+      Collection<StoreFile> files, boolean cacheBlocks, boolean usePread,
+      boolean isCompaction, ScanQueryMatcher matcher) throws IOException {
+    List<StoreFileScanner> scanners = new ArrayList<StoreFileScanner>(
+        files.size());
     for (StoreFile file : files) {
       StoreFile.Reader r = file.createReader();
-      scanners.add(r.getStoreFileScanner(cacheBlocks, usePread, isCompaction));
+      StoreFileScanner scanner = r.getStoreFileScanner(cacheBlocks, usePread,
+          isCompaction);
+      scanner.setScanQueryMatcher(matcher);
+      scanners.add(scanner);
     }
     return scanners;
   }
@@ -225,16 +241,24 @@ class StoreFileScanner implements KeyValueScanner {
   @Override
   public boolean requestSeek(KeyValue kv, boolean forward, boolean useBloom)
       throws IOException {
-    if (reader.getBloomFilterType() != StoreFile.BloomType.ROWCOL ||
-        kv.getFamilyLength() == 0) {
+    if (kv.getFamilyLength() == 0) {
       useBloom = false;
     }
 
     boolean haveToSeek = true;
     if (useBloom) {
-      haveToSeek = reader.passesBloomFilter(kv.getBuffer(),
-          kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
-          kv.getQualifierOffset(), kv.getQualifierLength());
+      // check ROWCOL Bloom filter first.
+      if (reader.getBloomFilterType() == StoreFile.BloomType.ROWCOL) {
+        haveToSeek = reader.passesGeneralBloomFilter(kv.getBuffer(),
+            kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
+            kv.getQualifierOffset(), kv.getQualifierLength());
+      } else if (this.matcher != null && !matcher.hasNullColumnInQuery() &&
+          kv.isDeleteFamily()) {
+        // if there is no such delete family kv in the store file,
+        // then no need to seek.
+        haveToSeek = reader.passesDeleteFamilyBloomFilter(kv.getBuffer(),
+            kv.getRowOffset(), kv.getRowLength());
+      }
     }
 
     delayedReseek = forward;
@@ -296,6 +320,10 @@ class StoreFileScanner implements KeyValueScanner {
     } else {
       seek(delayedSeekKV);
     }
+  }
+
+  public void setScanQueryMatcher(ScanQueryMatcher matcher) {
+    this.matcher = matcher;
   }
 
   // Test methods

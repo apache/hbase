@@ -396,6 +396,60 @@ public class TestStoreFile extends HBaseTestCase {
     bloomWriteRead(writer, fs);
   }
 
+  public void testDeleteFamilyBloomFilter() throws Exception {
+    FileSystem fs = FileSystem.getLocal(conf);
+    conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE,
+        (float) 0.01);
+    conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, true);
+    float err = conf.getFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE,
+        0);
+
+    // write the file
+    Path f = new Path(ROOT_DIR, getName());
+    StoreFile.Writer writer = new StoreFile.Writer(fs, f,
+        StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM,
+        conf, KeyValue.COMPARATOR, StoreFile.BloomType.NONE, 2000);
+
+    // add delete family
+    long now = System.currentTimeMillis();
+    for (int i = 0; i < 2000; i += 2) {
+      String row = String.format(localFormatter, i);
+      KeyValue kv = new KeyValue(row.getBytes(), "family".getBytes(),
+          "col".getBytes(), now, KeyValue.Type.DeleteFamily, "value".getBytes());
+      writer.append(kv);
+    }
+    writer.close();
+
+    StoreFile.Reader reader = new StoreFile.Reader(fs, writer.getPath(), null,
+        false, false);
+    reader.loadFileInfo();
+    reader.loadBloomfilter();
+
+    // check false positives rate
+    int falsePos = 0;
+    int falseNeg = 0;
+    for (int i = 0; i < 2000; i++) {
+      String row = String.format(localFormatter, i);
+      byte[] rowKey = Bytes.toBytes(row);
+      boolean exists = reader.passesDeleteFamilyBloomFilter(rowKey, 0,
+          rowKey.length);
+      if (i % 2 == 0) {
+        if (!exists)
+          falseNeg++;
+      } else {
+        if (exists)
+          falsePos++;
+      }
+    }
+    assertEquals(1000, reader.getDeleteFamilyCnt());
+    reader.close();
+    fs.delete(f, true);
+    assertEquals("False negatives: " + falseNeg, 0, falseNeg);
+    int maxFalsePos = (int) (2 * 2000 * err);
+    assertTrue("Too many false positives: " + falsePos + " (err=" + err
+        + ", expected no more than " + maxFalsePos, falsePos <= maxFalsePos);
+  }
+
   public void testBloomTypes() throws Exception {
     float err = (float) 0.01;
     FileSystem fs = FileSystem.getLocal(conf);
@@ -443,7 +497,7 @@ public class TestStoreFile extends HBaseTestCase {
       reader.loadFileInfo();
       reader.loadBloomfilter();
       StoreFileScanner scanner = reader.getStoreFileScanner(false, false);
-      assertEquals(expKeys[x], reader.bloomFilter.getKeyCount());
+      assertEquals(expKeys[x], reader.generalBloomFilter.getKeyCount());
 
       // check false positives rate
       int falsePos = 0;
@@ -493,7 +547,7 @@ public class TestStoreFile extends HBaseTestCase {
     StoreFile.Writer writer = new StoreFile.Writer(fs, f,
         StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM,
         conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, 2000);
-    assertFalse(writer.hasBloom());
+    assertFalse(writer.hasGeneralBloom());
     writer.close();
     fs.delete(f, true);
 
@@ -516,7 +570,7 @@ public class TestStoreFile extends HBaseTestCase {
     writer = new StoreFile.Writer(fs, f,
         StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM,
         conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, Integer.MAX_VALUE);
-    assertFalse(writer.hasBloom());
+    assertFalse(writer.hasGeneralBloom());
     writer.close();
     fs.delete(f, true);
   }

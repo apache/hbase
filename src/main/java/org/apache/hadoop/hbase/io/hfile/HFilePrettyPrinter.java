@@ -322,13 +322,28 @@ public class HFilePrettyPrinter {
     }
     System.out.println("Mid-key: " + Bytes.toStringBinary(reader.midkey()));
 
-    // Printing bloom information
-    DataInput bloomMeta = reader.getBloomFilterMetadata();
+    // Printing general bloom information
+    DataInput bloomMeta = reader.getGeneralBloomFilterMetadata();
     BloomFilter bloomFilter = null;
     if (bloomMeta != null)
       bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
 
     System.out.println("Bloom filter:");
+    if (bloomFilter != null) {
+      System.out.println(FOUR_SPACES
+          + bloomFilter.toString().replaceAll(ByteBloomFilter.STATS_RECORD_SEP,
+              "\n" + FOUR_SPACES));
+    } else {
+      System.out.println(FOUR_SPACES + "Not present");
+    }
+
+    // Printing delete bloom information
+    bloomMeta = reader.getDeleteBloomFilterMetadata();
+    bloomFilter = null;
+    if (bloomMeta != null)
+      bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
+
+    System.out.println("Delete Family Bloom filter:");
     if (bloomFilter != null) {
       System.out.println(FOUR_SPACES
           + bloomFilter.toString().replaceAll(ByteBloomFilter.STATS_RECORD_SEP,

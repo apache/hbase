@@ -663,13 +663,18 @@ public class HFileReaderV1 extends AbstractHFileReader {
   }
 
   @Override
-  public DataInput getBloomFilterMetadata() throws IOException {
+  public DataInput getGeneralBloomFilterMetadata() throws IOException {
     ByteBuffer buf = getMetaBlock(HFileWriterV1.BLOOM_FILTER_META_KEY, false);
     if (buf == null)
       return null;
     ByteArrayInputStream bais = new ByteArrayInputStream(buf.array(),
         buf.arrayOffset(), buf.limit());
     return new DataInputStream(bais);
+  }
+
+  @Override
+  public DataInput getDeleteBloomFilterMetadata() throws IOException {
+    return null;
   }
 
   @Override

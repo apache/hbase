@@ -65,15 +65,23 @@ public class ScanQueryMatcher {
   protected byte [] row;
 
   /**
+   * This variable shows whether there is an null column in the query. There
+   * always exists a null column in the wildcard column query.
+   * There maybe exists a null column in the explicit column query based on the
+   * first column.
+   * */
+  private boolean hasNullColumn = true;
+
+  /**
    * Constructs a ScanQueryMatcher for a Scan.
    * @param scan
    * @param family
-   * @param columns
+   * @param columnSet
    * @param ttl
    * @param rowComparator
    */
   public ScanQueryMatcher(Scan scan, byte [] family,
-      NavigableSet<byte[]> columns, long ttl,
+      NavigableSet<byte[]> columnSet, long ttl,
       KeyValue.KeyComparator rowComparator, int maxVersions,
       boolean retainDeletesInOutput) {
     this.tr = scan.getTimeRange();
@@ -81,19 +89,34 @@ public class ScanQueryMatcher {
     this.rowComparator = rowComparator;
     this.deletes =  new ScanDeleteTracker();
     this.stopRow = scan.getStopRow();
-    this.startKey = KeyValue.createFirstOnRow(scan.getStartRow(), family, null);
+    this.startKey = KeyValue.createFirstDeleteFamilyOnRow(scan.getStartRow(),
+        family);
     this.filter = scan.getFilter();
     this.retainDeletesInOutput = retainDeletesInOutput;
 
     // Single branch to deal with two types of reads (columns vs all in family)
-    if (columns == null || columns.size() == 0) {
+    if (columnSet == null || columnSet.size() == 0) {
+      // there is always a null column in the wildcard column query.
+      hasNullColumn = true;
+
       // use a specialized scan for wildcard column tracker.
       this.columns = new ScanWildcardColumnTracker(maxVersions);
     } else {
+      // whether there is null column in the explicit column query
+      hasNullColumn = (columnSet.first().length == 0);
+
       // We can share the ExplicitColumnTracker, diff is we reset
       // between rows, not between storefiles.
-      this.columns = new ExplicitColumnTracker(columns,maxVersions);
+      this.columns = new ExplicitColumnTracker(columnSet,maxVersions);
     }
+  }
+
+  /**
+   *
+   * @return  whether there is an null column in the query
+   */
+  public boolean hasNullColumnInQuery() {
+    return hasNullColumn;
   }
 
   public ScanQueryMatcher(Scan scan, byte [] family,

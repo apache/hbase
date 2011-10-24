@@ -211,7 +211,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     // First the store file scanners
     List<StoreFileScanner> sfScanners = StoreFileScanner
       .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks,
-                                isGet, false);
+                                isGet, false, this.matcher);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
 
