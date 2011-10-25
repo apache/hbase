@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKSplitLog.TaskState;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.AsyncCallback;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -153,9 +154,12 @@ public class SplitLogWorker implements Runnable, Watcher {
   public void run() {
     try {
       LOG.info("SplitLogWorker starting");
+      this.watcher.createZNodeIfNotExists(this.watcher.splitLogZNode, new byte[0],
+          CreateMode.PERSISTENT, false /* set watch? */);
       this.watcher.registerListener(this);
       int res;
-      // wait for master to create the splitLogZnode
+      // the above creation might have failed. Don't proceed until someone
+      // creates the /hbase/splitlog zknode.
       res = -1;
       while (res == -1 && !exitWorker) {
         try {
@@ -168,7 +172,7 @@ public class SplitLogWorker implements Runnable, Watcher {
         if (res == -1) {
           try {
             LOG.info(watcher.splitLogZNode + " znode does not exist," +
-            " waiting for master to create one");
+            " waiting for someone to create one");
             Thread.sleep(1000);
           } catch (InterruptedException e) {
             LOG.debug("Interrupted while waiting for " + watcher.splitLogZNode
