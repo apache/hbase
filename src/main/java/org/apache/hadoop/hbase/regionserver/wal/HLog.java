@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
@@ -406,7 +407,7 @@ public class HLog implements Syncable {
     this.getNumCurrentReplicas = getGetNumCurrentReplicas(this.hdfs_out);
 
     logSyncerThread = new LogSyncer(this.optionalFlushInterval);
-    Threads.setDaemonThreadRunning(logSyncerThread,
+    Threads.setDaemonThreadRunning(logSyncerThread.getThread(),
         Thread.currentThread().getName() + ".logSyncer");
     coprocessorHost = new WALCoprocessorHost(this, conf);
   }
@@ -1133,7 +1134,7 @@ public class HLog implements Syncable {
    * This thread is responsible to call syncFs and buffer up the writers while
    * it happens.
    */
-   class LogSyncer extends Thread {
+   class LogSyncer extends HasThread {
 
     private final long optionalFlushInterval;
 
