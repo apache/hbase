@@ -563,7 +563,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
-   * @param keepDeletedRows True if deleted rows should not be collected
+   * @param keepDeletedCells True if deleted rows should not be collected
    * immediately.
    */
   public void setKeepDeletedCells(boolean keepDeletedCells) {

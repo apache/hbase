@@ -94,11 +94,10 @@ public interface KeyValueScanner {
 
   /**
    * Does the real seek operation in case it was skipped by
-   * {@link #seekToRowCol(KeyValue, boolean)}. Note that this function should
+   * seekToRowCol(KeyValue, boolean) (TODO: Whats this?). Note that this function should
    * be never called on scanners that always do real seek operations (i.e. most
    * of the scanners). The easiest way to achieve this is to call
    * {@link #realSeekDone()} first.
    */
   public void enforceSeek() throws IOException;
-
 }
