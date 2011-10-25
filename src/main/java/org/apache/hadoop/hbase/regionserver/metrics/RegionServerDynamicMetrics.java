@@ -46,8 +46,7 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
  * <p>
  * This class has a number of metrics variables that are publicly accessible;
  * these variables (objects) have methods to update their values;
- * for example:
- *  <p> {@link #rpcQueueTime}.inc(time)
+ * for example: rpcQueueTime.inc(time)
  *
  */
 public class RegionServerDynamicMetrics implements Updater {

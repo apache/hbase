@@ -39,7 +39,7 @@ import org.apache.hadoop.io.Writable;
  * <p>
  * To append to a set of columns of a row, instantiate an Append object with the
  * row to append to. At least one column to append must be specified using the
- * {@link #add(byte[], byte[], long)} method.
+ * {@link #add(byte[], byte[], byte[])} method.
  */
 public class Append extends Mutation implements Writable {
   // TODO: refactor to derive from Put?

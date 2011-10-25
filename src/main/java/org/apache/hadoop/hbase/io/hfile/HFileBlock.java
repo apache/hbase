@@ -495,10 +495,10 @@ public class HFileBlock implements Cacheable, HFileBlockInfo {
    * <ul>
    * <li>Construct an {@link HFileBlock.Writer}, providing a compression
    * algorithm
-   * <li>Call {@link Writer#startWriting(BlockType)} and get a data stream to
+   * <li>Call {@link Writer#startWriting(BlockType, boolean)} and get a data stream to
    * write to
    * <li>Write your data into the stream
-   * <li>Call {@link Writer#writeHeaderAndData()} as many times as you need to
+   * <li>Call {@link Writer#writeHeaderAndData(FSDataOutputStream)} as many times as you need to
    * store the serialized block into an external stream, or call
    * {@link Writer#getHeaderAndData()} to get it as a byte array.
    * <li>Repeat to write more blocks
@@ -586,8 +586,6 @@ public class HFileBlock implements Cacheable, HFileBlockInfo {
     private long prevOffset;
 
     /**
-     * @param blockType
-     *          block type to create
      * @param compressionAlgorithm
      *          compression algorithm to use
      */
@@ -717,7 +715,7 @@ public class HFileBlock implements Cacheable, HFileBlockInfo {
     }
 
     /**
-     * Similar to {@link #writeHeaderAndData(DataOutputStream)}, but records
+     * Similar to {@link #writeHeaderAndData(FSDataOutputStream)}, but records
      * the offset of this block so that it can be referenced in the next block
      * of the same type.
      *
@@ -864,7 +862,7 @@ public class HFileBlock implements Cacheable, HFileBlockInfo {
     }
 
     /**
-     * Similar to {@link #getUncompressedDataWithHeader()} but returns a byte
+     * Similar to {@link #getUncompressedBufferWithHeader()} but returns a byte
      * buffer.
      *
      * @return uncompressed block for caching on write in the form of a buffer
@@ -1084,20 +1082,15 @@ public class HFileBlock implements Cacheable, HFileBlockInfo {
     /**
      * Decompresses data from the given stream using the configured compression
      * algorithm.
-     *
-     * @param boundedStream
+     * @param dest
+     * @param destOffset
+     * @param bufferedBoundedStream
      *          a stream to read compressed data from, bounded to the exact
      *          amount of compressed data
      * @param compressedSize
      *          compressed data size, header not included
      * @param uncompressedSize
      *          uncompressed data size, header not included
-     * @param header
-     *          the header to include before the decompressed data, or null.
-     *          Only the first {@link HFileBlock#HEADER_SIZE} bytes of the
-     *          buffer are included.
-     * @return the byte buffer containing the given header (optionally) and the
-     *         decompressed data
      * @throws IOException
      */
     protected void decompress(byte[] dest, int destOffset,
