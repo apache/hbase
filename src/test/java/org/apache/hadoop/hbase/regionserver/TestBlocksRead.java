@@ -62,8 +62,8 @@ public class TestBlocksRead extends HBaseTestCase {
   }
 
   HRegion region = null;
-  private final String DIR = HBaseTestingUtility.getTestDir() +
-    "/TestBlocksRead/";
+  private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final String DIR = TEST_UTIL.getDataTestDir("TestBlocksRead").toString();
 
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()

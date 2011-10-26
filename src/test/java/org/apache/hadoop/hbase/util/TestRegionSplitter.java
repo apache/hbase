@@ -61,7 +61,7 @@ public class TestRegionSplitter {
     }
 
     @AfterClass
-    public static void teardown() throws IOException {
+    public static void teardown() throws Exception {
         UTIL.shutdownMiniCluster();
     }
 
