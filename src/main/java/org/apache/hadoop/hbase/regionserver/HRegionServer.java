@@ -82,8 +82,6 @@ import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.MultiPut;
@@ -168,7 +166,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   protected HServerInfo serverInfo;
   protected final Configuration conf;
 
-  private final HConnection connection;
   protected final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
   private FileSystem fs;
   private Path rootDir;
@@ -283,7 +280,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public HRegionServer(Configuration conf) throws IOException, InterruptedException {
     this.fsOk = true;
     this.conf = conf;
-    this.connection = HConnectionManager.getConnection(conf);
     this.isOnline = false;
 
     // check to see if the codec list is available:
@@ -503,7 +499,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     blockAndCheckIfStopped(this.clusterStatusTracker);
 
     // Create the catalog tracker and start it;
-    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
+    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.conf,
       this, this.conf.getInt("hbase.regionserver.catalog.timeout", Integer.MAX_VALUE));
     catalogTracker.start();
   }
@@ -679,7 +675,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       this.hbaseMaster = null;
     }
     this.leases.close();
-    HConnectionManager.deleteConnection(conf, true);
     this.zooKeeper.close();
     if (!killed) {
       join();

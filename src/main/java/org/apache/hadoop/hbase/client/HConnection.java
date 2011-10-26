@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +55,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  *
  * @see HConnectionManager
  */
-public interface HConnection extends Abortable {
+public interface HConnection extends Abortable, Closeable {
   /**
    * @return Configuration instance being used by this HConnection instance.
    */

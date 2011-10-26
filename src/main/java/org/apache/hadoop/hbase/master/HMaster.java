@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
@@ -136,8 +135,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private final MasterMetrics metrics;
   // file system manager for the master FS operations
   private MasterFileSystem fileSystemManager;
-
-  private HConnection connection;
 
   // server manager to deal with region server info
   private ServerManager serverManager;
@@ -298,7 +295,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       if (this.catalogTracker != null) this.catalogTracker.stop();
       if (this.serverManager != null) this.serverManager.stop();
       if (this.assignmentManager != null) this.assignmentManager.stop();
-      HConnectionManager.deleteConnection(this.conf, true);
       this.zooKeeper.close();
     }
     LOG.info("HMaster main thread exiting");
@@ -344,12 +340,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
     this.fileSystemManager = new MasterFileSystem(this, metrics);
-    this.connection = HConnectionManager.getConnection(conf);
     this.executorService = new ExecutorService(getServerName());
 
     this.serverManager = new ServerManager(this, this, metrics);
 
-    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
+    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.conf,
       this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));
     this.catalogTracker.start();
 

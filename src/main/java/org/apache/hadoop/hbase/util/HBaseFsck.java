@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
@@ -244,15 +245,23 @@ public class HBaseFsck {
    * Load the list of disabled tables in ZK into local set.
    * @throws ZooKeeperConnectionException
    * @throws IOException
-   * @throws KeeperException
    */
   private void loadDisabledTables()
-  throws ZooKeeperConnectionException, IOException, KeeperException {
-    ZooKeeperWatcher zkw =
-      HConnectionManager.getConnection(conf).getZooKeeperWatcher();
-    for (String tableName : ZKTable.getDisabledOrDisablingTables(zkw)) {
-      disabledTables.add(Bytes.toBytes(tableName));
-    }
+  throws ZooKeeperConnectionException, IOException {
+    HConnectionManager.execute(new HConnectable<Void>(conf) {
+      @Override
+      public Void connect(HConnection connection) throws IOException {
+        ZooKeeperWatcher zkw = connection.getZooKeeperWatcher();
+        try {
+          for (String tableName : ZKTable.getDisabledOrDisablingTables(zkw)) {
+            disabledTables.add(Bytes.toBytes(tableName));
+          }
+        } catch (KeeperException ke) {
+          throw new IOException(ke);
+        }
+        return null;
+      }
+    });
   }
 
   /**

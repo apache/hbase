@@ -30,6 +30,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -42,6 +43,7 @@ import org.apache.commons.logging.LogFactory;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * This class is for testing HCM features
@@ -71,10 +73,7 @@ public class TestHCM {
    * @throws SecurityException 
    * @see https://issues.apache.org/jira/browse/HBASE-2925
    */
-  // Disabling.  Of course this test will OOME using new Configuration each time
-  // St.Ack 20110428
-  // @Test
-  public void testManyNewConnectionsDoesnotOOME()
+  @Test public void testManyNewConnectionsDoesnotOOME()
   throws SecurityException, IllegalArgumentException,
   ZooKeeperConnectionException, NoSuchFieldException, IllegalAccessException,
   InterruptedException {
@@ -86,13 +85,16 @@ public class TestHCM {
   public static void createNewConfigurations() throws SecurityException,
   IllegalArgumentException, NoSuchFieldException,
   IllegalAccessException, InterruptedException, ZooKeeperConnectionException {
+    int startingHConnectionManagerCacheSize = getHConnectionManagerCacheSize();
     HConnection last = null;
-    for (int i = 0; i <= (HConnectionManager.MAX_CACHED_HBASE_INSTANCES * 2); i++) {
+    for (int i = 0; i <= 100; i++) {
       // set random key to differentiate the connection from previous ones
       Configuration configuration = HBaseConfiguration.create();
+      configuration.set(HConstants.HBASE_CONNECTION_PER_CONFIG, "false");
       configuration.set("somekey", String.valueOf(_randy.nextInt()));
       System.out.println("Hash Code: " + configuration.hashCode());
-      HConnection connection = HConnectionManager.getConnection(configuration);
+      HConnection connection =
+        HConnectionManager.getConnection(configuration);
       if (last != null) {
         if (last == connection) {
           System.out.println("!! Got same connection for once !!");
@@ -104,14 +106,11 @@ public class TestHCM {
       configuration.set("someotherkey", String.valueOf(_randy.nextInt()));
       last = connection;
       LOG.info("Cache Size: "
-          + getHConnectionManagerCacheSize() + ", Valid Keys: "
-          + getValidKeyCount());
+          + getHConnectionManagerCacheSize());
       Thread.sleep(100);
     }
-    Assert.assertEquals(HConnectionManager.MAX_CACHED_HBASE_INSTANCES,
+    Assert.assertEquals(startingHConnectionManagerCacheSize + 1,
       getHConnectionManagerCacheSize());
-    Assert.assertEquals(HConnectionManager.MAX_CACHED_HBASE_INSTANCES,
-      getValidKeyCount());
   }
 
   private static int getHConnectionManagerCacheSize()
@@ -122,21 +121,6 @@ public class TestHCM {
     cacheField.setAccessible(true);
     Map<?, ?> cache = (Map<?, ?>) cacheField.get(null);
     return cache.size();
-  }
-
-  private static int getValidKeyCount() throws SecurityException,
-  NoSuchFieldException, IllegalArgumentException,
-  IllegalAccessException {
-    Field cacheField =
-      HConnectionManager.class.getDeclaredField("HBASE_INSTANCES");
-    cacheField.setAccessible(true);
-    Map<?, ?> cache = (Map<?, ?>) cacheField.get(null);
-    List<Object> keys = new ArrayList<Object>(cache.keySet());
-    Set<Object> values = new HashSet<Object>();
-    for (Object key : keys) {
-      values.add(cache.get(key));
-    }
-    return values.size();
   }
 
   /**
@@ -157,5 +141,71 @@ public class TestHCM {
     conn.deleteCachedLocation(TABLE_NAME, ROW);
     HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
+  }
+
+  /**
+   * Make sure that {@link HConfiguration} instances that are essentially the
+   * same map to the same {@link HConnection} instance.
+   */
+  @Test
+  public void testConnectionSameness() throws Exception {
+    HConnection previousConnection = null;
+    for (int i = 0; i < 2; i++) {
+      // set random key to differentiate the connection from previous ones
+      Configuration configuration = TEST_UTIL.getConfiguration();
+      configuration.set(HConstants.HBASE_CONNECTION_PER_CONFIG, "false");
+      configuration.set("some_key", String.valueOf(_randy.nextInt()));
+      LOG.info("The hash code of the current configuration is: "
+          + configuration.hashCode());
+      HConnection currentConnection = HConnectionManager
+          .getConnection(configuration);
+      if (previousConnection != null) {
+        assertTrue(
+            "Did not get the same connection even though its key didn't change",
+            previousConnection == currentConnection);
+      }
+      previousConnection = currentConnection;
+      // change the configuration, so that it is no longer reachable from the
+      // client's perspective. However, since its part of the LRU doubly linked
+      // list, it will eventually get thrown out, at which time it should also
+      // close the corresponding {@link HConnection}.
+      configuration.set("other_key", String.valueOf(_randy.nextInt()));
+    }
+  }
+
+  /**
+   * Makes sure that there is no leaking of
+   * {@link HConnectionManager.TableServers} in the {@link HConnectionManager}
+   * class.
+   */
+  @Test
+  public void testConnectionUniqueness() throws Exception {
+    HConnection previousConnection = null;
+    for (int i = 0; i < 50; i++) {
+      // set random key to differentiate the connection from previous ones
+      Configuration configuration = TEST_UTIL.getConfiguration();
+      configuration.set(HConstants.HBASE_CONNECTION_PER_CONFIG, "false");
+      configuration.set("some_key", String.valueOf(_randy.nextInt()));
+      configuration.set(HConstants.HBASE_CLIENT_INSTANCE_ID,
+          String.valueOf(_randy.nextInt()));
+      LOG.info("The hash code of the current configuration is: "
+          + configuration.hashCode());
+      HConnection currentConnection = HConnectionManager
+          .getConnection(configuration);
+      if (previousConnection != null) {
+        assertTrue("Got the same connection even though its key changed!",
+            previousConnection != currentConnection);
+      }
+      // change the configuration, so that it is no longer reachable from the
+      // client's perspective. However, since its part of the LRU doubly linked
+      // list, it will eventually get thrown out, at which time it should also
+      // close the corresponding {@link HConnection}.
+      configuration.set("other_key", String.valueOf(_randy.nextInt()));
+
+      previousConnection = currentConnection;
+      LOG.info("The current HConnectionManager#HBASE_INSTANCES cache size is: "
+          + getHConnectionManagerCacheSize());
+      Thread.sleep(50);
+    }
   }
 }

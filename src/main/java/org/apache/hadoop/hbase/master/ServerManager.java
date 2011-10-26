@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -83,6 +84,7 @@ public class ServerManager {
 
   private final Server master;
   private final MasterServices services;
+  private final HConnection connection;
 
   // Reporting to track master metrics.
   private final MasterMetrics metrics;
@@ -96,9 +98,15 @@ public class ServerManager {
    * @param master
    * @param services
    * @param metrics
+   * @throws ZooKeeperConnectionException
    */
-  public ServerManager(final Server master, final MasterServices services,
-      MasterMetrics metrics) {
+  public ServerManager(final Server master, final MasterServices services, MasterMetrics metrics)
+  throws ZooKeeperConnectionException {
+	  this(master, services, metrics, true);
+	}
+	
+	ServerManager(final Server master, final MasterServices services, MasterMetrics metrics, final boolean connect)
+	throws ZooKeeperConnectionException {
     this.master = master;
     this.services = services;
     this.metrics = metrics;
@@ -106,6 +114,7 @@ public class ServerManager {
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     this.deadservers =
       new DeadServer(c.getInt("hbase.master.maxdeadservers", 100));
+    this.connection = connect ? HConnectionManager.getConnection(c) : null;
   }
 
   /**
@@ -612,12 +621,10 @@ public class ServerManager {
    */
   private HRegionInterface getServerConnection(HServerInfo info)
   throws IOException {
-    HConnection connection =
-      HConnectionManager.getConnection(this.master.getConfiguration());
     HRegionInterface hri = serverConnections.get(info.getServerName());
     if (hri == null) {
       LOG.debug("New connection to " + info.getServerName());
-      hri = connection.getHRegionConnection(info.getServerAddress(), false);
+      hri = this.connection.getHRegionConnection(info.getServerAddress(), false);
       this.serverConnections.put(info.getServerName(), hri);
     }
     return hri;
@@ -701,9 +708,15 @@ public class ServerManager {
   }
 
   /**
-   * Stop the ServerManager.  Currently does nothing.
+   * Stop the ServerManager.  Currently closes the connection to the master.
    */
   public void stop() {
-
+    if (connection != null) {
+      try {
+        connection.close();
+      } catch (IOException e) {
+        LOG.error("Attempt to close connection to master failed", e);
+      }
+    }
   }
 }

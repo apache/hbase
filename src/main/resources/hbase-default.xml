@@ -124,6 +124,14 @@
     before running a retry of a failed get, region lookup, etc.</description>
   </property>
   <property>
+    <name>hbase.connection.per.config</name>
+    <value>true</value>
+    <description>Disallows sharing of connections for configuration instances
+    with equivalent settings.
+    Default: true (expected to be false in future releases).
+    </description>
+  </property>
+  <property>
     <name>hbase.client.retries.number</name>
     <value>10</value>
     <description>Maximum retries.  Used as maximum for all retryable

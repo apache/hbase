@@ -72,7 +72,7 @@ public class TestClockSkewDetection {
 
       @Override
       public void stop(String why) {
-      }}, null, null);
+      }}, null, null, false);
 
     LOG.debug("regionServerStartup 1");
     HServerInfo hsi1 = new HServerInfo(new HServerAddress("example.org:1234"),
