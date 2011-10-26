@@ -254,24 +254,20 @@ public class TestWALReplay {
     Result result = region.get(g, null);
     assertEquals(countPerFamily * hri.getTableDesc().getFamilies().size(),
       result.size());
-    // Now close the region, split the log, reopen the region and assert that
-    // replay of log has no effect, that our seqids are calculated correctly so
+    // Now close the region (without flush), split the log, reopen the region and assert that
+    // replay of log has the correct effect, that our seqids are calculated correctly so
     // all edits in logs are seen as 'stale'/old.
-    region.close();
+    region.close(true);
     wal.close();
     runWALSplit(this.conf);
     HLog wal2 = createWAL(this.conf);
-    HRegion region2 = new HRegion(basedir, wal2, this.fs, this.conf, hri, null) {
-      @Override
-      protected boolean restoreEdit(Store s, KeyValue kv) {
-        super.restoreEdit(s, kv);
-        throw new RuntimeException("Called when it should not have been!");
-      }
-    };
+    HRegion region2 = new HRegion(basedir, wal2, this.fs, this.conf, hri, null);
     long seqid2 = region2.initialize();
     // HRegionServer usually does this. It knows the largest seqid across all regions.
     wal2.setSequenceNumber(seqid2);
     assertTrue(seqid + result.size() < seqid2);
+    final Result result1b = region2.get(g, null);
+    assertEquals(result.size(), result1b.size());
 
     // Next test.  Add more edits, then 'crash' this region by stealing its wal
     // out from under it and assert that replay of the log adds the edits back
@@ -313,6 +309,85 @@ public class TestWALReplay {
     // I can't close wal1.  Its been appropriated when we split.
     region3.close();
     wal3.closeAndDelete();
+  }
+
+  /**
+   * Test that we recover correctly when there is a failure in between the
+   * flushes. i.e. Some stores got flushed but others did not.
+   *
+   * Unfortunately, there is no easy hook to flush at a store level. The way
+   * we get around this is by flushing at the region level, and then deleting
+   * the recently flushed store file for one of the Stores. This would put us
+   * back in the situation where all but that store got flushed and the region
+   * died.
+   *
+   * We restart Region again, and verify that the edits were replayed.
+   *
+   * @throws IOException
+   * @throws IllegalAccessException
+   * @throws NoSuchFieldException
+   * @throws IllegalArgumentException
+   * @throws SecurityException
+   */
+  @Test
+  public void testReplayEditsAfterPartialFlush()
+  throws IOException, SecurityException, IllegalArgumentException,
+      NoSuchFieldException, IllegalAccessException, InterruptedException {
+    final String tableNameStr = "testReplayEditsAfterPartialFlush";
+    HRegionInfo hri = createBasic3FamilyHRegionInfo(tableNameStr);
+    Path basedir = new Path(this.hbaseRootDir, tableNameStr);
+    deleteDir(basedir);
+    final byte[] rowName = Bytes.toBytes(tableNameStr);
+    final int countPerFamily = 10;
+
+    // Write countPerFamily edits into the three families.  Do a flush on one
+    // of the families during the load of edits so its seqid is not same as
+    // others to test we do right thing when different seqids.
+    HLog wal = createWAL(this.conf);
+    HRegion region = new HRegion(basedir, wal, this.fs, this.conf, hri, null);
+    long seqid = region.initialize();
+    // HRegionServer usually does this. It knows the largest seqid across all regions.
+    wal.setSequenceNumber(seqid);
+    for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
+      addRegionEdits(rowName, hcd.getName(), countPerFamily, this.ee, region, "x");
+    }
+
+    // Now assert edits made it in.
+    final Get g = new Get(rowName);
+    Result result = region.get(g, null);
+    assertEquals(countPerFamily * hri.getTableDesc().getFamilies().size(),
+      result.size());
+
+    // Let us flush the region
+    region.flushcache();
+    region.close(true);
+    wal.close();
+
+    // delete the store files in the second column family to simulate a failure
+    // in between the flushcache();
+    // we have 3 families. killing the middle one ensures that taking the maximum
+    // will make us fail.
+    int cf_count = 0;
+    for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
+      cf_count++;
+      if (cf_count == 2) {
+        this.fs.delete(new Path(region.getRegionDir(), Bytes.toString(hcd.getName()))
+            , true);
+      }
+    }
+
+
+    // Let us try to split and recover
+    runWALSplit(this.conf);
+    HLog wal2 = createWAL(this.conf);
+    HRegion region2 = new HRegion(basedir, wal2, this.fs, this.conf, hri, null);
+    long seqid2 = region2.initialize();
+    // HRegionServer usually does this. It knows the largest seqid across all regions.
+    wal2.setSequenceNumber(seqid2);
+    assertTrue(seqid + result.size() < seqid2);
+
+    final Result result1b = region2.get(g, null);
+    assertEquals(result.size(), result1b.size());
   }
 
   /**
