@@ -44,7 +44,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -225,7 +224,7 @@ public class TestFromClientSide {
      ResultScanner scanner = table.getScanner(s);
      while (scanner.next() != null) continue;
 
-     Path tempPath = new Path(HBaseTestingUtility.getTestDir(), "regions.dat");
+     Path tempPath = new Path(TEST_UTIL.getDataTestDir(), "regions.dat");
 
      final String tempFileName = tempPath.toString();
 

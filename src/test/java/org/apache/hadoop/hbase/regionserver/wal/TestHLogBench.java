@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 import java.util.Random;
-import java.text.NumberFormat;
+
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.log4j.Level;
 import org.apache.commons.logging.Log;
@@ -39,17 +39,10 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestHLogBench extends Configured implements Tool {
@@ -69,8 +62,10 @@ public class TestHLogBench extends Configured implements Tool {
   // the number of threads and the number of iterations per thread
   private int numThreads = 300;
   private int numIterationsPerThread = 10000;
-  private Path regionRootDir = new Path(HBaseTestingUtility.getTestDir() + 
-                                        "/TestHLogBench/");
+
+  private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private Path regionRootDir =TEST_UTIL.getDataTestDir("TestHLogBench") ;
+
   private boolean appendNoSync = false;
 
   public TestHLogBench() {
@@ -327,7 +322,7 @@ public class TestHLogBench extends Configured implements Tool {
     argv[2] = "-numIterationsPerThread";
     argv[3] = Integer.toString(1000);
     argv[4] = "-path";
-    argv[5] = HBaseTestingUtility.getTestDir() + "/HlogPerformance";
+    argv[5] = TEST_UTIL.getDataTestDir() + "/HlogPerformance";
     argv[6] = "-nosync";
     try {
       res = ToolRunner.run(bench, argv);

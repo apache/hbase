@@ -47,8 +47,9 @@ public class TestAtomicOperation extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestAtomicOperation.class);
 
   HRegion region = null;
-  private final String DIR = HBaseTestingUtility.getTestDir() +
-    "/TestIncrement/";
+  private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final String DIR = TEST_UTIL.getDataTestDir("TestIncrement").toString();
+
 
   private final int MAX_VERSIONS = 2;
 
