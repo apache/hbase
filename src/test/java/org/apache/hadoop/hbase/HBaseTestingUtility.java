@@ -53,14 +53,13 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.migration.HRegionInfo090x;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ReadWriteConsistencyControl;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -1036,97 +1035,6 @@ public class HBaseTestingUtility {
       }
     }
     return count;
-  }
-
-  public int createMultiRegionsWithLegacyHRI(final Configuration c,
-                                             final HTableDescriptor htd,
-      final byte [] family, int numRegions)
-  throws IOException {
-    if (numRegions < 3) throw new IOException("Must create at least 3 regions");
-    byte [] startKey = Bytes.toBytes("aaaaa");
-    byte [] endKey = Bytes.toBytes("zzzzz");
-    byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
-    byte [][] regionStartKeys = new byte[splitKeys.length+1][];
-    for (int i=0;i<splitKeys.length;i++) {
-      regionStartKeys[i+1] = splitKeys[i];
-    }
-    regionStartKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
-    return createMultiRegionsWithLegacyHRI(c, htd, family, regionStartKeys);
-  }
-
-  public int createMultiRegionsWithLegacyHRI(final Configuration c,
-                                             final HTableDescriptor htd,
-      final byte[] columnFamily, byte [][] startKeys)
-  throws IOException {
-    Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
-    HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
-    if(!htd.hasFamily(columnFamily)) {
-      HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
-      htd.addFamily(hcd);
-    }
-    List<HRegionInfo090x> newRegions
-        = new ArrayList<HRegionInfo090x>(startKeys.length);
-    int count = 0;
-    for (int i = 0; i < startKeys.length; i++) {
-      int j = (i + 1) % startKeys.length;
-      HRegionInfo090x hri = new HRegionInfo090x(htd,
-        startKeys[i], startKeys[j]);
-      Put put = new Put(hri.getRegionName());
-      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(hri));
-      meta.put(put);
-      LOG.info("createMultiRegions: PUT inserted " + hri.toString());
-
-      newRegions.add(hri);
-      count++;
-    }
-    return count;
-
-  }
-
-  public int createMultiRegionsWithNewHRI(final Configuration c,
-                                             final HTableDescriptor htd,
-      final byte [] family, int numRegions)
-  throws IOException {
-    if (numRegions < 3) throw new IOException("Must create at least 3 regions");
-    byte [] startKey = Bytes.toBytes("aaaaa");
-    byte [] endKey = Bytes.toBytes("zzzzz");
-    byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
-    byte [][] regionStartKeys = new byte[splitKeys.length+1][];
-    for (int i=0;i<splitKeys.length;i++) {
-      regionStartKeys[i+1] = splitKeys[i];
-    }
-    regionStartKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
-    return createMultiRegionsWithNewHRI(c, htd, family, regionStartKeys);
-  }
-
-  public int createMultiRegionsWithNewHRI(final Configuration c, final HTableDescriptor htd,
-      final byte[] columnFamily, byte [][] startKeys)
-  throws IOException {
-    Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
-    HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
-    if(!htd.hasFamily(columnFamily)) {
-      HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
-      htd.addFamily(hcd);
-    }
-    List<HRegionInfo> newRegions
-        = new ArrayList<HRegionInfo>(startKeys.length);
-    int count = 0;
-    for (int i = 0; i < startKeys.length; i++) {
-      int j = (i + 1) % startKeys.length;
-      HRegionInfo hri = new HRegionInfo(htd.getName(),
-        startKeys[i], startKeys[j]);
-      Put put = new Put(hri.getRegionName());
-      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(hri));
-      meta.put(put);
-      LOG.info("createMultiRegions: PUT inserted " + hri.toString());
-
-      newRegions.add(hri);
-      count++;
-    }
-    return count;
-
   }
 
   /**
