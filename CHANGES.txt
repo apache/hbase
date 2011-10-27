@@ -409,6 +409,7 @@ Release 0.92.0 - Unreleased
    HBASE-4645  Edits Log recovery losing data across column families
    HBASE-4634  "test.build.data" property overused leading to write data at the
                wrong place (nkeywal)
+   HBASE-4388  Second start after migration from 90 to trunk crashes
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
