@@ -946,7 +946,7 @@ public class ThriftServer {
         value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
                                         HConstants.SERVER_QUALIFIER);
         if (value != null && value.length > 0) {
-          ServerName sn = new ServerName(value);
+          ServerName sn = new ServerName(Bytes.toString(value), -1/*Any value works here for startcode*/);
           region.setServerName(Bytes.toBytes(sn.getHostname()));
           region.port = sn.getPort();
         }
