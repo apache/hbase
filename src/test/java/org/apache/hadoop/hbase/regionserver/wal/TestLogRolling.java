@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -248,6 +249,17 @@ public class TestLogRolling  {
     } catch (InterruptedException e) {
       // continue
     }
+  }
+
+  void validateData(HTable table, int rownum) throws IOException {
+    String row = "row" + String.format("%1$04d", rownum);
+    Get get = new Get(Bytes.toBytes(row));
+    get.addFamily(HConstants.CATALOG_FAMILY);
+    Result result = table.get(get);
+    assertTrue(result.size() == 1);
+    assertTrue(Bytes.equals(value,
+                result.getValue(HConstants.CATALOG_FAMILY, null)));
+    LOG.info("Validated row " + row);
   }
 
   void batchWriteAndWait(HTable table, int start, boolean expect, int timeout)
@@ -462,6 +474,7 @@ public class TestLogRolling  {
     Thread.sleep(1000);
     dfsCluster.waitActive();
     LOG.info("Data Nodes restarted");
+    validateData(table, 1002);
 
     // this write should succeed, but trigger a log roll
     writeData(table, 1003);
@@ -469,6 +482,7 @@ public class TestLogRolling  {
 
     assertTrue("Missing datanode should've triggered a log roll",
         newFilenum > oldFilenum && newFilenum > curTime);
+    validateData(table, 1003);
 
     writeData(table, 1004);
 
@@ -477,6 +491,7 @@ public class TestLogRolling  {
     Thread.sleep(1000);
     dfsCluster.waitActive();
     LOG.info("Data Nodes restarted");
+    validateData(table, 1004);
 
     // this write should succeed, but trigger a log roll
     writeData(table, 1005);

@@ -250,6 +250,38 @@ public class MemStore implements HeapSize {
   }
 
   /**
+   * Remove n key from the memstore. Only kvs that have the same key and the
+   * same memstoreTS are removed.  It is ok to not update timeRangeTracker 
+   * in this call. It is possible that we can optimize this method by using 
+   * tailMap/iterator, but since this method is called rarely (only for 
+   * error recovery), we can leave those optimization for the future.
+   * @param kv
+   */
+  void rollback(final KeyValue kv) {
+    this.lock.readLock().lock();
+    try {
+      // If the key is in the snapshot, delete it. We should not update
+      // this.size, because that tracks the size of only the memstore and
+      // not the snapshot. The flush of this snapshot to disk has not
+      // yet started because Store.flush() waits for all rwcc transactions to
+      // commit before starting the flush to disk.
+      KeyValue found = this.snapshot.get(kv);
+      if (found != null && found.getMemstoreTS() == kv.getMemstoreTS()) {
+        this.snapshot.remove(kv);
+      }
+      // If the key is in the memstore, delete it. Update this.size.
+      found = this.kvset.get(kv);
+      if (found != null && found.getMemstoreTS() == kv.getMemstoreTS()) {
+        this.kvset.remove(kv);
+        long s = heapSizeChange(kv, true);
+        this.size.addAndGet(-s);
+      }
+    } finally {
+      this.lock.readLock().unlock();
+    }
+  }
+
+  /**
    * Write a delete
    * @param delete
    * @return approximate size of the passed key and value.

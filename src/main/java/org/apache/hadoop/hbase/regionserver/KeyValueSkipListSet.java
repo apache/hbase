@@ -165,6 +165,10 @@ class KeyValueSkipListSet implements NavigableSet<KeyValue> {
     throw new UnsupportedOperationException("Not implemented");
   }
 
+  public KeyValue get(KeyValue kv) {
+    return this.delegatee.get(kv);
+  }
+
   public int size() {
     return this.delegatee.size();
   }

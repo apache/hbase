@@ -1230,7 +1230,7 @@ public class HLog implements Syncable {
         logSyncerThread.hlogFlush(this.writer);
         this.writer.sync();
         syncBatchSize.addAndGet(doneUpto - this.syncedTillHere);
-        this.syncedTillHere = doneUpto;
+        this.syncedTillHere = Math.max(this.syncedTillHere, doneUpto);
       } catch(IOException io) {
         syncSuccessful = false;
       }

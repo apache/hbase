@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.SortedSet;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -322,6 +323,22 @@ public class Store implements HeapSize {
   }
 
   /**
+   * Removes a kv from the memstore. The KeyValue is removed only
+   * if its key & memstoreTS matches the key & memstoreTS value of the 
+   * kv parameter.
+   *
+   * @param kv
+   */
+  protected void rollback(final KeyValue kv) {
+    lock.readLock().lock();
+    try {
+      this.memstore.rollback(kv);
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  /**
    * @return All store files.
    */
   List<StoreFile> getStorefiles() {
@@ -447,34 +464,41 @@ public class Store implements HeapSize {
    * @param logCacheFlushId flush sequence number
    * @param snapshot
    * @param snapshotTimeRangeTracker
-   * @return true if a compaction is needed
+   * @param flushedSize The number of bytes flushed
+   * @param status
+   * @return Path The path name of the tmp file to which the store was flushed
    * @throws IOException
    */
-  private StoreFile flushCache(final long logCacheFlushId,
+  private Path flushCache(final long logCacheFlushId,
       SortedSet<KeyValue> snapshot,
       TimeRangeTracker snapshotTimeRangeTracker,
+      AtomicLong flushedSize,
       MonitoredTask status) throws IOException {
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
     return internalFlushCache(
-        snapshot, logCacheFlushId, snapshotTimeRangeTracker, status);
+        snapshot, logCacheFlushId, snapshotTimeRangeTracker, flushedSize, status);
   }
 
   /*
    * @param cache
    * @param logCacheFlushId
-   * @return StoreFile created.
+   * @param snapshotTimeRangeTracker
+   * @param flushedSize The number of bytes flushed
+   * @return Path The path name of the tmp file to which the store was flushed
    * @throws IOException
    */
-  private StoreFile internalFlushCache(final SortedSet<KeyValue> set,
+  private Path internalFlushCache(final SortedSet<KeyValue> set,
       final long logCacheFlushId,
       TimeRangeTracker snapshotTimeRangeTracker,
+      AtomicLong flushedSize,
       MonitoredTask status)
       throws IOException {
     StoreFile.Writer writer;
     String fileName;
     long flushed = 0;
+    Path pathName;
     // Don't flush if there are no entries.
     if (set.size() == 0) {
       return null;
@@ -496,7 +520,7 @@ public class Store implements HeapSize {
         // A. Write the map out to the disk
         writer = createWriterInTmp(set.size());
         writer.setTimeRangeTracker(snapshotTimeRangeTracker);
-        fileName = writer.getPath().getName();
+        pathName = writer.getPath();
         try {
           List<KeyValue> kvs = new ArrayList<KeyValue>();
           boolean hasMore;
@@ -520,17 +544,39 @@ public class Store implements HeapSize {
         }
       }
     } finally {
+      flushedSize.set(flushed);
       scanner.close();
     }
+    if (LOG.isInfoEnabled()) {
+      LOG.info("Flushed " + 
+               ", sequenceid=" + logCacheFlushId +
+               ", memsize=" + StringUtils.humanReadableInt(flushed) +
+               ", into tmp file " + pathName);
+    }
+    return pathName;
+  }
 
+  /*
+   * @param path The pathname of the tmp file into which the store was flushed
+   * @param logCacheFlushId
+   * @return StoreFile created.
+   * @throws IOException
+   */
+  private StoreFile commitFile(final Path path,
+      final long logCacheFlushId,
+      TimeRangeTracker snapshotTimeRangeTracker,
+      AtomicLong flushedSize,
+      MonitoredTask status)
+      throws IOException {
     // Write-out finished successfully, move into the right spot
+    String fileName = path.getName();
     Path dstPath = new Path(homedir, fileName);
-    validateStoreFile(writer.getPath());
-    String msg = "Renaming flushed file at " + writer.getPath() + " to " + dstPath;
+    validateStoreFile(path);
+    String msg = "Renaming flushed file at " + path + " to " + dstPath;
     LOG.info(msg);
     status.setStatus("Flushing " + this + ": " + msg);
-    if (!fs.rename(writer.getPath(), dstPath)) {
-      LOG.warn("Unable to rename " + writer.getPath() + " to " + dstPath);
+    if (!fs.rename(path, dstPath)) {
+      LOG.warn("Unable to rename " + path + " to " + dstPath);
     }
 
     status.setStatus("Flushing " + this + ": reopening flushed file");
@@ -546,11 +592,10 @@ public class Store implements HeapSize {
     // HRegion.internalFlushcache, which indirectly calls this to actually do
     // the flushing through the StoreFlusherImpl class
     HRegion.incrNumericPersistentMetric("cf." + this.toString() + ".flushSize",
-        flushed);
+        flushedSize.longValue());
     if(LOG.isInfoEnabled()) {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
         ", sequenceid=" + logCacheFlushId +
-        ", memsize=" + StringUtils.humanReadableInt(flushed) +
         ", filesize=" + StringUtils.humanReadableInt(r.length()));
     }
     return sf;
@@ -1815,10 +1860,13 @@ public class Store implements HeapSize {
     private long cacheFlushId;
     private SortedSet<KeyValue> snapshot;
     private StoreFile storeFile;
+    private Path storeFilePath;
     private TimeRangeTracker snapshotTimeRangeTracker;
+    private AtomicLong flushedSize;
 
     private StoreFlusherImpl(long cacheFlushId) {
       this.cacheFlushId = cacheFlushId;
+      this.flushedSize = new AtomicLong();
     }
 
     @Override
@@ -1830,15 +1878,17 @@ public class Store implements HeapSize {
 
     @Override
     public void flushCache(MonitoredTask status) throws IOException {
-      storeFile = Store.this.flushCache(
-          cacheFlushId, snapshot, snapshotTimeRangeTracker, status);
+      storeFilePath = Store.this.flushCache(
+        cacheFlushId, snapshot, snapshotTimeRangeTracker, flushedSize, status);
     }
 
     @Override
-    public boolean commit() throws IOException {
-      if (storeFile == null) {
+    public boolean commit(MonitoredTask status) throws IOException {
+      if (storeFilePath == null) {
         return false;
       }
+      storeFile = Store.this.commitFile(storeFilePath, cacheFlushId,
+                               snapshotTimeRangeTracker, flushedSize, status);
       // Add new file to store files.  Clear snapshot too while we have
       // the Store write lock.
       return Store.this.updateStorefiles(storeFile, snapshot);

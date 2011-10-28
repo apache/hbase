@@ -60,5 +60,5 @@ interface StoreFlusher {
    * @return
    * @throws IOException
    */
-  boolean commit() throws IOException;
+  boolean commit(MonitoredTask status) throws IOException;
 }
