@@ -414,6 +414,7 @@ Release 0.92.0 - Unreleased
                of ArithmeticException: / by zero.
    HBASE-4300  Start of new-version master fails if old master's znode is
                hanging around
+   HBASE-4679  Thrift null mutation error
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
