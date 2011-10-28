@@ -2431,7 +2431,8 @@ public class HRegion implements HeapSize { // , Writable{
   private long replayRecoveredEdits(final Path edits,
       final long minSeqId, final CancelableProgressable reporter)
     throws IOException {
-    String msg = "Replaying edits from " + edits + "; minSequenceid=" + minSeqId;
+    String msg = "Replaying edits from " + edits + "; minSequenceid=" +
+      minSeqId + "; path=" + edits;
     LOG.info(msg);
     MonitoredTask status = TaskMonitor.get().createStatus(msg);
     
@@ -2445,6 +2446,7 @@ public class HRegion implements HeapSize { // , Writable{
     long intervalEdits = 0;
     HLog.Entry entry;
     Store store = null;
+    boolean reported_once = false;
 
     try {
       // How many edits seen before we check elapsed time
@@ -2477,6 +2479,7 @@ public class HRegion implements HeapSize { // , Writable{
                 status.abort(msg);
                 throw new IOException(msg);
               }
+              reported_once = true;
               lastReport = cur;
             }
           }
@@ -2556,14 +2559,14 @@ public class HRegion implements HeapSize { // , Writable{
         throw ioe;
       }
     }
-    
+    if (reporter != null && !reported_once) {
+      reporter.progress();
+    }
     msg = "Applied " + editsCount + ", skipped " + skippedEdits +
     ", firstSequenceidInLog=" + firstSeqIdInLog +
-    ", maxSequenceidInLog=" + currentEditSeqId;
+    ", maxSequenceidInLog=" + currentEditSeqId + ", path=" + edits;
     status.markComplete(msg);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(msg);
-    }
+    LOG.debug(msg);
     return currentEditSeqId;
     } finally {
       reader.close();
