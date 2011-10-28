@@ -719,6 +719,7 @@ Release 0.92.0 - Unreleased
    HBASE-4437  Update hadoop in 0.92 (0.20.205?)
    HBASE-4656  Note how dfs.support.append has to be enabled in 0.20.205.0
                clusters
+   HBASE-4699  Cleanup the UIs
 
   NEW FEATURES
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
