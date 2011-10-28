@@ -721,6 +721,8 @@ Release 0.92.0 - Unreleased
    HBASE-4656  Note how dfs.support.append has to be enabled in 0.20.205.0
                clusters
    HBASE-4699  Cleanup the UIs
+   HBASE-4552  Remove trivial 0.90 deprecated code from 0.92 and trunk.
+               (Jonathan Hsieh)
 
   NEW FEATURES
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
