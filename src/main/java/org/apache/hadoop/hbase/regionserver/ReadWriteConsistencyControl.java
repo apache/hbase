@@ -87,6 +87,11 @@ public class ReadWriteConsistencyControl {
   }
 
   public void completeMemstoreInsert(WriteEntry e) {
+    advanceMemstore(e);
+    waitForRead(e);
+  }
+
+  boolean advanceMemstore(WriteEntry e) {
     synchronized (writeQueue) {
       e.markCompleted();
 
@@ -120,10 +125,19 @@ public class ReadWriteConsistencyControl {
           memstoreRead = nextReadValue;
           readWaiters.notifyAll();
         }
-
       }
+      if (memstoreRead >= e.getWriteNumber()) {
+        return true;
+      }
+      return false;
     }
+  }
 
+  /**
+   * Wait for the global readPoint to advance upto
+   * the specified transaction number.
+   */
+  public void waitForRead(WriteEntry e) {
     boolean interrupted = false;
     synchronized (readWaiters) {
       while (memstoreRead < e.getWriteNumber()) {

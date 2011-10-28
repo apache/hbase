@@ -1209,6 +1209,7 @@ public class HRegion implements HeapSize { // , Writable{
     // during the flush
     long sequenceId = -1L;
     long completeSequenceId = -1L;
+    ReadWriteConsistencyControl.WriteEntry w = null;
 
     // We have to take a write lock during snapshot, or else a write could
     // end up in both snapshot and memstore (makes it difficult to do atomic
@@ -1219,6 +1220,10 @@ public class HRegion implements HeapSize { // , Writable{
     final long currentMemStoreSize = this.memstoreSize.get();
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(stores.size());
     try {
+      // Record the rwcc for all transactions in progress.
+      w = rwcc.beginMemstoreInsert();
+      rwcc.advanceMemstore(w);
+
       sequenceId = (wal == null)? myseqid :
         wal.startCacheFlush(this.regionInfo.getEncodedNameAsBytes());
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
@@ -1234,8 +1239,17 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       this.updatesLock.writeLock().unlock();
     }
-    status.setStatus("Flushing stores");
+    status.setStatus("Waiting for rwcc");
+    LOG.debug("Finished snapshotting, commencing waiting for rwcc");
 
+    // wait for all in-progress transactions to commit to HLog before
+    // we can start the flush. This prevents
+    // uncommitted transactions from being written into HFiles.
+    // We have to block before we start the flush, otherwise keys that
+    // were removed via a rollbackMemstore could be written to Hfiles.
+    rwcc.waitForRead(w);
+
+    status.setStatus("Flushing stores");
     LOG.debug("Finished snapshotting, commencing flushing stores");
 
     // Any failure from here on out will be catastrophic requiring server
@@ -1246,15 +1260,17 @@ public class HRegion implements HeapSize { // , Writable{
     try {
       // A.  Flush memstore to all the HStores.
       // Keep running vector of all store files that includes both old and the
-      // just-made new flush store file.
+      // just-made new flush store file. The new flushed file is still in the
+      // tmp directory.
 
       for (StoreFlusher flusher : storeFlushers) {
         flusher.flushCache(status);
       }
+
       // Switch snapshot (in memstore) -> new hfile (thus causing
       // all the store scanners to reset/reseek).
       for (StoreFlusher flusher : storeFlushers) {
-        boolean needsCompaction = flusher.commit();
+        boolean needsCompaction = flusher.commit(status);
         if (needsCompaction) {
           compactionRequested = true;
         }
@@ -1483,11 +1499,12 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
+   * This is used only by unit tests. Not required to be a public API.
    * @param familyMap map of family to edits for the given family.
    * @param writeToWAL
    * @throws IOException
    */
-  public void delete(Map<byte[], List<KeyValue>> familyMap, UUID clusterId,
+  void delete(Map<byte[], List<KeyValue>> familyMap, UUID clusterId,
       boolean writeToWAL) throws IOException {
     Delete delete = new Delete();
     delete.setFamilyMap(familyMap);
@@ -1577,7 +1594,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
 
       // Now make changes to the memstore.
-      long addedSize = applyFamilyMapToMemstore(familyMap);
+      long addedSize = applyFamilyMapToMemstore(familyMap, null);
       flush = isFlushSize(this.addAndGetGlobalMemstoreSize(addedSize));
 
       if (coprocessorHost != null) {
@@ -1745,8 +1762,9 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
 
-    long now = EnvironmentEdgeManager.currentTimeMillis();
-    byte[] byteNow = Bytes.toBytes(now);
+    ReadWriteConsistencyControl.WriteEntry w = null;
+    long txid = 0;
+    boolean walSyncSuccessful = false;
     boolean locked = false;
 
     /** Keep track of the locks we hold so we can release them in finally clause */
@@ -1805,6 +1823,12 @@ public class HRegion implements HeapSize { // , Writable{
         lastIndexExclusive++;
         numReadyToWrite++;
       }
+
+      // we should record the timestamp only after we have acquired the rowLock,
+      // otherwise, newer puts are not guaranteed to have a newer timestamp
+      long now = EnvironmentEdgeManager.currentTimeMillis();
+      byte[] byteNow = Bytes.toBytes(now);
+
       // Nothing to put -- an exception in the above such as NoSuchColumnFamily?
       if (numReadyToWrite <= 0) return 0L;
 
@@ -1823,32 +1847,23 @@ public class HRegion implements HeapSize { // , Writable{
             byteNow);
       }
 
-
       this.updatesLock.readLock().lock();
       locked = true;
 
+      //
       // ------------------------------------
-      // STEP 3. Write to WAL
+      // Acquire the latest rwcc number
       // ----------------------------------
-      for (int i = firstIndex; i < lastIndexExclusive; i++) {
-        // Skip puts that were determined to be invalid during preprocessing
-        if (batchOp.retCodeDetails[i].getOperationStatusCode()
-            != OperationStatusCode.NOT_RUN) {
-          continue;
-        }
-
-        Put p = batchOp.operations[i].getFirst();
-        if (!p.getWriteToWAL()) continue;
-        addFamilyMapToWALEdit(familyMaps[i], walEdit);
-      }
-
-      // Append the edit to WAL
-      Put first = batchOp.operations[firstIndex].getFirst();
-      this.log.append(regionInfo, this.htableDescriptor.getName(),
-          walEdit, first.getClusterId(), now, this.htableDescriptor);
+      w = rwcc.beginMemstoreInsert();
 
       // ------------------------------------
-      // STEP 4. Write back to memstore
+      // STEP 3. Write back to memstore
+      // Write to memstore. It is ok to write to memstore
+      // first without updating the HLog because we do not roll
+      // forward the memstore RWCC. The RWCC will be moved up when
+      // the complete operation is done. These changes are not yet
+      // visible to scanners till we update the RWCC. The RWCC is
+      // moved only when the sync is complete.
       // ----------------------------------
       long addedSize = 0;
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
@@ -1856,13 +1871,65 @@ public class HRegion implements HeapSize { // , Writable{
             != OperationStatusCode.NOT_RUN) {
           continue;
         }
-        addedSize += applyFamilyMapToMemstore(familyMaps[i]);
-        batchOp.retCodeDetails[i] = new OperationStatus(
-            OperationStatusCode.SUCCESS);
+        addedSize += applyFamilyMapToMemstore(familyMaps[i], w);
       }
 
       // ------------------------------------
-      // STEP 5. Run coprocessor post hooks
+      // STEP 4. Build WAL edit
+      // ----------------------------------
+      for (int i = firstIndex; i < lastIndexExclusive; i++) {
+        // Skip puts that were determined to be invalid during preprocessing
+        if (batchOp.retCodeDetails[i].getOperationStatusCode()
+            != OperationStatusCode.NOT_RUN) {
+          continue;
+        }
+        batchOp.retCodeDetails[i] = new OperationStatus(OperationStatusCode.SUCCESS);
+
+        Put p = batchOp.operations[i].getFirst();
+        if (!p.getWriteToWAL()) continue;
+        addFamilyMapToWALEdit(familyMaps[i], walEdit);
+      }
+
+      // -------------------------
+      // STEP 5. Append the edit to WAL. Do not sync wal.
+      // -------------------------
+      Put first = batchOp.operations[firstIndex].getFirst();
+      txid = this.log.appendNoSync(regionInfo, this.htableDescriptor.getName(),
+               walEdit, first.getClusterId(), now, this.htableDescriptor);
+
+      // -------------------------------
+      // STEP 6. Release row locks, etc.
+      // -------------------------------
+      if (locked) {
+        this.updatesLock.readLock().unlock();
+        locked = false;
+      }
+      if (acquiredLocks != null) {
+        for (Integer toRelease : acquiredLocks) {
+          releaseRowLock(toRelease);
+        }
+        acquiredLocks = null;
+      }
+      // -------------------------
+      // STEP 7. Sync wal.
+      // -------------------------
+      if (walEdit.size() > 0 &&
+          (this.regionInfo.isMetaRegion() || 
+           !this.htableDescriptor.isDeferredLogFlush())) {
+        this.log.sync(txid);
+      }
+      walSyncSuccessful = true;
+      // ------------------------------------------------------------------
+      // STEP 8. Advance rwcc. This will make this put visible to scanners and getters.
+      // ------------------------------------------------------------------
+      if (w != null) {
+        rwcc.completeMemstoreInsert(w);
+        w = null;
+      }
+
+      // ------------------------------------
+      // STEP 9. Run coprocessor post hooks. This should be done after the wal is
+      // sycned so that the coprocessor contract is adhered to.
       // ------------------------------------
       if (coprocessorHost != null) {
         for (int i = firstIndex; i < lastIndexExclusive; i++) {
@@ -1879,11 +1946,21 @@ public class HRegion implements HeapSize { // , Writable{
       success = true;
       return addedSize;
     } finally {
-      if (locked)
-        this.updatesLock.readLock().unlock();
 
-      for (Integer toRelease : acquiredLocks) {
-        releaseRowLock(toRelease);
+      // if the wal sync was unsuccessful, remove keys from memstore
+      if (!walSyncSuccessful) {
+        rollbackMemstore(batchOp, familyMaps, firstIndex, lastIndexExclusive);
+      }
+      if (w != null) rwcc.completeMemstoreInsert(w);
+
+      if (locked) {
+        this.updatesLock.readLock().unlock();
+      }
+
+      if (acquiredLocks != null) {
+        for (Integer toRelease : acquiredLocks) {
+          releaseRowLock(toRelease);
+        }
       }
       if (!success) {
         for (int i = firstIndex; i < lastIndexExclusive; i++) {
@@ -2121,7 +2198,7 @@ public class HRegion implements HeapSize { // , Writable{
             walEdit, clusterId, now, this.htableDescriptor);
       }
 
-      long addedSize = applyFamilyMapToMemstore(familyMap);
+      long addedSize = applyFamilyMapToMemstore(familyMap, null);
       flush = isFlushSize(this.addAndGetGlobalMemstoreSize(addedSize));
     } finally {
       this.updatesLock.readLock().unlock();
@@ -2143,14 +2220,22 @@ public class HRegion implements HeapSize { // , Writable{
    * should already have locked updatesLock.readLock(). This also does
    * <b>not</b> check the families for validity.
    *
+   * @param familyMap Map of kvs per family
+   * @param localizedWriteEntry The WriteEntry of the RWCC for this transaction.
+   *        If null, then this method internally creates a rwcc transaction.
    * @return the additional memory usage of the memstore caused by the
    * new entries.
    */
-  private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap) {
-    ReadWriteConsistencyControl.WriteEntry w = null;
+  private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap,
+    ReadWriteConsistencyControl.WriteEntry localizedWriteEntry) {
     long size = 0;
+    boolean freerwcc = false;
+
     try {
-      w = rwcc.beginMemstoreInsert();
+      if (localizedWriteEntry == null) {
+        localizedWriteEntry = rwcc.beginMemstoreInsert();
+        freerwcc = true;
+      }
 
       for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
         byte[] family = e.getKey();
@@ -2158,14 +2243,52 @@ public class HRegion implements HeapSize { // , Writable{
 
         Store store = getStore(family);
         for (KeyValue kv: edits) {
-          kv.setMemstoreTS(w.getWriteNumber());
+          kv.setMemstoreTS(localizedWriteEntry.getWriteNumber());
           size += store.add(kv);
         }
       }
     } finally {
-      rwcc.completeMemstoreInsert(w);
+      if (freerwcc) {
+        rwcc.completeMemstoreInsert(localizedWriteEntry);
+      }
     }
     return size;
+  }
+
+  /**
+   * Remove all the keys listed in the map from the memstore. This method is
+   * called when a Put has updated memstore but subequently fails to update 
+   * the wal. This method is then invoked to rollback the memstore.
+   */
+  private void rollbackMemstore(BatchOperationInProgress<Pair<Put, Integer>> batchOp,
+                                Map<byte[], List<KeyValue>>[] familyMaps,
+                                int start, int end) {
+    int kvsRolledback = 0;
+    for (int i = start; i < end; i++) {
+      // skip over request that never succeeded in the first place.
+      if (batchOp.retCodeDetails[i].getOperationStatusCode()
+            != OperationStatusCode.SUCCESS) {
+        continue;
+      }
+
+      // Rollback all the kvs for this row. 
+      Map<byte[], List<KeyValue>> familyMap  = familyMaps[i]; 
+      for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
+        byte[] family = e.getKey();
+        List<KeyValue> edits = e.getValue();
+
+        // Remove those keys from the memstore that matches our 
+        // key's (row, cf, cq, timestamp, memstoreTS). The interesting part is
+        // that even the memstoreTS has to match for keys that will be rolleded-back.
+        Store store = getStore(family);
+        for (KeyValue kv: edits) {
+          store.rollback(kv);
+          kvsRolledback++;
+        }
+      }
+    }
+    LOG.debug("rollbackMemstore rolled back " + kvsRolledback +
+        " keyvalues from start:" + start + " to end:" + end);
   }
 
   /**

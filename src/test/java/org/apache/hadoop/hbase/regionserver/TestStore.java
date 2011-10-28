@@ -618,7 +618,7 @@ public class TestStore extends TestCase {
     StoreFlusher storeFlusher = store.getStoreFlusher(id);
     storeFlusher.prepare();
     storeFlusher.flushCache(Mockito.mock(MonitoredTask.class));
-    storeFlusher.commit();
+    storeFlusher.commit(Mockito.mock(MonitoredTask.class));
   }
 
 

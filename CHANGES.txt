@@ -4,6 +4,8 @@ Release 0.93.0 - Unreleased
    HBASE-4460  Support running an embedded ThriftServer within a RegionServer (jgray)
    HBASE-4536  Allow CF to retain deleted rows (Lars H)
    HBASE-4629  Enable automated patch testing for hbase (Giridharan Kesavan)
+   HBASE-4528  The put operation can release the rowlock before sync-ing the
+               Hlog (dhruba via jgray)
 
   IMPROVEMENT
    HBASE-4132  Extend the WALActionsListener API to accomodate log archival
