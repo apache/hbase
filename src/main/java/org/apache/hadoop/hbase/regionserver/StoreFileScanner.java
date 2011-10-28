@@ -156,7 +156,6 @@ class StoreFileScanner implements KeyValueScanner {
 
   public boolean reseek(KeyValue key) throws IOException {
     seekCount.incrementAndGet();
-    System.out.println("Reseek " + key + " data block " + HFile.dataBlockReadCnt);
     try {
       try {
         if (!reseekAtOrAfter(hfs, key)) {
