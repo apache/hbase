@@ -419,6 +419,7 @@ Release 0.92.0 - Unreleased
    HBASE-4692  HBASE-4300 broke the build
    HBASE-4680  FSUtils.isInSafeMode() checks should operate on HBase root dir,
                where we have permissions
+   HBASE-4641  Block cache can be mistakenly instantiated on Master (jgray)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
