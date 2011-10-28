@@ -561,9 +561,6 @@ public class HLog implements Syncable {
       }
       this.filenum = System.currentTimeMillis();
       Path newPath = computeFilename();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Enabling new writer for "+FSUtils.getPath(newPath));
-      }
 
       // Tell our listeners that a new log is about to be created
       if (!this.listeners.isEmpty()) {
@@ -597,7 +594,7 @@ public class HLog implements Syncable {
             this.numEntries.get() +
             ", filesize=" +
             this.fs.getFileStatus(oldFile).getLen() + ". ": "") +
-          "New hlog " + FSUtils.getPath(newPath));
+          " for " + FSUtils.getPath(newPath));
         this.numEntries.set(0);
       }
       // Can we delete any of the old log files?

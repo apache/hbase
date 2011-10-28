@@ -691,6 +691,7 @@ Release 0.92.0 - Unreleased
                cluster instead of one per method (nkeywal)
    HBASE-3929  Add option to HFile tool to produce basic stats (Matteo
                Bertozzi and todd via todd)
+   HBASE-4694  Some cleanup of log messages in RS and M
        
 
   TASKS
