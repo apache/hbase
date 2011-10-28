@@ -139,9 +139,11 @@ public class DependentColumnFilter extends CompareFilter {
         // include non-matches for the time being, they'll be discarded afterwards
         return ReturnCode.INCLUDE;
   	}
-  	// If it doesn't pass the op, skip it
-  	if(comparator != null && doCompare(compareOp, comparator, v.getValue(), 0, v.getValueLength()))
-  	  return ReturnCode.SKIP;  	  
+    // If it doesn't pass the op, skip it
+    if (comparator != null
+        && doCompare(compareOp, comparator, v.getBuffer(), v.getValueOffset(),
+            v.getValueLength()))
+      return ReturnCode.SKIP;
 	
     stampSet.add(v.getTimestamp());
     if(dropDependentColumn) {

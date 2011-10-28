@@ -52,7 +52,7 @@ implements ColumnAggregationProtocol {
         curVals.clear();
         done = scanner.next(curVals);
         KeyValue kv = curVals.get(0);
-        sumResult += Bytes.toInt(kv.getValue());
+        sumResult += Bytes.toInt(kv.getBuffer(), kv.getValueOffset());
       } while (done);
     } finally {
       scanner.close();

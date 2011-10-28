@@ -22,9 +22,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
@@ -62,8 +60,6 @@ public class ReplicationSink {
   private final Configuration conf;
   // Pool used to replicated
   private final HTablePool pool;
-  // Chain to pull on when we want all to stop.
-  private final Stoppable stopper;
   private final ReplicationSinkMetrics metrics;
 
   /**
@@ -78,7 +74,6 @@ public class ReplicationSink {
     this.conf = conf;
     this.pool = new HTablePool(this.conf,
         conf.getInt("replication.sink.htablepool.capacity", 10));
-    this.stopper = stopper;
     this.metrics = new ReplicationSinkMetrics();
   }
 
@@ -126,17 +121,17 @@ public class ReplicationSink {
           }
           // With mini-batching, we need to expect multiple rows per edit
           byte[] lastKey = kvs.get(0).getRow();
-          Put put = new Put(kvs.get(0).getRow(),
-              kvs.get(0).getTimestamp());
+          Put put = new Put(lastKey, kvs.get(0).getTimestamp());
           put.setClusterId(entry.getKey().getClusterId());
           for (KeyValue kv : kvs) {
-            if (!Bytes.equals(lastKey, kv.getRow())) {
+            byte[] key = kv.getRow();            
+            if (!Bytes.equals(lastKey, key)) {
               tableList.add(put);
-              put = new Put(kv.getRow(), kv.getTimestamp());
+              put = new Put(key, kv.getTimestamp());
               put.setClusterId(entry.getKey().getClusterId());
             }
-            put.add(kv.getFamily(), kv.getQualifier(), kv.getValue());
-            lastKey = kv.getRow();
+            put.add(kv);
+            lastKey = key;
           }
           tableList.add(put);
         }
@@ -172,7 +167,7 @@ public class ReplicationSink {
       this.metrics.appliedOpsRate.inc(puts.size());
     } finally {
       if (table != null) {
-        this.pool.putTable(table);
+        table.close();
       }
     }
   }
@@ -191,7 +186,7 @@ public class ReplicationSink {
       this.metrics.appliedOpsRate.inc(1);
     } finally {
       if (table != null) {
-        this.pool.putTable(table);
+        table.close();
       }
     }
   }

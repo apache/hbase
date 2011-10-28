@@ -2026,7 +2026,9 @@ public class HRegion implements HeapSize { // , Writable{
         if (result.size() == 0 && valueIsNull) {
           matches = true;
         } else if (result.size() == 1 && !valueIsNull) {
-          int compareResult = comparator.compareTo(result.get(0).getValue());
+          KeyValue kv = result.get(0);
+          int compareResult = comparator.compareTo(kv.getBuffer(),
+              kv.getValueOffset(), kv.getValueLength());
           switch (compareOp) {
           case LESS:
             matches = compareResult <= 0;
@@ -3896,7 +3898,8 @@ public class HRegion implements HeapSize { // , Writable{
             long amount = column.getValue();
             if (idx < results.size() &&
                 results.get(idx).matchingQualifier(column.getKey())) {
-              amount += Bytes.toLong(results.get(idx).getValue());
+              KeyValue kv = results.get(idx);
+              amount += Bytes.toLong(kv.getBuffer(), kv.getValueOffset());
               idx++;
             }
 
