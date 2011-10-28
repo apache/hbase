@@ -39,9 +39,9 @@ public class LongColumnInterpreter implements ColumnInterpreter<Long, Long> {
 
   public Long getValue(byte[] colFamily, byte[] colQualifier, KeyValue kv)
       throws IOException {
-    if (kv == null || kv.getValue().length != Bytes.SIZEOF_LONG)
+    if (kv == null || kv.getValueLength() != Bytes.SIZEOF_LONG)
       return null;
-    return Bytes.toLong(kv.getValue());
+    return Bytes.toLong(kv.getBuffer(), kv.getValueOffset());
   }
 
    @Override
