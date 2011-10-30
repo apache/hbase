@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.security.MessageDigest;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -1131,6 +1133,20 @@ public class HBaseTestingUtility {
     byte [] firstrow = metaRows.get(0);
     LOG.debug("FirstRow=" + Bytes.toString(firstrow));
     int index = hbaseCluster.getServerWith(firstrow);
+    long start = EnvironmentEdgeManager.currentTimeMillis();
+    int timeout = 3000;   // 3sec timeout
+    while (index == -1 &&
+        EnvironmentEdgeManager.currentTimeMillis() - start < timeout) {
+      try {
+        // wait for the region to come online
+        Thread.sleep(50);
+      } catch (InterruptedException ie) {
+        IOException t = new InterruptedIOException();
+        t.initCause(ie);
+        throw t;
+      }
+      index = hbaseCluster.getServerWith(firstrow);
+    }
     return hbaseCluster.getRegionServerThreads().get(index).getRegionServer();
   }
 
