@@ -37,7 +37,7 @@ Release 0.93.0 - Unreleased
    HBASE-4534  A new unit test for lazy seek and StoreScanner in general
                (mikhail via jgray)
    HBASE-4545  TestHLog doesn't clean up after itself
-
+   HBASE-4690  Intermittent TestRegionServerCoprocessorExceptionWithAbort failure
 
 Release 0.92.0 - Unreleased
   INCOMPATIBLE CHANGES
