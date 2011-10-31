@@ -169,15 +169,29 @@ public class EnableTableHandler extends EventHandler {
     }
 
     @Override
-    protected void populatePool(ExecutorService pool) {
-      for (HRegionInfo region: regions) {
-        if (assignmentManager.isRegionInTransition(region) != null) continue;
-        final HRegionInfo hri = region;
-        pool.execute(new Runnable() {
-          public void run() {
-            assignmentManager.assign(hri, true);
+    protected void populatePool(ExecutorService pool) throws IOException {
+      boolean roundRobinAssignment = this.server.getConfiguration().getBoolean(
+          "hbase.master.enabletable.roundrobin", false);
+
+      if (!roundRobinAssignment) {
+        for (HRegionInfo region : regions) {
+          if (assignmentManager.isRegionInTransition(region) != null) {
+            continue;
           }
-        });
+          final HRegionInfo hri = region;
+          pool.execute(new Runnable() {
+            public void run() {
+              assignmentManager.assign(hri, true);
+            }
+          });
+        }
+      } else {
+        try {
+          assignmentManager.assignUserRegionsToOnlineServers(regions);
+        } catch (InterruptedException e) {
+          LOG.warn("Assignment was interrupted");
+          Thread.currentThread().interrupt();
+        }
       }
     }
 

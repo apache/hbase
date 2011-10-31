@@ -27,6 +27,8 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -42,10 +44,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -53,16 +53,11 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.TestHLogUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -84,6 +79,8 @@ public class TestAdmin {
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
     TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
+    TEST_UTIL.getConfiguration().setBoolean(
+        "hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(3);
   }
 
@@ -578,6 +575,60 @@ public class TestAdmin {
     splitTest(splitKey, familyNames, rowCounts, numVersions, blockSize);
   }
 
+  /**
+   * Test round-robin assignment on enableTable.
+   * 
+   * @throws IOException
+   */
+  @Test
+  public void testEnableTableRoundRobinAssignment() throws IOException {
+    byte[] tableName = Bytes.toBytes("testEnableTableAssignment");
+    byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 },
+        new byte[] { 3, 3, 3 }, new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 },
+        new byte[] { 6, 6, 6 }, new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 },
+        new byte[] { 9, 9, 9 } };
+    int expectedRegions = splitKeys.length + 1;
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    admin.createTable(desc, splitKeys);
+    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Map<HRegionInfo, HServerAddress> regions = ht.getRegionsInfo();
+    assertEquals("Tried to create " + expectedRegions + " regions "
+        + "but only found " + regions.size(), expectedRegions, regions.size());
+    // Disable table.
+    admin.disableTable(tableName);
+    // Enable table, use round-robin assignment to assign regions.
+    admin.enableTable(tableName);
+
+    // Check the assignment.
+    HTable metaTable = new HTable(HConstants.META_TABLE_NAME);
+    List<HRegionInfo> regionInfos = admin.getTableRegions(tableName);
+    Map<String, Integer> serverMap = new HashMap<String, Integer>();
+    for (int i = 0, j = regionInfos.size(); i < j; i++) {
+      HRegionInfo hri = regionInfos.get(i);
+      Get get = new Get(hri.getRegionName());
+      Result result = metaTable.get(get);
+      String server = Bytes.toString(result.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.SERVER_QUALIFIER));
+      Integer regioncount = serverMap.get(server);
+      if (regioncount == null) {
+        regioncount = 0;
+      }
+      regioncount++;
+      serverMap.put(server, regioncount);
+    }
+    List<Map.Entry<String, Integer>> entryList = new ArrayList<Map.Entry<String, Integer>>(
+        serverMap.entrySet());
+    Collections.sort(entryList, new Comparator<Map.Entry<String, Integer>>() {
+      public int compare(Map.Entry<String, Integer> oa,
+          Map.Entry<String, Integer> ob) {
+        return (oa.getValue() - ob.getValue());
+      }
+    });
+    assertTrue(entryList.size() == 3);
+    assertTrue((entryList.get(2).getValue() - entryList.get(0).getValue()) < 2);
+  }
+  
   /**
    * Multi-family scenario. Tests forcing split from client and
    * having scanners successfully ride over split.
