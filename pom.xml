@@ -150,6 +150,22 @@
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
+      <id>kannan</id>
+      <name>Kannan Muthukkaruppan</name>
+      <email>kannan@fb.com</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>karthik</id>
+      <name>Karthik Ranganathan</name>
+      <email>kranganathan@fb.com</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
       <id>larsgeorge</id>
       <name>Lars George</name>
       <email>larsgeorge@apache.org</email>
@@ -169,14 +185,6 @@
       <id>nspiegelberg</id>
       <name>Nicolas Spiegelberg</name>
       <email>nspiegelberg@fb.com</email>
-      <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
-    </developer>
-    <developer>
-      <id>kannan</id>
-      <name>Kannan Muthukkaruppan</name>
-      <email>kannan@fb.com</email>
       <timezone>-8</timezone>
       <organization>Facebook</organization>
       <organizationUrl>http://www.facebook.com</organizationUrl>
