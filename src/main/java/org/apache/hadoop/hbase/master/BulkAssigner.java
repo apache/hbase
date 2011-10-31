@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.concurrent.Executors;
 
@@ -35,7 +36,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * Server.
  */
 public abstract class BulkAssigner {
-  final Server server;
+  protected final Server server;
 
   /**
    * @param server An instance of Server
@@ -71,19 +72,24 @@ public abstract class BulkAssigner {
       getLong("hbase.bulk.assignment.waiton.empty.rit", 5 * 60 * 1000);
   }
 
-  protected abstract void populatePool(final java.util.concurrent.ExecutorService pool);
+  protected abstract void populatePool(
+      final java.util.concurrent.ExecutorService pool) throws IOException;
 
-  public boolean bulkAssign() throws InterruptedException {
+  public boolean bulkAssign() throws InterruptedException, IOException {
     return bulkAssign(true);
   }
 
   /**
    * Run the bulk assign.
-   * @param sync Whether to assign synchronously.
+   * 
+   * @param sync
+   *          Whether to assign synchronously.
    * @throws InterruptedException
    * @return True if done.
+   * @throws IOException
    */
-  public boolean bulkAssign(boolean sync) throws InterruptedException {
+  public boolean bulkAssign(boolean sync) throws InterruptedException,
+      IOException {
     boolean result = false;
     ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
     builder.setDaemon(true);

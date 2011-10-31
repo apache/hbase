@@ -27,6 +27,8 @@ Release 0.93.0 - Unreleased
    HBASE-4489  Better key splitting in RegionSplitter
    HBASE-4626  Filters unnecessarily copy byte arrays (Lars H)
    HBASE-4691  Remove more unnecessary byte[] copies from KeyValues (Lars H)
+   HBASE-4669  Add an option of using round-robin assignment for enabling table
+               (Jieshan Bean)
 
   BUG FIXES
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)

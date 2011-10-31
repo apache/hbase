@@ -19,18 +19,16 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.BulkAssigner;
-import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.commons.logging.Log;
 
 /**
  * Performs bulk reopen of the list of regions provided to it.
@@ -93,7 +91,7 @@ public class BulkReOpen extends BulkAssigner {
         "hbase.bulk.reopen.threadpool.size", defaultThreadCount);
   }
 
-  public boolean bulkReOpen() throws InterruptedException {
+  public boolean bulkReOpen() throws InterruptedException, IOException {
     return bulkAssign();
   }
 }

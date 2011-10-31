@@ -24,8 +24,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -57,19 +57,19 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
-import org.apache.hadoop.hbase.executor.EventHandler.EventType;
-import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
-import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
+import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
+import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -706,7 +706,7 @@ public class AssignmentManager extends ZooKeeperListener {
           // what follows will fail because not in expected state.
           regionState.update(RegionState.State.CLOSED,
               data.getStamp(), data.getOrigin());
-	  removeClosedRegion(regionState.getRegion());
+        removeClosedRegion(regionState.getRegion());
           this.executorService.submit(new ClosedRegionHandler(master,
             this, regionState.getRegion()));
           break;
@@ -1835,6 +1835,20 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
+   * Assigns all user regions to online servers. Use round-robin assignment.
+   * 
+   * @param regions
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public void assignUserRegionsToOnlineServers(List<HRegionInfo> regions)
+      throws IOException,
+      InterruptedException {
+    List<ServerName> servers = this.serverManager.getOnlineServersList();
+    assignUserRegions(regions, servers);
+  }
+
+  /**
    * Assigns all user regions, if any.  Used during cluster startup.
    * <p>
    * This is a synchronous call and will return once every region has been
@@ -1919,7 +1933,8 @@ public class AssignmentManager extends ZooKeeperListener {
     }
 
     @Override
-    public boolean bulkAssign(boolean sync) throws InterruptedException {
+    public boolean bulkAssign(boolean sync) throws InterruptedException,
+        IOException {
       // Disable timing out regions in transition up in zk while bulk assigning.
       this.assignmentManager.timeoutMonitor.bulkAssign(true);
       try {
