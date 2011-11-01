@@ -251,13 +251,12 @@ public class HBaseTestingUtility {
     }
 
     String randomStr = UUID.randomUUID().toString();
-    Path testDir= new Path(
+    Path testPath= new Path(
       getBaseTestDir(),
       randomStr
     );
 
-    dataTestDir = new File(testDir.toString()).getAbsoluteFile();
-    // Have it cleaned up on exit
+    dataTestDir = new File(testPath.toString()).getAbsoluteFile();
     dataTestDir.deleteOnExit();
   }
 
@@ -400,7 +399,6 @@ public class HBaseTestingUtility {
       throws Exception {
     File zkClusterFile = new File(getClusterTestDir().toString());
     return startMiniZKCluster(zkClusterFile, zooKeeperServerNum);
-
   }
   
   private MiniZooKeeperCluster startMiniZKCluster(final File dir)
@@ -1389,7 +1387,7 @@ public class HBaseTestingUtility {
     while (!admin.isTableAvailable(table)) {
       assertTrue("Timed out waiting for table " + Bytes.toStringBinary(table),
           System.currentTimeMillis() - startWait < timeoutMillis);
-      Thread.sleep(500);
+      Thread.sleep(200);
     }
   }
 
@@ -1402,13 +1400,14 @@ public class HBaseTestingUtility {
    */
   public boolean ensureSomeRegionServersAvailable(final int num)
       throws IOException {
-    if (this.getHBaseCluster().getLiveRegionServerThreads().size() < num) {
-      // Need at least "num" servers.
-      LOG.info("Started new server=" +
-        this.getHBaseCluster().startRegionServer());
-      return true;
+    boolean startedServer = false;
+
+    for (int i=hbaseCluster.getLiveRegionServerThreads().size(); i<num; ++i){
+      LOG.info("Started new server=" + hbaseCluster.startRegionServer());
+      startedServer = true;
     }
-    return false;
+
+    return startedServer;
   }
 
 
@@ -1503,7 +1502,7 @@ public class HBaseTestingUtility {
         break;
       }
       LOG.info("Found=" + rows);
-      Threads.sleep(1000);
+      Threads.sleep(200);
     }
   }
 

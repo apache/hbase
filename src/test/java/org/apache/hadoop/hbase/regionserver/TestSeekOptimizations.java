@@ -229,9 +229,11 @@ public class TestSeekOptimizations {
             + columnRestrictionStr + ", " + rowRestrictionStr
             + ", maxVersions=" + maxVersions + ", lazySeek=" + lazySeekEnabled;
     long seekCount = StoreFileScanner.getSeekCount() - initialSeekCount;
-    System.err.println("Seek count: " + seekCount + ", KVs returned: "
+    if (VERBOSE) {
+      System.err.println("Seek count: " + seekCount + ", KVs returned: "
         + actualKVs.size() + ". " + testDesc +
         (lazySeekEnabled ? "\n" : ""));
+    }
     if (lazySeekEnabled) {
       totalSeekLazy += seekCount;
     } else {

@@ -99,6 +99,7 @@ public class TestFromClientSide {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    // We need more than one region server in this test
     TEST_UTIL.startMiniCluster(3);
   }
 
@@ -480,6 +481,7 @@ public class TestFromClientSide {
       System.out.println(String.format("Saving row: %s, with value %s", row,
           value));
       Put put = new Put(Bytes.toBytes(row));
+      put.setWriteToWAL(false);
       put.add(Bytes.toBytes("trans-blob"), null, Bytes
           .toBytes("value for blob"));
       put.add(Bytes.toBytes("trans-type"), null, Bytes.toBytes("statement"));
@@ -656,7 +658,6 @@ public class TestFromClientSide {
     Result result = scanner.next();
     assertTrue("Expected null result", result == null);
     scanner.close();
-    System.out.println("Done.");
   }
 
   @Test
@@ -695,6 +696,7 @@ public class TestFromClientSide {
     };
     for(int i=0;i<10;i++) {
       Put put = new Put(ROWS[i]);
+      put.setWriteToWAL(false);
       put.add(FAMILY, QUALIFIERS[i], VALUE);
       ht.put(put);
     }
@@ -730,6 +732,7 @@ public class TestFromClientSide {
     };
     for(int i=0;i<10;i++) {
       Put put = new Put(ROWS[i]);
+      put.setWriteToWAL(false);
       put.add(FAMILY, QUALIFIERS[i], VALUE);
       ht.put(put);
     }
@@ -1954,6 +1957,7 @@ public class TestFromClientSide {
     for (int i = 0; i < 10; i++) {
       byte [] bytes = Bytes.toBytes(i);
       put = new Put(bytes);
+      put.setWriteToWAL(false);
       put.add(FAMILIES[0], QUALIFIER, bytes);
       ht.put(put);
     }
@@ -2061,6 +2065,7 @@ public class TestFromClientSide {
 
     for(int i=0;i<numRows;i++) {
       Put put = new Put(ROWS[i]);
+      put.setWriteToWAL(false);
       for(int j=0;j<numColsPerRow;j++) {
         put.add(FAMILY, QUALIFIERS[j], QUALIFIERS[j]);
       }
@@ -3607,6 +3612,7 @@ public class TestFromClientSide {
     for (int i = 0; i < NB_BATCH_ROWS; i++) {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
+      put.setWriteToWAL(false);
       put.add(CONTENTS_FAMILY, null, value);
       rowsUpdate.add(put);
     }
@@ -3634,6 +3640,7 @@ public class TestFromClientSide {
     for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
+      put.setWriteToWAL(false);
       put.add(CONTENTS_FAMILY, null, value);
       rowsUpdate.add(put);
     }
@@ -3675,6 +3682,7 @@ public class TestFromClientSide {
     for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
+      put.setWriteToWAL(false);
       put.add(CONTENTS_FAMILY, null, value);
       rowsUpdate.add(put);
     }
@@ -3870,6 +3878,7 @@ public class TestFromClientSide {
     try {
       for (Result r : s) {
         put = new Put(r.getRow());
+        put.setWriteToWAL(false);
         for (KeyValue kv : r.raw()) {
           put.add(kv);
         }

@@ -1286,12 +1286,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       new HDFSBlocksDistribution();
     long totalStaticIndexSize = 0;
     long totalStaticBloomSize = 0;
+    long totalMslabWaste = 0;
 
     long tmpfiles;
     long tmpindex;
     long tmpfilesize;
     long tmpbloomsize;
     long tmpstaticsize;
+    long tmpMslabWaste;
     String cfname;
 
     // Note that this is a map of Doubles instead of Longs. This is because we
@@ -1315,6 +1317,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           tmpfilesize = store.getStorefilesSize();
           tmpbloomsize = store.getTotalStaticBloomSize();
           tmpstaticsize = store.getTotalStaticIndexSize();
+          tmpMslabWaste = store.memstore.getMslabWaste();
 
           // Note that there is only one store per CF so setting is safe
           cfname = "cf." + store.toString();
@@ -1329,11 +1332,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
               (store.getMemStoreSize() / (1024.0 * 1024)));
           this.incrMap(tempVals, cfname + ".staticIndexSizeKB",
               tmpstaticsize / 1024.0);
+          this.incrMap(tempVals, cfname + ".mslabWasteKB",
+              tmpMslabWaste / 1024.0);
 
           storefiles += tmpfiles;
           storefileIndexSize += tmpindex;
           totalStaticIndexSize += tmpstaticsize;
           totalStaticBloomSize += tmpbloomsize;
+          totalMslabWaste += tmpMslabWaste;
         }
       }
 
@@ -1353,6 +1359,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         (int) (totalStaticIndexSize / 1024));
     this.metrics.totalStaticBloomSizeKB.set(
         (int) (totalStaticBloomSize / 1024));
+    this.metrics.totalMslabWasteKB.set(
+        (int) (totalMslabWaste / 1024));
     this.metrics.readRequestsCount.set(readRequestsCount);
     this.metrics.writeRequestsCount.set(writeRequestsCount);
 
