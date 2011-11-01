@@ -87,6 +87,8 @@ Release 0.90.5 - Unreleased
                (Jonathan Hsieh)
    HBASE-4508  Backport HBASE-3777 to 0.90 branch (Bright Fulton)
    HBASE-4277  HRS.closeRegion should be able to close regions with only the encoded name (Ram)
+   HBASE-4695  WAL logs get deleted before region server can fully flush
+              (gaojinchao)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
