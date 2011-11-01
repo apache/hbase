@@ -78,6 +78,12 @@ public class HRegionThriftServer extends Thread {
   volatile private TServer tserver;
 
   /**
+   * Whether requests should be redirected to other RegionServers if the
+   * specified region is not hosted by this RegionServer.
+   */
+  private boolean redirect;
+
+  /**
    * Create an instance of the glue object that connects the
    * RegionServer with the standard ThriftServer implementation
    */
@@ -113,7 +119,7 @@ public class HRegionThriftServer extends Thread {
         byte [] row = rowb.array();
         HTable table = getTable(tableName.array());
         HRegionLocation location = table.getRegionLocation(row);
-        byte[] regionName = location.getRegionInfo().getEncodedNameAsBytes();
+        byte[] regionName = location.getRegionInfo().getRegionName();
 
         if (columns == null) {
           Get get = new Get(row);
@@ -136,7 +142,10 @@ public class HRegionThriftServer extends Thread {
         Result result = rs.get(regionName, get);
         return ThriftUtilities.rowResultFromHBase(result);
       } catch (NotServingRegionException e) {
-        LOG.info("ThriftServer redirecting getRowWithColumnsTs");
+        if (!redirect) {
+          throw new IOError(e.getMessage());
+        }
+        LOG.debug("ThriftServer redirecting getRowWithColumnsTs");
         return super.getRowWithColumnsTs(tableName, rowb, columns, timestamp);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
@@ -155,6 +164,8 @@ public class HRegionThriftServer extends Thread {
     this.transport = conf.get("hbase.regionserver.thrift.transport");
     this.nonblocking = conf.getBoolean("hbase.regionserver.thrift.nonblocking",
                                        false);
+    this.redirect = conf.getBoolean("hbase.regionserver.thrift.redirect",
+        false);
   }
 
   /**
@@ -171,7 +182,8 @@ public class HRegionThriftServer extends Thread {
   public void run() {
     try {
       HBaseHandlerRegion handler = new HBaseHandlerRegion(this.conf);
-      Hbase.Processor processor = new Hbase.Processor(handler);
+      Hbase.Processor<HBaseHandlerRegion> processor =
+        new Hbase.Processor<HBaseHandlerRegion>(handler);
 
       TProtocolFactory protocolFactory;
       if (this.protocol != null && this.protocol.equals("compact")) {
