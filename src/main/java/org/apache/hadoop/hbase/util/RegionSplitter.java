@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -151,9 +150,9 @@ public class RegionSplitter {
      * Split a pre-existing region into 2 regions.
      *
      * @param start
-     *          first row (inclusive)
+     *          row
      * @param end
-     *          last row (exclusive)
+     *          row
      * @return the split row to use
      */
     byte[] split(byte[] start, byte[] end);
@@ -164,11 +163,8 @@ public class RegionSplitter {
      * @param numRegions
      *          number of regions to split the table into
      *
-     * @throws RuntimeException
-     *           user input is validated at this time. may throw a runtime
-     *           exception in response to a parse failure
-     * @return array of split keys for the initial regions of the table. The
-     *         length of the returned array should be numRegions-1.
+     * @return array of split keys for the initial regions of the table. The length of the
+     * returned array should be numRegions-1.
      */
     byte[][] split(int numRegions);
 
@@ -189,27 +185,6 @@ public class RegionSplitter {
      * @return your representation of your last row
      */
     byte[] lastRow();
-
-    /**
-     * In HBase, the last row is represented by an empty byte array. Set this
-     * value to help the split code understand how to evenly divide the first
-     * region.
-     *
-     * @param userInput
-     *          raw user input (may throw RuntimeException on parse failure)
-     */
-    void setFirstRow(String userInput);
-
-    /**
-     * In HBase, the last row is represented by an empty byte array. Set this
-     * value to help the split code understand how to evenly divide the last
-     * region. Note that this last row is inclusive for all rows sharing the
-     * same prefix.
-     *
-     * @param userInput
-     *          raw user input (may throw RuntimeException on parse failure)
-     */
-    void setLastRow(String userInput);
 
     /**
      * @param input
@@ -288,10 +263,6 @@ public class RegionSplitter {
     opt.addOption(OptionBuilder.withArgName("count").hasArg().withDescription(
         "Max outstanding splits that have unfinished major compactions")
         .create("o"));
-    opt.addOption(null, "firstrow", true,
-        "First Row in Table for Split Algorithm");
-    opt.addOption(null, "lastrow", true,
-        "Last Row in Table for Split Algorithm");
     opt.addOption(null, "risky", false,
         "Skip verification steps to complete quickly."
             + "STRONGLY DISCOURAGED for production systems.  ");
@@ -328,31 +299,24 @@ public class RegionSplitter {
     }
     String tableName = cmd.getArgs()[0];
     String splitClass = cmd.getArgs()[1];
-    SplitAlgorithm splitAlgo = newSplitAlgoInstance(conf, splitClass);
-
-    if (cmd.hasOption("firstrow")) {
-      splitAlgo.setFirstRow(cmd.getOptionValue("firstrow"));
-    }
-    if (cmd.hasOption("lastrow")) {
-      splitAlgo.setLastRow(cmd.getOptionValue("lastrow"));
-    }
 
     if (createTable) {
       conf.set("split.count", cmd.getOptionValue("c"));
-      createPresplitTable(tableName, splitAlgo, cmd.getOptionValue("f").split(":"), conf);
+      createPresplitTable(tableName, splitClass, cmd.getOptionValue("f").split(":"), conf);
     }
 
     if (rollingSplit) {
       if (cmd.hasOption("o")) {
         conf.set("split.outstanding", cmd.getOptionValue("o"));
       }
-      rollingSplit(tableName, splitAlgo, conf);
+      rollingSplit(tableName, splitClass, conf);
     }
   }
 
-  static void createPresplitTable(String tableName, SplitAlgorithm splitAlgo,
+  static void createPresplitTable(String tableName, String splitClassName,
           String[] columnFamilies, Configuration conf) throws IOException,
           InterruptedException {
+    SplitAlgorithm splitAlgo = newSplitAlgoInstance(conf, splitClassName);
     final int splitCount = conf.getInt("split.count", 0);
     Preconditions.checkArgument(splitCount > 1, "Split count must be > 1");
 
@@ -387,8 +351,9 @@ public class RegionSplitter {
     LOG.debug("Finished creating table with " + splitCount + " regions");
   }
 
-  static void rollingSplit(String tableName, SplitAlgorithm splitAlgo,
+  static void rollingSplit(String tableName, String splitClassName,
           Configuration conf) throws IOException, InterruptedException {
+    SplitAlgorithm splitAlgo = newSplitAlgoInstance(conf, splitClassName);
     final int minOS = conf.getInt("split.outstanding", 2);
 
     HTable table = new HTable(conf, tableName);
@@ -788,25 +753,20 @@ public class RegionSplitter {
   }
 
   /**
-   * HexStringSplit is a well-known {@link SplitAlgorithm} for choosing region
-   * boundaries. The format of a HexStringSplit region boundary is the ASCII
-   * representation of an MD5 checksum, or any other uniformly distributed
-   * hexadecimal value. Row are hex-encoded long values in the range
-   * <b>"00000000" => "FFFFFFFF"</b> and are left-padded with zeros to keep the
-   * same order lexicographically as if they were binary.
+   * HexStringSplit is one possible {@link SplitAlgorithm} for choosing region
+   * boundaries. The format of a HexStringSplit region boundary is the
+   * ASCII representation of an MD5 checksum, or any other uniformly distributed
+   * bytes. Row are hex-encoded long values in the range <b>"00000000" =>
+   * "FFFFFFFF"</b> and are left-padded with zeros to keep the same order
+   * lexicographically as if they were binary.
    *
-   * Since this split algorithm uses hex strings as keys, it is easy to read &
-   * write in the shell but takes up more space and may be non-intuitive.
+   * This split algorithm is only appropriate if you will use hex strings as
+   * keys.
    */
   public static class HexStringSplit implements SplitAlgorithm {
-    final static String DEFAULT_MIN_HEX = "00000000";
-    final static String DEFAULT_MAX_HEX = "FFFFFFFF";
-
-    String firstRow = DEFAULT_MIN_HEX;
-    BigInteger firstRowInt = BigInteger.ZERO;
-    String lastRow = DEFAULT_MAX_HEX;
-    BigInteger lastRowInt = new BigInteger(lastRow, 16);
-    int rowComparisonLength = lastRow.length();
+    final static String MAXHEX = "FFFFFFFF";
+    final static BigInteger MAXHEX_INT = new BigInteger(MAXHEX, 16);
+    final static int rowComparisonLength = MAXHEX.length();
 
     public byte[] split(byte[] start, byte[] end) {
       BigInteger s = convertToBigInteger(start);
@@ -816,43 +776,22 @@ public class RegionSplitter {
     }
 
     public byte[][] split(int n) {
-      Preconditions.checkArgument(lastRowInt.compareTo(firstRowInt) > 0,
-          "last row (%s) is configured less than first row (%s)", lastRow,
-          firstRow);
-      // +1 to range because the last row is inclusive
-      BigInteger range = lastRowInt.subtract(firstRowInt).add(BigInteger.ONE);
-      Preconditions.checkState(range.compareTo(BigInteger.valueOf(n)) >= 0,
-          "split granularity (%s) is greater than the range (%s)", n, range);
-
       BigInteger[] splits = new BigInteger[n - 1];
-      BigInteger sizeOfEachSplit = range.divide(BigInteger.valueOf(n));
+      BigInteger sizeOfEachSplit = MAXHEX_INT.divide(BigInteger.valueOf(n));
       for (int i = 1; i < n; i++) {
         // NOTE: this means the last region gets all the slop.
         // This is not a big deal if we're assuming n << MAXHEX
-        splits[i - 1] = firstRowInt.add(sizeOfEachSplit.multiply(BigInteger
-            .valueOf(i)));
+        splits[i - 1] = sizeOfEachSplit.multiply(BigInteger.valueOf(i));
       }
       return convertToBytes(splits);
     }
 
     public byte[] firstRow() {
-      return convertToByte(firstRowInt);
+      return convertToByte(BigInteger.ZERO);
     }
 
     public byte[] lastRow() {
-      return convertToByte(lastRowInt);
-    }
-
-    public void setFirstRow(String userInput) {
-      firstRow = userInput;
-      firstRowInt = new BigInteger(firstRow, 16);
-    }
-
-    public void setLastRow(String userInput) {
-      lastRow = userInput;
-      lastRowInt = new BigInteger(lastRow, 16);
-      // Precondition: lastRow > firstRow, so last's length is the greater
-      rowComparisonLength = lastRow.length();
+      return convertToByte(MAXHEX_INT);
     }
 
     public byte[] strToRow(String in) {
@@ -867,24 +806,17 @@ public class RegionSplitter {
       return " ";
     }
 
-    /**
-     * Divide 2 numbers in half (for split algorithm)
-     *
-     * @param a number #1
-     * @param b number #2
-     * @return the midpoint of the 2 numbers
-     */
-    public BigInteger split2(BigInteger a, BigInteger b) {
-      return a.add(b).divide(BigInteger.valueOf(2)).abs();
+    static BigInteger split2(BigInteger minValue, BigInteger maxValue) {
+      return maxValue.add(minValue).divide(BigInteger.valueOf(2));
     }
 
     /**
      * Returns an array of bytes corresponding to an array of BigIntegers
      *
-     * @param bigIntegers numbers to convert
+     * @param bigIntegers
      * @return bytes corresponding to the bigIntegers
      */
-    public byte[][] convertToBytes(BigInteger[] bigIntegers) {
+    static byte[][] convertToBytes(BigInteger[] bigIntegers) {
       byte[][] returnBytes = new byte[bigIntegers.length][];
       for (int i = 0; i < bigIntegers.length; i++) {
         returnBytes[i] = convertToByte(bigIntegers[i]);
@@ -895,56 +827,38 @@ public class RegionSplitter {
     /**
      * Returns the bytes corresponding to the BigInteger
      *
-     * @param bigInteger number to convert
-     * @param pad padding length
+     * @param bigInteger
      * @return byte corresponding to input BigInteger
      */
-    public static byte[] convertToByte(BigInteger bigInteger, int pad) {
+    static byte[] convertToByte(BigInteger bigInteger) {
       String bigIntegerString = bigInteger.toString(16);
-      bigIntegerString = StringUtils.leftPad(bigIntegerString, pad, '0');
+      bigIntegerString = StringUtils.leftPad(bigIntegerString,
+          rowComparisonLength, '0');
       return Bytes.toBytes(bigIntegerString);
     }
 
     /**
-     * Returns the bytes corresponding to the BigInteger
+     * Returns the BigInteger represented by thebyte array
      *
-     * @param bigInteger number to convert
-     * @return corresponding bytes
-     */
-    public byte[] convertToByte(BigInteger bigInteger) {
-      return convertToByte(bigInteger, rowComparisonLength);
-    }
-
-    /**
-     * Returns the BigInteger represented by the byte array
-     *
-     * @param row byte array representing row
+     * @param row
      * @return the corresponding BigInteger
      */
-    public BigInteger convertToBigInteger(byte[] row) {
+    static BigInteger convertToBigInteger(byte[] row) {
       return (row.length > 0) ? new BigInteger(Bytes.toString(row), 16)
           : BigInteger.ZERO;
-    }
-
-    @Override
-    public String toString() {
-      return this.getClass().getSimpleName() + " [" + rowToStr(firstRow())
-          + "," + rowToStr(lastRow()) + "]";
     }
   }
 
   /**
    * A SplitAlgorithm that divides the space of possible keys evenly. Useful
-   * when the keys are approximately uniform random bytes (e.g. hashes). Rows
-   * are raw byte values in the range <b>00 => FF</b> and are right-padded with
-   * zeros to keep the same memcmp() order. This is the natural algorithm to use
-   * for a byte[] environment and saves space, but is not necessarily the
-   * easiest for readability.
+   * when the keys are approximately uniform random bytes (e.g. hashes).
+   * You probably shouldn't use this if your keys are ASCII, or if your keys
+   * tend to have similar prefixes.
    */
   public static class UniformSplit implements SplitAlgorithm {
-    static final byte xFF = (byte) 0xFF;
-    byte[] firstRowBytes = ArrayUtils.EMPTY_BYTE_ARRAY;
-    byte[] lastRowBytes =
+	static final byte xFF = (byte)0xFF;
+    static final byte[] firstRowBytes = ArrayUtils.EMPTY_BYTE_ARRAY;
+    static final byte[] lastRowBytes =
             new byte[] {xFF, xFF, xFF, xFF, xFF, xFF, xFF, xFF};
     public byte[] split(byte[] start, byte[] end) {
       return Bytes.split(start, end, 1)[1];
@@ -952,19 +866,12 @@ public class RegionSplitter {
 
     @Override
     public byte[][] split(int numRegions) {
-      Preconditions.checkArgument(
-          Bytes.compareTo(lastRowBytes, firstRowBytes) > 0,
-          "last row (%s) is configured less than first row (%s)",
-          Bytes.toStringBinary(lastRowBytes),
-          Bytes.toStringBinary(firstRowBytes));
-
-      byte[][] splits = Bytes.split(firstRowBytes, lastRowBytes, true,
-          numRegions - 1);
-      Preconditions.checkState(splits != null,
-          "Could not split region with given user input: " + this);
-
-      // remove endpoints, which are included in the splits list
-      return Arrays.copyOfRange(splits, 1, splits.length - 1);
+      byte[][] splitKeysPlusEndpoints = Bytes.split(firstRowBytes, lastRowBytes,
+              numRegions-1);
+      byte[][] splitAtKeys = new byte[splitKeysPlusEndpoints.length-2][];
+      System.arraycopy(splitKeysPlusEndpoints, 1, splitAtKeys, 0,
+              splitKeysPlusEndpoints.length-2);
+      return splitAtKeys;
     }
 
     @Override
@@ -975,16 +882,6 @@ public class RegionSplitter {
     @Override
     public byte[] lastRow() {
       return lastRowBytes;
-    }
-
-    @Override
-    public void setFirstRow(String userInput) {
-      firstRowBytes = Bytes.toBytesBinary(userInput);
-    }
-
-    @Override
-    public void setLastRow(String userInput) {
-      lastRowBytes = Bytes.toBytesBinary(userInput);
     }
 
     @Override
@@ -1000,12 +897,6 @@ public class RegionSplitter {
     @Override
     public String separator() {
       return ",";
-    }
-
-    @Override
-    public String toString() {
-      return this.getClass().getSimpleName() + " [" + rowToStr(firstRow())
-          + "," + rowToStr(lastRow()) + "]";
     }
   }
 }
