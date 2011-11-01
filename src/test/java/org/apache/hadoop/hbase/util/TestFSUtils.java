@@ -35,6 +35,7 @@ import org.junit.Test;
  * Test {@link FSUtils}.
  */
 public class TestFSUtils {
+  
   @Test public void testIsHDFS() throws Exception {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     htu.getConfiguration().setBoolean("dfs.support.append", false);
