@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
@@ -57,9 +56,7 @@ public class MemStoreLAB {
   final static String MAX_ALLOC_KEY = "hbase.hregion.memstore.mslab.max.allocation";
   final static int MAX_ALLOC_DEFAULT = 256  * 1024; // allocs bigger than this don't go through allocator
   final int maxAlloc;
-  
-  private final AtomicLong wastedSpace = new AtomicLong();
-  
+
   public MemStoreLAB() {
     this(new Configuration());
   }
@@ -106,35 +103,22 @@ public class MemStoreLAB {
     }
   }
 
-  public long getWastedBytes() {
-    Chunk cur = curChunk.get();
-    long ret = wastedSpace.get();
-    if (cur != null) {
-      ret += cur.getFreeSpace();
-    }
-    return ret;
-  }
-
   /**
    * Try to retire the current chunk if it is still
    * <code>c</code>. Postcondition is that curChunk.get()
    * != c
    */
   private void tryRetireChunk(Chunk c) {
+    @SuppressWarnings("unused")
     boolean weRetiredIt = curChunk.compareAndSet(c, null);
     // If the CAS succeeds, that means that we won the race
-    // to retire the chunk.
+    // to retire the chunk. We could use this opportunity to
+    // update metrics on external fragmentation.
+    //
     // If the CAS fails, that means that someone else already
     // retired the chunk for us.
-    if (weRetiredIt) {
-      // This isn't quite right, since another thread may
-      // have a small allocation concurrently with our retiring
-      // the chunk. But it should be very close to right,
-      // and this is just for metrics.
-      wastedSpace.addAndGet(c.getFreeSpace());
-    }
   }
-  
+
   /**
    * Get the current chunk, or, if there is no current chunk,
    * allocate a new one from the JVM.
@@ -254,15 +238,6 @@ public class MemStoreLAB {
       return "Chunk@" + System.identityHashCode(this) +
         " allocs=" + allocCount.get() + "waste=" +
         (data.length - nextFreeOffset.get());
-    }
-    
-    private int getFreeSpace() {
-      int off = nextFreeOffset.get();
-      if (off >= 0) {
-        return data.length - off;
-      } else {
-        return 0;
-      }
     }
   }
 

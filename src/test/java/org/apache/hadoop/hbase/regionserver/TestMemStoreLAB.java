@@ -46,9 +46,7 @@ public class TestMemStoreLAB {
   public void testLABRandomAllocation() {
     Random rand = new Random();
     MemStoreLAB mslab = new MemStoreLAB();
-    assertEquals(0, mslab.getWastedBytes());
     int expectedOff = 0;
-    int slabsUsed = 0;
     byte[] lastBuffer = null;
     // 100K iterations by 0-1K alloc -> 50MB expected
     // should be reasonable for unit test and also cover wraparound
@@ -60,21 +58,12 @@ public class TestMemStoreLAB {
       if (alloc.getData() != lastBuffer) {
         expectedOff = 0;
         lastBuffer = alloc.getData();
-        slabsUsed++;
       }
       assertEquals(expectedOff, alloc.getOffset());
       assertTrue("Allocation " + alloc + " overruns buffer",
           alloc.getOffset() + size <= alloc.getData().length);
       expectedOff += size;
     }
-
-    // maximum waste is 1KB per slab plus
-    // whatever's left in current slab
-    long expectedWaste = slabsUsed * 1000 +
-        (lastBuffer.length - expectedOff);
-    long waste = mslab.getWastedBytes();
-    assertTrue("waste should be less than " + expectedWaste +
-        " but was: " + waste, waste < expectedWaste);
   }
 
   @Test

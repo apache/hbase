@@ -136,18 +136,6 @@ public class MemStore implements HeapSize {
     }
   }
 
-  /**
-   * @return the number of bytes "wasted" by external fragmentation
-   * in the MSLAB, if configured.
-   */
-  long getMslabWaste() {
-    if (allocator != null) {
-      return allocator.getWastedBytes();
-    } else {
-      return 0;
-    }
-  }
-
   void dump() {
     for (KeyValue kv: this.kvset) {
       LOG.info(kv);
