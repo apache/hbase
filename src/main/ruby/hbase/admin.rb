@@ -159,9 +159,13 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Closes a region
-    def close_region(region_name, server = nil)
-      @admin.closeRegion(region_name, server)
+    # Closes a region.
+    # If server name is nil, we presume region_name is full region name (HRegionInfo.getRegionName).
+    # If server name is not nil, we presume it is the region's encoded name (HRegionInfo.getEncodedName)
+    def close_region(region_name, server)
+      if (server == nil || !closeEncodedRegion?(region_name, server))         
+      	@admin.closeRegion(region_name, server)
+      end	
     end
 
     #----------------------------------------------------------------------------------------------
@@ -338,6 +342,12 @@ module Hbase
     def enabled?(table_name)
       @admin.isTableEnabled(table_name)
     end
+
+    #----------------------------------------------------------------------------------------------
+    #Is supplied region name is encoded region name
+    def closeEncodedRegion?(region_name, server)
+       @admin.closeRegionWithEncodedRegionName(region_name, server)
+    end   
 
     #----------------------------------------------------------------------------------------------
     # Return a new HColumnDescriptor made of passed args

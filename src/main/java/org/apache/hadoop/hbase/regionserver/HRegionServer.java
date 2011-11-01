@@ -2159,6 +2159,37 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     return closeRegion(region, false, zk);
   }
+  
+  @Override
+  @QosPriority(priority = HIGH_QOS)
+  public boolean closeRegion(byte[] encodedRegionName, boolean zk)
+      throws IOException {
+    return closeRegion(encodedRegionName, false, zk);
+  }
+  
+  /**
+   * @param encodedRegionName
+   *          encodedregionName to close
+   * @param abort
+   *          True if we are aborting
+   * @param zk
+   *          True if we are to update zk about the region close; if the close
+   *          was orchestrated by master, then update zk. If the close is being
+   *          run by the regionserver because its going down, don't update zk.
+   * @return True if closed a region.
+   */
+  protected boolean closeRegion(byte[] encodedRegionName, final boolean abort,
+      final boolean zk) throws IOException {
+    String encodedRegionNameStr = Bytes.toString(encodedRegionName);
+    HRegion region = this.getFromOnlineRegions(encodedRegionNameStr);
+    if (null != region) {
+      return closeRegion(region.getRegionInfo(), abort, zk);
+    }
+    LOG
+        .error("Unable to close the region " + encodedRegionNameStr
+            + ".  The specified region does not exist.");
+    return false;
+  }
 
   /**
    * @param region Region to close

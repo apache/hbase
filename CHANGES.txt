@@ -86,6 +86,7 @@ Release 0.90.5 - Unreleased
    HBASE-4378  [hbck] Does not complain about regions with startkey==endkey.
                (Jonathan Hsieh)
    HBASE-4508  Backport HBASE-3777 to 0.90 branch (Bright Fulton)
+   HBASE-4277  HRS.closeRegion should be able to close regions with only the encoded name (Ram)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
