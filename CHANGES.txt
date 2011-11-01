@@ -25,6 +25,7 @@ Release 0.93.0 - Unreleased
    HBASE-4469  Avoid top row seek by looking up bloomfilter (liyin via jgray)
    HBASE-4418  Show all the hbase configuration in the web ui
    HBASE-4489  Better key splitting in RegionSplitter
+   HBASE-4532  Avoid top row seek by dedicated bloom filter for delete family bloom filter
    HBASE-4626  Filters unnecessarily copy byte arrays (Lars H)
    HBASE-4691  Remove more unnecessary byte[] copies from KeyValues (Lars H)
    HBASE-4669  Add an option of using round-robin assignment for enabling table
@@ -706,6 +707,7 @@ Release 0.92.0 - Unreleased
    HBASE-4603  Uneeded sleep time for tests in
                hbase.master.ServerManager#waitForRegionServers (nkeywal)
    HBASE-4703  Improvements in tests (nkeywal)
+   HBASE-4611  Add support for Phabricator/Differential as an alternative code review tool
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
