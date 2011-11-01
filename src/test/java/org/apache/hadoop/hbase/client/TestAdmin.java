@@ -325,7 +325,7 @@ public class TestAdmin {
     while (!done.get()) {
       synchronized (done) {
         try {
-          done.wait(1000);
+          done.wait(100);
         } catch (InterruptedException e) {
           e.printStackTrace();
         }
@@ -678,6 +678,7 @@ public class TestAdmin {
         for (int i = 0; i < rowCounts[index]; i++) {
           byte[] k = Bytes.toBytes(i);
           Put put = new Put(k);
+          put.setWriteToWAL(false);
           put.add(familyNames[index], new byte[0], k);
           table.put(put);
         }
@@ -867,7 +868,7 @@ public class TestAdmin {
     for (int i = 0; i < count; i++) {
       while(threads[i].isAlive()) {
         try {
-          Thread.sleep(1000);
+          Thread.sleep(100);
         } catch (InterruptedException e) {
           // continue
         }
@@ -1067,10 +1068,16 @@ public class TestAdmin {
         }
       }
     }
-    Thread.sleep(1000);
-    onlineRegions = rs.getOnlineRegions();
+
+    boolean isInList = rs.getOnlineRegions().contains(info);
+    long timeout = System.currentTimeMillis() + 2000;
+    while ((System.currentTimeMillis() < timeout) && (isInList)) {
+      Thread.sleep(100);
+      isInList = rs.getOnlineRegions().contains(info);
+    }
+
     assertFalse("The region should not be present in online regions list.",
-        onlineRegions.contains(info));
+      isInList);
   }
 
   @Test
@@ -1305,6 +1312,7 @@ public class TestAdmin {
         .toBytes(tableName));
     for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
+      put.setWriteToWAL(false);
       put.add(HConstants.CATALOG_FAMILY, null, value);
       table.put(put);
       if (i % 32 == 0) {

@@ -155,6 +155,9 @@ public class RegionServerMetrics implements Updater {
   public final MetricsIntValue totalStaticBloomSizeKB =
     new MetricsIntValue("totalStaticBloomSizeKB", registry);
 
+  /** Total amount of memory wasted by external fragmentation in MSLABs */
+  public final MetricsIntValue totalMslabWasteKB =
+    new MetricsIntValue("totalMslabWasteKB", registry);
   /**
    * HDFS blocks locality index
    */

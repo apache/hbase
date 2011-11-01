@@ -287,6 +287,7 @@ public class TestRegionSplitter {
         for(byte b=Byte.MIN_VALUE; b<Byte.MAX_VALUE; b++) {
             byte[] whateverBytes = new byte[] {b};
             Put p = new Put(whateverBytes);
+            p.setWriteToWAL(false);
             p.add(CF_NAME.getBytes(), whateverBytes, whateverBytes);
             hTable.put(p);
         }
