@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Test;
 
 /**
@@ -40,9 +41,7 @@ import org.junit.Test;
  */
 public class TestGlobalMemStoreSize {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  
-  private static int regionServerNum =4;
+  private static int regionServerNum = 4;
   private static int regionNum = 16;
   // total region num = region num + root and meta regions
   private static int totalRegionNum = regionNum+2;
@@ -80,24 +79,33 @@ public class TestGlobalMemStoreSize {
     
     for (HRegionServer server : getOnlineRegionServers()) {
       long globalMemStoreSize = 0;
-      for(HRegionInfo regionInfo : server.getOnlineRegions()) {
+      for (HRegionInfo regionInfo : server.getOnlineRegions()) {
         globalMemStoreSize += 
           server.getFromOnlineRegions(regionInfo.getEncodedName()).
           getMemstoreSize().get();
       }
       assertEquals(server.getRegionServerAccounting().getGlobalMemstoreSize(),
-          globalMemStoreSize);
+        globalMemStoreSize);
     }
     
     // check the global memstore size after flush
+    LOG.info("Starting flushes");
+    int i = 0;
     for (HRegionServer server : getOnlineRegionServers()) {
-      for(HRegionInfo regionInfo : server.getOnlineRegions()) {
-        HRegion region= 
-          server.getFromOnlineRegions(regionInfo.getEncodedName());
-        region.flushcache();
+      for (HRegionInfo regionInfo : server.getOnlineRegions()) {
+        HRegion r = server.getFromOnlineRegions(regionInfo.getEncodedName());
+        LOG.info("Flushing " + r.toString());
+        r.flushcache();
       }
-      assertEquals(server.getRegionServerAccounting().getGlobalMemstoreSize(),
-          0);
+      LOG.info("Post flush on " + server.getServerName());
+      long now = System.currentTimeMillis();
+      long timeout = now + 3000;
+      while(server.getRegionServerAccounting().getGlobalMemstoreSize() != 0 &&
+          timeout < System.currentTimeMillis()) {
+        Threads.sleep(10);
+      }
+      assertEquals("Server=" + server.getServerName() + ", i=" + i++, 0,
+        server.getRegionServerAccounting().getGlobalMemstoreSize());
     }
 
     TEST_UTIL.shutdownMiniCluster();
