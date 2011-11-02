@@ -19,17 +19,18 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.RegionSplitter.HexStringSplit;
+import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -47,13 +49,10 @@ import org.junit.Test;
  * rolling split of an existing table.
  */
 public class TestRegionSplitter {
+    private final static Log LOG = LogFactory.getLog(TestRegionSplitter.class);
     private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-    private final static String HEX_SPLIT_CLASS_NAME =
-            "org.apache.hadoop.hbase.util.RegionSplitter$HexStringSplit";
-    private final static String UNIFORM_SPLIT_CLASS_NAME =
-            "org.apache.hadoop.hbase.util.RegionSplitter$UniformSplit";
     private final static String CF_NAME = "SPLIT_TEST_CF";
-    private final static byte xFF = (byte)0xff;
+    private final static byte xFF = (byte) 0xff;
 
     @BeforeClass
     public static void setup() throws Exception {
@@ -70,28 +69,28 @@ public class TestRegionSplitter {
      */
     @Test
     public void testCreatePresplitTableHex() throws Exception {
-        final List<byte[]> expectedBounds = new ArrayList<byte[]>();
-        expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
-        expectedBounds.add("0fffffff".getBytes());
-        expectedBounds.add("1ffffffe".getBytes());
-        expectedBounds.add("2ffffffd".getBytes());
-        expectedBounds.add("3ffffffc".getBytes());
-        expectedBounds.add("4ffffffb".getBytes());
-        expectedBounds.add("5ffffffa".getBytes());
-        expectedBounds.add("6ffffff9".getBytes());
-        expectedBounds.add("7ffffff8".getBytes());
-        expectedBounds.add("8ffffff7".getBytes());
-        expectedBounds.add("9ffffff6".getBytes());
-        expectedBounds.add("affffff5".getBytes());
-        expectedBounds.add("bffffff4".getBytes());
-        expectedBounds.add("cffffff3".getBytes());
-        expectedBounds.add("dffffff2".getBytes());
-        expectedBounds.add("effffff1".getBytes());
-        expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
+      final List<byte[]> expectedBounds = new ArrayList<byte[]>();
+      expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
+      expectedBounds.add("10000000".getBytes());
+      expectedBounds.add("20000000".getBytes());
+      expectedBounds.add("30000000".getBytes());
+      expectedBounds.add("40000000".getBytes());
+      expectedBounds.add("50000000".getBytes());
+      expectedBounds.add("60000000".getBytes());
+      expectedBounds.add("70000000".getBytes());
+      expectedBounds.add("80000000".getBytes());
+      expectedBounds.add("90000000".getBytes());
+      expectedBounds.add("a0000000".getBytes());
+      expectedBounds.add("b0000000".getBytes());
+      expectedBounds.add("c0000000".getBytes());
+      expectedBounds.add("d0000000".getBytes());
+      expectedBounds.add("e0000000".getBytes());
+      expectedBounds.add("f0000000".getBytes());
+          expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
 
-        // Do table creation/pre-splitting and verification of region boundaries
-        preSplitTableAndVerify(expectedBounds, HEX_SPLIT_CLASS_NAME,
-                "NewHexPresplitTable");
+          // Do table creation/pre-splitting and verification of region boundaries
+      preSplitTableAndVerify(expectedBounds,
+          HexStringSplit.class.getSimpleName(), "NewHexPresplitTable");
     }
 
     /**
@@ -99,29 +98,28 @@ public class TestRegionSplitter {
      */
     @Test
     public void testCreatePresplitTableUniform() throws Exception {
-        List<byte[]> expectedBounds = new ArrayList<byte[]>();
-        expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
-        expectedBounds.add(new byte[] {      0x0f, xFF, xFF, xFF, xFF, xFF, xFF,        xFF});
-        expectedBounds.add(new byte[] {      0x1f, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xfe});
-        expectedBounds.add(new byte[] {      0x2f, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xfd});
-        expectedBounds.add(new byte[] {      0x3f, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xfc});
-        expectedBounds.add(new byte[] {      0x4f, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xfb});
-        expectedBounds.add(new byte[] {      0x5f, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xfa});
-        expectedBounds.add(new byte[] {      0x6f, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xf9});
-        expectedBounds.add(new byte[] {      0x7f, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xf8});
-        expectedBounds.add(new byte[] {(byte)0x8f, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xf7});
-        expectedBounds.add(new byte[] {(byte)0x9f, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xf6});
-        expectedBounds.add(new byte[] {(byte)0xaf, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xf5});
-        expectedBounds.add(new byte[] {(byte)0xbf, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xf4});
-        expectedBounds.add(new byte[] {(byte)0xcf, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xf3});
-        expectedBounds.add(new byte[] {(byte)0xdf, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xf2});
-        expectedBounds.add(new byte[] {(byte)0xef, xFF, xFF, xFF, xFF, xFF, xFF, (byte)0xf1});
-        expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
+      List<byte[]> expectedBounds = new ArrayList<byte[]>();
+      expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
+      expectedBounds.add(new byte[] {      0x10, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {      0x20, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {      0x30, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {      0x40, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {      0x50, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {      0x60, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {      0x70, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {(byte)0x80, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {(byte)0x90, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {(byte)0xa0, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {(byte)0xb0, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {(byte)0xc0, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {(byte)0xd0, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {(byte)0xe0, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] {(byte)0xf0, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
 
-        // Do table creation/pre-splitting and verification of region boundaries
-        preSplitTableAndVerify(expectedBounds,
-                "org.apache.hadoop.hbase.util.RegionSplitter$UniformSplit",
-                "NewUniformPresplitTable");
+      // Do table creation/pre-splitting and verification of region boundaries
+      preSplitTableAndVerify(expectedBounds, UniformSplit.class.getSimpleName(),
+        "NewUniformPresplitTable");
     }
 
     /**
@@ -135,7 +133,7 @@ public class TestRegionSplitter {
 
         byte[][] twoRegionsSplits = splitter.split(2);
         assertEquals(1, twoRegionsSplits.length);
-        assertArrayEquals(twoRegionsSplits[0], "7fffffff".getBytes());
+    assertArrayEquals(twoRegionsSplits[0], "80000000".getBytes());
 
         byte[][] threeRegionsSplits = splitter.split(3);
         assertEquals(2, threeRegionsSplits.length);
@@ -157,7 +155,7 @@ public class TestRegionSplitter {
         splitPoint = splitter.split(firstRow, "20000000".getBytes());
         assertArrayEquals(splitPoint, "10000000".getBytes());
 
-        // Halfway between 5f... and 7f... should be 6f....
+        // Halfway between df... and ff... should be ef....
         splitPoint = splitter.split("dfffffff".getBytes(), lastRow);
         assertArrayEquals(splitPoint,"efffffff".getBytes());
     }
@@ -179,7 +177,7 @@ public class TestRegionSplitter {
         byte[][] twoRegionsSplits = splitter.split(2);
         assertEquals(1, twoRegionsSplits.length);
         assertArrayEquals(twoRegionsSplits[0],
-                new byte[] {0x7f, xFF, xFF, xFF, xFF, xFF, xFF, xFF});
+            new byte[] { (byte) 0x80, 0, 0, 0, 0, 0, 0, 0 });
 
         byte[][] threeRegionsSplits = splitter.split(3);
         assertEquals(2, threeRegionsSplits.length);
@@ -207,6 +205,64 @@ public class TestRegionSplitter {
                 new byte[] {(byte)0xef, xFF, xFF, xFF, xFF, xFF, xFF, xFF});
     }
 
+  @Test
+  public void testUserInput() {
+    SplitAlgorithm algo = new HexStringSplit();
+    assertFalse(splitFailsPrecondition(algo)); // default settings are fine
+    assertFalse(splitFailsPrecondition(algo, "00", "AA")); // custom is fine
+    assertTrue(splitFailsPrecondition(algo, "AA", "00")); // range error
+    assertTrue(splitFailsPrecondition(algo, "AA", "AA")); // range error
+    assertFalse(splitFailsPrecondition(algo, "0", "2", 3)); // should be fine
+    assertFalse(splitFailsPrecondition(algo, "0", "A", 11)); // should be fine
+    assertTrue(splitFailsPrecondition(algo, "0", "A", 12)); // too granular
+
+    algo = new UniformSplit();
+    assertFalse(splitFailsPrecondition(algo)); // default settings are fine
+    assertFalse(splitFailsPrecondition(algo, "\\x00", "\\xAA")); // custom is fine
+    assertTrue(splitFailsPrecondition(algo, "\\xAA", "\\x00")); // range error
+    assertTrue(splitFailsPrecondition(algo, "\\xAA", "\\xAA")); // range error
+    assertFalse(splitFailsPrecondition(algo, "\\x00", "\\x02", 3)); // should be fine
+    assertFalse(splitFailsPrecondition(algo, "\\x00", "\\x0A", 11)); // should be fine
+    assertTrue(splitFailsPrecondition(algo, "\\x00", "\\x0A", 12)); // too granular
+  }
+
+  private boolean splitFailsPrecondition(SplitAlgorithm algo) {
+    return splitFailsPrecondition(algo, 100);
+  }
+
+  private boolean splitFailsPrecondition(SplitAlgorithm algo, String firstRow,
+      String lastRow) {
+    return splitFailsPrecondition(algo, firstRow, lastRow, 100);
+  }
+
+  private boolean splitFailsPrecondition(SplitAlgorithm algo, String firstRow,
+      String lastRow, int numRegions) {
+    algo.setFirstRow(firstRow);
+    algo.setLastRow(lastRow);
+    return splitFailsPrecondition(algo, numRegions);
+  }
+
+  private boolean splitFailsPrecondition(SplitAlgorithm algo, int numRegions) {
+    try {
+      byte[][] s = algo.split(numRegions);
+      LOG.debug("split algo = " + algo);
+      if (s != null) {
+        StringBuilder sb = new StringBuilder();
+        for (byte[] b : s) {
+          sb.append(Bytes.toStringBinary(b) + "  ");
+        }
+        LOG.debug(sb.toString());
+      }
+      return false;
+    } catch (IllegalArgumentException e) {
+      return true;
+    } catch (IllegalStateException e) {
+      return true;
+    } catch (IndexOutOfBoundsException e) {
+      return true;
+    }
+  }
+
     /**
      * Creates a pre-split table with expectedBounds.size()+1 regions, then
      * verifies that the region boundaries are the same as the expected
@@ -214,21 +270,23 @@ public class TestRegionSplitter {
      * @throws Various junit assertions
      */
     private void preSplitTableAndVerify(List<byte[]> expectedBounds,
-            String splitAlgo, String tableName) throws Exception {
+            String splitClass, String tableName) throws Exception {
         final int numRegions = expectedBounds.size()-1;
         final Configuration conf = UTIL.getConfiguration();
         conf.setInt("split.count", numRegions);
+        SplitAlgorithm splitAlgo = RegionSplitter.newSplitAlgoInstance(conf, splitClass);
         RegionSplitter.createPresplitTable(tableName, splitAlgo,
                 new String[] {CF_NAME}, conf);
         verifyBounds(expectedBounds, tableName);
     }
 
-    private void rollingSplitAndVerify(String tableName, String splitAlgo,
+    private void rollingSplitAndVerify(String tableName, String splitClass,
             List<byte[]> expectedBounds)  throws Exception {
         final Configuration conf = UTIL.getConfiguration();
 
         // Set this larger than the number of splits so RegionSplitter won't block
         conf.setInt("split.outstanding", 5);
+        SplitAlgorithm splitAlgo = RegionSplitter.newSplitAlgoInstance(conf, splitClass);
         RegionSplitter.rollingSplit(tableName, splitAlgo, conf);
         verifyBounds(expectedBounds, tableName);
     }
