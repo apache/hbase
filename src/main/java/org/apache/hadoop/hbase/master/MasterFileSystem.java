@@ -288,10 +288,12 @@ public class MasterFileSystem {
   }
 
   /**
+   * Enable in-memory caching for specified region.
+   *
    * @param hri Set all family block caching to <code>b</code>
    * @param b
    */
-  private static void setInfoFamilyCaching(final HRegionInfo hri, final boolean b) {
+  public static void setInfoFamilyCaching(final HRegionInfo hri, final boolean b) {
     for (HColumnDescriptor hcd: hri.getTableDesc().families.values()) {
       if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
         hcd.setBlockCacheEnabled(b);

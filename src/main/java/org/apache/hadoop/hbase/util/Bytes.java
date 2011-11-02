@@ -299,6 +299,9 @@ public class Bytes {
    * @see #toStringBinary(byte[], int, int)
    */
   public static String toStringBinary(final byte [] b) {
+    if (b == null) {
+      return "null";
+    }
     return toStringBinary(b, 0, b.length);
   }
 

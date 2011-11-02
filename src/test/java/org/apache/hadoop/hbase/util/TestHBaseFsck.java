@@ -19,10 +19,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
+import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertNoErrors;
+import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -59,7 +61,9 @@ public class TestHBaseFsck {
 
   // for the instance, reset every test run
   private HTable tbl;
-
+  private final static byte[][] splits= new byte[][] { Bytes.toBytes("A"), 
+    Bytes.toBytes("B"), Bytes.toBytes("C") };
+  
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
@@ -70,28 +74,8 @@ public class TestHBaseFsck {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private HBaseFsck doFsck(boolean fix) throws Exception {
-    HBaseFsck fsck = new HBaseFsck(conf);
-    fsck.connect();
-    fsck.displayFullReport(); // i.e. -details
-    fsck.setTimeLag(0);
-    fsck.setFixErrors(fix);
-    fsck.doWork();
-    return fsck;
-  }
-
-  private void assertNoErrors(HBaseFsck fsck) throws Exception {
-    List<ERROR_CODE> errs = fsck.getErrors().getErrorList();
-    assertEquals(0, errs.size());
-  }
-
-  private void assertErrors(HBaseFsck fsck, ERROR_CODE[] expectedErrors) {
-    List<ERROR_CODE> errs = fsck.getErrors().getErrorList();
-    assertEquals(Arrays.asList(expectedErrors), errs);
-  }
-
-  private HRegionInfo createRegion(Configuration conf,
-      final HTableDescriptor htd, byte[] startKey, byte[] endKey)
+  private HRegionInfo createRegion(Configuration conf, final HTableDescriptor
+      htd, byte[] startKey, byte[] endKey)
       throws IOException {
     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
     HRegionInfo hri = new HRegionInfo(htd, startKey, endKey);
@@ -152,15 +136,15 @@ public class TestHBaseFsck {
    * @throws InterruptedException
    * @throws KeeperException
    */
-  void setupTable(String tablename) throws Exception {
-    byte[][] startKeys = new byte[][] { Bytes.toBytes("A"), Bytes.toBytes("B"),
-        Bytes.toBytes("C") };
+  HTable setupTable(String tablename) throws Exception {
     HTableDescriptor desc = new HTableDescriptor(tablename);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
     desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
-    TEST_UTIL.getHBaseAdmin().createTable(desc, startKeys);
+    TEST_UTIL.getHBaseAdmin().createTable(desc, splits);
     tbl = new HTable(TEST_UTIL.getConfiguration(), tablename);
+    return tbl;
   }
+
 
   /**
    * delete table in preparation for next test
@@ -182,16 +166,16 @@ public class TestHBaseFsck {
    */
   @Test
   public void testHBaseFsckClean() throws Exception {
-    assertNoErrors(doFsck(false));
+    assertNoErrors(doFsck(conf, false));
     String table = "tableClean";
     try {
-      HBaseFsck hbck = doFsck(false);
+      HBaseFsck hbck = doFsck(conf, false);
       assertNoErrors(hbck);
 
       setupTable(table);
       
       // We created 1 table, should be fine
-      hbck = doFsck( false);
+      hbck = doFsck(conf, false);
       assertNoErrors(hbck);
       assertEquals(0, hbck.getOverlapGroups(table).size());
     } finally {
@@ -204,11 +188,11 @@ public class TestHBaseFsck {
    */
   @Test
   public void testDupeStartKey() throws Exception {
-    assertNoErrors(doFsck(false));
+    assertNoErrors(doFsck(conf, false));
     String table = "tableDupeStartKey";
     try {
       setupTable(table);
-      assertNoErrors(doFsck(false));
+      assertNoErrors(doFsck(conf, false));
 
       // Now let's mess it up, by adding a region with a duplicate startkey
       HRegionInfo hriDupe = createRegion(conf, tbl.getTableDescriptor(),
@@ -217,7 +201,7 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .waitForAssignment(hriDupe);
 
-      HBaseFsck hbck = doFsck(false);
+      HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.DUPE_STARTKEYS,
             ERROR_CODE.DUPE_STARTKEYS});
       assertEquals(2, hbck.getOverlapGroups(table).size());
@@ -234,7 +218,7 @@ public class TestHBaseFsck {
     String table = "tableDegenerateRegions";
     try {
       setupTable(table);
-      assertNoErrors(doFsck(false));
+      assertNoErrors(doFsck(conf,false));
 
       // Now let's mess it up, by adding a region with a duplicate startkey
       HRegionInfo hriDupe = createRegion(conf, tbl.getTableDescriptor(),
@@ -243,7 +227,7 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .waitForAssignment(hriDupe);
 
-      HBaseFsck hbck = doFsck(false);
+      HBaseFsck hbck = doFsck(conf,false);
       assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.DEGENERATE_REGION,
           ERROR_CODE.DUPE_STARTKEYS, ERROR_CODE.DUPE_STARTKEYS});
       assertEquals(2, hbck.getOverlapGroups(table).size());
@@ -268,7 +252,7 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .waitForAssignment(hriOverlap);
 
-      HBaseFsck hbck = doFsck(false);
+      HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new ERROR_CODE[] {
           ERROR_CODE.OVERLAP_IN_REGION_CHAIN,
           ERROR_CODE.OVERLAP_IN_REGION_CHAIN });
@@ -298,7 +282,7 @@ public class TestHBaseFsck {
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("C"), Bytes.toBytes(""));
       TEST_UTIL.getHBaseAdmin().enableTable(table);
 
-      HBaseFsck hbck = doFsck(false);
+      HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.HOLE_IN_REGION_CHAIN });
       // holes are separate from overlap groups
       assertEquals(0, hbck.getOverlapGroups(table).size());
@@ -306,5 +290,4 @@ public class TestHBaseFsck {
       deleteTable(table);
     }
   }
-
 }
