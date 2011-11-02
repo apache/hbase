@@ -31,6 +31,7 @@ Release 0.93.0 - Unreleased
    HBASE-4669  Add an option of using round-robin assignment for enabling table
                (Jieshan Bean)
    HBASE-4696  HRegionThriftServer' might have to indefinitely do redirtects (jgray)
+   HBASE-1744  Thrift server to match the new java api (Tim Sell)
 
   BUG FIXES
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)
