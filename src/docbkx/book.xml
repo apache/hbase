@@ -565,6 +565,12 @@ admin.enableTable(table);
         second and third column family in the case where data access is usually column scoped;
         i.e. you query one column family or the other but usually not both at the one time.
     </para>
+    <section xml:id="number.of.cfs.card"><title>Cardinality of ColumnFamilies</title>
+      <para>Where multiple ColumnFamilies exist in a single table, be aware of the cardinality (i.e., number of rows).  
+      If ColumnFamily-A has 1000,000 rows and ColumnFamily-B has 1 billion rows, ColumnFamily-A's data will likely be spread 
+      across many, many regions (and RegionServers).  This makes mass scans for ColumnFamily-A less efficient.  
+      </para>
+    </section>
   </section>
   <section xml:id="rowkey.design"><title>Rowkey Design</title>
     <section xml:id="timeseries">
@@ -970,6 +976,11 @@ public static class MyMapper extends TableMapper&lt;ImmutableBytesWritable, Put&
     <para>This is just an example, developers could choose not to use <classname>TableOutputFormat</classname> and connect to the 
     target table themselves.
     </para>
+    </para>
+    </section>
+    <section xml:id="mapreduce.example.readwrite.multi">
+      <title>HBase MapReduce Read/Write Example With Multi-Table Output</title>
+      <para>TODO:  example for <classname>MultiTableOutputFormat</classname>.
     </para>
     </section>
     <section xml:id="mapreduce.example.summary">
@@ -1575,7 +1586,6 @@ scan.setFilter(filter);
           <para>For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFile.html">HFile source code</link>.
           </para>
       </section>
-
       <section xml:id="hfile_tool">
         <title>HFile Tool</title>
 
@@ -1589,7 +1599,13 @@ scan.setFilter(filter);
         usage for other things to do with the <classname>HFile</classname>
         tool.</para>
       </section>
+      <section xml:id="store.file.dir">
+       <title>StoreFile Directory Structure on HDFS</title>
+        <para>For more information of what StoreFiles look like on HDFS with respect to the directory structure, see <xref linkend="trouble.namenode.hbase.objects" />.
+        </para>
       </section>
+      </section> <!--  hfile -->
+      
       <section xml:id="hfile.blocks">
         <title>Blocks</title>
         <para>StoreFiles are composed of blocks.  The blocksize is configured on a per-ColumnFamily basis.

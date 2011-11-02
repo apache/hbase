@@ -417,6 +417,11 @@ false
         </para>
       </section>
     </section>
+    <section xml:id="ops.capacity.regions"><title>Regions</title>
+      <para>Another common question for HBase administrators is determining the right number of regions per
+      RegionServer.  This affects both storage and hardware planning. See <xref linkend="perf.number.of.regions" />.
+      </para>
+    </section>
   </section>
 
 </chapter>
