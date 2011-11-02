@@ -95,7 +95,7 @@ public class TestThriftHBaseServiceHandler {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
-    HBaseAdmin admin = new HBaseAdmin(new Configuration());
+    HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
     HTableDescriptor tableDescriptor = new HTableDescriptor(tableAname);
     for (HColumnDescriptor family : families) {
       tableDescriptor.addFamily(family);
