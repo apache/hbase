@@ -140,6 +140,11 @@
       <para>The number of regions for an HBase table is driven by the <xref
               linkend="bigger.regions" />. Also, see the architecture
           section on <xref linkend="arch.regions.size" /></para>
+       <para>A lower number of regions is preferred, generally in the range of 20 to 200
+       per RegionServer.  Adjust the regionsize as appropriate to achieve this number.  There
+       are some clusters that set the regionsize to 20Gb, for example, so you may need to 
+       experiment with this setting based on your hardware configuration and application needs.
+       </para>
     </section>
 
     <section xml:id="perf.compactions.and.splits">
