@@ -440,6 +440,8 @@ Release 0.92.0 - Unreleased
                (gaojinchao)
    HBASE-4708  Revert safemode related pieces of hbase-4510 (Harsh J)
    HBASE-3515  [replication] ReplicationSource can miss a log after RS comes out of GC
+   HBASE-4713  Raise debug level to warn on ExecutionException in
+               HConnectionManager$HConnectionImplementation (Lucian George Iordache)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
