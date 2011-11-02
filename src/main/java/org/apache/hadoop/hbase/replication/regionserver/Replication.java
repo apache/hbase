@@ -191,7 +191,7 @@ public class Replication implements WALActionsListener,
   }
 
   @Override
-  public void postLogRoll(Path oldPath, Path newPath) {
+  public void postLogRoll(Path oldPath, Path newPath) throws IOException {
     getReplicationManager().logRolled(newPath);
   }
 
