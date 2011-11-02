@@ -442,6 +442,7 @@ Release 0.92.0 - Unreleased
    HBASE-3515  [replication] ReplicationSource can miss a log after RS comes out of GC
    HBASE-4713  Raise debug level to warn on ExecutionException in
                HConnectionManager$HConnectionImplementation (Lucian George Iordache)
+   HBASE-4716  Improve locking for single column family bulk load
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
