@@ -567,8 +567,8 @@ admin.enableTable(table);
     </para>
     <section xml:id="number.of.cfs.card"><title>Cardinality of ColumnFamilies</title>
       <para>Where multiple ColumnFamilies exist in a single table, be aware of the cardinality (i.e., number of rows).  
-      If ColumnFamily-A has 1000,000 rows and ColumnFamily-B has 1 billion rows, ColumnFamily-A's data will likely be spread 
-      across many, many regions (and RegionServers).  This makes mass scans for ColumnFamily-A less efficient.  
+      If ColumnFamilyA has 1000,000 rows and ColumnFamilyB has 1 billion rows, ColumnFamilyA's data will likely be spread 
+      across many, many regions (and RegionServers).  This makes mass scans for ColumnFamilyA less efficient.  
       </para>
     </section>
   </section>
@@ -631,11 +631,32 @@ admin.enableTable(table);
          when designing rowkeys.
          </para> 
        </section>
-       <section xml:id="keysize.example"><title>Numeric Example</title>
+       <section xml:id="keysize.patterns"><title>Byte Patterns</title>
          <para>A long is 8 bytes.  You can store an unsigned number up to 18,446,744,073,709,551,615 in those eight bytes.
             If you stored this number as a String -- presuming a byte per character -- you need nearly 3x the bytes.
-            This is a perfect example of a small inefficiency that may not seem like much, but can add up in HBase when 
-            used as rowkeys.
+         </para>
+         <para>Not convinced?  Below is some sample code that you can run on your own.
+<programlisting>
+// long
+//
+long l = 1234567890L;
+byte[] lb = Bytes.toBytes(l);
+System.out.println("long bytes length: " + lb.length);   // returns 8
+		
+String s = "" + l;
+byte[] sb = Bytes.toBytes(s);
+System.out.println("long as string length: " + sb.length);    // returns 10
+			
+// hash 
+//
+MessageDigest md = MessageDigest.getInstance("MD5");
+byte[] digest = md.digest(Bytes.toBytes(s));
+System.out.println("md5 digest bytes length: " + digest.length);    // returns 16
+		
+String sDigest = new String(digest);
+byte[] sbDigest = Bytes.toBytes(sDigest);
+System.out.println("md5 digest as string length: " + sbDigest.length);    // returns 26		
+</programlisting>               
          </para>
        </section>
     </section>
