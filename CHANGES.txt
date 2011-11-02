@@ -789,6 +789,8 @@ Release 0.92.0 - Unreleased
    HBASE-4057  Implement HBase version of "show processlist" (Riley Patterson)
    HBASE-4219  Per Column Family Metrics
    HBASE-4219  Addendum for failure of TestHFileBlock
+   HBASE-4377  [hbck] Offline rebuild .META. from fs data only
+               (Jonathan Hsieh)
 
 Release 0.90.5 - Unreleased
 
