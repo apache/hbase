@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.Writables;
@@ -953,9 +954,10 @@ public class ThriftServer {
         value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
                                         HConstants.SERVER_QUALIFIER);
         if (value != null && value.length > 0) {
-          ServerName sn = new ServerName(Bytes.toString(value), -1/*Any value works here for startcode*/);
-          region.setServerName(Bytes.toBytes(sn.getHostname()));
-          region.port = sn.getPort();
+          String hostAndPort = Bytes.toString(value);
+          region.setServerName(Bytes.toBytes(
+              Addressing.parseHostname(hostAndPort)));
+          region.port = Addressing.parsePort(hostAndPort);
         }
         return region;
       } catch (IOException e) {

@@ -443,6 +443,8 @@ Release 0.92.0 - Unreleased
    HBASE-4713  Raise debug level to warn on ExecutionException in
                HConnectionManager$HConnectionImplementation (Lucian George Iordache)
    HBASE-4716  Improve locking for single column family bulk load
+   HBASE-4609  ThriftServer.getRegionInfo() is expecting old ServerName format, need to
+               use new Addressing class instead (Jonathan Gray)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
