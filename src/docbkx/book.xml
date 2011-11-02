@@ -614,7 +614,8 @@ admin.enableTable(table);
        </para>
        <para>Most of the time small inefficiencies don't matter all that much.  Unfortunately,
          this is a case where they do.  Whatever patterns are selected for ColumnFamilies, attributes, and rowkeys they could be repeated
-       several billion times in your data.  See <xref linkend="keyvalue"/> for more information on HBase stores data internally.</para>
+       several billion times in your data. </para>
+       <para>See <xref linkend="keyvalue"/> for more information on HBase stores data internally.</para>
        <section xml:id="keysize.cf"><title>Column Families</title>
          <para>Try to keep the ColumnFamily names as small as possible, preferably one character (e.g. "d" for data/default).
          </para> 
@@ -629,6 +630,13 @@ admin.enableTable(table);
          A short key that is useless for data access is not better than a longer key with better get/scan properties.  Expect tradeoffs
          when designing rowkeys.
          </para> 
+       </section>
+       <section xml:id="keysize.example"><title>Numeric Example</title>
+         <para>A long is 8 bytes.  You can store an unsigned number up to 18,446,744,073,709,551,615 in those eight bytes.
+            If you stored this number as a String -- presuming a byte per character -- you need nearly 3x the bytes.
+            This is a perfect example of a small inefficiency that may not seem like much, but can add up in HBase when 
+            used as rowkeys.
+         </para>
        </section>
     </section>
     <section xml:id="reverse.timestamp"><title>Reverse Timestamps</title>
