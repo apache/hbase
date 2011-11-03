@@ -801,6 +801,7 @@ Release 0.92.0 - Unreleased
    HBASE-4219  Addendum for failure of TestHFileBlock
    HBASE-4377  [hbck] Offline rebuild .META. from fs data only
                (Jonathan Hsieh)
+   HBASE-4298  Support to drain RS nodes through ZK (Aravind Gottipati)
 
 Release 0.90.5 - Unreleased
 
