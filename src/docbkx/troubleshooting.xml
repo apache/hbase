@@ -461,6 +461,8 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
     
     <section xml:id="trouble.client">
       <title>Client</title>
+       <para>For more information on the HBase client, see <xref linkend="client"/>. 
+       </para>
        <section xml:id="trouble.client.scantimeout">
             <title>ScannerTimeoutException</title>
             <para>This is thrown if the time between RPC calls from the client to RegionServer exceeds the scan timeout.  
@@ -523,6 +525,8 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
     </section>
     <section xml:id="trouble.namenode">
       <title>NameNode</title>
+       <para>For more information on the NameNode, see <xref linkend="arch.hdfs"/>. 
+       </para>
        <section xml:id="trouble.namenode.disk">
             <title>HDFS Utilization of Tables and Regions</title>
             <para>To determine how much space HBase is using on HDFS use the <code>hadoop</code> shell commands from the NameNode.  For example... </para>
@@ -565,6 +569,8 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
         
     <section xml:id="trouble.rs">
       <title>RegionServer</title>
+        <para>For more information on the RegionServers, see <xref linkend="regionserver.arch"/>. 
+       </para>
       <section xml:id="trouble.rs.startup">
         <title>Startup Errors</title>
           <section xml:id="trouble.rs.startup.master-no-region">
@@ -747,6 +753,8 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
 
     <section xml:id="trouble.master">
       <title>Master</title>
+       <para>For more information on the Master, see <xref linkend="master"/>. 
+       </para>
       <section xml:id="trouble.master.startup">
         <title>Startup Errors</title>
           <section xml:id="trouble.master.startup.migration">
