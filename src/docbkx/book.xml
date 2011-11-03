@@ -567,7 +567,7 @@ admin.enableTable(table);
     </para>
     <section xml:id="number.of.cfs.card"><title>Cardinality of ColumnFamilies</title>
       <para>Where multiple ColumnFamilies exist in a single table, be aware of the cardinality (i.e., number of rows).  
-      If ColumnFamilyA has 1000,000 rows and ColumnFamilyB has 1 billion rows, ColumnFamilyA's data will likely be spread 
+      If ColumnFamilyA has 1 million rows and ColumnFamilyB has 1 billion rows, ColumnFamilyA's data will likely be spread 
       across many, many regions (and RegionServers).  This makes mass scans for ColumnFamilyA less efficient.  
       </para>
     </section>
