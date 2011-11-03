@@ -43,6 +43,7 @@ Release 0.93.0 - Unreleased
                (mikhail via jgray)
    HBASE-4545  TestHLog doesn't clean up after itself
    HBASE-4690  Intermittent TestRegionServerCoprocessorExceptionWithAbort failure
+   HBASE-4480  Testing script to simplify local testing (Scott Kuehn)
 
 Release 0.92.0 - Unreleased
   INCOMPATIBLE CHANGES
