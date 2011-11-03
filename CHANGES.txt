@@ -458,6 +458,7 @@ Release 0.92.0 - Unreleased
    HBASE-4479  TestMasterFailover failure in Hbase-0.92#17(Ram)
    HBASE-4651  ConcurrentModificationException might be thrown in
                TestHCM.testConnectionUniqueness (Jinchao)
+   HBASE-4518  TestServerCustomProtocol fails intermittently
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
