@@ -89,13 +89,12 @@ public class TestGlobalMemStoreSize {
     }
     
     // check the global memstore size after flush
-    LOG.info("Starting flushes");
     int i = 0;
     for (HRegionServer server : getOnlineRegionServers()) {
+      LOG.info("Starting flushes on " + server.getServerName() + ", size=" + server.getRegionServerAccounting().getGlobalMemstoreSize());
       for (HRegionInfo regionInfo : server.getOnlineRegions()) {
         HRegion r = server.getFromOnlineRegions(regionInfo.getEncodedName());
-        LOG.info("Flushing " + r.toString());
-        r.flushcache();
+        LOG.info("Flush " + r.toString() + " on " + server.getServerName() + ", " +  r.flushcache() + ", size=" + server.getRegionServerAccounting().getGlobalMemstoreSize());;
       }
       LOG.info("Post flush on " + server.getServerName());
       long now = System.currentTimeMillis();
