@@ -353,6 +353,18 @@ Deferred log flush can be configured on tables via <link
       rows at a time to the client to be processed. There is a cost/benefit to
       have the cache value be large because it costs more in memory for both
       client and RegionServer, so bigger isn't always better.</para>
+      <section xml:id="perf.hbase.client.caching.mr">
+        <title>Scan Caching in MapReduce Jobs</title>
+        <para>Scan settings in MapReduce jobs deserve special attention.  Timeouts can result (e.g., UnknownScannerException)
+        in Map tasks if it takes longer to process a batch of records before the client goes back to the RegionServer for the
+        next set of data.  This problem can occur because there is non-trivial processing occuring per row.  If you process
+        rows quickly, set caching higher.  If you process rows more slowly (e.g., lots of transformations per row, writes), 
+        then set caching lower.
+        </para>
+        <para>Timeouts can also happen in a non-MapReduce use case (i.e., single threaded HBase client doing a Scan), but the
+        processing that is often performed in MapReduce jobs tends to exacerbate this issue.
+        </para>
+      </section>
     </section>
     <section xml:id="perf.hbase.client.selection">
       <title>Scan Attribute Selection</title>

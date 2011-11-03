@@ -464,11 +464,13 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
        <para>For more information on the HBase client, see <xref linkend="client"/>. 
        </para>
        <section xml:id="trouble.client.scantimeout">
-            <title>ScannerTimeoutException</title>
+            <title>ScannerTimeoutException or UnknownScannerException</title>
             <para>This is thrown if the time between RPC calls from the client to RegionServer exceeds the scan timeout.  
             For example, if <code>Scan.setCaching</code> is set to 500, then there will be an RPC call to fetch the next batch of rows every 500 <code>.next()</code> calls on the ResultScanner
             because data is being transferred in blocks of 500 rows to the client.  Reducing the setCaching value may be an option, but setting this value too low makes for inefficient
             processing on numbers of rows.
+            </para>
+            <para>See <xref linkend="perf.hbase.client.caching"/>.
             </para>
        </section>    
        <section xml:id="trouble.client.scarylogs">
