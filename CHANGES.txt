@@ -448,7 +448,7 @@ Release 0.92.0 - Unreleased
                use new Addressing class instead (Jonathan Gray)
    HBASE-4719  HBase script assumes pre-Hadoop 0.21 layout of jar files
                (Roman Shposhnik)
-
+   HBASE-4553  The update of .tableinfo is not atomic; we remove then rename
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
