@@ -61,7 +61,6 @@ import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
@@ -1056,6 +1055,7 @@ public class AssignmentManager extends ZooKeeperListener {
       copy.putAll(this.regionPlans);
     }
     for (Map.Entry<String, RegionPlan> e: copy.entrySet()) {
+      if (e.getValue() == null || e.getValue().getDestination() == null) continue;
       if (!e.getValue().getDestination().equals(sn)) continue;
       RegionState rs = null;
       synchronized (this.regionsInTransition) {
