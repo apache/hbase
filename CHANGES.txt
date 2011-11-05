@@ -450,6 +450,7 @@ Release 0.92.0 - Unreleased
                (Roman Shposhnik)
    HBASE-4553  The update of .tableinfo is not atomic; we remove then rename
    HBASE-4725  NPE in AM#updateTimers
+   HBASE-4745  LRU statistics thread should be a daemon
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
