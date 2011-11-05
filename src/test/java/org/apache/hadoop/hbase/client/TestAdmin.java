@@ -601,7 +601,8 @@ public class TestAdmin {
     admin.enableTable(tableName);
 
     // Check the assignment.
-    HTable metaTable = new HTable(HConstants.META_TABLE_NAME);
+    HTable metaTable = new HTable(TEST_UTIL.getConfiguration(),
+        HConstants.META_TABLE_NAME);
     List<HRegionInfo> regionInfos = admin.getTableRegions(tableName);
     Map<String, Integer> serverMap = new HashMap<String, Integer>();
     for (int i = 0, j = regionInfos.size(); i < j; i++) {

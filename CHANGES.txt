@@ -37,6 +37,8 @@ Release 0.93.0 - Unreleased
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)
    HBASE-4673  NPE in HFileReaderV2.close during major compaction when
                hfile.block.cache.size is set to 0 (Lars H)
+   HBASE-4751  Make TestAdmin#testEnableTableRoundRobinAssignment friendly to
+               concurrent tests (Jieshan Bean)
  
   TESTS
    HBASE-4534  A new unit test for lazy seek and StoreScanner in general
