@@ -57,7 +57,7 @@ public class ExistsResource extends ResourceBase {
     MIMETYPE_BINARY})
   public Response get(final @Context UriInfo uriInfo) {
     try {
-      if (!tableResource.exists()) {
+      if (!servlet.getAdmin().tableExists(tableResource.table)) {
         throw new WebApplicationException(Response.Status.NOT_FOUND);
       }
     } catch (IOException e) {

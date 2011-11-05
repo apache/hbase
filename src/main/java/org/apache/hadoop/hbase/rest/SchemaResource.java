@@ -106,7 +106,7 @@ public class SchemaResource extends ResourceBase {
   }
 
   private Response replace(final byte[] name, final TableSchemaModel model,
-      final UriInfo uriInfo, final HBaseAdmin admin) {
+      final UriInfo uriInfo) {
     if (servlet.isReadOnly()) {
       throw new WebApplicationException(Response.Status.FORBIDDEN);
     }
@@ -122,6 +122,7 @@ public class SchemaResource extends ResourceBase {
         }
         htd.addFamily(hcd);
       }
+      HBaseAdmin admin = servlet.getAdmin();
       if (admin.tableExists(name)) {
         admin.disableTable(name);
         admin.modifyTable(name, htd);
@@ -140,11 +141,12 @@ public class SchemaResource extends ResourceBase {
   }
 
   private Response update(final byte[] name, final TableSchemaModel model,
-      final UriInfo uriInfo, final HBaseAdmin admin) {
+      final UriInfo uriInfo) {
     if (servlet.isReadOnly()) {
       throw new WebApplicationException(Response.Status.FORBIDDEN);
     }
     try {
+      HBaseAdmin admin = servlet.getAdmin();
       HTableDescriptor htd = admin.getTableDescriptor(name);
       admin.disableTable(name);
       try {
@@ -176,11 +178,10 @@ public class SchemaResource extends ResourceBase {
       final UriInfo uriInfo) {
     try {
       byte[] name = Bytes.toBytes(tableResource.getName());
-      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
-      if (replace || !admin.tableExists(name)) {
-        return replace(name, model, uriInfo, admin);
+      if (replace || !servlet.getAdmin().tableExists(name)) {
+        return replace(name, model, uriInfo);
       } else {
-        return update(name, model, uriInfo, admin);
+        return update(name, model, uriInfo);
       }
     } catch (IOException e) {
       throw new WebApplicationException(e, 

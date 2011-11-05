@@ -32,21 +32,17 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.rest.transform.NullTransform;
 import org.apache.hadoop.hbase.rest.transform.Transform;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.StringUtils;
 
 public class TableResource extends ResourceBase {
-  private static final Log LOG = LogFactory.getLog(TableResource.class);
 
   /**
    * HCD attributes starting with this string are considered transform
@@ -132,62 +128,59 @@ public class TableResource extends ResourceBase {
    * The attribute key must begin with the string "Transform$".
    */
   void scanTransformAttrs() throws IOException {
+    HTableDescriptor htd = null;
     try {
-      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
-      HTableDescriptor htd = admin.getTableDescriptor(Bytes.toBytes(table));
-      for (HColumnDescriptor hcd: htd.getFamilies()) {
-        for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-            hcd.getValues().entrySet()) {
-          // does the key start with the transform directive tag?
-          String key = Bytes.toString(e.getKey().get());
-          if (!key.startsWith(DIRECTIVE_KEY)) {
-            // no, skip
-            continue;
+      HTablePool pool = servlet.getTablePool();
+      HTableInterface t = pool.getTable(table);
+      try {
+        htd = t.getTableDescriptor();
+      } finally {
+        pool.putTable(t);      
+      }
+    } catch (Exception e) {
+      // HTablePool#getTable throws RTE, and it doesn't really matter what
+      // exception got us here anyway, htd will be null below
+    }
+    if (htd == null) {
+      return;
+    }
+    for (HColumnDescriptor hcd: htd.getFamilies()) {
+      for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+        hcd.getValues().entrySet()) {
+        // does the key start with the transform directive tag?
+        String key = Bytes.toString(e.getKey().get());
+        if (!key.startsWith(DIRECTIVE_KEY)) {
+          // no, skip
+          continue;
+        }
+        // match a comma separated list of one or more directives
+        byte[] value = e.getValue().get();
+        Matcher m = DIRECTIVE_PATTERN.matcher(Bytes.toString(value));
+        while (m.find()) {
+          byte[] qualifier = HConstants.EMPTY_BYTE_ARRAY;
+          String s = m.group(1);
+          if (s.length() > 0 && !s.equals("*")) {
+            qualifier = Bytes.toBytes(s);
           }
-          // match a comma separated list of one or more directives
-          byte[] value = e.getValue().get();
-          Matcher m = DIRECTIVE_PATTERN.matcher(Bytes.toString(value));
-          while (m.find()) {
-            byte[] qualifier = HConstants.EMPTY_BYTE_ARRAY;
-            String s = m.group(1);
-            if (s.length() > 0 && !s.equals("*")) {
-              qualifier = Bytes.toBytes(s);
-            }
-            boolean retry = false;
-            String className = m.group(2);
-            while (true) {
-              try {
-                // if a transform was previously configured for the qualifier,
-                // this will simply replace it
-                setTransform(table, hcd.getName(), qualifier,
+          String className = m.group(2);
+          try {
+            // if a transform was previously configured for the qualifier,
+            // this will simply replace it
+            setTransform(table, hcd.getName(), qualifier,
+                (Transform)Class.forName(className).newInstance());
+          } catch (ClassNotFoundException ex) {
+            className = "org.apache.hadoop.hbase.rest.transform." + className;
+            try {
+              setTransform(table, hcd.getName(), qualifier,
                   (Transform)Class.forName(className).newInstance());
-                break;
-              } catch (InstantiationException ex) {
-                LOG.error(StringUtils.stringifyException(ex));
-                if (retry) {
-                  break;
-                }
-                retry = true;
-              } catch (IllegalAccessException ex) {
-                LOG.error(StringUtils.stringifyException(ex));
-                if (retry) {
-                  break;
-                }
-                retry = true;
-              } catch (ClassNotFoundException ex) {
-                if (retry) {
-                  LOG.error(StringUtils.stringifyException(ex));
-                  break;
-                }
-                className = "org.apache.hadoop.hbase.rest.transform." + className;
-                retry = true;
-              }
+            } catch (Exception ex2) {
+              throw new IOException("Cannot instantiate transform", ex2);
             }
+          } catch (Exception ex) {           
+            throw new IOException("Cannot instantiate transform", ex);
           }
         }
       }
-    } catch (TableNotFoundException e) {
-      // ignore
     }
   }
 
@@ -220,15 +213,6 @@ public class TableResource extends ResourceBase {
   /** @return the table name */
   String getName() {
     return table;
-  }
-
-  /**
-   * @return true if the table exists
-   * @throws IOException
-   */
-  boolean exists() throws IOException {
-    HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
-    return admin.tableExists(table);
   }
 
   /**
