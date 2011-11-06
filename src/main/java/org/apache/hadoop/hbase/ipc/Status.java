@@ -1,6 +1,4 @@
 /**
- * Copyright 2010 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,20 +18,15 @@
 package org.apache.hadoop.hbase.ipc;
 
 /**
- * All custom RPC protocols to be exported by Coprocessors must extend this interface.
- *
- * <p>
- * <strong>Note that all callable methods must have a return type handled by
- * {@link org.apache.hadoop.hbase.io.HbaseObjectWritable#writeObject(java.io.DataOutput, Object, Class, org.apache.hadoop.conf.Configuration)}.</strong>
- * That is:
- * <ul>
- *   <li>a Java primitive type ({@code int}, {@code float}, etc)</li>
- *   <li>a Java {@code String}</li>
- *   <li>a {@link org.apache.hadoop.io.Writable}</li>
- *   <li>an array or {@code java.util.List} of one of the above</li>
- * </ul>
- * </p>
+ * Status of a Hadoop IPC call.
  */
-public interface CoprocessorProtocol extends VersionedProtocol {
-  public static final long VERSION = 1L;
+enum Status {
+  SUCCESS (0),
+  ERROR (1),
+  FATAL (-1);
+
+  int state;
+  private Status(int state) {
+    this.state = state;
+  }
 }
