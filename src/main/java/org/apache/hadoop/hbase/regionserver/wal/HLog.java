@@ -1693,7 +1693,7 @@ public class HLog implements Syncable {
     NavigableSet<Path> filesSorted = new TreeSet<Path>();
     Path editsdir = getRegionDirRecoveredEditsDir(regiondir);
     if (!fs.exists(editsdir)) return filesSorted;
-    FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
+    FileStatus[] files = FSUtils.listStatus(fs, editsdir, new PathFilter() {
       @Override
       public boolean accept(Path p) {
         boolean result = false;
