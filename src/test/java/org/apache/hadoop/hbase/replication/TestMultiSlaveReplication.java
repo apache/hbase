@@ -56,9 +56,6 @@ public class TestMultiSlaveReplication {
   private static Configuration conf2;
   private static Configuration conf3;
 
-  private static String clusterKey2;
-  private static String clusterKey3;
-
   private static HBaseTestingUtility utility1;
   private static HBaseTestingUtility utility2;
   private static HBaseTestingUtility utility3;
@@ -111,12 +108,6 @@ public class TestMultiSlaveReplication {
     utility3.setZkCluster(miniZK);
     new ZooKeeperWatcher(conf3, "cluster3", null, true);
 
-    clusterKey2 = conf2.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-    conf2.get("hbase.zookeeper.property.clientPort")+":/2";
-
-    clusterKey3 = conf3.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-    conf3.get("hbase.zookeeper.property.clientPort")+":/3";
-    
     table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
@@ -143,7 +134,7 @@ public class TestMultiSlaveReplication {
     HTable htable3 = new HTable(conf3, tableName);
     htable3.setWriteBufferSize(1024);
     
-    admin1.addPeer("1", clusterKey2);
+    admin1.addPeer("1", utility2.getClusterKey());
 
     // put "row" and wait 'til it got around, then delete
     putAndWait(row, famName, htable1, htable2);
@@ -158,7 +149,7 @@ public class TestMultiSlaveReplication {
     // after the log was rolled put a new row
     putAndWait(row3, famName, htable1, htable2);
 
-    admin1.addPeer("2", clusterKey3);
+    admin1.addPeer("2", utility3.getClusterKey());
 
     // put a row, check it was replicated to all clusters
     putAndWait(row1, famName, htable1, htable2, htable3);

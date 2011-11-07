@@ -50,8 +50,8 @@ public class TestHQuorumPeer {
 
   @Before public void setup() throws IOException {
     // Set it to a non-standard port.
-    TEST_UTIL.getConfiguration().setInt("hbase.zookeeper.property.clientPort",
-      PORT_NO);
+    TEST_UTIL.getConfiguration().setInt(HConstants.ZOOKEEPER_CLIENT_PORT,
+        PORT_NO);
     this.dataDir = TEST_UTIL.getDataTestDir(this.getClass().getName());
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     if (fs.exists(this.dataDir)) {
@@ -66,7 +66,7 @@ public class TestHQuorumPeer {
 
   @Test public void testMakeZKProps() {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    conf.set("hbase.zookeeper.property.dataDir", this.dataDir.toString());
+    conf.set(HConstants.ZOOKEEPER_DATA_DIR, this.dataDir.toString());
     Properties properties = ZKConfig.makeZKProps(conf);
     assertEquals(dataDir.toString(), (String)properties.get("dataDir"));
     assertEquals(Integer.valueOf(PORT_NO),

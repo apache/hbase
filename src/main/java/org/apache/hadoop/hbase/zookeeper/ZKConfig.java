@@ -45,10 +45,6 @@ public class ZKConfig {
   private static final String VARIABLE_END = "}";
   private static final int VARIABLE_END_LENGTH = VARIABLE_END.length();
 
-  private static final String ZK_CFG_PROPERTY = "hbase.zookeeper.property.";
-  private static final int ZK_CFG_PROPERTY_SIZE = ZK_CFG_PROPERTY.length();
-  private static final String ZK_CLIENT_PORT_KEY = "clientPort";
-
   /**
    * Make a Properties object holding ZooKeeper config equivalent to zoo.cfg.
    * If there is a zoo.cfg in the classpath, simply read it in. Otherwise parse
@@ -78,8 +74,8 @@ public class ZKConfig {
     // Directly map all of the hbase.zookeeper.property.KEY properties.
     for (Entry<String, String> entry : conf) {
       String key = entry.getKey();
-      if (key.startsWith(ZK_CFG_PROPERTY)) {
-        String zkKey = key.substring(ZK_CFG_PROPERTY_SIZE);
+      if (key.startsWith(HConstants.ZK_CFG_PROPERTY_PREFIX)) {
+        String zkKey = key.substring(HConstants.ZK_CFG_PROPERTY_PREFIX_LEN);
         String value = entry.getValue();
         // If the value has variables substitutions, need to do a get.
         if (value.contains(VARIABLE_START)) {
@@ -89,10 +85,10 @@ public class ZKConfig {
       }
     }
 
-    // If clientPort is not set, assign the default
-    if (zkProperties.getProperty(ZK_CLIENT_PORT_KEY) == null) {
-      zkProperties.put(ZK_CLIENT_PORT_KEY,
-                       HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT);
+    // If clientPort is not set, assign the default.
+    if (zkProperties.getProperty(HConstants.CLIENT_PORT_STR) == null) {
+      zkProperties.put(HConstants.CLIENT_PORT_STR,
+          HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT);
     }
 
     // Create the server.X properties.

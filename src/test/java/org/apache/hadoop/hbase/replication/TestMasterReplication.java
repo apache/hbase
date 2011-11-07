@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,30 +47,27 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestMasterReplication {
 
   private static final Log LOG = LogFactory.getLog(TestReplication.class);
 
-  private static Configuration conf1;
-  private static Configuration conf2;
-  private static Configuration conf3;
+  private Configuration conf1;
+  private Configuration conf2;
+  private Configuration conf3;
 
-  private static String clusterKey1;
-  private static String clusterKey2;
-  private static String clusterKey3;
+  private HBaseTestingUtility utility1;
+  private HBaseTestingUtility utility2;
+  private HBaseTestingUtility utility3;
+  
+  private MiniZooKeeperCluster miniZK; 
 
-  private static HBaseTestingUtility utility1;
-  private static HBaseTestingUtility utility2;
-  private static HBaseTestingUtility utility3;
   private static final long SLEEP_TIME = 500;
   private static final int NB_RETRIES = 10;
 
@@ -86,10 +82,10 @@ public class TestMasterReplication {
   private static final byte[] put = Bytes.toBytes("put");
   private static final byte[] delete = Bytes.toBytes("delete");
 
-  private static HTableDescriptor table;
+  private HTableDescriptor table;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     conf1 = HBaseConfiguration.create();
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     // smaller block size and capacity to trigger more operations
@@ -103,42 +99,42 @@ public class TestMasterReplication {
     conf1.setBoolean("dfs.support.append", true);
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        "org.apache.hadoop.hbase.replication.TestMasterReplication$CoprocessorCounter");
+        CoprocessorCounter.class.getName());
 
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
-    MiniZooKeeperCluster miniZK = utility1.getZkCluster();
+    miniZK = utility1.getZkCluster();
+    // By setting the mini ZK cluster through this method, even though this is
+    // already utility1's mini ZK cluster, we are telling utility1 not to shut
+    // the mini ZK cluster when we shut down the HBase cluster.
+    utility1.setZkCluster(miniZK);
     new ZooKeeperWatcher(conf1, "cluster1", null, true);
 
     conf2 = new Configuration(conf1);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
 
-    conf3 = new Configuration(conf1);
-    conf3.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/3");
-
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
-    new ZooKeeperWatcher(conf2, "cluster3", null, true);
+    new ZooKeeperWatcher(conf2, "cluster2", null, true);
+
+    conf3 = new Configuration(conf1);
+    conf3.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/3");
 
     utility3 = new HBaseTestingUtility(conf3);
     utility3.setZkCluster(miniZK);
     new ZooKeeperWatcher(conf3, "cluster3", null, true);
 
-    clusterKey1 = conf1.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-    conf1.get("hbase.zookeeper.property.clientPort")+":/1";
-
-    clusterKey2 = conf2.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-    conf2.get("hbase.zookeeper.property.clientPort")+":/2";
-
-    clusterKey3 = conf3.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-    conf3.get("hbase.zookeeper.property.clientPort")+":/3";
-    
     table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);
     table.addFamily(fam);
+  }
+
+  @After
+  public void tearDown() throws IOException {
+    miniZK.shutdown();
   }
 
   @Test(timeout=300000)
@@ -161,9 +157,9 @@ public class TestMasterReplication {
     HTable htable3 = new HTable(conf3, tableName);
     htable3.setWriteBufferSize(1024);
     
-    admin1.addPeer("1", clusterKey2);
-    admin2.addPeer("1", clusterKey3);
-    admin3.addPeer("1", clusterKey1);
+    admin1.addPeer("1", utility2.getClusterKey());
+    admin2.addPeer("1", utility3.getClusterKey());
+    admin3.addPeer("1", utility1.getClusterKey());
 
     // put "row" and wait 'til it got around
     putAndWait(row, famName, htable1, htable3);
@@ -213,8 +209,8 @@ public class TestMasterReplication {
     htable2.setWriteBufferSize(1024);
 
     // set M-M
-    admin1.addPeer("1", clusterKey2);
-    admin2.addPeer("1", clusterKey1);
+    admin1.addPeer("1", utility2.getClusterKey());
+    admin2.addPeer("1", utility1.getClusterKey());
 
     // add rows to both clusters,
     // make sure they are both replication

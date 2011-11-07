@@ -336,18 +336,4 @@ public class TestRegionSplitter {
         }
         return -1;
     }
-
-    /**
-     * Inserts some meaningless data into a CF so the regions can be split.
-     */
-    static void insertSomeData(String table) throws IOException {
-        HTable hTable = new HTable(table);
-        for(byte b=Byte.MIN_VALUE; b<Byte.MAX_VALUE; b++) {
-            byte[] whateverBytes = new byte[] {b};
-            Put p = new Put(whateverBytes);
-            p.setWriteToWAL(false);
-            p.add(CF_NAME.getBytes(), whateverBytes, whateverBytes);
-            hTable.put(p);
-        }
-    }
 }

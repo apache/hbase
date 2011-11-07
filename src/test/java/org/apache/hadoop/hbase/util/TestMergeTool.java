@@ -60,7 +60,7 @@ public class TestMergeTool extends HBaseTestCase {
     // find a zk ensemble put up by another concurrent test and this will
     // mess up this test.  Choose unlikely port. Default test port is 21818.
     // Default zk port is 2181.
-    this.conf.setInt("hbase.zookeeper.property.clientPort", 10001);
+    this.conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, 10001);
 
     this.conf.set("hbase.hstore.compactionThreshold", "2");
 

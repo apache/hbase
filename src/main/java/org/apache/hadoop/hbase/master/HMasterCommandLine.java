@@ -117,10 +117,11 @@ public class HMasterCommandLine extends ServerCommandLine {
       if (LocalHBaseCluster.isLocal(conf)) {
         final MiniZooKeeperCluster zooKeeperCluster =
           new MiniZooKeeperCluster();
-        File zkDataPath = new File(conf.get("hbase.zookeeper.property.dataDir"));
-        int zkClientPort = conf.getInt("hbase.zookeeper.property.clientPort", 0);
+        File zkDataPath = new File(conf.get(HConstants.ZOOKEEPER_DATA_DIR));
+        int zkClientPort = conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 0);
         if (zkClientPort == 0) {
-          throw new IOException("No config value for hbase.zookeeper.property.clientPort");
+          throw new IOException("No config value for "
+              + HConstants.ZOOKEEPER_CLIENT_PORT);
         }
         zooKeeperCluster.setDefaultClientPort(zkClientPort);
         int clientPort = zooKeeperCluster.startup(zkDataPath);
@@ -131,7 +132,7 @@ public class HMasterCommandLine extends ServerCommandLine {
           System.err.println(errorMsg);
           throw new IOException(errorMsg);
         }
-        conf.set("hbase.zookeeper.property.clientPort",
+        conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,
                  Integer.toString(clientPort));
         // Need to have the zk cluster shutdown when master is shutdown.
         // Run a subclass that does the zk cluster shutdown on its way out.

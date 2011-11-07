@@ -345,7 +345,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
 
       public HTableWrapper(byte[] tableName) throws IOException {
         this.tableName = tableName;
-        this.table = new HTable(tableName);
+        this.table = new HTable(conf, tableName);
         openTables.add(this);
       }
 

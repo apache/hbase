@@ -32,6 +32,8 @@ Release 0.93.0 - Unreleased
                (Jieshan Bean)
    HBASE-4696  HRegionThriftServer' might have to indefinitely do redirtects (jgray)
    HBASE-1744  Thrift server to match the new java api (Tim Sell)
+   HBASE-4746  Use a random ZK client port in unit tests so we can run them in parallel
+               (Mikhail Bautin)
 
   BUG FIXES
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)
