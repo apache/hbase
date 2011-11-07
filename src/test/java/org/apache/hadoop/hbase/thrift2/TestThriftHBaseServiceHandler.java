@@ -113,9 +113,13 @@ public class TestThriftHBaseServiceHandler {
 
   }
 
+  private ThriftHBaseServiceHandler createHandler() {
+    return new ThriftHBaseServiceHandler(UTIL.getConfiguration());
+  }
+
   @Test
   public void testExists() throws TIOError, TException {
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler();
+    ThriftHBaseServiceHandler handler = createHandler();
     byte[] rowName = "testExists".getBytes();
     ByteBuffer table = ByteBuffer.wrap(tableAname);
 
@@ -137,7 +141,7 @@ public class TestThriftHBaseServiceHandler {
 
   @Test
   public void testPutGet() throws Exception {
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler();
+    ThriftHBaseServiceHandler handler = createHandler();
     byte[] rowName = "testPutGet".getBytes();
     ByteBuffer table = ByteBuffer.wrap(tableAname);
 
@@ -162,7 +166,7 @@ public class TestThriftHBaseServiceHandler {
 
   @Test
   public void testPutGetMultiple() throws Exception {
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler();
+    ThriftHBaseServiceHandler handler = createHandler();
     ByteBuffer table = ByteBuffer.wrap(tableAname);
     byte[] rowName1 = "testPutGetMultiple1".getBytes();
     byte[] rowName2 = "testPutGetMultiple2".getBytes();
@@ -194,7 +198,7 @@ public class TestThriftHBaseServiceHandler {
 
   @Test
   public void testDeleteMultiple() throws Exception {
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler();
+    ThriftHBaseServiceHandler handler = createHandler();
     ByteBuffer table = ByteBuffer.wrap(tableAname);
     byte[] rowName1 = "testDeleteMultiple1".getBytes();
     byte[] rowName2 = "testDeleteMultiple2".getBytes();
@@ -224,7 +228,7 @@ public class TestThriftHBaseServiceHandler {
 
   @Test
   public void testDelete() throws Exception {
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler();
+    ThriftHBaseServiceHandler handler = createHandler();
     byte[] rowName = "testDelete".getBytes();
     ByteBuffer table = ByteBuffer.wrap(tableAname);
 
@@ -261,7 +265,7 @@ public class TestThriftHBaseServiceHandler {
 
   @Test
   public void testDeleteAllTimestamps() throws Exception {
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler();
+    ThriftHBaseServiceHandler handler = createHandler();
     byte[] rowName = "testDeleteAllTimestamps".getBytes();
     ByteBuffer table = ByteBuffer.wrap(tableAname);
 
@@ -301,7 +305,7 @@ public class TestThriftHBaseServiceHandler {
 
   @Test
   public void testDeleteSingleTimestamp() throws Exception {
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler();
+    ThriftHBaseServiceHandler handler = createHandler();
     byte[] rowName = "testDeleteSingleTimestamp".getBytes();
     ByteBuffer table = ByteBuffer.wrap(tableAname);
 
@@ -346,7 +350,7 @@ public class TestThriftHBaseServiceHandler {
 
   @Test
   public void testIncrement() throws Exception {
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler();
+    ThriftHBaseServiceHandler handler = createHandler();
     byte[] rowName = "testIncrement".getBytes();
     ByteBuffer table = ByteBuffer.wrap(tableAname);
 
@@ -379,7 +383,7 @@ public class TestThriftHBaseServiceHandler {
    */
   @Test
   public void testCheckAndPut() throws Exception {
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler();
+    ThriftHBaseServiceHandler handler = createHandler();
     byte[] rowName = "testCheckAndPut".getBytes();
     ByteBuffer table = ByteBuffer.wrap(tableAname);
 
@@ -426,7 +430,7 @@ public class TestThriftHBaseServiceHandler {
    */
   @Test
   public void testCheckAndDelete() throws Exception {
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler();
+    ThriftHBaseServiceHandler handler = createHandler();
     byte[] rowName = "testCheckAndDelete".getBytes();
     ByteBuffer table = ByteBuffer.wrap(tableAname);
 
@@ -469,7 +473,7 @@ public class TestThriftHBaseServiceHandler {
 
   @Test
   public void testScan() throws Exception {
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler();
+    ThriftHBaseServiceHandler handler = createHandler();
     ByteBuffer table = ByteBuffer.wrap(tableAname);
 
     TScan scan = new TScan();

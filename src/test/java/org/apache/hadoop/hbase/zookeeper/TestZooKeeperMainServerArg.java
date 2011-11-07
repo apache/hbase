@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.junit.Test;
 
 
@@ -32,10 +33,10 @@ public class TestZooKeeperMainServerArg {
 
   @Test public void test() {
     Configuration c = HBaseConfiguration.create();
-    assertEquals("localhost:" + c.get("hbase.zookeeper.property.clientPort"),
+    assertEquals("localhost:" + c.get(HConstants.ZOOKEEPER_CLIENT_PORT),
       parser.parse(c));
     final String port = "1234";
-    c.set("hbase.zookeeper.property.clientPort", port);
+    c.set(HConstants.ZOOKEEPER_CLIENT_PORT, port);
     c.set("hbase.zookeeper.quorum", "example.com");
     assertEquals("example.com:" + port, parser.parse(c));
     c.set("hbase.zookeeper.quorum", "example1.com,example2.com,example3.com");

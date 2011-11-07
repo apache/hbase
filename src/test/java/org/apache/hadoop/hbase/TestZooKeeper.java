@@ -235,7 +235,7 @@ public class TestZooKeeper {
     assertEquals(znode, parts[2]);
     ZKUtil.applyClusterKeyToConf(conf, key);
     assertEquals(parts[0], conf.get(HConstants.ZOOKEEPER_QUORUM));
-    assertEquals(parts[1], conf.get("hbase.zookeeper.property.clientPort"));
+    assertEquals(parts[1], conf.get(HConstants.ZOOKEEPER_CLIENT_PORT));
     assertEquals(parts[2], conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
     String reconstructedKey = ZKUtil.getZooKeeperClusterKey(conf);
     assertEquals(key, reconstructedKey);

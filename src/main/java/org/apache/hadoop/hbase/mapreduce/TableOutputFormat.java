@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -61,6 +60,9 @@ implements Configurable {
    * @see TableMapReduceUtil#initTableReducerJob(String, Class, org.apache.hadoop.mapreduce.Job, Class, String, String, String)
    */
   public static final String QUORUM_ADDRESS = "hbase.mapred.output.quorum";
+
+  /** Optional job parameter to specify peer cluster's ZK client port */
+  public static final String QUORUM_PORT = "hbase.mapred.output.quorum.port";
 
   /** Optional specification of the rs class name of the peer cluster */
   public static final String
@@ -182,6 +184,7 @@ implements Configurable {
       throw new IllegalArgumentException("Must specify table name");
     }
     String address = this.conf.get(QUORUM_ADDRESS);
+    int zkClientPort = conf.getInt(QUORUM_PORT, 0);
     String serverClass = this.conf.get(REGION_SERVER_CLASS);
     String serverImpl = this.conf.get(REGION_SERVER_IMPL);
     try {
@@ -191,6 +194,9 @@ implements Configurable {
       if (serverClass != null) {
         this.conf.set(HConstants.REGION_SERVER_CLASS, serverClass);
         this.conf.set(HConstants.REGION_SERVER_IMPL, serverImpl);
+      }
+      if (zkClientPort != 0) {
+        conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
       }
       this.table = new HTable(this.conf, tableName);
       this.table.setAutoFlush(false);

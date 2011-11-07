@@ -69,8 +69,8 @@ public class TestHBaseTestingUtility {
     // Cluster 2
     HBaseTestingUtility htu2 = new HBaseTestingUtility();
     htu2.getConfiguration().set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
-    htu2.getConfiguration().set("hbase.zookeeper.property.clientPort",
-      htu1.getConfiguration().get("hbase.zookeeper.property.clientPort", "-1"));
+    htu2.getConfiguration().set(HConstants.ZOOKEEPER_CLIENT_PORT,
+      htu1.getConfiguration().get(HConstants.ZOOKEEPER_CLIENT_PORT, "-1"));
     htu2.setZkCluster(htu1.getZkCluster());
 
     // Cluster 3; seed it with the conf from htu1 so we pickup the 'right'
@@ -78,8 +78,8 @@ public class TestHBaseTestingUtility {
     // start of minizkcluster.
     HBaseTestingUtility htu3 = new HBaseTestingUtility();
     htu3.getConfiguration().set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/3");
-    htu3.getConfiguration().set("hbase.zookeeper.property.clientPort",
-      htu1.getConfiguration().get("hbase.zookeeper.property.clientPort", "-1"));
+    htu3.getConfiguration().set(HConstants.ZOOKEEPER_CLIENT_PORT,
+      htu1.getConfiguration().get(HConstants.ZOOKEEPER_CLIENT_PORT, "-1"));
     htu3.setZkCluster(htu1.getZkCluster());
 
     try {

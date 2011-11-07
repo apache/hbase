@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
@@ -52,13 +53,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ThriftHBaseServiceHandler implements THBaseService.Iface {
 
   // TODO: Size of pool configuraple
-  private final HTablePool htablePool = new HTablePool();
+  private final HTablePool htablePool;
   private static final Log LOG = LogFactory.getLog(ThriftHBaseServiceHandler.class);
 
   // nextScannerId and scannerMap are used to manage scanner state
   // TODO: Cleanup thread for Scanners, Scanner id wrap
   private final AtomicInteger nextScannerId = new AtomicInteger(0);
   private final Map<Integer, ResultScanner> scannerMap = new ConcurrentHashMap<Integer, ResultScanner>();
+
+  public ThriftHBaseServiceHandler(Configuration conf) {
+    htablePool = new HTablePool(conf, Integer.MAX_VALUE);
+  }
 
   private HTableInterface getTable(byte[] tableName) {
     return htablePool.getTable(tableName);

@@ -103,9 +103,9 @@ public class TestReplicationSourceManager {
     zkw = new ZooKeeperWatcher(conf, "test", null);
     ZKUtil.createWithParents(zkw, "/hbase/replication");
     ZKUtil.createWithParents(zkw, "/hbase/replication/peers/1");
-    ZKUtil.setData(zkw, "/hbase/replication/peers/1",Bytes.toBytes(
-          conf.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-          conf.get("hbase.zookeeper.property.clientPort")+":/1"));
+    ZKUtil.setData(zkw, "/hbase/replication/peers/1",
+        Bytes.toBytes(conf.get(HConstants.ZOOKEEPER_QUORUM) + ":"
+            + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT) + ":/1"));
     ZKUtil.createWithParents(zkw, "/hbase/replication/state");
     ZKUtil.setData(zkw, "/hbase/replication/state", Bytes.toBytes("true"));
 

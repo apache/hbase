@@ -430,7 +430,7 @@ public class FSTableDescriptors implements TableDescriptors {
     FileSystem fs = FSUtils.getCurrentFileSystem(conf);
     FileStatus status = getTableInfoPath(fs, FSUtils.getRootDir(conf), tableName);
     // The below deleteDirectory works for either file or directory.
-    if (status != null && fs.exists(status.getPath()))  {
+    if (status != null && fs.exists(status.getPath())) {
       FSUtils.deleteDirectory(fs, status.getPath());
     }
   }

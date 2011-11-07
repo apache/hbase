@@ -29,6 +29,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
@@ -196,7 +197,8 @@ public class ThriftServer {
 
       // Construct correct ProtocolFactory
       TProtocolFactory protocolFactory = getTProtocolFactory(cmd.hasOption("compact"));
-      THBaseService.Iface handler = new ThriftHBaseServiceHandler();
+      THBaseService.Iface handler = new ThriftHBaseServiceHandler(
+          HBaseConfiguration.create());
       THBaseService.Processor processor = new THBaseService.Processor(handler);
 
       boolean framed = cmd.hasOption("framed") || nonblocking || hsha;

@@ -183,7 +183,7 @@ public class ZKUtil {
       throws IOException{
     String[] parts = transformClusterKey(key);
     conf.set(HConstants.ZOOKEEPER_QUORUM, parts[0]);
-    conf.set("hbase.zookeeper.property.clientPort", parts[1]);
+    conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, parts[1]);
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, parts[2]);
   }
 

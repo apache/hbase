@@ -125,37 +125,6 @@ public class HTable implements HTableInterface, Closeable {
   private boolean closed;
   private int operationTimeout;
   private static final int DOPUT_WB_CHECK = 10;    // i.e., doPut checks the writebuffer every X Puts.
-  
-  /**
-   * Creates an object to access a HBase table.
-   * Internally it creates a new instance of {@link Configuration} and a new
-   * client to zookeeper as well as other resources.  It also comes up with
-   * a fresh view of the cluster and must do discovery from scratch of region
-   * locations; i.e. it will not make use of already-cached region locations if
-   * available. Use only when being quick and dirty.
-   * @throws IOException if a remote or network exception occurs
-   * @see #HTable(Configuration, String)
-   */
-  public HTable(final String tableName)
-  throws IOException {
-    this(HBaseConfiguration.create(), Bytes.toBytes(tableName));
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * Internally it creates a new instance of {@link Configuration} and a new
-   * client to zookeeper as well as other resources.  It also comes up with
-   * a fresh view of the cluster and must do discovery from scratch of region
-   * locations; i.e. it will not make use of already-cached region locations if
-   * available. Use only when being quick and dirty.
-   * @param tableName Name of the table.
-   * @throws IOException if a remote or network exception occurs
-   * @see #HTable(Configuration, String)
-   */
-  public HTable(final byte [] tableName)
-  throws IOException {
-    this(HBaseConfiguration.create(), tableName);
-  }
 
   /**
    * Creates an object to access a HBase table.
@@ -237,7 +206,9 @@ public class HTable implements HTableInterface, Closeable {
   }
 
   /**
-   * Tells whether or not a table is enabled or not.
+   * Tells whether or not a table is enabled or not. This method creates a
+   * new HBase configuration, so it might make your unit tests fail due to
+   * incorrect ZK client port.
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
@@ -249,11 +220,13 @@ public class HTable implements HTableInterface, Closeable {
   }
 
   /**
-   * Tells whether or not a table is enabled or not.
+   * Tells whether or not a table is enabled or not. This method creates a
+   * new HBase configuration, so it might make your unit tests fail due to
+   * incorrect ZK client port.
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
-	* @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
+   * @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
    */
   @Deprecated
   public static boolean isTableEnabled(byte[] tableName) throws IOException {
