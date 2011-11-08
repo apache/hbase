@@ -954,10 +954,14 @@ public class HMaster extends Thread implements HMasterInterface,
             + HConstants.HLOG_SPLITTING_EXT);
         try {
           if (!this.fs.rename(logDir, splitDir)) {
-            LOG.error("Failed fs.rename of " + logDir);
+            LOG.error("Failed log splitting because " +
+              " failed fs.rename of " + logDir);
+            return;
           }
         } catch (IOException ioe) {
-          LOG.error("Failed fs.rename of " + logDir, ioe);
+          LOG.error("Failed log splitting because" +
+            " failed fs.rename of " + logDir, ioe);
+          return;
         }
         logDir = splitDir;
         LOG.debug("Renamed region directory: " + splitDir);
@@ -972,7 +976,9 @@ public class HMaster extends Thread implements HMasterInterface,
         splitCount += contentSummary.getFileCount();
         splitLogSize += contentSummary.getSpaceConsumed();
       } catch (IOException e) {
-        LOG.error("Failed to get file system content summary", e);
+        LOG.error("Failed log splitting because" +
+          " failed to get file system content summary", e);
+        return;
       }
     }
     splitTime = EnvironmentEdgeManager.currentTimeMillis();
@@ -991,6 +997,7 @@ public class HMaster extends Thread implements HMasterInterface,
         }
       } catch (IOException e) {
         LOG.error("Failed distributed splitting " + serverNames, e);
+        return;
       }
     } else {
       // splitLogLock ensures that dead region servers' logs are processed
@@ -1002,6 +1009,7 @@ public class HMaster extends Thread implements HMasterInterface,
               getConfiguration());
         } catch (IOException e) {
           LOG.error("Failed splitting " + logDir.toString(), e);
+          return;
         } finally {
           this.splitLogLock.unlock();
         }
