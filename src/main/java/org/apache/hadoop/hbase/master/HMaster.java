@@ -294,12 +294,15 @@ public class HMaster extends Thread implements HMasterInterface,
     }
   }
 
-  private void stallIfBackupMaster() {
+  /**
+   * @return true if successfully became primary master
+   */
+  private boolean waitToBecomePrimary() {
     if (!this.zkMasterAddressWatcher.writeAddressToZooKeeper(this.address,
         true)) {
       LOG.info("Failed to write master address to ZooKeeper, not starting (" +
           "closed=" + closed.get() + ")");
-      return;
+      return false;
     }
 
     isActiveMaster = true;
@@ -338,6 +341,7 @@ public class HMaster extends Thread implements HMasterInterface,
     // We're almost open for business
     this.closed.set(false);
     LOG.info("HMaster w/ hbck initialized on " + this.address.toString());
+    return true;
   }
 
   public long getApplyPreferredAssignmentPeriod() {
@@ -599,7 +603,10 @@ public class HMaster extends Thread implements HMasterInterface,
   /** Main processing loop */
   @Override
   public void run() {
-    stallIfBackupMaster();
+    if (!waitToBecomePrimary()) {
+      LOG.info("Failed to become primary -- not starting");
+      return;
+    }
 
     if (closed.get()) {
       LOG.info("Master is closing, not starting the main loop");
