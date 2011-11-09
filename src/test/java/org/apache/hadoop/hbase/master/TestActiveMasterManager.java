@@ -29,9 +29,7 @@ import java.util.concurrent.Semaphore;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -42,11 +40,13 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 /**
  * Test the {@link ActiveMasterManager}.
  */
+@Category(MediumTests.class)
 public class TestActiveMasterManager {
   private final static Log LOG = LogFactory.getLog(TestActiveMasterManager.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

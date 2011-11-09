@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
 
@@ -41,6 +42,7 @@ import static org.junit.Assert.*;
  * error message describing the set of its loaded coprocessors for crash
  * diagnosis. (HBASE-4014).
  */
+@Category(MediumTests.class)
 public class TestRegionServerCoprocessorExceptionWithAbort {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

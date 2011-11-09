@@ -25,15 +25,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
@@ -49,6 +42,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -62,6 +56,7 @@ import static org.junit.Assert.*;
  * Tests invocation of the {@link org.apache.hadoop.hbase.coprocessor.MasterObserver}
  * interface hooks at all appropriate times during normal HMaster operations.
  */
+@Category(MediumTests.class)
 public class TestWALObserver {
   private static final Log LOG = LogFactory.getLog(TestWALObserver.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

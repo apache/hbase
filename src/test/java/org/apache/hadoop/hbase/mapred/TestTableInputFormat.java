@@ -35,9 +35,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -49,6 +47,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -56,6 +55,7 @@ import org.mockito.stubbing.Answer;
  * This tests the TableInputFormat and its recovery semantics
  * 
  */
+@Category(LargeTests.class)
 public class TestTableInputFormat {
 
   private static final Log LOG = LogFactory.getLog(TestTableInputFormat.class);

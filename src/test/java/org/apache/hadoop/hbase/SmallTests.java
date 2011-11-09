@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,27 +17,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.MediumTests;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import static junit.framework.Assert.assertEquals;
+package org.apache.hadoop.hbase;
 
 /**
- * Tests that the incrementing environment edge increments time instead of using
- * the default.
+ * Tag a test as 'small', meaning that the test class has the following
+ * characteristics:
+ *  - can be run simultaneously with other small tests in the same JVM
+ *  - ideally, last less than 15 seconds
+ *  - does not use a cluster
+ *
+ * @see MediumTests
+ * @see LargeTests
  */
-@Category(MediumTests.class)
-public class TestIncrementingEnvironmentEdge {
-
-  @Test
-  public void testGetCurrentTimeUsesSystemClock() {
-    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
-    assertEquals(1, edge.currentTimeMillis());
-    assertEquals(2, edge.currentTimeMillis());
-    assertEquals(3, edge.currentTimeMillis());
-    assertEquals(4, edge.currentTimeMillis());
-  }
+public interface SmallTests {
 }

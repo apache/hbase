@@ -34,11 +34,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test HBASE-3694 whether the GlobalMemStoreSize is the same as the summary
  * of all the online region's MemStoreSize
  */
+@Category(MediumTests.class)
 public class TestGlobalMemStoreSize {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private static int regionServerNum = 4;

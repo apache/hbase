@@ -46,11 +46,13 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Port of old TestScanMultipleVersions, TestTimestamp and TestGetRowVersions
  * from old testing framework to {@link HBaseTestingUtility}.
  */
+@Category(MediumTests.class)
 public class TestMultiVersions {
   private static final Log LOG = LogFactory.getLog(TestMultiVersions.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();

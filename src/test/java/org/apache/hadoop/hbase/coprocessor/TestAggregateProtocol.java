@@ -24,9 +24,7 @@ import static org.junit.Assert.assertEquals;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -38,11 +36,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * A test class to cover aggregate functions, that can be implemented using
  * Coprocessors.
  */
+@Category(MediumTests.class)
 public class TestAggregateProtocol {
   protected static Log myLog = LogFactory.getLog(TestAggregateProtocol.class);
 

@@ -24,12 +24,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
@@ -37,6 +36,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * Unit testing of ReplicationAdmin
  */
+@Category(MediumTests.class)
 public class TestReplicationAdmin {
 
   private static final Log LOG =

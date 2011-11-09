@@ -29,12 +29,15 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import static org.junit.Assert.assertTrue;
 
 /**
  * Testing, info servers are disabled.  This test enables then and checks that
  * they serve pages.
  */
+@Category(MediumTests.class)
 public class TestInfoServers {
   static final Log LOG = LogFactory.getLog(TestInfoServers.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();

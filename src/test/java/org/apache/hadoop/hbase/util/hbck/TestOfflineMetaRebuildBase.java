@@ -25,14 +25,17 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * This builds a table, removes info from meta, and then rebuilds meta.
  */
+@Category(MediumTests.class)
 public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
 
   @Test(timeout = 120000)

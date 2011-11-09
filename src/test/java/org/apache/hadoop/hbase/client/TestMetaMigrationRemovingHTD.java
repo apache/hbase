@@ -38,11 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaMigrationRemovingHTD;
 import org.apache.hadoop.hbase.catalog.MetaReader;
@@ -52,11 +48,13 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test migration that removes HTableDescriptor from HRegionInfo moving the
  * meta version from no version to {@link MetaReader#META_VERSION}.
  */
+@Category(MediumTests.class)
 public class TestMetaMigrationRemovingHTD {
   static final Log LOG = LogFactory.getLog(TestMetaMigrationRemovingHTD.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

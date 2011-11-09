@@ -19,10 +19,12 @@
  */
 package org.apache.hadoop.hbase.io.hfile.slab;
 
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests SingleSlabCache.
@@ -31,6 +33,7 @@ import org.junit.Test;
  * Tests will ensure that evictions operate when they're supposed to and do what
  * they should, and that cached blocks are accessible when expected to be.
  */
+@Category(MediumTests.class)
 public class TestSingleSizeCache {
   SingleSizeCache cache;
   final int CACHE_SIZE = 1000000;

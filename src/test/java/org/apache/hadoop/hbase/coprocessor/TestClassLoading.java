@@ -23,17 +23,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,6 +37,7 @@ import java.util.Arrays;
 import java.util.jar.*;
 
 import org.junit.*;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -53,6 +46,7 @@ import static org.junit.Assert.assertFalse;
 /**
  * Test coprocessors class loading.
  */
+@Category(MediumTests.class)
 public class TestClassLoading {
   private static final Log LOG = LogFactory.getLog(TestClassLoading.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

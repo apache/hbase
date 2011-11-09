@@ -21,15 +21,15 @@ package org.apache.hadoop.hbase.catalog;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Do {@link CatalogTracker} tests on running cluster.
  */
+@Category(LargeTests.class)
 public class TestCatalogTrackerOnCluster {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final Log LOG =

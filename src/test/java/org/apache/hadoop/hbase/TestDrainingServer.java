@@ -39,11 +39,13 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test the draining servers feature.
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-4298">HBASE-4298</a>
  */
+@Category(MediumTests.class)
 public class TestDrainingServer {
   private static final Log LOG = LogFactory.getLog(TestDrainingServer.class);
   private static final HBaseTestingUtility TEST_UTIL =

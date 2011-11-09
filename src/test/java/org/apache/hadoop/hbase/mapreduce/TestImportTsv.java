@@ -23,6 +23,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.ArrayList;
 
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -30,20 +31,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.GenericOptionsParser;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.ParsedLine;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Result;
 
 import org.junit.Test;
@@ -51,9 +46,11 @@ import org.junit.Test;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
 
+@Category(MediumTests.class)
 public class TestImportTsv {
 
   @Test
