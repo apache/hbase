@@ -29,12 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -43,10 +38,12 @@ import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test filters at the HRegion doorstep.
  */
+@Category(SmallTests.class)
 public class TestFilter extends HBaseTestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private HRegion region;

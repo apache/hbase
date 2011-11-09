@@ -37,17 +37,17 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 
 /**
  * Test the load balancer that is created by default.
  */
+@Category(MediumTests.class)
 public class TestDefaultLoadBalancer {
   private static final Log LOG = LogFactory.getLog(TestDefaultLoadBalancer.class);
 

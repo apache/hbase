@@ -17,13 +17,16 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.util.HashSet;
 
 import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@Category(SmallTests.class)
 public class TestTableSplit {
   @Test
   public void testHashCode() {

@@ -28,13 +28,12 @@ import java.util.Properties;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.*;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.*;
@@ -42,6 +41,7 @@ import static org.junit.Assert.*;
 /**
  * Test for HQuorumPeer.
  */
+@Category(SmallTests.class)
 public class TestHQuorumPeer {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static int PORT_NO = 21818;

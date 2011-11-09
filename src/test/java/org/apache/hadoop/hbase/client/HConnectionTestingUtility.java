@@ -18,14 +18,17 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionKey;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 /**
  * {@link HConnection} testing utility.
  */
+@Category(SmallTests.class)
 public class HConnectionTestingUtility {
   /*
    * Not part of {@link HBaseTestingUtility} because this class is not

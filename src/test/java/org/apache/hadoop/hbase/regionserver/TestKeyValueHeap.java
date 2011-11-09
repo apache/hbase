@@ -26,12 +26,12 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
+import org.junit.experimental.categories.Category;
 
-
+@Category(SmallTests.class)
 public class TestKeyValueHeap extends HBaseTestCase {
   private static final boolean PRINT = false;
 

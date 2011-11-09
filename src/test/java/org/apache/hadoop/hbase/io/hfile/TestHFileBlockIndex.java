@@ -55,6 +55,7 @@ import org.junit.runners.Parameterized.Parameters;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
+@Category(MediumTests.class)
 public class TestHFileBlockIndex {
 
   @Parameters

@@ -27,11 +27,14 @@ import java.io.StringWriter;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestCellModel extends TestCase {
 
   private static final long TIMESTAMP = 1245219839331L;

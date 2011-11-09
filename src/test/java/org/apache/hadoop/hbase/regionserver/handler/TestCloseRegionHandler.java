@@ -25,11 +25,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.MockRegionServerServices;
@@ -37,11 +33,13 @@ import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 /**
  * Test of the {@link CloseRegionHandler}.
  */
+@Category(MediumTests.class)
 public class TestCloseRegionHandler {
   static final Log LOG = LogFactory.getLog(TestCloseRegionHandler.class);
   private final static HBaseTestingUtility HTU = new HBaseTestingUtility();

@@ -17,10 +17,13 @@
 package org.apache.hadoop.hbase.filter;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.hbase.SmallTests;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests for the bit comparator
  */
+@Category(SmallTests.class)
 public class TestBitComparator extends TestCase {
 
   private static byte[] zeros = new byte[]{0, 0, 0, 0, 0, 0};

@@ -24,7 +24,10 @@ import java.nio.ByteBuffer;
 import java.util.LinkedList;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.hbase.SmallTests;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestCachedBlockQueue extends TestCase {
 
   public void testQueue() throws Exception {

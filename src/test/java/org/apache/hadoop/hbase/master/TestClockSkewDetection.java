@@ -26,15 +26,13 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClockOutOfSyncException;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
-
+@Category(MediumTests.class)
 public class TestClockSkewDetection {
   private static final Log LOG =
     LogFactory.getLog(TestClockSkewDetection.class);

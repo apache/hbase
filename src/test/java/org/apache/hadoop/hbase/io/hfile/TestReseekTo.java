@@ -25,14 +25,17 @@ import java.util.List;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
 
 /**
  * Test {@link HFileScanner#reseekTo(byte[])}
  */
+@Category(SmallTests.class)
 public class TestReseekTo {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

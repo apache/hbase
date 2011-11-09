@@ -28,18 +28,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.*;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 
 /**
  * Tests for {@link FSTableDescriptors}.
  */
+@Category(SmallTests.class)
 public class TestFSTableDescriptors {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestFSTableDescriptors.class);

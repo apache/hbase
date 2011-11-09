@@ -21,12 +21,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.Store.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,6 +36,7 @@ import java.util.NavigableSet;
 import java.util.TreeSet;
 import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
 
+@Category(SmallTests.class)
 public class TestStoreScanner extends TestCase {
   private static final String CF_STR = "cf";
   final byte [] CF = Bytes.toBytes(CF_STR);

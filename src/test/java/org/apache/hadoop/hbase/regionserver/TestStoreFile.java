@@ -33,10 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -47,6 +44,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;
@@ -56,6 +54,7 @@ import com.google.common.collect.Lists;
 /**
  * Test HStoreFile
  */
+@Category(SmallTests.class)
 public class TestStoreFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestStoreFile.class);
   private CacheConfig cacheConf =  new CacheConfig(conf);

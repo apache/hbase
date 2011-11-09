@@ -26,12 +26,15 @@ import static org.junit.Assert.assertTrue;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests the BlockCacheColumnFamilySummary class
  * 
  */
+@Category(SmallTests.class)
 public class TestBlockCacheColumnFamilySummary {
 
 

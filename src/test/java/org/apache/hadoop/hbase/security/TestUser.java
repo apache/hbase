@@ -25,12 +25,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
+@Category(SmallTests.class)
 public class TestUser {
   private static Log LOG = LogFactory.getLog(TestUser.class);
 

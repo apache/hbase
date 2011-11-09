@@ -24,13 +24,16 @@ import static org.junit.Assert.*;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
+import org.apache.hadoop.hbase.MediumTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test case for the MemoryBoundedLogMessageBuffer utility.
  * Ensures that it uses no more memory than it's supposed to,
  * and that it properly deals with multibyte encodings.
  */
+@Category(MediumTests.class)
 public class TestMemoryBoundedLogMessageBuffer {
 
   private static final long TEN_KB = 10 * 1024;

@@ -31,7 +31,9 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.MetaComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestKeyValue extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
 

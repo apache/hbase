@@ -27,16 +27,15 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestHRegionInfo {
   @Test
   public void testCreateHRegionInfoName() throws Exception {

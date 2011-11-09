@@ -28,11 +28,14 @@ import java.util.Iterator;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestCellSetModel extends TestCase {
 
   private static final byte[] ROW1 = Bytes.toBytes("testrow1");

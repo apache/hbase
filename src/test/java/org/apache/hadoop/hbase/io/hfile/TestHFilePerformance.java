@@ -46,6 +46,7 @@ import org.junit.experimental.categories.Category;
  * Remove after tfile is committed and use the tfile version of this class
  * instead.</p>
  */
+@Category(MediumTests.class)
 public class TestHFilePerformance extends TestCase {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static String ROOT_DIR =

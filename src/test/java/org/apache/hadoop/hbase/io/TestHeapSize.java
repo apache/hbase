@@ -38,6 +38,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
@@ -46,11 +47,13 @@ import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.junit.experimental.categories.Category;
 
 /**
  * Testing the sizing that HeapSize offers and compares to the size given by
  * ClassSize.
  */
+@Category(SmallTests.class)
 public class TestHeapSize extends TestCase {
   static final Log LOG = LogFactory.getLog(TestHeapSize.class);
   // List of classes implementing HeapSize

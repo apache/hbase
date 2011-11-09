@@ -47,10 +47,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test HBase Writables serializations
  */
+@Category(SmallTests.class)
 public class TestSerialization {
 
   @Test public void testCompareFilter() throws Exception {
@@ -83,6 +85,7 @@ public class TestSerialization {
     assertTrue(hmw.size() == 1);
     assertTrue(Bytes.equals("value".getBytes(), hmw.get("key".getBytes())));
   }
+
 
   @Test public void testTableDescriptor() throws Exception {
     final String name = "testTableDescriptor";

@@ -43,6 +43,7 @@ import org.apache.hbase.tmpl.master.AssignmentManagerStatusTmpl;
 import org.apache.hbase.tmpl.master.MasterStatusTmpl;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
@@ -51,6 +52,7 @@ import com.google.common.collect.Maps;
 /**
  * Tests for the master status page and its template.
  */
+@Category(MediumTests.class)
 public class TestMasterStatusServlet {
   
   private HMaster master;

@@ -26,8 +26,7 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -37,7 +36,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparator;
 import org.junit.Assert;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestHbaseObjectWritable extends TestCase {
 
   @Override

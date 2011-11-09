@@ -37,8 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -53,11 +52,13 @@ import org.apache.hadoop.hbase.util.CompoundBloomFilterBase;
 import org.apache.hadoop.hbase.util.CompoundBloomFilterWriter;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests writing Bloom filter blocks in the same part of the file as data
  * blocks.
  */
+@Category(SmallTests.class)
 public class TestCompoundBloomFilter {
 
   private static final HBaseTestingUtility TEST_UTIL =
