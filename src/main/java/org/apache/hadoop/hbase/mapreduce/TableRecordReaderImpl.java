@@ -174,7 +174,7 @@ public class TableRecordReaderImpl {
     } catch (DoNotRetryIOException e) {
       throw e;
     } catch (IOException e) {
-      LOG.debug("recovered from " + StringUtils.stringifyException(e));
+      LOG.info("recovered from " + StringUtils.stringifyException(e));
       if (lastSuccessfulRow == null) {
         LOG.warn("We are restarting the first next() invocation," +
             " if your mapper's restarted a few other times like this" +
