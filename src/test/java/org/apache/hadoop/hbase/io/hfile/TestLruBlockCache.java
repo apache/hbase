@@ -22,10 +22,12 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ClassSize;
 
 import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests the concurrent LruBlockCache.<p>
@@ -34,6 +36,7 @@ import junit.framework.TestCase;
  * evictions run when they're supposed to and do what they should,
  * and that cached blocks are accessible when expected to be.
  */
+@Category(MediumTests.class)
 public class TestLruBlockCache extends TestCase {
 
   public void testBackgroundEvictionThread() throws Exception {

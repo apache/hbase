@@ -25,17 +25,20 @@ import static org.junit.Assert.assertFalse;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
 import org.junit.Test;
 
 import com.google.common.collect.Multimap;
+import org.junit.experimental.categories.Category;
 
 /**
  * This builds a table, builds an overlap, and then fails when attempting to
  * rebuild meta.
  */
+@Category(MediumTests.class)
 public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
 
   @Test(timeout = 120000)

@@ -27,6 +27,7 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericArray;
 import org.apache.avro.generic.GenericData;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.avro.generated.AColumn;
 import org.apache.hadoop.hbase.avro.generated.AColumnValue;
 import org.apache.hadoop.hbase.avro.generated.AFamilyDescriptor;
@@ -40,11 +41,13 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Unit testing for AvroServer.HBaseImpl, a part of the
  * org.apache.hadoop.hbase.avro package.
  */
+@Category(MediumTests.class)
 public class TestAvroServer {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

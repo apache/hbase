@@ -59,8 +59,10 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /** JUnit test case for HLog */
+@Category(LargeTests.class)
 public class TestHLog  {
   private static final Log LOG = LogFactory.getLog(TestHLog.class);
   {

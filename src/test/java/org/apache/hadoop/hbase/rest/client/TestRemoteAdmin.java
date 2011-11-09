@@ -20,9 +20,7 @@
 
 package org.apache.hadoop.hbase.rest.client;
 
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.HBaseRESTTestingUtility;
 import org.apache.hadoop.hbase.rest.client.Client;
@@ -32,7 +30,9 @@ import static org.junit.Assert.*;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(MediumTests.class)
 public class TestRemoteAdmin {
   private static final String TABLE_1 = "TestRemoteAdmin_Table_1";
   private static final byte[] COLUMN_1 = Bytes.toBytes("a");

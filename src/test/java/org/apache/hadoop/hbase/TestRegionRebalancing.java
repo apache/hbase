@@ -39,10 +39,12 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test whether region rebalancing works. (HBASE-71)
  */
+@Category(LargeTests.class)
 public class TestRegionRebalancing {
   final Log LOG = LogFactory.getLog(this.getClass().getName());
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();

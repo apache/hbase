@@ -40,6 +40,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test case that uses multiple threads to read and write multifamily rows
@@ -48,6 +49,7 @@ import com.google.common.collect.Lists;
  * This can run as a junit test, or with a main() function which runs against
  * a real cluster (eg for testing with failures, region movement, etc)
  */
+@Category(MediumTests.class)
 public class TestAcidGuarantees {
   protected static final Log LOG = LogFactory.getLog(TestAcidGuarantees.class);
   public static final byte [] TABLE_NAME = Bytes.toBytes("TestAcidGuarantees");

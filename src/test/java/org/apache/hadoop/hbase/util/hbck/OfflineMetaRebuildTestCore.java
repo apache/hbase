@@ -31,12 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -51,6 +46,7 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.experimental.categories.Category;
 
 /**
  * This testing base class creates a minicluster and testing table table
@@ -65,6 +61,7 @@ import org.junit.Before;
  * since minicluster startup and tear downs seem to leak file handles and
  * eventually cause out of file handle exceptions.
  */
+@Category(LargeTests.class)
 public class OfflineMetaRebuildTestCore {
   protected final static Log LOG = LogFactory
       .getLog(OfflineMetaRebuildTestCore.class);

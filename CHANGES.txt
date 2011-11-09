@@ -34,6 +34,8 @@ Release 0.93.0 - Unreleased
    HBASE-1744  Thrift server to match the new java api (Tim Sell)
    HBASE-4746  Use a random ZK client port in unit tests so we can run them in parallel
                (Mikhail Bautin)
+   HBASE-4737  Categorize the tests into small/medium/large; allow small tests to be run
+               in parallel within a single JVM (N Keywal)
 
   BUG FIXES
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)

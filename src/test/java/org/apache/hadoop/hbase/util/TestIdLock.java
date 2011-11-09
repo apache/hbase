@@ -33,8 +33,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import static org.junit.Assert.*;
-import org.junit.Test;
 
+import org.apache.hadoop.hbase.MediumTests;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+@Category(MediumTests.class)
+// Medium as it creates 100 threads; seems better to run it isolated
 public class TestIdLock {
 
   private static final Log LOG = LogFactory.getLog(TestIdLock.class);

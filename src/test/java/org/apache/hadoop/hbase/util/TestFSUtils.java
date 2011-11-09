@@ -22,18 +22,19 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test {@link FSUtils}.
  */
+@Category(MediumTests.class)
 public class TestFSUtils {
   @Test public void testIsHDFS() throws Exception {
     HBaseTestingUtility htu = new HBaseTestingUtility();

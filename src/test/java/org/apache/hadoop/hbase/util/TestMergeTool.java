@@ -37,8 +37,10 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.experimental.categories.Category;
 
 /** Test stand alone merge tool that can merge arbitrary regions */
+@Category(LargeTests.class)
 public class TestMergeTool extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestMergeTool.class);
   HBaseTestingUtility TEST_UTIL;

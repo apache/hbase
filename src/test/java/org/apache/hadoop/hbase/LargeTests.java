@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,27 +17,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.MediumTests;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import static junit.framework.Assert.assertEquals;
+package org.apache.hadoop.hbase;
 
 /**
- * Tests that the incrementing environment edge increments time instead of using
- * the default.
+ * Tag a test as 'large', meaning that the test class has the following
+ * characteristics:
+ *  - executed in an isolated JVM. Tests can however be executed in different
+ *    JVM on the same machine simultaneously.
+ *  - will not have to be executed by the developer before submitting a bug
+ *  - ideally, last less than 2 minutes to help parallelization
+ *
+ *  It the worst case compared to small or medium, use it only for tests that
+ *    you cannot put in the other categories
+ *
+ * @see SmallTests
+ * @see MediumTests
  */
-@Category(MediumTests.class)
-public class TestIncrementingEnvironmentEdge {
-
-  @Test
-  public void testGetCurrentTimeUsesSystemClock() {
-    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
-    assertEquals(1, edge.currentTimeMillis());
-    assertEquals(2, edge.currentTimeMillis());
-    assertEquals(3, edge.currentTimeMillis());
-    assertEquals(4, edge.currentTimeMillis());
-  }
+public interface LargeTests {
 }

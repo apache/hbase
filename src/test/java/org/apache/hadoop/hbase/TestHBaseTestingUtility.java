@@ -43,10 +43,12 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test our testing utility class
  */
+@Category(LargeTests.class)
 public class TestHBaseTestingUtility {
   private final Log LOG = LogFactory.getLog(this.getClass());
 

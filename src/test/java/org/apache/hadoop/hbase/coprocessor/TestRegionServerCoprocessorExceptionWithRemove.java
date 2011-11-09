@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
 
@@ -43,6 +44,7 @@ import static org.junit.Assert.*;
  * back to the client.
  * (HBASE-4014).
  */
+@Category(MediumTests.class)
 public class TestRegionServerCoprocessorExceptionWithRemove {
   public static class BuggyRegionObserver extends SimpleRegionObserver {
     @SuppressWarnings("null")
