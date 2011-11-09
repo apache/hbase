@@ -33,6 +33,7 @@ import org.junit.experimental.categories.Category;
  * Tests will ensure that evictions operate when they're supposed to and do what
  * they should, and that cached blocks are accessible when expected to be.
  */
+// Starts 100 threads, high variability of execution time => Medium
 @Category(MediumTests.class)
 public class TestSingleSizeCache {
   SingleSizeCache cache;

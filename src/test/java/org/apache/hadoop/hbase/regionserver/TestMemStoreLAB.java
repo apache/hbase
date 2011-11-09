@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB.Allocation;
 import org.junit.Test;
 
@@ -36,7 +37,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestMemStoreLAB {
 
   /**

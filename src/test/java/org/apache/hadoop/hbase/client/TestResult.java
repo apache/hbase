@@ -22,7 +22,9 @@ package org.apache.hadoop.hbase.client;
 
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 import static org.apache.hadoop.hbase.HBaseTestCase.assertByteEquals;
 
@@ -31,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 
+@Category(SmallTests.class)
 public class TestResult extends TestCase {
 
   static KeyValue[] genKVs(final byte[] row, final byte[] family,

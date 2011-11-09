@@ -25,17 +25,14 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.List;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hbase.tmpl.regionserver.RSStatusTmpl;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
@@ -43,6 +40,7 @@ import com.google.common.collect.Lists;
 /**
  * Tests for the region server status page and its template.
  */
+@Category(SmallTests.class)
 public class TestRSStatusServlet {
   private HRegionServer rs;
   

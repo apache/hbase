@@ -39,9 +39,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.io.BytesWritable;
+import org.junit.experimental.categories.Category;
 import org.mortbay.log.Log;
 
 /**
@@ -52,6 +54,7 @@ import org.mortbay.log.Log;
  * Remove after tfile is committed and use the tfile version of this class
  * instead.</p>
  */
+@Category(MediumTests.class)
 public class TestHFileSeek extends TestCase {
   private static final boolean USE_PREAD = true;
   private MyOptions options;

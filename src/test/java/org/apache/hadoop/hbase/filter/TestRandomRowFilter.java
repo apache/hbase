@@ -27,8 +27,11 @@ import java.io.DataOutputStream;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestRandomRowFilter extends TestCase {
   protected RandomRowFilter quarterChanceFilter;
 

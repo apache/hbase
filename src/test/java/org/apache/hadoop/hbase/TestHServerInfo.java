@@ -23,7 +23,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.util.Writables;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestHServerInfo {
 
   @Test

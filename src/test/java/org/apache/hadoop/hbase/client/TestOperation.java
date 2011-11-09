@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -31,11 +33,13 @@ import java.util.Map;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.codehaus.jackson.map.ObjectMapper;
+import org.junit.experimental.categories.Category;
 
 /**
- * Run tests that use the funtionality of the Operation superclass for 
+ * Run tests that use the functionality of the Operation superclass for
  * Puts, Gets, Deletes, Scans, and MultiPuts.
  */
+@Category(SmallTests.class)
 public class TestOperation {
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");

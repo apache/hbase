@@ -31,17 +31,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.collect.Lists;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestCompactSelection extends TestCase {
   private final static Log LOG = LogFactory.getLog(TestCompactSelection.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

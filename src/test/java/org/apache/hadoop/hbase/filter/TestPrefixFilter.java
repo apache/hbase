@@ -22,7 +22,9 @@ package org.apache.hadoop.hbase.filter;
 
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,6 +32,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.UnsupportedEncodingException;
 
+@Category(SmallTests.class)
 public class TestPrefixFilter extends TestCase {
   Filter mainFilter;
   static final char FIRST_CHAR = 'a';

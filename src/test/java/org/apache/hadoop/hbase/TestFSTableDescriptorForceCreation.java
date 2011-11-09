@@ -28,7 +28,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.junit.*;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestFSTableDescriptorForceCreation {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

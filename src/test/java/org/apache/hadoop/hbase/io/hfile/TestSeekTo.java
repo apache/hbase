@@ -23,13 +23,14 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test {@link HFileScanner#seekTo(byte[])} and its variants.
  */
+@Category(SmallTests.class)
 public class TestSeekTo extends HBaseTestCase {
 
   static KeyValue toKV(String row) {

@@ -26,8 +26,11 @@ import java.util.Arrays;
 import java.util.Iterator;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestSortedCopyOnWriteSet {
 
   @Test

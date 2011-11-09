@@ -28,18 +28,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.EntryBuffers;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.RegionEntryBuffer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import static org.mockito.Mockito.mock;
 
 /**
  * Simple testing of a few HLog methods.
  */
+@Category(SmallTests.class)
 public class TestHLogMethods {
   private static final byte[] TEST_REGION = Bytes.toBytes("test_region");;
   private static final byte[] TEST_TABLE = Bytes.toBytes("test_table");

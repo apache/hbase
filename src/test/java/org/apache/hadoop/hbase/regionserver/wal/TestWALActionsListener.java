@@ -33,11 +33,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import static org.junit.Assert.*;
 
 /**
  * Test that the actions are called while playing with an HLog
  */
+@Category(SmallTests.class)
 public class TestWALActionsListener {
   protected static final Log LOG = LogFactory.getLog(TestWALActionsListener.class);
 

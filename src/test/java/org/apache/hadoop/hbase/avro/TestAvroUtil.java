@@ -18,12 +18,15 @@
 package org.apache.hadoop.hbase.avro;
 
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.avro.generated.AResult;
 import org.apache.hadoop.hbase.client.Result;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
+@Category(SmallTests.class)
 public class TestAvroUtil {
 
   

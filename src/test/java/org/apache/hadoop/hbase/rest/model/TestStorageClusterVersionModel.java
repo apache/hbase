@@ -27,7 +27,10 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.hbase.SmallTests;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestStorageClusterVersionModel extends TestCase {
   private static final String VERSION = "0.0.1-testing";
 

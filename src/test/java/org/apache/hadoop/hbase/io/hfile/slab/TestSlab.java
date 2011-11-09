@@ -22,9 +22,13 @@ package org.apache.hadoop.hbase.io.hfile.slab;
 
 import static org.junit.Assert.*;
 import java.nio.ByteBuffer;
+
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.*;
+import org.junit.experimental.categories.Category;
 
 /**Test cases for Slab.java*/
+@Category(SmallTests.class)
 public class TestSlab {
   static final int BLOCKSIZE = 1000;
   static final int NUMBLOCKS = 100;

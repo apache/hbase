@@ -28,10 +28,13 @@ import java.util.Iterator;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Base64;
 
 import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestTableSchemaModel extends TestCase {
 
   public static final String TABLE_NAME = "testTable";

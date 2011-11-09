@@ -33,10 +33,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.Store.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
@@ -45,8 +42,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.junit.experimental.categories.Category;
 
 /** memstore test case */
+@Category(SmallTests.class)
 public class TestMemStore extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private MemStore memstore;

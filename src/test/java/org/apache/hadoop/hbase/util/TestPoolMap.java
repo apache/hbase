@@ -29,8 +29,11 @@ import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestPoolMap {
   public abstract static class TestPoolType extends TestCase {
     protected PoolMap<String, String> poolMap;

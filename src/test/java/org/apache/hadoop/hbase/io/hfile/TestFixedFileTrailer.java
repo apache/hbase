@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 @RunWith(Parameterized.class)
+@Category(MediumTests.class)
 public class TestFixedFileTrailer {
 
   private static final Log LOG = LogFactory.getLog(TestFixedFileTrailer.class);

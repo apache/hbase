@@ -31,13 +31,7 @@ import java.util.List;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,14 +40,16 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 /**
  * Test the {@link SplitTransaction} class against an HRegion (as opposed to
  * running cluster).
  */
+@Category(SmallTests.class)
 public class TestSplitTransaction {
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final Path testdir =
     TEST_UTIL.getDataTestDir(this.getClass().getName());
   private HRegion parent;
@@ -64,15 +60,22 @@ public class TestSplitTransaction {
   private static final byte [] ENDROW = new byte [] {'{', '{', '{'};
   private static final byte [] GOOD_SPLIT_ROW = new byte [] {'d', 'd', 'd'};
   private static final byte [] CF = HConstants.CATALOG_FAMILY;
+  
+  static {
+  System.out.println("AAAA static");
+  }
 
   @Before public void setup() throws IOException {
+  System.out.println("AAAA setup");
     this.fs = FileSystem.get(TEST_UTIL.getConfiguration());
     this.fs.delete(this.testdir, true);
     this.wal = new HLog(fs, new Path(this.testdir, "logs"),
       new Path(this.testdir, "archive"),
       TEST_UTIL.getConfiguration());
+      System.out.println("AAAA setup createRegion");
     this.parent = createRegion(this.testdir, this.wal);
     TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster", true);
+    System.out.println("AAAA setup ends");
   }
 
   @After public void teardown() throws IOException {
@@ -86,6 +89,7 @@ public class TestSplitTransaction {
   }
 
   @Test public void testFailAfterPONR() throws IOException, KeeperException {
+    System.out.println("AAAA testFailAfterPONR");
     final int rowcount = TEST_UTIL.loadRegion(this.parent, CF);
     assertTrue(rowcount > 0);
     int parentRowCount = countRows(this.parent);
@@ -289,7 +293,7 @@ public class TestSplitTransaction {
     return rowcount;
   }
 
-  static HRegion createRegion(final Path testdir, final HLog wal)
+  HRegion createRegion(final Path testdir, final HLog wal)
   throws IOException {
     // Make a region with start and end keys. Use 'aaa', to 'AAA'.  The load
     // region utility will add rows between 'aaa' and 'zzz'.

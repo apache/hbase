@@ -46,6 +46,7 @@ import org.junit.experimental.categories.Category;
  * Remove after tfile is committed and use the tfile version of this class
  * instead.</p>
  */
+@Category(SmallTests.class)
 public class TestHFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestHFile.class);
 

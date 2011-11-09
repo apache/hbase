@@ -20,10 +20,13 @@
 package org.apache.hadoop.hbase.util;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.hbase.SmallTests;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests url transformations
  */
+@Category(SmallTests.class)
 public class TestKeying extends TestCase {
 
   @Override

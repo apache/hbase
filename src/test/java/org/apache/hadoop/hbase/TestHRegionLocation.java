@@ -25,7 +25,9 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestHRegionLocation {
   /**
    * HRegionLocations are equal if they have the same 'location' -- i.e. host and

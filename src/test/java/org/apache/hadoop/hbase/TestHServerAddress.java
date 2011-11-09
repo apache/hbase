@@ -26,10 +26,12 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.hbase.util.Writables;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests for {@link HServerAddress}
  */
+@Category(SmallTests.class)
 public class TestHServerAddress {
   @Test
   public void testHashCode() {

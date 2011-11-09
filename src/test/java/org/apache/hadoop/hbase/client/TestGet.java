@@ -28,11 +28,14 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 // TODO: cover more test cases
+@Category(SmallTests.class)
 public class TestGet {
   @Test
   public void testAttributesSerialization() throws IOException {

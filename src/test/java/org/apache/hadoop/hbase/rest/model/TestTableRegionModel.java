@@ -26,12 +26,13 @@ import java.io.StringWriter;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestTableRegionModel extends TestCase {
   private static final String TABLE = "testtable";
   private static final byte[] START_KEY = Bytes.toBytes("abracadbra");

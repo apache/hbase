@@ -33,13 +33,16 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests filter sets
  *
  */
+@Category(SmallTests.class)
 public class TestFilterList extends TestCase {
   static final int MAX_PAGES = 2;
   static final char FIRST_CHAR = 'a';

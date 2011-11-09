@@ -22,18 +22,17 @@ import java.io.IOException;
 
 import junit.framework.Assert;
 
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.MetaMigrationRemovingHTD;
 import org.apache.hadoop.hbase.util.Writables;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Migration tests that do not need spin up of a cluster.
  * @deprecated Remove after we release 0.92
  */
+@Category(SmallTests.class)
 public class TestMigrationFrom090To092 {
   @Test
   public void testMigrateHRegionInfoFromVersion0toVersion1()
