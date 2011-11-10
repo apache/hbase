@@ -90,6 +90,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     // Invented config.  Add to hbase-*.xml if other than default compression.
     final String defaultCompression = conf.get("hfile.compression",
         Compression.Algorithm.NONE.getName());
+    final boolean compactionExclude = conf.getBoolean(
+        "hbase.mapreduce.hfileoutputformat.compaction.exclude", false);
 
     // create a map from column family to the compression algorithm
     final Map<byte[], String> compressionMap = createFamilyCompressionMap(conf);
@@ -186,6 +188,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
               Bytes.toBytes(context.getTaskAttemptID().toString()));
           w.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY,
               Bytes.toBytes(true));
+          w.appendFileInfo(StoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
+              Bytes.toBytes(compactionExclude));
           w.appendFileInfo(StoreFile.TIMERANGE_KEY,
               WritableUtils.toByteArray(trt));
           w.close();

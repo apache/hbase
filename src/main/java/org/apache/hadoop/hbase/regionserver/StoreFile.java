@@ -109,6 +109,10 @@ public class StoreFile {
   public static final byte[] MAJOR_COMPACTION_KEY =
       Bytes.toBytes("MAJOR_COMPACTION_KEY");
 
+  /** Major compaction flag in FileInfo */
+  public static final byte[] EXCLUDE_FROM_MINOR_COMPACTION_KEY =
+      Bytes.toBytes("EXCLUDE_FROM_MINOR_COMPACTION");
+
   /** Bloom filter Type in FileInfo */
   static final byte[] BLOOM_FILTER_TYPE_KEY =
       Bytes.toBytes("BLOOM_FILTER_TYPE");
@@ -154,6 +158,10 @@ public class StoreFile {
   // If true, this file was product of a major compaction.  Its then set
   // whenever you get a Reader.
   private AtomicBoolean majorCompaction = null;
+
+  // If true, this file should not be included in minor compactions.
+  // It's set whenever you get a Reader.
+  private boolean excludeFromMinorCompaction = false;
 
   /** Meta key set when store file is a result of a bulk load */
   public static final byte[] BULKLOAD_TASK_KEY =
@@ -311,6 +319,13 @@ public class StoreFile {
       throw new NullPointerException("This has not been set yet");
     }
     return this.majorCompaction.get();
+  }
+
+  /**
+   * @return True if this file should not be part of a minor compaction.
+   */
+  boolean excludeFromMinorCompaction() {
+    return this.excludeFromMinorCompaction;
   }
 
   /**
@@ -486,6 +501,9 @@ public class StoreFile {
       // HFileOutputFormat explicitly sets the major compacted key.
       this.majorCompaction = new AtomicBoolean(false);
     }
+
+    b = metadataMap.get(EXCLUDE_FROM_MINOR_COMPACTION_KEY);
+    this.excludeFromMinorCompaction = (b != null && Bytes.toBoolean(b));
 
     BloomType hfileBloomType = reader.getBloomFilterType();
     if (cfBloomType != BloomType.NONE) {
