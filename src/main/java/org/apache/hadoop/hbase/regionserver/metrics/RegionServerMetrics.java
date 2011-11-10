@@ -192,6 +192,12 @@ public class RegionServerMetrics implements Updater {
     new MetricsTimeVaryingRate("fsWriteLatency", registry);
 
   /**
+   * size (in bytes) of data in HLog append calls
+   */
+  public final MetricsTimeVaryingRate fsWriteSize =
+    new MetricsTimeVaryingRate("fsWriteSize", registry);
+
+  /**
    * filesystem sync latency
    */
   public final MetricsTimeVaryingRate fsSyncLatency =
@@ -299,19 +305,24 @@ public class RegionServerMetrics implements Updater {
       //    minMax.update(timePerOps);
       // }
       // Means you can't pass a numOps of zero or get a ArithmeticException / by zero.
-      int ops = (int)HFile.getReadOps();
+      // HLog metrics
+      addHLogMetric(HLog.getWriteTime(), this.fsWriteLatency);
+      addHLogMetric(HLog.getWriteSize(), this.fsWriteSize);
+      addHLogMetric(HLog.getSyncTime(), this.fsSyncLatency);
+      // HFile metrics
+      int ops = HFile.getReadOps();
       if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTimeMs());
-      ops = (int)HFile.getWriteOps();
-      if (ops != 0) this.fsWriteLatency.inc(ops, HFile.getWriteTimeMs());
-      // mix in HLog metrics
-      ops = (int)HLog.getWriteOps();
-      if (ops != 0) this.fsWriteLatency.inc(ops, HLog.getWriteTime());
-      ops = (int)HLog.getSyncOps();
-      if (ops != 0) this.fsSyncLatency.inc(ops, HLog.getSyncTime());
+      /* NOTE: removed HFile write latency.  2 reasons:
+       * 1) Mixing HLog latencies are far higher priority since they're 
+       *      on-demand and HFile is used in background (compact/flush)
+       * 2) HFile metrics are being handled at a higher level 
+       *      by compaction & flush metrics.
+       */
 
       // push the result
       this.fsReadLatency.pushMetric(this.metricsRecord);
       this.fsWriteLatency.pushMetric(this.metricsRecord);
+      this.fsWriteSize.pushMetric(this.metricsRecord);
       this.fsSyncLatency.pushMetric(this.metricsRecord);
       this.compactionTime.pushMetric(this.metricsRecord);
       this.compactionSize.pushMetric(this.metricsRecord);
@@ -321,10 +332,23 @@ public class RegionServerMetrics implements Updater {
     this.metricsRecord.update();
   }
 
+  private void addHLogMetric(HLog.Metric logMetric,
+      MetricsTimeVaryingRate hadoopMetric) {
+    if (logMetric.count > 0)
+      hadoopMetric.inc(logMetric.min);
+    if (logMetric.count > 1)
+      hadoopMetric.inc(logMetric.max);
+    if (logMetric.count > 2) {
+      int ops = logMetric.count - 2;
+      hadoopMetric.inc(ops, logMetric.total - logMetric.max - logMetric.min);
+    }
+  }
+
   public void resetAllMinMax() {
     this.atomicIncrementTime.resetMinMax();
     this.fsReadLatency.resetMinMax();
     this.fsWriteLatency.resetMinMax();
+    this.fsWriteSize.resetMinMax();
     this.fsSyncLatency.resetMinMax();
   }
 

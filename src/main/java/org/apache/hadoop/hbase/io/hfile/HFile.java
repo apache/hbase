@@ -26,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -142,15 +143,15 @@ public class HFile {
   static final char CACHE_KEY_SEPARATOR = '_';
 
   // For measuring latency of "typical" reads and writes
-  static volatile AtomicLong readOps = new AtomicLong();
+  static volatile AtomicInteger readOps = new AtomicInteger();
   static volatile AtomicLong readTimeNano = new AtomicLong();
-  static volatile AtomicLong writeOps = new AtomicLong();
+  static volatile AtomicInteger writeOps = new AtomicInteger();
   static volatile AtomicLong writeTimeNano = new AtomicLong();
 
   // for test purpose
   public static volatile AtomicLong dataBlockReadCnt = new AtomicLong(0);
 
-  public static final long getReadOps() {
+  public static final int getReadOps() {
     return readOps.getAndSet(0);
   }
 
@@ -158,7 +159,7 @@ public class HFile {
     return readTimeNano.getAndSet(0) / 1000000;
   }
 
-  public static final long getWriteOps() {
+  public static final int getWriteOps() {
     return writeOps.getAndSet(0);
   }
 
