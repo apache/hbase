@@ -61,21 +61,14 @@ public class TestSplitTransaction {
   private static final byte [] GOOD_SPLIT_ROW = new byte [] {'d', 'd', 'd'};
   private static final byte [] CF = HConstants.CATALOG_FAMILY;
   
-  static {
-  System.out.println("AAAA static");
-  }
-
   @Before public void setup() throws IOException {
-  System.out.println("AAAA setup");
     this.fs = FileSystem.get(TEST_UTIL.getConfiguration());
     this.fs.delete(this.testdir, true);
     this.wal = new HLog(fs, new Path(this.testdir, "logs"),
       new Path(this.testdir, "archive"),
       TEST_UTIL.getConfiguration());
-      System.out.println("AAAA setup createRegion");
     this.parent = createRegion(this.testdir, this.wal);
     TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster", true);
-    System.out.println("AAAA setup ends");
   }
 
   @After public void teardown() throws IOException {
@@ -89,7 +82,6 @@ public class TestSplitTransaction {
   }
 
   @Test public void testFailAfterPONR() throws IOException, KeeperException {
-    System.out.println("AAAA testFailAfterPONR");
     final int rowcount = TEST_UTIL.loadRegion(this.parent, CF);
     assertTrue(rowcount > 0);
     int parentRowCount = countRows(this.parent);
