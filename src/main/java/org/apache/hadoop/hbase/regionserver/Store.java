@@ -62,6 +62,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -1091,6 +1093,14 @@ public class Store implements HeapSize {
       if (filesToCompact.size() < this.minFilesToCompact) {
         return Collections.emptyList();
       }
+
+      // remove bulk import files that request to be excluded from minors
+      filesToCompact.removeAll(Collections2.filter(filesToCompact,
+          new Predicate<StoreFile>() {
+            public boolean apply(StoreFile input) {
+              return input.excludeFromMinorCompaction();
+            }
+          }));
 
       /* TODO: add sorting + unit test back in when HBASE-2856 is fixed
       // Sort files by size to correct when normal skew is altered by bulk load.

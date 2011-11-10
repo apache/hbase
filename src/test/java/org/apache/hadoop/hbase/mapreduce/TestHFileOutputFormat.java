@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
 import java.util.Random;
 
 import junit.framework.Assert;
@@ -45,6 +46,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -54,8 +56,10 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.NullWritable;
@@ -235,7 +239,7 @@ public class TestHFileOutputFormat  {
    * metadata used by time-restricted scans.
    */
   @Test
-  public void test_TIMERANGE() throws Exception { 
+  public void test_TIMERANGE() throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
@@ -679,6 +683,95 @@ public class TestHFileOutputFormat  {
     }
   }
   
+  @Test
+  public void testExcludeMinorCompaction() throws Exception {
+    Configuration conf = util.getConfiguration();
+    conf.setInt("hbase.hstore.compaction.min", 2);
+    Path testDir = util.getDataTestDir("testExcludeMinorCompaction");
+    byte[][] startKeys = generateRandomStartKeys(5);
+
+    try {
+      util.startMiniCluster();
+      final FileSystem fs = util.getDFSCluster().getFileSystem();
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      HTable table = util.createTable(TABLE_NAME, FAMILIES);
+      assertEquals("Should start with empty table", 0, util.countRows(table));
+
+      // deep inspection: get the StoreFile dir
+      final Path storePath = Store.getStoreHomedir(
+          HTableDescriptor.getTableDir(FSUtils.getRootDir(conf), TABLE_NAME),
+          admin.getTableRegions(TABLE_NAME).get(0).getEncodedName(),
+          FAMILIES[0]);
+      assertEquals(0, fs.listStatus(storePath).length);
+
+      // put some data in it and flush to create a storefile
+      Put p = new Put(Bytes.toBytes("test"));
+      p.add(FAMILIES[0], Bytes.toBytes("1"), Bytes.toBytes("1"));
+      table.put(p);
+      admin.flush(TABLE_NAME);
+      assertEquals(1, util.countRows(table));
+      quickPoll(new Callable<Boolean>() {
+        public Boolean call() throws Exception {
+          return fs.listStatus(storePath).length == 1;
+        }
+      }, 5000);
+
+      // Generate a bulk load file with more rows
+      conf.setBoolean("hbase.mapreduce.hfileoutputformat.compaction.exclude",
+          true);
+      util.startMiniMapReduceCluster();
+      runIncrementalPELoad(conf, table, testDir);
+
+      // Perform the actual load
+      new LoadIncrementalHFiles(conf).doBulkLoad(testDir, table);
+
+      // Ensure data shows up
+      int expectedRows = NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
+      assertEquals("LoadIncrementalHFiles should put expected data in table",
+          expectedRows + 1, util.countRows(table));
+
+      // should have a second StoreFile now
+      assertEquals(2, fs.listStatus(storePath).length);
+
+      // minor compactions shouldn't get rid of the file
+      admin.compact(TABLE_NAME);
+      try {
+        quickPoll(new Callable<Boolean>() {
+          public Boolean call() throws Exception {
+            return fs.listStatus(storePath).length == 1;
+          }
+        }, 5000);
+        throw new IOException("SF# = " + fs.listStatus(storePath).length);
+      } catch (AssertionError ae) {
+        // this is expected behavior
+      }
+
+      // a major compaction should work though
+      admin.majorCompact(TABLE_NAME);
+      quickPoll(new Callable<Boolean>() {
+        public Boolean call() throws Exception {
+          return fs.listStatus(storePath).length == 1;
+        }
+      }, 5000);
+
+    } finally {
+      util.shutdownMiniMapReduceCluster();
+      util.shutdownMiniCluster();
+    }
+  }
+
+  private void quickPoll(Callable<Boolean> c, int waitMs) throws Exception {
+    int sleepMs = 10;
+    int retries = (int) Math.ceil(((double) waitMs) / sleepMs);
+    while (retries-- > 0) {
+      if (c.call().booleanValue()) {
+        return;
+      }
+      Thread.sleep(sleepMs);
+    }
+    fail();
+  }
+
   public static void main(String args[]) throws Exception {
     new TestHFileOutputFormat().manualTest(args);
   }
