@@ -364,6 +364,14 @@ public class ScanQueryMatcher {
     return this.startKey;
   }
 
+  /**
+   *
+   * @return the Filter
+   */
+  Filter getFilter() {
+    return this.filter;
+  }
+
   public KeyValue getNextKeyHint(KeyValue kv) {
     if (filter == null) {
       return null;
