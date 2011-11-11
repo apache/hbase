@@ -1088,7 +1088,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   /*
-   * Check if an OOME and if so, call abort.
+   * Check if an OOME and, if so, abort immediately to avoid creating more objects.
    *
    * @param e
    *
@@ -1096,12 +1096,19 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   public boolean checkOOME(final Throwable e) {
     boolean stop = false;
-    if (e instanceof OutOfMemoryError
-        || (e.getCause() != null && e.getCause() instanceof OutOfMemoryError)
-        || (e.getMessage() != null && e.getMessage().contains(
-            "java.lang.OutOfMemoryError"))) {
-      abort("OutOfMemoryError, aborting", e);
-      stop = true;
+    try {
+      if (e instanceof OutOfMemoryError
+          || (e.getCause() != null && e.getCause() instanceof OutOfMemoryError)
+          || (e.getMessage() != null && e.getMessage().contains(
+              "java.lang.OutOfMemoryError"))) {
+        stop = true;
+        LOG.fatal(
+          "Run out of memory; HRegionServer will abort itself immediately", e);
+      }
+    } finally {
+      if (stop) {
+        Runtime.getRuntime().halt(1);
+      }
     }
     return stop;
   }
