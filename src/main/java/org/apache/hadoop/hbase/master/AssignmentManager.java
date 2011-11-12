@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
@@ -162,6 +164,10 @@ public class AssignmentManager extends ZooKeeperListener {
 
   //Thread pool executor service for timeout monitor
   private java.util.concurrent.ExecutorService threadPoolExecutorService;
+  
+  private List<EventType> ignoreStatesRSOffline = Arrays.asList(new EventType[]{
+      EventType.RS_ZK_REGION_FAILED_OPEN, EventType.RS_ZK_REGION_CLOSED });
+  
 
   /**
    * Constructs a new assignment manager.
@@ -613,7 +619,8 @@ public class AssignmentManager extends ZooKeeperListener {
       String prettyPrintedRegionName = HRegionInfo.prettyPrint(encodedName);
       // Verify this is a known server
       if (!serverManager.isServerOnline(sn) &&
-          !this.master.getServerName().equals(sn)) {
+          !this.master.getServerName().equals(sn)
+          && !ignoreStatesRSOffline.contains(data.getEventType())) {
         LOG.warn("Attempted to handle region transition for server but " +
           "server is not online: " + prettyPrintedRegionName);
         return;
