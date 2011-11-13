@@ -27,11 +27,14 @@ import java.util.SortedSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
 
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Multimap;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestRegionSplitCalculator {
   final static Log LOG = LogFactory.getLog(TestRegionSplitCalculator.class);
 

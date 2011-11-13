@@ -27,7 +27,9 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestServerName {
   @Test
   public void testRegexPatterns() {
