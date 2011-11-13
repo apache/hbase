@@ -24,7 +24,6 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -494,11 +493,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
     }
 
     public long free(long toFree) {
-      LinkedList<CachedBlock> blocks = queue.get();
+      CachedBlock cb;
       long freedBytes = 0;
-      for(CachedBlock cb: blocks) {
+      while ((cb = queue.pollLast()) != null) {
         freedBytes += evictBlock(cb);
-        if(freedBytes >= toFree) {
+        if (freedBytes >= toFree) {
           return freedBytes;
         }
       }
