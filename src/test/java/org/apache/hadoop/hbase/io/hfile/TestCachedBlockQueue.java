@@ -63,17 +63,9 @@ public class TestCachedBlockQueue extends TestCase {
 
     assertEquals(queue.heapSize(), expectedSize);
 
-    LinkedList<org.apache.hadoop.hbase.io.hfile.CachedBlock> blocks =
-      queue.get();
-    assertEquals(blocks.poll().getName(), "cb1");
-    assertEquals(blocks.poll().getName(), "cb2");
-    assertEquals(blocks.poll().getName(), "cb3");
-    assertEquals(blocks.poll().getName(), "cb4");
-    assertEquals(blocks.poll().getName(), "cb5");
-    assertEquals(blocks.poll().getName(), "cb6");
-    assertEquals(blocks.poll().getName(), "cb7");
-    assertEquals(blocks.poll().getName(), "cb8");
-
+    for (int i = 1; i <= 8; i++) {
+      assertEquals(queue.pollLast().getName(), "cb"+i);      
+    }
   }
 
   public void testQueueSmallBlockEdgeCase() throws Exception {
@@ -116,17 +108,9 @@ public class TestCachedBlockQueue extends TestCase {
 
     assertEquals(queue.heapSize(), expectedSize);
 
-    LinkedList<org.apache.hadoop.hbase.io.hfile.CachedBlock> blocks = queue.get();
-    assertEquals(blocks.poll().getName(), "cb0");
-    assertEquals(blocks.poll().getName(), "cb1");
-    assertEquals(blocks.poll().getName(), "cb2");
-    assertEquals(blocks.poll().getName(), "cb3");
-    assertEquals(blocks.poll().getName(), "cb4");
-    assertEquals(blocks.poll().getName(), "cb5");
-    assertEquals(blocks.poll().getName(), "cb6");
-    assertEquals(blocks.poll().getName(), "cb7");
-    assertEquals(blocks.poll().getName(), "cb8");
-
+    for (int i = 0; i <= 8; i++) {
+      assertEquals(queue.pollLast().getName(), "cb"+i);      
+    }
   }
 
   private static class CachedBlock extends org.apache.hadoop.hbase.io.hfile.CachedBlock
