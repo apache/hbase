@@ -27,13 +27,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
-import junit.framework.TestSuite;
 
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-@Category(SmallTests.class)
+@RunWith(Suite.class)
+@Suite.SuiteClasses({TestPoolMap.TestRoundRobinPoolType.class, TestPoolMap.TestThreadLocalPoolType.class, TestPoolMap.TestReusablePoolType.class})
+@Category(MediumTests.class)
 public class TestPoolMap {
   public abstract static class TestPoolType extends TestCase {
     protected PoolMap<String, String> poolMap;
@@ -71,6 +75,7 @@ public class TestPoolMap {
     }
   }
 
+  @Category(MediumTests.class)
   public static class TestRoundRobinPoolType extends TestPoolType {
     @Override
     protected PoolType getPoolType() {
@@ -132,6 +137,7 @@ public class TestPoolMap {
 
   }
 
+  @Category(MediumTests.class)
   public static class TestThreadLocalPoolType extends TestPoolType {
     @Override
     protected PoolType getPoolType() {
@@ -176,6 +182,7 @@ public class TestPoolMap {
 
   }
 
+  @Category(MediumTests.class)
   public static class TestReusablePoolType extends TestPoolType {
     @Override
     protected PoolType getPoolType() {
@@ -223,13 +230,4 @@ public class TestPoolMap {
     }
 
   }
-
-  public static Test suite() {
-    TestSuite suite = new TestSuite();
-    suite.addTestSuite(TestRoundRobinPoolType.class);
-    suite.addTestSuite(TestThreadLocalPoolType.class);
-    suite.addTestSuite(TestReusablePoolType.class);
-    return suite;
-  }
-
 }

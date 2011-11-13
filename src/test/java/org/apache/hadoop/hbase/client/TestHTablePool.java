@@ -23,7 +23,6 @@ import java.io.IOException;
 
 import junit.framework.Assert;
 import junit.framework.TestCase;
-import junit.framework.TestSuite;
 
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -202,6 +201,7 @@ public class TestHTablePool {
     }
   }
 
+  @Category(MediumTests.class)
 	public static class TestHTableReusablePool extends TestHTablePoolType {
 		@Override
 		protected PoolType getPoolType() {
@@ -276,6 +276,7 @@ public class TestHTablePool {
 		}
 	}
 
+  @Category(MediumTests.class)
 	public static class TestHTableThreadLocalPool extends TestHTablePoolType {
 		@Override
 		protected PoolType getPoolType() {
