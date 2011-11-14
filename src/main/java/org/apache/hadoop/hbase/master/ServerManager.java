@@ -308,19 +308,25 @@ public class ServerManager {
   }
 
   void letRegionServersShutdown() {
-    synchronized (onlineServers) {
-      while (!onlineServers.isEmpty()) {
+    long previousLogTime = 0;
+    while (!onlineServers.isEmpty()) {
+
+      if (System.currentTimeMillis() > (previousLogTime + 1000)) {
         StringBuilder sb = new StringBuilder();
-        for (ServerName key: this.onlineServers.keySet()) {
+        for (ServerName key : this.onlineServers.keySet()) {
           if (sb.length() > 0) {
             sb.append(", ");
           }
           sb.append(key);
         }
         LOG.info("Waiting on regionserver(s) to go down " + sb.toString());
+        previousLogTime = System.currentTimeMillis();
+      }
+
+      synchronized (onlineServers) {
         try {
-          this.onlineServers.wait(1000);
-        } catch (InterruptedException e) {
+          onlineServers.wait(100);
+        } catch (InterruptedException ignored) {
           // continue
         }
       }
@@ -348,6 +354,9 @@ public class ServerManager {
     // not in online servers list.
     this.deadservers.add(serverName);
     this.onlineServers.remove(serverName);
+    synchronized (onlineServers) {
+      onlineServers.notifyAll();
+    }
     this.serverConnections.remove(serverName);
     // If cluster is going down, yes, servers are going to be expiring; don't
     // process as a dead server

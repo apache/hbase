@@ -831,16 +831,21 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private void waitOnAllRegionsToClose(final boolean abort) {
     // Wait till all regions are closed before going out.
     int lastCount = -1;
+    long previousLogTime = 0;
     while (!isOnlineRegionsEmpty()) {
       int count = getNumberOfOnlineRegions();
       // Only print a message if the count of regions has changed.
       if (count != lastCount) {
-        lastCount = count;
-        LOG.info("Waiting on " + count + " regions to close");
-        // Only print out regions still closing if a small number else will
-        // swamp the log.
-        if (count < 10 && LOG.isDebugEnabled()) {
-          LOG.debug(this.onlineRegions);
+        // Log every second at most
+        if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+          previousLogTime = System.currentTimeMillis();
+          lastCount = count;
+          LOG.info("Waiting on " + count + " regions to close");
+          // Only print out regions still closing if a small number else will
+          // swamp the log.
+          if (count < 10 && LOG.isDebugEnabled()) {
+            LOG.debug(this.onlineRegions);
+          }
         }
       }
       // Ensure all user regions have been sent a close. Use this to
@@ -853,7 +858,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           closeRegion(hri, abort, false);
         }
       }
-      Threads.sleep(1000);
+      Threads.sleep(200);
     }
   }
 
