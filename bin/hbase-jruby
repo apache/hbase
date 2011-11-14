@@ -1,0 +1,4 @@
+#!/bin/bash
+
+`dirname $0`/hbase org.jruby.Main $*
+
