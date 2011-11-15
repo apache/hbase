@@ -428,6 +428,8 @@ Release 0.92.0 - Unreleased
                in the case of RS offline
    HBASE-4777  Write back to client 'incompatible' if we show up with wrong version
    HBASE-4775  Remove -ea from all but tests; enable it if you need it testing
+   HBASE-4784  Void return types not handled correctly for CoprocessorProtocol
+               methods
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
