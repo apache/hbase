@@ -545,7 +545,8 @@ admin.modifyColumn(table, cf2 );    // modifying existing ColumnFamily
 admin.enableTable(table);                
       </programlisting>
       </para>See <xref linkend="client_dependencies"/> for more information about configuring client connections.
-      <para>
+      <para>Note:  online schema changes are supported in the 0.92.x codebase, but the 0.90.x codebase requires the table
+      to be disabled.
       </para>
   </section>   
   <section xml:id="number.of.cfs">
@@ -739,17 +740,6 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
       </para>
     </section> 
   </section>
-  <section xml:id="cf.in.memory">
-  <title>
-  In-Memory ColumnFamilies
-  </title>
-  <para>ColumnFamilies can optionally be defined as in-memory.  Data is still persisted to disk, just like any other ColumnFamily.  
-  In-memory blocks have the highest priority in the <xref linkend="block.cache" />, but it is not a guarantee that the entire table
-  will be in memory.
-  </para>
-  <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> for more information.
-  </para>
-  </section>
   <section xml:id="ttl">
   <title>Time To Live (TTL)</title>
   <para>ColumnFamilies can set a TTL length in seconds, and HBase will automatically delete rows once the expiration time is reached.
@@ -773,20 +763,6 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
   A new "raw" scan options returns all deleted rows and the delete markers.
   </para>
   <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> for more information.
-  </para>
-  </section>
-  <section xml:id="schema.bloom">
-  <title>Bloom Filters</title>
-  <para>Bloom Filters can be enabled per-ColumnFamily.
-        Use <code>HColumnDescriptor.setBloomFilterType(NONE | ROW |
-        ROWCOL)</code> to enable blooms per Column Family. Default =
-        <varname>NONE</varname> for no bloom filters. If
-        <varname>ROW</varname>, the hash of the row will be added to the bloom
-        on each insert. If <varname>ROWCOL</varname>, the hash of the row +
-        column family + column family qualifier will be added to the bloom on
-        each key insert.</para>
-  <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> and 
-  <xref linkend="blooms"/> for more information.
   </para>
   </section>
   <section xml:id="secondary.indexes">
@@ -874,6 +850,11 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
       </para>
     </section>
   </section>
+  <section xml:id="schema.ops"><title>Operational and Performance Configuration Options</title>
+    <para>See the Performance section <xref linkend="perf.schema"/> for more information operational and performance
+    schema design options, such as Bloom Filters, Table-configured regionsizes, and blocksizes.
+    </para>
+  </section>  
 
   </chapter>   <!--  schema design -->
 
