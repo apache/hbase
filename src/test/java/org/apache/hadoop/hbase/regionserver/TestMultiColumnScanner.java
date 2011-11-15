@@ -39,9 +39,13 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -58,11 +62,13 @@ public class TestMultiColumnScanner {
   private static final Log LOG = LogFactory.getLog(TestMultiColumnScanner.class);
 
   private static final String TABLE_NAME = "TestMultiColumnScanner";
+  static final int MAX_VERSIONS = 50;
 
-  // These fields are used in other unit tests
+  // These fields are used in TestScanWithBloomError
   static final String FAMILY = "CF";
   static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
-  static final int MAX_VERSIONS = 50;
+
+  private SchemaMetrics schemaMetrics;
 
   /**
    * The size of the column qualifier set used. Increasing this parameter
@@ -101,6 +107,9 @@ public class TestMultiColumnScanner {
   private Compression.Algorithm comprAlgo;
   private StoreFile.BloomType bloomType;
 
+  private long lastBlocksRead;
+  private long lastCacheHits;
+
   // Some static sanity-checking.
   static {
     assertTrue(BIG_LONG > 0.9 * Long.MAX_VALUE); // Guard against typos.
@@ -109,6 +118,13 @@ public class TestMultiColumnScanner {
     for (int i = 0; i < TIMESTAMPS.length - 1; ++i)
       assertTrue(TIMESTAMPS[i] < TIMESTAMPS[i + 1]);
   }
+
+  @Before
+  public void setUp() {
+    SchemaMetrics.configureGlobally(TEST_UTIL.getConfiguration());
+    schemaMetrics = SchemaMetrics.getInstance(TABLE_NAME, FAMILY);
+  }
+
 
   @Parameters
   public static final Collection<Object[]> parameters() {
@@ -119,6 +135,39 @@ public class TestMultiColumnScanner {
       StoreFile.BloomType bloomType) {
     this.comprAlgo = comprAlgo;
     this.bloomType = bloomType;
+  }
+
+  private long getBlocksRead() {
+    return HRegion.getNumericMetric(schemaMetrics.getBlockMetricName(
+        BlockType.BlockCategory.ALL_CATEGORIES, false,
+        BlockMetricType.READ_COUNT));
+  }
+
+  private long getCacheHits() {
+    return HRegion.getNumericMetric(schemaMetrics.getBlockMetricName(
+        BlockType.BlockCategory.ALL_CATEGORIES, false,
+        BlockMetricType.CACHE_HIT));
+  }
+
+  private void saveBlockStats() {
+    lastBlocksRead = getBlocksRead();
+    lastCacheHits = getCacheHits();
+  }
+
+  private void showBlockStats() {
+    long blocksRead = blocksReadDelta();
+    long cacheHits = cacheHitsDelta();
+    LOG.info("Compression: " + comprAlgo + ", Bloom type: "
+        + bloomType + ", blocks read: " + blocksRead + ", block cache hits: "
+        + cacheHits + ", misses: " + (blocksRead - cacheHits));
+  }
+
+  private long cacheHitsDelta() {
+    return getCacheHits() - lastCacheHits;
+  }
+
+  private long blocksReadDelta() {
+    return getBlocksRead() - lastBlocksRead;
   }
 
   @Test

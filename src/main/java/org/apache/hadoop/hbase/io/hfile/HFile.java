@@ -41,6 +41,9 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -141,6 +144,14 @@ public class HFile {
 
   /** Separator between HFile name and offset in block cache key */
   static final char CACHE_KEY_SEPARATOR = '_';
+
+  /**
+   * We assume that HFile path ends with
+   * ROOT_DIR/TABLE_NAME/REGION_NAME/CF_NAME/HFILE, so it has at least this
+   * many levels of nesting. This is needed for identifying table and CF name
+   * from an HFile path.
+   */
+  public final static int MIN_NUM_HFILE_PATH_LEVELS = 5;
 
   // For measuring latency of "typical" reads and writes
   static volatile AtomicInteger readOps = new AtomicInteger();
@@ -258,6 +269,7 @@ public class HFile {
    */
   public static final WriterFactory getWriterFactory(Configuration conf,
       CacheConfig cacheConf) {
+    SchemaMetrics.configureGlobally(conf);
     int version = getFormatVersion(conf);
     switch (version) {
     case 1:
@@ -278,7 +290,8 @@ public class HFile {
   }
 
   /** An interface used by clients to open and iterate an {@link HFile}. */
-  public interface Reader extends Closeable, CachingBlockReader {
+  public interface Reader extends Closeable, CachingBlockReader,
+      SchemaAware {
     /**
      * Returns this reader's "name". Usually the last component of the path.
      * Needs to be constant as the file is being moved to support caching on
@@ -291,10 +304,10 @@ public class HFile {
     RawComparator<byte []> getComparator();
 
     HFileScanner getScanner(boolean cacheBlocks,
-        final boolean pread, final boolean isCompaction);
+       final boolean pread, final boolean isCompaction);
 
     ByteBuffer getMetaBlock(String metaBlockName,
-        boolean cacheBlock) throws IOException;
+       boolean cacheBlock) throws IOException;
 
     Map<byte[], byte[]> loadFileInfo() throws IOException;
 

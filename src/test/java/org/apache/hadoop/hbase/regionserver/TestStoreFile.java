@@ -26,6 +26,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -59,11 +62,19 @@ public class TestStoreFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestStoreFile.class);
   private CacheConfig cacheConf =  new CacheConfig(conf);
   private String ROOT_DIR;
+  private Map<String, Long> startingMetrics;
 
   @Override
   public void setUp() throws Exception {
     super.setUp();
+    startingMetrics = SchemaMetrics.getMetricsSnapshot();
     ROOT_DIR = new Path(this.testDir, "TestStoreFile").toString();
+  }
+
+  @Override
+  public void tearDown() throws Exception {
+    super.tearDown();
+    SchemaMetrics.validateMetricChanges(startingMetrics);
   }
 
   /**

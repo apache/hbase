@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
@@ -42,9 +41,8 @@ import org.apache.hadoop.io.Writable;
 /**
  * Common functionality needed by all versions of {@link HFile} writers.
  */
-public abstract class AbstractHFileWriter implements HFile.Writer {
-
-  private static final Log LOG = LogFactory.getLog(AbstractHFileWriter.class);
+public abstract class AbstractHFileWriter extends SchemaConfigured
+    implements HFile.Writer {
 
   /** Key previously appended. Becomes the last key in the file. */
   protected byte[] lastKeyBuffer = null;
@@ -94,10 +92,6 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   /** May be null if we were passed a stream. */
   protected final Path path;
 
-  /** Prefix of the form cf.<column_family_name> for statistics counters. */
-  // Note that this is gotten from the path, which can be null, so this can
-  // remain unknown
-  public String cfStatsPrefix = "cf.unknown";
 
   /** Cache configuration for caching data on write. */
   protected final CacheConfig cacheConf;
@@ -111,6 +105,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   public AbstractHFileWriter(CacheConfig cacheConf,
       FSDataOutputStream outputStream, Path path, int blockSize,
       Compression.Algorithm compressAlgo, KeyComparator comparator) {
+    super(null, path);
     this.outputStream = outputStream;
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();
@@ -122,27 +117,6 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
 
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
-
-    if (path != null)
-      cfStatsPrefix = "cf." + parseCfNameFromPath(path.toString());
-  }
-
-  /**
-   * Parse the HFile path to figure out which table and column family it belongs
-   * to. This is used to maintain read statistics on a per-column-family basis.
-   *
-   * @param path
-   *          HFile path name
-   */
-  public static String parseCfNameFromPath(String path) {
-    String splits[] = path.split("/");
-    if (splits.length < 2) {
-      LOG.warn("Could not determine the table and column family of the "
-          + "HFile path " + path);
-      return "unknown";
-    }
-
-    return splits[splits.length - 2];
   }
 
   /**
@@ -247,11 +221,6 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   @Override
   public Path getPath() {
     return path;
-  }
-
-  @Override
-  public String getColumnFamilyName() {
-    return cfStatsPrefix;
   }
 
   @Override

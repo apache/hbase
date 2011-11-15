@@ -501,11 +501,17 @@ public class TestHFileBlock {
       ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
       HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
           true, -1);
-      long expected = ClassSize.align(ClassSize.estimateBase(HFileBlock.class,
-          true)
-          + ClassSize.estimateBase(buf.getClass(), true)
-          + HFileBlock.HEADER_SIZE + size);
-      assertEquals(expected, block.heapSize());
+      assertEquals(80, HFileBlock.BYTE_BUFFER_HEAP_SIZE);
+      long byteBufferExpectedSize =
+          ClassSize.align(ClassSize.estimateBase(buf.getClass(), true)
+              + HFileBlock.HEADER_SIZE + size);
+      long hfileBlockExpectedSize =
+          ClassSize.align(ClassSize.estimateBase(HFileBlock.class, true));
+      long expected = hfileBlockExpectedSize + byteBufferExpectedSize;
+      assertEquals("Block data size: " + size + ", byte buffer expected " +
+          "size: " + byteBufferExpectedSize + ", HFileBlock class expected " +
+          "size: " + hfileBlockExpectedSize + ";", expected,
+          block.heapSize());
     }
   }
 

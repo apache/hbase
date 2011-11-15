@@ -48,12 +48,13 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -239,6 +240,8 @@ public class StoreFile {
     } else {
       this.modificationTimeStamp = 0;
     }
+
+    SchemaMetrics.configureGlobally(conf);
   }
 
   /**
@@ -1060,7 +1063,7 @@ public class StoreFile {
   /**
    * Reader for a StoreFile.
    */
-  public static class Reader {
+  public static class Reader extends SchemaConfigured {
     static final Log LOG = LogFactory.getLog(Reader.class.getName());
 
     protected BloomFilter generalBloomFilter = null;
@@ -1069,21 +1072,13 @@ public class StoreFile {
     private final HFile.Reader reader;
     protected TimeRangeTracker timeRangeTracker = null;
     protected long sequenceID = -1;
-    private final String bloomAccessedMetric;
-    private final String bloomSkippedMetric;
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
 
     public Reader(FileSystem fs, Path path, CacheConfig cacheConf)
         throws IOException {
+      super(path);
       reader = HFile.createReader(fs, path, cacheConf);
-
-      // prepare the text (key) for the metrics
-      bloomAccessedMetric = reader.getColumnFamilyName() +
-          ".keyMaybeInBloomCnt";
-      bloomSkippedMetric = reader.getColumnFamilyName() +
-          ".keyNotInBloomCnt";
-
       bloomFilterType = BloomType.NONE;
     }
 
@@ -1092,8 +1087,6 @@ public class StoreFile {
      */
     Reader() {
       this.reader = null;
-      bloomAccessedMetric = "";
-      bloomSkippedMetric = "";
     }
 
     public RawComparator<byte []> getComparator() {
@@ -1353,10 +1346,7 @@ public class StoreFile {
                 && bloomFilter.contains(key, 0, key.length, bloom);
           }
 
-          if (exists)
-            HRegion.incrNumericMetric(bloomAccessedMetric, 1);
-          else
-            HRegion.incrNumericMetric(bloomSkippedMetric, 1);
+          getSchemaMetrics().updateBloomMetrics(exists);
           return exists;
         }
       } catch (IOException e) {

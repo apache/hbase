@@ -78,7 +78,18 @@ public enum BlockType {
   INDEX_V1("IDXBLK)+", BlockCategory.INDEX);
 
   public enum BlockCategory {
-    DATA, META, INDEX, BLOOM
+    DATA, META, INDEX, BLOOM, ALL_CATEGORIES, UNKNOWN;
+
+    /**
+     * Throws an exception if the block category passed is the special category
+     * meaning "all categories".
+     */
+    public void expectSpecific() {
+      if (this == ALL_CATEGORIES) {
+        throw new IllegalArgumentException("Expected a specific block " +
+            "category but got " + this);
+      }
+    }
   }
 
   public static final int MAGIC_LENGTH = 8;
@@ -104,8 +115,8 @@ public enum BlockType {
     buf.put(magic);
   }
 
-  public String getMetricName(){
-    return metricCat.toString();
+  public BlockCategory getCategory() {
+    return metricCat;
   }
 
   public static BlockType parse(byte[] buf, int offset, int length)

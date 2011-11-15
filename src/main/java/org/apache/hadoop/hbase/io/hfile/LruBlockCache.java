@@ -40,7 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -255,9 +255,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * Cache the block with the specified name and buffer.
    * <p>
    * It is assumed this will NEVER be called on an already cached block.  If
-   * that is done, it is assumed that you are reinserting the same exact
-   * block due to a race condition and will update the buffer but not modify
-   * the size of the cache.
+   * that is done, an exception will be thrown.
    * @param blockName block name
    * @param buf block buffer
    * @param inMemory if block is in-memory
@@ -303,13 +301,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
     if (evict) {
       heapsize *= -1;
     }
-    if (cb.getBuffer() instanceof HFileBlockInfo) {
-      HFileBlockInfo cb_hfbi = (HFileBlockInfo) cb.getBuffer();
-      HRegion.incrNumericPersistentMetric(cb_hfbi.getColumnFamilyName()
-          + ".blockCacheSize", heapsize);
-      HRegion.incrNumericPersistentMetric("bt."
-          + cb_hfbi.getBlockType().getMetricName() + ".blockCacheSize",
-          heapsize);
+    Cacheable cachedBlock = cb.getBuffer();
+    SchemaMetrics schemaMetrics = cachedBlock.getSchemaMetrics();
+    if (schemaMetrics != null) {
+      schemaMetrics.updateOnCachePutOrEvict(
+          cachedBlock.getBlockType().getCategory(), heapsize, evict);
     }
     return size.addAndGet(heapsize);
   }
@@ -317,8 +313,10 @@ public class LruBlockCache implements BlockCache, HeapSize {
   /**
    * Get the buffer of the block with the specified name.
    * @param blockName block name
+   * @param caching true if the caller caches blocks on cache misses
    * @return buffer of specified block name, or null if not in cache
    */
+  @Override
   public Cacheable getBlock(String blockName, boolean caching) {
     CachedBlock cb = map.get(blockName);
     if(cb == null) {

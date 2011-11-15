@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -136,6 +137,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       final KeyComparator comparator) throws IOException {
     super(cacheConf, createOutputStream(conf, fs, path), path,
         blockSize, compressAlgo, comparator);
+    SchemaMetrics.configureGlobally(conf);
     finishInit(conf);
   }
 
@@ -177,8 +179,17 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     // Meta data block index writer
     metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
-
     LOG.debug("Initialized with " + cacheConf);
+
+    if (isSchemaConfigured()) {
+      schemaConfigurationChanged();
+    }
+  }
+
+  @Override
+  protected void schemaConfigurationChanged() {
+    passSchemaMetricsTo(dataBlockIndexWriter);
+    passSchemaMetricsTo(metaBlockIndexWriter);
   }
 
   /**
@@ -221,7 +232,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     if (cacheConf.shouldCacheDataOnWrite()) {
       HFileBlock blockForCaching = fsBlockWriter.getBlockForCaching();
-      blockForCaching.setColumnFamilyName(this.getColumnFamilyName());
+      passSchemaMetricsTo(blockForCaching);
       cacheConf.getBlockCache().cacheBlock(
           HFile.getBlockCacheKey(name, lastDataBlockOffset), blockForCaching);
     }
@@ -243,7 +254,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         if (cacheThisBlock) {
           // Cache this block on write.
           HFileBlock cBlock = fsBlockWriter.getBlockForCaching();
-          cBlock.setColumnFamilyName(this.getColumnFamilyName());
+          passSchemaMetricsTo(cBlock);
           cacheConf.getBlockCache().cacheBlock(
               HFile.getBlockCacheKey(name, offset), cBlock);
         }

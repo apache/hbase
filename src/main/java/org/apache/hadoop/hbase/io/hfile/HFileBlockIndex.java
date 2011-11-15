@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.HFile.CachingBlockReader;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompoundBloomFilterWriter;
@@ -81,13 +82,6 @@ public class HFileBlockIndex {
    */
   private static final String INLINE_BLOCKS_NOT_ALLOWED =
       "Inline blocks are not allowed in the single-level-only mode";
-
-  /**
-   * Configuration key to cache leaf- and intermediate-level index blocks on
-   * write.
-   */
-  public static final String CACHE_INDEX_BLOCKS_ON_WRITE_KEY =
-      "hfile.block.index.cacheonwrite";
 
   /**
    * The size of a meta-data record used for finding the mid-key in a
@@ -609,7 +603,8 @@ public class HFileBlockIndex {
    * index. However, in most practical cases we will only have leaf-level
    * blocks and the root index, or just the root index.
    */
-  public static class BlockIndexWriter implements InlineBlockWriter {
+  public static class BlockIndexWriter extends SchemaConfigured
+      implements InlineBlockWriter {
     /**
      * While the index is being written, this represents the current block
      * index referencing all leaf blocks, with one exception. If the file is
@@ -838,8 +833,10 @@ public class HFileBlockIndex {
       blockWriter.writeHeaderAndData(out);
 
       if (blockCache != null) {
+        HFileBlock blockForCaching = blockWriter.getBlockForCaching();
+        passSchemaMetricsTo(blockForCaching);
         blockCache.cacheBlock(HFile.getBlockCacheKey(nameForCaching,
-            beginOffset), blockWriter.getBlockForCaching());
+            beginOffset), blockForCaching);
       }
 
       // Add intermediate index block size
@@ -1300,14 +1297,6 @@ public class HFileBlockIndex {
       return numSubEntriesAt.get(i);
     }
 
-  }
-
-  /**
-   * @return true if the given configuration specifies that we should
-   *         cache-on-write index blocks
-   */
-  public static boolean shouldCacheOnWrite(Configuration conf) {
-    return conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY, false);
   }
 
   public static int getMaxChunkSize(Configuration conf) {

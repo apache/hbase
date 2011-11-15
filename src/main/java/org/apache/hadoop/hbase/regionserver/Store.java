@@ -54,6 +54,8 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
@@ -90,7 +92,7 @@ import com.google.common.collect.Lists;
  * <p>Locking and transactions are handled at a higher level.  This API should
  * not be called directly but by an HRegion manager.
  */
-public class Store implements HeapSize {
+public class Store extends SchemaConfigured implements HeapSize {
   static final Log LOG = LogFactory.getLog(Store.class);
   protected final MemStore memstore;
   // This stores directory in the filesystem.
@@ -160,6 +162,8 @@ public class Store implements HeapSize {
   protected Store(Path basedir, HRegion region, HColumnDescriptor family,
     FileSystem fs, Configuration conf)
   throws IOException {
+    super(conf, region.getTableDesc().getNameAsString(),
+        Bytes.toString(family.getName()));
     HRegionInfo info = region.regionInfo;
     this.fs = fs;
     this.homedir = getStoreHomedir(basedir, info.getEncodedName(), family.getName());
@@ -193,7 +197,7 @@ public class Store implements HeapSize {
         family.getMaxVersions(), ttl, family.getKeepDeletedCells(),
         this.comparator);
     this.memstore = new MemStore(conf, this.comparator);
-    this.storeNameStr = Bytes.toString(this.family.getName());
+    this.storeNameStr = getColumnFamilyName();
 
     // By default, compact if storefile.count >= minFilesToCompact
     this.minFilesToCompact = Math.max(2,
@@ -503,7 +507,6 @@ public class Store implements HeapSize {
       MonitoredTask status)
       throws IOException {
     StoreFile.Writer writer;
-    String fileName;
     long flushed = 0;
     Path pathName;
     // Don't flush if there are no entries.
@@ -598,8 +601,8 @@ public class Store implements HeapSize {
     // retrieved from HRegion.recentFlushes, which is set within
     // HRegion.internalFlushcache, which indirectly calls this to actually do
     // the flushing through the StoreFlusherImpl class
-    HRegion.incrNumericPersistentMetric("cf." + this.toString() + ".flushSize",
-        flushedSize.longValue());
+    getSchemaMetrics().updatePersistentStoreMetric(
+        SchemaMetrics.StoreMetricType.FLUSH_SIZE, flushedSize.longValue());
     if (LOG.isInfoEnabled()) {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
         ", sequenceid=" + logCacheFlushId +
@@ -625,9 +628,17 @@ public class Store implements HeapSize {
   private StoreFile.Writer createWriterInTmp(int maxKeyCount,
     Compression.Algorithm compression)
   throws IOException {
-    return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
-        compression, this.comparator, this.conf, this.cacheConf,
-        this.family.getBloomFilterType(), maxKeyCount);
+    StoreFile.Writer w = StoreFile.createWriter(fs, region.getTmpDir(),
+        blocksize, compression, comparator, conf, cacheConf,
+        family.getBloomFilterType(), maxKeyCount);
+    if (w.writer instanceof SchemaConfigured) {
+      // The store file writer's path does not include the CF name, so we need
+      // to configure the HFile writer directly.
+      SchemaConfigured sc = (SchemaConfigured) w.writer;
+      SchemaConfigured.resetSchemaMetricsConf(sc);
+      passSchemaMetricsTo(sc);
+    }
+    return w;
   }
 
   /*
@@ -1927,10 +1938,11 @@ public class Store implements HeapSize {
     return this.cacheConf;
   }
 
-  public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
-      + (18 * ClassSize.REFERENCE) + (7 * Bytes.SIZEOF_LONG)
-      + (1 * Bytes.SIZEOF_DOUBLE) + (5 * Bytes.SIZEOF_INT)
-      + Bytes.SIZEOF_BOOLEAN);
+  public static final long FIXED_OVERHEAD =
+      ClassSize.align(new SchemaConfigured().heapSize()
+          + (18 * ClassSize.REFERENCE) + (7 * Bytes.SIZEOF_LONG)
+          + (1 * Bytes.SIZEOF_DOUBLE) + (5 * Bytes.SIZEOF_INT)
+          + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK

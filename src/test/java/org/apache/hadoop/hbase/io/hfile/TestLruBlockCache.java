@@ -20,14 +20,24 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.metrics.TestSchemaMetrics;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
-import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
+import static org.junit.Assert.*;
 
 /**
  * Tests the concurrent LruBlockCache.<p>
@@ -36,9 +46,32 @@ import org.junit.experimental.categories.Category;
  * evictions run when they're supposed to and do what they should,
  * and that cached blocks are accessible when expected to be.
  */
+@RunWith(Parameterized.class)
 @Category(MediumTests.class)
-public class TestLruBlockCache extends TestCase {
+public class TestLruBlockCache {
 
+  private Map<String, Long> startingMetrics;
+
+  public TestLruBlockCache(boolean useTableName) {
+    SchemaMetrics.setUseTableNameInTest(useTableName);
+  }
+
+  @Parameters
+  public static Collection<Object[]> parameters() {
+    return TestSchemaMetrics.parameters();
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    startingMetrics = SchemaMetrics.getMetricsSnapshot();
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    SchemaMetrics.validateMetricChanges(startingMetrics);
+  }
+
+  @Test
   public void testBackgroundEvictionThread() throws Exception {
 
     long maxSize = 100000;
@@ -65,6 +98,7 @@ public class TestLruBlockCache extends TestCase {
     assertEquals(cache.getEvictionCount(), 1);
   }
 
+  @Test
   public void testCacheSimple() throws Exception {
 
     long maxSize = 1000000;
@@ -124,6 +158,7 @@ public class TestLruBlockCache extends TestCase {
     t.join();
   }
 
+  @Test
   public void testCacheEvictionSimple() throws Exception {
 
     long maxSize = 100000;
@@ -164,6 +199,7 @@ public class TestLruBlockCache extends TestCase {
     }
   }
 
+  @Test
   public void testCacheEvictionTwoPriorities() throws Exception {
 
     long maxSize = 100000;
@@ -222,6 +258,7 @@ public class TestLruBlockCache extends TestCase {
     }
   }
 
+  @Test
   public void testCacheEvictionThreePriorities() throws Exception {
 
     long maxSize = 100000;
@@ -345,6 +382,7 @@ public class TestLruBlockCache extends TestCase {
   }
 
   // test scan resistance
+  @Test
   public void testScanResistance() throws Exception {
 
     long maxSize = 100000;
@@ -407,6 +445,7 @@ public class TestLruBlockCache extends TestCase {
   }
 
   // test setMaxSize
+  @Test
   public void testResizeBlockCache() throws Exception {
 
     long maxSize = 300000;
@@ -533,6 +572,16 @@ public class TestLruBlockCache extends TestCase {
       return CachedBlock.PER_BLOCK_OVERHEAD
           + ClassSize.align(2 * blockName.length())
           + ClassSize.align(size);
+    }
+
+    @Override
+    public BlockType getBlockType() {
+      return BlockType.DATA;
+    }
+
+    @Override
+    public SchemaMetrics getSchemaMetrics() {
+      return SchemaMetrics.getUnknownInstanceForTest();
     }
 
     @Override
