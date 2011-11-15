@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.wal.TestHLogUtils;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtilsForTests;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -1313,7 +1313,7 @@ public class TestAdmin {
     byte[] value = Bytes.toBytes(v.toString());
     HRegionServer regionServer = startAndWriteData("TestLogRolling", value);
     LOG.info("after writing there are "
-        + TestHLogUtils.getNumLogFiles(regionServer.getWAL()) + " log files");
+        + HLogUtilsForTests.getNumLogFiles(regionServer.getWAL()) + " log files");
 
     // flush all regions
 
@@ -1323,7 +1323,7 @@ public class TestAdmin {
       r.flushcache();
     }
     admin.rollHLogWriter(regionServer.getServerName().getServerName());
-    int count = TestHLogUtils.getNumLogFiles(regionServer.getWAL());
+    int count = HLogUtilsForTests.getNumLogFiles(regionServer.getWAL());
     LOG.info("after flushing all regions and rolling logs there are " +
         count + " log files");
     assertTrue(("actual count: " + count), count <= 2);
