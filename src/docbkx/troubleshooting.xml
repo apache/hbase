@@ -535,6 +535,8 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
             <para><programlisting>hadoop fs -dus /hbase/</programlisting> ...returns the summarized disk utilization for all HBase objects.  </para>
             <para><programlisting>hadoop fs -dus /hbase/myTable</programlisting> ...returns the summarized disk utilization for the HBase table 'myTable'. </para>
             <para><programlisting>hadoop fs -du /hbase/myTable</programlisting> ...returns a list of the regions under the HBase table 'myTable' and their disk utilization. </para>
+            <para>For more information on HDFS shell commands, see the <link xlink:href="http://hadoop.apache.org/common/docs/current/file_system_shell.html">HDFS FileSystem Shell documentation</link>.
+            </para>
        </section>    
        <section xml:id="trouble.namenode.hbase.objects">
             <title>Browsing HDFS for HBase Objects</title>
@@ -557,6 +559,9 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
           <filename>/&lt;RegionServer&gt;</filename>    (RegionServers)
                <filename>/&lt;HLog&gt;</filename>           (WAL HLog files for the RegionServer)
             </programlisting>
+            </para>
+		    <para>See the <link xlink:href="see http://hadoop.apache.org/common/docs/current/hdfs_user_guide.html">HDFS User Guide</link> for other non-shell diagnostic 
+		    utilities like <code>fsck</code>. 
             </para>
           <section xml:id="trouble.namenode.uncompaction">
             <title>Use Cases</title>
