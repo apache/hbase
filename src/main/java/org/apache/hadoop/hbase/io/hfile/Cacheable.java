@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 
 /**
  * Cacheable is an interface that allows for an object to be cached. If using an
@@ -53,4 +54,15 @@ public interface Cacheable extends HeapSize {
    * @return CacheableDeserialzer instance.
    */
   public CacheableDeserializer<Cacheable> getDeserializer();
+
+  /**
+   * @return the block type of this cached HFile block
+   */
+  public BlockType getBlockType();
+
+  /**
+   * @return the metrics object identified by table and column family
+   */
+  public SchemaMetrics getSchemaMetrics();
+
 }

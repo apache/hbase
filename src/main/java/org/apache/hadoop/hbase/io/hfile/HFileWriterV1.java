@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -146,6 +147,7 @@ public class HFileWriterV1 extends AbstractHFileWriter {
       final KeyComparator comparator) throws IOException {
     super(cacheConf, createOutputStream(conf, fs, path), path,
         blockSize, compress, comparator);
+    SchemaMetrics.configureGlobally(conf);
   }
 
   /** Constructor that takes a stream. */
@@ -204,7 +206,7 @@ public class HFileWriterV1 extends AbstractHFileWriter {
       HFileBlock cBlock = new HFileBlock(BlockType.DATA,
           (int) (outputStream.getPos() - blockBegin), bytes.length, -1,
           ByteBuffer.wrap(bytes, 0, bytes.length), true, blockBegin);
-      cBlock.setColumnFamilyName(this.getColumnFamilyName());
+      passSchemaMetricsTo(cBlock);
       cacheConf.getBlockCache().cacheBlock(
           HFile.getBlockCacheKey(name, blockBegin), cBlock);
       baosDos.close();

@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 
 public class CacheTestUtils {
 
@@ -273,6 +274,16 @@ public class CacheTestUtils {
           return new ByteArrayCacheable(buf);
         }
       };
+    }
+
+    @Override
+    public BlockType getBlockType() {
+      return BlockType.DATA;
+    }
+
+    @Override
+    public SchemaMetrics getSchemaMetrics() {
+      return SchemaMetrics.getUnknownInstanceForTest();
     }
 
   }

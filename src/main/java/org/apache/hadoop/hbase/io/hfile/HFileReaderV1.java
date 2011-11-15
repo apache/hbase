@@ -30,10 +30,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
@@ -216,7 +216,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
     // Per meta key from any given file, synchronize reads for said block
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
       metaLoads.incrementAndGet();
-      HRegion.incrNumericMetric(this.fsMetaBlockReadCntMetric, 1);
+
       // Check cache for block.  If found return.
       if (cacheConf.isBlockCacheEnabled()) {
         HFileBlock cachedBlock =
@@ -224,7 +224,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
               cacheConf.shouldCacheDataOnRead());
         if (cachedBlock != null) {
           cacheHits.incrementAndGet();
-          HRegion.incrNumericMetric(this.fsMetaBlockReadCacheHitCntMetric, 1);
+          getSchemaMetrics().updateOnCacheHit(BlockCategory.META, false);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Cache Miss, please load.
@@ -233,13 +233,13 @@ public class HFileReaderV1 extends AbstractHFileReader {
       HFileBlock hfileBlock = fsBlockReader.readBlockData(offset,
           nextOffset - offset, metaBlockIndexReader.getRootBlockDataSize(block),
           true);
-      hfileBlock.setColumnFamilyName(this.getColumnFamilyName());
+      passSchemaMetricsTo(hfileBlock);
       hfileBlock.expectType(BlockType.META);
 
       long delta = System.nanoTime() - startTimeNs;
-      HRegion.incrTimeVaryingMetric(fsReadTimeNanoMetric, delta);
       HFile.readTimeNano.addAndGet(delta);
       HFile.readOps.incrementAndGet();
+      getSchemaMetrics().updateOnCacheMiss(BlockCategory.META, false, delta);
 
       // Cache the block
       if (cacheConf.shouldCacheDataOnRead() && cacheBlock) {
@@ -281,12 +281,6 @@ public class HFileReaderV1 extends AbstractHFileReader {
     synchronized (dataBlockIndexReader.getRootBlockKey(block)) {
       blockLoads.incrementAndGet();
 
-      if (isCompaction) {
-        HRegion.incrNumericMetric(this.compactionBlockReadCntMetric, 1);
-      } else {
-        HRegion.incrNumericMetric(this.fsBlockReadCntMetric, 1);
-      }
-
       // Check cache for block.  If found return.
       if (cacheConf.isBlockCacheEnabled()) {
         HFileBlock cachedBlock =
@@ -294,15 +288,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
               cacheConf.shouldCacheDataOnRead());
         if (cachedBlock != null) {
           cacheHits.incrementAndGet();
-
-          if (isCompaction) {
-            HRegion.incrNumericMetric(
-                this.compactionBlockReadCacheHitCntMetric, 1);
-          } else {
-            HRegion.incrNumericMetric(
-                this.fsBlockReadCacheHitCntMetric, 1);
-          }
-
+          getSchemaMetrics().updateOnCacheHit(BlockCategory.DATA,
+              isCompaction);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Carry on, please load.
@@ -324,18 +311,15 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
       HFileBlock hfileBlock = fsBlockReader.readBlockData(offset, nextOffset
           - offset, dataBlockIndexReader.getRootBlockDataSize(block), pread);
-      hfileBlock.setColumnFamilyName(this.getColumnFamilyName());
+      passSchemaMetricsTo(hfileBlock);
       hfileBlock.expectType(BlockType.DATA);
       ByteBuffer buf = hfileBlock.getBufferWithoutHeader();
 
       long delta = System.nanoTime() - startTimeNs;
       HFile.readTimeNano.addAndGet(delta);
       HFile.readOps.incrementAndGet();
-      if (isCompaction) {
-        HRegion.incrTimeVaryingMetric(this.compactionReadTimeNanoMetric, delta);
-      } else {
-        HRegion.incrTimeVaryingMetric(this.fsReadTimeNanoMetric, delta);
-      }
+      getSchemaMetrics().updateOnCacheMiss(BlockCategory.DATA, isCompaction,
+          delta);
 
       // Cache the block
       if (cacheConf.shouldCacheDataOnRead() && cacheBlock) {

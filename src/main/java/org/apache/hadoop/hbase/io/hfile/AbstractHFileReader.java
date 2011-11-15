@@ -23,21 +23,19 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.io.RawComparator;
 
 /**
  * Common functionality needed by all versions of {@link HFile} readers.
  */
-public abstract class AbstractHFileReader implements HFile.Reader {
-
-  private static final Log LOG = LogFactory.getLog(AbstractHFileReader.class);
+public abstract class AbstractHFileReader extends SchemaConfigured
+    implements HFile.Reader {
 
   /** Filesystem-level block reader for this HFile format version. */
   protected HFileBlock.FSReader fsBlockReader;
@@ -92,26 +90,11 @@ public abstract class AbstractHFileReader implements HFile.Reader {
 
   protected FileInfo fileInfo;
 
-  /** Prefix of the form cf.<column_family_name> for statistics counters. */
-  private final String cfStatsPrefix;
-
-  // various metrics that we want to track on a per-cf basis
-  public String fsReadTimeNanoMetric = "";
-  public String compactionReadTimeNanoMetric = "";
-
-  public String fsBlockReadCntMetric = "";
-  public String compactionBlockReadCntMetric = "";
-
-  public String fsBlockReadCacheHitCntMetric = "";
-  public String compactionBlockReadCacheHitCntMetric = "";
-
-  public String fsMetaBlockReadCntMetric = "";
-  public String fsMetaBlockReadCacheHitCntMetric = "";
-
   protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long fileSize,
       final boolean closeIStream,
       final CacheConfig cacheConf) {
+    super(null, path);
     this.trailer = trailer;
     this.compressAlgo = trailer.getCompressionCodec();
     this.cacheConf = cacheConf;
@@ -120,21 +103,6 @@ public abstract class AbstractHFileReader implements HFile.Reader {
     this.closeIStream = closeIStream;
     this.path = path;
     this.name = path.getName();
-    cfStatsPrefix = "cf." + parseCfNameFromPath(path.toString());
-
-    fsReadTimeNanoMetric = cfStatsPrefix + ".fsReadNano";
-    compactionReadTimeNanoMetric = cfStatsPrefix + ".compactionReadNano";
-
-    fsBlockReadCntMetric = cfStatsPrefix + ".fsBlockReadCnt";
-    fsBlockReadCacheHitCntMetric = cfStatsPrefix + ".fsBlockReadCacheHitCnt";
-
-    compactionBlockReadCntMetric = cfStatsPrefix + ".compactionBlockReadCnt";
-    compactionBlockReadCacheHitCntMetric = cfStatsPrefix
-        + ".compactionBlockReadCacheHitCnt";
-
-    fsMetaBlockReadCntMetric = cfStatsPrefix + ".fsMetaBlockReadCnt";
-    fsMetaBlockReadCacheHitCntMetric = cfStatsPrefix
-        + ".fsMetaBlockReadCacheHitCnt";
   }
 
   @SuppressWarnings("serial")
@@ -152,24 +120,6 @@ public abstract class AbstractHFileReader implements HFile.Reader {
 
   protected String toStringLastKey() {
     return KeyValue.keyToString(getLastKey());
-  }
-
-  /**
-   * Parse the HFile path to figure out which table and column family
-   * it belongs to. This is used to maintain read statistics on a
-   * per-column-family basis.
-   *
-   * @param path HFile path name
-   */
-  public static String parseCfNameFromPath(String path) {
-    String splits[] = path.split("/");
-    if (splits.length < 2) {
-      LOG.warn("Could not determine the table and column family of the " +
-          "HFile path " + path);
-      return "unknown";
-    }
-
-    return splits[splits.length - 2];
   }
 
   public abstract boolean isFileInfoLoaded();
@@ -288,11 +238,6 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   @Override
   public HFileBlockIndex.BlockIndexReader getDataBlockIndexReader() {
     return dataBlockIndexReader;
-  }
-
-  @Override
-  public String getColumnFamilyName() {
-    return cfStatsPrefix;
   }
 
   @Override

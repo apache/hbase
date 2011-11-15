@@ -181,6 +181,11 @@ public class HRegion implements HeapSize { // , Writable{
   private ClassToInstanceMap<CoprocessorProtocol>
       protocolHandlers = MutableClassToInstanceMap.create();
 
+  /**
+   * Temporary subdirectory of the region directory used for compaction output.
+   */
+  public static final String REGION_TEMP_SUBDIR = ".tmp";
+
   //These variable are just used for getting data out of the region, to test on
   //client side
   // private int numStores = 0;
@@ -323,6 +328,30 @@ public class HRegion implements HeapSize { // , Writable{
         return;
     }
     oldVal.addAndGet(amount);
+  }
+
+  public static long getNumericMetric(String key) {
+    AtomicLong m = numericMetrics.get(key);
+    if (m == null)
+      return 0;
+    return m.get();
+  }
+
+  public static Pair<Long, Integer> getTimeVaryingMetric(String key) {
+    Pair<AtomicLong, AtomicInteger> pair = timeVaryingMetrics.get(key);
+    if (pair == null) {
+      return new Pair<Long, Integer>(0L, 0);
+    }
+
+    return new Pair<Long, Integer>(pair.getFirst().get(),
+        pair.getSecond().get());
+  }
+
+  static long getNumericPersistentMetric(String key) {
+    AtomicLong m = numericPersistentMetrics.get(key);
+    if (m == null)
+      return 0;
+    return m.get();
   }
 
   /**
@@ -935,11 +964,11 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Get the temporary diretory for this region. This directory
+   * Get the temporary directory for this region. This directory
    * will have its contents removed when the region is reopened.
    */
   Path getTmpDir() {
-    return new Path(getRegionDir(), ".tmp");
+    return new Path(getRegionDir(), REGION_TEMP_SUBDIR);
   }
 
   void triggerMajorCompaction() {

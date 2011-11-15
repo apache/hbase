@@ -29,12 +29,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 
 import org.apache.hadoop.hbase.io.DoubleOutputStream;
-import org.apache.hadoop.hbase.io.hfile.HFileBlockInfo;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompoundBloomFilter;
@@ -74,7 +76,7 @@ import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.NONE;
  * The version 2 block representation in the block cache is the same as above,
  * except that the data section is always uncompressed in the cache.
  */
-public class HFileBlock implements Cacheable, HFileBlockInfo {
+public class HFileBlock extends SchemaConfigured implements Cacheable {
 
   /** The size of a version 2 {@link HFile} block header */
   public static final int HEADER_SIZE = MAGIC_LENGTH + 2 * Bytes.SIZEOF_INT
@@ -86,26 +88,27 @@ public class HFileBlock implements Cacheable, HFileBlockInfo {
   public static final int BYTE_BUFFER_HEAP_SIZE = (int) ClassSize.estimateBase(
       ByteBuffer.wrap(new byte[0], 0, 0).getClass(), false);
 
-  static final int EXTRA_SERIALIZATION_SPACE = Bytes.SIZEOF_LONG + Bytes.SIZEOF_INT;
-
+  static final int EXTRA_SERIALIZATION_SPACE = Bytes.SIZEOF_LONG +
+      Bytes.SIZEOF_INT;
 
   private static final CacheableDeserializer<Cacheable> blockDeserializer =
-  new CacheableDeserializer<Cacheable>() {
-    public HFileBlock deserialize(ByteBuffer buf) throws IOException{
-      ByteBuffer newByteBuffer = ByteBuffer.allocate(buf.limit()
-          - HFileBlock.EXTRA_SERIALIZATION_SPACE);
-      buf.limit(buf.limit()
-          - HFileBlock.EXTRA_SERIALIZATION_SPACE).rewind();
-      newByteBuffer.put(buf);
-      HFileBlock ourBuffer = new HFileBlock(newByteBuffer);
+      new CacheableDeserializer<Cacheable>() {
+        public HFileBlock deserialize(ByteBuffer buf) throws IOException{
+          ByteBuffer newByteBuffer = ByteBuffer.allocate(buf.limit()
+              - HFileBlock.EXTRA_SERIALIZATION_SPACE);
+          buf.limit(buf.limit()
+              - HFileBlock.EXTRA_SERIALIZATION_SPACE).rewind();
+          newByteBuffer.put(buf);
+          HFileBlock ourBuffer = new HFileBlock(newByteBuffer);
 
-      buf.position(buf.limit());
-      buf.limit(buf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE);
-      ourBuffer.offset = buf.getLong();
-      ourBuffer.nextBlockOnDiskSizeWithHeader = buf.getInt();
-      return ourBuffer;
-    }
-  };
+          buf.position(buf.limit());
+          buf.limit(buf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE);
+          ourBuffer.offset = buf.getLong();
+          ourBuffer.nextBlockOnDiskSizeWithHeader = buf.getInt();
+          return ourBuffer;
+        }
+      };
+
   private BlockType blockType;
   private final int onDiskSizeWithoutHeader;
   private final int uncompressedSizeWithoutHeader;
@@ -155,16 +158,6 @@ public class HFileBlock implements Cacheable, HFileBlockInfo {
     if (fillHeader)
       overwriteHeader();
     this.offset = offset;
-  }
-
-  private String cfStatsPrefix = "cf.unknown";
-
-  public String getColumnFamilyName() {
-    return this.cfStatsPrefix;
-  }
-
-  public void setColumnFamilyName(String cfName) {
-    this.cfStatsPrefix = cfName;
   }
 
   /**
@@ -423,23 +416,24 @@ public class HFileBlock implements Cacheable, HFileBlockInfo {
 
   @Override
   public long heapSize() {
-    // This object, block type and byte buffer reference, on-disk and
-    // uncompressed size, next block's on-disk size, offset and previous
-    // offset, byte buffer object, and its byte array. Might also need to add
-    // some fields inside the byte buffer.
+    long size = ClassSize.align(
+        // This object
+        ClassSize.OBJECT +
+        // Block type and byte buffer references
+        2 * ClassSize.REFERENCE +
+        // On-disk size, uncompressed size, and next block's on-disk size
+        3 * Bytes.SIZEOF_INT +
+        // This and previous block offset
+        2 * Bytes.SIZEOF_LONG
+    );
 
-    // We only add one BYTE_BUFFER_HEAP_SIZE because at any given moment, one of
-    // the bytebuffers will be null. But we do account for both references.
-
-    // If we are on heap, then we add the capacity of buf.
     if (buf != null) {
-      return ClassSize.align(ClassSize.OBJECT + 3 * ClassSize.REFERENCE + 3
-          * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG + BYTE_BUFFER_HEAP_SIZE)
-          + ClassSize.align(buf.capacity());
-    } else {
-      return ClassSize.align(ClassSize.OBJECT + 3 * ClassSize.REFERENCE + 3
-          * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG + BYTE_BUFFER_HEAP_SIZE);
+      size += ClassSize.align(buf.capacity() + BYTE_BUFFER_HEAP_SIZE);
     }
+
+    // SchemaConfigured (but don't count object overhead twice).
+    size += super.heapSize() - ClassSize.OBJECT;
+    return size;
   }
 
   /**

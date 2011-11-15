@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.junit.experimental.categories.Category;
@@ -54,11 +56,21 @@ public class TestHFile extends HBaseTestCase {
   private final int minBlockSize = 512;
   private static String localFormatter = "%010d";
   private static CacheConfig cacheConf = null;
+  private Map<String, Long> startingMetrics;
 
+  @Override
   public void setUp() throws Exception {
-    super.setUp();
+    startingMetrics = SchemaMetrics.getMetricsSnapshot();
     ROOT_DIR = this.getUnitTestdir("TestHFile").toString();
+    super.setUp();
   }
+
+  @Override
+  public void tearDown() throws Exception {
+    super.tearDown();
+    SchemaMetrics.validateMetricChanges(startingMetrics);
+  }
+
 
   /**
    * Test empty HFile.
