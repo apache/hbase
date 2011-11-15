@@ -1017,7 +1017,7 @@ TableMapReduceUtil.initTableMapperJob(
 	job);
 TableMapReduceUtil.initTableReducerJob(
 	targetTable,        // output table
-	MyReducer.class,    // reducer class
+	MyTableReducer.class,    // reducer class
 	job);
 job.setNumReduceTasks(1);   // at least one, adjust as required
 	    
@@ -1044,7 +1044,7 @@ public static class MyMapper extends TableMapper&lt;Text, IntWritable&gt;  {
     </programlisting>
     In the reducer, the "ones" are counted (just like any other MR example that does this), and then emits a <classname>Put</classname>.
     <programlisting>
-public static class MyReducer extends TableReducer&lt;Text, IntWritable, ImmutableBytesWritable&gt;  {
+public static class MyTableReducer extends TableReducer&lt;Text, IntWritable, ImmutableBytesWritable&gt;  {
         
  	public void reduce(Text key, Iterable&lt;IntWritable&gt; values, Context context) throws IOException, InterruptedException {
     		int i = 0;
@@ -1058,10 +1058,55 @@ public static class MyReducer extends TableReducer&lt;Text, IntWritable, Immutab
    	}
 }
     </programlisting>
-    
     </para>
     </section>
+    <section xml:id="mapreduce.example.summary.file">
+    <title>HBase MapReduce Summary to File Example</title>
+       <para>This very similar to the summary example above, with exception that this is using HBase as a MapReduce source
+       but HDFS as the sink.  The differences are in the job setup and in the reducer.  The mapper remains the same.
+       </para> 
+    <programlisting>
+Configuration config = HBaseConfiguration.create();
+Job job = new Job(config,"ExampleSummaryToFile");
+job.setJarByClass(MySummaryFileJob.class);     // class that contains mapper and reducer
+	        
+Scan scan = new Scan();
+scan.setCaching(500);        // 1 is the default in Scan, which will be bad for MapReduce jobs
+scan.setCacheBlocks(false);  // don't set to true for MR jobs
+// set other scan attrs
+	        
+TableMapReduceUtil.initTableMapperJob(
+	sourceTable,        // input table
+	scan,               // Scan instance to control CF and attribute selection
+	MyMapper.class,     // mapper class
+	Text.class,         // mapper output key
+	IntWritable.class,  // mapper output value
+	job);
+job.setReducerClass(MyReducer.class);    // reducer class
+job.setNumReduceTasks(1);    // at least one, adjust as required
+FileOutputFormat.setOutputPath(job, new Path("/tmp/mr/mySummaryFile"));  // adjust directories as required
+	    
+boolean b = job.waitForCompletion(true);
+if (!b) {
+	throw new IOException("error with job!");
+}    
+    </programlisting>
+    As stated above, the previous Mapper can run unchanged with this example.  
+    As for the Reducer, it is a "generic" Reducer instead of extending TableMapper and emitting Puts.
+    <programlisting>
+ public static class MyReducer extends Reducer&lt;Text, IntWritable, Text, IntWritable&gt;  {
+        
+	public void reduce(Text key, Iterable&lt;IntWritable&gt; values, Context context) throws IOException, InterruptedException {
+		int i = 0;
+		for (IntWritable val : values) {
+			i += val.get();
+		}	
+		context.write(key, new IntWritable(i));
+	}
+}
+    </programlisting>
    </section>
+   </section> <!--  mr examples -->
    <section xml:id="mapreduce.htable.access">
    <title>Accessing Other HBase Tables in a MapReduce Job</title>
 	<para>Although the framework currently allows one HBase table as input to a
