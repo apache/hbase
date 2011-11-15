@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,25 +17,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.regionserver.wal;
 
-import java.util.SortedMap;
-import java.util.TreeMap;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 
-public class SoftValueSortedMapTest {
-  private static void testMap(SortedMap<Integer, Integer> map) {
-    System.out.println("Testing " + map.getClass());
-    for(int i = 0; i < 1000000; i++) {
-      map.put(i, i);
-    }
-    System.out.println(map.size());
-    @SuppressWarnings("unused")
-    byte[] block = new byte[849*1024*1024]; // FindBugs DLS_DEAD_LOCAL_STORE
-    System.out.println(map.size());
+/**
+ * An Utility testcase that returns the number of log files that
+ * were rolled to be accessed from outside packages.
+ * 
+ * This class makes available methods that are package protected.
+ *  This is interesting for test only.
+ */
+public class HLogUtilsForTests {
+  
+  /**
+   * 
+   * @param log
+   * @return
+   */
+  public static int getNumLogFiles(HLog log) {
+    return log.getNumLogFiles();
   }
 
-  public static void main(String[] args) {
-    testMap(new SoftValueSortedMap<Integer, Integer>());
-    testMap(new TreeMap<Integer, Integer>());
+  public static int getNumEntries(HLog log) {
+    return log.getNumEntries();
   }
 }
