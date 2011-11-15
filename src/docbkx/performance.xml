@@ -140,10 +140,13 @@
       <para>The number of regions for an HBase table is driven by the <xref
               linkend="bigger.regions" />. Also, see the architecture
           section on <xref linkend="arch.regions.size" /></para>
-       <para>A lower number of regions is preferred, generally in the range of 20 to 200
-       per RegionServer.  Adjust the regionsize as appropriate to achieve this number.  There
-       are some clusters that set the regionsize to 20Gb, for example, so you may need to 
-       experiment with this setting based on your hardware configuration and application needs.
+       <para>A lower number of regions is preferred, generally in the range of 20 to low-hundreds
+       per RegionServer.  Adjust the regionsize as appropriate to achieve this number. 
+       </para>
+       <para>For the 0.90.x codebase, the upper-bound of regionsize is about 4Gb.
+       For 0.92.x codebase, due to the HFile v2 change much larger regionsizes can be supported (e.g., 20Gb).
+       </para>
+       <para>You may need to experiment with this setting based on your hardware configuration and application needs.
        </para>
     </section>
 
@@ -153,12 +156,6 @@
       <para>For larger systems, managing <link
       linkend="disable.splitting">compactions and splits</link> may be
       something you want to consider.</para>
-    </section>
-
-    <section xml:id="perf.compression">
-      <title>Compression</title>
-      <para>Production systems should use compression with their column family definitions.  See <xref linkend="compression" /> for more information.
-      </para>
     </section>
 
     <section xml:id="perf.handlers">
@@ -218,7 +215,52 @@
       <title>Key and Attribute Lengths</title>
       <para>See <xref linkend="keysize" />.</para>
     </section>
-  </section>
+    <section xml:id="schema.regionsize"><title>Table RegionSize</title>
+    <para>The regionsize can be set on a per-table basis via <code>setFileSize</code> on
+    <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html">HTableDescriptor</link> in the 
+    event where certain tables require different regionsizes than the configured default regionsize.
+    </para>
+    <para>See <xref linkend="perf.number.of.regions"/> for more information.
+    </para>
+    </section>
+    <section xml:id="schema.bloom">
+    <title>Bloom Filters</title>
+    <para>Bloom Filters can be enabled per-ColumnFamily.
+        Use <code>HColumnDescriptor.setBloomFilterType(NONE | ROW |
+        ROWCOL)</code> to enable blooms per Column Family. Default =
+        <varname>NONE</varname> for no bloom filters. If
+        <varname>ROW</varname>, the hash of the row will be added to the bloom
+        on each insert. If <varname>ROWCOL</varname>, the hash of the row +
+        column family + column family qualifier will be added to the bloom on
+        each key insert.</para>
+    <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> and 
+    <xref linkend="blooms"/> for more information.
+    </para>
+    </section>
+    <section xml:id="schema.cf.blocksize"><title>ColumnFamily BlockSize</title>
+    <para>The blocksize can be configured for each ColumnFamily in a table, and this defaults to 64k.  Larger cell values require larger blocksizes. 
+    There is an inverse relationship between blocksize and the resulting StoreFile indexes (i.e., if the blocksize is doubled then the resulting
+    indexes should be roughly halved).
+    </para>
+    <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> 
+    and <xref linkend="store"/>for more information.
+    </para>
+    </section>
+    <section xml:id="cf.in.memory">
+    <title>In-Memory ColumnFamilies</title>
+    <para>ColumnFamilies can optionally be defined as in-memory.  Data is still persisted to disk, just like any other ColumnFamily.  
+    In-memory blocks have the highest priority in the <xref linkend="block.cache" />, but it is not a guarantee that the entire table
+    will be in memory.
+    </para>
+    <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> for more information.
+    </para>
+    </section>
+    <section xml:id="perf.compression">
+      <title>Compression</title>
+      <para>Production systems should use compression with their ColumnFamily definitions.  See <xref linkend="compression" /> for more information.
+      </para>
+    </section>
+  </section>  <!--  perf schema -->
   
   <section xml:id="perf.writing">
     <title>Writing to HBase</title>
