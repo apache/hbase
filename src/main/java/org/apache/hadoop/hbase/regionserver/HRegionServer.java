@@ -2076,11 +2076,26 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  public void bulkLoadHFile(String hfilePath, byte[] regionName,
-      byte[] familyName) throws IOException {
+  public void bulkLoadHFile(String hfilePath, byte[] regionName, byte[] familyName)
+      throws IOException {
     checkOpen();
     HRegion region = getRegion(regionName);
-    region.bulkLoadHFile(hfilePath, familyName);
+    List<Pair<byte[], String>> familyPaths = new ArrayList<Pair<byte[], String>>();
+    familyPaths.add(new Pair<byte[], String>(familyName, hfilePath));
+    region.bulkLoadHFiles(familyPaths);
+  }
+
+  /**
+   * Atomically bulk load several HFiles into an open region
+   * @return true if successful, false is failed but recoverably (no action)
+   * @throws IOException if failed unrecoverably
+   */
+  @Override
+  public boolean bulkLoadHFiles(List<Pair<byte[], String>> familyPaths,
+      byte[] regionName) throws IOException {
+    checkOpen();
+    HRegion region = getRegion(regionName);
+    return region.bulkLoadHFiles(familyPaths);
   }
 
   Map<String, Integer> rowlocks = new ConcurrentHashMap<String, Integer>();

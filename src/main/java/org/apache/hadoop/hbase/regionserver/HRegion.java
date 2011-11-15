@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -2212,23 +2213,112 @@ public class HRegion implements HeapSize { // , Writable{
     }
     return lid;
   }
-
-  public void bulkLoadHFile(String hfilePath, byte[] familyName)
-  throws IOException {
-    startRegionOperation();
-    try {
-      Store store = getStore(familyName);
-      if (store == null) {
-        throw new DoNotRetryIOException(
-            "No such column family " + Bytes.toStringBinary(familyName));
+  
+  /**
+   * Determines whether multiple column families are present
+   * Precondition: familyPaths is not null
+   *
+   * @param familyPaths List of Pair<byte[] column family, String hfilePath>
+   */
+  private static boolean hasMultipleColumnFamilies(
+      List<Pair<byte[], String>> familyPaths) {
+    boolean multipleFamilies = false;
+    byte[] family = null;
+    for (Pair<byte[], String> pair : familyPaths) {
+      byte[] fam = pair.getFirst();
+      if (family == null) {
+        family = fam;
+      } else if (!Bytes.equals(family, fam)) {
+        multipleFamilies = true;
+        break;
       }
-      store.bulkLoadHFile(hfilePath);
-    } finally {
-      closeRegionOperation();
     }
-
+    return multipleFamilies;
   }
 
+  /**
+   * Attempts to atomically load a group of hfiles.  This is critical for loading
+   * rows with multiple column families atomically.
+   *
+   * @param familyPaths List of Pair<byte[] column family, String hfilePath>
+   * @return true if successful, false if failed recoverably
+   * @throws IOException if failed unrecoverably.
+   */
+  public boolean bulkLoadHFiles(List<Pair<byte[], String>> familyPaths)
+  throws IOException {
+    // we need writeLock for multi-family bulk load
+    startBulkRegionOperation(hasMultipleColumnFamilies(familyPaths));
+    try {
+      // There possibly was a split that happend between when the split keys
+      // were gathered and before the HReiogn's write lock was taken.  We need
+      // to validate the HFile region before attempting to bulk load all of them
+      List<IOException> ioes = new ArrayList<IOException>();
+      List<Pair<byte[], String>> failures = new ArrayList<Pair<byte[], String>>();
+      for (Pair<byte[], String> p : familyPaths) {
+        byte[] familyName = p.getFirst();
+        String path = p.getSecond();
+
+        Store store = getStore(familyName);
+        if (store == null) {
+          IOException ioe = new DoNotRetryIOException(
+              "No such column family " + Bytes.toStringBinary(familyName));
+          ioes.add(ioe);
+          failures.add(p);
+        }
+
+        try {
+          store.assertBulkLoadHFileOk(new Path(path));
+        } catch (WrongRegionException wre) {
+          // recoverable (file doesn't fit in region)
+          failures.add(p);
+        } catch (IOException ioe) {
+          // unrecoverable (hdfs problem)
+          ioes.add(ioe);
+        }
+      }
+
+
+      // validation failed, bail out before doing anything permanent.
+      if (failures.size() != 0) {
+        StringBuilder list = new StringBuilder();
+        for (Pair<byte[], String> p : failures) {
+          list.append("\n").append(Bytes.toString(p.getFirst())).append(" : ")
+            .append(p.getSecond());
+        }
+        // problem when validating
+        LOG.warn("There was a recoverable bulk load failure likely due to a" +
+            " split.  These (family, HFile) pairs were not loaded: " + list);
+        return false;
+      }
+
+      // validation failed because of some sort of IO problem.
+      if (ioes.size() != 0) {
+        LOG.error("There were IO errors when checking if bulk load is ok.  " +
+            "throwing exception!");
+        throw MultipleIOException.createIOException(ioes);
+      }
+
+      for (Pair<byte[], String> p : familyPaths) {
+        byte[] familyName = p.getFirst();
+        String path = p.getSecond();
+        Store store = getStore(familyName);
+        try {
+          store.bulkLoadHFile(path);
+        } catch (IOException ioe) {
+          // a failure here causes an atomicity violation that we currently 
+          // cannot recover from since it is likely a failed hdfs operation.
+
+          // TODO Need a better story for reverting partial failures due to HDFS.
+          LOG.error("There was a partial failure due to IO when attempting to" +
+              " load " + Bytes.toString(p.getFirst()) + " : "+ p.getSecond());
+          throw ioe;
+        }
+      }
+      return true;
+    } finally {
+      closeBulkRegionOperation();
+    }
+  }
 
   @Override
   public boolean equals(Object o) {
@@ -3390,6 +3480,38 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private void closeRegionOperation(){
     lock.readLock().unlock();
+  }
+
+  /**
+   * This method needs to be called before any public call that reads or
+   * modifies stores in bulk. It has to be called just before a try.
+   * #closeBulkRegionOperation needs to be called in the try's finally block
+   * Acquires a writelock and checks if the region is closing or closed.
+   * @throws NotServingRegionException when the region is closing or closed
+   */
+  private void startBulkRegionOperation(boolean writeLockNeeded)
+  throws NotServingRegionException {
+    if (this.closing.get()) {
+      throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
+          " is closing");
+    }
+    if (writeLockNeeded) lock.writeLock().lock();
+    else lock.readLock().lock();
+    if (this.closed.get()) {
+      if (writeLockNeeded) lock.writeLock().unlock();
+      else lock.readLock().unlock();
+      throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
+          " is closed");
+    }
+  }
+
+  /**
+   * Closes the lock. This needs to be called in the finally block corresponding
+   * to the try block of #startRegionOperation
+   */
+  private void closeBulkRegionOperation(){
+    if (lock.writeLock().isHeldByCurrentThread()) lock.writeLock().unlock();
+    else lock.readLock().unlock();
   }
 
   /**

@@ -22,8 +22,24 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Deque;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,7 +51,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -44,14 +60,20 @@ import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.Reference.Range;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Tool to load the output of HFileOutputFormat into an existing table.
@@ -59,7 +81,8 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class LoadIncrementalHFiles extends Configured implements Tool {
 
-  static Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
+  private static Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
+  static AtomicLong regionCount = new AtomicLong(0);
 
   public static String NAME = "completebulkload";
 
@@ -86,7 +109,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * region boundary, and each part is added back into the queue.
    * The import process finishes when the queue is empty.
    */
-  private static class LoadQueueItem {
+  static class LoadQueueItem {
     final byte[] family;
     final Path hfilePath;
 
@@ -94,13 +117,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       this.family = family;
       this.hfilePath = hfilePath;
     }
+
+    public String toString() {
+      return "family:"+ Bytes.toString(family) + " path:" + hfilePath.toString();
+    }
   }
 
   /**
    * Walk the given directory for all HFiles, and return a Queue
    * containing all such files.
    */
-  private Deque<LoadQueueItem> discoverLoadQueue(Path hfofDir)
+  private void discoverLoadQueue(Deque<LoadQueueItem> ret, Path hfofDir)
   throws IOException {
     FileSystem fs = hfofDir.getFileSystem(getConf());
 
@@ -114,7 +141,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       throw new FileNotFoundException("No families found in " + hfofDir);
     }
 
-    Deque<LoadQueueItem> ret = new LinkedList<LoadQueueItem>();
     for (FileStatus stat : familyDirStatuses) {
       if (!stat.isDir()) {
         LOG.warn("Skipping non-directory " + stat.getPath());
@@ -130,21 +156,21 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         ret.add(new LoadQueueItem(family, hfile));
       }
     }
-    return ret;
   }
 
   /**
    * Perform a bulk load of the given directory into the given
-   * pre-existing table.
+   * pre-existing table.  This method is not threadsafe.
+   * 
    * @param hfofDir the directory that was provided as the output path
    * of a job using HFileOutputFormat
    * @param table the table to load into
    * @throws TableNotFoundException if table does not yet exist
    */
-  public void doBulkLoad(Path hfofDir, HTable table)
+  public void doBulkLoad(Path hfofDir, final HTable table)
     throws TableNotFoundException, IOException
   {
-    HConnection conn = table.getConnection();
+    final HConnection conn = table.getConnection();
 
     if (!conn.isTableAvailable(table.getTableName())) {
       throw new TableNotFoundException("Table " +
@@ -152,13 +178,57 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           "is not currently available.");
     }
 
-    Deque<LoadQueueItem> queue = null;
+    // initialize thread pools
+    int nrThreads = getConf().getInt("hbase.loadincremental.threads.max",
+        Runtime.getRuntime().availableProcessors());
+    ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
+    builder.setNameFormat("LoadIncrementalHFiles-%1$d");
+    ExecutorService pool = new ThreadPoolExecutor(nrThreads, nrThreads,
+        60, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<Runnable>(),
+        builder.build());
+    ((ThreadPoolExecutor)pool).allowCoreThreadTimeOut(true);
+
+    // LQI queue does not need to be threadsafe -- all operations on this queue
+    // happen in this thread
+    Deque<LoadQueueItem> queue = new LinkedList<LoadQueueItem>();
     try {
-      queue = discoverLoadQueue(hfofDir);
-      while (!queue.isEmpty()) {
-        LoadQueueItem item = queue.remove();
-        tryLoad(item, conn, table.getTableName(), queue);
+      discoverLoadQueue(queue, hfofDir);
+      int count = 0;
+
+      if (queue.isEmpty()) {
+        LOG.warn("Bulk load operation did not find any files to load in " +
+        "directory " + hfofDir.toUri() + ".  Does it contain files in " +
+        "subdirectories that correspond to column family names?");
       }
+
+      // Assumes that region splits can happen while this occurs.
+      while (!queue.isEmpty()) {
+        // need to reload split keys each iteration.
+        final Pair<byte[][], byte[][]> startEndKeys = table.getStartEndKeys();
+        if (count != 0) {
+          LOG.info("Split occured while grouping HFiles, retry attempt " +
+              + count + " with " + queue.size() + " files remaining to group or split");
+        }
+
+        int maxRetries = getConf().getInt("hbase.bulkload.retries.number", 0);
+        if (maxRetries != 0 && count >= maxRetries) {
+          LOG.error("Retry attempted " + count +  " times without completing, bailing out");
+          return;
+        }
+        count++;
+
+        // Using ByteBuffer for byte[] equality semantics
+        Multimap<ByteBuffer, LoadQueueItem> regionGroups = groupOrSplitPhase(table,
+            pool, queue, startEndKeys);
+
+        bulkLoadPhase(table, conn, pool, queue, regionGroups);
+
+        // NOTE: The next iteration's split / group could happen in parallel to
+        // atomic bulkloads assuming that there are splits and no merges, and
+        // that we can atomically pull out the groups we want to retry.
+      }
+
     } finally {
       if (queue != null && !queue.isEmpty()) {
         StringBuilder err = new StringBuilder();
@@ -174,15 +244,148 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   /**
-   * Attempt to load the given load queue item into its target region server.
-   * If the hfile boundary no longer fits into a region, physically splits
-   * the hfile such that the new bottom half will fit, and adds the two
-   * resultant hfiles back into the load queue.
+   * This takes the LQI's grouped by likely regions and attempts to bulk load
+   * them.  Any failures are re-queued for another pass with the
+   * groupOrSplitPhase.
    */
-  private void tryLoad(final LoadQueueItem item,
-      HConnection conn, final byte[] table,
-      final Deque<LoadQueueItem> queue)
-  throws IOException {
+  protected void bulkLoadPhase(final HTable table, final HConnection conn,
+      ExecutorService pool, Deque<LoadQueueItem> queue,
+      final Multimap<ByteBuffer, LoadQueueItem> regionGroups) throws IOException {
+    // atomically bulk load the groups.
+    Set<Future<List<LoadQueueItem>>> loadingFutures = new HashSet<Future<List<LoadQueueItem>>>();
+    for (Entry<ByteBuffer, ? extends Collection<LoadQueueItem>> e: regionGroups.asMap().entrySet()) {
+      final byte[] first = e.getKey().array();
+      final Collection<LoadQueueItem> lqis =  e.getValue();
+
+      final Callable<List<LoadQueueItem>> call = new Callable<List<LoadQueueItem>>() {
+        public List<LoadQueueItem> call() throws Exception {
+          List<LoadQueueItem> toRetry = tryAtomicRegionLoad(conn, table.getTableName(), first, lqis);
+          return toRetry;
+        }
+      };
+      loadingFutures.add(pool.submit(call));
+    }
+
+    // get all the results.
+    for (Future<List<LoadQueueItem>> future : loadingFutures) {
+      try {
+        List<LoadQueueItem> toRetry = future.get();
+
+        // LQIs that are requeued to be regrouped.
+        queue.addAll(toRetry);
+
+      } catch (ExecutionException e1) {
+        Throwable t = e1.getCause();
+        if (t instanceof IOException) {
+          // At this point something unrecoverable has happened.
+          // TODO Implement bulk load recovery
+          throw new IOException("BulkLoad encountered an unrecoverable problem", t);
+        }
+        LOG.error("Unexpected execution exception during bulk load", e1);
+        throw new IllegalStateException(t);
+      } catch (InterruptedException e1) {
+        LOG.error("Unexpected interrupted exception during bulk load", e1);
+        throw new IllegalStateException(e1);
+      }
+    }
+  }
+
+  /**
+   * @return A Multimap<startkey, LoadQueueItem> that groups LQI by likely
+   * bulk load region targets.
+   */
+  private Multimap<ByteBuffer, LoadQueueItem> groupOrSplitPhase(final HTable table,
+      ExecutorService pool, Deque<LoadQueueItem> queue,
+      final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+    // <region start key, LQI> need synchronized only within this scope of this
+    // phase because of the puts that happen in futures.
+    Multimap<ByteBuffer, LoadQueueItem> rgs = HashMultimap.create();
+    final Multimap<ByteBuffer, LoadQueueItem> regionGroups = Multimaps.synchronizedMultimap(rgs);
+
+    // drain LQIs and figure out bulk load groups
+    Set<Future<List<LoadQueueItem>>> splittingFutures = new HashSet<Future<List<LoadQueueItem>>>();
+    while (!queue.isEmpty()) {
+      final LoadQueueItem item = queue.remove();
+      
+      final Callable<List<LoadQueueItem>> call = new Callable<List<LoadQueueItem>>() {
+        public List<LoadQueueItem> call() throws Exception {
+          List<LoadQueueItem> splits = groupOrSplit(regionGroups, item, table, startEndKeys);
+          return splits;
+        }
+      };
+      splittingFutures.add(pool.submit(call));
+    }
+    // get all the results.  All grouping and splitting must finish before
+    // we can attempt the atomic loads.
+    for (Future<List<LoadQueueItem>> lqis : splittingFutures) {
+      try {
+        List<LoadQueueItem> splits = lqis.get();
+        if (splits != null) {
+          queue.addAll(splits);
+        }
+      } catch (ExecutionException e1) {
+        Throwable t = e1.getCause();
+        if (t instanceof IOException) {
+          LOG.error("IOException during splitting", e1);
+          throw (IOException)t; // would have been thrown if not parallelized,
+        }
+        LOG.error("Unexpected execution exception during splitting", e1);
+        throw new IllegalStateException(t);
+      } catch (InterruptedException e1) {
+        LOG.error("Unexpected interrupted exception during splitting", e1);
+        throw new IllegalStateException(e1);
+      }
+    }
+    return regionGroups;
+  }
+
+  // unique file name for the table
+  String getUniqueName(byte[] tableName) {
+    String name = Bytes.toStringBinary(tableName) + "," + regionCount.incrementAndGet();
+    return name;
+  }
+
+  protected List<LoadQueueItem> splitStoreFile(final LoadQueueItem item,
+      final HTable table, byte[] startKey,
+      byte[] splitKey) throws IOException {
+    final Path hfilePath = item.hfilePath;
+
+    // We use a '_' prefix which is ignored when walking directory trees
+    // above.
+    final Path tmpDir = new Path(item.hfilePath.getParent(), "_tmp");
+
+    LOG.info("HFile at " + hfilePath + " no longer fits inside a single " +
+    "region. Splitting...");
+
+    String uniqueName = getUniqueName(table.getTableName());
+    HColumnDescriptor familyDesc = table.getTableDescriptor().getFamily(item.family);
+    Path botOut = new Path(tmpDir, uniqueName + ".bottom");
+    Path topOut = new Path(tmpDir, uniqueName + ".top");
+    splitStoreFile(getConf(), hfilePath, familyDesc, splitKey,
+        botOut, topOut);
+
+    // Add these back at the *front* of the queue, so there's a lower
+    // chance that the region will just split again before we get there.
+    List<LoadQueueItem> lqis = new ArrayList<LoadQueueItem>(2);
+    lqis.add(new LoadQueueItem(item.family, botOut));
+    lqis.add(new LoadQueueItem(item.family, topOut));
+
+    LOG.info("Successfully split into new HFiles " + botOut + " and " + topOut);
+    return lqis;
+  }
+
+  /**
+   * Attempt to assign the given load queue item into its target region group.
+   * If the hfile boundary no longer fits into a region, physically splits
+   * the hfile such that the new bottom half will fit and returns the list of
+   * LQI's corresponding to the resultant hfiles.
+   *
+   * protected for testing
+   */
+  protected List<LoadQueueItem> groupOrSplit(Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+      final LoadQueueItem item, final HTable table,
+      final Pair<byte[][], byte[][]> startEndKeys)
+      throws IOException {
     final Path hfilePath = item.hfilePath;
     final FileSystem fs = hfilePath.getFileSystem(getConf());
     HFile.Reader hfr = new HFile.Reader(fs, hfilePath, null, false);
@@ -200,44 +403,87 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         " last="  + Bytes.toStringBinary(last));
     if (first == null || last == null) {
       assert first == null && last == null;
+      // TODO what if this is due to a bad HFile?
       LOG.info("hfile " + hfilePath + " has no entries, skipping");
-      return;
+      return null;
+    }
+    if (Bytes.compareTo(first, last) > 0) {
+      throw new IllegalArgumentException(
+      "Invalid range: " + Bytes.toStringBinary(first) +
+      " > " + Bytes.toStringBinary(last));
+    }
+    int idx = Arrays.binarySearch(startEndKeys.getFirst(), first,
+        Bytes.BYTES_COMPARATOR);
+    if (idx < 0) {
+      // not on boundary, returns -(insertion index).  Calculate region it
+      // would be in.
+      idx = -(idx + 1) - 1;
+    }
+    final int indexForCallable = idx;
+    boolean lastKeyInRange =
+      Bytes.compareTo(last, startEndKeys.getSecond()[idx]) < 0 ||
+      Bytes.equals(startEndKeys.getSecond()[idx], HConstants.EMPTY_BYTE_ARRAY);
+    if (!lastKeyInRange) {
+      List<LoadQueueItem> lqis = splitStoreFile(item, table,
+          startEndKeys.getFirst()[indexForCallable],
+          startEndKeys.getSecond()[indexForCallable]);
+      return lqis;
     }
 
-    // We use a '_' prefix which is ignored when walking directory trees
-    // above.
-    final Path tmpDir = new Path(item.hfilePath.getParent(), "_tmp");
+    // group regions.
+    regionGroups.put(ByteBuffer.wrap(startEndKeys.getFirst()[idx]), item);
+    return null;
+  }
 
-    conn.getRegionServerWithRetries(
-      new ServerCallable<Void>(conn, table, first) {
-        @Override
-        public Void call() throws Exception {
-          LOG.debug("Going to connect to server " + location +
-              "for row " + Bytes.toStringBinary(row));
-          HRegionInfo hri = location.getRegionInfo();
-          if (!hri.containsRange(first, last)) {
-            LOG.info("HFile at " + hfilePath + " no longer fits inside a single " +
-                "region. Splitting...");
+  /**
+   * Attempts to do an atomic load of many hfiles into a region.  If it fails,
+   * it returns a list of hfiles that need to be retried.  If it is successful
+   * it will return an empty list.
+   * 
+   * NOTE: To maintain row atomicity guarantees, region server callable should
+   * succeed atomically and fails atomically.
+   * 
+   * Protected for testing.
+   * 
+   * @return empty list if success, list of items to retry on recoverable
+   * failure
+   */
+  protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
+      byte[] tableName, final byte[] first, Collection<LoadQueueItem> lqis) throws IOException {
 
-            HColumnDescriptor familyDesc = hri.getTableDesc().getFamily(item.family);
-            Path botOut = new Path(tmpDir, hri.getEncodedName() + ".bottom");
-            Path topOut = new Path(tmpDir, hri.getEncodedName() + ".top");
-            splitStoreFile(getConf(), hfilePath, familyDesc, hri.getEndKey(),
-                botOut, topOut);
+    final List<Pair<byte[], String>> famPaths =
+      new ArrayList<Pair<byte[], String>>(lqis.size());
+    for (LoadQueueItem lqi : lqis) {
+      famPaths.add(Pair.newPair(lqi.family, lqi.hfilePath.toString()));
+    }
 
-            // Add these back at the *front* of the queue, so there's a lower
-            // chance that the region will just split again before we get there.
-            queue.addFirst(new LoadQueueItem(item.family, botOut));
-            queue.addFirst(new LoadQueueItem(item.family, topOut));
-            LOG.info("Successfully split into new HFiles " + botOut + " and " + topOut);
-            return null;
-          }
+    final ServerCallable<Boolean> svrCallable = new ServerCallable<Boolean>(conn,
+        tableName, first) {
+      @Override
+      public Boolean call() throws Exception {
+        LOG.debug("Going to connect to server " + location + " for row "
+            + Bytes.toStringBinary(row));
+        byte[] regionName = location.getRegionInfo().getRegionName();
+        return server.bulkLoadHFiles(famPaths, regionName);
+      }
+    };
 
-          byte[] regionName = location.getRegionInfo().getRegionName();
-          server.bulkLoadHFile(hfilePath.toString(), regionName, item.family);
-          return null;
-        }
-      });
+    try {
+      List<LoadQueueItem> toRetry = new ArrayList<LoadQueueItem>();
+      boolean success = conn.getRegionServerWithRetries(svrCallable);
+      if (!success) {
+        LOG.warn("Attempt to bulk load region containing "
+            + Bytes.toStringBinary(first) + " into table "
+            + Bytes.toStringBinary(tableName)  + " with files " + lqis
+            + " failed.  This is recoverable and they will be retried.");
+        toRetry.addAll(lqis); // return lqi's to retry
+      }
+      // success
+      return toRetry;
+    } catch (IOException e) {
+      LOG.error("Encountered unrecoverable error from region server", e);
+      throw e;
+    }
   }
 
   /**
@@ -320,7 +566,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    ToolRunner.run(new LoadIncrementalHFiles(HBaseConfiguration.create()), args);
+    int ret = ToolRunner.run(new LoadIncrementalHFiles(HBaseConfiguration.create()), args);
+    System.exit(ret);
   }
 
 }

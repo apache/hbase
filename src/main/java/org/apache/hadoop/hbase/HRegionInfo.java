@@ -363,6 +363,14 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   }
 
   /**
+   * Gets the table name.
+   * @return Table name.
+   */
+  public byte[] getTableName() {
+    return getTableName(regionName);
+  }
+
+  /**
    * Separate elements of a regionName.
    * @param regionName
    * @return Array of byte[] containing tableName, startKey and id

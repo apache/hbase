@@ -90,6 +90,7 @@ Release 0.90.5 - Unreleased
    HBASE-4695  WAL logs get deleted before region server can fully flush
               (gaojinchao)
    HBASE-4684  REST server is leaking ZK connections
+   HBASE-4718  Backport HBASE-4552 (multi-family bulk load) to 0.90 branch (Jonathan Hsieh)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
