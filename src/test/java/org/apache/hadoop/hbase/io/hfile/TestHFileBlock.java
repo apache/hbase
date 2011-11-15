@@ -501,7 +501,6 @@ public class TestHFileBlock {
       ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
       HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
           true, -1);
-      assertEquals(80, HFileBlock.BYTE_BUFFER_HEAP_SIZE);
       long byteBufferExpectedSize =
           ClassSize.align(ClassSize.estimateBase(buf.getClass(), true)
               + HFileBlock.HEADER_SIZE + size);
