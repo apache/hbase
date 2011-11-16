@@ -673,7 +673,7 @@ public class Result implements Writable, WritableWithSize {
     KeyValue[] ourKVs = res1.sorted();
     KeyValue[] replicatedKVs = res2.sorted();
     for (int i = 0; i < res1.size(); i++) {
-      if (!ourKVs[i].equals(replicatedKVs[i]) &&
+      if (!ourKVs[i].equals(replicatedKVs[i]) ||
           !Bytes.equals(ourKVs[i].getValue(), replicatedKVs[i].getValue())) {
         throw new Exception("This result was different: "
             + res1.toString() + " compared to " + res2.toString());
