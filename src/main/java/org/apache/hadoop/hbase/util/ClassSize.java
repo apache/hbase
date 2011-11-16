@@ -25,7 +25,6 @@ import org.apache.commons.logging.LogFactory;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.Properties;
 
 /**
  * Class for determining the "size" of a class, an attempt to calculate the
@@ -98,19 +97,13 @@ public class ClassSize {
   /** Overhead for CopyOnWriteArrayList */
   public static final int COPYONWRITE_ARRAYLIST;
 
-  private static final String THIRTY_TWO = "32";
-
   /**
    * Method for reading the arc settings and setting overheads according
    * to 32-bit or 64-bit architecture.
    */
   static {
-    // Figure out whether this is a 32 or 64 bit machine.
-    Properties sysProps = System.getProperties();
-    String arcModel = sysProps.getProperty("sun.arch.data.model");
-
     //Default value is set to 8, covering the case when arcModel is unknown
-    if (arcModel.equals(THIRTY_TWO)) {
+    if (is32BitJVM()) {
       REFERENCE = 4;
     } else {
       REFERENCE = 8;
@@ -292,5 +285,14 @@ public class ClassSize {
     //stored and sent together
     return  ((num + 7) >> 3) << 3;
   }
+
+  /**
+   * Determines if we are running in a 32-bit JVM. Some unit tests need to
+   * know this too.
+   */
+  public static boolean is32BitJVM() {
+    return System.getProperty("sun.arch.data.model").equals("32");
+  }
+
 }
 

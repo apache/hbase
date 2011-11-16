@@ -57,6 +57,23 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
    */
   private SchemaMetrics schemaMetrics;
 
+  static {
+    if (ClassSize.OBJECT <= 0 || ClassSize.REFERENCE <= 0) {
+      throw new AssertionError("Class sizes are not initialized");
+    }
+  }
+
+  /**
+   * Estimated heap size of this object. We don't count table name and column
+   * family name characters because these strings are shared among many
+   * objects. We need unaligned size to reuse this in subclasses.
+   */
+  public static final int SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE =
+      ClassSize.OBJECT + 3 * ClassSize.REFERENCE;
+
+  private static final int SCHEMA_CONFIGURED_ALIGNED_HEAP_SIZE =
+      ClassSize.align(SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE);
+
   /** A helper constructor that configures the "use table name" flag. */
   private SchemaConfigured(Configuration conf) {
     if (conf != null) {
@@ -202,9 +219,7 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
 
   @Override
   public long heapSize() {
-    // We don't count table name and column family name characters because
-    // these strings are shared among many objects.
-    return ClassSize.align(ClassSize.OBJECT + 3 * ClassSize.REFERENCE);
+    return SCHEMA_CONFIGURED_ALIGNED_HEAP_SIZE;
   }
 
   public String schemaConfAsJSON() {

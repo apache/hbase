@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -417,8 +416,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
   @Override
   public long heapSize() {
     long size = ClassSize.align(
-        // This object
-        ClassSize.OBJECT +
+        // Base class size, including object overhead.
+        SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
         // Block type and byte buffer references
         2 * ClassSize.REFERENCE +
         // On-disk size, uncompressed size, and next block's on-disk size
@@ -428,12 +427,11 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     );
 
     if (buf != null) {
+      // Deep overhead of the byte buffer. Needs to be aligned separately.
       size += ClassSize.align(buf.capacity() + BYTE_BUFFER_HEAP_SIZE);
     }
 
-    // SchemaConfigured (but don't count object overhead twice).
-    size += super.heapSize() - ClassSize.OBJECT;
-    return size;
+    return ClassSize.align(size);
   }
 
   /**
