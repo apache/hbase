@@ -491,10 +491,11 @@ public class TestHFileBlock {
 
   @Test
   public void testBlockHeapSize() {
-    // We have seen multiple possible values for this estimate of the heap size
-    // of a ByteBuffer, presumably depending on the JDK version.
-    assertTrue(HFileBlock.BYTE_BUFFER_HEAP_SIZE == 64 ||
-               HFileBlock.BYTE_BUFFER_HEAP_SIZE == 80);
+    if (ClassSize.is32BitJVM()) {
+      assertTrue(HFileBlock.BYTE_BUFFER_HEAP_SIZE == 64);
+    } else {
+      assertTrue(HFileBlock.BYTE_BUFFER_HEAP_SIZE == 80);
+    }
 
     for (int size : new int[] { 100, 256, 12345 }) {
       byte[] byteArr = new byte[HFileBlock.HEADER_SIZE + size];
