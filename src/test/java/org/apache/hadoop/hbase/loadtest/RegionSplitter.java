@@ -240,7 +240,8 @@ public class RegionSplitter {
     FileSystem fs = FileSystem.get(table.getConfiguration());
 
     // get a list of daughter regions to create
-    Set<Pair<BigInteger, BigInteger>> tmpRegionSet = getSplits(tableName);
+    Set<Pair<BigInteger, BigInteger>> tmpRegionSet = getSplits(conf,
+        tableName);
     LinkedList<Pair<byte[],byte[]>> outstanding = Lists.newLinkedList();
     int splitCount = 0;
     final int origCount = tmpRegionSet.size();
@@ -486,9 +487,9 @@ public class RegionSplitter {
     regionList.removeAll(finished);
   }
 
-  private static Set<Pair<BigInteger, BigInteger>> getSplits(String tblName)
-  throws IOException {
-    HTable table = new HTable(tblName);
+  private static Set<Pair<BigInteger, BigInteger>> getSplits(
+      Configuration conf, String tblName) throws IOException {
+    HTable table = new HTable(conf, tblName);
     Path hbDir = new Path(table.getConfiguration().get(HConstants.HBASE_DIR));
     Path tableDir = HTableDescriptor.getTableDir(hbDir, table.getTableName());
     Path splitFile = new Path(tableDir, "_balancedSplit");

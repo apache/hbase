@@ -93,8 +93,26 @@ public final class HConstants {
   /** Name of ZooKeeper config file in conf/ directory. */
   public static final String ZOOKEEPER_CONFIG_NAME = "zoo.cfg";
 
+  /** Common prefix of ZooKeeper configuration properties */
+  public static final String ZK_CFG_PROPERTY_PREFIX =
+      "hbase.zookeeper.property.";
+
+  public static final int ZK_CFG_PROPERTY_PREFIX_LEN =
+    ZK_CFG_PROPERTY_PREFIX.length();
+
   /** Parameter name for number of times to retry writes to ZooKeeper. */
   public static final String ZOOKEEPER_RETRIES = "zookeeper.retries";
+
+  /**
+   * The ZK client port key in the ZK properties map. The name reflects the
+   * fact that this is not an HBase configuration key.
+   */
+  public static final String CLIENT_PORT_STR = "clientPort";
+
+  /** Parameter name for the client port that the zookeeper listens on */
+  public static final String ZOOKEEPER_CLIENT_PORT =
+      ZK_CFG_PROPERTY_PREFIX + CLIENT_PORT_STR;
+
   /** Default number of times to retry writes to ZooKeeper. */
   public static final int DEFAULT_ZOOKEEPER_RETRIES = 5;
 

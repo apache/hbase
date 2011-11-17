@@ -28,6 +28,7 @@ import java.io.Reader;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,6 +57,15 @@ public class MiniZooKeeperCluster {
   /** Create mini ZooKeeper cluster. */
   public MiniZooKeeperCluster() {
     this.started = false;
+    this.clientPort = getRandomPort();
+  }
+
+  /**
+   * Ports from 49152 to 65535 cannot be registered with IANA and are intended
+   * for dynamic allocation (see http://bit.ly/dynports).
+   */
+  private static int getRandomPort() {
+    return 0xc000 + new Random().nextInt(0x3f00);
   }
 
   public void setClientPort(int clientPort) {
@@ -104,8 +114,7 @@ public class MiniZooKeeperCluster {
         standaloneServerFactory =
           new NIOServerCnxn.Factory(new InetSocketAddress(clientPort));
       } catch (BindException e) {
-        LOG.info("Faild binding ZK Server to client port: " + clientPort);
-        //this port is already in use. try to use another
+        LOG.info("Failed binding ZK Server to client port: " + clientPort);
         clientPort++;
         continue;
       }
@@ -113,12 +122,14 @@ public class MiniZooKeeperCluster {
     }
     standaloneServerFactory.startup(server);
 
+    LOG.info("Waiting for ZK to come online on port " + clientPort);
     if (!waitForServerUp(clientPort, CONNECTION_TIMEOUT)) {
       throw new IOException("Waiting for startup of standalone server");
     }
 
     started = true;
 
+    LOG.info("Initialized ZK cluster with client port " + clientPort);
     return clientPort;
   }
 
@@ -218,4 +229,9 @@ public class MiniZooKeeperCluster {
     }
     return false;
   }
+
+  public int getClientPort() {
+    return clientPort;
+  }
+
 }

@@ -22,29 +22,27 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericArray;
 import org.apache.avro.generic.GenericData;
 
+import org.apache.hadoop.hbase.avro.AvroServer.HBaseImpl;
 import org.apache.hadoop.hbase.avro.generated.AColumn;
 import org.apache.hadoop.hbase.avro.generated.AColumnValue;
 import org.apache.hadoop.hbase.avro.generated.AFamilyDescriptor;
 import org.apache.hadoop.hbase.avro.generated.AGet;
 import org.apache.hadoop.hbase.avro.generated.APut;
-import org.apache.hadoop.hbase.avro.generated.AResult;
 import org.apache.hadoop.hbase.avro.generated.ATableDescriptor;
 
 /**
@@ -102,7 +100,7 @@ public class TestAvroServer {
    */
   @Test
   public void testTableAdminAndMetadata() throws Exception {
-    AvroServer.HBaseImpl impl = new AvroServer.HBaseImpl();
+    AvroServer.HBaseImpl impl = createAvroServer();
 
     assertEquals(impl.listTables().size(), 0);
 
@@ -144,7 +142,7 @@ public class TestAvroServer {
    */
   @Test
   public void testFamilyAdminAndMetadata() throws Exception {
-    AvroServer.HBaseImpl impl = new AvroServer.HBaseImpl();
+    AvroServer.HBaseImpl impl = createAvroServer();
 
     ATableDescriptor tableA = new ATableDescriptor();
     tableA.name = tableAname;
@@ -178,7 +176,7 @@ public class TestAvroServer {
    */
   @Test
   public void testDML() throws Exception {
-    AvroServer.HBaseImpl impl = new AvroServer.HBaseImpl();
+    AvroServer.HBaseImpl impl = createAvroServer();
 
     ATableDescriptor tableA = new ATableDescriptor();
     tableA.name = tableAname;
@@ -221,5 +219,9 @@ public class TestAvroServer {
 
     impl.disableTable(tableAname);
     impl.deleteTable(tableAname);
+  }
+
+  public HBaseImpl createAvroServer() throws MasterNotRunningException {
+    return new AvroServer.HBaseImpl(TEST_UTIL.getConfiguration());
   }
 }

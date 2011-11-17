@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.HQuorumPeer;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
@@ -126,7 +127,7 @@ public class ReplicationZookeeperWrapper {
     String rsZNodeName =
         conf.get("zookeeper.znode.replication.rs", "rs");
     String thisCluster = this.conf.get(HConstants.ZOOKEEPER_QUORUM) + ":" +
-          this.conf.get("hbase.zookeeper.property.clientPort") + ":" +
+          this.conf.get(HConstants.ZOOKEEPER_CLIENT_PORT) + ":" +
           this.conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
 
     this.peerClusters = new HashMap<String, ZooKeeperWrapper>();
@@ -198,7 +199,7 @@ public class ReplicationZookeeperWrapper {
     }
     Configuration otherConf = new Configuration(this.conf);
     otherConf.set(HConstants.ZOOKEEPER_QUORUM, ensemble[0]);
-    otherConf.set("hbase.zookeeper.property.clientPort", ensemble[1]);
+    otherConf.set(HConstants.ZOOKEEPER_CLIENT_PORT, ensemble[1]);
     otherConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, ensemble[2]);
     ZooKeeperWrapper zkw = ZooKeeperWrapper.createInstance(otherConf,
         "connection to cluster: " + peerId);

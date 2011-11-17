@@ -23,8 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.HMsg;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -73,7 +71,8 @@ public class TestMaster {
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
     TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
-    TEST_UTIL.loadTable(new HTable(TABLENAME), FAMILYNAME);
+    TEST_UTIL.loadTable(new HTable(TEST_UTIL.getConfiguration(),
+        TABLENAME), FAMILYNAME);
 
     List<Pair<HRegionInfo, HServerAddress>> tableRegions =
       m.getTableRegions(TABLENAME);

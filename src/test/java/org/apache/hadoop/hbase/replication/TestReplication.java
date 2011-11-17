@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.replication;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.EmptyWatcher;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -40,7 +39,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -100,7 +98,7 @@ public class TestReplication {
     zkw1.writeZNode("/1", "replication", "");
     zkw1.writeZNode("/1/replication", "master",
         conf1.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-            conf1.get("hbase.zookeeper.property.clientPort")+":/1");
+            conf1.get(HConstants.ZOOKEEPER_CLIENT_PORT)+":/1");
     setIsReplication(true);
 
     LOG.info("Setup first Zk");
@@ -117,11 +115,11 @@ public class TestReplication {
     zkw2.writeZNode("/2", "replication", "");
     zkw2.writeZNode("/2/replication", "master",
         conf1.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-            conf1.get("hbase.zookeeper.property.clientPort")+":/1");
+            conf1.get(HConstants.ZOOKEEPER_CLIENT_PORT)+":/1");
 
     zkw1.writeZNode("/1/replication/peers", "1",
         conf2.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-            conf2.get("hbase.zookeeper.property.clientPort")+":/2");
+            conf2.get(HConstants.ZOOKEEPER_CLIENT_PORT)+":/2");
 
     LOG.info("Setup second Zk");
 

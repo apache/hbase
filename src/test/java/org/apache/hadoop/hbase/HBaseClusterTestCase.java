@@ -100,7 +100,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     // need to edit the config to add the ZooKeeper servers.
     this.zooKeeperCluster = new MiniZooKeeperCluster();
     int clientPort = this.zooKeeperCluster.startup(testDir);
-    conf.set("hbase.zookeeper.property.clientPort", Integer.toString(clientPort));
+    conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, Integer.toString(clientPort));
 
     // start the mini cluster
     this.cluster = new MiniHBaseCluster(conf, regionServers);

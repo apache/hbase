@@ -98,7 +98,9 @@ public class TestHQuorumPeer extends HBaseTestCase {
     Properties properties = HQuorumPeer.parseZooCfg(conf, is);
 
     assertEquals(dataDir.toString(), properties.get("dataDir"));
-    assertEquals(Integer.valueOf(2181), Integer.valueOf(properties.getProperty("clientPort")));
+    assertEquals(Integer.valueOf(2181),
+        Integer.valueOf(properties.getProperty(
+            HConstants.CLIENT_PORT_STR)));
     assertEquals("localhost:2888:3888", properties.get("server.0"));
     
     HQuorumPeer.writeMyID(properties);
@@ -134,6 +136,6 @@ public class TestHQuorumPeer extends HBaseTestCase {
     config.clear();
     Properties p = HQuorumPeer.makeZKProps(config);
     assertNotNull(p);
-    assertEquals(2181, p.get("hbase.zookeeper.property.clientPort"));
+    assertEquals(2181, p.get(HConstants.CLIENT_PORT_STR));
   }
 }

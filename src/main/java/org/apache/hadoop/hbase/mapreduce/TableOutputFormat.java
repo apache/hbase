@@ -50,6 +50,8 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Writable> {
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
   /** Optional job parameter to specify a peer cluster */
   public static final String QUORUM_ADDRESS = "hbase.mapred.output.quorum";
+  /** Optional job parameter to specify peer cluster's ZK client port */
+  public static final String QUORUM_PORT = "hbase.mapred.output.quorum.port";
   /** Optional specification of the rs class name of the peer cluster */
   public static final String
       REGION_SERVER_CLASS = "hbase.mapred.output.rs.class";
@@ -124,6 +126,7 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Writable> {
     Configuration conf = new Configuration(context.getConfiguration());
     String tableName = conf.get(OUTPUT_TABLE);
     String address = conf.get(QUORUM_ADDRESS);
+    int zkClientPort = conf.getInt(QUORUM_PORT, 0);
     String serverClass = conf.get(REGION_SERVER_CLASS);
     String serverImpl = conf.get(REGION_SERVER_IMPL);
     HTable table = null;
@@ -138,6 +141,9 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Writable> {
       if (serverClass != null) {
         conf.set(HConstants.REGION_SERVER_CLASS, serverClass);
         conf.set(HConstants.REGION_SERVER_IMPL, serverImpl);
+      }
+      if (zkClientPort != 0) {
+        conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
       }
       table = new HTable(conf, tableName);
     } catch(IOException e) {

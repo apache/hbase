@@ -125,7 +125,7 @@
   </property>
   <property>
     <name>hadoop.log.dir</name>
-    <value>${user.dir}/../logs</value>
+    <value>${hbase.tmp.dir}/logs</value>
   </property>
   <property>
     <name>hbase.zookeeper.property.clientPort</name>

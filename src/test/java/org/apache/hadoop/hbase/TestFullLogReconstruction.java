@@ -92,7 +92,7 @@ public class TestFullLogReconstruction {
 
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
 
-    HTable table = new HTable(TABLE_NAME);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME);
 
     TEST_UTIL.createMultiRegions(table, Bytes.toBytes("family"));
 

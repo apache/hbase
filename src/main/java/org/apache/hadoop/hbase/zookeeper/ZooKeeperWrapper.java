@@ -241,7 +241,7 @@ public class ZooKeeperWrapper implements Watcher {
   public void connectToZk(int retryNum, int retryFreq)
   throws IOException {
     try {
-      LOG.info("Connecting to zookeeper");
+      LOG.info("[" + instanceName + "] Connecting to zookeeper");
       if(recoverableZK != null) {
         recoverableZK.close();
         LOG.error("<" + instanceName + ">" + " Closed existing zookeeper client");
@@ -1131,11 +1131,14 @@ public class ZooKeeperWrapper implements Watcher {
         "[\\t\\n\\x0B\\f\\r]", ""));
     StringBuilder builder = new StringBuilder(quorum);
     builder.append(":");
+    builder.append(getZKClientPort(conf));
+    builder.append(":");
     builder.append(conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
     if (name != null && !name.isEmpty()) {
       builder.append(",");
       builder.append(name);
     }
+    LOG.trace("ZK cluster key: " + builder);
     return builder.toString();
   }
 
@@ -1783,6 +1786,17 @@ public class ZooKeeperWrapper implements Watcher {
    */
   public static boolean closedUnknownZKWrapperInTest() {
     return closedUnknownZKWrapper;
+  }
+
+  /** Copies the ZK client port from one configuration to another */
+  public static void copyClientPort(Configuration conf1, Configuration conf2) {
+    conf2.set(HConstants.ZOOKEEPER_CLIENT_PORT,
+        conf1.get(HConstants.ZOOKEEPER_CLIENT_PORT));
+  }
+
+  public static int getZKClientPort(Configuration conf) {
+    return conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT,
+        HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT);
   }
 
 }

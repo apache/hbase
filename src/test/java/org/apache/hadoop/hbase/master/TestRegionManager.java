@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestRegionManager extends HBaseClusterTestCase {
    public void testGetFirstMetaRegionForRegionAfterMetaSplit()
    throws Exception {
-     HTable meta = new HTable(HConstants.META_TABLE_NAME);
+     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
      HMaster master = this.cluster.getMaster();
      HServerAddress address = master.getMasterAddress();
      HTableDescriptor tableDesc = new HTableDescriptor(Bytes.toBytes("_MY_TABLE_"));

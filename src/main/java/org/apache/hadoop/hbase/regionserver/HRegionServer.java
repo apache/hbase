@@ -280,6 +280,8 @@ public class HRegionServer implements HRegionInterface,
    * @throws IOException
    */
   public HRegionServer(Configuration conf) throws IOException {
+    LOG.debug("Region server configured with ZK client port "
+        + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT));
     machineName = DNS.getDefaultHost(
         conf.get("hbase.regionserver.dns.interface","default"),
         conf.get("hbase.regionserver.dns.nameserver","default"));

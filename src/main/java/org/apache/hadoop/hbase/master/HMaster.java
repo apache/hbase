@@ -1827,7 +1827,7 @@ public class HMaster extends Thread implements HMasterInterface,
             final MiniZooKeeperCluster zooKeeperCluster =
               new MiniZooKeeperCluster();
             File zkDataPath = new File(conf.get("hbase.zookeeper.property.dataDir"));
-            int zkClientPort = conf.getInt("hbase.zookeeper.property.clientPort", 0);
+            int zkClientPort = conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 0);
             if (zkClientPort == 0) {
               throw new IOException("No config value for hbase.zookeeper.property.clientPort");
             }
@@ -1841,7 +1841,7 @@ public class HMaster extends Thread implements HMasterInterface,
               System.err.println(errorMsg);
               throw new IOException(errorMsg);
             }
-            conf.set("hbase.zookeeper.property.clientPort",
+            conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,
               Integer.toString(clientPort));
             // Need to have the zk cluster shutdown when master is shutdown.
             // Run a subclass that does the zk cluster shutdown on its way out.

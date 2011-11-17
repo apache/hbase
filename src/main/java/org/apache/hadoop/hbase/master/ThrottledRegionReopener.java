@@ -190,7 +190,7 @@ public class ThrottledRegionReopener {
    * @throws IOException
    */
   public synchronized void reOpenRegionsThrottle() throws IOException {
-    if (HTable.isTableEnabled(tableName)) {
+    if (HTable.isTableEnabled(master.getConfiguration(), tableName)) {
       LOG.info("Initiating reopen for all regions of " + tableName);
       if (closeSomeRegions() == 0) {
         regionManager.deleteThrottledReopener(tableName);

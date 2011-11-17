@@ -59,10 +59,8 @@ public class HQuorumPeer {
   private static final String VARIABLE_END = "}";
   private static final int VARIABLE_END_LENGTH = VARIABLE_END.length();
 
-  private static final String ZK_CFG_PROPERTY = "hbase.zookeeper.property.";
-  private static final int ZK_CFG_PROPERTY_SIZE = ZK_CFG_PROPERTY.length();
-  private static final String ZK_CLIENT_PORT_KEY = ZK_CFG_PROPERTY
-      + "clientPort";
+  private static final int ZK_CLIENT_PORT_KEY_PREFIX_LENGTH =
+      HConstants.ZK_CFG_PROPERTY_PREFIX.length();
 
   /**
    * Parse ZooKeeper configuration from HBase XML config and run a QuorumPeer.
@@ -188,8 +186,8 @@ public class HQuorumPeer {
     // Directly map all of the hbase.zookeeper.property.KEY properties.
     for (Entry<String, String> entry : conf) {
       String key = entry.getKey();
-      if (key.startsWith(ZK_CFG_PROPERTY)) {
-        String zkKey = key.substring(ZK_CFG_PROPERTY_SIZE);
+      if (key.startsWith(HConstants.ZK_CFG_PROPERTY_PREFIX)) {
+        String zkKey = key.substring(ZK_CLIENT_PORT_KEY_PREFIX_LENGTH);
         String value = entry.getValue();
         // If the value has variables substitutions, need to do a get.
         if (value.contains(VARIABLE_START)) {
@@ -199,10 +197,10 @@ public class HQuorumPeer {
       }
     }
 
-    // If clientPort is not set, assign the default
-    if (zkProperties.getProperty(ZK_CLIENT_PORT_KEY) == null) {
-      zkProperties.put(ZK_CLIENT_PORT_KEY,
-                       HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT);
+    // If clientPort is not set, assign the default.
+    if (zkProperties.getProperty(HConstants.CLIENT_PORT_STR) == null) {
+      zkProperties.put(HConstants.CLIENT_PORT_STR,
+          HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT);
     }
 
     // Create the server.X properties.
@@ -218,6 +216,7 @@ public class HQuorumPeer {
       zkProperties.put(key, address);
     }
 
+    LOG.trace("Created ZK properties: " + zkProperties);
     return zkProperties;
   }
 

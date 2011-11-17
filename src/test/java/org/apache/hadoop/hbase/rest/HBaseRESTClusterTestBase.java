@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.rest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.util.StringUtils;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
@@ -40,6 +41,8 @@ public class HBaseRESTClusterTestBase extends HBaseClusterTestCase
 
   protected void setUp() throws Exception {
     super.setUp();
+    ZooKeeperWrapper.copyClientPort(conf,
+        RESTServlet.getInstance().getConfiguration());
     startServletContainer();
   }
 

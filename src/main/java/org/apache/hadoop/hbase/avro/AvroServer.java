@@ -138,11 +138,15 @@ public class AvroServer {
      *
      * @throws MasterNotRunningException
      */
-    HBaseImpl() throws MasterNotRunningException {
-      conf = HBaseConfiguration.create();
+    HBaseImpl(Configuration conf) throws MasterNotRunningException {
+      this.conf = conf;
       admin = new HBaseAdmin(conf);
       htablePool = new HTablePool(conf, 10);
       scannerMap = new HashMap<Integer, ResultScanner>();
+    }
+
+    HBaseImpl() throws MasterNotRunningException {
+      this(HBaseConfiguration.create());
     }
 
     //

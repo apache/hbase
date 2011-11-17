@@ -139,7 +139,7 @@ public class TestZooKeeper {
     desc.addFamily(family);
     admin.createTable(desc);
 
-    HTable table = new HTable(tableName);
+    HTable table = new HTable(conf, tableName);
     Put put = new Put(Bytes.toBytes("testrow"));
     put.add(Bytes.toBytes("fam"),
         Bytes.toBytes("col"), Bytes.toBytes("testdata"));

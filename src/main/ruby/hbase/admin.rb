@@ -41,6 +41,7 @@ module Hbase
     def initialize(configuration, formatter)
       @admin = HBaseAdmin.new(configuration)
       connection = @admin.getConnection()
+      @conf = configuration
       @zk_wrapper = connection.getZooKeeperWrapper()
       zk = @zk_wrapper.getZooKeeper()
       @zk_main = ZooKeeperMain.new(zk)
@@ -203,7 +204,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Truncates table (deletes all records by recreating the table)
     def truncate(table_name)
-      h_table = HTable.new(table_name)
+      h_table = HTable.new(@conf, table_name)
       table_description = h_table.getTableDescriptor()
       yield 'Disabling table...' if block_given?
       disable(table_name)
@@ -400,7 +401,7 @@ module Hbase
     # Enables/disables a region by name
     def online(region_name, on_off)
       # Open meta table
-      meta = HTable.new(HConstants::META_TABLE_NAME)
+      meta = HTable.new(@conf, HConstants::META_TABLE_NAME)
 
       # Read region info
       # FIXME: fail gracefully if can't find the region

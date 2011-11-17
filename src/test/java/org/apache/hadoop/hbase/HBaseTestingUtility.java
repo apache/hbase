@@ -288,8 +288,8 @@ public class HBaseTestingUtility {
     }
     this.zkCluster = new MiniZooKeeperCluster();
     int clientPort = this.zkCluster.startup(dir);
-    this.conf.set("hbase.zookeeper.property.clientPort",
-      Integer.toString(clientPort));
+    this.conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,
+        Integer.toString(clientPort));
     return this.zkCluster;
   }
 
@@ -930,6 +930,7 @@ public class HBaseTestingUtility {
 
   public void setZkCluster(MiniZooKeeperCluster zkCluster) {
     this.zkCluster = zkCluster;
+    conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkCluster.getClientPort());
   }
 
   public MiniDFSCluster getDFSCluster() {

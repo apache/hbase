@@ -1134,7 +1134,8 @@ public class PerformanceEvaluation {
       // just started up
       FileSystem fs = dfsCluster.getFileSystem();
       conf.set("fs.default.name", fs.getUri().toString());
-      conf.set("hbase.zookeeper.property.clientPort", Integer.toString(zooKeeperPort));
+      conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,
+          Integer.toString(zooKeeperPort));
       Path parentdir = fs.getHomeDirectory();
       conf.set(HConstants.HBASE_DIR, parentdir.toString());
       fs.mkdirs(parentdir);

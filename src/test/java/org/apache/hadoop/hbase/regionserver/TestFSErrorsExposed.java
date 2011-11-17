@@ -164,7 +164,7 @@ public class TestFSErrorsExposed {
           false, false, HConstants.FOREVER, "NONE"));
       admin.createTable(desc);
 
-      HTable table = new HTable(tableName);
+      HTable table = new HTable(util.getConfiguration(), tableName);
 
       // Load some data
       util.loadTable(table, fam);

@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -54,10 +53,10 @@ public class TestReplicationSink {
 
   private static final long SLEEP_TIME = 500;
 
-  private final static Configuration conf = HBaseConfiguration.create();
-
   private final static HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
+
+  private final static Configuration conf = TEST_UTIL.getConfiguration();
 
   private static ReplicationSink SINK;
 
@@ -80,11 +79,9 @@ public class TestReplicationSink {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
-    TEST_UTIL.getConfiguration().setBoolean(
-        HConstants.REPLICATION_ENABLE_KEY, true);
-    TEST_UTIL.startMiniCluster(3);
     conf.setBoolean("dfs.support.append", true);
+    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
+    TEST_UTIL.startMiniCluster(3);
     SINK = new ReplicationSink(conf,STOPPER);
     table1 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAME1);
     table2 = TEST_UTIL.createTable(TABLE_NAME2, FAM_NAME2);

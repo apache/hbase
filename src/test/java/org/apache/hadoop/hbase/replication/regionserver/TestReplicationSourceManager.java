@@ -77,8 +77,6 @@ public class TestReplicationSourceManager {
 
   private static final byte[] f1 = Bytes.toBytes("f1");
 
-  private static final byte[] f2 = Bytes.toBytes("f2");
-
   private static final byte[] test = Bytes.toBytes("test");
 
   private static FileSystem fs;
@@ -100,12 +98,10 @@ public class TestReplicationSourceManager {
 
     zkw = ZooKeeperWrapper.createInstance(conf, "test");
     zkw.writeZNode("/hbase", "replication", "");
-    zkw.writeZNode("/hbase/replication", "master",
-        conf.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-    conf.get("hbase.zookeeper.property.clientPort")+":/1");
-    zkw.writeZNode("/hbase/replication/peers", "1",
-          conf.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-          conf.get("hbase.zookeeper.property.clientPort")+":/1");
+    final String clusterKey = conf.get(HConstants.ZOOKEEPER_QUORUM) + ":"
+        + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT) + ":/1";
+    zkw.writeZNode("/hbase/replication", "master", clusterKey);
+    zkw.writeZNode("/hbase/replication/peers", "1", clusterKey);
 
     // set port to 0 so that RS picks a port dynamically to
     // avoid clash over the default port in unit test runs.
@@ -116,9 +112,9 @@ public class TestReplicationSourceManager {
         server.getZooKeeperWrapper(), conf,
         REPLICATING, "123456789");
     fs = FileSystem.get(conf);
-    oldLogDir = new Path(utility.getTestDir(),
+    oldLogDir = new Path(HBaseTestingUtility.getTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
-    logDir = new Path(utility.getTestDir(),
+    logDir = new Path(HBaseTestingUtility.getTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
 
     manager = new ReplicationSourceManager(helper,

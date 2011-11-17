@@ -309,7 +309,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
 
     Path hfofDir = new Path(args[0]);
-    HTable table = new HTable(args[1]);
+    HTable table = new HTable(getConf(), args[1]);
 
     doBulkLoad(hfofDir, table);
     return 0;

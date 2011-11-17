@@ -74,7 +74,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
    * @throws Exception
    */
   public void doTestTableCreateDrop() throws Exception {
-    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler();
+    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler(conf);
 
     // Create/enable/disable/delete tables, ensure methods act correctly
     assertEquals(handler.getTableNames().size(), 0);
@@ -105,7 +105,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
    */
   public void doTestTableMutations() throws Exception {
     // Setup
-    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler();
+    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler(conf);
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply a few Mutations to rowA
@@ -177,7 +177,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
    */
   public void doTestTableTimestampsAndColumns() throws Exception {
     // Setup
-    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler();
+    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler(conf);
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
@@ -255,7 +255,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
    */
   public void doTestTableScanners() throws Exception {
     // Setup
-    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler();
+    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler(conf);
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
@@ -322,7 +322,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
    */
   public void doTestTableMultiGet() throws Exception {
     // Setup
-    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler();
+    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler(conf);
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
@@ -364,7 +364,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
    */
   public void doTestTableCheckAndMutate() throws Exception {
     // Setup
-    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler();
+    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler(conf);
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA

@@ -81,22 +81,26 @@ public class HTable implements HTableInterface {
   private long maxScannerResultSize;
 
   /**
-   * Creates an object to access a HBase table.
+   * Creates an object to access a HBase table. DO NOT USE THIS CONSTRUCTOR.
+   * It will make your unit tests fail due to incorrect ZK client port.
    *
    * @param tableName Name of the table.
    * @throws IOException if a remote or network exception occurs
    */
+  @Deprecated
   public HTable(final String tableName)
   throws IOException {
     this(HBaseConfiguration.create(), Bytes.toBytes(tableName));
   }
 
   /**
-   * Creates an object to access a HBase table.
+   * Creates an object to access a HBase table. DO NOT USE THIS CONSTRUCTOR.
+   * It will make your unit tests fail due to incorrect ZK client port.
    *
    * @param tableName Name of the table.
    * @throws IOException if a remote or network exception occurs
    */
+  @Deprecated
   public HTable(final byte [] tableName)
   throws IOException {
     this(HBaseConfiguration.create(), tableName);
@@ -184,21 +188,25 @@ public class HTable implements HTableInterface {
   private ExecutorService pool;
 
   /**
-   * Tells whether or not a table is enabled or not.
+   * Tells whether or not a table is enabled or not. DO NOT USE THIS METHOD.
+   * It will make your unit tests fail due to incorrect ZK client port.
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
    */
+  @Deprecated
   public static boolean isTableEnabled(String tableName) throws IOException {
     return isTableEnabled(Bytes.toBytes(tableName));
   }
 
   /**
-   * Tells whether or not a table is enabled or not.
+   * Tells whether or not a table is enabled or not. DO NOT USE THIS METHOD.
+   * It will make your unit tests fail due to incorrect ZK client port.
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
    */
+  @Deprecated
   public static boolean isTableEnabled(byte[] tableName) throws IOException {
     return isTableEnabled(HBaseConfiguration.create(), tableName);
   }

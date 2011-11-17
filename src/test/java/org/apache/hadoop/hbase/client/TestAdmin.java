@@ -21,9 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -38,12 +35,10 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -633,7 +628,7 @@ public class TestAdmin {
     htd.addFamily(fam2);
     htd.addFamily(fam3);
     this.admin.createTable(htd);
-    HTable table = new HTable("myTestTable");
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), "myTestTable");
     HTableDescriptor confirmedHtd = table.getTableDescriptor();
 
     assertEquals(htd.compareTo(confirmedHtd), 0);

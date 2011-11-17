@@ -185,13 +185,11 @@ public class ThriftServer {
       return scannerMap.remove(id);
     }
 
-    /**
-     * Constructs an HBaseHandler object.
-     *
-     * @throws IOException
-     */
-    protected HBaseHandler() throws IOException {
-      this(HBaseConfiguration.create());
+    /** Constructs a handler with configuration based on the given one. */
+    protected HBaseHandler(HBaseConfiguration conf) throws IOException {
+      this(HBaseConfiguration.create(conf));
+      LOG.debug("Creating HBaseHandler with ZK client port " +
+          conf.get(HConstants.ZOOKEEPER_CLIENT_PORT));
     }
 
     protected HBaseHandler(final Configuration c) throws IOException {
@@ -218,7 +216,7 @@ public class ThriftServer {
 
     public boolean isTableEnabled(final byte[] tableName) throws IOError {
       try {
-        return HTable.isTableEnabled(tableName);
+        return HTable.isTableEnabled(conf, tableName);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -1106,7 +1104,8 @@ public class ThriftServer {
       protocolFactory = new TBinaryProtocol.Factory();
     }
 
-    HBaseHandler handler = new HBaseHandler();
+    HBaseHandler handler = new HBaseHandler(
+        HBaseConfiguration.create());
     Hbase.Processor processor = new Hbase.Processor(handler);
 
     TServer server;
