@@ -242,8 +242,8 @@ public class TestCompactSelection extends TestCase {
     int hourOfDay = calendar.get(Calendar.HOUR_OF_DAY);
     LOG.debug("Hour of day = " + hourOfDay);
     int hourPlusOne = ((hourOfDay+1)%24);
-    int hourMinusOne = ((hourOfDay-1)%24);
-    int hourMinusTwo = ((hourOfDay-2)%24);
+    int hourMinusOne = ((hourOfDay-1+24)%24);
+    int hourMinusTwo = ((hourOfDay-2+24)%24);
 
     // check compact selection without peak hour setting
     LOG.debug("Testing compact selection without off-peak settings...");
