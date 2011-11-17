@@ -92,6 +92,8 @@ Release 0.90.5 - Unreleased
    HBASE-4684  REST server is leaking ZK connections
    HBASE-4718  Backport HBASE-4552 (multi-family bulk load) to 0.90 branch (Jonathan Hsieh)
    HBASE-4800  Result.compareResults is incorrect (James Taylor and Lars H)
+   HBASE-4799  Catalog Janitor logic bug causes region leackage
+               (Max Lapan)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
