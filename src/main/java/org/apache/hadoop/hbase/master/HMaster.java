@@ -965,6 +965,10 @@ public class HMaster extends Thread implements HMasterInterface,
     for (String serverName : serverNames) {
       Path logDir = new Path(this.rootdir,
           HLog.getHLogDirectoryName(serverName));
+      if (! fs.exists(logDir)) {
+        LOG.info("Log dir for server " + serverName + " does not exist");
+        continue;
+      }
       // rename the directory so a rogue RS doesn't create more HLogs
       if (!serverName.endsWith(HConstants.HLOG_SPLITTING_EXT)) {
         realServerNames.add(serverName);
@@ -985,6 +989,11 @@ public class HMaster extends Thread implements HMasterInterface,
       contentSummary = fs.getContentSummary(logDir);
       splitCount += contentSummary.getFileCount();
       splitLogSize += contentSummary.getSpaceConsumed();
+    }
+    if (logDirs.size() == 0) {
+      LOG.info("No logs to split");
+      this.metrics.addSplit(0, 0, 0);
+      return;
     }
     splitTime = EnvironmentEdgeManager.currentTimeMillis();
     if (distributedLogSplitting) {
