@@ -114,11 +114,17 @@ if [ "$JAVA_HOME" = "" ]; then
   exit 1
 fi
 JAVA=$JAVA_HOME/bin/java
-export HBASE_LOGFILE=hbase-$HBASE_IDENT_STRING-$command-$HOSTNAME.log
+export HBASE_LOG_PREFIX=hbase-$HBASE_IDENT_STRING-$command-$HOSTNAME
+export HBASE_LOGFILE=$HBASE_LOG_PREFIX.log
 export HBASE_ROOT_LOGGER="INFO,DRFA"
-logout=$HBASE_LOG_DIR/hbase-$HBASE_IDENT_STRING-$command-$HOSTNAME.out  
+logout=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.out  
+loggc=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.gc
 loglog="${HBASE_LOG_DIR}/${HBASE_LOGFILE}"
 pid=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.pid
+
+if [ "$HBASE_USE_GC_LOGFILE" = "true" ]; then
+  export HBASE_GC_OPTS=" -Xloggc:${loggc}"
+fi
 
 # Set default scheduling priority
 if [ "$HBASE_NICENESS" = "" ]; then
@@ -137,6 +143,7 @@ case $startStop in
     fi
 
     hbase_rotate_log $logout
+    hbase_rotate_log $loggc
     echo starting $command, logging to $logout
     # Add to the command log file vital stats on our environment.
     echo "`date` Starting $command on `hostname`" >> $loglog

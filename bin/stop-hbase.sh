@@ -39,8 +39,9 @@ if [ "$HBASE_IDENT_STRING" = "" ]; then
   export HBASE_IDENT_STRING="$USER"
 fi
 
-export HBASE_LOGFILE=hbase-$HBASE_IDENT_STRING-master-$HOSTNAME.log
-logout=$HBASE_LOG_DIR/hbase-$HBASE_IDENT_STRING-master-$HOSTNAME.out  
+export HBASE_LOG_PREFIX=hbase-$HBASE_IDENT_STRING-master-$HOSTNAME
+export HBASE_LOGFILE=$HBASE_LOG_PREFIX.log
+logout=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.out  
 loglog="${HBASE_LOG_DIR}/${HBASE_LOGFILE}"
 pid=${HBASE_PID_DIR:-/tmp}/hbase-$HBASE_IDENT_STRING-master.pid
 
