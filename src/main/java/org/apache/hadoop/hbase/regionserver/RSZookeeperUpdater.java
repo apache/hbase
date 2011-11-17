@@ -126,7 +126,7 @@ public class RSZookeeperUpdater {
     // get the version to update from ZK
     zkVersion = stat.getVersion();
 
-    // update the data for "regionName" ZNode in unassigned to CLOSING
+    // update the data for "regionName" ZNode in unassigned to OPENING
     updateZKWithEventData(HBaseEventType.RS2ZK_REGION_OPENING, hmsg);
 
     // TODO: implement the updatePeriodically logic here
@@ -140,7 +140,7 @@ public class RSZookeeperUpdater {
   public void finishRegionOpenEvent(HMsg hmsg) throws IOException {
     // TODO: stop the updatePeriodically here
 
-    // update the data for "regionName" ZNode in unassigned to CLOSED
+    // update the data for "regionName" ZNode in unassigned to OPENED
     updateZKWithEventData(HBaseEventType.RS2ZK_REGION_OPENED, hmsg);
   }
 
@@ -173,7 +173,7 @@ public class RSZookeeperUpdater {
               " with [" + hbEventType + "]" +
               " expected version = " + zkVersion);
     lastUpdatedState = hbEventType;
-    zkWrapper.writeZNode(regionZNode, data, zkVersion, true);
+    zkWrapper.writeZNode(regionZNode, data, zkVersion, false);
     zkVersion++;
   }
 }
