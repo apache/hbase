@@ -268,43 +268,6 @@ public class HRegion implements HeapSize { // , Writable{
                             Pair<AtomicLong, AtomicInteger>>();
 
   /**
-   * Method to transform a set of column families in byte[] format into a
-   * signature for printing out in metrics
-   *
-   * @param families
-   *          the ordered set of column families
-   * @return a string to print out in metrics
-   */
-  public static String createMutationSignature(Set<byte[]> families) {
-    int limit = families.size();
-    if (1 == limit) {
-      return SchemaMetrics.CF_PREFIX +
-          Bytes.toString(families.iterator().next());
-    }
-
-    List<byte[]> sortedFamilies = new ArrayList<byte[]>(families);
-    Collections.sort(sortedFamilies, Bytes.BYTES_COMPARATOR);
-
-    StringBuilder sb = new StringBuilder(SchemaMetrics.CF_PREFIX);
-
-    int MAX_SIZE = 256;
-    for (byte[] family : sortedFamilies) {
-      if (sb.length() > MAX_SIZE) {
-        sb.append("__more");
-        break;
-      }
-
-      --limit;
-      sb.append(Bytes.toString(family));
-      if (0 != limit) {
-        sb.append("~");
-      }
-    }
-
-    return sb.toString();
-  }
-
-  /**
    * Method to transform a single column family in byte[] format into a
    * signature for printing out in metrics. Used as overloading so as to not
    * create an extra Set. Could have gone further and imposed restriction on the
@@ -1646,8 +1609,9 @@ public class HRegion implements HeapSize { // , Writable{
 
     // do after lock
     long after = EnvironmentEdgeManager.currentTimeMillis();
-    String signature = HRegion.createMutationSignature(familyMap.keySet());
-    HRegion.incrTimeVaryingMetric(signature + ".delete_", after - now);
+    String signature = SchemaMetrics.generateSchemaMetricsPrefix(
+        this.getTableDesc().getNameAsString(), familyMap.keySet());
+    HRegion.incrTimeVaryingMetric(signature + "delete_", after - now);
 
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
@@ -1840,12 +1804,14 @@ public class HRegion implements HeapSize { // , Writable{
         // else, if all have been consistent so far, check if it still holds
         // all else, designate failure signature and mark as unclear
         if (null == signature) {
-          signature = HRegion.createMutationSignature(put.getFamilyMap()
+          signature = SchemaMetrics.generateSchemaMetricsPrefix(
+              this.getTableDesc().getNameAsString(), put.getFamilyMap()
               .keySet());
         } else {
           if (isSignatureClear) {
-            if (!signature.equals(HRegion.createMutationSignature(put
-                .getFamilyMap().keySet()))) {
+            if (!signature.equals(SchemaMetrics.generateSchemaMetricsPrefix(
+                this.getTableDesc().getNameAsString(),
+                put.getFamilyMap().keySet()))) {
               isSignatureClear = false;
               signature = SchemaMetrics.CF_UNKNOWN_PREFIX;
             }
@@ -1911,7 +1877,7 @@ public class HRegion implements HeapSize { // , Writable{
       if (null == signature) {
         signature = SchemaMetrics.CF_BAD_FAMILY_PREFIX;
       }
-      HRegion.incrTimeVaryingMetric(signature + ".multiput_", after - now);
+      HRegion.incrTimeVaryingMetric(signature + "multiput_", after - now);
 
       if (!success) {
         for (int i = firstIndex; i < lastIndexExclusive; i++) {
@@ -2130,8 +2096,9 @@ public class HRegion implements HeapSize { // , Writable{
 
     // do after lock
     long after = EnvironmentEdgeManager.currentTimeMillis();
-    String signature = HRegion.createMutationSignature(familyMap.keySet());
-    HRegion.incrTimeVaryingMetric(signature + ".put_", after - now);
+    String signature = SchemaMetrics.generateSchemaMetricsPrefix(
+        this.getTableDesc().getNameAsString(), familyMap.keySet());
+    HRegion.incrTimeVaryingMetric(signature + "put_", after - now);
 
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
@@ -3406,8 +3373,9 @@ public class HRegion implements HeapSize { // , Writable{
 
     // do after lock
     long after = EnvironmentEdgeManager.currentTimeMillis();
-    String signature = HRegion.createMutationSignature(get.familySet());
-    HRegion.incrTimeVaryingMetric(signature + ".get_", after - now);
+    String signature = SchemaMetrics.generateSchemaMetricsPrefix(
+        this.getTableDesc().getNameAsString(), get.familySet());
+    HRegion.incrTimeVaryingMetric(signature + "get_", after - now);
 
     return results;
   }

@@ -22,13 +22,16 @@ package org.apache.hadoop.hbase.regionserver.metrics;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
 import static org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
@@ -39,6 +42,7 @@ import static org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runner.manipulation.Sorter;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
@@ -221,6 +225,35 @@ public class TestSchemaMetrics {
     SchemaConfigured sc = new SchemaConfigured(null, TABLE_NAME, CF_NAME);
     assertEquals(ClassSize.estimateBase(SchemaConfigured.class, true),
         sc.heapSize());
+  }
+
+  @Test
+  public void testGenerateSchemaMetricsPrefix() {
+    String tableName = "table1";
+    int numCF = 3;
+
+    StringBuilder expected = new StringBuilder();
+    if (useTableName) {
+      expected.append("tab.");
+      expected.append(tableName);
+      expected.append(".");
+    }
+    expected.append("cf.");
+    Set<byte[]> families = new HashSet<byte[]>();
+    for (int i = 1; i <= numCF; i++) {
+      String cf = "cf" + i;
+      families.add(Bytes.toBytes(cf));
+      expected.append(cf);
+      if (i == numCF) {
+        expected.append(".");
+      } else {
+        expected.append("~");
+      }
+    }
+
+    String result = SchemaMetrics.generateSchemaMetricsPrefix(tableName,
+        families);
+    assertEquals(expected.toString(), result);
   }
 
 }
