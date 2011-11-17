@@ -380,13 +380,13 @@ public class HFileReaderV1 extends AbstractHFileReader {
    * Implementation of {@link HFileScanner} interface.
    */
   protected static class ScannerV1 extends AbstractHFileReader.Scanner {
-    private final HFileReaderV1 readerV1;
+    private final HFileReaderV1 reader;
     private int currBlock;
 
     public ScannerV1(HFileReaderV1 reader, boolean cacheBlocks,
         final boolean pread, final boolean isCompaction) {
-      super(reader, cacheBlocks, pread, isCompaction);
-      readerV1 = reader;
+      super(cacheBlocks, pread, isCompaction);
+      this.reader = reader;
     }
 
     @Override
@@ -456,7 +456,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
           blockBuffer = null;
           return false;
         }
-        blockBuffer = readerV1.readBlockBuffer(currBlock, cacheBlocks, pread,
+        blockBuffer = reader.readBlockBuffer(currBlock, cacheBlocks, pread,
             isCompaction);
         currKeyLen = blockBuffer.getInt();
         currValueLen = blockBuffer.getInt();
@@ -476,7 +476,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
     @Override
     public int seekTo(byte[] key, int offset, int length) throws IOException {
-      int b = readerV1.blockContainingKey(key, offset, length);
+      int b = reader.blockContainingKey(key, offset, length);
       if (b < 0) return -1; // falls before the beginning of the file! :-(
       // Avoid re-reading the same block (that'd be dumb).
       loadBlock(b, true);
@@ -502,7 +502,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
         }
       }
 
-      int b = readerV1.blockContainingKey(key, offset, length);
+      int b = reader.blockContainingKey(key, offset, length);
       if (b < 0) {
         return -1;
       }
@@ -569,7 +569,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
     @Override
     public boolean seekBefore(byte[] key, int offset, int length)
     throws IOException {
-      int b = readerV1.blockContainingKey(key, offset, length);
+      int b = reader.blockContainingKey(key, offset, length);
       if (b < 0)
         return false; // key is before the start of the file.
 
@@ -621,7 +621,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
         return true;
       }
       currBlock = 0;
-      blockBuffer = readerV1.readBlockBuffer(currBlock, cacheBlocks, pread,
+      blockBuffer = reader.readBlockBuffer(currBlock, cacheBlocks, pread,
           isCompaction);
       currKeyLen = blockBuffer.getInt();
       currValueLen = blockBuffer.getInt();
@@ -631,13 +631,13 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
     private void loadBlock(int bloc, boolean rewind) throws IOException {
       if (blockBuffer == null) {
-        blockBuffer = readerV1.readBlockBuffer(bloc, cacheBlocks, pread,
+        blockBuffer = reader.readBlockBuffer(bloc, cacheBlocks, pread,
             isCompaction);
         currBlock = bloc;
         blockFetches++;
       } else {
         if (bloc != currBlock) {
-          blockBuffer = readerV1.readBlockBuffer(bloc, cacheBlocks, pread,
+          blockBuffer = reader.readBlockBuffer(bloc, cacheBlocks, pread,
               isCompaction);
           currBlock = bloc;
           blockFetches++;

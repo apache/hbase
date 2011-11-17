@@ -377,10 +377,10 @@ public class MemStore implements HeapSize {
       long addedSize = add(newKv);
 
       // now find and RM the old one(s) to prevent version explosion:
-	  KeyValue firstKv = KeyValue.createFirstOnRow(
-			  newKv.getBuffer(), newKv.getRowOffset(), newKv.getRowLength(),
-			  newKv.getBuffer(), newKv.getFamilyOffset(), newKv.getFamilyLength(),
-			  newKv.getBuffer(), newKv.getQualifierOffset(), newKv.getQualifierLength());
+    KeyValue firstKv = KeyValue.createFirstOnRow(
+        newKv.getBuffer(), newKv.getRowOffset(), newKv.getRowLength(),
+        newKv.getBuffer(), newKv.getFamilyOffset(), newKv.getFamilyLength(),
+        newKv.getBuffer(), newKv.getQualifierOffset(), newKv.getQualifierLength());
       SortedSet<KeyValue> ss = kvset.tailSet(firstKv);
       Iterator<KeyValue> it = ss.iterator();
       while ( it.hasNext() ) {
@@ -474,7 +474,7 @@ public class MemStore implements HeapSize {
     return Collections.<KeyValueScanner>singletonList(
         new CollectionBackedScanner(snapshot, comparator));
   }
-  
+
   /**
    * Check if this memstore may contain the required keys
    * @param scan
@@ -504,6 +504,10 @@ public class MemStore implements HeapSize {
     Iterator<KeyValue> kvsetIt;
     Iterator<KeyValue> snapshotIt;
 
+    // The kvset and snapshot at the time of creating this scanner
+    volatile KeyValueSkipListSet kvsetAtCreation;
+    volatile KeyValueSkipListSet snapshotAtCreation;
+
     /*
     Some notes...
 
@@ -524,6 +528,9 @@ public class MemStore implements HeapSize {
 
     MemStoreScanner() {
       super();
+
+      kvsetAtCreation = kvset;
+      snapshotAtCreation = snapshot;
 
       //DebugPrint.println(" MS new@" + hashCode());
     }
@@ -551,8 +558,8 @@ public class MemStore implements HeapSize {
 
       // kvset and snapshot will never be empty.
       // if tailSet cant find anything, SS is empty (not null).
-      SortedSet<KeyValue> kvTail = kvset.tailSet(key);
-      SortedSet<KeyValue> snapshotTail = snapshot.tailSet(key);
+      SortedSet<KeyValue> kvTail = kvsetAtCreation.tailSet(key);
+      SortedSet<KeyValue> snapshotTail = snapshotAtCreation.tailSet(key);
 
       kvsetIt = kvTail.iterator();
       snapshotIt = snapshotTail.iterator();

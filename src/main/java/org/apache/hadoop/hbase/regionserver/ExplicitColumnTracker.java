@@ -95,10 +95,13 @@ public class ExplicitColumnTracker implements ColumnTracker {
    * @param offset offset to the start of the qualifier
    * @param length length of the qualifier
    * @param timestamp timestamp of the key being checked
+   * @param ignoreCount indicates if the KV needs to be excluded while counting
+   *   (used during compactions. We only count KV's that are older than all the
+   *   scanners' read points.)
    * @return MatchCode telling ScanQueryMatcher what action to take
    */
   public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset,
-      int length, long timestamp) {
+      int length, long timestamp, boolean ignoreCount) {
     do {
       // No more columns left, we are done with this query
       if(this.columns.size() == 0) {
@@ -117,6 +120,8 @@ public class ExplicitColumnTracker implements ColumnTracker {
       // Column Matches. If it is not a duplicate key, decrement versions left
       // and include.
       if(ret == 0) {
+        if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
+
         //If column matches, check if it is a duplicate timestamp
         if (sameAsPreviousTS(timestamp)) {
           //If duplicate, skip this Key

@@ -64,6 +64,9 @@ public class ScanQueryMatcher {
   /** Row the query is on */
   protected byte [] row;
 
+  /** readPoint over which the KVs are unconditionally included */
+  protected long maxReadPointToTrackVersions;
+
   /**
    * This variable shows whether there is an null column in the query. There
    * always exists a null column in the wildcard column query.
@@ -83,6 +86,7 @@ public class ScanQueryMatcher {
   public ScanQueryMatcher(Scan scan, byte [] family,
       NavigableSet<byte[]> columnSet, long ttl,
       KeyValue.KeyComparator rowComparator, int maxVersions,
+      long readPointToUse,
       boolean retainDeletesInOutput) {
     this.tr = scan.getTimeRange();
     this.oldestStamp = System.currentTimeMillis() - ttl;
@@ -93,6 +97,7 @@ public class ScanQueryMatcher {
         family);
     this.filter = scan.getFilter();
     this.retainDeletesInOutput = retainDeletesInOutput;
+    this.maxReadPointToTrackVersions = readPointToUse;
 
     // Single branch to deal with two types of reads (columns vs all in family)
     if (columnSet == null || columnSet.size() == 0) {
@@ -124,7 +129,9 @@ public class ScanQueryMatcher {
       KeyValue.KeyComparator rowComparator, int maxVersions) {
       /* By default we will not include deletes */
       /* deletes are included explicitly (for minor compaction) */
-      this(scan, family, columns, ttl, rowComparator, maxVersions, false);
+      this(scan, family, columns, ttl, rowComparator, maxVersions,
+           Long.MAX_VALUE /* max Readpoint to Track versions */,
+           false);
   }
 
   /**
@@ -249,7 +256,8 @@ public class ScanQueryMatcher {
       }
     }
 
-    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength, timestamp);
+    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength, timestamp,
+         kv.getMemstoreTS() > maxReadPointToTrackVersions);
     /*
      * According to current implementation, colChecker can only be
      * SEEK_NEXT_COL, SEEK_NEXT_ROW, SKIP or INCLUDE. Therefore, always return

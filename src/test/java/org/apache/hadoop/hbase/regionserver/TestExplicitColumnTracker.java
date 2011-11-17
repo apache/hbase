@@ -54,7 +54,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     long timestamp = 0;
     //"Match"
     for(byte [] col : scannerColumns){
-      result.add(exp.checkColumn(col, 0, col.length, ++timestamp));
+      result.add(exp.checkColumn(col, 0, col.length, ++timestamp, false));
     }
 
     assertEquals(expected.size(), result.size());
@@ -165,13 +165,13 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     ColumnTracker explicit = new ExplicitColumnTracker(columns, maxVersions);
     for (int i = 0; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
-      explicit.checkColumn(col, 0, col.length, 1);
+      explicit.checkColumn(col, 0, col.length, 1, false);
     }
     explicit.update();
 
     for (int i = 1; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
-      explicit.checkColumn(col, 0, col.length, 1);
+      explicit.checkColumn(col, 0, col.length, 1, false);
     }
   }
 

@@ -93,6 +93,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
         columns, store.ttl, store.comparator.getRawComparator(),
         store.versionsToReturn(scan.getMaxVersions()),
+        Long.MAX_VALUE,
         false);
 
     // Pass columns to try to filter out unnecessary StoreFiles.
@@ -128,8 +129,11 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @param store who we scan
    * @param scan the spec
    * @param scanners ancilliary scanners
+   * @param smallestReadPoint the readPoint that we should use for tracking versions
+   * @param retainDeletesInOutput should we retain deletes after compaction?
    */
   StoreScanner(Store store, Scan scan, List<? extends KeyValueScanner> scanners,
+                            long smallestReadPoint,
                             boolean retainDeletesInOutput)
       throws IOException {
     this(store, false, scan, null);
@@ -137,6 +141,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
         null, store.ttl, store.comparator.getRawComparator(),
         store.versionsToReturn(scan.getMaxVersions()),
+        smallestReadPoint,
         retainDeletesInOutput);
 
     // Seek all scanners to the initial key
@@ -157,6 +162,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     this(null, scan.getCacheBlocks(), scan, columns);
     this.matcher = new ScanQueryMatcher(scan, colFamily, columns, ttl,
         comparator.getRawComparator(), scan.getMaxVersions(),
+        Long.MAX_VALUE,
         false);
 
     // Seek all scanners to the initial key
@@ -187,20 +193,7 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @return List of scanners ordered properly.
    */
   private List<KeyValueScanner> getScanners() throws IOException {
-    // First the store file scanners
-
-    // TODO this used to get the store files in descending order,
-    // but now we get them in ascending order, which I think is
-    // actually more correct, since memstore get put at the end.
-    List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks,
-                                isGet, false);
-    List<KeyValueScanner> scanners =
-      new ArrayList<KeyValueScanner>(sfScanners.size()+1);
-    scanners.addAll(sfScanners);
-    // Then the memstore scanners
-    scanners.addAll(this.store.memstore.getScanners());
-    return scanners;
+    return this.store.getScanners(cacheBlocks, isGet, false, null);
   }
 
   /*
@@ -208,23 +201,23 @@ class StoreScanner extends NonLazyKeyValueScanner
    */
   private List<KeyValueScanner> getScanners(Scan scan,
       final NavigableSet<byte[]> columns) throws IOException {
-    // First the store file scanners
-    List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks,
-                                isGet, false, this.matcher);
+    List<KeyValueScanner> allStoreScanners =
+      this.store.getScanners(cacheBlocks, isGet, false, this.matcher);
+
     List<KeyValueScanner> scanners =
-      new ArrayList<KeyValueScanner>(sfScanners.size()+1);
+      new ArrayList<KeyValueScanner>(allStoreScanners.size());
 
     // include only those scan files which pass all filters
-    for (StoreFileScanner sfs : sfScanners) {
-      if (sfs.shouldSeek(scan, columns)) {
-        scanners.add(sfs);
+    for (KeyValueScanner kvs : allStoreScanners) {
+      if (kvs instanceof StoreFileScanner) {
+        if (((StoreFileScanner)kvs).shouldSeek(scan, columns))
+          scanners.add(kvs);
       }
-    }
-
-    // Then the memstore scanners
-    if (this.store.memstore.shouldSeek(scan)) {
-      scanners.addAll(this.store.memstore.getScanners());
+      else {
+        // kvs is a MemStoreScanner
+        if (this.store.memstore.shouldSeek(scan))
+          scanners.add(kvs);
+      }
     }
     return scanners;
   }
@@ -467,12 +460,12 @@ class StoreScanner extends NonLazyKeyValueScanner
     // query matcher if scanning intra-row.
     KeyValue kv = heap.peek();
     if (kv == null) {
-	kv = lastTopKey;
+      kv = lastTopKey;
     }
     if ((matcher.row == null) || !kv.matchingRow(matcher.row)) {
-	this.countPerRow = 0;
-	matcher.reset();
-	matcher.setRow(kv.getRow());
+      this.countPerRow = 0;
+      matcher.reset();
+      matcher.setRow(kv.getRow());
     }
   }
 

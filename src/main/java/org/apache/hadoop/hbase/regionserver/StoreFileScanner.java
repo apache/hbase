@@ -52,6 +52,8 @@ class StoreFileScanner implements KeyValueScanner {
   private boolean delayedReseek;
   private KeyValue delayedSeekKV;
 
+  private boolean enforceRWCC = false;
+
   // The variable, realSeekDone, may cheat on store file scanner for the
   // multi-column bloom-filter optimization.
   // So this flag shows whether this storeFileScanner could do a reseek.
@@ -65,9 +67,10 @@ class StoreFileScanner implements KeyValueScanner {
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
    * @param hfs HFile scanner
    */
-  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs) {
+  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs, boolean useRWCC) {
     this.reader = reader;
     this.hfs = hfs;
+    this.enforceRWCC = useRWCC;
   }
 
   /**
@@ -124,11 +127,13 @@ class StoreFileScanner implements KeyValueScanner {
 
   public KeyValue next() throws IOException {
     KeyValue retKey = cur;
+
     try {
       // only seek if we aren't at the end. cur == null implies 'end'.
       if (cur != null) {
         hfs.next();
         cur = hfs.getKeyValue();
+        skipKVsNewerThanReadpoint();
       }
     } catch(IOException e) {
       throw new IOException("Could not iterate " + this, e);
@@ -138,6 +143,7 @@ class StoreFileScanner implements KeyValueScanner {
 
   public boolean seek(KeyValue key) throws IOException {
     seekCount.incrementAndGet();
+
     try {
       try {
         if(!seekAtOrAfter(hfs, key)) {
@@ -147,7 +153,8 @@ class StoreFileScanner implements KeyValueScanner {
 
         this.isReseekable = true;
         cur = hfs.getKeyValue();
-        return true;
+
+        return skipKVsNewerThanReadpoint();
       } finally {
         realSeekDone = true;
       }
@@ -158,6 +165,7 @@ class StoreFileScanner implements KeyValueScanner {
 
   public boolean reseek(KeyValue key) throws IOException {
     seekCount.incrementAndGet();
+
     try {
       try {
         if (!reseekAtOrAfter(hfs, key)) {
@@ -165,13 +173,43 @@ class StoreFileScanner implements KeyValueScanner {
           return false;
         }
         cur = hfs.getKeyValue();
-        return true;
+
+        return skipKVsNewerThanReadpoint();
       } finally {
         realSeekDone = true;
       }
     } catch (IOException ioe) {
       throw new IOException("Could not seek " + this, ioe);
     }
+  }
+
+  protected boolean skipKVsNewerThanReadpoint() throws IOException {
+    long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
+
+    // We want to ignore all key-values that are newer than our current
+    // readPoint
+    while(enforceRWCC
+        && cur != null
+        && (cur.getMemstoreTS() > readPoint)) {
+      hfs.next();
+      cur = hfs.getKeyValue();
+    }
+
+    if (cur == null) {
+      close();
+      return false;
+    }
+
+    // For the optimisation in HBASE-4346, we set the KV's memstoreTS to
+    // 0, if it is older than all the scanners' read points. It is possible
+    // that a newer KV's memstoreTS was reset to 0. But, there is an
+    // older KV which was not reset to 0 (because it was
+    // not old enough during flush). Make sure that we set it correctly now,
+    // so that the comparision order does not change.
+    if (cur.getMemstoreTS() <= readPoint) {
+      cur.setMemstoreTS(0);
+    }
+    return true;
   }
 
   public void close() {
@@ -331,5 +369,4 @@ class StoreFileScanner implements KeyValueScanner {
   static final long getSeekCount() {
     return seekCount.get();
   }
-
 }

@@ -34,14 +34,23 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
+import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Writes HFile format version 2.
  */
 public class HFileWriterV2 extends AbstractHFileWriter {
+
+  /** Max memstore (rwcc) timestamp in FileInfo */
+  public static final byte [] MAX_MEMSTORE_TS_KEY = Bytes.toBytes("MAX_MEMSTORE_TS_KEY");
+  /** KeyValue version in FileInfo */
+  public static final byte [] KEY_VALUE_VERSION = Bytes.toBytes("KEY_VALUE_VERSION");
+  /** Version for KeyValue which includes memstore timestamp */
+  public static final int KEY_VALUE_VER_WITH_MEMSTORE_TS = 1;
 
   /** Inline block writers for multi-level block index and compound Blooms. */
   private List<InlineBlockWriter> inlineBlockWriters =
@@ -62,6 +71,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   /** Additional data items to be written to the "load-on-open" section. */
   private List<BlockWritable> additionalLoadOnOpenData =
     new ArrayList<BlockWritable>();
+
+  private final boolean includeMemstoreTS = true;
+  private long maxMemstoreTS = 0;
 
   static class WriterFactoryV2 extends HFile.WriterFactory {
 
@@ -288,8 +300,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    */
   @Override
   public void append(final KeyValue kv) throws IOException {
-    append(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength(),
+    append(kv.getMemstoreTS(), kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength(),
         kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
+    this.maxMemstoreTS = Math.max(this.maxMemstoreTS, kv.getMemstoreTS());
   }
 
   /**
@@ -304,7 +317,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    */
   @Override
   public void append(final byte[] key, final byte[] value) throws IOException {
-    append(key, 0, key.length, value, 0, value.length);
+    append(0, key, 0, key.length, value, 0, value.length);
   }
 
   /**
@@ -319,7 +332,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    * @param vlength
    * @throws IOException
    */
-  private void append(final byte[] key, final int koffset, final int klength,
+  private void append(final long memstoreTS, final byte[] key, final int koffset, final int klength,
       final byte[] value, final int voffset, final int vlength)
       throws IOException {
     boolean dupKey = checkKey(key, koffset, klength);
@@ -332,6 +345,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       newBlock();
 
     // Write length of key and value and then actual key and value bytes.
+    // Additionally, we may also write down the memstoreTS.
     {
       DataOutputStream out = fsBlockWriter.getUserDataStream();
       out.writeInt(klength);
@@ -340,6 +354,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       totalValueLength += vlength;
       out.write(key, koffset, klength);
       out.write(value, voffset, vlength);
+      if (this.includeMemstoreTS) {
+        WritableUtils.writeVLong(out, memstoreTS);
+      }
     }
 
     // Are we the first key in this block?
@@ -403,6 +420,11 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         BlockType.ROOT_INDEX, false), "meta");
     fsBlockWriter.writeHeaderAndData(outputStream);
 
+    if (this.includeMemstoreTS) {
+      appendFileInfo(MAX_MEMSTORE_TS_KEY, Bytes.toBytes(maxMemstoreTS));
+      appendFileInfo(KEY_VALUE_VERSION, Bytes.toBytes(KEY_VALUE_VER_WITH_MEMSTORE_TS));
+    }
+
     // File info
     writeFileInfo(trailer, fsBlockWriter.startWriting(BlockType.FILE_INFO,
         false));
@@ -420,6 +442,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     trailer.setLastDataBlockOffset(lastDataBlockOffset);
     trailer.setComparatorClass(comparator.getClass());
     trailer.setDataIndexCount(dataBlockIndexWriter.getNumRootEntries());
+
 
     finishClose(trailer);
 

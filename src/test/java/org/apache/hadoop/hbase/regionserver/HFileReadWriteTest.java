@@ -368,7 +368,7 @@ public class HFileReadWriteTest {
       Scan scan = new Scan();
 
       // Include deletes
-      scanner = new StoreScanner(store, scan, scanners, true);
+      scanner = new StoreScanner(store, scan, scanners, Long.MAX_VALUE, true);
       ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
 
       while (scanner.next(kvs) || kvs.size() != 0) {

@@ -827,7 +827,8 @@ public class TestStoreFile extends HBaseTestCase {
     for (int i=numKVs;i>0;i--) {
       KeyValue kv = new KeyValue(b, b, b, i, b);
       kvs.add(kv);
-      totalSize += kv.getLength();
+      // kv has memstoreTS 0, which takes 1 byte to store.
+      totalSize += kv.getLength() + 1;
     }
     int blockSize = totalSize / numBlocks;
     StoreFile.Writer writer = new StoreFile.Writer(fs, path, blockSize,

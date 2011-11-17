@@ -250,6 +250,12 @@ public class TestAcidGuarantees {
       writers.add(writer);
       ctx.addThread(writer);
     }
+    // Add a flusher
+    ctx.addThread(new RepeatingTestThread(ctx) {
+      public void doAnAction() throws Exception {
+        util.flush();
+      }
+    });
 
     List<AtomicGetReader> getters = Lists.newArrayList();
     for (int i = 0; i < numGetters; i++) {

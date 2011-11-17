@@ -19,7 +19,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -34,6 +36,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * {@link HFile} reader for version 2.
@@ -47,6 +50,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * a data block.
    */
   private static final int KEY_VALUE_LEN_SIZE = 2 * Bytes.SIZEOF_INT;
+
+  private boolean includesMemstoreTS = false;
+
+  private boolean hasMemstoreTS() {
+    return includesMemstoreTS;
+  }
 
   /**
    * A "sparse lock" implementation allowing to lock on a particular block
@@ -115,6 +124,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
     lastKey = fileInfo.get(FileInfo.LASTKEY);
     avgKeyLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_KEY_LEN));
     avgValueLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_VALUE_LEN));
+    byte [] keyValueFormatVersion = fileInfo.get(HFileWriterV2.KEY_VALUE_VERSION);
+    includesMemstoreTS = (keyValueFormatVersion != null &&
+       Bytes.toInt(keyValueFormatVersion) == HFileWriterV2.KEY_VALUE_VER_WITH_MEMSTORE_TS);
 
     // Store all other load-on-open blocks for further consumption.
     HFileBlock b;
@@ -314,10 +326,17 @@ public class HFileReaderV2 extends AbstractHFileReader {
    */
   protected static class ScannerV2 extends AbstractHFileReader.Scanner {
     private HFileBlock block;
+    private HFileReaderV2 reader;
 
     public ScannerV2(HFileReaderV2 r, boolean cacheBlocks,
         final boolean pread, final boolean isCompaction) {
-      super(r, cacheBlocks, pread, isCompaction);
+      super(cacheBlocks, pread, isCompaction);
+      this.reader = r;
+    }
+
+    @Override
+    public HFileReaderV2 getReader() {
+      return reader;
     }
 
     @Override
@@ -325,8 +344,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
       if (!isSeeked())
         return null;
 
-      return new KeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
+      KeyValue ret = new KeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
           + blockBuffer.position());
+      if (this.reader.hasMemstoreTS()) {
+        ret.setMemstoreTS(currMemstoreTS);
+      }
+      return ret;
     }
 
     @Override
@@ -352,6 +375,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
       blockBuffer = null;
       currKeyLen = 0;
       currValueLen = 0;
+      currMemstoreTS = 0;
+      currMemstoreTSLen = 0;
     }
 
     /**
@@ -367,7 +392,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       try {
         blockBuffer.position(blockBuffer.position() + KEY_VALUE_LEN_SIZE
-            + currKeyLen + currValueLen);
+            + currKeyLen + currValueLen + currMemstoreTSLen);
       } catch (IllegalArgumentException e) {
         LOG.error("Current pos = " + blockBuffer.position()
             + "; currKeyLen = " + currKeyLen + "; currValLen = "
@@ -560,6 +585,16 @@ public class HFileReaderV2 extends AbstractHFileReader {
       currKeyLen = blockBuffer.getInt();
       currValueLen = blockBuffer.getInt();
       blockBuffer.reset();
+      if (this.reader.hasMemstoreTS()) {
+        try {
+          int memstoreTSOffset = blockBuffer.arrayOffset() + blockBuffer.position()
+                                  + KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen;
+          currMemstoreTS = Bytes.readVLong(blockBuffer.array(), memstoreTSOffset);
+          currMemstoreTSLen = WritableUtils.getVIntSize(currMemstoreTS);
+        } catch (Exception e) {
+          throw new RuntimeException("Error reading memstoreTS. " + e);
+        }
+      }
 
       if (currKeyLen < 0 || currValueLen < 0
           || currKeyLen > blockBuffer.limit()
@@ -587,12 +622,24 @@ public class HFileReaderV2 extends AbstractHFileReader {
     private int blockSeek(byte[] key, int offset, int length,
         boolean seekBefore) {
       int klen, vlen;
+      long memstoreTS = 0;
+      int memstoreTSLen = 0;
       int lastKeyValueSize = -1;
       do {
         blockBuffer.mark();
         klen = blockBuffer.getInt();
         vlen = blockBuffer.getInt();
         blockBuffer.reset();
+        if (this.reader.hasMemstoreTS()) {
+          try {
+            int memstoreTSOffset = blockBuffer.arrayOffset() + blockBuffer.position()
+                                  + KEY_VALUE_LEN_SIZE + klen + vlen;
+            memstoreTS = Bytes.readVLong(blockBuffer.array(), memstoreTSOffset);
+            memstoreTSLen = WritableUtils.getVIntSize(memstoreTS);
+          } catch (Exception e) {
+            throw new RuntimeException("Error reading memstoreTS. " + e);
+          }
+      }
 
         int keyOffset = blockBuffer.arrayOffset() + blockBuffer.position()
             + KEY_VALUE_LEN_SIZE;
@@ -614,6 +661,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
           }
           currKeyLen = klen;
           currValueLen = vlen;
+          if (this.reader.hasMemstoreTS()) {
+            currMemstoreTS = memstoreTS;
+            currMemstoreTSLen = memstoreTSLen;
+          }
           return 0; // indicate exact match
         }
 
@@ -625,7 +676,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         }
 
         // The size of this key/value tuple, including key/value length fields.
-        lastKeyValueSize = klen + vlen + KEY_VALUE_LEN_SIZE;
+        lastKeyValueSize = klen + vlen + memstoreTSLen + KEY_VALUE_LEN_SIZE;
         blockBuffer.position(blockBuffer.position() + lastKeyValueSize);
       } while (blockBuffer.remaining() > 0);
 

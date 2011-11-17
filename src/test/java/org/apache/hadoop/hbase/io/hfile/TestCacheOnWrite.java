@@ -179,9 +179,10 @@ public class TestCacheOnWrite {
     }
 
     LOG.info("Block count by type: " + blockCountByType);
+    String countByType = blockCountByType.toString();
     assertEquals(
-        "{DATA=1367, LEAF_INDEX=172, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=24}",
-        blockCountByType.toString());
+        "{DATA=1379, LEAF_INDEX=173, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=24}",
+        countByType);
 
     reader.close();
   }

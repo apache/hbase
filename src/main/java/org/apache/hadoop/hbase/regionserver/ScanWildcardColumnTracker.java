@@ -60,17 +60,22 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * @param offset
    * @param length
    * @param timestamp
+   * @param ignoreCount indicates if the KV needs to be excluded while counting
+   *   (used during compactions. We only count KV's that are older than all the
+   *   scanners' read points.)
    * @return The match code instance.
    */
   @Override
   public MatchCode checkColumn(byte[] bytes, int offset, int length,
-      long timestamp) throws IOException {
+      long timestamp, boolean ignoreCount) throws IOException {
     if (columnBuffer == null) {
       // first iteration.
       columnBuffer = bytes;
       columnOffset = offset;
       columnLength = length;
       currentCount = 0;
+
+      if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
 
       if (++currentCount > maxVersions) {
         return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
@@ -81,6 +86,8 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     int cmp = Bytes.compareTo(bytes, offset, length,
         columnBuffer, columnOffset, columnLength);
     if (cmp == 0) {
+      if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
+
       //If column matches, check if it is a duplicate timestamp
       if (sameAsPreviousTS(timestamp)) {
         return ScanQueryMatcher.MatchCode.SKIP;
@@ -101,6 +108,9 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
       columnOffset = offset;
       columnLength = length;
       currentCount = 0;
+
+      if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
+
       if (++currentCount > maxVersions)
         return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
       setTS(timestamp);

@@ -47,12 +47,13 @@ public interface ColumnTracker {
    * @param offset
    * @param length
    * @param timestamp
+   * @param ignoreCount -- should we keep count of this KV
    * @return The match code instance.
    * @throws IOException in case there is an internal consistency problem
    *      caused by a data corruption.
    */
   public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset,
-      int length, long ttl) throws IOException;
+      int length, long ttl, boolean ignoreCount) throws IOException;
 
   /**
    * Updates internal variables in between files
