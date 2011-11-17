@@ -189,7 +189,7 @@ public class HMaster extends Thread implements HMasterInterface,
   private Map<String, Integer> fragmentation = null;
   private RegionServerOperationQueue regionServerOperationQueue;
 
-  // True if this is the master that started the cluster.
+  /** True if this is the master that started the cluster. */
   private boolean isClusterStartup;
 
   private long masterStartupTime = Long.MAX_VALUE;
@@ -227,7 +227,7 @@ public class HMaster extends Thread implements HMasterInterface,
     // before we race to write our address to zookeeper.
     zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
         getZKWrapperName());
-    isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
+    detectClusterStartup();
 
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
@@ -305,7 +305,9 @@ public class HMaster extends Thread implements HMasterInterface,
       return false;
     }
 
+    detectClusterStartup();
     isActiveMaster = true;
+
     this.regionServerOperationQueue =
       new RegionServerOperationQueue(this.conf, this.closed);
 
@@ -345,6 +347,10 @@ public class HMaster extends Thread implements HMasterInterface,
     return true;
   }
 
+  public void detectClusterStartup() {
+    isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
+  }
+
   public long getApplyPreferredAssignmentPeriod() {
     return this.applyPreferredAssignmentPeriod;
   }
@@ -371,10 +377,6 @@ public class HMaster extends Thread implements HMasterInterface,
    */
   public boolean isClusterStartup() {
     return isClusterStartup;
-  }
-
-  public void resetClusterStartup() {
-    isClusterStartup = false;
   }
 
   public HServerAddress getHServerAddress() {
