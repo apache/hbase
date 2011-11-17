@@ -1689,6 +1689,14 @@ public class HRegionServer implements HRegionInterface,
       HMsg hmsg = new HMsg(HMsg.Type.MSG_REPORT_OPEN, regionInfo);
       zkUpdater.finishRegionOpenEvent(hmsg);
     } catch (IOException e) {
+      try {
+        // Do not report this region close to the master, as master seems to have
+        // moved on, and is not expecting this RS to host this region anymore.
+        closeRegion(regionInfo, false);
+      } catch (IOException e1) {
+        LOG.error("Failed to close region that could not be marked open " +
+          regionInfo.getRegionNameAsString(), e1);
+      }
       LOG.error("Failed to mark region " + regionInfo.getRegionNameAsString() + " as opened", e);
     }
   }
