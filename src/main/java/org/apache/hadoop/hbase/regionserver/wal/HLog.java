@@ -1308,6 +1308,28 @@ public class HLog implements Syncable {
   public static List<Path> splitLog(final Path rootDir, final Path srcDir,
     Path oldLogDir, final FileSystem fs, final Configuration conf)
   throws IOException {
+    return splitLog(rootDir, srcDir, oldLogDir, fs, conf, Long.MAX_VALUE);
+  }
+
+  /**
+   * Split up a bunch of regionserver commit log files that are no longer
+   * being written to, into new files, one per region for region to replay on
+   * startup. Delete the old log files when finished.
+   *
+   * @param rootDir qualified root directory of the HBase instance
+   * @param srcDir Directory of log files to split: e.g.
+   *                <code>${ROOTDIR}/log_HOST_PORT</code>
+   * @param oldLogDir directory where processed (split) logs will be archived to
+   * @param fs FileSystem
+   * @param conf Configuration
+   * @param maxWriteTime ignore entries with ts greater than this
+   * @throws IOException will throw if corrupted hlogs aren't tolerated
+   * @return the list of splits
+   */
+  public static List<Path> splitLog(final Path rootDir, final Path srcDir,
+    Path oldLogDir, final FileSystem fs, final Configuration conf,
+    long maxWriteTime)
+  throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Splitting logs in " + srcDir);
     try {
@@ -1328,7 +1350,7 @@ public class HLog implements Syncable {
       LOG.info("Splitting " + logfiles.length + " hlog(s) in " +
         srcDir.toString());
       status.setStatus("Performing split");
-      splits = splitLog(rootDir, srcDir, oldLogDir, logfiles, fs, conf);
+      splits = splitLog(rootDir, srcDir, oldLogDir, logfiles, fs, conf, maxWriteTime);
       try {
         FileStatus[] files = fs.listStatus(srcDir);
         for(FileStatus file : files) {
@@ -1408,12 +1430,13 @@ public class HLog implements Syncable {
    * @param logfiles the list of log files to split
    * @param fs
    * @param conf
+   * @param maxWriteTime ignore entries with ts greater than this
    * @return
    * @throws IOException
    */
   private static List<Path> splitLog(final Path rootDir, final Path srcDir,
     Path oldLogDir, final FileStatus[] logfiles, final FileSystem fs,
-    final Configuration conf)
+    final Configuration conf, long maxWriteTime)
   throws IOException {
     List<Path> processedLogs = new ArrayList<Path>();
     List<Path> corruptedLogs = new ArrayList<Path>();
@@ -1454,7 +1477,7 @@ public class HLog implements Syncable {
               ": " + logPath + ", length=" + logLength );
             try {
               recoverFileLease(fs, logPath, conf);
-              parseHLog(log, editsByRegion, fs, conf);
+              parseHLog(log, editsByRegion, fs, conf, maxWriteTime);
               processedLogs.add(logPath);
             } catch (EOFException eof) {
               // truncated files are expected if a RS crashes (see HBASE-2643)
@@ -1685,11 +1708,12 @@ public class HLog implements Syncable {
    * list of edits as values
    * @param fs the filesystem
    * @param conf the configuration
+   * @param maxWriteTime ignore entries with ts greater than this
    * @throws IOException if hlog is corrupted, or can't be open
    */
   private static void parseHLog(final FileStatus logfile,
     final Map<byte[], LinkedList<Entry>> splitLogsMap, final FileSystem fs,
-    final Configuration conf)
+    final Configuration conf, long maxWriteTime)
   throws IOException {
     // Check for possibly empty file. With appends, currently Hadoop reports a
     // zero length even if the file has been sync'd. Revisit if HDFS-376 or
@@ -1718,6 +1742,8 @@ public class HLog implements Syncable {
     try {
       Entry entry;
       while ((entry = in.next()) != null) {
+        //Ignore entries that have a ts greater than maxWriteTime
+        if (entry.getKey().getWriteTime() > maxWriteTime) continue;
         byte[] region = entry.getKey().getRegionName();
         LinkedList<Entry> queue = splitLogsMap.get(region);
         if (queue == null) {
