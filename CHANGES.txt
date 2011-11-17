@@ -873,6 +873,8 @@ Release 0.90.5 - Unreleased
                (Jonathan Hsieh)
    HBASE-4509  [hbck] Improve region map output
                (Jonathan Hsieh)
+   HBASE-4806  Fix logging message in HbaseObjectWritable
+               (Jonathan Hsieh via todd)
 
 Release 0.90.4 - August 10, 2011
 
