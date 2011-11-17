@@ -29,6 +29,7 @@ java_import org.apache.hadoop.hbase.HTableDescriptor
 java_import org.apache.hadoop.hbase.io.hfile.Compression
 java_import org.apache.hadoop.hbase.regionserver.StoreFile
 java_import org.apache.hadoop.hbase.util.Pair
+java_import org.apache.hadoop.hbase.util.RegionSplitter
 java_import org.apache.hadoop.hbase.HRegionInfo
 java_import org.apache.zookeeper.ZooKeeper
 
@@ -147,6 +148,10 @@ module Hbase
       # Start defining the table
       htd = HTableDescriptor.new(table_name)
 
+      # Parameters for pre-splitting the table
+      num_regions = nil
+      split_algo = nil
+
       # All args are columns, add them to the table definition
       # TODO: add table options support
       args.each do |arg|
@@ -154,12 +159,28 @@ module Hbase
           raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash or String type")
         end
 
-        # Add column to the table
-        htd.addFamily(hcd(arg, htd))
+        if arg.kind_of?(Hash) and (arg.has_key?(NUMREGIONS) or arg.has_key?(SPLITALGO))
+          raise(ArgumentError, "Number of regions must be specified") unless arg.has_key?(NUMREGIONS)
+          raise(ArgumentError, "Split algorithm must be specified") unless arg.has_key?(SPLITALGO)
+          raise(ArgumentError, "Number of regions must be geter than 1") unless arg[NUMREGIONS] > 1
+          num_regions = arg[NUMREGIONS]
+          split_algo = RegionSplitter.newSplitAlgoInstance(@conf, arg[SPLITALGO])
+        else
+          # Add column to the table
+          htd.addFamily(hcd(arg, htd))
+        end
       end
 
-      # Perform the create table call
-      @admin.createTable(htd)
+      if num_regions.nil?
+        # Perform the create table call
+        @admin.createTable(htd)
+      else
+        # Compute the splits for the predefined number of regions
+        splits = split_algo.split(JInteger.valueOf(num_regions))
+
+        # Perform the create table call
+        @admin.createTable(htd, splits)
+      end
     end
 
     #----------------------------------------------------------------------------------------------

@@ -55,6 +55,8 @@ module HBaseConstants
   INTERVAL = 'INTERVAL'
   CACHE = 'CACHE'
   FILTER = 'FILTER'
+  SPLITALGO = 'SPLITALGO'
+  NUMREGIONS = 'NUMREGIONS'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)

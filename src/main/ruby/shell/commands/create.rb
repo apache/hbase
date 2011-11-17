@@ -24,7 +24,7 @@ module Shell
       def help
         return <<-EOF
           Create table; pass table name, a dictionary of specifications per
-          column family, and optionally a dictionary of table configuration.
+          column family, and optionally a dictionary of split parameters.
           Dictionaries are described below in the GENERAL NOTES section.
           Examples:
 
@@ -34,6 +34,10 @@ module Shell
           hbase> create 't1', 'f1', 'f2', 'f3'
           hbase> create 't1', {NAME => 'f1', VERSIONS => 1, TTL => 2592000,
                  BLOCKCACHE => true}
+          hbase> # Optionally pre-split the table into NUMREGIONS, using
+          hbase> # SPLITALGO ("HexStringSplit", "UniformSplit" or classname)
+          hbase> create 't1', 'f1', {NUMREGIONS => 15,
+                 SPLITALGO => "HexStringSplit"}
         EOF
       end
 
