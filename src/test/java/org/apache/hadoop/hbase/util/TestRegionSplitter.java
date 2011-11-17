@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -271,28 +270,17 @@ public class TestRegionSplitter {
    * verifies that the region boundaries are the same as the expected region
    * boundaries in expectedBounds.
    *
-   * @throws Various
-   *           junit assertions
+   * @throws Various junit assertions
    */
   private void preSplitTableAndVerify(List<byte[]> expectedBounds,
       String splitClass, String tableName) throws Exception {
     final int numRegions = expectedBounds.size() - 1;
     final Configuration conf = UTIL.getConfiguration();
     conf.setInt("split.count", numRegions);
-    SplitAlgorithm splitAlgo = RegionSplitter.newSplitAlgoInstance(conf, splitClass);
+    SplitAlgorithm splitAlgo = RegionSplitter.newSplitAlgoInstance(conf,
+        splitClass);
     RegionSplitter.createPresplitTable(tableName, splitAlgo,
         new String[] { CF_NAME }, conf);
-    verifyBounds(expectedBounds, tableName);
-  }
-
-  private void rollingSplitAndVerify(String tableName, String splitClass,
-      List<byte[]> expectedBounds) throws Exception {
-    final Configuration conf = UTIL.getConfiguration();
-
-    // Set this larger than the number of splits so RegionSplitter won't block
-    conf.setInt("split.outstanding", 5);
-    SplitAlgorithm splitAlgo = RegionSplitter.newSplitAlgoInstance(conf, splitClass);
-    RegionSplitter.rollingSplit(tableName, splitAlgo, conf);
     verifyBounds(expectedBounds, tableName);
   }
 
@@ -341,16 +329,4 @@ public class TestRegionSplitter {
     return -1;
   }
 
-  /**
-   * Inserts some meaningless data into a CF so the regions can be split.
-   */
-  static void insertSomeData(String table) throws IOException {
-    HTable hTable = new HTable(table);
-    for (byte b = Byte.MIN_VALUE; b < Byte.MAX_VALUE; b++) {
-      byte[] whateverBytes = new byte[] { b };
-      Put p = new Put(whateverBytes);
-      p.add(CF_NAME.getBytes(), whateverBytes, whateverBytes);
-      hTable.put(p);
-    }
-  }
 }

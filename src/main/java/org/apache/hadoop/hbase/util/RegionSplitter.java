@@ -373,7 +373,7 @@ public class RegionSplitter {
 
     if (conf.getBoolean("split.verify", true)) {
       // NOTE: createTable is synchronous on the table, but not on the regions
-      HTable table = new HTable(tableName);
+      HTable table = new HTable(conf, tableName);
       int onlineRegions = 0;
       while (onlineRegions < splitCount) {
         onlineRegions = table.getRegionsInfo().size();
