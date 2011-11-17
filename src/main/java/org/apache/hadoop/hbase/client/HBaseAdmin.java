@@ -902,7 +902,7 @@ public class HBaseAdmin {
     // Iterate over all regions and send a compaction request to each.
     while (regionsIt.hasNext()) {
       byte[] regionName = regionsIt.next().getRegionName();
-      modifyTable(null, op, new byte[][] {regionName, columnFamily});
+      modifyTable(null, op, new Object[] {regionName, columnFamily});
     }
   }
 
@@ -946,7 +946,7 @@ public class HBaseAdmin {
     byte [] tableName = HRegionInfo.parseRegionName(tableOrRegionName)[0];
     // Perform compaction only if a valid column family was passed.
     modifyTable(null, HConstants.Modify.TABLE_COMPACT,
-        new byte[][] {tableOrRegionName, columnFamily});
+        new Object[] {tableOrRegionName, columnFamily});
   }
 
   /**
@@ -1012,7 +1012,7 @@ public class HBaseAdmin {
       return;
     }
     modifyTable(null, HConstants.Modify.TABLE_MAJOR_COMPACT,
-        new byte[][] {tableOrRegionName, columnFamily});
+        new Object[] {tableOrRegionName, columnFamily});
   }
 
   /**
@@ -1077,10 +1077,10 @@ public class HBaseAdmin {
       throw new IllegalArgumentException("Pass a table name or region name");
     }
     if (tableExists(tableNameOrRegionName)) {
-      modifyTable(tableNameOrRegionName, op, null);
+      modifyTable(tableNameOrRegionName, op, (Object[])null);
     } else {
       HRegionInfo.parseRegionName(tableNameOrRegionName); // verify format
-      modifyTable(null, op, new byte[][] {tableNameOrRegionName});
+      modifyTable(null, op, new Object[] {tableNameOrRegionName});
     }
   }
 
