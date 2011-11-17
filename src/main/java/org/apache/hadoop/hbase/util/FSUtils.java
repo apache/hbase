@@ -26,9 +26,7 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -792,46 +790,21 @@ public class FSUtils {
 
     FileStatus[] statusList = fs.globStatus(queryPath, pathFilter);
 
-    LOG.debug("Query Path: " + queryPath + " ; # list of files: " +
-        statusList.length);
-
     if (null == statusList) {
       return regionToBestLocalityRSMapping;
+    } else {
+      LOG.debug("Query Path: " + queryPath + " ; # list of files: " +
+          statusList.length);
     }
 
+    // lower the number of threads in case we have very few expected regions
+    threadPoolSize = Math.min(threadPoolSize, statusList.length);
+
     // run in multiple threads
-    int totalGoodRegionFiles = 0;
-    ThreadPoolExecutor tpe = null;
-    FSRegionScanner[] parallelTasks = null;
+    ThreadPoolExecutor tpe = new ThreadPoolExecutor(threadPoolSize,
+        threadPoolSize, 60, TimeUnit.SECONDS,
+        new ArrayBlockingQueue<Runnable>(statusList.length));
     try {
-      // lower the number of threads in case we have very few expected regions
-      int maxRegions = statusList.length;
-
-      if (maxRegions < threadPoolSize) {
-        threadPoolSize = maxRegions;
-      }
-
-      // initialize executor service
-      tpe = new ThreadPoolExecutor(threadPoolSize,
-          threadPoolSize, 60, TimeUnit.SECONDS,
-          new ArrayBlockingQueue<Runnable>(
-              threadPoolSize));
-
-      // set defaults
-      FSRegionScanner.setFileSystem(fs);
-      FSRegionScanner
-          .setRegionToBestLocalityRSMapping(regionToBestLocalityRSMapping);
-
-      // start initializing "thread pool" and threads
-      parallelTasks = new FSRegionScanner[threadPoolSize];
-      ArrayList<LinkedList<Path>> buckets = new ArrayList<LinkedList<Path>>();
-      for (int i = 0; i < threadPoolSize; ++i) {
-        // create buckets for each thread
-        LinkedList<Path> bucket = new LinkedList<Path>();
-        buckets.add(bucket);
-        parallelTasks[i] = new FSRegionScanner(bucket);
-      }
-
       // ignore all file status items that are not of interest
       for (FileStatus regionStatus : statusList) {
         if (null == regionStatus) {
@@ -847,43 +820,26 @@ public class FSUtils {
           continue;
         }
 
-        // add to respective bucket, do round-robin additions to make sure all
-        // threads get things to do; can create empty buckets in the rare case
-        // in which we end up getting less region paths than we have threads to
-        // handle them
-        buckets.get(totalGoodRegionFiles % threadPoolSize).add(regionPath);
-        ++totalGoodRegionFiles;
-      }
-
-      // start each thread in executor service
-      for (FSRegionScanner task : parallelTasks) {
-        tpe.execute(task);
+        tpe.execute(new FSRegionScanner(fs, regionPath,
+            regionToBestLocalityRSMapping));
       }
     } finally {
-      if (null != tpe && null != parallelTasks) {
-        tpe.shutdown();
-        int threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-            60 * 1000);
-        try {
-          // here we wait until TPE terminates, which is either naturally or by
-          // exceptions in the execution of the threads
-          while (!tpe.awaitTermination(threadWakeFrequency,
-              TimeUnit.MILLISECONDS)) {
-            int filesDone = 0;
-            for (FSRegionScanner rs : parallelTasks) {
-              filesDone += rs.getNumberOfFinishedRegions();
-            }
-
-            // printing out rough estimate, so as to not introduce
-            // AtomicInteger
-            LOG.info("Locality checking is underway: { Threads completed : "
-                + tpe.getCompletedTaskCount() + "/" + parallelTasks.length
-                + " , Scanned Regions : " + filesDone + "/"
-                + totalGoodRegionFiles + " }");
-          }
-        } catch (InterruptedException e) {
-          throw new IOException(e);
+      tpe.shutdown();
+      int threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+          60 * 1000);
+      try {
+        // here we wait until TPE terminates, which is either naturally or by
+        // exceptions in the execution of the threads
+        while (!tpe.awaitTermination(threadWakeFrequency,
+            TimeUnit.MILLISECONDS)) {
+          // printing out rough estimate, so as to not introduce
+          // AtomicInteger
+          LOG.info("Locality checking is underway: { Scanned Regions : "
+              + tpe.getCompletedTaskCount() + "/"
+              + tpe.getTaskCount() + " }");
         }
+      } catch (InterruptedException e) {
+        throw new IOException(e);
       }
     }
 
@@ -902,139 +858,102 @@ public class FSUtils {
 class FSRegionScanner implements Runnable {
   static private final Log LOG = LogFactory.getLog(FSRegionScanner.class);
 
-  /**
-   * The shared block count map
-   */
-  private HashMap<String, AtomicInteger> blockCountMap;
+  private Path regionPath;
 
   /**
    * The file system used
    */
-  static private FileSystem fs;
-
-  static void setFileSystem(FileSystem fs) {
-    FSRegionScanner.fs = fs;
-  }
+  private FileSystem fs;
 
   /**
    * The locality mapping returned by the above getRegionLocalityMappingFromFS
    * method
    */
-  static private MapWritable regionToBestLocalityRSMapping;
+  private MapWritable regionToBestLocalityRSMapping;
 
-  static void setRegionToBestLocalityRSMapping(
+  FSRegionScanner(FileSystem fs, Path regionPath,
       MapWritable regionToBestLocalityRSMapping) {
-    FSRegionScanner.regionToBestLocalityRSMapping =
-      regionToBestLocalityRSMapping;
-  }
-
-  /**
-   * The respective paths to analyze for each thread
-   */
-  private LinkedList<Path> paths;
-
-  /**
-   * Number of finished blocks by now
-   */
-  private int numerOfFinishedRegions;
-
-  public int getNumberOfFinishedRegions() {
-    return numerOfFinishedRegions;
-  }
-
-  FSRegionScanner(LinkedList<Path> paths) {
-    this.paths = paths;
-    this.numerOfFinishedRegions = 0;
-    this.blockCountMap = new HashMap<String, AtomicInteger>();
+    this.fs = fs;
+    this.regionPath = regionPath;
+    this.regionToBestLocalityRSMapping = regionToBestLocalityRSMapping;
   }
 
   @Override
   public void run() {
     try {
-      for (Path regionPath : paths) {
-        try {
-          // empty the map for each region
-          blockCountMap.clear();
+      // empty the map for each region
+      Map<String, AtomicInteger> blockCountMap = new HashMap<String, AtomicInteger>();
 
-          if (null == regionPath) {
-            continue;
-          }
-          //get table name
-          String tableName = regionPath.getParent().getName();
-          int totalBlkCount = 0;
+      //get table name
+      String tableName = regionPath.getParent().getName();
+      int totalBlkCount = 0;
 
-          // ignore null
-          FileStatus[] cfList = fs.listStatus(regionPath);
-          if (null == cfList) {
-            continue;
-          }
+      // ignore null
+      FileStatus[] cfList = fs.listStatus(regionPath);
+      if (null == cfList) {
+        return;
+      }
 
-          // for each cf, get all the blocks information
-          for (FileStatus cfStatus : cfList) {
-            if (!cfStatus.isDir()) {
-              // skip because this is not a CF directory
-              continue;
-            }
-            FileStatus[] storeFileLists = fs.listStatus(cfStatus.getPath());
-            if (null == storeFileLists) {
-              continue;
-            }
-
-            for (FileStatus storeFile : storeFileLists) {
-              BlockLocation[] blkLocations =
-                fs.getFileBlockLocations(storeFile, 0, storeFile.getLen());
-              if (null == blkLocations) {
-                continue;
-              }
-
-              totalBlkCount += blkLocations.length;
-              for(BlockLocation blk: blkLocations) {
-                for (String host: blk.getHosts()) {
-                  AtomicInteger count = blockCountMap.get(host);
-                  if (count == null) {
-                    count = new AtomicInteger(0);
-                    blockCountMap.put(host, count);
-                  }
-                 count.incrementAndGet();
-                }
-              }
-            }
-          }
-
-          int largestBlkCount = 0;
-          String hostToRun = null;
-          for (String host: blockCountMap.keySet()) {
-            int tmp = blockCountMap.get(host).get();
-            if (tmp > largestBlkCount) {
-              largestBlkCount = tmp;
-              hostToRun = host;
-            }
-          }
-
-          // empty regions could make this null
-          if (null == hostToRun) {
-            continue;
-          }
-
-          if (hostToRun.endsWith(".")) {
-            hostToRun = hostToRun.substring(0, hostToRun.length()-1);
-          }
-          String name = tableName + ":" + regionPath.getName();
-          synchronized (regionToBestLocalityRSMapping) {
-            regionToBestLocalityRSMapping.put(new Text(name), new Text(hostToRun));
-          }
-          this.numerOfFinishedRegions++;
-        } catch (IOException e) {
-          LOG.warn("Problem scanning file system", e);
-          continue;
-        } catch (RuntimeException e) {
-          LOG.warn("Problem scanning file system", e);
+      // for each cf, get all the blocks information
+      for (FileStatus cfStatus : cfList) {
+        if (!cfStatus.isDir()) {
+          // skip because this is not a CF directory
           continue;
         }
+        FileStatus[] storeFileLists = fs.listStatus(cfStatus.getPath());
+        if (null == storeFileLists) {
+          continue;
+        }
+
+        for (FileStatus storeFile : storeFileLists) {
+          BlockLocation[] blkLocations =
+            fs.getFileBlockLocations(storeFile, 0, storeFile.getLen());
+          if (null == blkLocations) {
+            continue;
+          }
+
+          totalBlkCount += blkLocations.length;
+          for(BlockLocation blk: blkLocations) {
+            for (String host: blk.getHosts()) {
+              AtomicInteger count = blockCountMap.get(host);
+              if (count == null) {
+                count = new AtomicInteger(0);
+                blockCountMap.put(host, count);
+              }
+             count.incrementAndGet();
+            }
+          }
+        }
       }
-    } finally {
-      // sanity check
-      assert this.numerOfFinishedRegions <= this.paths.size();
+
+      int largestBlkCount = 0;
+      String hostToRun = null;
+      for (Map.Entry<String, AtomicInteger> entry : blockCountMap.entrySet()) {
+        String host = entry.getKey();
+
+        int tmp = entry.getValue().get();
+        if (tmp > largestBlkCount) {
+          largestBlkCount = tmp;
+          hostToRun = host;
+        }
+      }
+
+      // empty regions could make this null
+      if (null == hostToRun) {
+        return;
+      }
+
+      if (hostToRun.endsWith(".")) {
+        hostToRun = hostToRun.substring(0, hostToRun.length()-1);
+      }
+      String name = tableName + ":" + regionPath.getName();
+      synchronized (regionToBestLocalityRSMapping) {
+        regionToBestLocalityRSMapping.put(new Text(name), new Text(hostToRun));
+      }
+    } catch (IOException e) {
+      LOG.warn("Problem scanning file system", e);
+    } catch (RuntimeException e) {
+      LOG.warn("Problem scanning file system", e);
     }
   }
 }
