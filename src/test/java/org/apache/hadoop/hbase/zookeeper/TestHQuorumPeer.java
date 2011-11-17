@@ -42,7 +42,7 @@ public class TestHQuorumPeer extends HBaseTestCase {
   protected void setUp() throws Exception {
     super.setUp();
     String userName = System.getProperty("user.name");
-    dataDir = new Path("/tmp/hbase-" + userName, "zookeeper");
+    dataDir = new Path(conf.get("hbase.tmp.dir"), "zookeeper");
     if (fs.exists(dataDir)) {
       if (!fs.isDirectory(dataDir)) {
         fail();
