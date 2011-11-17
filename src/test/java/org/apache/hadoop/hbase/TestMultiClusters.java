@@ -57,6 +57,8 @@ public class TestMultiClusters {
 
     Configuration conf2 = HBaseConfiguration.create();
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
+    conf2.set("hbase.zookeeper.property.clientPort",
+        conf1.get("hbase.zookeeper.property.clientPort"));
     HBaseTestingUtility utility2 = new HBaseTestingUtility(conf2);
     // They share the same ensemble, but homed differently
     utility2.setZkCluster(utility1.getZkCluster());
