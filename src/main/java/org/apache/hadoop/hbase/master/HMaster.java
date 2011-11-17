@@ -954,6 +954,10 @@ public class HMaster extends Thread implements HMasterInterface,
     List<String> serverNames = new ArrayList<String>();
     try {
       do {
+        if (this.clusterShutdownRequested.get()) {
+          LOG.warn("Cluster is shutting down, aborting log splitting");
+          return;
+        }
         try {
           Path logsDirPath =
               new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
