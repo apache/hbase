@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Random;
 import java.util.UUID;
 
 import org.apache.commons.logging.Log;
@@ -63,14 +64,14 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.zookeeper.ZooKeeper;
 
 import com.google.common.base.Preconditions;
 
@@ -110,6 +111,13 @@ public class HBaseTestingUtility {
       { Compression.Algorithm.NONE },
       { Compression.Algorithm.GZ }
     });
+
+  /** This is for unit tests parameterized with a single boolean. */
+  public static final List<Object[]> BOOLEAN_PARAMETERIZED =
+      Arrays.asList(new Object[][] {
+          { new Boolean(false) },
+          { new Boolean(true) }
+      });
 
   /** Compression algorithms to use in testing */
   public static final Compression.Algorithm[] COMPRESSION_ALGORITHMS =
@@ -407,6 +415,7 @@ public class HBaseTestingUtility {
       }
     }
     LOG.info("Minicluster is down");
+    clusterTestBuildDir = null;
   }
 
   /**
@@ -1136,4 +1145,82 @@ public class HBaseTestingUtility {
     }
   }
 
+  /** Creates a random table with the given parameters */
+  public HTable createRandomTable(String tableName,
+      final Collection<String> families,
+      final int maxVersions,
+      final int numColsPerRow,
+      final int numFlushes,
+      final int numRegions,
+      final int numRowsPerFlush)
+      throws IOException, InterruptedException {
+
+    LOG.info("\n\nCreating random table " + tableName + " with " + numRegions +
+        " regions, " + numFlushes + " storefiles per region, " +
+        numRowsPerFlush + " rows per flush, maxVersions=" +  maxVersions +
+        "\n");
+
+    final Random rand = new Random(tableName.hashCode() * 17L + 12938197137L);
+    final int numCF = families.size();
+    final byte[][] cfBytes = new byte[numCF][];
+    final byte[] tableNameBytes = Bytes.toBytes(tableName);
+
+    {
+      int cfIndex = 0;
+      for (String cf : families) {
+        cfBytes[cfIndex++] = Bytes.toBytes(cf);
+      }
+    }
+
+    final int actualStartKey = 0;
+    final int actualEndKey = Integer.MAX_VALUE;
+    final int keysPerRegion = (actualEndKey - actualStartKey) / numRegions;
+    final int splitStartKey = actualStartKey + keysPerRegion;
+    final int splitEndKey = actualEndKey - keysPerRegion;
+    final String keyFormat = "%08x";
+    final HTable table = createTable(tableNameBytes, cfBytes,
+        maxVersions,
+        Bytes.toBytes(String.format(keyFormat, splitStartKey)),
+        Bytes.toBytes(String.format(keyFormat, splitEndKey)),
+        numRegions);
+    hbaseCluster.flushcache(HConstants.META_TABLE_NAME);
+
+    for (int iFlush = 0; iFlush < numFlushes; ++iFlush) {
+      for (int iRow = 0; iRow < numRowsPerFlush; ++iRow) {
+        final byte[] row = Bytes.toBytes(String.format(keyFormat,
+            actualStartKey + rand.nextInt(actualEndKey - actualStartKey)));
+
+        Put put = new Put(row);
+        Delete del = new Delete(row);
+        for (int iCol = 0; iCol < numColsPerRow; ++iCol) {
+          final byte[] cf = cfBytes[rand.nextInt(numCF)];
+          final long ts = rand.nextInt();
+          final byte[] qual = Bytes.toBytes("col" + iCol);
+          if (rand.nextBoolean()) {
+            final byte[] value = Bytes.toBytes("value_for_row_" + iRow +
+                "_cf_" + Bytes.toStringBinary(cf) + "_col_" + iCol + "_ts_" +
+                ts + "_random_" + rand.nextLong());
+            put.add(cf, qual, ts, value);
+          } else if (rand.nextDouble() < 0.8) {
+            del.deleteColumn(cf, qual, ts);
+          } else {
+            del.deleteColumns(cf, qual, ts);
+          }
+        }
+
+        if (!put.isEmpty()) {
+          table.put(put);
+        }
+
+        if (!del.isEmpty()) {
+          table.delete(del);
+        }
+      }
+      LOG.info("Initiating flush #" + iFlush + " for table " + tableName);
+      table.flushCommits();
+      hbaseCluster.flushcache(tableNameBytes);
+    }
+
+    return table;
+  }
 }

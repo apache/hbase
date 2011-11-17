@@ -105,7 +105,6 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
@@ -126,7 +125,6 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.zookeeper.Watcher.Event.KeeperState;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
@@ -221,6 +219,8 @@ public class HRegionServer implements HRegionInterface,
   private final LinkedList<byte[]> reservedSpace = new LinkedList<byte []>();
 
   private RegionServerMetrics metrics;
+
+  @SuppressWarnings("unused")
   private RegionServerDynamicMetrics dynamicMetrics;
 
   // Compactions
@@ -260,6 +260,7 @@ public class HRegionServer implements HRegionInterface,
   private final HServerAddress address;
 
   // The main region server thread.
+  @SuppressWarnings("unused")
   private Thread regionServerThread;
 
   private final String machineName;
@@ -405,7 +406,6 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public void process(WatchedEvent event) {
     EventType type = event.getType();
-    KeeperState state = event.getState();
 
     // Ignore events if we're shutting down.
     if (this.stopRequested.get()) {
@@ -1048,24 +1048,6 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
-  /**
-   * Help function for metrics() that increments a map value if it exists.
-   *
-   * @param map
-   *          The map to work with
-   * @param key
-   *          the string key
-   * @param val
-   *          the value to add or set the map key to
-   */
-  protected void incrMap(Map<String, MutableDouble> map, String key, double val) {
-    if (map.get(key) != null) {
-      map.get(key).add(val);
-    } else {
-      map.put(key, new MutableDouble(val));
-    }
-  }
-
   protected void metrics() {
     this.metrics.regions.set(this.onlineRegions.size());
     this.metrics.incrementRequests(this.requestCount.get());
@@ -1079,19 +1061,13 @@ public class HRegionServer implements HRegionInterface,
     long totalStaticIndexSize = 0;
     long totalStaticBloomSize = 0;
 
-    long tmpfiles;
-    long tmpindex;
-    long tmpfilesize;
-    long tmpbloomsize;
-    long tmpstaticsize;
-    SchemaMetrics schemaMetrics;
-
     // Note that this is a map of Doubles instead of Longs. This is because we
     // do effective integer division, which would perhaps truncate more than it
     // should because we do it only on one part of our sum at a time. Rather
     // than dividing at the end, where it is difficult to know the proper
     // factor, everything is exact then truncated.
-    Map<String, MutableDouble> tempVals = new HashMap<String, MutableDouble>();
+    final Map<String, MutableDouble> tempVals =
+        new HashMap<String, MutableDouble>();
 
     synchronized (this.onlineRegions) {
       for (Map.Entry<Integer, HRegion> e: this.onlineRegions.entrySet()) {
@@ -1100,48 +1076,60 @@ public class HRegionServer implements HRegionInterface,
         synchronized (r.stores) {
           stores += r.stores.size();
           for(Map.Entry<byte [], Store> ee: r.stores.entrySet()) {
-            Store store = ee.getValue();
-            tmpfiles = store.getStorefilesCount();
-            tmpindex = store.getStorefilesIndexSize();
-            tmpfilesize = store.getStorefilesSize();
-            tmpbloomsize = store.getTotalStaticBloomSize();
-            tmpstaticsize = store.getTotalStaticIndexSize();
+            final Store store = ee.getValue();
+            final SchemaMetrics schemaMetrics = store.getSchemaMetrics();
 
-            schemaMetrics = store.getSchemaMetrics();
-            schemaMetrics.updateStoreMetric(
-                StoreMetricType.STORE_FILE_COUNT,
-                tmpfiles);
+            {
+              long tmpStorefiles = store.getStorefilesCount();
+              schemaMetrics.accumulateStoreMetric(tempVals,
+                  StoreMetricType.STORE_FILE_COUNT, tmpStorefiles);
+              storefiles += tmpStorefiles;
+            }
 
-            schemaMetrics.updateStoreMetric(
-                StoreMetricType.STORE_FILE_INDEX_SIZE,
-                (long) (tmpindex / (1024.0 * 1024)));
 
-            schemaMetrics.updateStoreMetric(
-                StoreMetricType.STORE_FILE_SIZE_MB,
-                (long) (tmpfilesize / (1024.0 * 1024)));
+            {
+              long tmpStorefileIndexSize = store.getStorefilesIndexSize();
+              schemaMetrics.accumulateStoreMetric(tempVals,
+                  StoreMetricType.STORE_FILE_INDEX_SIZE,
+                  (long) (tmpStorefileIndexSize / (1024.0 * 1024)));
+              storefileIndexSize += tmpStorefileIndexSize;
+            }
 
-            schemaMetrics.updateStoreMetric(
-                StoreMetricType.STATIC_BLOOM_SIZE_KB,
-                (long)(tmpbloomsize / 1024.0));
+            {
+              long tmpStorefilesSize = store.getStorefilesSize();
+              schemaMetrics.accumulateStoreMetric(tempVals,
+                  StoreMetricType.STORE_FILE_SIZE_MB,
+                  (long) (tmpStorefilesSize / (1024.0 * 1024)));
+            }
 
-            schemaMetrics.updateStoreMetric(StoreMetricType.MEMSTORE_SIZE_MB,
-                (long)(store.getMemStoreSize() / (1024.0 * 1024)));
+            {
+              long tmpStaticBloomSize = store.getTotalStaticBloomSize();
+              schemaMetrics.accumulateStoreMetric(tempVals,
+                  StoreMetricType.STATIC_BLOOM_SIZE_KB,
+                  (long) (tmpStaticBloomSize / 1024.0));
+              totalStaticBloomSize += tmpStaticBloomSize;
+            }
 
-            schemaMetrics.updateStoreMetric(
-                StoreMetricType.STATIC_INDEX_SIZE_KB,
-                (long)(tmpstaticsize / 1024.0));
+            {
+              long tmpStaticIndexSize = store.getTotalStaticIndexSize();
+              schemaMetrics.accumulateStoreMetric(tempVals,
+                  StoreMetricType.STATIC_INDEX_SIZE_KB,
+                  (long) (tmpStaticIndexSize / 1024.0));
+              totalStaticIndexSize += tmpStaticIndexSize;
+            }
 
-            storefiles += tmpfiles;
-            storefileIndexSize += tmpindex;
-            totalStaticIndexSize += tmpstaticsize;
-            totalStaticBloomSize += tmpbloomsize;
+            schemaMetrics.accumulateStoreMetric(tempVals,
+                StoreMetricType.MEMSTORE_SIZE_MB,
+                (long) (store.getMemStoreSize() / (1024.0 * 1024)));
           }
         }
       }
     }
+
     for (Entry<String, MutableDouble> e : tempVals.entrySet()) {
       HRegion.setNumericMetric(e.getKey(), e.getValue().longValue());
     }
+
     this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);
     this.metrics.memstoreSizeMB.set((int)(memstoreSize/(1024*1024)));

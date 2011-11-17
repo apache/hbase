@@ -33,9 +33,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang.mutable.MutableDouble;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -96,11 +98,11 @@ public class SchemaMetrics {
   private static final Log LOG = LogFactory.getLog(SchemaMetrics.class);
 
   public static enum BlockMetricType {
-    // Metric configuration: compactionAware | timeVarying
-    READ_TIME("Read",                   true,  true),
-    READ_COUNT("BlockReadCnt",          true,  false),
-    CACHE_HIT("BlockReadCacheHitCnt",   true,  false),
-    CACHE_MISS("BlockReadCacheMissCnt", true,  false),
+    // Metric configuration: compactionAware, timeVarying
+    READ_TIME("Read",                   true, true),
+    READ_COUNT("BlockReadCnt",          true, false),
+    CACHE_HIT("BlockReadCacheHitCnt",   true, false),
+    CACHE_MISS("BlockReadCacheMissCnt", true, false),
 
     CACHE_SIZE("blockCacheSize",        false, false),
     CACHED("blockCacheNumCached",       false, false),
@@ -363,13 +365,30 @@ public class SchemaMetrics {
   }
 
   /**
-   * Update the store metric to a certain value.
-   * @param storeMetricType the store metric to update
-   * @param value the value to update the metric to
+   * Used to accumulate store metrics across multiple regions in a region
+   * server.  These metrics are not "persistent", i.e. we keep overriding them
+   * on every update instead of incrementing, so we need to accumulate them in
+   * a temporary map before pushing them to the global metric collection.
+   * @param tmpMap a temporary map for accumulating store metrics
+   * @param storeMetricType the store metric type to increment
+   * @param val the value to add to the metric
    */
-  public void updateStoreMetric(StoreMetricType storeMetricType, long value) {
-    HRegion.setNumericMetric(storeMetricNames[storeMetricType.ordinal()],
-        value);
+  public void accumulateStoreMetric(final Map<String, MutableDouble> tmpMap,
+      StoreMetricType storeMetricType, double val) {
+    final String key = getStoreMetricName(storeMetricType);
+    if (tmpMap.get(key) != null) {
+      tmpMap.get(key).add(val);
+    } else {
+      tmpMap.put(key, new MutableDouble(val));
+    }
+
+    if (this != ALL_SCHEMA_METRICS) {
+      ALL_SCHEMA_METRICS.accumulateStoreMetric(tmpMap, storeMetricType, val);
+    }
+  }
+
+  public String getStoreMetricName(StoreMetricType storeMetricType) {
+    return storeMetricNames[storeMetricType.ordinal()];
   }
 
   /**
@@ -564,17 +583,33 @@ public class SchemaMetrics {
 
   // Methods used in testing
 
-  private static final String WORD_AND_DOT_RE_STR = "[^.]+\\.";
+  private static final String regexEscape(String s) {
+    return s.replace(".", "\\.");
+  }
+
+  /**
+   * Assume that table names used in tests don't contain dots, except for the
+   * META table.
+   */
+  private static final String WORD_AND_DOT_RE_STR = "([^.]+|" +
+      regexEscape(Bytes.toString(HConstants.META_TABLE_NAME)) +
+      ")\\.";
+
+  /** "tab.<table_name>." */
   private static final String TABLE_NAME_RE_STR =
-      "\\b" + TABLE_PREFIX.replace(".", "\\.") + WORD_AND_DOT_RE_STR;
+      "\\b" + regexEscape(TABLE_PREFIX) + WORD_AND_DOT_RE_STR;
+
+  /** "cf.<cf_name>." */
   private static final String CF_NAME_RE_STR =
-      "\\b" + CF_PREFIX.replace(".", "\\.") + WORD_AND_DOT_RE_STR;
-  private static final Pattern CF_NAME_RE = Pattern.compile(
-      CF_NAME_RE_STR);
+      "\\b" + regexEscape(CF_PREFIX) + WORD_AND_DOT_RE_STR;
+  private static final Pattern CF_NAME_RE = Pattern.compile(CF_NAME_RE_STR);
+
+  /** "tab.<table_name>.cf.<cf_name>." */
   private static final Pattern TABLE_AND_CF_NAME_RE = Pattern.compile(
       TABLE_NAME_RE_STR + CF_NAME_RE_STR);
+
   private static final Pattern BLOCK_CATEGORY_RE = Pattern.compile(
-      "\\b" + BLOCK_TYPE_PREFIX.replace(".", "\\.") + "[^.]+\\." +
+      "\\b" + regexEscape(BLOCK_TYPE_PREFIX) + "[^.]+\\." +
       // Also remove the special-case block type marker for meta blocks
       "|" + META_BLOCK_CATEGORY_STR + "(?=" +
       BlockMetricType.BLOCK_METRIC_TYPE_RE + ")");
@@ -599,7 +634,7 @@ public class SchemaMetrics {
       for (boolean isCompaction : BOOL_VALUES) {
         for (BlockMetricType metricType : BlockMetricType.values()) {
           int i = getBlockMetricIndex(blockCategory, isCompaction, metricType);
-          System.err.println("blockCategory=" + blockCategory + ", "
+          LOG.debug("blockCategory=" + blockCategory + ", "
               + "metricType=" + metricType + ", isCompaction=" + isCompaction
               + ", metricName=" + blockMetricNames[i]);
         }
@@ -702,24 +737,30 @@ public class SchemaMetrics {
         final long oldValue = getLong(oldMetrics, metricName);
         final long newValue = getLong(newMetrics, metricName);
         final long delta = newValue - oldValue;
-        if (oldValue != newValue) {
-          // Debug output for the unit test
-          System.err.println("Metric=" + metricName + ", delta=" + delta);
-        }
 
-        if (cfm != ALL_SCHEMA_METRICS) {
-          // Re-calculate values of metrics with no column family (or CF/table)
-          // specified based on all metrics with CF (or CF/table) specified.
-          final String aggregateMetricName =
-              cfTableMetricRE.matcher(metricName).replaceAll("");
-          putLong(allCfDeltas, aggregateMetricName,
-              getLong(allCfDeltas, aggregateMetricName) + delta);
+        // Re-calculate values of metrics with no column family (or CF/table)
+        // specified based on all metrics with CF (or CF/table) specified.
+        if (delta != 0) {
+          if (cfm != ALL_SCHEMA_METRICS) {
+            final String aggregateMetricName =
+                cfTableMetricRE.matcher(metricName).replaceAll("");
+            if (!aggregateMetricName.equals(metricName)) {
+              LOG.debug("Counting " + delta + " units of " + metricName
+                  + " towards " + aggregateMetricName);
+
+              putLong(allCfDeltas, aggregateMetricName,
+                  getLong(allCfDeltas, aggregateMetricName) + delta);
+            }
+          } else {
+            LOG.debug("Metric=" + metricName + ", delta=" + delta);
+          }
         }
 
         Matcher matcher = BLOCK_CATEGORY_RE.matcher(metricName);
         if (matcher.find()) {
            // Only process per-block-category metrics
           String metricNoBlockCategory = matcher.replaceAll("");
+
           putLong(allBlockCategoryDeltas, metricNoBlockCategory,
               getLong(allBlockCategoryDeltas, metricNoBlockCategory) + delta);
         }
@@ -734,7 +775,7 @@ public class SchemaMetrics {
         if (errors.length() > 0)
           errors.append("\n");
         errors.append("The all-CF metric " + key + " changed by "
-            + actual + " but the aggregation of per-column-family metrics "
+            + actual + " but the aggregation of per-CF/table metrics "
             + "yields " + expected);
       }
     }

@@ -183,8 +183,6 @@ public class HRegion implements HeapSize { // , Writable{
   final Path regiondir;
   KeyValue.KVComparator comparator;
 
-  private Pair<Long,Long> lastCompactInfo = null;
-
   /*
    * Data structure of write state flags used coordinating flushes,
    * compactions and closes.

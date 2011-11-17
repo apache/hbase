@@ -20,7 +20,6 @@
 
 package org.apache.hadoop.hbase.regionserver.metrics;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -28,6 +27,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
@@ -59,10 +59,7 @@ public class TestSchemaMetrics {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> params = new ArrayList<Object[]>();
-    params.add(new Object[] { new Boolean(false) });
-    params.add(new Object[] { new Boolean(true) });
-    return params;
+    return HBaseTestingUtility.BOOLEAN_PARAMETERIZED;
   }
 
   public TestSchemaMetrics(boolean useTableName) {
