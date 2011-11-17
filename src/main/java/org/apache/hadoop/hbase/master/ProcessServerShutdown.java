@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -37,7 +36,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.RegionManager.RegionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -51,11 +49,17 @@ class ProcessServerShutdown extends RegionServerOperation {
   private final String deadServer;
   private boolean isRootServer;
   private List<MetaRegion> metaRegions;
-
-  private Path rsLogDir;
-  private boolean isSplitFinished;
   private boolean rootRescanned;
   private HServerAddress deadServerAddress;
+
+  public enum LogSplitResult {
+    NOT_RUNNING,
+    RUNNING,
+    SUCCESS,
+    FAILED
+  };
+
+  private volatile LogSplitResult logSplitResult = LogSplitResult.NOT_RUNNING;
 
   private static class ToDoEntry {
     boolean regionOffline;
@@ -75,11 +79,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     super(master);
     this.deadServer = serverInfo.getServerName();
     this.deadServerAddress = serverInfo.getServerAddress();
-    this.isSplitFinished = false;
     this.rootRescanned = false;
-    this.rsLogDir =
-      new Path(master.getRootDir(), HLog.getHLogDirectoryName(serverInfo));
-
     // check to see if I am responsible for either ROOT or any of the META tables.
 
     // TODO Why do we do this now instead of at processing time?
@@ -282,17 +282,63 @@ class ProcessServerShutdown extends RegionServerOperation {
     }
   }
 
+  /**
+   * Start a new thread to split the log for the dead server.
+   * @param deadServer
+   */
+  public void startSplitDeadServerLog(final String deadServer) {
+    this.logSplitResult = LogSplitResult.RUNNING;
+    this.master.getLogSplitThreadPool().submit(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          master.splitLog(deadServer);
+          logSplitResult = LogSplitResult.SUCCESS;
+        } catch (Exception e) {
+          LOG.error(
+              "Exception when spliting log for dead server " + deadServer, e);
+          logSplitResult = LogSplitResult.FAILED;
+        }
+      }
+    });
+  }
+
   @Override
   protected boolean process() throws IOException {
     LOG.info("Process shutdown of server " + this.deadServer +
-      ": logSplit: " + isSplitFinished + ", rootRescanned: " + rootRescanned +
+      ": logSplit: " + logSplitResult + ", rootRescanned: " + rootRescanned +
       ", numberOfMetaRegions: " + master.getRegionManager().numMetaRegions() +
       ", onlineMetaRegions.size(): " +
       master.getRegionManager().numOnlineMetaRegions());
-    if (!isSplitFinished) {
-      this.master.splitLog(deadServer);
-      isSplitFinished = true;
+
+    switch (this.logSplitResult) {
+    case NOT_RUNNING:
+      LOG.info("Start to split log for dead server " + deadServer);
+      startSplitDeadServerLog(deadServer);
+      this.requeue();
+      return false;
+
+    case RUNNING:
+      LOG.debug("Splitting log for dead server " + deadServer
+          + " and requeue the region server shutdown operation to delay queue");
+      this.requeue();
+      return false;
+
+    case SUCCESS:
+      LOG.info("Succeeded in splitting log for dead server " + deadServer);
+      break;
+
+    case FAILED:
+      LOG.warn("Failed to split log for dead server " + deadServer
+          + " and requeue the region server shutdown operation to delay queue");
+      this.requeue();
+      return false;
+
+    default:
+      throw new RuntimeException("Invalid split log result: "
+          + this.logSplitResult);
     }
+
     LOG.info("Log split complete, meta reassignment and scanning:");
     if (this.isRootServer) {
       LOG.info("ProcessServerShutdown reassigning ROOT region");
@@ -363,5 +409,13 @@ class ProcessServerShutdown extends RegionServerOperation {
   @Override
   protected int getPriority() {
     return 2; // high but not highest priority
+  }
+
+  /**
+   * For test purpose
+   * @return logSplitResult
+   */
+  public LogSplitResult getLogSplitResult() {
+    return this.logSplitResult;
   }
 }

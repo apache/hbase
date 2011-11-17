@@ -37,6 +37,10 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
@@ -204,6 +208,8 @@ public class HMaster extends Thread implements HMasterInterface,
   /** Flag set after we become the active master (used for testing). */
   private volatile boolean isActiveMaster = false;
 
+  public ThreadPoolExecutor logSplitThreadPool;
+
   /**
    * Constructor
    * @param conf configuration
@@ -291,6 +297,27 @@ public class HMaster extends Thread implements HMasterInterface,
         throw new IOException("Interrupted waiting for master address");
       }
     }
+
+    // initilize the thread pool for log splitting.
+    int maxSplitLogThread = conf
+        .getInt("hbase.master.splitLogThread.max", 1000);
+    // Unfortunately Executors.newCachedThreadPool does not allow us to
+    // set the maximum size of the pool, so we have to do it ourselves.
+    logSplitThreadPool = new ThreadPoolExecutor(maxSplitLogThread,
+        maxSplitLogThread, 30L, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<Runnable>(),
+        new ThreadFactory() {
+          private int count = 1;
+
+          public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "LogSplittingThread" + "-" + count++);
+            if (!t.isDaemon())
+              t.setDaemon(true);
+            return t;
+          }
+        });
+    // allow the core pool threads timeout and terminate
+    logSplitThreadPool.allowCoreThreadTimeOut(true);
   }
 
   /**
@@ -349,6 +376,10 @@ public class HMaster extends Thread implements HMasterInterface,
 
   public void detectClusterStartup() {
     isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
+  }
+
+  public ThreadPoolExecutor getLogSplitThreadPool() {
+    return this.logSplitThreadPool;
   }
 
   public long getApplyPreferredAssignmentPeriod() {
