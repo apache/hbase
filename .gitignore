@@ -4,6 +4,7 @@
 /.project
 /.settings
 /build
+/lib/native/Linux-amd64-64/libgpl*
 /.idea/
 /logs
 /target
