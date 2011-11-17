@@ -1777,7 +1777,7 @@ public class HMaster extends Thread implements HMasterInterface,
   /*
    * Version of master that will shutdown the passed zk cluster on its way out.
    */
-  static class LocalHMaster extends HMaster {
+  public static class LocalHMaster extends HMaster {
     private MiniZooKeeperCluster zkcluster = null;
 
     public LocalHMaster(Configuration conf) throws IOException {
