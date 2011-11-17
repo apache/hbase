@@ -129,6 +129,7 @@ public class HLog implements Syncable {
   static final Log LOG = LogFactory.getLog(HLog.class);
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
   static final byte [] METAROW = Bytes.toBytes("METAROW");
+  public static final boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
 
   /*
    * Name of directory that holds recovered edits written by the wal log
@@ -1429,7 +1430,8 @@ public class HLog implements Syncable {
       //TODO make a note on the conf rename and update hbase-site.xml if needed
       int logFilesPerStep = conf.getInt("hbase.hlog.split.batch.size", 3);
       boolean skipErrors =
-        conf.getBoolean("hbase.hlog.split.skip.errors", false);
+        conf.getBoolean("hbase.hlog.split.skip.errors",
+            SPLIT_SKIP_ERRORS_DEFAULT);
 
       lastSplitSize = 0;
 

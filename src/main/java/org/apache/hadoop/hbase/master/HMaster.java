@@ -892,39 +892,55 @@ public class HMaster extends Thread implements HMasterInterface,
    * ad active region server.
    */
   private void splitLogAfterStartup() {
+    boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
+        HLog.SPLIT_SKIP_ERRORS_DEFAULT);
+    List<String> serverNames = new ArrayList<String>();
     try {
-      Path logsDirPath =
-          new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
-      try {
-        if (!this.fs.exists(logsDirPath)) return;
-      } catch (IOException e) {
-        throw new RuntimeException("Could exists for " + logsDirPath, e);
-      }
-      FileStatus[] logFolders;
-      try {
-        logFolders = this.fs.listStatus(logsDirPath);
-      } catch (IOException e) {
-        throw new RuntimeException("Failed listing " + logsDirPath.toString(), e);
-      }
-      if (logFolders == null || logFolders.length == 0) {
-        LOG.debug("No log files to split, proceeding...");
-        return;
-      }
-      List<String> serverNames = new ArrayList<String>();
-      for (FileStatus status : logFolders) {
-        Path logDir = status.getPath();
-        String serverName = logDir.getName();
-        LOG.info("Found log folder : " + serverName);
-        if (this.serverManager.getServerInfo(serverName) == null) {
-          LOG.info("Log folder " + status.getPath() + " doesn't belong " +
-              "to a known region server, splitting");
-          serverNames.add(serverName);
-        } else {
-          LOG.info("Log folder " + status.getPath() +
-              " belongs to an existing region server");
+      do {
+        try {
+          Path logsDirPath =
+              new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
+          if (!this.fs.exists(logsDirPath)) return;
+          FileStatus[] logFolders = this.fs.listStatus(logsDirPath);
+          if (logFolders == null || logFolders.length == 0) {
+            LOG.debug("No log files to split, proceeding...");
+            return;
+          }
+          for (FileStatus status : logFolders) {
+            Path logDir = status.getPath();
+            String serverName = logDir.getName();
+            LOG.info("Found log folder : " + serverName);
+            if (this.serverManager.getServerInfo(serverName) == null) {
+              LOG.info("Log folder " + status.getPath() + " doesn't belong " +
+                  "to a known region server, splitting");
+              serverNames.add(serverName);
+            } else {
+              LOG.info("Log folder " + status.getPath() +
+                  " belongs to an existing region server");
+            }
+          }
+
+          splitLog(serverNames);
+          retrySplitting = false;
+        } catch (IOException ioe) {
+          LOG.warn("Failed splitting of " + serverNames, ioe);
+          // reset serverNames
+          serverNames = new ArrayList<String>();
+          if (!checkFileSystem()) {
+            LOG.warn("Bad Filesystem, exiting");
+            Runtime.getRuntime().halt(1);
+          }
+          try {
+            if (retrySplitting) {
+              Thread.sleep(30000); //30s
+            }
+          } catch (InterruptedException e) {
+            LOG.warn("Interrupted, returning w/o splitting at startup");
+            Thread.currentThread().interrupt();
+            retrySplitting = false;
+          }
         }
-      }
-      splitLog(serverNames);
+      } while (retrySplitting);
     } finally {
       isSplitLogAfterStartupDone.set(true);
     }
@@ -934,13 +950,13 @@ public class HMaster extends Thread implements HMasterInterface,
     return (isSplitLogAfterStartupDone.get());
   }
 
-  public void splitLog(final String serverName) {
+  public void splitLog(final String serverName) throws IOException {
     List<String> serverNames = new ArrayList<String>();
     serverNames.add(serverName);
     splitLog(serverNames);
   }
 
-  public void splitLog(final List<String> serverNames) {
+  public void splitLog(final List<String> serverNames) throws IOException {
     long splitTime = 0, splitLogSize = 0, splitCount = 0;
     List<String> realServerNames = new ArrayList<String>();
     List<Path> logDirs = new ArrayList<Path>();
@@ -952,16 +968,9 @@ public class HMaster extends Thread implements HMasterInterface,
         realServerNames.add(serverName);
         Path splitDir = new Path(logDir.getParent(), logDir.getName()
             + HConstants.HLOG_SPLITTING_EXT);
-        try {
-          if (!this.fs.rename(logDir, splitDir)) {
-            LOG.error("Failed log splitting because " +
+        if (!this.fs.rename(logDir, splitDir)) {
+          throw new IOException("Failed log splitting because " +
               " failed fs.rename of " + logDir);
-            return;
-          }
-        } catch (IOException ioe) {
-          LOG.error("Failed log splitting because" +
-            " failed fs.rename of " + logDir, ioe);
-          return;
         }
         logDir = splitDir;
         LOG.debug("Renamed region directory: " + splitDir);
@@ -971,15 +980,9 @@ public class HMaster extends Thread implements HMasterInterface,
       }
       logDirs.add(logDir);
       ContentSummary contentSummary;
-      try {
-        contentSummary = fs.getContentSummary(logDir);
-        splitCount += contentSummary.getFileCount();
-        splitLogSize += contentSummary.getSpaceConsumed();
-      } catch (IOException e) {
-        LOG.error("Failed log splitting because" +
-          " failed to get file system content summary", e);
-        return;
-      }
+      contentSummary = fs.getContentSummary(logDir);
+      splitCount += contentSummary.getFileCount();
+      splitLogSize += contentSummary.getSpaceConsumed();
     }
     splitTime = EnvironmentEdgeManager.currentTimeMillis();
     if (distributedLogSplitting) {
@@ -988,16 +991,11 @@ public class HMaster extends Thread implements HMasterInterface,
         splitLogManager.handleDeadWorker(realServerName);
       }
       try {
-        try {
-          splitLogManager.splitLogDistributed(logDirs);
-        } catch (OrphanHLogAfterSplitException e) {
-          LOG.warn("Retrying distributed splitting for " + serverNames
-              + "because of:", e);
-          splitLogManager.splitLogDistributed(logDirs);
-        }
-      } catch (IOException e) {
-        LOG.error("Failed distributed splitting " + serverNames, e);
-        return;
+        splitLogManager.splitLogDistributed(logDirs);
+      } catch (OrphanHLogAfterSplitException e) {
+        LOG.warn("Retrying distributed splitting for " + serverNames
+            + "because of:", e);
+        splitLogManager.splitLogDistributed(logDirs);
       }
     } else {
       // splitLogLock ensures that dead region servers' logs are processed
@@ -1007,9 +1005,6 @@ public class HMaster extends Thread implements HMasterInterface,
         try {
           HLog.splitLog(this.rootdir, logDir, oldLogDir, this.fs,
               getConfiguration());
-        } catch (IOException e) {
-          LOG.error("Failed splitting " + logDir.toString(), e);
-          return;
         } finally {
           this.splitLogLock.unlock();
         }
