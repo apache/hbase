@@ -1033,10 +1033,28 @@ public class Bytes {
    * @return Array of dividing values
    */
   public static byte [][] split(final byte [] a, final byte [] b, final int num) {
-    byte[][] ret = new byte[num+2][];
+    return split(a, b, false, num);
+  }
+
+  /**
+   * Split passed range.  Expensive operation relatively.  Uses BigInteger math.
+   * Useful splitting ranges for MapReduce jobs.
+   * @param a Beginning of range
+   * @param b End of range
+   * @param inclusive Whether the end of range is prefix-inclusive or is
+   * considered an exclusive boundary.  Automatic splits are generally exclusive
+   * and manual splits with an explicit range utilize an inclusive end of range.
+   * @param num Number of times to split range.  Pass 1 if you want to split
+   * the range in two; i.e. one split.
+   * @return Array of dividing values
+   */
+  public static byte[][] split(final byte[] a, final byte[] b,
+      boolean inclusive, final int num) {
+    byte[][] ret = new byte[num + 2][];
     int i = 0;
-    Iterable<byte[]> iter = iterateOnSplits(a, b, num);
-    if (iter == null) return null;
+    Iterable<byte[]> iter = iterateOnSplits(a, b, inclusive, num);
+    if (iter == null)
+      return null;
     for (byte[] elem : iter) {
       ret[i++] = elem;
     }
@@ -1044,10 +1062,19 @@ public class Bytes {
   }
 
   /**
-   * Iterate over keys within the passed inclusive range.
+   * Iterate over keys within the passed range, splitting at an [a,b) boundary.
+   */
+  public static Iterable<byte[]> iterateOnSplits(final byte[] a,
+      final byte[] b, final int num)
+  {
+    return iterateOnSplits(a, b, false, num);
+  }
+
+  /**
+   * Iterate over keys within the passed range.
    */
   public static Iterable<byte[]> iterateOnSplits(
-      final byte[] a, final byte[]b, final int num)
+      final byte[] a, final byte[]b, boolean inclusive, final int num)
   {
     byte [] aPadded;
     byte [] bPadded;
@@ -1070,7 +1097,10 @@ public class Bytes {
     byte [] prependHeader = {1, 0};
     final BigInteger startBI = new BigInteger(add(prependHeader, aPadded));
     final BigInteger stopBI = new BigInteger(add(prependHeader, bPadded));
-    final BigInteger diffBI = stopBI.subtract(startBI);
+    BigInteger diffBI = stopBI.subtract(startBI);
+    if (inclusive) {
+      diffBI = diffBI.add(BigInteger.ONE);
+    }
     final BigInteger splitsBI = BigInteger.valueOf(num + 1);
     if(diffBI.compareTo(splitsBI) < 0) {
       return null;
