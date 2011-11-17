@@ -179,7 +179,7 @@ public class HTable implements HTableInterface {
    */
   public int getCurrentNrHRS() throws IOException {
     return HConnectionManager
-      .getClientZooKeeperWatcher(this.configuration)
+      .getClientZKConnection(this.configuration)
       .getZooKeeperWrapper()
       .getRSDirectoryCount();
   }

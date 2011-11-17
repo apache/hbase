@@ -181,7 +181,7 @@ public class HConnectionManager {
    * @return zkConnection ClientZKConnection
    * @throws IOException if a remote or network exception occurs
    */
-  public static synchronized ClientZKConnection getClientZooKeeperWatcher(
+  public static synchronized ClientZKConnection getClientZKConnection(
       Configuration conf) throws IOException {
     if (!ZK_WRAPPERS.containsKey(
         ZooKeeperWrapper.getZookeeperClusterKey(conf))) {
@@ -1175,7 +1175,7 @@ public class HConnectionManager {
 
     public synchronized ZooKeeperWrapper getZooKeeperWrapper()
         throws IOException {
-      return HConnectionManager.getClientZooKeeperWatcher(conf)
+      return HConnectionManager.getClientZKConnection(conf)
           .getZooKeeperWrapper();
     }
 

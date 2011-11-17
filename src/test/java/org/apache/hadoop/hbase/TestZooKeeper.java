@@ -166,8 +166,8 @@ public class TestZooKeeper {
       ipMeta.exists(new Get(HConstants.LAST_ROW));
 
       // make sure they aren't the same
-      assertFalse(HConnectionManager.getClientZooKeeperWatcher(conf)
-          .getZooKeeperWrapper() == HConnectionManager.getClientZooKeeperWatcher(
+      assertFalse(HConnectionManager.getClientZKConnection(conf)
+          .getZooKeeperWrapper() == HConnectionManager.getClientZKConnection(
           otherConf).getZooKeeperWrapper());
       assertFalse(HConnectionManager.getConnection(conf)
           .getZooKeeperWrapper().getQuorumServers().equals(HConnectionManager
