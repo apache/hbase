@@ -282,8 +282,6 @@ public class RegionManager {
 
     HServerLoad thisServersLoad = info.getLoad();
     boolean isSingleServer = this.master.numServers() == 1;
-    // have to add . at the end of host name
-    String hostName = info.getHostname();
     boolean holdRegionForBestRegionServer = false;
     boolean assignmentByLocality = false;
 
@@ -307,6 +305,8 @@ public class RegionManager {
     }
 
     if (assignmentByLocality) {
+      // have to add . at the end of host name
+      String hostName = info.getHostname();
       quickStartRegionServerSet.add(hostName);
     }
 
@@ -551,7 +551,8 @@ public class RegionManager {
     boolean isMetaServer = isMetaServer(addr);
     boolean isRootServer = isRootServer(addr);
     boolean isMetaOrRoot = isMetaServer || isRootServer;
-    String hostName = addr.getHostname();
+    // lookup hostname of addr if needed
+    String hostName = null;
     RegionState rootState = null;
     // Handle if root is unassigned... only assign root if root is offline.
     synchronized (this.regionsInTransition) {
@@ -609,6 +610,9 @@ public class RegionManager {
           Text preferredHostNameTxt =
             (Text)this.master.getPreferredRegionToRegionServerMapping().get(new Text(name));
 
+          if (hostName == null) {
+            hostName = addr.getHostname();
+          }
           if (preferredHostNameTxt != null) {
             String preferredHost = preferredHostNameTxt.toString();
             if (hostName.startsWith(preferredHost)) {
