@@ -55,19 +55,34 @@ public class TestSplitLogWorker {
   private ZooKeeperWrapper zkw;
   private SplitLogWorker slw;
 
-  private void waitForCounter(AtomicLong ctr, long oldval, long newval,
+  private interface Expr {
+    public long eval();
+  }
+
+  private void waitForCounter(final AtomicLong ctr, long oldval, long newval,
+      long timems) {
+    Expr e = new Expr() {
+      public long eval() {
+        return ctr.get();
+      }
+    };
+    waitForCounter(e, oldval, newval, timems);
+    return;
+  }
+
+  private void waitForCounter(Expr e, long oldval, long newval,
       long timems) {
     long curt = System.currentTimeMillis();
     long endt = curt + timems;
     while (curt < endt) {
-      if (ctr.get() == oldval) {
+      if (e.eval() == oldval) {
         try {
           Thread.sleep(10);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException eintr) {
         }
         curt = System.currentTimeMillis();
       } else {
-        assertEquals(newval, ctr.get());
+        assertEquals(newval, e.eval());
         return;
       }
     }
@@ -161,7 +176,13 @@ public class TestSplitLogWorker {
     slw1.start();
     slw2.start();
     waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
-    waitForCounter(tot_wkr_failed_to_grab_task_lost_race, 0, 1, 1000);
+    Expr e = new Expr() {
+      public long eval() {
+        return tot_wkr_failed_to_grab_task_lost_race.get() +
+            tot_wkr_failed_to_grab_task_owned.get();
+      }
+    };
+    waitForCounter(e, 0, 1, 1000);
     assertTrue(TaskState.TASK_OWNED.equals(
         zkw.getData("", ZKSplitLog.getEncodedNodeName(zkw, "trft")), "svr1")
         || TaskState.TASK_OWNED
@@ -233,7 +254,7 @@ public class TestSplitLogWorker {
         "tmt_svr"));
   }
 
-  // @Test
+  @Test
   public void testRescan() throws Exception {
     LOG.info("testRescan");
     slw = new SplitLogWorker(zkw, TEST_UTIL.getConfiguration(),
@@ -256,8 +277,8 @@ public class TestSplitLogWorker {
 
     // create a RESCAN node
     zkw.getZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "RESCAN"),
-        TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
-        CreateMode.PERSISTENT_SEQUENTIAL);
+        TaskState.TASK_DONE.get("manager"), Ids.OPEN_ACL_UNSAFE,
+        CreateMode.EPHEMERAL_SEQUENTIAL);
 
     waitForCounter(tot_wkr_task_acquired, 1, 2, 1000);
     // RESCAN node might not have been processed if the worker became busy
@@ -266,18 +287,9 @@ public class TestSplitLogWorker {
     zkw.setData(ZKSplitLog.getEncodedNodeName(zkw, "task"),
         TaskState.TASK_UNASSIGNED.get("manager"));
     waitForCounter(tot_wkr_preempt_task, 1, 2, 1000);
-    waitForCounter(tot_wkr_task_acquired_rescan, 0, 1, 1000);
 
     List<String> nodes = zkw.listChildrenNoWatch(zkw.splitLogZNode);
     LOG.debug(nodes);
-    int num = 0;
-    for (String node : nodes) {
-      num++;
-      if (node.startsWith("RESCAN")) {
-        assertTrue(TaskState.TASK_DONE.equals(
-            zkw.getData("", ZKSplitLog.getEncodedNodeName(zkw, node)), "svr"));
-      }
-    }
-    assertEquals(2, num);
+    assertEquals(2, nodes.size());
   }
 }

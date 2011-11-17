@@ -253,7 +253,6 @@ public class ZKSplitLog {
     public static AtomicLong tot_wkr_task_done = new AtomicLong(0);
     public static AtomicLong tot_wkr_task_err = new AtomicLong(0);
     public static AtomicLong tot_wkr_task_heartbeat = new AtomicLong(0);
-    public static AtomicLong tot_wkr_task_acquired_rescan = new AtomicLong(0);
     public static AtomicLong tot_wkr_get_data_queued = new AtomicLong(0);
     public static AtomicLong tot_wkr_get_data_result = new AtomicLong(0);
     public static AtomicLong tot_wkr_get_data_retry = new AtomicLong(0);
