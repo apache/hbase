@@ -119,6 +119,10 @@ Release 0.90.5 - Unreleased
                (Jonathan Hsieh)
    HBASE-4509  [hbck] Improve region map output
                (Jonathan Hsieh)
+   HBASE-4806  Fix logging message in HbaseObjectWritable
+               (Jonathan Hsieh via todd)
+
+
   NEW FEATURE
    HBASE-4377  [hbck] Offline rebuild .META. from fs data only
                (Jonathan Hsieh)
