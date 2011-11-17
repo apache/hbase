@@ -19,6 +19,10 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,10 +47,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class TestReplication {
 
@@ -87,6 +87,7 @@ public class TestReplication {
     conf1.setInt("hbase.regionserver.maxlogs", 10);
     conf1.setLong("hbase.master.logcleaner.ttl", 10);
     conf1.setLong("hbase.client.retries.number", 4);
+    conf1.setInt(HConstants.ZOOKEEPER_CONNECTION_RETRY_NUM, 2);
     conf1.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf1.setBoolean("dfs.support.append", true);
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
@@ -108,7 +109,7 @@ public class TestReplication {
     conf2.setInt("hbase.client.retries.number", 6);
     conf2.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf2.setBoolean("dfs.support.append", true);
-
+    conf2.setInt(HConstants.ZOOKEEPER_CONNECTION_RETRY_NUM, 2);
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
     zkw2 = ZooKeeperWrapper.createInstance(conf2, "cluster2");
@@ -391,7 +392,7 @@ public class TestReplication {
    * the upload. The failover happens internally.
    * @throws Exception
    */
-  @Test
+  @Test (timeout=300000)
   public void queueFailover() throws Exception {
     utility1.createMultiRegions(htable1, famName);
 
@@ -403,8 +404,8 @@ public class TestReplication {
         utility2.getHBaseCluster().getServerWithMeta() == 0 ? 1 : 0;
 
     // Takes about 20 secs to run the full loading, kill around the middle
-    Thread killer1 = killARegionServer(utility1, 7500, rsToKill1);
-    Thread killer2 = killARegionServer(utility2, 10000, rsToKill2);
+    Thread killer1 = killARegionServer(utility1, 5000, rsToKill1);
+    Thread killer2 = killARegionServer(utility2, 5000, rsToKill2);
 
     LOG.info("Start loading table");
     int initialCount = utility1.loadTable(htable1, famName);
@@ -413,7 +414,7 @@ public class TestReplication {
     killer2.join(5000);
     LOG.info("Done waiting for threads");
 
-    Result[] res;
+    Result[] res = null;
     while (true) {
       try {
         Scan scan = new Scan();
@@ -425,6 +426,7 @@ public class TestReplication {
         LOG.info("Cluster wasn't ready yet, restarting scanner");
       }
     }
+
     // Test we actually have all the rows, we may miss some because we
     // don't have IO fencing.
     if (res.length != initialCount) {
@@ -435,8 +437,6 @@ public class TestReplication {
 
     Scan scan2 = new Scan();
 
-    int lastCount = 0;
-
     for (int i = 0; i < NB_RETRIES; i++) {
       if (i==NB_RETRIES-1) {
         fail("Waited too much time for queueFailover replication");
@@ -445,13 +445,9 @@ public class TestReplication {
       Result[] res2 = scanner2.next(initialCount * 2);
       scanner2.close();
       if (res2.length < initialCount) {
-        if (lastCount < res2.length) {
-          i--; // Don't increment timeout if we make progress
-        }
-        lastCount = res2.length;
-        LOG.info("Only got " + lastCount + " rows instead of " +
+        LOG.info("Only got " + res2.length + " rows instead of " +
             initialCount + " current i=" + i);
-        Thread.sleep(SLEEP_TIME*2);
+        Thread.sleep(SLEEP_TIME * 2);
       } else {
         break;
       }

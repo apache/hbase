@@ -27,9 +27,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RuntimeExceptionAbortStrategy;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.junit.AfterClass;
@@ -59,7 +60,8 @@ public class TestRestartCluster {
 
   @Test (timeout=300000) public void testRestartClusterAfterKill()throws Exception {
     utility.startMiniZKCluster();
-    zkWrapper = ZooKeeperWrapper.createInstance(conf, "cluster1");
+    zkWrapper = ZooKeeperWrapper.createInstance(conf, "cluster1",
+        new RuntimeExceptionAbortStrategy());
 
     // create the unassigned region, throw up a region opened state for META
     String unassignedZNode = zkWrapper.getRegionInTransitionZNode();

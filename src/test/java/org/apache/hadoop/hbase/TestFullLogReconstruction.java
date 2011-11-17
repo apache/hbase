@@ -20,16 +20,19 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.*;
-import static org.junit.Assert.assertEquals;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class TestFullLogReconstruction {
 
@@ -38,6 +41,7 @@ public class TestFullLogReconstruction {
 
   private final static byte[] TABLE_NAME = Bytes.toBytes("tabletest");
   private final static byte[] FAMILY = Bytes.toBytes("family");
+  private static int NUM_REGIONSERVER = 2;
 
   /**
    * @throws java.lang.Exception
@@ -55,7 +59,7 @@ public class TestFullLogReconstruction {
     c.setInt("ipc.client.connect.max.retries", 1);
     c.setInt("dfs.client.block.recovery.retries", 1);
     c.setInt("hbase.regionserver.flushlogentries", 1);
-    TEST_UTIL.startMiniCluster(2);
+    TEST_UTIL.startMiniCluster(NUM_REGIONSERVER);
   }
 
   /**
@@ -71,6 +75,7 @@ public class TestFullLogReconstruction {
    */
   @Before
   public void setUp() throws Exception {
+    TEST_UTIL.ensureSomeRegionServersAvailable(NUM_REGIONSERVER);
   }
 
   /**
@@ -87,7 +92,7 @@ public class TestFullLogReconstruction {
    * see all the rows.
    * @throws Exception
    */
-  @Test
+  @Test (timeout = 300000)
   public void testReconstruction() throws Exception {
 
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
@@ -113,6 +118,8 @@ public class TestFullLogReconstruction {
     }
 
     TEST_UTIL.expireRegionServerSession(0);
+    // wait for meta region comes online
+    Thread.sleep(1000);
     scan = new Scan();
     results = table.getScanner(scan);
     int newCount = 0;

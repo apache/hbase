@@ -1,18 +1,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HMsg;
-import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.CreateMode;
@@ -38,15 +32,14 @@ public class RSZookeeperUpdater {
   private int zkVersion = 0;
   HBaseEventType lastUpdatedState;
 
-  public RSZookeeperUpdater(Configuration conf,
-                            String regionServerName, String regionName) {
-    this(conf, regionServerName, regionName, 0);
+  public RSZookeeperUpdater(ZooKeeperWrapper zkWrapper,
+      String regionServerName, String regionName) {
+    this(zkWrapper, regionServerName, regionName, 0);
   }
 
-  public RSZookeeperUpdater(Configuration conf, String regionServerName,
-                            String regionName, int zkVersion) {
-    this.zkWrapper = ZooKeeperWrapper.getInstance(conf,
-        ZooKeeperWrapper.getWrapperNameForRS(regionServerName));
+  public RSZookeeperUpdater(ZooKeeperWrapper zkWrapper, String regionServerName,
+      String regionName, int zkVersion) {
+    this.zkWrapper = zkWrapper;
     this.regionServerName = regionServerName;
     this.regionName = regionName;
     // get the region ZNode we have to create

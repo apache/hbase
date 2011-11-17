@@ -63,6 +63,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -112,6 +113,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
@@ -363,8 +365,26 @@ public class HRegionServer implements HRegionInterface,
   }
 
   private void initializeZooKeeper() throws IOException {
-    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
-        ZooKeeperWrapper.getWrapperNameForRS(serverInfo.getServerName()));
+    boolean abortProcesstIfZKExpired = conf.getBoolean(
+        HConstants.ZOOKEEPER_SESSION_EXPIRED_ABORT_PROCESS, true);
+    if (abortProcesstIfZKExpired) {
+      zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
+          serverInfo.getServerName(), new RuntimeHaltAbortStrategy());
+    } else {
+      zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
+          serverInfo.getServerName(), new Abortable() {
+
+            @Override
+            public void abort(String why, Throwable e) {
+              kill();
+            }
+
+            @Override
+            public boolean isAborted() {
+              return killed;
+            }
+          });
+    }
     zooKeeperWrapper.registerListener(this);
     try {
       zooKeeperWrapper.watchMasterAddress(zooKeeperWrapper);
@@ -1020,8 +1040,8 @@ public class HRegionServer implements HRegionInterface,
         "running at " + this.serverInfo.getServerName() +
         " because logdir " + logdir.toString() + " exists");
     }
-    this.replicationHandler = new Replication(this.conf,this.serverInfo,
-        this.fs, oldLogDir, stopRequested);
+    this.replicationHandler = new Replication(this.conf, this.zooKeeperWrapper,
+        this.serverInfo, this.fs, oldLogDir, stopRequested);
     HLog log = instantiateHLog(logdir, oldLogDir);
     this.replicationHandler.addLogEntryVisitor(log);
     return log;
@@ -1342,6 +1362,7 @@ public class HRegionServer implements HRegionInterface,
    * log it is using and without notifying the master.
    * Used unit testing and on catastrophic events such as HDFS is yanked out
    * from under hbase or we OOME.
+   *
    * @param reason the reason we are aborting
    * @param cause the exception that caused the abort, or null
    */
@@ -1379,7 +1400,7 @@ public class HRegionServer implements HRegionInterface,
    * Exits w/o closing regions or cleaninup logs but it does close socket in
    * case want to bring up server on old hostname+port immediately.
    */
-  protected void kill() {
+  public void kill() {
     this.killed = true;
     abort("Simulated kill");
   }
@@ -1647,8 +1668,8 @@ public class HRegionServer implements HRegionInterface,
   void openRegion(final HRegionInfo regionInfo) {
     Integer mapKey = Bytes.mapKey(regionInfo.getRegionName());
     HRegion region = this.onlineRegions.get(mapKey);
-    RSZookeeperUpdater zkUpdater =
-      new RSZookeeperUpdater(conf, serverInfo.getServerName(),
+    RSZookeeperUpdater zkUpdater = new RSZookeeperUpdater(
+        this.zooKeeperWrapper, serverInfo.getServerName(),
           regionInfo.getEncodedName());
     if (region == null) {
       try {
@@ -1745,7 +1766,7 @@ public class HRegionServer implements HRegionInterface,
   throws IOException {
     RSZookeeperUpdater zkUpdater = null;
     if(reportWhenCompleted) {
-      zkUpdater = new RSZookeeperUpdater(conf,
+      zkUpdater = new RSZookeeperUpdater(this.zooKeeperWrapper,
           serverInfo.getServerName(), hri.getEncodedName());
       zkUpdater.startRegionCloseEvent(null, false);
     }

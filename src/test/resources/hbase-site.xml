@@ -140,4 +140,14 @@
     <value>100</value>
   </property>
 
+  <property>
+    <name>zookeeper.session.timeout</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <name>hbase.zookeeper.sessionExpired.abortProcess</name>
+    <value>false</value>
+  </property>
+
 </configuration>

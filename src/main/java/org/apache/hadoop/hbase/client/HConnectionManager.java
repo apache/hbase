@@ -19,9 +19,32 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -44,31 +67,11 @@ import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
-
-import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.net.ConnectException;
-import java.net.SocketTimeoutException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * A non-instantiable class that manages connections to multiple tables in
@@ -95,6 +98,9 @@ public class HConnectionManager {
     super();
   }
 
+  private static String ZK_INSTANCE_NAME =
+    HConnectionManager.class.getSimpleName();
+
   private static final int MAX_CACHED_HBASE_INSTANCES=31;
   // A LRU Map of master HBaseConfiguration -> connection information for that
   // instance. The objects it contains are mutable and hence require
@@ -110,8 +116,8 @@ public class HConnectionManager {
       }
   };
 
-  private static final Map<String, ClientZKWatcher> ZK_WRAPPERS =
-    new HashMap<String, ClientZKWatcher>();
+  private static final Map<String, ClientZKConnection> ZK_WRAPPERS =
+    new HashMap<String, ClientZKConnection>();
 
   /**
    * Get the connection object for the instance specified by the configuration
@@ -161,8 +167,8 @@ public class HConnectionManager {
       }
     }
     synchronized (ZK_WRAPPERS) {
-      for (ClientZKWatcher watch : ZK_WRAPPERS.values()) {
-        watch.resetZooKeeper();
+      for (ClientZKConnection connection : ZK_WRAPPERS.values()) {
+        connection.closeZooKeeperConnection();
       }
     }
   }
@@ -172,81 +178,141 @@ public class HConnectionManager {
    * If the connection isn't established, a new one is created.
    * This acts like a multiton.
    * @param conf configuration
-   * @return ZKW watcher
+   * @return zkConnection ClientZKConnection
    * @throws IOException if a remote or network exception occurs
    */
-  public static synchronized ClientZKWatcher getClientZooKeeperWatcher(
+  public static synchronized ClientZKConnection getClientZooKeeperWatcher(
       Configuration conf) throws IOException {
     if (!ZK_WRAPPERS.containsKey(
         ZooKeeperWrapper.getZookeeperClusterKey(conf))) {
       ZK_WRAPPERS.put(ZooKeeperWrapper.getZookeeperClusterKey(conf),
-          new ClientZKWatcher(conf));
+          new ClientZKConnection(conf));
     }
     return ZK_WRAPPERS.get(ZooKeeperWrapper.getZookeeperClusterKey(conf));
   }
 
   /**
-   * This class is responsible to handle connection and reconnection
-   * to a zookeeper quorum.
+   * This class is responsible to handle connection and reconnection to a
+   * zookeeper quorum.
    *
    */
-  public static class ClientZKWatcher implements Watcher {
+  public static class ClientZKConnection implements Abortable, Watcher {
 
-    static final Log LOG = LogFactory.getLog(ClientZKWatcher.class);
+    static final Log LOG = LogFactory.getLog(ClientZKConnection.class);
     private ZooKeeperWrapper zooKeeperWrapper;
     private Configuration conf;
+    private boolean aborted = false;
+    private int reconnectionTimes = 0;
+    private int maxReconnectionTimes = 0;
 
     /**
-     * Takes a configuration to pass it to ZKW but won't instanciate it
-     * @param conf configuration
+     * Create a ClientZKConnection
+     *
+     * @param conf
+     *          configuration
      */
-    public ClientZKWatcher(Configuration conf) {
+    public ClientZKConnection(Configuration conf) {
       this.conf = conf;
+      maxReconnectionTimes =
+        conf.getInt("hbase.client.max.zookeeper.reconnection", 3);
     }
 
     /**
-     * Called by ZooKeeper when an event occurs on our connection. We use this to
-     * detect our session expiring. When our session expires, we have lost our
-     * connection to ZooKeeper. Our handle is dead, and we need to recreate it.
+     * Get the zookeeper wrapper for this connection, instantiate it if
+     * necessary.
      *
-     * See http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions
-     * for more information.
-     *
-     * @param event WatchedEvent witnessed by ZooKeeper.
+     * @return zooKeeperWrapper
+     * @throws java.io.IOException
+     *           if a remote or network exception occurs
      */
-    public void process(WatchedEvent event) {
-      KeeperState state = event.getState();
-      if(!state.equals(KeeperState.SyncConnected)) {
-        LOG.debug("Got ZooKeeper event, state: " + state + ", type: "
-            + event.getType() + ", path: " + event.getPath());
-      }
-      if (state == KeeperState.Expired) {
-        resetZooKeeper();
-      }
-    }
-
-    /**
-     * Get this watcher's ZKW, instantiate it if necessary.
-     * @return ZKW
-     * @throws java.io.IOException if a remote or network exception occurs
-     */
-    public synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
+    public synchronized ZooKeeperWrapper getZooKeeperWrapper()
+        throws IOException {
       if (zooKeeperWrapper == null) {
-        zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
-            HConnectionManager.class.getSimpleName());
-        zooKeeperWrapper.registerListener(this);
+        if (this.reconnectionTimes < this.maxReconnectionTimes) {
+          zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
+              ZK_INSTANCE_NAME, this);
+        } else {
+          String msg = "HBase client failed to connection to zk after "
+            + maxReconnectionTimes + " attempts";
+          LOG.fatal(msg);
+          throw new IOException(msg);
+        }
       }
       return zooKeeperWrapper;
     }
 
     /**
-     * Clear this connection to zookeeper.
+     * Close this connection to zookeeper.
      */
-    private synchronized void resetZooKeeper() {
+    private synchronized void closeZooKeeperConnection() {
       if (zooKeeperWrapper != null) {
         zooKeeperWrapper.close();
         zooKeeperWrapper = null;
       }
+    }
+
+    /**
+     * Reset this connection to zookeeper.
+     *
+     * @throws IOException
+     *           If there is any exception when reconnect to zookeeper
+     */
+    private synchronized void resetZooKeeperConnection() throws IOException {
+      // close the zookeeper connection first
+      closeZooKeeperConnection();
+      // reconnect to zookeeper
+      zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, ZK_INSTANCE_NAME,
+         this);
+    }
+
+    @Override
+    public synchronized void process(WatchedEvent event) {
+      LOG.debug("Received ZK WatchedEvent: " +
+          "[path=" + event.getPath() + "] " +
+          "[state=" + event.getState().toString() + "] " +
+          "[type=" + event.getType().toString() + "]");
+      if (event.getType() == EventType.None &&
+          event.getState() == KeeperState.SyncConnected) {
+          LOG.info("Reconnected to ZooKeeper");
+          // reset the reconnection times
+          reconnectionTimes = 0;
+      }
+    }
+
+    @Override
+    public void abort(final String msg, Throwable t) {
+      if (t != null && t instanceof KeeperException.SessionExpiredException) {
+        try {
+          reconnectionTimes++;
+          LOG.info("This client just lost it's session with ZooKeeper, "
+              + "trying the " + reconnectionTimes + " times to reconnect.");
+          // reconnect to zookeeper if possible
+          resetZooKeeperConnection();
+
+          LOG.info("Reconnected successfully. This disconnect could have been"
+              + " caused by a network partition or a long-running GC pause,"
+              + " either way it's recommended that you verify your "
+              + "environment.");
+          this.aborted = false;
+          return;
+        } catch (IOException e) {
+          LOG.error("Could not reconnect to ZooKeeper after session"
+              + " expiration, aborting");
+          t = e;
+        }
+      }
+      if (t != null)
+        LOG.fatal(msg, t);
+      else
+        LOG.fatal(msg);
+
+			this.aborted = true;
+      closeZooKeeperConnection();
+    }
+
+    @Override
+    public boolean isAborted() {
+      return this.aborted;
     }
   }
 

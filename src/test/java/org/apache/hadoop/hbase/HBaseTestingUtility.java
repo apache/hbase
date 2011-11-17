@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,7 +55,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ReadWriteConsistencyControl;
@@ -70,10 +70,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.KeeperException.NodeExistsException;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.ZooKeeper;
@@ -837,12 +833,9 @@ public class HBaseTestingUtility {
   }
 
   public void expireSession(ZooKeeperWrapper nodeZK) throws Exception{
-    ZooKeeperWrapper zkw =
-        ZooKeeperWrapper.createInstance(conf,
-            ZooKeeperWrapper.class.getName());
-    zkw.registerListener(EmptyWatcher.instance);
-    String quorumServers = zkw.getQuorumServers();
-    int sessionTimeout = 5 * 1000; // 5 seconds
+    nodeZK.registerListener(EmptyWatcher.instance);
+    String quorumServers = nodeZK.getQuorumServers();
+    int sessionTimeout = nodeZK.getSessionTimeout();
 
     byte[] password = nodeZK.getSessionPassword();
     long sessionID = nodeZK.getSessionID();
@@ -850,12 +843,18 @@ public class HBaseTestingUtility {
     ZooKeeper zk = new ZooKeeper(quorumServers,
         sessionTimeout, EmptyWatcher.instance, sessionID, password);
     zk.close();
-    final long sleep = sessionTimeout * 5L;
-    LOG.info("ZK Closed; sleeping=" + sleep);
+    final long sleep = sessionTimeout * 10L;
+    final int maxRetryNum = 5;
+    int retryNum = maxRetryNum;
+    while (!nodeZK.isAborted() && retryNum != 0) {
+      Thread.sleep(sleep);
+      LOG.info("ZK Closed; sleeping=" + sleep);
+      retryNum--;
+    }
 
-    Thread.sleep(sleep);
-
-    new HTable(conf, HConstants.META_TABLE_NAME);
+    if (retryNum == 0) {
+      fail("ZooKeeper is not aborted after " + maxRetryNum + " attempt");
+    }
   }
 
   /**

@@ -19,6 +19,11 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import java.io.IOException;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,11 +38,6 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeperWrapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-
-import java.io.IOException;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Replication serves as an umbrella over the setup of replication and
@@ -57,23 +57,22 @@ public class Replication implements LogEntryVisitor {
   /**
    * Instantiate the replication management (if rep is enabled).
    * @param conf conf to use
+   * @param zkWrapper the ZooKeeperWrapper of this region server
    * @param hsi the info if this region server
    * @param fs handle to the filesystem
    * @param oldLogDir directory where logs are archived
    * @param stopRequested boolean that tells us if we are shutting down
    * @throws IOException
    */
-  public Replication(Configuration conf, HServerInfo hsi,
-                     FileSystem fs, Path oldLogDir,
-                     AtomicBoolean stopRequested) throws IOException {
+  public Replication(Configuration conf, ZooKeeperWrapper zkWrapper,
+      HServerInfo hsi, FileSystem fs, Path oldLogDir,
+      AtomicBoolean stopRequested) throws IOException {
     this.conf = conf;
     this.stopRequested = stopRequested;
     this.replication =
         conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false);
     if (replication) {
-      this.zkHelper = new ReplicationZookeeperWrapper(
-        ZooKeeperWrapper.getInstance(conf,
-            ZooKeeperWrapper.getWrapperNameForRS(hsi.getServerName())), conf,
+      this.zkHelper = new ReplicationZookeeperWrapper(zkWrapper, conf,
         this.replicating, hsi.getServerName());
       this.replicationMaster = zkHelper.isReplicationMaster();
       this.replicationManager = this.replicationMaster ?

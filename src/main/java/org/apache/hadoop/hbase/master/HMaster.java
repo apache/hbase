@@ -57,6 +57,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -104,6 +105,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.Writables;
@@ -231,8 +233,7 @@ public class HMaster extends Thread implements HMasterInterface,
     // number of RS ephemeral nodes. RS ephemeral nodes are created only after
     // the primary master has written the address to ZK. So this has to be done
     // before we race to write our address to zookeeper.
-    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
-        getZKWrapperName());
+    initializeZooKeeper();
     detectClusterStartup();
 
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
@@ -380,6 +381,29 @@ public class HMaster extends Thread implements HMasterInterface,
 
   public ThreadPoolExecutor getLogSplitThreadPool() {
     return this.logSplitThreadPool;
+  }
+
+  private void initializeZooKeeper() throws IOException {
+    boolean abortProcesstIfZKExpired = conf.getBoolean(
+        HConstants.ZOOKEEPER_SESSION_EXPIRED_ABORT_PROCESS, true);
+    if (abortProcesstIfZKExpired) {
+      zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
+          getZKWrapperName(), new RuntimeHaltAbortStrategy());
+    } else {
+      zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
+          getZKWrapperName(), new Abortable() {
+
+            @Override
+            public void abort(String why, Throwable e) {
+              killMaster();
+            }
+
+            @Override
+            public boolean isAborted() {
+              return isKilled();
+            }
+          });
+    }
   }
 
   public long getApplyPreferredAssignmentPeriod() {

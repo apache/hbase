@@ -45,13 +45,14 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RuntimeExceptionAbortStrategy;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -156,6 +157,12 @@ public class ZooKeeperWrapper implements Watcher {
   private int zkDumpConnectionTimeOut;
 
   /**
+   * abortable in case of zk failure;
+   * if abortable is null, ignore the zk failures.
+   */
+  private volatile Abortable abortable;
+
+  /**
    * To allow running multiple independent unit tests within the same JVM, we
    * use a concept of "namespaces", which are typically based on test name.
    * The same instance name can exist independently in multiple namespaces.
@@ -174,9 +181,37 @@ public class ZooKeeperWrapper implements Watcher {
     return INSTANCES.get(currentNamespaceForTesting + name);
   }
 
-  // creates only one instance
+  /**
+   * Create one ZooKeeperWrapper instance if there is no cached ZooKeeperWrapper
+   * for this instance name
+   *
+   * @param conf
+   *          HBaseConfiguration to read settings from.
+   * @param name
+   *          The name of the instance
+   * @return zooKeepWrapper The ZooKeeperWrapper cached or created
+   * @throws IOException
+   */
   public static ZooKeeperWrapper createInstance(Configuration conf, String name)
-  throws IOException {
+      throws IOException {
+    return createInstance(conf, name, new RuntimeExceptionAbortStrategy());
+  }
+
+  /**
+   * Create one ZooKeeperWrapper instance if there is no cached
+   * ZooKeeperWrapper for the name
+   *
+   * @param conf
+   *          HBaseConfiguration to read settings from.
+   * @param instanceName
+   *          The name of the instance
+   * @param abortable
+   *          The abortable object when zk failed
+   * @return zooKeepWrapper The ZooKeeperWrapper cached or created
+   * @throws IOException
+   */
+  public static ZooKeeperWrapper createInstance(Configuration conf,
+      String name, Abortable abortable) throws IOException {
     ZooKeeperWrapper zkw = getInstance(conf, name);
     if (zkw != null) {
       return zkw;
@@ -186,11 +221,11 @@ public class ZooKeeperWrapper implements Watcher {
       if (getInstance(conf, name) == null) {
         String fullname = getZookeeperClusterKey(conf, name);
         String mapKey = currentNamespaceForTesting + fullname;
-        ZooKeeperWrapper instance = new ZooKeeperWrapper(conf, mapKey);
+        ZooKeeperWrapper instance = new ZooKeeperWrapper(conf, mapKey,
+            abortable);
         INSTANCES.put(mapKey, instance);
       }
-    }
-    finally {
+    } finally {
       createLock.unlock();
     }
     return getInstance(conf, name);
@@ -203,10 +238,12 @@ public class ZooKeeperWrapper implements Watcher {
    * and remove itself from being a listener.
    *
    * @param conf HBaseConfiguration to read settings from.
+   * @param instanceName The name of the instance
+   * @param abortable The abortable object when zk failed
    * @throws IOException If a connection error occurs.
    */
-  private ZooKeeperWrapper(Configuration conf, String instanceName)
-  throws IOException {
+  private ZooKeeperWrapper(Configuration conf, String instanceName,
+      Abortable abortable) throws IOException {
     this.instanceName = instanceName;
     Properties properties = HQuorumPeer.makeZKProps(conf);
     quorumServers = HQuorumPeer.getZKQuorumServersString(properties);
@@ -214,9 +251,11 @@ public class ZooKeeperWrapper implements Watcher {
       throw new IOException("Could not read quorum servers from " +
                             HConstants.ZOOKEEPER_CONFIG_NAME);
     }
-    sessionTimeout = conf.getInt("zookeeper.session.timeout", 60 * 1000);
 
-    parentZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+    sessionTimeout = conf.getInt(HConstants.ZOOKEEPER_SESSION_TIMEOUT,
+        HConstants.DEFAULT_ZOOKEEPER_SESSION_TIMEOUT);
+    parentZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
+        HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
 
     String rootServerZNodeName = conf.get("zookeeper.znode.rootserver", "root-region-server");
     String rsZNodeName         = conf.get("zookeeper.znode.rs", "rs");
@@ -230,11 +269,12 @@ public class ZooKeeperWrapper implements Watcher {
     rgnsInTransitZNode  = getZNode(parentZNode, regionsInTransitZNodeName);
     masterElectionZNode = getZNode(parentZNode, masterAddressZNodeName);
     clusterStateZNode   = getZNode(parentZNode, stateZNodeName);
-    int retryNum = conf.getInt("zookeeper.connection.retry.num", 6);
+    int retryNum = conf.getInt(HConstants.ZOOKEEPER_CONNECTION_RETRY_NUM, 6);
     int retryFreq = conf.getInt("zookeeper.connection.retry.freq", 1000);
     zkDumpConnectionTimeOut = conf.getInt("zookeeper.dump.connection.timeout",
         1000);
     splitLogZNode       = getZNode(parentZNode, splitLogZNodeName);
+    this.abortable = abortable;
     connectToZk(retryNum,retryFreq);
   }
 
@@ -295,8 +335,8 @@ public class ZooKeeperWrapper implements Watcher {
         "[type=" + event.getType().toString() + "]");
     if (event.getType() == EventType.None) {
       if (event.getState() == KeeperState.Expired) {
-        LOG.error("ZooKeeper Session Expiration, aborting server");
-        abort();
+        this.abort("ZooKeeper Session Expiration, aborting server",
+              new KeeperException.SessionExpiredException());
       } else if (event.getState() == KeeperState.Disconnected) {
         LOG.warn("Disconnected from ZooKeeper");
       } else if (event.getState() == KeeperState.SyncConnected) {
@@ -474,8 +514,7 @@ public class ZooKeeperWrapper implements Watcher {
       return recoverableZK.exists(getZNode(parentZNode, znode), watch ? this : null)
              != null;
     } catch (KeeperException e) {
-      LOG.error("Received KeeperException on exists() call, aborting", e);
-      abort();
+      abort("Received KeeperException on exists() call, aborting", e);
       return false;
     } catch (InterruptedException e) {
       return false;
@@ -503,6 +542,14 @@ public class ZooKeeperWrapper implements Watcher {
    */
   public byte[] getSessionPassword() {
     return recoverableZK.getSessionPassword();
+  }
+
+  /**
+   * This is for testing purpose
+   * @return timeout The zookeeper session timeout.
+   */
+  public int getSessionTimeout() {
+    return this.sessionTimeout;
   }
 
   /** @return host:port list of quorum servers. */
@@ -1381,8 +1428,7 @@ public class ZooKeeperWrapper implements Watcher {
     } catch (KeeperException.NoNodeException e) {
       LOG.warn("Attempted to delete an unassigned region node but it DNE");
     } catch (KeeperException e) {
-      LOG.error("Error deleting region " + regionName, e);
-      abort();
+      abort("Error deleting region " + regionName, e);
     } catch (InterruptedException e) {
       LOG.error("Error deleting region " + regionName, e);
     }
@@ -1732,15 +1778,19 @@ public class ZooKeeperWrapper implements Watcher {
     }
   }
 
-  private void abort() {
-    LOG.fatal("<" + instanceName + "> Aborting process because of fatal ZK error");
+  /**
+   * The abortable will abort based on its stragety.
+   * @param why
+   * @param e
+   */
+  private void abort(String why, Throwable e) {
+    LOG.error("<" + instanceName + "> is going to abort" +
+		"because " + why);
+    this.abortable.abort(why, e);
+  }
 
-    // Previously, this was System.exit(1). exit() invokes shutdown hooks.
-    // If abort happens in the region servers main worker thread, this can
-    // cause a deadlock in the shutdown sequence.
-    //
-    // When a RS ZK session expires, exit asap. Do not run any shutdown hooks.
-    Runtime.getRuntime().halt(1);
+  public boolean isAborted() {
+    return abortable.isAborted();
   }
 
   /**
@@ -1772,11 +1822,6 @@ public class ZooKeeperWrapper implements Watcher {
       }
     }
     return result;
-  }
-
-  /** @return the ZK wrapper name to be used by a region server */
-  public static String getWrapperNameForRS(String serverName) {
-    return HRegionServer.class.getSimpleName() + "-" + serverName;
   }
 
   /**

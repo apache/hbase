@@ -19,6 +19,14 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,21 +37,15 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.RuntimeExceptionAbortStrategy;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.io.IOException;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
 
 public class TestZooKeeper {
   private final Log LOG = LogFactory.getLog(this.getClass());
@@ -52,7 +54,7 @@ public class TestZooKeeper {
       TEST_UTIL = new HBaseTestingUtility();
 
   private static Configuration conf;
-
+  private static int NUM_REGIONSERVER = 5;
   /**
    * @throws java.lang.Exception
    */
@@ -61,7 +63,7 @@ public class TestZooKeeper {
     // Test we can first start the ZK cluster by itself
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
-    TEST_UTIL.startMiniCluster(2);
+    TEST_UTIL.startMiniCluster(NUM_REGIONSERVER);
     conf = TEST_UTIL.getConfiguration();
   }
 
@@ -78,7 +80,7 @@ public class TestZooKeeper {
    */
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.ensureSomeRegionServersAvailable(2);
+    TEST_UTIL.ensureSomeRegionServersAvailable(NUM_REGIONSERVER);
   }
 
   /**
@@ -86,43 +88,47 @@ public class TestZooKeeper {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test
+  @Test (timeout = 300000)
   public void testClientSessionExpired()
       throws IOException, InterruptedException {
     new HTable(conf, HConstants.META_TABLE_NAME);
 
     ZooKeeperWrapper zkw =
-        ZooKeeperWrapper.createInstance(conf, TestZooKeeper.class.getName());
+        ZooKeeperWrapper.createInstance(conf, "testClientSessionExpired",
+            new RuntimeExceptionAbortStrategy());
     zkw.registerListener(EmptyWatcher.instance);
     String quorumServers = zkw.getQuorumServers();
-    int sessionTimeout = 5 * 1000; // 5 seconds
+    int sessionTimeout = zkw.getSessionTimeout();
+
     HConnection connection = HConnectionManager.getConnection(conf);
     ZooKeeperWrapper connectionZK = connection.getZooKeeperWrapper();
     long sessionID = connectionZK.getSessionID();
     byte[] password = connectionZK.getSessionPassword();
 
+    // close the zk session for connectionZK
     ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout,
         EmptyWatcher.instance, sessionID, password);
     zk.close();
-
     Thread.sleep(sessionTimeout * 3L);
+    connection.relocateRegion(HConstants.ROOT_TABLE_NAME,
+        HConstants.EMPTY_BYTE_ARRAY);
 
-    System.err.println("ZooKeeper should have timed out");
-    connection.relocateRegion(HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_BYTE_ARRAY);
-  }
-  @Test
-  public void testRegionServerSessionExpired() throws Exception{
-    LOG.info("Starting testRegionServerSessionExpired");
-    new HTable(conf, HConstants.META_TABLE_NAME);
-    TEST_UTIL.expireRegionServerSession(0);
-    testSanity();
-  }
-  @Test
-  public void testMasterSessionExpired() throws Exception {
-    LOG.info("Starting testMasterSessionExpired");
-    new HTable(conf, HConstants.META_TABLE_NAME);
-    TEST_UTIL.expireMasterSession();
-    testSanity();
+    // The zk session for connectionZK should NOT time out since the client will
+    // reconnect to zk again once the session is expired.
+    assertFalse(connectionZK.isAborted());
+    // The zk session for zkw should NOT time out
+    assertFalse(zkw.isAborted());
+
+    // close the zk session for zkw
+    sessionID = zkw.getSessionID();
+    password = zkw.getSessionPassword();
+    sessionTimeout = zkw.getSessionTimeout();
+    zk = new ZooKeeper(quorumServers, sessionTimeout,
+        EmptyWatcher.instance, sessionID, password);
+    zk.close();
+    while (!zkw.isAborted()) {
+      Thread.sleep(sessionTimeout * 3L);
+    }
   }
 
   /**
@@ -180,7 +186,8 @@ public class TestZooKeeper {
   @Test
   public void testZNodeDeletes() throws Exception {
     ZooKeeperWrapper zkw =
-        ZooKeeperWrapper.createInstance(conf, TestZooKeeper.class.getName());
+        ZooKeeperWrapper.createInstance(conf, "testZNodeDeletes",
+            new RuntimeExceptionAbortStrategy());
     zkw.registerListener(EmptyWatcher.instance);
     zkw.ensureExists("/l1/l2/l3/l4");
     try {
@@ -193,5 +200,28 @@ public class TestZooKeeper {
     assertNull(zkw.getData("/l1/l2/l3", "l4"));
     zkw.deleteZNode("/l1");
     assertNull(zkw.getData("/l1", "l2"));
+  }
+
+  @Test (timeout = 300000)
+  public void testRegionServerSessionExpired() throws Exception{
+    LOG.info("Starting testRegionServerSessionExpired");
+    new HTable(conf, HConstants.META_TABLE_NAME);
+    TEST_UTIL.expireRegionServerSession(0);
+    // to wait for the meta region coming online.
+    Thread.sleep(1000);
+    testSanity();
+  }
+
+  @Test (timeout = 300000)
+  public void testMasterSessionExpired() throws Exception {
+    LOG.info("Starting testMasterSessionExpired");
+    new HTable(conf, HConstants.META_TABLE_NAME);
+    TEST_UTIL.expireMasterSession();
+
+    List<RegionServerThread> regionServerThreadList =
+      TEST_UTIL.getHBaseCluster().getRegionServerThreads();
+    for (RegionServerThread regionServerThread : regionServerThreadList) {
+      regionServerThread.getRegionServer().kill();
+    }
   }
 }

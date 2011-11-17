@@ -103,6 +103,16 @@ public final class HConstants {
   /** Parameter name for number of times to retry writes to ZooKeeper. */
   public static final String ZOOKEEPER_RETRIES = "zookeeper.retries";
 
+  /** Parameter name for the strategy whether aborting the process
+   *  when zookeeper session expired.
+   */
+  public static final String ZOOKEEPER_SESSION_EXPIRED_ABORT_PROCESS =
+    "hbase.zookeeper.sessionExpired.abortProcess";
+
+  /** Parameter name for number of times to retry to connection to ZooKeeper. */
+  public static final String ZOOKEEPER_CONNECTION_RETRY_NUM =
+    "zookeeper.connection.retry.num";
+
   /**
    * The ZK client port key in the ZK properties map. The name reflects the
    * fact that this is not an HBase configuration key.
@@ -115,6 +125,12 @@ public final class HConstants {
 
   /** Default number of times to retry writes to ZooKeeper. */
   public static final int DEFAULT_ZOOKEEPER_RETRIES = 5;
+
+  /** Parameter name for ZooKeeper session time out.*/
+  public static final String ZOOKEEPER_SESSION_TIMEOUT =
+    "zookeeper.session.timeout";
+  /** Default value for ZooKeeper session time out. */
+  public static final int DEFAULT_ZOOKEEPER_SESSION_TIMEOUT = 60 * 1000;
 
   /** Parameter name for ZooKeeper pause between retries. In milliseconds. */
   public static final String ZOOKEEPER_PAUSE = "zookeeper.pause";
