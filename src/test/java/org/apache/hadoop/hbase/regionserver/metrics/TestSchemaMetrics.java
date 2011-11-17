@@ -20,9 +20,12 @@
 
 package org.apache.hadoop.hbase.regionserver.metrics;
 
+import static org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BOOL_VALUES;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -30,23 +33,14 @@ import java.util.Set;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-
-import static org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
-    BOOL_VALUES;
-import static org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
-    BlockMetricType;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runner.manipulation.Sorter;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
-import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 public class TestSchemaMetrics {
@@ -74,8 +68,8 @@ public class TestSchemaMetrics {
 
   @Test
   public void testNaming() {
-    final String metricPrefix = (useTableName ? "tab." +
-        TABLE_NAME + "." : "") + "cf." + CF_NAME + ".";
+    final String metricPrefix = (useTableName ? SchemaMetrics.TABLE_PREFIX +
+        TABLE_NAME + "." : "") + SchemaMetrics.CF_PREFIX + CF_NAME + ".";
     SchemaMetrics schemaMetrics = SchemaMetrics.getInstance(TABLE_NAME,
         CF_NAME);
     SchemaMetrics ALL_CF_METRICS = SchemaMetrics.ALL_SCHEMA_METRICS;
@@ -231,11 +225,11 @@ public class TestSchemaMetrics {
 
     StringBuilder expected = new StringBuilder();
     if (useTableName) {
-      expected.append("tab.");
+      expected.append(SchemaMetrics.TABLE_PREFIX);
       expected.append(tableName);
       expected.append(".");
     }
-    expected.append("cf.");
+    expected.append(SchemaMetrics.CF_PREFIX);
     Set<byte[]> families = new HashSet<byte[]>();
     for (int i = 1; i <= numCF; i++) {
       String cf = "cf" + i;

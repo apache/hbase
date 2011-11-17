@@ -165,7 +165,7 @@ public class SchemaMetrics {
    * per-CF/table metrics.
    */
   public static final String UNKNOWN = "__unknown";
-  private static final String TABLE_PREFIX = "tab.";
+  public static final String TABLE_PREFIX = "tbl.";
   public static final String CF_PREFIX = "cf.";
   public static final String BLOCK_TYPE_PREFIX = "bt.";
   public static final String CF_UNKNOWN_PREFIX = CF_PREFIX + UNKNOWN + ".";
