@@ -2463,6 +2463,31 @@ public class HRegion implements HeapSize {
     return this.stores;
   }
 
+  /**
+   * Return list of storeFiles for the set of CFs.
+   * Uses splitLock to prevent the race condition where a region closes
+   * in between the for loop - closing the stores one by one, some stores
+   * will return 0 files.
+   * @return List of storeFiles.
+   */
+  public List<String> getStoreFileList(final byte [][] columns)
+    throws IllegalArgumentException {
+    List<String> storeFileNames = new ArrayList<String>();
+    synchronized(splitLock) {
+      for(byte[] column : columns) {
+        Store store = this.stores.get(column);
+        if (store == null) {
+          throw new IllegalArgumentException("No column family : " +
+              new String(column) + " available");
+        }
+        List<StoreFile> storeFiles = store.getStorefiles();
+        for (StoreFile storeFile: storeFiles) {
+          storeFileNames.add(storeFile.getPath().toString());
+        }
+      }
+    }
+    return storeFileNames;
+  }
   //////////////////////////////////////////////////////////////////////////////
   // Support code
   //////////////////////////////////////////////////////////////////////////////

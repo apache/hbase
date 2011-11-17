@@ -2432,22 +2432,30 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public List<String> getStoreFileList(byte[] regionName, byte[] columnFamily)
     throws IllegalArgumentException {
-	  HRegion region = getOnlineRegion(regionName);
+    return getStoreFileList(regionName, new byte[][]{columnFamily});
+  }
+
+  @Override
+  public List<String> getStoreFileList(byte[] regionName, byte[][] columnFamilies)
+    throws IllegalArgumentException {
+    HRegion region = getOnlineRegion(regionName);
     if (region == null) {
-      throw new IllegalArgumentException("No region : " + new String(regionName)
+      throw new IllegalArgumentException("No region: " + new String(regionName)
           + " available");
     }
-    Store store = region.getStore(columnFamily);
-    if (store == null) {
-      throw new IllegalArgumentException("No column family : " +
-          new String(columnFamily) + " available");
+    return region.getStoreFileList(columnFamilies);
+  }
+
+  public List<String> getStoreFileList(byte[] regionName)
+    throws IllegalArgumentException {
+    HRegion region = getOnlineRegion(regionName);
+    if (region == null) {
+      throw new IllegalArgumentException("No region: " + new String(regionName)
+          + " available");
     }
-	  List<StoreFile> storeFiles = region.getStore(columnFamily).getStorefiles();
-	  List<String> storeFileNames = new ArrayList<String>(storeFiles.size());
-	  for (StoreFile storeFile: storeFiles) {
-		  storeFileNames.add(storeFile.getPath().toString());
-	  }
-	  return storeFileNames;
+    Set<byte[]> columnFamilies = region.getStores().keySet();
+    int nCF = columnFamilies.size();
+    return region.getStoreFileList(columnFamilies.toArray(new byte[nCF][]));
   }
 
   /**

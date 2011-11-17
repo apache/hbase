@@ -92,7 +92,30 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
    */
   public long getLastFlushTime(byte[] regionName);
 
+  /**
+   * Get a list of store files for a particular CF in a particular region
+   * @param region name
+   * @param CF name
+   * @return the list of store files
+   */
   public List<String> getStoreFileList(byte[] regionName, byte[] columnFamily)
+    throws IllegalArgumentException;
+
+  /**
+   * Get a list of store files for a set of CFs in a particular region
+   * @param region name
+   * @param CF names
+   * @return the list of store files
+   */
+  public List<String> getStoreFileList(byte[] regionName, byte[][] columnFamilies)
+    throws IllegalArgumentException;
+
+  /**
+   * Get a list of store files for all CFs in a particular region
+   * @param region name
+   * @return the list of store files
+   */
+  public List<String> getStoreFileList(byte[] regionName)
     throws IllegalArgumentException;
 
   /**
