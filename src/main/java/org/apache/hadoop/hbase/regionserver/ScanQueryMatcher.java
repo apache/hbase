@@ -186,8 +186,7 @@ public class ScanQueryMatcher {
       (offset - initialOffset) - KeyValue.TIMESTAMP_TYPE_SIZE;
 
     long timestamp = kv.getTimestamp();
-    if (isExpired(timestamp) &&
-        kv.getType() != KeyValue.Type.DeleteFamily.getCode()) {
+    if (isExpired(timestamp)) {
       // done, the rest of this column will also be expired as well.
       return getNextRowOrNextColumn(bytes, offset, qualLength);
     }

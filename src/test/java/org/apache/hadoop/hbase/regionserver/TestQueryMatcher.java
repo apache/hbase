@@ -273,25 +273,4 @@ public class TestQueryMatcher extends HBaseTestCase {
       assertEquals(expected[i], actual.get(i));
     }
   }
-
-  public void testExpiredDeletFamilyMarker() throws IOException {
-    long now = EnvironmentEdgeManager.currentTimeMillis();
-    get = new Get(row1);
-    get.addFamily(fam1);
-    this.scan = new Scan(get);
-
-    // ttl set to 500ms
-    ScanQueryMatcher qm = new ScanQueryMatcher(scan, fam1, null, 500,
-        rowComparator, 1, false);
-    qm.setRow(row1);
-
-    KeyValue kv;
-    // expired Delete Family Marker
-    kv = new KeyValue(row1, fam1, null, now-1000, Type.DeleteFamily, null);
-    assertEquals(ScanQueryMatcher.MatchCode.SKIP, qm.match(kv));
-
-    // not-expired regular KV
-    kv = new KeyValue(row1, fam1, col1, now-100, Type.Put, data);
-    assertEquals(ScanQueryMatcher.MatchCode.INCLUDE, qm.match(kv));
-  }
 }

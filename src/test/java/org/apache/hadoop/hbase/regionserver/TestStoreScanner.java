@@ -472,4 +472,29 @@ public class TestStoreScanner extends TestCase {
           getCols("a"), scanners);
     assertNull(scan.peek());
   }
+
+  public void testExpiredDeleteFamily() throws Exception {
+    long now = System.currentTimeMillis();
+    KeyValue [] kvs = new KeyValue[] {
+        new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null, now-1000,
+            KeyValue.Type.DeleteFamily),
+        KeyValueTestUtil.create("R1", "cf", "a", now-10, KeyValue.Type.Put,
+            "dont-care"),
+    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
+    Scan scan = new Scan();
+    scan.setMaxVersions(1);
+    // scanner with ttl equal to 500
+    StoreScanner scanner =
+        new StoreScanner(scan, CF, 500, KeyValue.COMPARATOR,
+            null, scanners);
+
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    assertEquals(true, scanner.next(results));
+    assertEquals(1, results.size());
+    assertEquals(kvs[1], results.get(0));
+    results.clear();
+
+    assertEquals(false, scanner.next(results));
+  }
 }
