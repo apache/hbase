@@ -304,42 +304,35 @@ class ProcessServerShutdown extends RegionServerOperation {
   }
 
   @Override
-  protected boolean process() throws IOException {
-    LOG.info("Process shutdown of server " + this.deadServer +
-      ": logSplit: " + logSplitResult + ", rootRescanned: " + rootRescanned +
-      ", numberOfMetaRegions: " + master.getRegionManager().numMetaRegions() +
-      ", onlineMetaRegions.size(): " +
-      master.getRegionManager().numOnlineMetaRegions());
-
+  protected RegionServerOperationResult process() throws IOException {
     switch (this.logSplitResult) {
     case NOT_RUNNING:
-      LOG.info("Start to split log for dead server " + deadServer);
+      LOG.info("Process server shut down for dead server " + deadServer);
       startSplitDeadServerLog(deadServer);
-      this.requeue();
-      return false;
+      return RegionServerOperationResult.OPERATION_DELAYED;
 
     case RUNNING:
-      LOG.debug("Splitting log for dead server " + deadServer
-          + " and requeue the region server shutdown operation to delay queue");
-      this.requeue();
-      return false;
+      return RegionServerOperationResult.OPERATION_DELAYED;
 
     case SUCCESS:
       LOG.info("Succeeded in splitting log for dead server " + deadServer);
       break;
 
     case FAILED:
-      LOG.warn("Failed to split log for dead server " + deadServer
-          + " and requeue the region server shutdown operation to delay queue");
-      this.requeue();
-      return false;
+      LOG.warn("Failed splitting log for dead server " + deadServer);
+      return RegionServerOperationResult.OPERATION_FAILED;
 
     default:
       throw new RuntimeException("Invalid split log result: "
           + this.logSplitResult);
     }
 
-    LOG.info("Log split complete, meta reassignment and scanning:");
+    LOG.info("Log split is completed, meta reassignment and scanning: "
+	+ "rootRescanned: " + rootRescanned + ", numberOfMetaRegions: "
+      + master.getRegionManager().numMetaRegions()
+      + ", onlineMetaRegions.size(): "
+      + master.getRegionManager().numOnlineMetaRegions());
+
     if (this.isRootServer) {
       LOG.info("ProcessServerShutdown reassigning ROOT region");
       master.getRegionManager().reassignRootRegion();
@@ -355,10 +348,8 @@ class ProcessServerShutdown extends RegionServerOperation {
     metaRegions.clear();
 
     if (!rootAvailable()) {
-      // Return true so that worker does not put this request back on the
-      // toDoQueue.
-      // rootAvailable() has already put it on the delayedToDoQueue
-      return true;
+      // We can't proceed because the root region is not online.
+      return RegionServerOperationResult.OPERATION_DELAYED;
     }
 
     if (!rootRescanned) {
@@ -368,7 +359,7 @@ class ProcessServerShutdown extends RegionServerOperation {
               HRegionInfo.ROOT_REGIONINFO), this.master).doWithRetries();
       if (result == null) {
         // Master is closing - give up
-        return true;
+        return RegionServerOperationResult.OPERATION_SUCCEEDED;
       }
 
       if (LOG.isDebugEnabled()) {
@@ -381,9 +372,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     if (!metaTableAvailable()) {
       // We can't proceed because not all meta regions are online.
-      // metaAvailable() has put this request on the delayedToDoQueue
-      // Return true so that worker does not put this on the toDoQueue
-      return true;
+      return RegionServerOperationResult.OPERATION_DELAYED;
     }
 
     List<MetaRegion> regions = master.getRegionManager().getListOfOnlineMetaRegions();
@@ -403,7 +392,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removed " + deadServer + " from deadservers Map");
     }
-    return true;
+    return RegionServerOperationResult.OPERATION_SUCCEEDED;
   }
 
   @Override

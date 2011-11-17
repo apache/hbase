@@ -19,10 +19,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-
-import java.io.IOException;
 
 /**
  * ProcessRegionClose is the way we do post-processing on a closed region. We
@@ -57,26 +57,20 @@ public class ProcessRegionClose extends ProcessRegionStatusChange {
   }
 
   @Override
-  protected boolean process() throws IOException {
+  protected RegionServerOperationResult process() throws IOException {
     if (!metaRegionAvailable()) {
       // We can't proceed unless the meta region we are going to update
-      // is online. metaRegionAvailable() has put this operation on the
-      // delayedToDoQueue, so return true so the operation is not put
-      // back on the toDoQueue
-      return true;
+      // is online.
+      return RegionServerOperationResult.OPERATION_DELAYED;
     }
-    Boolean result = null;
+
     if (offlineRegion || reassignRegion) {
-      result =
+      Boolean result =
         new RetryableMetaOperation<Boolean>(getMetaRegion(), this.master) {
           public Boolean call() throws IOException {
-
-
-            // We can't proceed unless the meta region we are going to update
-            // is online. metaRegionAvailable() will put this operation on the
-            // delayedToDoQueue, so return true so the operation is not put
-            // back on the toDoQueue
-
+          // We can't proceed unless the meta region we are going to update
+          // is online. metaRegionAvailable() will return OPERATION_FAILED,
+          // which will put this operation to the todo queue later.
             if (metaRegionAvailable()) {
               if(offlineRegion) {
                 // offline the region in meta and then remove it from the
@@ -97,13 +91,16 @@ public class ProcessRegionClose extends ProcessRegionStatusChange {
             return true;
           }
         }.doWithRetries();
-        result = result == null ? true : result;
 
+      if (result == null || result) {
+        return RegionServerOperationResult.OPERATION_SUCCEEDED;
+      } else {
+        return RegionServerOperationResult.OPERATION_FAILED;
+      }
     } else {
       LOG.info("Region was neither offlined, or asked to be reassigned, what gives: " +
       regionInfo.getRegionNameAsString());
+      return RegionServerOperationResult.OPERATION_SUCCEEDED;
     }
-
-    return result == null ? true : result;
   }
 }

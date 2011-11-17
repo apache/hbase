@@ -19,16 +19,25 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import java.io.IOException;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 abstract class RegionServerOperation implements Delayed {
   protected static final Log LOG =
     LogFactory.getLog(RegionServerOperation.class.getName());
+
+  public static enum RegionServerOperationResult {
+    /** this operation is completed successfully. */
+    OPERATION_SUCCEEDED,
+    /** this operation has been put back to the delay queue. */
+    OPERATION_DELAYED,
+    /** this operation is failed. */
+    OPERATION_FAILED
+  }
 
   private long expire;
   protected final HMaster master;
@@ -70,10 +79,6 @@ abstract class RegionServerOperation implements Delayed {
         - o.getDelay(TimeUnit.MILLISECONDS)).intValue();
   }
 
-  protected void requeue() {
-    this.master.getRegionServerOperationQueue().putOnDelayQueue(this);
-  }
-
   private long whenToExpire() {
     return System.currentTimeMillis() + this.delay;
   }
@@ -82,7 +87,6 @@ abstract class RegionServerOperation implements Delayed {
     boolean available = true;
     if (this.master.getRegionManager().getRootRegionLocation() == null) {
       available = false;
-      requeue();
     }
     return available;
   }
@@ -105,7 +109,6 @@ abstract class RegionServerOperation implements Delayed {
         LOG.debug("Requeuing because not all meta regions are online");
       }
       available = false;
-      requeue();
     }
     return available;
   }
@@ -119,5 +122,5 @@ abstract class RegionServerOperation implements Delayed {
     return Integer.MAX_VALUE;
   }
 
-  protected abstract boolean process() throws IOException;
+  protected abstract RegionServerOperationResult process() throws IOException;
 }

@@ -47,7 +47,6 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
     if (isMetaTable) {
       // This operation is for the meta table
       if (!rootAvailable()) {
-        requeue();
         // But we can't proceed unless the root region is available
         available = false;
       }
@@ -56,8 +55,6 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
           !metaTableAvailable()) {
         // The root region has not been scanned or the meta table is not
         // available so we can't proceed.
-        // Put the operation on the delayedToDoQueue
-        requeue();
         available = false;
       }
     }

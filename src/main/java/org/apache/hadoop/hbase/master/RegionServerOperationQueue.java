@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.master.RegionServerOperation.RegionServerOperationResult;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -140,30 +141,27 @@ public class RegionServerOperationQueue {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Processing todo: " + op.toString());
       }
-      if (!process(op)) {
+      if (!preProcess(op)) {
         // Add it back on the queue.
         putOnDelayQueue(op);
-      } else if (op.process()) {
-        processed(op);
       } else {
-        // Operation would have blocked because not all meta regions are
-        // online. This could cause a deadlock, because this thread is waiting
-        // for the missing meta region(s) to come back online, but since it
-        // is waiting, it cannot process the meta region online operation it
-        // is waiting for. So put this operation back on the queue for now.
-        if (toDoQueue.size() == 0) {
-          // The queue is currently empty so wait for a while to see if what
-          // we need comes in first
-          this.sleeper.sleep();
-        }
-        try {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Put " + op.toString() + " back on queue");
-          }
-          toDoQueue.put(op);
-        } catch (InterruptedException e) {
-          throw new RuntimeException(
-            "Putting into toDoQueue was interrupted.", e);
+        RegionServerOperationResult result = op.process();
+
+        switch (result) {
+        case OPERATION_SUCCEEDED:
+          postProcess(op);
+          return ProcessingResultCode.PROCESSED;
+
+        case OPERATION_FAILED:
+          putOnTodoQueue(op);
+          break;
+        case OPERATION_DELAYED:
+          putOnDelayQueue(op);
+          break;
+
+        default:
+          throw new RuntimeException("Invalid RegionServerProccessResult: "
+              + result);
         }
       }
     } catch (Exception ex) {
@@ -177,6 +175,7 @@ public class RegionServerOperationQueue {
           LOG.warn("main processing loop: " + op.toString(), e);
         }
       }
+
       LOG.warn("Failed processing: " + op.toString() +
         "; putting onto delayed todo queue", ex);
       putOnDelayQueue(op);
@@ -185,9 +184,33 @@ public class RegionServerOperationQueue {
     return ProcessingResultCode.REQUEUED;
   }
 
-  void putOnDelayQueue(final RegionServerOperation op) {
+  private void putOnDelayQueue(final RegionServerOperation op) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Put " + op.toString() + " back to the delay queue");
+    }
     op.resetExpiration();
     this.delayedToDoQueue.put(op);
+  }
+
+  private void putOnTodoQueue(final RegionServerOperation op) {
+    // Operation would have blocked because not all meta regions are
+    // online. This could cause a deadlock, because this thread is waiting
+    // for the missing meta region(s) to come back online, but since it
+    // is waiting, it cannot process the meta region online operation it
+    // is waiting for. So put this operation back on the queue for now.
+    if (toDoQueue.size() == 0) {
+      // The queue is currently empty so wait for a while to see if what
+      // we need comes in first
+      this.sleeper.sleep();
+    }
+    try {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Put " + op.toString() + " back to the todo queue");
+      }
+      toDoQueue.put(op);
+    } catch (InterruptedException e) {
+      throw new RuntimeException("Putting into toDoQueue was interrupted.", e);
+    }
   }
 
   /**
@@ -221,10 +244,11 @@ public class RegionServerOperationQueue {
   }
 
   /*
-   * Tell listeners that we processed a RegionServerOperation.
+   * Tell listeners that we have processed a RegionServerOperation.
+   *
    * @param op Operation to tell the world about.
    */
-  private void processed(final RegionServerOperation op) {
+  private void postProcess(final RegionServerOperation op) {
     if (this.listeners.isEmpty()) return;
     for (RegionServerOperationListener listener: this.listeners) {
       listener.processed(op);
@@ -233,7 +257,7 @@ public class RegionServerOperationQueue {
 
   /**
    * Called for each message passed the master.  Most of the messages that come
-   * in here will go on to become {@link #process(RegionServerOperation)}s but
+   * in here will go on to become {@link #preProcess(RegionServerOperation)}s but
    * others like {@linke HMsg.Type#MSG_REPORT_PROCESS_OPEN} go no further;
    * only in here can you see them come in.
    * @param serverInfo Server we got the message from.
@@ -250,10 +274,11 @@ public class RegionServerOperationQueue {
   }
 
   /*
-   * Tell listeners that we processed a RegionServerOperation.
+   * Tell listeners that we start to process a RegionServerOperation.
+   *
    * @param op Operation to tell the world about.
    */
-  private boolean process(final RegionServerOperation op) throws IOException {
+  private boolean preProcess(final RegionServerOperation op) throws IOException {
     if (this.listeners.isEmpty()) return true;
     for (RegionServerOperationListener listener: this.listeners) {
       if (!listener.process(op)) return false;

@@ -67,6 +67,8 @@ public class TestMasterTransitions {
   private static final String TABLENAME = "master_transitions";
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a"),
     Bytes.toBytes("b"), Bytes.toBytes("c")};
+  static final int SERVER_DURATION = 3 * 1000;
+  static final int CLOSE_DURATION = 1 * 1000;
 
   /**
    * Start up a mini cluster and put a small table of many empty regions into it.
@@ -78,6 +80,8 @@ public class TestMasterTransitions {
     // a few in this test.  Let a couple of cycles pass is more realistic and
     // gives stuff a chance to work.
     TEST_UTIL.getConfiguration().setInt("hbase.regions.percheckin", 2);
+    TEST_UTIL.getConfiguration().setInt("hbase.server.thread.wakefrequency",
+        SERVER_DURATION);
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(2);
     // Create a table of three families.  This will assign a region.
@@ -115,9 +119,7 @@ public class TestMasterTransitions {
     private final int otherServerIndex;
     private final HRegionInfo hri;
     private int closeCount = 0;
-    static final int SERVER_DURATION = 3 * 1000;
-    static final int CLOSE_DURATION = 1 * 1000;
- 
+
     HBase2428Listener(final MiniHBaseCluster c, final HServerAddress metaAddress,
         final HRegionInfo closingHRI, final int otherServerIndex) {
       this.cluster = c;
@@ -241,7 +243,7 @@ public class TestMasterTransitions {
       // (Multiple by two to add in some slop in case of GC or something).
       assertTrue(listener.getCloseCount() > 1);
       assertTrue(listener.getCloseCount() <
-        ((HBase2428Listener.SERVER_DURATION/HBase2428Listener.CLOSE_DURATION) * 2));
+          ((SERVER_DURATION / CLOSE_DURATION) * 2));
 
       // Assert the closed region came back online
       assertRegionIsBackOnline(hri);

@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -27,8 +29,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-
-import java.io.IOException;
 
 /**
  * ProcessRegionOpen is instantiated when a region server reports that it is
@@ -59,14 +59,12 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
   }
 
   @Override
-  protected boolean process() throws IOException {
+  protected RegionServerOperationResult process() throws IOException {
     // TODO: The below check is way too convoluted!!!
     if (!metaRegionAvailable()) {
       // We can't proceed unless the meta region we are going to update
-      // is online. metaRegionAvailable() has put this operation on the
-      // delayedToDoQueue, so return true so the operation is not put
-      // back on the toDoQueue
-      return true;
+      // is online.
+      return RegionServerOperationResult.OPERATION_DELAYED;
     }
     HRegionInterface server =
         master.getServerConnection().getHRegionConnection(getMetaRegion().getServer());
@@ -119,7 +117,7 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
           ZooKeeperWrapper.getInstance(master.getConfiguration(),
               master.getZKWrapperName());
       zkWrapper.deleteUnassignedRegion(regionInfo.getEncodedName());
-      return true;
+      return RegionServerOperationResult.OPERATION_SUCCEEDED;
     }
   }
 

@@ -134,4 +134,10 @@
     The port at which the clients will connect.
     </description>
   </property>
+
+  <property>
+    <name>hbase.server.thread.wakefrequency</name>
+    <value>100</value>
+  </property>
+
 </configuration>
