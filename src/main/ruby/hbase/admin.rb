@@ -30,6 +30,7 @@ module Hbase
     def initialize(configuration, formatter)
       @admin = org.apache.hadoop.hbase.client.HBaseAdmin.new(configuration)
       connection = @admin.getConnection()
+      @conf = configuration
       @zk_wrapper = connection.getZooKeeperWatcher()
       zk = @zk_wrapper.getRecoverableZooKeeper().getZooKeeper()
       @zk_main = org.apache.zookeeper.ZooKeeperMain.new(zk)
@@ -198,6 +199,13 @@ module Hbase
             splits[idx] = split.to_java_bytes
             idx = idx + 1
           end
+        elsif arg.kind_of?(Hash) and (arg.has_key?(NUMREGIONS) or arg.has_key?(SLITALGO))
+          raise(ArgumentError, "Number of regions must be specified") unless arg.has_key?(NUMREGIONS)
+          raise(ArgumentError, "Split algorithm must be specified") unless arg.has_key?(SPLITALGO)
+          raise(ArgumentError, "Number of regions must be geter than 1") unless arg[NUMREGIONS] > 1
+          num_regions = arg[NUMREGIONS]
+          split_algo = org.apache.hadoop.hbase.util.RegionSplitter.newSplitAlgoInstance(@conf, arg[SPLITALGO])
+          splits = split_algo.split(JInteger.valueOf(num_regions))
         else
           # Add column to the table
           descriptor = hcd(arg, htd)
