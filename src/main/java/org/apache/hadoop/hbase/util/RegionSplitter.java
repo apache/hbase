@@ -584,7 +584,7 @@ public class RegionSplitter {
    * @throws IOException if the specified SplitAlgorithm class couldn't be
    * instantiated
    */
-  static SplitAlgorithm newSplitAlgoInstance(Configuration conf,
+  public static SplitAlgorithm newSplitAlgoInstance(Configuration conf,
           String splitClassName) throws IOException {
     Class<?> splitClass;
 

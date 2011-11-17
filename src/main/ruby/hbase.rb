@@ -53,6 +53,8 @@ module HBaseConstants
   FILTER = 'FILTER'
   SPLITS = 'SPLITS'
   SPLITS_FILE = 'SPLITS_FILE'
+  SPLITALGO = 'SPLITALGO'
+  NUMREGIONS = 'NUMREGIONS'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)
