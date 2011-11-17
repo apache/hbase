@@ -45,7 +45,8 @@ public class RSZookeeperUpdater {
 
   public RSZookeeperUpdater(Configuration conf, String regionServerName,
                             String regionName, int zkVersion) {
-    this.zkWrapper = ZooKeeperWrapper.getInstance(conf, regionServerName);
+    this.zkWrapper = ZooKeeperWrapper.getInstance(conf,
+        ZooKeeperWrapper.getWrapperNameForRS(regionServerName));
     this.regionServerName = regionServerName;
     this.regionName = regionName;
     // get the region ZNode we have to create

@@ -190,7 +190,7 @@ public class HMaster extends Thread implements HMasterInterface,
   private RegionServerOperationQueue regionServerOperationQueue;
 
   // True if this is the master that started the cluster.
-  boolean isClusterStartup;
+  private boolean isClusterStartup;
 
   private long masterStartupTime = Long.MAX_VALUE;
   private AtomicBoolean isSplitLogAfterStartupDone = new AtomicBoolean(false);
@@ -204,8 +204,6 @@ public class HMaster extends Thread implements HMasterInterface,
   /** Flag set after we become the active master (used for testing). */
   private volatile boolean isActiveMaster = false;
 
-  public static final String MASTER_ID_CONF_KEY = "hbase.test.master.id";
-
   /**
    * Constructor
    * @param conf configuration
@@ -214,14 +212,6 @@ public class HMaster extends Thread implements HMasterInterface,
   public HMaster(Configuration conf) throws IOException {
     this.conf = conf;
 
-    // Figure out if this is a fresh cluster start. This is done by checking the
-    // number of RS ephemeral nodes. RS ephemeral nodes are created only after
-    // the primary master has written the address to ZK. So this has to be done
-    // before we race to write our address to zookeeper.
-    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
-        getZKWrapperName());
-    isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
-
     // Get my address and create an rpc server instance.  The rpc-server port
     // can be ephemeral...ensure we have the correct info
     HServerAddress a = new HServerAddress(getMyAddress(this.conf));
@@ -229,6 +219,15 @@ public class HMaster extends Thread implements HMasterInterface,
       a.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
       false, conf);
     this.address = new HServerAddress(this.rpcServer.getListenerAddress());
+    setName(getServerName());
+
+    // Figure out if this is a fresh cluster start. This is done by checking the
+    // number of RS ephemeral nodes. RS ephemeral nodes are created only after
+    // the primary master has written the address to ZK. So this has to be done
+    // before we race to write our address to zookeeper.
+    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
+        getZKWrapperName());
+    isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
 
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
@@ -302,6 +301,7 @@ public class HMaster extends Thread implements HMasterInterface,
         true)) {
       LOG.info("Failed to write master address to ZooKeeper, not starting (" +
           "closed=" + closed.get() + ")");
+      zooKeeperWrapper.close();
       return false;
     }
 
@@ -309,7 +309,9 @@ public class HMaster extends Thread implements HMasterInterface,
     this.regionServerOperationQueue =
       new RegionServerOperationQueue(this.conf, this.closed);
 
-    serverManager = new ServerManager(this);
+    synchronized(this) {
+      serverManager = new ServerManager(this);
+    }
 
     // Start the unassigned watcher - which will create the unassigned region
     // in ZK. This is needed before RegionManager() constructor tries to assign
@@ -336,7 +338,6 @@ public class HMaster extends Thread implements HMasterInterface,
       throw new RuntimeException(e);
     }
 
-    setName(MASTER);
     this.metrics = new MasterMetrics(MASTER, this.serverManager);
     // We're almost open for business
     this.closed.set(false);
@@ -682,6 +683,7 @@ public class HMaster extends Thread implements HMasterInterface,
       // this when the cluster is shutting down.
       this.serverManager.letRegionServersShutdown();
     }
+    serverManager.joinThreads();
 
     /*
      * Clean up and close up shop
@@ -696,15 +698,13 @@ public class HMaster extends Thread implements HMasterInterface,
     }
     this.rpcServer.stop();
 
-    if (killed) {
-      regionManager.joinThreads();
-    } else {
-      // Compared to the above, this will clear the RS directory. We are not
-      // doing that when the master is being "killed" in a unit test.
-      regionManager.stop();
+    regionManager.joinThreads();
+    if (!killed) {
+      // We are shutting down the cluster.
+      zooKeeperWrapper.clearRSDirectory();
     }
 
-    this.zooKeeperWrapper.close();
+    zooKeeperWrapper.close();
     HBaseExecutorService.shutdown();
     LOG.info("HMaster main thread exiting");
   }
@@ -1898,19 +1898,26 @@ public class HMaster extends Thread implements HMasterInterface,
     if (!isActiveMaster) {
       zkMasterAddressWatcher.cancelMasterZNodeWait();
     }
+
+    synchronized(this) {
+      if (serverManager != null) {
+        serverManager.requestShutdown();
+      }
+    }
   }
 
   public void killMaster() {
+    LOG.info("Killing master without shutting down the cluster");
     killed = true;
     stopMaster();
   }
 
-  boolean isKilled() {
+  public boolean isKilled() {
     return killed;
   }
 
   String getZKWrapperName() {
-    return HMaster.class.getName() + conf.get(MASTER_ID_CONF_KEY, "");
+    return getClass().getSimpleName() + "-" + getServerName();
   }
 
   public SplitLogManager getSplitLogManager() {

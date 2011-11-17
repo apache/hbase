@@ -56,6 +56,7 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
                                  byte[] serData) {
     super(false, serverName, eventType);
     this.regionName = regionName;
+
     this.serializedData = serData;
     this.serverManager = serverManager;
   }
@@ -92,14 +93,7 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
   }
 
   private void handleRegionOpenedEvent() {
-    try {
-      if(hbEventData == null) {
-        hbEventData = new RegionTransitionEventData();
-        Writables.getWritable(serializedData, hbEventData);
-      }
-    } catch (IOException e) {
-      LOG.error("Could not deserialize additional args for Open region", e);
-    }
+    ensureEventDataAvailable();
     LOG.debug("RS " + hbEventData.getRsName() + " has opened region " + regionName);
     HServerInfo serverInfo = serverManager.getServerInfo(hbEventData.getRsName());
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
@@ -109,4 +103,28 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
                 " about " + returnMsgs.get(0).getRegionInfo().getRegionNameAsString());
     }
   }
+
+  private void ensureEventDataAvailable() {
+    if (hbEventData != null) {
+      return;
+    }
+
+    try {
+      hbEventData = new RegionTransitionEventData();
+      Writables.getWritable(serializedData, hbEventData);
+    } catch (IOException e) {
+      LOG.error("Could not deserialize additional args for Open region", e);
+      throw new RuntimeException(e);
+    }
+  }
+
+  public String getRegionName() {
+    return regionName;
+  }
+
+  public String getRegionServerName() {
+    ensureEventDataAvailable();
+    return hbEventData.getRsName();
+  }
+
 }

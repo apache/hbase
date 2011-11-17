@@ -61,7 +61,13 @@ public class ZKUnassignedWatcher implements Watcher {
 
     // If the UNASSIGNED ZNode exists and this is a fresh cluster start, then
     // delete it.
-    if(master.isClusterStartup() && zkWrapper.exists(unassignedZNode, false)) {
+    final boolean unassignedNodeExists =
+        zkWrapper.exists(unassignedZNode, false);
+    LOG.debug(getClass().getSimpleName() + " constructor: " +
+        "unassignedNodeExists=" + unassignedNodeExists + ", " +
+        "isClusterStartup=" + master.isClusterStartup());
+
+    if (master.isClusterStartup() && unassignedNodeExists) {
       LOG.info("Cluster start, but found " + unassignedZNode + ", deleting it.");
       try {
         zkWrapper.deleteZNode(unassignedZNode, true);
@@ -177,7 +183,8 @@ public class ZKUnassignedWatcher implements Watcher {
     // if the region was OPENED then handle that
     else if(rsEvent == HBaseEventType.RS2ZK_REGION_OPENED ||
             rsEvent == HBaseEventType.RS2ZK_REGION_OPENING) {
-      new MasterOpenRegionHandler(rsEvent, serverManager, serverName, region, data).submit();
+      new MasterOpenRegionHandler(rsEvent, serverManager, serverName, region,
+          data).submit();
     }
   }
 }

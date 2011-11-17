@@ -50,7 +50,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 public class MiniHBaseCluster {
   static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
   private Configuration conf;
-  public LocalHBaseCluster hbaseCluster;
+  private LocalHBaseCluster hbaseCluster;
   // Cache this.  For some reason only works first time I get it.  TODO: Figure
   // out why.
   private final static UserGroupInformation UGI;
@@ -291,8 +291,10 @@ public class MiniHBaseCluster {
    * Adds a new master to the cluster and starts the master thread. Useful if
    * the existing master dies and a live master is needed for cleanup.
    */
-  public void startNewMaster() throws IOException {
-    hbaseCluster.addMaster().start();
+  public HMaster startNewMaster() throws IOException {
+    HMaster newMaster = hbaseCluster.addMaster();
+    newMaster.start();
+    return newMaster;
   }
 
   /**
@@ -518,26 +520,16 @@ public class MiniHBaseCluster {
   }
 
   /**
-  * Kill the specified master cleanly. Does not result in a cluster shutdown.
-  *
-  * @param serverNumber Used as index into a list.
-  * @return the master that was stopped
-  */
+   * Kill the specified master cleanly. Does not result in a cluster shutdown.
+   *
+   * @param serverNumber Used as index into a list.
+   * @return the master that was stopped
+   */
   public HMaster killMaster(int serverNumber) {
     HMaster server = hbaseCluster.getMasters().get(serverNumber);
     LOG.info("Killing master " + server.toString());
     server.killMaster();
     return server;
-  }
-
-  /**
-   * Wait for the specified master to stop. Removes this thread from list
-   * of running threads.
-   * @param serverNumber
-   * @return Name of master that just went down.
-   */
-  public String waitOnMasterStop(final int serverNumber) {
-    return this.hbaseCluster.waitOnMasterStop(serverNumber);
   }
 
   /**
@@ -559,6 +551,14 @@ public class MiniHBaseCluster {
       Thread.sleep(200);
     }
     return false;
+  }
+
+  public LocalHBaseCluster getHBaseCluster() {
+    return hbaseCluster;
+  }
+
+  public HMaster getMaster(int activeIndex) {
+    return getMasters().get(activeIndex);
   }
 
 }

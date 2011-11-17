@@ -361,8 +361,8 @@ public class HRegionServer implements HRegionInterface,
   }
 
   private void initializeZooKeeper() throws IOException {
-    zooKeeperWrapper =
-        ZooKeeperWrapper.createInstance(conf, serverInfo.getServerName());
+    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
+        ZooKeeperWrapper.getWrapperNameForRS(serverInfo.getServerName()));
     zooKeeperWrapper.registerListener(this);
     try {
       zooKeeperWrapper.watchMasterAddress(zooKeeperWrapper);

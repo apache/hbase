@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -29,8 +30,10 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -62,6 +65,9 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 public class ServerManager {
   private static final Log LOG =
     LogFactory.getLog(ServerManager.class.getName());
+
+  public static final Pattern HOST_PORT_RE =
+      Pattern.compile("^[0-9a-zA-Z-_.]+:[0-9]{1,5}$");
 
   private final AtomicInteger quiescedServers = new AtomicInteger(0);
 
@@ -98,6 +104,16 @@ public class ServerManager {
   private int minimumServerCount;
 
   private final OldLogsCleaner oldLogCleaner;
+
+  /**
+   * A set of host:port pairs representing regionservers that are blacklisted
+   * from region assignment. Used for unit tests only. Please do not use this
+   * for production, because in a real situation a blacklisted server might
+   * be the underloaded one, so the master will keep trying to assign regions
+   * to it.
+   */
+  private static final Set<String> blacklistedRSHostPortSetForTest =
+      new ConcurrentSkipListSet<String>();
 
   /*
    * Dumps into log current stats on dead servers and number of servers
@@ -539,8 +555,22 @@ public class ServerManager {
       // Should we tell it close regions because its overloaded?  If its
       // currently opening regions, leave it alone till all are open.
       if (openingCount < this.nobalancingCount) {
-        this.master.getRegionManager().assignRegions(serverInfo, mostLoadedRegions,
-          returnMsgs);
+        if (!blacklistedRSHostPortSetForTest.contains(
+            serverInfo.getHostnamePort())) {
+          // Production code path.
+          master.getRegionManager().assignRegions(serverInfo,
+              mostLoadedRegions, returnMsgs);
+        } else {
+          // UNIT TESTS ONLY.
+          // We just don't assign anything to "blacklisted" regionservers as
+          // required by a unit test (for determinism). This is OK because
+          // another regionserver will get these regions in response to a
+          // heartbeat.
+          LOG.debug("[UNIT TEST ONLY] Not assigning regions "
+              + Arrays.toString(mostLoadedRegions) + " to regionserver "
+              + serverInfo.getHostnamePort()
+              + " because it is blacklisted.");
+        }
       }
 
       // Send any pending table actions.
@@ -1008,4 +1038,25 @@ public class ServerManager {
   public void setMinimumServerCount(int minimumServerCount) {
     this.minimumServerCount = minimumServerCount;
   }
+
+  public static void blacklistRSHostPortInTest(String hostPort) {
+    if (!HOST_PORT_RE.matcher(hostPort).matches()) {
+      throw new IllegalArgumentException("host:port pair expected but got " +
+          hostPort);
+    }
+    LOG.debug("Blacklisting the regionserver " + hostPort + " so that " +
+        "no regions are assigned to it. This is only done in unit tests.");
+    blacklistedRSHostPortSetForTest.add(hostPort);
+  }
+
+  public void joinThreads() {
+    Threads.shutdown(oldLogCleaner);
+    Threads.shutdown(serverMonitorThread);
+  }
+
+  public void requestShutdown() {
+    oldLogCleaner.stopThread();
+    serverMonitorThread.stopThread();
+  }
+
 }

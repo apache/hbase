@@ -123,7 +123,7 @@ public class LocalHBaseCluster {
       (Class<? extends HMaster>)conf.getClass(HConstants.MASTER_IMPL,
           masterClass);
     for (int i = 0; i < noMasters; i++) {
-      addMaster(new Configuration(conf), i);
+      addMaster();
     }
     // Start the HRegionServers.
     this.regionServerClass =
@@ -147,16 +147,17 @@ public class LocalHBaseCluster {
     return rst;
   }
 
+  /**
+   * Adds a master to the list of masters in the cluster. Each new master gets
+   * its own copy of the configuration.
+   * @return the new master
+   */
   public HMaster addMaster() throws IOException {
-    return addMaster(new Configuration(conf), this.masters.size());
-  }
-
-  public HMaster addMaster(Configuration c, final int index)
-  throws IOException {
+    Configuration masterConf = new Configuration(conf);
     // Create each master with its own Configuration instance so each has
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
-    // the guts of HConnectionManager.
-    HMaster m = JVMClusterUtil.createMaster(c, this.masterClass, index);
+    // the guts of HConnectionManager).
+    HMaster m = JVMClusterUtil.createMaster(masterConf, this.masterClass);
     this.masters.add(m);
     return m;
   }
@@ -170,7 +171,23 @@ public class LocalHBaseCluster {
   }
 
   /**
-   * @return the HMaster thread
+   * Returns the current active master, if available.
+   * @return the active HMaster, null if none is active.
+   */
+  public HMaster getActiveMaster() {
+    for (HMaster master : masters) {
+      if (master.isActiveMaster()) {
+        return master;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * For use in unit tests with only one master. If there are multiple masters,
+   * use {@link #getActiveMaster()}.
+   *
+   * @return the HMaster object
    */
   public HMaster getMaster() {
     if (masters.size() != 1) {
@@ -187,9 +204,10 @@ public class LocalHBaseCluster {
   }
 
   /**
-   * Wait for the specified master to stop
-   * Removes this thread from list of running threads.
-   * @param serverNumber
+   * Wait for the specified master to stop, and removes this thread from list
+   * of running threads.
+   *
+   * @param serverNumber the 0-based index of the master to stop
    * @return Name of master that just went down.
    */
   public String waitOnMasterStop(int serverNumber) {

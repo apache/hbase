@@ -231,9 +231,9 @@ public class HConnectionManager {
      * @throws java.io.IOException if a remote or network exception occurs
      */
     public synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
-      if(zooKeeperWrapper == null) {
-        zooKeeperWrapper =
-            ZooKeeperWrapper.createInstance(conf, HConnectionManager.class.getName());
+      if (zooKeeperWrapper == null) {
+        zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
+            HConnectionManager.class.getSimpleName());
         zooKeeperWrapper.registerListener(this);
       }
       return zooKeeperWrapper;

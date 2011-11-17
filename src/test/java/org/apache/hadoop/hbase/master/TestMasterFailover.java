@@ -24,90 +24,66 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.junit.Test;
 
-public class TestMasterFailover {
-  private static final Log LOG = LogFactory.getLog(TestMasterFailover.class);
+public class TestMasterFailover extends MultiMasterTest {
 
   /**
    * Simple test of master failover.
    * <p>
    * Starts with three masters.  Kills a backup master.  Then kills the active
    * master.  Ensures the final master becomes active and we can still contact
-   * the cluster.
+   * the miniCluster().
    * @throws Exception
    */
-  @Test
+  @Test(timeout=240000)
   public void testSimpleMasterFailover() throws Exception {
+    ZooKeeperWrapper.setNamespaceForTesting();
+    header("Starting simple master failover test");
 
-    final int NUM_MASTERS = 3;
-    final int NUM_RS = 3;
+    final int numMasters = 3;
+    final int numRS = 3;
 
-    // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    startMiniCluster(numMasters, numRS);
 
-    // get all the master threads
-    List<HMaster> HMasters = cluster.getMasters();
+    ensureMastersAreUp(numMasters);
+    final int activeIndex = getActiveMasterIndex();
 
-    // make sure all masters came online
-    for (HMaster mt : HMasters) {
-      assertTrue(mt.isAlive());
-    }
-
-    // verify only one is the active master and we have right number
-    int numActive = 0;
-    int activeIndex = -1;
-    String activeName = null;
-    for (int i = 0; i < HMasters.size(); i++) {
-      if (HMasters.get(i).isActiveMaster()) {
-        numActive++;
-        activeIndex = i;
-        activeName = HMasters.get(i).getServerName();
-      }
-    }
-    assertEquals(1, numActive);
-    assertEquals(NUM_MASTERS, HMasters.size());
+    final List<HMaster> masters = miniCluster().getMasters();
+    final String activeName = masters.get(activeIndex).getServerName();
 
     // attempt to stop one of the inactive masters
-    int backupIndex = (activeIndex + 1) % HMasters.size();
-    LOG.debug("\n\nStopping backup master (#" + backupIndex + ")\n");
-    cluster.killMaster(backupIndex);
-    cluster.waitOnMasterStop(backupIndex);
+    int backupIndex = (activeIndex + 1) % masters.size();
 
-    // verify still one active master and it's the same
-    for (int i = 0; i < HMasters.size(); i++) {
-      if (HMasters.get(i).isActiveMaster()) {
-        assertTrue(activeName.equals(
-            HMasters.get(i).getServerName()));
-        activeIndex = i;
-      }
-    }
-    assertTrue(activeIndex != -1);
-    assertEquals(1, numActive);
-    assertEquals(2, HMasters.size());
+    header("Stopping backup master (#" + backupIndex + ")");
 
-    // kill the active master
-    LOG.debug("\n\nStopping the active master (#" + activeIndex + ")\n");
-    cluster.killMaster(activeIndex);
-    cluster.waitOnMasterStop(activeIndex);
+    miniCluster().killMaster(backupIndex);
+    miniCluster().waitForActiveAndReadyMaster();
+    miniCluster().getHBaseCluster().waitOnMasterStop(backupIndex);
+
+    // Verify there is still one active master and it is the same.
+    // We must compare server names, because indexes might have shifted.
+    final int newActiveIndex = getActiveMasterIndex();
+    assertTrue(activeName.equals(masters.get(newActiveIndex).getServerName()));
+    assertEquals(2, masters.size());
+
+    header("Stopping the active master (#" + newActiveIndex + "). Keep " +
+        "in mind that the old master was removed, so the indexes might have " +
+        "shifted.");
+
+    miniCluster().killMaster(newActiveIndex);
+    miniCluster().getHBaseCluster().waitOnMasterStop(newActiveIndex);
+    assertEquals(1, masters.size());
 
     // wait for an active master to show up and be ready
-    assertTrue(cluster.waitForActiveAndReadyMaster());
+    assertTrue(miniCluster().waitForActiveAndReadyMaster());
 
-    LOG.debug("\n\nVerifying backup master is now active\n");
+    header("Verifying backup master is now active");
     // should only have one master now
-    assertEquals(1, HMasters.size());
+    assertEquals(1, masters.size());
     // and he should be active
-    assertTrue(HMasters.get(0).isActiveMaster());
-
-    // Stop the cluster
-    TEST_UTIL.shutdownMiniCluster();
+    assertTrue(masters.get(0).isActiveMaster());
   }
 
 }

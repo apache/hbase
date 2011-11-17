@@ -26,9 +26,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.PrintWriter;
-import java.io.InputStream;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.text.DateFormat;
@@ -53,6 +50,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
@@ -154,14 +152,28 @@ public class ZooKeeperWrapper implements Watcher {
   private Set<String> unassignedZNodesWatched = new HashSet<String>();
 
   private List<Watcher> listeners = Collections.synchronizedList(new ArrayList<Watcher>());
-  
+
   private int zkDumpConnectionTimeOut;
+
+  /**
+   * To allow running multiple independent unit tests within the same JVM, we
+   * use a concept of "namespaces", which are typically based on test name.
+   * The same instance name can exist independently in multiple namespaces.
+   */
+  private static String currentNamespaceForTesting = "";
+
+  /**
+   * We set this when close() is called on an unknown instance of ZK wrapper,
+   * so we can watch for this in unit tests.
+   */
+  private static volatile boolean closedUnknownZKWrapper = false;
 
   // return the singleton given the name of the instance
   public static ZooKeeperWrapper getInstance(Configuration conf, String name) {
     name = getZookeeperClusterKey(conf, name);
-    return INSTANCES.get(name);
+    return INSTANCES.get(currentNamespaceForTesting + name);
   }
+
   // creates only one instance
   public static ZooKeeperWrapper createInstance(Configuration conf, String name)
   throws IOException {
@@ -173,8 +185,9 @@ public class ZooKeeperWrapper implements Watcher {
     try {
       if (getInstance(conf, name) == null) {
         String fullname = getZookeeperClusterKey(conf, name);
-        ZooKeeperWrapper instance = new ZooKeeperWrapper(conf, fullname);
-        INSTANCES.put(fullname, instance);
+        String mapKey = currentNamespaceForTesting + fullname;
+        ZooKeeperWrapper instance = new ZooKeeperWrapper(conf, mapKey);
+        INSTANCES.put(mapKey, instance);
       }
     }
     finally {
@@ -259,6 +272,11 @@ public class ZooKeeperWrapper implements Watcher {
 
   public synchronized void registerListener(Watcher watcher) {
     listeners.add(watcher);
+  }
+
+  /** Adds the given listener to the beginning of the listener list.*/
+  public synchronized void registerHighPriorityListener(Watcher watcher) {
+    listeners.add(0, watcher);
   }
 
   public synchronized void unregisterListener(Watcher watcher) {
@@ -404,12 +422,12 @@ public class ZooKeeperWrapper implements Watcher {
   throws IOException {
     String[] sp = server.split(":");
     String host = sp[0];
-    int port = sp.length > 1 ? Integer.parseInt(sp[1]) : 
+    int port = sp.length > 1 ? Integer.parseInt(sp[1]) :
       HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT;
-    
-    Socket socket = new Socket(); 
+
+    Socket socket = new Socket();
     InetSocketAddress sockAddr = new InetSocketAddress(host, port);
-    socket.connect(sockAddr, timeout); 
+    socket.connect(sockAddr, timeout);
     socket.setSoTimeout(timeout);
 
     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -417,10 +435,10 @@ public class ZooKeeperWrapper implements Watcher {
       socket.getInputStream()));
     out.println("stat");
     out.flush();
-    
+
     ArrayList<String> res = new ArrayList<String>();
     while (true) {
-      String line = in.readLine();    
+      String line = in.readLine();
       if (line != null) res.add(line);
       else break;
     }
@@ -921,6 +939,11 @@ public class ZooKeeperWrapper implements Watcher {
   public void close() {
     try {
       recoverableZK.close();
+      if (!INSTANCES.containsKey(instanceName)) {
+        LOG.error("No ZooKeeper instance with key " + instanceName + " found:"
+            + instanceName + ", probably already closed.", new Throwable());
+        closedUnknownZKWrapper = true;
+      }
       INSTANCES.remove(instanceName);
       LOG.debug("<" + instanceName + ">" + "Closed connection with ZooKeeper; " + this.rootRegionZNode);
     } catch (InterruptedException e) {
@@ -1695,6 +1718,17 @@ public class ZooKeeperWrapper implements Watcher {
 
   }
 
+  /**
+   * Blocks until there are no node in regions in transition. Used in testing
+   * only.
+   */
+  public void blockUntilNoRegionsInTransition()
+      throws KeeperException, InterruptedException {
+    while (!recoverableZK.getChildren(rgnsInTransitZNode, false).isEmpty()) {
+      Thread.sleep(100);
+    }
+  }
+
   private void abort() {
     LOG.fatal("<" + instanceName + "> Aborting process because of fatal ZK error");
 
@@ -1705,4 +1739,50 @@ public class ZooKeeperWrapper implements Watcher {
     // When a RS ZK session expires, exit asap. Do not run any shutdown hooks.
     Runtime.getRuntime().halt(1);
   }
+
+  /**
+   * If this is called in a unit test, that test will get a separate namespace
+   * of ZK wrappers that will not collide with other unit tests. Uses the call
+   * stack to auto-detect the calling function's name, so should be called
+   * directly from a unit test method.
+   */
+  public static void setNamespaceForTesting() {
+    // Use the caller's method name.
+    String namespace =
+        new Throwable().getStackTrace()[1].getMethodName() + "_";
+    LOG.debug("Using \"" + namespace + "\" as the ZK wrapper " +
+        "namespace to avoid collisions between unit tests.");
+    currentNamespaceForTesting = namespace;
+  }
+
+  /**
+   * Used in unit testing.
+   * @return whether all ZK wrappers in the current unit test's "namespace"
+   *         have been closed and removed from the instance map.
+   */
+  public static boolean allInstancesInNamespaceClosed() {
+    boolean result = true;
+    for (String k : INSTANCES.keySet()) {
+      if (k.startsWith(currentNamespaceForTesting)) {
+        LOG.error("ZK wrapper not closed by the end of the test: " + k);
+        result = false;
+      }
+    }
+    return result;
+  }
+
+  /** @return the ZK wrapper name to be used by a region server */
+  public static String getWrapperNameForRS(String serverName) {
+    return HRegionServer.class.getSimpleName() + "-" + serverName;
+  }
+
+  /**
+   * Used in unit tests.
+   * @return true if the {@link #close()} been called on an unknown ZK wrapper,
+   *         most likely because it has been already closed.
+   */
+  public static boolean closedUnknownZKWrapperInTest() {
+    return closedUnknownZKWrapper;
+  }
+
 }

@@ -783,13 +783,6 @@ public class RegionManager {
     this.metaScannerThread.interruptAndStop();
   }
 
-  /** Stop the region assigner */
-  public void stop() {
-    joinThreads();
-    master.getZooKeeperWrapper().clearRSDirectory();
-    master.getZooKeeperWrapper().close();
-  }
-
   /**
    * Terminate all threads but don't clean up any state.
    */

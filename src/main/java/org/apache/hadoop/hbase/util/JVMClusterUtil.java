@@ -96,20 +96,18 @@ public class JVMClusterUtil {
   }
 
   /**
-   * Creates a {@link HMaster}.
-   * Call 'start' on the returned thread to make it run.
-   * @param c Configuration to use.
-   * @param hmc Class to create.
-   * @param index Used distinguishing the object returned.
-   * @throws IOException
-   * @return Master added.
+   * Creates a {@link HMaster}. Call 'start' on the returned thread to make it
+   * run. Modifies the passed configuration -- the caller is responsible for
+   * defensive copying.
+   * @param masterConf configuration to use
+   * @param hmc class to create an instance of
+   * @param masterId a unique identifier of a master within a mini-cluster
+   * @return the new master
    */
   public static HMaster createMaster(
-      final Configuration c, final Class<? extends HMaster> hmc,
-      final int index)
+      final Configuration masterConf, final Class<? extends HMaster> hmc)
   throws IOException {
-    Configuration masterConf = new Configuration(c);
-    masterConf.setInt(HMaster.MASTER_ID_CONF_KEY, index);
+    LOG.debug("Creating a new master, class: " + hmc.getName());
 
     HMaster master;
     try {

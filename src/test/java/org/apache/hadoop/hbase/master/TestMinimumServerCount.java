@@ -65,7 +65,7 @@ public class TestMinimumServerCount extends HBaseClusterTestCase {
     assertFalse(admin.isTableEnabled(TABLE_NAME));
 
     // reach in and set minimum server count
-    cluster.hbaseCluster.getMaster().getServerManager()
+    cluster.getHBaseCluster().getMaster().getServerManager()
       .setMinimumServerCount(2);
 
     // now try to enable the table

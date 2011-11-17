@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ReadWriteConsistencyControl;
@@ -69,6 +70,10 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.KeeperException.NodeExistsException;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.ZooKeeper;
@@ -372,13 +377,18 @@ public class HBaseTestingUtility {
     this.conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
-    this.hbaseCluster = new MiniHBaseCluster(this.conf, numMasters, numSlaves);
+    startMiniHBaseCluster(numMasters, numSlaves);
     // Don't leave here till we've done a successful scan of the .META.
     HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) continue;
     LOG.info("Minicluster is up");
     return this.hbaseCluster;
+  }
+
+  public void startMiniHBaseCluster(final int numMasters, final int numSlaves)
+      throws IOException, InterruptedException {
+    this.hbaseCluster = new MiniHBaseCluster(this.conf, numMasters, numSlaves);
   }
 
   /**
@@ -414,6 +424,7 @@ public class HBaseTestingUtility {
         LOG.warn("Failed delete of " + this.clusterTestBuildDir.toString());
       }
     }
+    clusterTestBuildDir = null;
     LOG.info("Minicluster is down");
     clusterTestBuildDir = null;
   }
@@ -1067,7 +1078,8 @@ public class HBaseTestingUtility {
       s.close();
       // If I get to here and all rows have a Server, then all have been assigned.
       if (rows == countOfRegions) break;
-      LOG.info("Found=" + rows);
+      LOG.info("Found " + rows + " open regions, waiting for " +
+          countOfRegions);
       Threads.sleep(1000);
     }
   }

@@ -71,8 +71,9 @@ public class TestHRegionClose {
     HRegionInfo regionInfo = region[0].getRegionInfo();
 
     // Some initializtion relevant to zk.
-    ZooKeeperWrapper zkWrapper = ZooKeeperWrapper.getInstance(conf, server
-        .getHServerInfo().getServerName());
+    ZooKeeperWrapper zkWrapper = ZooKeeperWrapper.getInstance(conf,
+        ZooKeeperWrapper.getWrapperNameForRS(
+            server.getHServerInfo().getServerName()));
     String regionZNode = zkWrapper.getZNode(
         zkWrapper.getRegionInTransitionZNode(), regionInfo.getEncodedName());
 

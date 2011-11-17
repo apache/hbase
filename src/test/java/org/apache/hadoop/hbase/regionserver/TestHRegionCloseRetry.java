@@ -93,8 +93,9 @@ public class TestHRegionCloseRetry {
     }
     assertNotNull(regionInfo);
 
-    ZooKeeperWrapper zkWrapper = ZooKeeperWrapper.getInstance(conf, server
-        .getHServerInfo().getServerName());
+    ZooKeeperWrapper zkWrapper = ZooKeeperWrapper.getInstance(conf,
+        ZooKeeperWrapper.getWrapperNameForRS(
+            server.getHServerInfo().getServerName()));
     String regionZNode = zkWrapper.getZNode(
         zkWrapper.getRegionInTransitionZNode(), regionInfo.getEncodedName());
 

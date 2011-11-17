@@ -42,7 +42,7 @@ public abstract class Chore extends Thread {
   /**
    * This variable might belong to someone else, e.g. HMaster. Setting this
    * variable might trigger cluster shutdown. To shut down this thread only,
-   * use {@link #threadStop}.
+   * use {@link #threadShouldStop}.
    */
   protected volatile AtomicBoolean stop;
 
@@ -51,7 +51,7 @@ public abstract class Chore extends Thread {
    * down. We use this flag when the master requests a shutdown of base
    * scanners, but we don't want to shut down the whole cluster.
    */
-  private volatile boolean threadStop = false;
+  private volatile boolean threadShouldStop = false;
 
   /**
    * @param p Period at which we should run.  Will be adjusted appropriately
@@ -72,7 +72,7 @@ public abstract class Chore extends Thread {
   public void run() {
     try {
       boolean initialChoreComplete = false;
-      while (!this.stop.get() && !threadStop) {
+      while (!this.stop.get() && !threadShouldStop) {
         long startTime = System.currentTimeMillis();
         try {
           if (!initialChoreComplete) {
@@ -126,8 +126,14 @@ public abstract class Chore extends Thread {
     this.sleeper.sleep();
   }
 
-  protected void shutdownThisThread() {
-    threadStop = true;
+  /**
+   * Sets the flag that this thread should stop, and wakes up the thread if it
+   * is sleeping using {@link Sleeper}. Does not interrupt or notify the
+   * waiting thread in any other way.
+   */
+  public void stopThread() {
+    threadShouldStop = true;
+    sleeper.skipSleepCycle();
   }
 
 }
