@@ -252,6 +252,12 @@ public class TestAcidGuarantees {
       writers.add(writer);
       ctx.addThread(writer);
     }
+    // Add a flusher
+    ctx.addThread(new RepeatingTestThread(ctx) {
+      public void doAnAction() throws Exception {
+        util.flush();
+      }
+    });
 
     List<AtomicGetReader> getters = Lists.newArrayList();
     for (int i = 0; i < numGetters; i++) {
@@ -288,7 +294,6 @@ public class TestAcidGuarantees {
   }
 
   @Test
-  @Ignore("Currently not passing - see HBASE-2856")
   public void testGetAtomicity() throws Exception {
     util.startMiniCluster(1);
     try {
@@ -299,7 +304,6 @@ public class TestAcidGuarantees {
   }
 
   @Test
-  @Ignore("Currently not passing - see HBASE-2670")
   public void testScanAtomicity() throws Exception {
     util.startMiniCluster(1);
     try {
@@ -310,7 +314,6 @@ public class TestAcidGuarantees {
   }
 
   @Test
-  @Ignore("Currently not passing - see HBASE-2670")
   public void testMixedAtomicity() throws Exception {
     util.startMiniCluster(1);
     try {
@@ -324,7 +327,7 @@ public class TestAcidGuarantees {
     Configuration c = HBaseConfiguration.create();
     TestAcidGuarantees test = new TestAcidGuarantees();
     test.setConf(c);
-    test.runTestAtomicity(5*60*1000, 5, 2, 2, 3);
+    test.runTestAtomicity(5000, 50, 2, 2, 3);
   }
 
   private void setConf(Configuration c) {

@@ -212,6 +212,29 @@ public class HRegion implements HeapSize { // , Writable{
   final Path regiondir;
   KeyValue.KVComparator comparator;
 
+  private ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
+
+  /*
+   * @return The smallest rwcc readPoint across all the scanners in this
+   * region. Writes older than this readPoint, are included  in every
+   * read operation.
+   */
+  public long getSmallestReadPoint() {
+    long minimumReadPoint;
+    // We need to ensure that while we are calculating the smallestReadPoint
+    // no new RegionScanners can grab a readPoint that we are unaware of.
+    // We achieve this by synchronizing on the scannerReadPoints object.
+    synchronized(scannerReadPoints) {
+      minimumReadPoint = rwcc.memstoreReadPoint();
+
+      for (Long readPoint: this.scannerReadPoints.values()) {
+        if (readPoint < minimumReadPoint) {
+          minimumReadPoint = readPoint;
+        }
+      }
+    }
+    return minimumReadPoint;
+  }
   /*
    * Data structure of write state flags used coordinating flushes,
    * compactions and closes.
@@ -371,6 +394,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.htableDescriptor = null;
     this.threadWakeFrequency = 0L;
     this.coprocessorHost = null;
+    this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
   }
 
   /**
@@ -414,6 +438,7 @@ public class HRegion implements HeapSize { // , Writable{
     String encodedNameStr = this.regionInfo.getEncodedName();
     setHTableSpecificConf();
     this.regiondir = getRegionDir(this.tableDir, encodedNameStr);
+    this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
 
     // don't initialize coprocessors if not running within a regionserver
     // TODO: revisit if coprocessors should load in other cases
@@ -495,6 +520,8 @@ public class HRegion implements HeapSize { // , Writable{
     // min across all the max.
     long minSeqId = -1;
     long maxSeqId = -1;
+    // initialized to -1 so that we pick up MemstoreTS from column families
+    long maxMemstoreTS = -1;
     for (HColumnDescriptor c : this.htableDescriptor.getFamilies()) {
       status.setStatus("Instantiating store for column family " + c);
       Store store = instantiateHStore(this.tableDir, c);
@@ -506,7 +533,12 @@ public class HRegion implements HeapSize { // , Writable{
       if (maxSeqId == -1 || storeSeqId > maxSeqId) {
         maxSeqId = storeSeqId;
       }
+      long maxStoreMemstoreTS = store.getMaxMemstoreTS();
+      if (maxStoreMemstoreTS > maxMemstoreTS) {
+        maxMemstoreTS = maxStoreMemstoreTS;
+      }
     }
+    rwcc.initialize(maxMemstoreTS + 1);
     // Recover any edits if available.
     maxSeqId = Math.max(maxSeqId, replayRecoveredEditsIfAny(
         this.regiondir, minSeqId, reporter, status));
@@ -1666,6 +1698,8 @@ public class HRegion implements HeapSize { // , Writable{
     this.put(put, lockid, put.getWriteToWAL());
   }
 
+
+
   /**
    * @param put
    * @param lockid
@@ -2285,6 +2319,7 @@ public class HRegion implements HeapSize { // , Writable{
         rwcc.completeMemstoreInsert(localizedWriteEntry);
       }
     }
+
     return size;
   }
 
@@ -2963,6 +2998,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
       //DebugPrint.println("HRegionScanner.<init>");
+
       this.filter = scan.getFilter();
       this.batch = scan.getBatch();
       if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
@@ -2974,7 +3010,12 @@ public class HRegion implements HeapSize { // , Writable{
       // it is [startRow,endRow) and if startRow=endRow we get nothing.
       this.isScan = scan.isGetScan() ? -1 : 0;
 
-      this.readPt = ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+      // synchronize on scannerReadPoints so that nobody calculates
+      // getSmallestReadPoint, before scannerReadPoints is updated.
+      synchronized(scannerReadPoints) {
+	      this.readPt = ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+	      scannerReadPoints.put(this, this.readPt);
+      }
 
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
       if (additionalScanners != null) {
@@ -2984,7 +3025,9 @@ public class HRegion implements HeapSize { // , Writable{
       for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
           scan.getFamilyMap().entrySet()) {
         Store store = stores.get(entry.getKey());
-        scanners.add(store.getScanner(scan, entry.getValue()));
+        StoreScanner scanner = store.getScanner(scan, entry.getValue());
+        scanner.useRWCC(true);
+        scanners.add(scanner);
       }
       this.storeHeap = new KeyValueHeap(scanners, comparator);
     }
@@ -3135,6 +3178,8 @@ public class HRegion implements HeapSize { // , Writable{
         storeHeap.close();
         storeHeap = null;
       }
+      // no need to sychronize here.
+	  scannerReadPoints.remove(this);
       this.filterClosed = true;
     }
 
@@ -4186,7 +4231,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      28 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
+      29 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
       (4 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
@@ -4195,7 +4240,7 @@ public class HRegion implements HeapSize { // , Writable{
       (2 * ClassSize.ATOMIC_BOOLEAN) + // closed, closing
       ClassSize.ATOMIC_LONG + // memStoreSize 
       ClassSize.ATOMIC_INTEGER + // lockIdGenerator
-      (2 * ClassSize.CONCURRENT_HASHMAP) +  // lockedRows, lockIds
+      (3 * ClassSize.CONCURRENT_HASHMAP) +  // lockedRows, lockIds, scannerReadPoints
       WriteState.HEAP_SIZE + // writestate
       ClassSize.CONCURRENT_SKIPLISTMAP + ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + // stores
       (2 * ClassSize.REENTRANT_LOCK) + // lock, updatesLock

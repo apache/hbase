@@ -24,6 +24,9 @@ import java.util.LinkedList;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
+
 /**
  * Manages the read/write consistency within memstore. This provides
  * an interface for readers to determine what entries to ignore, and
@@ -42,6 +45,31 @@ public class ReadWriteConsistencyControl {
 
   private static final ThreadLocal<Long> perThreadReadPoint =
       new ThreadLocal<Long>();
+
+  /**
+   * Default constructor. Initializes the memstoreRead/Write points to 0.
+   */
+  public ReadWriteConsistencyControl() {
+    this.memstoreRead = this.memstoreWrite = 0;
+  }
+
+  /**
+   * Initializes the memstoreRead/Write points appropriately.
+   * @param startPoint
+   */
+  public void initialize(long startPoint) {
+    synchronized (writeQueue) {
+      if (this.memstoreWrite != this.memstoreRead) {
+        throw new RuntimeException("Already used this rwcc. Too late to initialize");
+      }
+
+      if (this.memstoreWrite > startPoint) {
+        throw new RuntimeException("Cannot decrease RWCC timestamp");
+      }
+
+      this.memstoreRead = this.memstoreWrite = startPoint;
+    }
+  }
 
   /**
    * Get this thread's read point. Used primarily by the memstore scanner to
@@ -151,6 +179,7 @@ public class ReadWriteConsistencyControl {
       }
     }
     if (interrupted) Thread.currentThread().interrupt();
+
   }
 
   public long memstoreReadPoint() {

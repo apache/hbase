@@ -238,6 +238,13 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   /**
+   * @return The maximum memstoreTS in all store files.
+   */
+  public long getMaxMemstoreTS() {
+    return StoreFile.getMaxMemstoreTSInList(this.getStorefiles());
+  }
+
+  /**
    * @param tabledir
    * @param encodedName Encoded region name.
    * @param family
@@ -507,6 +514,9 @@ public class Store extends SchemaConfigured implements HeapSize {
       MonitoredTask status)
       throws IOException {
     StoreFile.Writer writer;
+    String fileName;
+    // Find the smallest read point across all the Scanners.
+    long smallestReadPoint = region.getSmallestReadPoint();
     long flushed = 0;
     Path pathName;
     // Don't flush if there are no entries.
@@ -538,6 +548,11 @@ public class Store extends SchemaConfigured implements HeapSize {
             hasMore = scanner.next(kvs);
             if (!kvs.isEmpty()) {
               for (KeyValue kv : kvs) {
+                // If we know that this KV is going to be included always, then let us
+                // set its memstoreTS to 0. This will help us save space when writing to disk.
+                if (kv.getMemstoreTS() <= smallestReadPoint) {
+                  kv.setMemstoreTS(0);
+                }
                 writer.append(kv);
                 flushed += this.memstore.heapSizeChange(kv, true);
               }
@@ -1224,6 +1239,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     // Make the instantiation lazy in case compaction produces no product; i.e.
     // where all source cells are expired or deleted.
     StoreFile.Writer writer = null;
+    // Find the smallest read point across all the Scanners.
+    long smallestReadPoint = region.getSmallestReadPoint();
     try {
       InternalScanner scanner = null;
       try {
@@ -1259,6 +1276,9 @@ public class Store extends SchemaConfigured implements HeapSize {
           if (writer != null) {
             // output to writer:
             for (KeyValue kv : kvs) {
+              if (kv.getMemstoreTS() <= smallestReadPoint) {
+                kv.setMemstoreTS(0);
+              }
               writer.append(kv);
               // update progress per key
               ++progress.currentCompactedKVs;
@@ -1707,7 +1727,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    * Return a scanner for both the memstore and the HStore files
    * @throws IOException
    */
-  public KeyValueScanner getScanner(Scan scan,
+  public StoreScanner getScanner(Scan scan,
       final NavigableSet<byte []> targetCols) throws IOException {
     lock.readLock().lock();
     try {
