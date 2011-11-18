@@ -215,7 +215,7 @@ public class HRegion implements HeapSize { // , Writable{
   private ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
 
   /*
-   * @return The smallest rwcc readPoint across all the scanners in this
+   * @return The smallest mvcc readPoint across all the scanners in this
    * region. Writes older than this readPoint, are included  in every
    * read operation.
    */
@@ -225,7 +225,7 @@ public class HRegion implements HeapSize { // , Writable{
     // no new RegionScanners can grab a readPoint that we are unaware of.
     // We achieve this by synchronizing on the scannerReadPoints object.
     synchronized(scannerReadPoints) {
-      minimumReadPoint = rwcc.memstoreReadPoint();
+      minimumReadPoint = mvcc.memstoreReadPoint();
 
       for (Long readPoint: this.scannerReadPoints.values()) {
         if (readPoint < minimumReadPoint) {
@@ -291,8 +291,8 @@ public class HRegion implements HeapSize { // , Writable{
   private boolean splitRequest;
   private byte[] explicitSplitPoint = null;
 
-  private final ReadWriteConsistencyControl rwcc =
-      new ReadWriteConsistencyControl();
+  private final MultiVersionConsistencyControl mvcc =
+      new MultiVersionConsistencyControl();
 
   // Coprocessor host
   private RegionCoprocessorHost coprocessorHost;
@@ -538,7 +538,7 @@ public class HRegion implements HeapSize { // , Writable{
         maxMemstoreTS = maxStoreMemstoreTS;
       }
     }
-    rwcc.initialize(maxMemstoreTS + 1);
+    mvcc.initialize(maxMemstoreTS + 1);
     // Recover any edits if available.
     maxSeqId = Math.max(maxSeqId, replayRecoveredEditsIfAny(
         this.regiondir, minSeqId, reporter, status));
@@ -747,8 +747,8 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
-   public ReadWriteConsistencyControl getRWCC() {
-     return rwcc;
+   public MultiVersionConsistencyControl getMVCC() {
+     return mvcc;
    }
 
   /**
@@ -1271,7 +1271,7 @@ public class HRegion implements HeapSize { // , Writable{
     // during the flush
     long sequenceId = -1L;
     long completeSequenceId = -1L;
-    ReadWriteConsistencyControl.WriteEntry w = null;
+    MultiVersionConsistencyControl.WriteEntry w = null;
 
     // We have to take a write lock during snapshot, or else a write could
     // end up in both snapshot and memstore (makes it difficult to do atomic
@@ -1282,9 +1282,9 @@ public class HRegion implements HeapSize { // , Writable{
     long currentMemStoreSize = 0;
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(stores.size());
     try {
-      // Record the rwcc for all transactions in progress.
-      w = rwcc.beginMemstoreInsert();
-      rwcc.advanceMemstore(w);
+      // Record the mvcc for all transactions in progress.
+      w = mvcc.beginMemstoreInsert();
+      mvcc.advanceMemstore(w);
 
       sequenceId = (wal == null)? myseqid :
         wal.startCacheFlush(this.regionInfo.getEncodedNameAsBytes());
@@ -1301,15 +1301,15 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       this.updatesLock.writeLock().unlock();
     }
-    status.setStatus("Waiting for rwcc");
-    LOG.debug("Finished snapshotting, commencing waiting for rwcc");
+    status.setStatus("Waiting for mvcc");
+    LOG.debug("Finished snapshotting, commencing waiting for mvcc");
 
     // wait for all in-progress transactions to commit to HLog before
     // we can start the flush. This prevents
     // uncommitted transactions from being written into HFiles.
     // We have to block before we start the flush, otherwise keys that
     // were removed via a rollbackMemstore could be written to Hfiles.
-    rwcc.waitForRead(w);
+    mvcc.waitForRead(w);
 
     status.setStatus("Flushing stores");
     LOG.debug("Finished snapshotting, commencing flushing stores");
@@ -1827,7 +1827,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
 
-    ReadWriteConsistencyControl.WriteEntry w = null;
+    MultiVersionConsistencyControl.WriteEntry w = null;
     long txid = 0;
     boolean walSyncSuccessful = false;
     boolean locked = false;
@@ -1917,17 +1917,17 @@ public class HRegion implements HeapSize { // , Writable{
 
       //
       // ------------------------------------
-      // Acquire the latest rwcc number
+      // Acquire the latest mvcc number
       // ----------------------------------
-      w = rwcc.beginMemstoreInsert();
+      w = mvcc.beginMemstoreInsert();
 
       // ------------------------------------
       // STEP 3. Write back to memstore
       // Write to memstore. It is ok to write to memstore
       // first without updating the HLog because we do not roll
-      // forward the memstore RWCC. The RWCC will be moved up when
+      // forward the memstore MVCC. The MVCC will be moved up when
       // the complete operation is done. These changes are not yet
-      // visible to scanners till we update the RWCC. The RWCC is
+      // visible to scanners till we update the MVCC. The MVCC is
       // moved only when the sync is complete.
       // ----------------------------------
       long addedSize = 0;
@@ -1985,10 +1985,10 @@ public class HRegion implements HeapSize { // , Writable{
       }
       walSyncSuccessful = true;
       // ------------------------------------------------------------------
-      // STEP 8. Advance rwcc. This will make this put visible to scanners and getters.
+      // STEP 8. Advance mvcc. This will make this put visible to scanners and getters.
       // ------------------------------------------------------------------
       if (w != null) {
-        rwcc.completeMemstoreInsert(w);
+        mvcc.completeMemstoreInsert(w);
         w = null;
       }
 
@@ -2016,7 +2016,7 @@ public class HRegion implements HeapSize { // , Writable{
       if (!walSyncSuccessful) {
         rollbackMemstore(batchOp, familyMaps, firstIndex, lastIndexExclusive);
       }
-      if (w != null) rwcc.completeMemstoreInsert(w);
+      if (w != null) mvcc.completeMemstoreInsert(w);
 
       if (locked) {
         this.updatesLock.readLock().unlock();
@@ -2288,20 +2288,20 @@ public class HRegion implements HeapSize { // , Writable{
    * <b>not</b> check the families for validity.
    *
    * @param familyMap Map of kvs per family
-   * @param localizedWriteEntry The WriteEntry of the RWCC for this transaction.
-   *        If null, then this method internally creates a rwcc transaction.
+   * @param localizedWriteEntry The WriteEntry of the MVCC for this transaction.
+   *        If null, then this method internally creates a mvcc transaction.
    * @return the additional memory usage of the memstore caused by the
    * new entries.
    */
   private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap,
-    ReadWriteConsistencyControl.WriteEntry localizedWriteEntry) {
+    MultiVersionConsistencyControl.WriteEntry localizedWriteEntry) {
     long size = 0;
-    boolean freerwcc = false;
+    boolean freemvcc = false;
 
     try {
       if (localizedWriteEntry == null) {
-        localizedWriteEntry = rwcc.beginMemstoreInsert();
-        freerwcc = true;
+        localizedWriteEntry = mvcc.beginMemstoreInsert();
+        freemvcc = true;
       }
 
       for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
@@ -2315,8 +2315,8 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
     } finally {
-      if (freerwcc) {
-        rwcc.completeMemstoreInsert(localizedWriteEntry);
+      if (freemvcc) {
+        mvcc.completeMemstoreInsert(localizedWriteEntry);
       }
     }
 
@@ -3013,7 +3013,7 @@ public class HRegion implements HeapSize { // , Writable{
       // synchronize on scannerReadPoints so that nobody calculates
       // getSmallestReadPoint, before scannerReadPoints is updated.
       synchronized(scannerReadPoints) {
-        this.readPt = ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+        this.readPt = MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
         scannerReadPoints.put(this, this.readPt);
       }
 
@@ -3057,7 +3057,7 @@ public class HRegion implements HeapSize { // , Writable{
       try {
 
         // This could be a new thread from the last time we called next().
-        ReadWriteConsistencyControl.setThreadReadPoint(this.readPt);
+        MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
 
         results.clear();
 
@@ -3884,7 +3884,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public Result append(Append append, Integer lockid, boolean writeToWAL)
       throws IOException {
-    // TODO: Use RWCC to make this set of appends atomic to reads
+    // TODO: Use MVCC to make this set of appends atomic to reads
     byte[] row = append.getRow();
     checkRow(row, "append");
     boolean flush = false;
@@ -4024,7 +4024,7 @@ public class HRegion implements HeapSize { // , Writable{
   public Result increment(Increment increment, Integer lockid,
       boolean writeToWAL)
   throws IOException {
-    // TODO: Use RWCC to make this set of increments atomic to reads
+    // TODO: Use MVCC to make this set of increments atomic to reads
     byte [] row = increment.getRow();
     checkRow(row, "increment");
     TimeRange tr = increment.getTimeRange();
@@ -4244,7 +4244,7 @@ public class HRegion implements HeapSize { // , Writable{
       ClassSize.CONCURRENT_SKIPLISTMAP + ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + // stores
       (2 * ClassSize.REENTRANT_LOCK) + // lock, updatesLock
       ClassSize.ARRAYLIST + // recentFlushes
-      ReadWriteConsistencyControl.FIXED_SIZE // rwcc
+      MultiVersionConsistencyControl.FIXED_SIZE // mvcc
       ;
 
   @Override
@@ -4253,7 +4253,7 @@ public class HRegion implements HeapSize { // , Writable{
     for(Store store : this.stores.values()) {
       heapSize += store.heapSize();
     }
-    // this does not take into account row locks, recent flushes, rwcc entries
+    // this does not take into account row locks, recent flushes, mvcc entries
     return heapSize;
   }
 

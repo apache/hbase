@@ -1285,7 +1285,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     StoreFile.Writer writer = null;
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = region.getSmallestReadPoint();
-    ReadWriteConsistencyControl.setThreadReadPoint(smallestReadPoint);
+    MultiVersionConsistencyControl.setThreadReadPoint(smallestReadPoint);
     try {
       InternalScanner scanner = null;
       try {
@@ -1942,7 +1942,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       throws IOException {
     this.lock.readLock().lock();
     try {
-      // TODO: Make this operation atomic w/ RWCC
+      // TODO: Make this operation atomic w/ MVCC
       return this.memstore.upsert(kvs);
     } finally {
       this.lock.readLock().unlock();

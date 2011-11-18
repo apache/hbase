@@ -713,7 +713,7 @@ public class MemStore implements HeapSize {
     }
 
     protected KeyValue getNext(Iterator<KeyValue> it) {
-      long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
+      long readPoint = MultiVersionConsistencyControl.getThreadReadPoint();
 
       while (it.hasNext()) {
         KeyValue v = it.next();
