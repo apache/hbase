@@ -671,7 +671,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             LOG.info("Closing user regions");
             closeUserRegions(this.abortRequested);
           } else if (this.stopping) {
-            LOG.info("Stopping meta regions, if the HRegionServer hosts any");
             boolean allUserRegionsOffline = areAllUserRegionsOffline();
             if (allUserRegionsOffline) {
               // Set stopped if no requests since last time we went around the loop.
@@ -681,6 +680,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
                 break;
               }
               oldRequestCount = this.requestCount.get();
+            } else {
+              // Make sure all regions have been closed -- some regions may
+              // have not got it because we were splitting at the time of
+              // the call to closeUserRegions.
+              closeUserRegions(this.abortRequested);
             }
             LOG.debug("Waiting on " + getOnlineRegionsAsPrintableString());
           }
@@ -1812,6 +1816,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   /**
    * Schedule closes on all user regions.
+   * Should be safe calling multiple times because it wont' close regions
+   * that are already closed or that are closing.
    * @param abort Whether we're running an abort.
    */
   void closeUserRegions(final boolean abort) {
@@ -1820,6 +1826,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
         if (!r.getRegionInfo().isMetaRegion()) {
+          if (r.isClosed() || r.isClosing()) continue;
           // Don't update zk with this close transition; pass false.
           closeRegion(r.getRegionInfo(), abort, false);
         }
