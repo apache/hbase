@@ -199,7 +199,7 @@ module Hbase
             splits[idx] = split.to_java_bytes
             idx = idx + 1
           end
-        elsif arg.kind_of?(Hash) and (arg.has_key?(NUMREGIONS) or arg.has_key?(SLITALGO))
+        elsif arg.kind_of?(Hash) and (arg.has_key?(NUMREGIONS) or arg.has_key?(SPLITALGO))
           raise(ArgumentError, "Number of regions must be specified") unless arg.has_key?(NUMREGIONS)
           raise(ArgumentError, "Split algorithm must be specified") unless arg.has_key?(SPLITALGO)
           raise(ArgumentError, "Number of regions must be geter than 1") unless arg[NUMREGIONS] > 1
