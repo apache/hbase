@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
+import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.BloomFilter;
@@ -155,6 +156,18 @@ public class StoreFile {
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
   private long sequenceid = -1;
+
+  // max of the MemstoreTS in the KV's in this store
+  // Set when we obtain a Reader.
+  private long maxMemstoreTS = -1;
+
+  public long getMaxMemstoreTS() {
+    return maxMemstoreTS;
+  }
+
+  public void setMaxMemstoreTS(long maxMemstoreTS) {
+    this.maxMemstoreTS = maxMemstoreTS;
+  }
 
   // If true, this file was product of a major compaction.  Its then set
   // whenever you get a Reader.
@@ -343,6 +356,24 @@ public class StoreFile {
   }
 
   /**
+   * Return the largest memstoreTS found across all storefiles in
+   * the given list. Store files that were created by a mapreduce
+   * bulk load are ignored, as they do not correspond to any specific
+   * put operation, and thus do not have a memstoreTS associated with them.
+   * @return 0 if no non-bulk-load files are provided or, this is Store that
+   * does not yet have any store files.
+   */
+  public static long getMaxMemstoreTSInList(Collection<StoreFile> sfs) {
+    long max = 0;
+    for (StoreFile sf : sfs) {
+      if (!sf.isBulkLoadResult()) {
+        max = Math.max(max, sf.getMaxMemstoreTS());
+      }
+    }
+    return max;
+  }
+
+  /**
    * Return the highest sequence ID found across all storefiles in
    * the given list. Store files that were created by a mapreduce
    * bulk load are ignored, as they do not correspond to any edit
@@ -490,6 +521,11 @@ public class StoreFile {
       }
     }
     this.reader.setSequenceID(this.sequenceid);
+
+    b = metadataMap.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
+    if (b != null) {
+      this.maxMemstoreTS = Bytes.toLong(b);
+    }
 
     b = metadataMap.get(MAJOR_COMPACTION_KEY);
     if (b != null) {

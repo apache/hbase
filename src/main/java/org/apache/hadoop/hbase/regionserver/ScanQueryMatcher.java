@@ -92,6 +92,12 @@ public class ScanQueryMatcher {
    */
   private final long earliestPutTs;
 
+  /** Should we ignore KV's with a newer RWCC timestamp **/
+  private boolean enforceRWCC = false;
+  public void useRWCC(boolean flag) {
+    this.enforceRWCC = flag;
+  }
+
   /**
    * This variable shows whether there is an null column in the query. There
    * always exists a null column in the wildcard column query.
@@ -226,6 +232,13 @@ public class ScanQueryMatcher {
     // check for early out based on timestamp alone
     if (columns.isDone(timestamp)) {
         return columns.getNextRowOrNextColumn(bytes, offset, qualLength);
+    }
+
+    // The compaction thread has no readPoint set. For other operations, we
+    // will ignore updates that are done after the read operation has started.
+    if (this.enforceRWCC &&
+        kv.getMemstoreTS() > ReadWriteConsistencyControl.getThreadReadPoint()) {
+        return MatchCode.SKIP;
     }
 
     /*

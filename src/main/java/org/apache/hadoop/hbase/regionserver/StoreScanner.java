@@ -159,6 +159,15 @@ class StoreScanner extends NonLazyKeyValueScanner
     heap = new KeyValueHeap(scanners, scanInfo.getComparator());
   }
 
+  /**
+   * Advise the StoreScanner if it should enforce the RWCC mechanism
+   * for ignoring newer KVs or not.
+   * @param flag
+   */
+  public void useRWCC(boolean flag) {
+    matcher.useRWCC(flag);
+  }
+
   /*
    * @return List of scanners ordered properly.
    */
