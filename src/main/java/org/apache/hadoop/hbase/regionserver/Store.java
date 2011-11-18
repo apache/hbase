@@ -424,10 +424,15 @@ public class Store extends SchemaConfigured implements HeapSize {
       ArrayList<StoreFile> newFiles = new ArrayList<StoreFile>(storefiles);
       newFiles.add(sf);
       this.storefiles = sortAndClone(newFiles);
-      notifyChangedReadersObservers();
     } finally {
+      // We need the lock, as long as we are updating the storefiles
+      // or changing the memstore. Let us release it before calling
+      // notifyChangeReadersObservers. See HBASE-4485 for a possible
+      // deadlock scenario that could have happened if continue to hold
+      // the lock.
       this.lock.writeLock().unlock();
     }
+    notifyChangedReadersObservers();
     LOG.info("Successfully loaded store file " + srcPath
         + " into store " + this + " (new location: " + dstPath + ")");
   }
@@ -671,15 +676,21 @@ public class Store extends SchemaConfigured implements HeapSize {
       ArrayList<StoreFile> newList = new ArrayList<StoreFile>(storefiles);
       newList.add(sf);
       storefiles = sortAndClone(newList);
+
       this.memstore.clearSnapshot(set);
-
-      // Tell listeners of the change in readers.
-      notifyChangedReadersObservers();
-
-      return needsCompaction();
     } finally {
+      // We need the lock, as long as we are updating the storefiles
+      // or changing the memstore. Let us release it before calling
+      // notifyChangeReadersObservers. See HBASE-4485 for a possible
+      // deadlock scenario that could have happened if continue to hold
+      // the lock.
       this.lock.writeLock().unlock();
     }
+
+    // Tell listeners of the change in readers.
+    notifyChangedReadersObservers();
+
+    return needsCompaction();
   }
 
   /*
@@ -690,6 +701,35 @@ public class Store extends SchemaConfigured implements HeapSize {
     for (ChangedReadersObserver o: this.changedReaderObservers) {
       o.updateReaders();
     }
+  }
+
+  protected List<KeyValueScanner> getScanners(boolean cacheBlocks,
+      boolean isGet,
+      boolean isCompaction,
+      ScanQueryMatcher matcher) throws IOException {
+    List<StoreFile> storeFiles;
+    List<KeyValueScanner> memStoreScanners;
+    this.lock.readLock().lock();
+    try {
+      storeFiles = this.getStorefiles();
+      memStoreScanners = this.memstore.getScanners();
+    } finally {
+      this.lock.readLock().unlock();
+    }
+
+    // First the store file scanners
+
+    // TODO this used to get the store files in descending order,
+    // but now we get them in ascending order, which I think is
+    // actually more correct, since memstore get put at the end.
+    List<StoreFileScanner> sfScanners = StoreFileScanner
+      .getScannersForStoreFiles(storeFiles, cacheBlocks, isGet, isCompaction, matcher);
+    List<KeyValueScanner> scanners =
+      new ArrayList<KeyValueScanner>(sfScanners.size()+1);
+    scanners.addAll(sfScanners);
+    // Then the memstore scanners
+    scanners.addAll(memStoreScanners);
+    return scanners;
   }
 
   /*
@@ -1381,8 +1421,8 @@ public class Store extends SchemaConfigured implements HeapSize {
           this.family.getBloomFilterType());
       result.createReader();
     }
-    this.lock.writeLock().lock();
     try {
+      this.lock.writeLock().lock();
       try {
         // Change this.storefiles so it reflects new state but do not
         // delete old store files until we have sent out notification of
@@ -1398,34 +1438,40 @@ public class Store extends SchemaConfigured implements HeapSize {
         }
 
         this.storefiles = sortAndClone(newStoreFiles);
+      } finally {
+        // We need the lock, as long as we are updating the storefiles
+        // or changing the memstore. Let us release it before calling
+        // notifyChangeReadersObservers. See HBASE-4485 for a possible
+        // deadlock scenario that could have happened if continue to hold
+        // the lock.
+        this.lock.writeLock().unlock();
+      }
 
-        // Tell observers that list of StoreFiles has changed.
-        notifyChangedReadersObservers();
-        // Finally, delete old store files.
-        for (StoreFile hsf: compactedFiles) {
-          hsf.deleteReader();
-        }
-      } catch (IOException e) {
-        e = RemoteExceptionHandler.checkIOException(e);
-        LOG.error("Failed replacing compacted files in " + this.storeNameStr +
-          ". Compacted file is " + (result == null? "none": result.toString()) +
-          ".  Files replaced " + compactedFiles.toString() +
-          " some of which may have been already removed", e);
+      // Tell observers that list of StoreFiles has changed.
+      notifyChangedReadersObservers();
+      // Finally, delete old store files.
+      for (StoreFile hsf: compactedFiles) {
+        hsf.deleteReader();
       }
-      // 4. Compute new store size
-      this.storeSize = 0L;
-      this.totalUncompressedBytes = 0L;
-      for (StoreFile hsf : this.storefiles) {
-        StoreFile.Reader r = hsf.getReader();
-        if (r == null) {
-          LOG.warn("StoreFile " + hsf + " has a null Reader");
-          continue;
-        }
-        this.storeSize += r.length();
-        this.totalUncompressedBytes += r.getTotalUncompressedBytes();
+    } catch (IOException e) {
+      e = RemoteExceptionHandler.checkIOException(e);
+      LOG.error("Failed replacing compacted files in " + this.storeNameStr +
+        ". Compacted file is " + (result == null? "none": result.toString()) +
+        ".  Files replaced " + compactedFiles.toString() +
+        " some of which may have been already removed", e);
+    }
+
+    // 4. Compute new store size
+    this.storeSize = 0L;
+    this.totalUncompressedBytes = 0L;
+    for (StoreFile hsf : this.storefiles) {
+      StoreFile.Reader r = hsf.getReader();
+      if (r == null) {
+        LOG.warn("StoreFile " + hsf + " has a null Reader");
+        continue;
       }
-    } finally {
-      this.lock.writeLock().unlock();
+      this.storeSize += r.length();
+      this.totalUncompressedBytes += r.getTotalUncompressedBytes();
     }
     return result;
   }
