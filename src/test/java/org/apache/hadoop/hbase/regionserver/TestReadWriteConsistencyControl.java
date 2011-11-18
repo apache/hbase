@@ -31,12 +31,12 @@ import java.util.concurrent.atomic.AtomicLong;
 public class TestReadWriteConsistencyControl extends TestCase {
   static class Writer implements Runnable {
     final AtomicBoolean finished;
-    final ReadWriteConsistencyControl rwcc;
+    final MultiVersionConsistencyControl mvcc;
     final AtomicBoolean status;
 
-    Writer(AtomicBoolean finished, ReadWriteConsistencyControl rwcc, AtomicBoolean status) {
+    Writer(AtomicBoolean finished, MultiVersionConsistencyControl mvcc, AtomicBoolean status) {
       this.finished = finished;
-      this.rwcc = rwcc;
+      this.mvcc = mvcc;
       this.status = status;
     }
     private Random rnd = new Random();
@@ -44,7 +44,7 @@ public class TestReadWriteConsistencyControl extends TestCase {
 
     public void run() {
       while (!finished.get()) {
-        ReadWriteConsistencyControl.WriteEntry e = rwcc.beginMemstoreInsert();
+        MultiVersionConsistencyControl.WriteEntry e = mvcc.beginMemstoreInsert();
 //        System.out.println("Begin write: " + e.getWriteNumber());
         // 10 usec - 500usec (including 0)
         int sleepTime = rnd.nextInt(500);
@@ -56,7 +56,7 @@ public class TestReadWriteConsistencyControl extends TestCase {
         } catch (InterruptedException e1) {
         }
         try {
-          rwcc.completeMemstoreInsert(e);
+          mvcc.completeMemstoreInsert(e);
         } catch (RuntimeException ex) {
           // got failure
           System.out.println(ex.toString());
@@ -70,7 +70,7 @@ public class TestReadWriteConsistencyControl extends TestCase {
   }
 
   public void testParallelism() throws Exception {
-    final ReadWriteConsistencyControl rwcc = new ReadWriteConsistencyControl();
+    final MultiVersionConsistencyControl mvcc = new MultiVersionConsistencyControl();
 
     final AtomicBoolean finished = new AtomicBoolean(false);
 
@@ -79,9 +79,9 @@ public class TestReadWriteConsistencyControl extends TestCase {
     final AtomicLong failedAt = new AtomicLong();
     Runnable reader = new Runnable() {
       public void run() {
-        long prev = rwcc.memstoreReadPoint();
+        long prev = mvcc.memstoreReadPoint();
         while (!finished.get()) {
-          long newPrev = rwcc.memstoreReadPoint();
+          long newPrev = mvcc.memstoreReadPoint();
           if (newPrev < prev) {
             // serious problem.
             System.out.println("Reader got out of order, prev: " +
@@ -103,7 +103,7 @@ public class TestReadWriteConsistencyControl extends TestCase {
 
     for (int i = 0 ; i < n ; ++i ) {
       statuses[i] = new AtomicBoolean(true);
-      writers[i] = new Thread(new Writer(finished, rwcc, statuses[i]));
+      writers[i] = new Thread(new Writer(finished, mvcc, statuses[i]));
       writers[i].start();
     }
     readThread.start();

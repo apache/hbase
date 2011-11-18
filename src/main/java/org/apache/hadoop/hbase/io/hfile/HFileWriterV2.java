@@ -49,7 +49,7 @@ import org.apache.hadoop.io.WritableUtils;
 public class HFileWriterV2 extends AbstractHFileWriter {
   static final Log LOG = LogFactory.getLog(HFileWriterV2.class);
 
-  /** Max memstore (rwcc) timestamp in FileInfo */
+  /** Max memstore (mvcc) timestamp in FileInfo */
   public static final byte [] MAX_MEMSTORE_TS_KEY = Bytes.toBytes("MAX_MEMSTORE_TS_KEY");
   /** KeyValue version in FileInfo */
   public static final byte [] KEY_VALUE_VERSION = Bytes.toBytes("KEY_VALUE_VERSION");

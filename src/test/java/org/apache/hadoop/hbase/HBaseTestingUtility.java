@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.ReadWriteConsistencyControl;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.User;
@@ -1525,7 +1525,7 @@ public class HBaseTestingUtility {
    */
   public static List<KeyValue> getFromStoreFile(Store store,
                                                 Get get) throws IOException {
-    ReadWriteConsistencyControl.resetThreadReadPoint();
+    MultiVersionConsistencyControl.resetThreadReadPoint();
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
         scan.getFamilyMap().get(store.getFamily().getName()));
