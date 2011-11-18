@@ -535,7 +535,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     // treat this as a minor compaction.
     InternalScanner scanner = new StoreScanner(this, scan, Collections
         .singletonList(new CollectionBackedScanner(set, this.comparator)),
-        ScanType.MINOR_COMPACT, HConstants.OLDEST_TIMESTAMP);
+        ScanType.MINOR_COMPACT, this.region.getSmallestReadPoint(),
+        HConstants.OLDEST_TIMESTAMP);
     try {
       // TODO:  We can fail in the below block before we complete adding this
       // flush to list of store files.  Add cleanup of anything put on filesystem
@@ -556,6 +557,9 @@ public class Store extends SchemaConfigured implements HeapSize {
                 // If we know that this KV is going to be included always, then let us
                 // set its memstoreTS to 0. This will help us save space when writing to disk.
                 if (kv.getMemstoreTS() <= smallestReadPoint) {
+                  // let us not change the original KV. It could be in the memstore
+                  // changing its memstoreTS could affect other threads/scanners.
+                  kv = kv.shallowCopy();
                   kv.setMemstoreTS(0);
                 }
                 writer.append(kv);
@@ -1281,6 +1285,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     StoreFile.Writer writer = null;
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = region.getSmallestReadPoint();
+    ReadWriteConsistencyControl.setThreadReadPoint(smallestReadPoint);
     try {
       InternalScanner scanner = null;
       try {
@@ -1289,7 +1294,7 @@ public class Store extends SchemaConfigured implements HeapSize {
         /* include deletes, unless we are doing a major compaction */
         scanner = new StoreScanner(this, scan, scanners,
             majorCompaction ? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT,
-            earliestPutTs);
+            smallestReadPoint, earliestPutTs);
         if (region.getCoprocessorHost() != null) {
           InternalScanner cpScanner = region.getCoprocessorHost().preCompact(
               this, scanner);

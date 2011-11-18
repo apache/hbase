@@ -64,17 +64,20 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    */
   @Override
   public MatchCode checkColumn(byte[] bytes, int offset, int length,
-      long timestamp, byte type) throws IOException {
+      long timestamp, byte type, boolean ignoreCount) throws IOException {
     
     if (columnBuffer == null) {
       // first iteration.
       resetBuffer(bytes, offset, length);
+      if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
       // do not count a delete marker as another version
       return checkVersion(type, timestamp);
     }
     int cmp = Bytes.compareTo(bytes, offset, length,
         columnBuffer, columnOffset, columnLength);
     if (cmp == 0) {
+      if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
+
       //If column matches, check if it is a duplicate timestamp
       if (sameAsPreviousTSAndType(timestamp, type)) {
         return ScanQueryMatcher.MatchCode.SKIP;
@@ -88,6 +91,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     if (cmp > 0) {
       // switched columns, lets do something.x
       resetBuffer(bytes, offset, length);
+      if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
       return checkVersion(type, timestamp);
     }
 

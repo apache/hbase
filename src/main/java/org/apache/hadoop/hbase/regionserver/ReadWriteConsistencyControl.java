@@ -44,7 +44,13 @@ public class ReadWriteConsistencyControl {
       new LinkedList<WriteEntry>();
 
   private static final ThreadLocal<Long> perThreadReadPoint =
-      new ThreadLocal<Long>();
+      new ThreadLocal<Long>() {
+       @Override
+      protected
+       Long initialValue() {
+         return Long.MAX_VALUE;
+       }
+  };
 
   /**
    * Default constructor. Initializes the memstoreRead/Write points to 0.
@@ -63,10 +69,6 @@ public class ReadWriteConsistencyControl {
         throw new RuntimeException("Already used this rwcc. Too late to initialize");
       }
 
-      if (this.memstoreWrite > startPoint) {
-        throw new RuntimeException("Cannot decrease RWCC timestamp");
-      }
-
       this.memstoreRead = this.memstoreWrite = startPoint;
     }
   }
@@ -77,7 +79,7 @@ public class ReadWriteConsistencyControl {
    * memstore).
    */
   public static long getThreadReadPoint() {
-    return perThreadReadPoint.get();
+      return perThreadReadPoint.get();
   }
 
   /**
@@ -179,7 +181,6 @@ public class ReadWriteConsistencyControl {
       }
     }
     if (interrupted) Thread.currentThread().interrupt();
-
   }
 
   public long memstoreReadPoint() {

@@ -92,11 +92,8 @@ public class ScanQueryMatcher {
    */
   private final long earliestPutTs;
 
-  /** Should we ignore KV's with a newer RWCC timestamp **/
-  private boolean enforceRWCC = false;
-  public void useRWCC(boolean flag) {
-    this.enforceRWCC = flag;
-  }
+  /** readPoint over which the KVs are unconditionally included */
+  protected long maxReadPointToTrackVersions;
 
   /**
    * This variable shows whether there is an null column in the query. There
@@ -116,6 +113,7 @@ public class ScanQueryMatcher {
    */
   public ScanQueryMatcher(Scan scan, Store.ScanInfo scanInfo,
       NavigableSet<byte[]> columns, StoreScanner.ScanType scanType,
+      long readPointToUse,
       long earliestPutTs) {
     this.tr = scan.getTimeRange();
     this.rowComparator = scanInfo.getComparator().getRawComparator();
@@ -125,6 +123,7 @@ public class ScanQueryMatcher {
         scanInfo.getFamily());
     this.filter = scan.getFilter();
     this.earliestPutTs = earliestPutTs;
+    this.maxReadPointToTrackVersions = readPointToUse;
 
     /* how to deal with deletes */
     // keep deleted cells: if compaction or raw scan
@@ -159,6 +158,7 @@ public class ScanQueryMatcher {
   ScanQueryMatcher(Scan scan, Store.ScanInfo scanInfo,
       NavigableSet<byte[]> columns) {
     this(scan, scanInfo, columns, StoreScanner.ScanType.USER_SCAN,
+          Long.MAX_VALUE, /* max Readpoint to track versions */
         HConstants.LATEST_TIMESTAMP);
   }
 
@@ -232,13 +232,6 @@ public class ScanQueryMatcher {
     // check for early out based on timestamp alone
     if (columns.isDone(timestamp)) {
         return columns.getNextRowOrNextColumn(bytes, offset, qualLength);
-    }
-
-    // The compaction thread has no readPoint set. For other operations, we
-    // will ignore updates that are done after the read operation has started.
-    if (this.enforceRWCC &&
-        kv.getMemstoreTS() > ReadWriteConsistencyControl.getThreadReadPoint()) {
-        return MatchCode.SKIP;
     }
 
     /*
@@ -328,7 +321,7 @@ public class ScanQueryMatcher {
     }
 
     MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength,
-        timestamp, type);
+        timestamp, type, kv.getMemstoreTS() > maxReadPointToTrackVersions);
     /*
      * According to current implementation, colChecker can only be
      * SEEK_NEXT_COL, SEEK_NEXT_ROW, SKIP or INCLUDE. Therefore, always return
