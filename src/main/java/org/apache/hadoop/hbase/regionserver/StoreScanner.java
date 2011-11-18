@@ -88,14 +88,14 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @throws IOException
    */
   StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns)
-  throws IOException {
+                              throws IOException {
     this(store, scan.getCacheBlocks(), scan, columns);
     if (columns != null && scan.isRaw()) {
       throw new DoNotRetryIOException(
           "Cannot specify any column for a raw scan");
     }
     matcher = new ScanQueryMatcher(scan, store.scanInfo, columns,
-        ScanType.USER_SCAN, HConstants.LATEST_TIMESTAMP);
+        ScanType.USER_SCAN, Long.MAX_VALUE, HConstants.LATEST_TIMESTAMP);
 
     // Pass columns to try to filter out unnecessary StoreFiles.
     List<KeyValueScanner> scanners = getScanners(scan, columns);
@@ -127,13 +127,15 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @param store who we scan
    * @param scan the spec
    * @param scanners ancilliary scanners
+   * @param smallestReadPoint the readPoint that we should use for tracking versions
+   * @param retainDeletesInOutput should we retain deletes after compaction?
    */
   StoreScanner(Store store, Scan scan,
       List<? extends KeyValueScanner> scanners, ScanType scanType,
-      long earliestPutTs) throws IOException {
+      long smallestReadPoint, long earliestPutTs) throws IOException {
     this(store, false, scan, null);
     matcher = new ScanQueryMatcher(scan, store.scanInfo, null, scanType,
-        earliestPutTs);
+        smallestReadPoint, earliestPutTs);
 
     // Seek all scanners to the initial key
     for(KeyValueScanner scanner : scanners) {
@@ -150,22 +152,13 @@ class StoreScanner extends NonLazyKeyValueScanner
       final List<KeyValueScanner> scanners) throws IOException {
     this(null, scan.getCacheBlocks(), scan, columns);
     this.matcher = new ScanQueryMatcher(scan, scanInfo, columns, scanType,
-        HConstants.LATEST_TIMESTAMP);
+        Long.MAX_VALUE, HConstants.LATEST_TIMESTAMP);
 
     // Seek all scanners to the initial key
     for (KeyValueScanner scanner : scanners) {
       scanner.seek(matcher.getStartKey());
     }
     heap = new KeyValueHeap(scanners, scanInfo.getComparator());
-  }
-
-  /**
-   * Advise the StoreScanner if it should enforce the RWCC mechanism
-   * for ignoring newer KVs or not.
-   * @param flag
-   */
-  public void useRWCC(boolean flag) {
-    matcher.useRWCC(flag);
   }
 
   /*
@@ -199,13 +192,15 @@ class StoreScanner extends NonLazyKeyValueScanner
     // include only those scan files which pass all filters
     for (KeyValueScanner kvs : allStoreScanners) {
       if (kvs instanceof StoreFileScanner) {
-        if (memOnly == false && ((StoreFileScanner)kvs).shouldSeek(scan, columns))
+        if (memOnly == false && ((StoreFileScanner)kvs).shouldSeek(scan, columns)) {
           scanners.add(kvs);
+        }
       }
       else {
         // kvs is a MemStoreScanner
-        if (filesOnly == false && this.store.memstore.shouldSeek(scan))
+        if (filesOnly == false && this.store.memstore.shouldSeek(scan)) {
           scanners.add(kvs);
+        }
       }
     }
 

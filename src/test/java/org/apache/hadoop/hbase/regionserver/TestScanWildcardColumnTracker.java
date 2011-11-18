@@ -56,7 +56,7 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
     for(byte [] qualifier : qualifiers) {
       ScanQueryMatcher.MatchCode mc = tracker.checkColumn(qualifier, 0,
-          qualifier.length, 1, KeyValue.Type.Put.getCode());
+          qualifier.length, 1, KeyValue.Type.Put.getCode(), false);
       actual.add(mc);
     }
 
@@ -89,7 +89,7 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
     long timestamp = 0;
     for(byte [] qualifier : qualifiers) {
       MatchCode mc = tracker.checkColumn(qualifier, 0, qualifier.length,
-          ++timestamp, KeyValue.Type.Put.getCode());
+          ++timestamp, KeyValue.Type.Put.getCode(), false);
       actual.add(mc);
     }
 
@@ -113,7 +113,7 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
     try {
       for(byte [] qualifier : qualifiers) {
         tracker.checkColumn(qualifier, 0, qualifier.length, 1,
-            KeyValue.Type.Put.getCode());
+            KeyValue.Type.Put.getCode(), false);
       }
     } catch (Exception e) {
       ok = true;

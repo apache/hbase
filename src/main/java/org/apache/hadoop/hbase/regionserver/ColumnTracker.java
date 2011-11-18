@@ -48,12 +48,15 @@ public interface ColumnTracker {
    * @param length
    * @param ttl The timeToLive to enforce.
    * @param type The type of the KeyValue
+   * @param ignoreCount indicates if the KV needs to be excluded while counting
+   *   (used during compactions. We only count KV's that are older than all the
+   *   scanners' read points.)
    * @return The match code instance.
    * @throws IOException in case there is an internal consistency problem
    *      caused by a data corruption.
    */
   public ScanQueryMatcher.MatchCode checkColumn(byte[] bytes, int offset,
-      int length, long ttl, byte type)
+      int length, long ttl, byte type, boolean ignoreCount)
       throws IOException;
 
   /**

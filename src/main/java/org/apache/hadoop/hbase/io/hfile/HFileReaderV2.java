@@ -126,7 +126,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
     avgValueLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_VALUE_LEN));
     byte [] keyValueFormatVersion = fileInfo.get(HFileWriterV2.KEY_VALUE_VERSION);
     includesMemstoreTS = (keyValueFormatVersion != null &&
-	  Bytes.toInt(keyValueFormatVersion) == HFileWriterV2.KEY_VALUE_VER_WITH_MEMSTORE);
+        Bytes.toInt(keyValueFormatVersion) == HFileWriterV2.KEY_VALUE_VER_WITH_MEMSTORE);
 
     // Store all other load-on-open blocks for further consumption.
     HFileBlock b;
@@ -364,7 +364,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         return null;
 
       KeyValue ret = new KeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-		  + blockBuffer.position());
+          + blockBuffer.position());
       if (this.reader.shouldIncludeMemstoreTS()) {
         ret.setMemstoreTS(currMemstoreTS);
       }
@@ -606,12 +606,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
       blockBuffer.reset();
       if (this.reader.shouldIncludeMemstoreTS()) {
         try {
-          ByteArrayInputStream byte_input = new ByteArrayInputStream(blockBuffer.array());
-          byte_input.skip(blockBuffer.arrayOffset() + blockBuffer.position()
-			 + KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen);
-          DataInputStream data_input = new DataInputStream(byte_input);
-
-          currMemstoreTS = WritableUtils.readVLong(data_input);
+          int memstoreTSOffset = blockBuffer.arrayOffset() + blockBuffer.position()
+                                  + KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen;
+          currMemstoreTS = Bytes.readVLong(blockBuffer.array(), memstoreTSOffset);
           currMemstoreTSLen = WritableUtils.getVIntSize(currMemstoreTS);
         } catch (Exception e) {
           throw new RuntimeException("Error reading memstoreTS. " + e);
@@ -654,17 +651,14 @@ public class HFileReaderV2 extends AbstractHFileReader {
         blockBuffer.reset();
         if (this.reader.shouldIncludeMemstoreTS()) {
           try {
-            ByteArrayInputStream byte_input = new ByteArrayInputStream(blockBuffer.array());
-            byte_input.skip(blockBuffer.arrayOffset() + blockBuffer.position()
-			 + KEY_VALUE_LEN_SIZE + klen + vlen);
-            DataInputStream data_input = new DataInputStream(byte_input);
-
-            memstoreTS = WritableUtils.readVLong(data_input);
+            int memstoreTSOffset = blockBuffer.arrayOffset() + blockBuffer.position()
+                                  + KEY_VALUE_LEN_SIZE + klen + vlen;
+            memstoreTS = Bytes.readVLong(blockBuffer.array(), memstoreTSOffset);
             memstoreTSLen = WritableUtils.getVIntSize(memstoreTS);
           } catch (Exception e) {
             throw new RuntimeException("Error reading memstoreTS. " + e);
           }
-	    }
+        }
 
         int keyOffset = blockBuffer.arrayOffset() + blockBuffer.position()
             + KEY_VALUE_LEN_SIZE;
@@ -689,7 +683,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           if (this.reader.shouldIncludeMemstoreTS()) {
             currMemstoreTS = memstoreTS;
             currMemstoreTSLen = memstoreTSLen;
-		  }
+          }
           return 0; // indicate exact match
         }
 

@@ -102,7 +102,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
    */
   @Override
   public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset,
-      int length, long timestamp, byte type) {
+      int length, long timestamp, byte type, boolean ignoreCount) {
     // delete markers should never be passed to an
     // *Explicit*ColumnTracker
     assert !KeyValue.isDelete(type);
@@ -124,6 +124,8 @@ public class ExplicitColumnTracker implements ColumnTracker {
       // Column Matches. If it is not a duplicate key, increment the version count
       // and include.
       if(ret == 0) {
+        if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
+
         //If column matches, check if it is a duplicate timestamp
         if (sameAsPreviousTS(timestamp)) {
           //If duplicate, skip this Key

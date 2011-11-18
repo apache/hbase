@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -394,10 +395,6 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     entryCount++;
   }
 
-  public static int getEncodedLength(long value) {
-	 return WritableUtils.getVIntSize(value);
-  }
-
   @Override
   public void close() throws IOException {
     if (outputStream == null) {
@@ -449,8 +446,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
 
     if (this.includeMemstoreTS) {
-	    appendFileInfo(MAX_MEMSTORE_TS_KEY, Bytes.toBytes(maxMemstoreTS));
-	    appendFileInfo(KEY_VALUE_VERSION, Bytes.toBytes(KEY_VALUE_VER_WITH_MEMSTORE));
+      appendFileInfo(MAX_MEMSTORE_TS_KEY, Bytes.toBytes(maxMemstoreTS));
+      appendFileInfo(KEY_VALUE_VERSION, Bytes.toBytes(KEY_VALUE_VER_WITH_MEMSTORE));
     }
 
     // File info

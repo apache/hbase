@@ -2320,8 +2320,8 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
 
-    return size;
-  }
+     return size;
+   }
 
   /**
    * Remove all the keys listed in the map from the memstore. This method is
@@ -3013,8 +3013,8 @@ public class HRegion implements HeapSize { // , Writable{
       // synchronize on scannerReadPoints so that nobody calculates
       // getSmallestReadPoint, before scannerReadPoints is updated.
       synchronized(scannerReadPoints) {
-	      this.readPt = ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-	      scannerReadPoints.put(this, this.readPt);
+        this.readPt = ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+        scannerReadPoints.put(this, this.readPt);
       }
 
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
@@ -3026,7 +3026,6 @@ public class HRegion implements HeapSize { // , Writable{
           scan.getFamilyMap().entrySet()) {
         Store store = stores.get(entry.getKey());
         StoreScanner scanner = store.getScanner(scan, entry.getValue());
-        scanner.useRWCC(true);
         scanners.add(scanner);
       }
       this.storeHeap = new KeyValueHeap(scanners, comparator);
@@ -3179,7 +3178,7 @@ public class HRegion implements HeapSize { // , Writable{
         storeHeap = null;
       }
       // no need to sychronize here.
-	  scannerReadPoints.remove(this);
+      scannerReadPoints.remove(this);
       this.filterClosed = true;
     }
 
