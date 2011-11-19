@@ -801,7 +801,8 @@ Release 0.92.0 - Unreleased
    HBASE-4377  [hbck] Offline rebuild .META. from fs data only
                (Jonathan Hsieh)
    HBASE-4298  Support to drain RS nodes through ZK (Aravind Gottipati)
-   HBASE-2742  Provide strong authentication with a secure RPC engine         
+   HBASE-2742  Provide strong authentication with a secure RPC engine
+   HBASE-3025  Coprocessor based access control
 
 Release 0.90.5 - Unreleased
 
