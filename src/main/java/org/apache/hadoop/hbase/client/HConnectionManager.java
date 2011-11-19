@@ -463,11 +463,6 @@ public class HConnectionManager {
     private final Set<Integer> regionCachePrefetchDisabledTables =
       new CopyOnWriteArraySet<Integer>();
 
-    // region caching is enabled by default. this set contains all tables
-    // whose region locations should not be cached
-    private final Set<Integer> regionCacheDisabledTables =
-      new CopyOnWriteArraySet<Integer>();
-
     private boolean stopProxy;
     private int refCount;
 
@@ -849,9 +844,7 @@ public class HConnectionManager {
               HRegionLocation loc = new HRegionLocation(regionInfo,
                 new HServerAddress(serverAddress));
               // cache this meta entry
-              if (shouldCacheRegion(tableName)) {
-                cacheLocation(tableName, loc);
-              }
+              cacheLocation(tableName, loc);
             }
             return true;
           } catch (RuntimeException e) {
@@ -980,9 +973,7 @@ public class HConnectionManager {
           // instantiate the location
           location = new HRegionLocation(regionInfo,
             new HServerAddress(serverAddress));
-          if (shouldCacheRegion(tableName)) {
-            cacheLocation(tableName, location);
-          }
+          cacheLocation(tableName, location);
           return location;
         } catch (TableNotFoundException e) {
           // if we got this error, probably means the table just plain doesn't
@@ -1504,10 +1495,6 @@ public class HConnectionManager {
       return location != null;
     }
 
-    public boolean getRegionCachePrefetch(final byte[] tableName) {
-      return !regionCachePrefetchDisabledTables.contains(Bytes.mapKey(tableName));
-    }
-
     public void setRegionCachePrefetch(final byte[] tableName,
         final boolean enable) {
       if (!enable) {
@@ -1518,27 +1505,15 @@ public class HConnectionManager {
       }
     }
 
-    public boolean shouldCacheRegion(final byte[] tableName) {
-      return !regionCacheDisabledTables.contains(Bytes.mapKey(tableName));
-    }
-
-    public void setRegionCaching(final byte[] tableName,
-        final boolean enable) {
-      if (!enable) {
-        regionCacheDisabledTables.add(Bytes.mapKey(tableName));
-      }
-      else {
-        regionCacheDisabledTables.remove(Bytes.mapKey(tableName));
-      }
+    public boolean getRegionCachePrefetch(final byte[] tableName) {
+      return !regionCachePrefetchDisabledTables.contains(Bytes.mapKey(tableName));
     }
 
     public void prewarmRegionCache(final byte[] tableName,
         final Map<HRegionInfo, HServerAddress> regions) {
       for (Map.Entry<HRegionInfo, HServerAddress> e : regions.entrySet()) {
-        if (shouldCacheRegion(tableName)) {
-          cacheLocation(tableName,
+        cacheLocation(tableName,
             new HRegionLocation(e.getKey(), e.getValue()));
-        }
       }
     }
 
