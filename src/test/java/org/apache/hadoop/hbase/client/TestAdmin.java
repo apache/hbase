@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtilsForTests;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -86,6 +87,11 @@ public class TestAdmin {
   @Before
   public void setUp() throws Exception {
     this.admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    this.admin.close();
   }
 
   @Test
