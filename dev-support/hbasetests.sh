@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+##
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+##
 #
 # This script:
 #   - analyse the content of the .java test file to split them between
@@ -27,6 +44,10 @@
 #
 ######################################### parameters
 
+#mvn test -Dtest=org.apache.hadoop.hbase.regionserver.TestScanWithBloomError $*
+
+#exit
+
 #set to 0 to run only developpers tests (small & medium categories)
 runAllTests=0
 
@@ -53,8 +74,8 @@ rootTestClassDirectory="./src/test/java/"
 surefireReportDirectory="./target/surefire-reports/"
 
 #variable to use to debug the script without launching the tests
-mvnCommand=mvn
-#mvnCommand=echo
+mvnCommand="mvn "
+#mvnCommand="echo $mvnCommand"
 
 ######################################### Functions
 #get the list of the process considered as dead
@@ -102,13 +123,15 @@ function cleanProcess {
       son=`ps -o pid= --pid $pId | wc -l`
       if (test $son -gt 0)
       then 
-        echo "$pId, java sub process of $id, is still running after a nice kill, using kill -9 now"
+        echo "$pId, java sub process of $id, is still running after a standard kill, using kill -9 now"
         echo "Stack for $pId before kill -9:"
         jstack -F -l $pId
         kill -9 $pId
+        echo "kill sent, waiting for 2 seconds"
+        sleep 2           
         echo "Process $pId killed by kill -9" 
       else
-        echo "Process $pId killed by standard kill -9" 
+        echo "Process $pId killed by standard kill -15" 
       fi
     else
       echo "$pId is not a java process (it's $name), I don't kill it."
@@ -192,13 +215,18 @@ do
     then 
       isLarge=`grep "@Category" $testFile | grep "LargeTests.class" | wc -l`
       if (test $isLarge -eq 0)
-      then 
-        isSmall=1
-        #sanity check on small tests
-        isStrange=`grep "\.startMini" $testFile | wc -l`
-        if (test $isStrange -gt 0)
+      then
+        isSmall=`grep "@Category" $testFile | grep "SmallTests.class" | wc -l`
+        if (test $isSmall -eq 0)
         then
-          echo "$testFile is categorized as 'small' but contains a .startMini string. Keep it as small anyway"
+          echo "$testName is not categorized, so it won't be tested"
+        else
+          #sanity check on small tests
+          isStrange=`grep "\.startMini" $testFile | wc -l`
+          if (test $isStrange -gt 0)
+          then
+            echo "$testFile is categorized as 'small' but contains a .startMini string. Keep it as small anyway, but it's strange."
+          fi
         fi
       fi
     fi
@@ -269,8 +297,8 @@ runList2=${runList2:1:${#runList2}}
 #now we can run the tests, at last!
 
 echo "Running small tests with one maven instance, in parallel"
-
-$mvnCommand -P parallelTests test -Dtest=$smallList  $args 
+#echo Small tests are $smallList 
+$mvnCommand -P singleJVMTests test -Dtest=$smallList  $args 
 cleanProcess
 
 exeTime=$(((`date +%s` - $startTime)/60))
