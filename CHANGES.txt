@@ -438,6 +438,7 @@ Release 0.92.0 - Unreleased
    HBASE-4816  Regionserver wouldn't go down because split happened exactly at same
                time we issued bulk user region close call on our way out
    HBASE-4815  Disable online altering by default, create a config for it
+   HBASE-4623  Remove @deprecated Scan methods in 0.90 from TRUNK and 0.92
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected

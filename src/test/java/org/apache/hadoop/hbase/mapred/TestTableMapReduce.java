@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -195,7 +196,7 @@ public class TestTableMapReduce {
    */
   private void verifyAttempt(final HTable table) throws IOException, NullPointerException {
     Scan scan = new Scan();
-    scan.addColumns(columns);
+    TableInputFormat.addColumns(scan, columns);
     ResultScanner scanner = table.getScanner(scan);
     try {
       for (Result r : scanner) {
