@@ -2061,7 +2061,7 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
             </answer>
         </qandaentry>
     </qandadiv>
-    <qandadiv><title>How do I...?</title>
+    <qandadiv><title xml:id="howdoi">How do I...?</title>
         <qandaentry xml:id="secondary.indices">
             <question><para>
                     Secondary Indexes in HBase?
@@ -2089,6 +2089,16 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
             <answer>
                 <para>
                     See <xref linkend="ops.backup" />
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry>
+            <question><para>
+                    Get a column 'slice': i.e. I have a million columns in my row but I only want to look at columns bbbb-bbbd?
+            </para></question>
+            <answer>
+                <para>
+                  See <classname>org.apache.hadoop.hbase.filter.ColumnRangeFilter</classname>    
                 </para>
             </answer>
         </qandaentry>
