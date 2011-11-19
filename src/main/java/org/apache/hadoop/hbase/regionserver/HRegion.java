@@ -1286,7 +1286,7 @@ public class HRegion implements HeapSize { // , Writable{
       w = mvcc.beginMemstoreInsert();
       mvcc.advanceMemstore(w);
 
-      sequenceId = (wal == null)? myseqid :
+      sequenceId = (wal == null)? myseqid:
         wal.startCacheFlush(this.regionInfo.getEncodedNameAsBytes());
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
 
@@ -1302,7 +1302,7 @@ public class HRegion implements HeapSize { // , Writable{
       this.updatesLock.writeLock().unlock();
     }
     status.setStatus("Waiting for mvcc");
-    LOG.debug("Finished snapshotting, commencing waiting for mvcc");
+    LOG.debug("Finished snapshotting " + this + ", commencing wait for mvcc");
 
     // wait for all in-progress transactions to commit to HLog before
     // we can start the flush. This prevents
