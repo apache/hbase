@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.master.MasterServices;
 
 public class ModifyTableHandler extends TableEventHandler {
@@ -32,9 +33,11 @@ public class ModifyTableHandler extends TableEventHandler {
 
   public ModifyTableHandler(final byte [] tableName,
       final HTableDescriptor htd, final Server server,
-      final MasterServices masterServices)
+      final MasterServices masterServices, final HMasterInterface masterInterface,
+      boolean instantModify)
   throws IOException {
-    super(EventType.C_M_MODIFY_TABLE, tableName, server, masterServices);
+    super(EventType.C_M_MODIFY_TABLE, tableName, server, masterServices,
+        masterInterface, instantModify);
     // Check table exists.
     getTableDescriptor();
     // This is the new schema we are going to write out as this modification.

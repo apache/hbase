@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -37,9 +38,11 @@ public class DeleteTableHandler extends TableEventHandler {
   private static final Log LOG = LogFactory.getLog(DeleteTableHandler.class);
 
   public DeleteTableHandler(byte [] tableName, Server server,
-      final MasterServices masterServices)
+      final MasterServices masterServices, HMasterInterface masterInterface,
+      boolean instantChange)
   throws IOException {
-    super(EventType.C_M_DELETE_TABLE, tableName, server, masterServices);
+    super(EventType.C_M_DELETE_TABLE, tableName, server, masterServices,
+        masterInterface, instantChange);
     // The next call fails if no such table.
     getTableDescriptor();
   }

@@ -35,13 +35,19 @@ import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.master.BulkReOpen;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.MasterSchemaChangeTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.collect.Lists;
@@ -57,32 +63,22 @@ import com.google.common.collect.Maps;
 public abstract class TableEventHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(TableEventHandler.class);
   protected final MasterServices masterServices;
+  protected HMasterInterface master = null;
   protected final byte [] tableName;
   protected final String tableNameStr;
+  protected boolean instantAction = false;
 
   public TableEventHandler(EventType eventType, byte [] tableName, Server server,
-      MasterServices masterServices)
+      MasterServices masterServices, HMasterInterface masterInterface,
+      boolean instantSchemaChange)
   throws IOException {
     super(server, eventType);
     this.masterServices = masterServices;
     this.tableName = tableName;
-    try {
-      this.masterServices.checkTableModifiable(tableName);
-    } catch (TableNotDisabledException ex)  {
-      if (isOnlineSchemaChangeAllowed()
-          && eventType.isOnlineSchemaChangeSupported()) {
-        LOG.debug("Ignoring table not disabled exception " +
-            "for supporting online schema changes.");
-      }	else {
-        throw ex;
-      }
-    }
+    this.masterServices.checkTableModifiable(tableName, eventType);
     this.tableNameStr = Bytes.toString(this.tableName);
-  }
-
-  private boolean isOnlineSchemaChangeAllowed() {
-    return this.server.getConfiguration().getBoolean(
-        "hbase.online.schema.update.enable", false);
+    this.instantAction = instantSchemaChange;
+    this.master = masterInterface;
   }
 
   @Override
@@ -94,20 +90,44 @@ public abstract class TableEventHandler extends EventHandler {
         MetaReader.getTableRegions(this.server.getCatalogTracker(),
           tableName);
       handleTableOperation(hris);
-      if (eventType.isOnlineSchemaChangeSupported() && this.masterServices.
-          getAssignmentManager().getZKTable().
-          isEnabledTable(Bytes.toString(tableName))) {
-        if (reOpenAllRegions(hris)) {
-          LOG.info("Completed table operation " + eventType + " on table " +
-              Bytes.toString(tableName));
-        } else {
-          LOG.warn("Error on reopening the regions");
-        }
-      }
+      handleSchemaChanges(hris);
     } catch (IOException e) {
       LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
     } catch (KeeperException e) {
       LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
+    }
+  }
+
+  private void handleSchemaChanges(List<HRegionInfo> regions)
+      throws IOException {
+    if (instantAction && regions != null && !regions.isEmpty()) {
+      handleInstantSchemaChanges(regions);
+    } else {
+      handleRegularSchemaChanges(regions);
+    }
+  }
+
+
+  /**
+   * Perform schema changes only if the table is in enabled state.
+   * @return
+   */
+  private boolean canPerformSchemaChange() {
+    return (eventType.isSchemaChangeEvent() && this.masterServices.
+        getAssignmentManager().getZKTable().
+        isEnabledTable(Bytes.toString(tableName)));
+  }
+
+  private void handleRegularSchemaChanges(List<HRegionInfo> regions)
+      throws IOException {
+    if (canPerformSchemaChange()) {
+      this.masterServices.getAssignmentManager().setRegionsToReopen(regions);
+      if (reOpenAllRegions(regions)) {
+        LOG.info("Completed table operation " + eventType + " on table " +
+            Bytes.toString(tableName));
+      } else {
+        LOG.warn("Error on reopening the regions");
+      }
     }
   }
 
@@ -117,7 +137,8 @@ public abstract class TableEventHandler extends EventHandler {
     HTable table = new HTable(masterServices.getConfiguration(), tableName);
     TreeMap<ServerName, List<HRegionInfo>> serverToRegions = Maps
         .newTreeMap();
-    NavigableMap<HRegionInfo, ServerName> hriHserverMapping = table.getRegionLocations();
+    NavigableMap<HRegionInfo, ServerName> hriHserverMapping
+        = table.getRegionLocations();
     List<HRegionInfo> reRegions = new ArrayList<HRegionInfo>();
     for (HRegionInfo hri : regions) {
       ServerName rsLocation = hriHserverMapping.get(hri);
@@ -157,6 +178,91 @@ public abstract class TableEventHandler extends EventHandler {
       }
     }
     return done;
+  }
+
+  /**
+   * Check whether any of the regions from the list of regions is undergoing a split.
+   * We simply check whether there is a unassigned node for any of the region and if so
+   * we return as true.
+   * @param regionInfos
+   * @return
+   */
+  private boolean isSplitInProgress(List<HRegionInfo> regionInfos) {
+    for (HRegionInfo hri : regionInfos) {
+      ZooKeeperWatcher zkw = this.masterServices.getZooKeeper();
+      String node = ZKAssign.getNodeName(zkw, hri.getEncodedName());
+      try {
+        if (ZKUtil.checkExists(zkw, node) != -1) {
+          LOG.debug("Region " + hri.getRegionNameAsString() + " is unassigned. Assuming" +
+          " that it is undergoing a split");
+          return true;
+        }
+      } catch (KeeperException ke) {
+        LOG.debug("KeeperException while determining splits in progress.", ke);
+        // Assume no splits happening?
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Wait for region split transaction in progress (if any)
+   * @param regions
+   * @param status
+   */
+  private void waitForInflightSplit(List<HRegionInfo> regions, MonitoredTask status) {
+    while (isSplitInProgress(regions)) {
+      try {
+        status.setStatus("Alter Schema is waiting for split region to complete.");
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  protected void handleInstantSchemaChanges(List<HRegionInfo> regions) {
+    if (regions == null || regions.isEmpty()) {
+      LOG.debug("Region size is null or empty. Ignoring alter request.");
+      return;
+    }
+    MonitoredTask status = TaskMonitor.get().createStatus(
+        "Handling alter table request for table = " + tableNameStr);
+    if (canPerformSchemaChange()) {
+      boolean prevBalanceSwitch = false;
+      try {
+        // turn off load balancer synchronously
+        prevBalanceSwitch = master.synchronousBalanceSwitch(false);
+        waitForInflightSplit(regions, status);
+        MasterSchemaChangeTracker masterSchemaChangeTracker =
+          this.masterServices.getSchemaChangeTracker();
+        masterSchemaChangeTracker
+        .createSchemaChangeNode(Bytes.toString(tableName),
+            regions.size());
+        while(!masterSchemaChangeTracker.doesSchemaChangeNodeExists(
+            Bytes.toString(tableName))) {
+          try {
+            Thread.sleep(50);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        }
+        status.markComplete("Created ZK node for handling the alter table request for table = "
+            + tableNameStr);
+      } catch (KeeperException e) {
+        LOG.warn("Instant schema change failed for table " + tableNameStr, e);
+        status.setStatus("Instant schema change failed for table " + tableNameStr
+            + " Cause = " + e.getCause());
+
+      } catch (IOException ioe) {
+        LOG.warn("Instant schema change failed for table " + tableNameStr, ioe);
+        status.setStatus("Instant schema change failed for table " + tableNameStr
+            + " Cause = " + ioe.getCause());
+      } finally {
+        master.synchronousBalanceSwitch(prevBalanceSwitch);
+      }
+    }
   }
 
   /**
