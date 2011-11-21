@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -257,6 +258,7 @@ public class TestInstantSchemaChangeFailover {
    * @throws KeeperException
    * @throws InterruptedException
    */
+  @Ignore
   @Test
   public void testInstantSchemaOperationsInZKForMasterFailover() throws IOException,
       KeeperException, InterruptedException {
