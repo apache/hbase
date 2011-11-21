@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -53,6 +54,13 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public HRegion getFromOnlineRegions(String encodedRegionName) {
     return this.regions.get(encodedRegionName);
+  }
+
+  public List<HRegion> getOnlineRegions(byte[] tableName) throws IOException {
+    return null;
+  }
+
+  public void refreshRegion(HRegion hRegion) throws IOException {
   }
 
   @Override

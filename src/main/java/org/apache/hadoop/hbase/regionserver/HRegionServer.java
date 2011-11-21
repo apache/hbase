@@ -145,6 +145,7 @@ import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.SchemaChangeTracker;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
@@ -282,6 +283,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   // Cluster Status Tracker
   private ClusterStatusTracker clusterStatusTracker;
+
+  // Schema change Tracker
+  private SchemaChangeTracker schemaChangeTracker;
 
   // Log Splitting Worker
   private SplitLogWorker splitLogWorker;
@@ -575,6 +579,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.conf,
       this, this.conf.getInt("hbase.regionserver.catalog.timeout", Integer.MAX_VALUE));
     catalogTracker.start();
+
+    // Schema change tracker
+    this.schemaChangeTracker = new SchemaChangeTracker(this.zooKeeper,
+        this, this);
+    this.schemaChangeTracker.start();
   }
 
   /**
@@ -1670,7 +1679,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   protected void join() {
     Threads.shutdown(this.compactionChecker.getThread());
     Threads.shutdown(this.cacheFlusher.getThread());
-    Threads.shutdown(this.hlogRoller.getThread());
+    if (this.hlogRoller != null) {
+      Threads.shutdown(this.hlogRoller.getThread());
+    }
     if (this.compactSplitThread != null) {
       this.compactSplitThread.join();
     }
@@ -2658,9 +2669,26 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     splitRegion(regionInfo, null);
   }
 
+  /**
+   * Wait for mid-flight schema change requests. (if any)
+   * @param tableName
+   */
+  private void waitForSchemaChange(String tableName) {
+    while (schemaChangeTracker.isSchemaChangeInProgress(tableName)) {
+      try {
+        LOG.debug("Schema alter is inprogress for table = " + tableName
+            + " Waiting for alter to complete before a split");
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
   @Override
   public void splitRegion(HRegionInfo regionInfo, byte[] splitPoint)
       throws NotServingRegionException, IOException {
+    waitForSchemaChange(Bytes.toString(regionInfo.getTableName()));
     checkOpen();
     HRegion region = getRegion(regionInfo.getRegionName());
     region.flushcache();
@@ -3371,6 +3399,60 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public byte[][] rollHLogWriter() throws IOException, FailedLogCloseException {
     HLog wal = this.getWAL();
     return wal.rollWriter(true);
+  }
+
+  /**
+  * Refresh schema changes for given region.
+  * @param hRegion HRegion to refresh
+  * @throws IOException
+  */
+ public void refreshRegion(HRegion hRegion) throws IOException {
+
+   if (hRegion != null) {
+     synchronized (this.onlineRegions) {
+       HRegionInfo regionInfo = hRegion.getRegionInfo();
+       // Close the region
+       hRegion.close();
+       // Remove from online regions
+       removeFromOnlineRegions(regionInfo.getEncodedName());
+       // Get new HTD
+       HTableDescriptor htd = this.tableDescriptors.get(regionInfo.getTableName());
+       LOG.debug("HTD for region = " + regionInfo.getRegionNameAsString()
+           + " Is = " + htd );
+       HRegion region =
+         HRegion.openHRegion(hRegion.getRegionInfo(), htd, hlog, conf,
+             this, null);
+       // Add new region to the onlineRegions
+       addToOnlineRegions(region);
+     }
+   }
+ }
+
+ /**
+  * Gets the online regions of the specified table.
+  * This method looks at the in-memory onlineRegions.  It does not go to <code>.META.</code>.
+  * Only returns <em>online</em> regions.  If a region on this table has been
+  * closed during a disable, etc., it will not be included in the returned list.
+  * So, the returned list may not necessarily be ALL regions in this table, its
+  * all the ONLINE regions in the table.
+  * @param tableName
+  * @return Online regions from <code>tableName</code>
+  */
+  public List<HRegion> getOnlineRegions(byte[] tableName) {
+    List<HRegion> tableRegions = new ArrayList<HRegion>();
+    synchronized (this.onlineRegions) {
+      for (HRegion region: this.onlineRegions.values()) {
+        HRegionInfo regionInfo = region.getRegionInfo();
+        if(Bytes.equals(regionInfo.getTableName(), tableName)) {
+          tableRegions.add(region);
+        }
+      }
+    }
+    return tableRegions;
+  }
+
+  public SchemaChangeTracker getSchemaChangeTracker() {
+    return this.schemaChangeTracker;
   }
 
   // used by org/apache/hbase/tmpl/regionserver/RSStatusTmpl.jamon (HBASE-4070).

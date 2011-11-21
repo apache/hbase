@@ -272,10 +272,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param tableName
    * @return Pair indicating the status of the alter command
    * @throws IOException
-   * @throws InterruptedException 
    */
   public Pair<Integer, Integer> getReopenStatus(byte[] tableName)
-  throws IOException, InterruptedException {
+  throws IOException {
     List <HRegionInfo> hris =
       MetaReader.getTableRegions(this.master.getCatalogTracker(), tableName);
     Integer pending = 0;

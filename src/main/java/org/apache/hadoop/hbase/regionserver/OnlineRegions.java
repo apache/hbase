@@ -21,6 +21,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.Server;
 
+import java.io.IOException;
+import java.util.List;
+
 /**
  * Interface to Map of online regions.  In the  Map, the key is the region's
  * encoded name and the value is an {@link HRegion} instance.
@@ -49,4 +52,18 @@ interface OnlineRegions extends Server {
    * null if named region is not member of the online regions.
    */
   public HRegion getFromOnlineRegions(String encodedRegionName);
+  /**
+   * Get all online regions of a table in this RS.
+   * @param tableName
+   * @return List of HRegion
+   * @throws java.io.IOException
+   */
+  public List<HRegion> getOnlineRegions(byte[] tableName) throws IOException;
+
+  /**
+   * Refresh a given region updating it with latest HTD info.
+   * @param hRegion
+   */
+  public void refreshRegion(HRegion hRegion) throws IOException;
+
 }

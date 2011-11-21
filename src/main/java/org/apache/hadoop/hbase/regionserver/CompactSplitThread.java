@@ -155,12 +155,29 @@ public class CompactSplitThread implements CompactionRequestor {
     return false;
   }
 
+  /**
+   * Wait for mid-flight schema alter requests. (if any). We don't want to execute a split
+   * when a schema alter is in progress as we end up in an inconsistent state.
+   * @param tableName
+   */
+  private void waitForInflightSchemaChange(String tableName) {
+    while (this.server.getSchemaChangeTracker()
+        .isSchemaChangeInProgress(tableName)) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
   public synchronized void requestSplit(final HRegion r, byte[] midKey) {
     if (midKey == null) {
       LOG.debug("Region " + r.getRegionNameAsString() +
         " not splittable because midkey=null");
       return;
     }
+    waitForInflightSchemaChange(r.getRegionInfo().getTableNameAsString());
     try {
       this.splits.execute(new SplitRequest(r, midKey, this.server));
       if (LOG.isDebugEnabled()) {

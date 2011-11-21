@@ -771,15 +771,39 @@
     </description>
   </property>
   <property>
-      <name>hbase.coprocessor.abortonerror</name>
-      <value>false</value>
-      <description>
-      Set to true to cause the hosting server (master or regionserver) to
-      abort if a coprocessor throws a Throwable object that is not IOException or
-      a subclass of IOException. Setting it to true might be useful in development
-      environments where one wants to terminate the server as soon as possible to
-      simplify coprocessor failure analysis.
-      </description>
+    <name>hbase.coprocessor.abortonerror</name>
+    <value>false</value>
+    <description>
+    Set to true to cause the hosting server (master or regionserver) to
+    abort if a coprocessor throws a Throwable object that is not IOException or
+    a subclass of IOException. Setting it to true might be useful in development
+    environments where one wants to terminate the server as soon as possible to
+    simplify coprocessor failure analysis.
+    </description>
+  </property>
+  <property>
+    <name>hbase.instant.schema.alter.enabled</name>
+    <value>false</value>
+    <description>Whether or not to handle alter schema changes instantly or not.
+    If enabled, all schema change alter operations will be instant, as the master will not
+    explicitly unassign/assign the impacted regions and instead will rely on Region servers to
+    refresh their schema changes. If enabled, the schema alter requests will survive
+    master or RS failures.
+    </description>
+  </property>
+  <property>
+    <name>hbase.instant.schema.janitor.period</name>
+    <value>120000</value>
+    <description>The Schema Janitor process wakes up every millis and sweeps all
+    expired/failed schema change requests.
+    </description>
+  </property>
+  <property>
+    <name>hbase.instant.schema.alter.timeout</name>
+    <value>60000</value>
+    <description>Timeout in millis after which any pending schema alter request will be
+    considered as failed.
+    </description>
   </property>
   <property>
     <name>hbase.online.schema.update.enable</name>
