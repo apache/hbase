@@ -538,9 +538,9 @@ String table = "myTable";
 admin.disableTable(table);           
 
 HColumnDescriptor cf1 = ...;
-admin.addColumn(table, cf1  );      // adding new ColumnFamily
+admin.addColumn(table, cf1);      // adding new ColumnFamily
 HColumnDescriptor cf2 = ...;
-admin.modifyColumn(table, cf2 );    // modifying existing ColumnFamily
+admin.modifyColumn(table, cf2);    // modifying existing ColumnFamily
 
 admin.enableTable(table);                
       </programlisting>
@@ -548,6 +548,13 @@ admin.enableTable(table);
       <para>Note:  online schema changes are supported in the 0.92.x codebase, but the 0.90.x codebase requires the table
       to be disabled.
       </para>
+    <section xml:id="schema.updates"><title>Schema Updates</title>  
+      <para>When changes are made to either Tables or ColumnFamilies (e.g., region size, block size), these changes
+      take effect the next time there is a major compaction and the StoreFiles get re-written.
+      </para>
+      <para>See <xref linkend="store"/> for more information on StoreFiles.
+      </para>
+    </section>
   </section>   
   <section xml:id="number.of.cfs">
   <title>
