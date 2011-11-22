@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.experimental.categories.Category;
@@ -318,5 +319,9 @@ public class TestHeapSize extends TestCase {
     // accounted for.  But we have satisfied our two core requirements.
     // Sizing is quite accurate now, and our tests will throw errors if
     // any of these classes are modified without updating overhead sizes.
+
+    SchemaConfigured sc = new SchemaConfigured(null, "myTable", "myCF");
+    assertEquals(ClassSize.estimateBase(SchemaConfigured.class, true),
+        sc.heapSize());
   }
 }

@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver.metrics;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -168,6 +169,9 @@ public class SchemaMetrics {
   public static final String CF_PREFIX = "cf.";
   public static final String BLOCK_TYPE_PREFIX = "bt.";
 
+  public static final String CF_UNKNOWN_PREFIX = CF_PREFIX + UNKNOWN + ".";
+  public static final String CF_BAD_FAMILY_PREFIX = CF_PREFIX + "__badfamily.";
+
   /**
    * A special schema metric value that means "all tables aggregated" or
    * "all column families aggregated" when used as a table name or a column
@@ -201,6 +205,16 @@ public class SchemaMetrics {
   private static final String SHOW_TABLE_NAME_CONF_KEY =
       "hbase.metrics.showTableName";
 
+  /** We use this when too many column families are involved in a request. */
+  private static final String MORE_CFS_OMITTED_STR = "__more";
+
+  /**
+   * Maximum length of a metric name prefix. Used when constructing metric
+   * names from a set of column families participating in a request.
+   */
+  private static final int MAX_METRIC_PREFIX_LENGTH =
+      256 - MORE_CFS_OMITTED_STR.length();
+
   // Global variables
   /** All instances of this class */
   private static final ConcurrentHashMap<String, SchemaMetrics>
@@ -230,9 +244,8 @@ public class SchemaMetrics {
   private final String[] storeMetricNames = new String[NUM_STORE_METRIC_TYPES];
 
   private SchemaMetrics(final String tableName, final String cfName) {
-    String metricPrefix =
-        tableName.equals(TOTAL_KEY) ? "" : TABLE_PREFIX + tableName + ".";
-    metricPrefix += cfName.equals(TOTAL_KEY) ? "" : CF_PREFIX + cfName + ".";
+    String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
+        tableName, cfName);
 
     for (BlockCategory blockCategory : BlockCategory.values()) {
       for (boolean isCompaction : BOOL_VALUES) {
@@ -292,24 +305,11 @@ public class SchemaMetrics {
       tableName = UNKNOWN;
     }
 
-    if (!tableName.equals(TOTAL_KEY)) {
-      // We are provided with a non-trivial table name (including "unknown").
-      // We need to know whether table name should be included into metrics.
-      if (useTableNameGlobally == null) {
-        throw new IllegalStateException("The value of the "
-            + SHOW_TABLE_NAME_CONF_KEY + " conf option has not been specified "
-            + "in SchemaMetrics");
-      }
-      final boolean useTableName = useTableNameGlobally;
-      if (!useTableName) {
-        // Don't include table name in metric keys.
-        tableName = TOTAL_KEY;
-      }
-    }
-
     if (cfName == null) {
       cfName = UNKNOWN;
     }
+
+    tableName = getEffectiveTableName(tableName);
 
     final String instanceKey = tableName + "\t" + cfName;
     SchemaMetrics schemaMetrics = cfToMetrics.get(instanceKey);
@@ -493,6 +493,103 @@ public class SchemaMetrics {
     final boolean useTableNameNew =
         conf.getBoolean(SHOW_TABLE_NAME_CONF_KEY, false);
     setUseTableName(useTableNameNew);
+  }
+
+  /**
+   * Determine the table name to be included in metric keys. If the global
+   * configuration says that we should not use table names in metrics,
+   * we always return {@link #TOTAL_KEY} even if nontrivial table name is
+   * provided.
+   *
+   * @param tableName a table name or {@link #TOTAL_KEY} when aggregating
+   * across all tables
+   * @return the table name to use in metric keys
+   */
+  private static String getEffectiveTableName(String tableName) {
+    if (!tableName.equals(TOTAL_KEY)) {
+      // We are provided with a non-trivial table name (including "unknown").
+      // We need to know whether table name should be included into metrics.
+      if (useTableNameGlobally == null) {
+        throw new IllegalStateException("The value of the "
+            + SHOW_TABLE_NAME_CONF_KEY + " conf option has not been specified "
+            + "in SchemaMetrics");
+      }
+      final boolean useTableName = useTableNameGlobally;
+      if (!useTableName) {
+        // Don't include table name in metric keys.
+        tableName = TOTAL_KEY;
+      }
+    }
+    return tableName;
+  }
+
+  /**
+   * Method to transform a combination of a table name and a column family name
+   * into a metric key prefix. Tables/column family names equal to
+   * {@link #TOTAL_KEY} are omitted from the prefix.
+   *
+   * @param tableName the table name or {@link #TOTAL_KEY} for all tables
+   * @param cfName the column family name or {@link #TOTAL_KEY} for all CFs
+   * @return the metric name prefix, ending with a dot.
+   */
+  public static String generateSchemaMetricsPrefix(String tableName,
+      final String cfName) {
+    tableName = getEffectiveTableName(tableName);
+    String schemaMetricPrefix =
+        tableName.equals(TOTAL_KEY) ? "" : TABLE_PREFIX + tableName + ".";
+    schemaMetricPrefix +=
+        cfName.equals(TOTAL_KEY) ? "" : CF_PREFIX + cfName + ".";
+    return schemaMetricPrefix;
+  }
+
+  public static String generateSchemaMetricsPrefix(byte[] tableName,
+      byte[] cfName) {
+    return generateSchemaMetricsPrefix(Bytes.toString(tableName),
+        Bytes.toString(cfName));
+  }
+
+  /**
+   * Method to transform a set of column families in byte[] format with table
+   * name into a metric key prefix.
+   *
+   * @param tableName the table name or {@link #TOTAL_KEY} for all tables
+   * @param families the ordered set of column families
+   * @return the metric name prefix, ending with a dot, or an empty string in
+   *         case of invalid arguments. This is OK since we always expect
+   *         some CFs to be included.
+   */
+  public static String generateSchemaMetricsPrefix(String tableName,
+      Set<byte[]> families) {
+    if (families == null || families.isEmpty() ||
+        tableName == null || tableName.isEmpty()) {
+      return "";
+    }
+
+    if (families.size() == 1) {
+      return generateSchemaMetricsPrefix(tableName,
+          Bytes.toString(families.iterator().next()));
+    }
+
+    tableName = getEffectiveTableName(tableName);
+    List<byte[]> sortedFamilies = new ArrayList<byte[]>(families);
+    Collections.sort(sortedFamilies, Bytes.BYTES_COMPARATOR);
+
+    StringBuilder sb = new StringBuilder();
+
+    int numCFsLeft = families.size();
+    for (byte[] family : sortedFamilies) {
+      if (sb.length() > MAX_METRIC_PREFIX_LENGTH) {
+        sb.append(MORE_CFS_OMITTED_STR);
+        break;
+      }
+      --numCFsLeft;
+      sb.append(Bytes.toString(family));
+      if (numCFsLeft > 0) {
+        sb.append("~");
+      }
+    }
+
+    return SchemaMetrics.generateSchemaMetricsPrefix(tableName, sb.toString());
   }
 
   /**
