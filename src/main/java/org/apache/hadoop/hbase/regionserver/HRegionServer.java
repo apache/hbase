@@ -967,6 +967,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       stop("Failed initialization");
       throw convertThrowableToIOE(cleanup(e, "Failed init"),
           "Region server startup failed");
+    } finally {
+      sleeper.skipSleepCycle();
     }
   }
 
@@ -1552,9 +1554,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public void stop(final String msg) {
     this.stopped = true;
     LOG.info("STOPPED: " + msg);
-    synchronized (this) {
-      // Wakes run() if it is sleeping
-      notifyAll(); // FindBugs NN_NAKED_NOTIFY
+    // Wakes run() if it is sleeping
+    //sleeper.skipSleepCycle();
+    //will be uncommented later, see discussion in jira 4798
+  }
+
+  public void waitForServerOnline(){
+    while (!isOnline() && !isStopped()){
+       sleeper.sleep();
     }
   }
 
@@ -1722,10 +1729,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   private ServerName getMaster() {
     ServerName masterServerName = null;
+    long previousLogTime = 0;
     while ((masterServerName = this.masterAddressManager.getMasterAddress()) == null) {
       if (!keepLooping()) return null;
-      LOG.debug("No master found; retry");
-      sleeper.sleep();
+      if (System.currentTimeMillis() > (previousLogTime+1000)){
+        LOG.debug("No master found; retry");
+        previousLogTime = System.currentTimeMillis();
+      }
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ignored) {
+      }
     }
     InetSocketAddress isa =
       new InetSocketAddress(masterServerName.getHostname(), masterServerName.getPort());
@@ -1744,11 +1758,20 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         e = e instanceof RemoteException ?
             ((RemoteException)e).unwrapRemoteException() : e;
         if (e instanceof ServerNotRunningYetException) {
-          LOG.info("Master isn't available yet, retrying");
+          if (System.currentTimeMillis() > (previousLogTime+1000)){
+            LOG.info("Master isn't available yet, retrying");
+            previousLogTime = System.currentTimeMillis();
+          }
         } else {
-          LOG.warn("Unable to connect to master. Retrying. Error was:", e);
+          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+            LOG.warn("Unable to connect to master. Retrying. Error was:", e);
+            previousLogTime = System.currentTimeMillis();
+          }
         }
-        sleeper.sleep();
+        try {
+          Thread.sleep(200);
+        } catch (InterruptedException ignored) {
+        }
       }
     }
     LOG.info("Connected to master at " + isa);

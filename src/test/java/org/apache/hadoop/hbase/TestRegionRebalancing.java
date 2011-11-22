@@ -212,7 +212,7 @@ public class TestRegionRebalancing {
     // while (!cluster.getMaster().allRegionsAssigned()) {
       LOG.debug("Waiting for there to be 22 regions, but there are " + getRegionCount() + " right now.");
       try {
-        Thread.sleep(1000);
+        Thread.sleep(200);
       } catch (InterruptedException e) {}
     }
   }

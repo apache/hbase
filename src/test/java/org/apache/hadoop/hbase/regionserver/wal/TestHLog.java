@@ -127,7 +127,7 @@ public class TestHLog  {
   }
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniDFSCluster();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   private static String getName() {
