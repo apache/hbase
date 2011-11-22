@@ -293,7 +293,6 @@ public class MiniHBaseCluster {
     try {
       t = hbaseCluster.addMaster(c, hbaseCluster.getMasters().size(), user);
       t.start();
-      t.waitForServerOnline();
     } catch (InterruptedException ie) {
       throw new IOException("Interrupted adding master to cluster", ie);
     }
@@ -382,7 +381,7 @@ public class MiniHBaseCluster {
           return true;
         }
       }
-      Thread.sleep(200);
+      Thread.sleep(100);
     }
     return false;
   }

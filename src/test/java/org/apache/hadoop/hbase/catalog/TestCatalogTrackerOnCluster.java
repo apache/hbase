@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -37,7 +38,7 @@ public class TestCatalogTrackerOnCluster {
 
   /**
    * @throws Exception 
-   * @see https://issues.apache.org/jira/browse/HBASE-3445
+   * @see {https://issues.apache.org/jira/browse/HBASE-3445}
    */
   @Test public void testBadOriginalRootLocation() throws Exception {
     UTIL.getConfiguration().setInt("ipc.socket.timeout", 3000);
@@ -61,9 +62,15 @@ public class TestCatalogTrackerOnCluster {
     ServerName nonsense =
       new ServerName("example.org", 1234, System.currentTimeMillis());
     RootLocationEditor.setRootLocation(zookeeper, nonsense);
+
     // Bring back up the hbase cluster.  See if it can deal with nonsense root
-    // location.
+    // location. The cluster should start and be fully available.
     UTIL.startMiniHBaseCluster(1, 1);
+
+    // if we can create a table, it's a good sign that it's working
+    UTIL.createTable(
+      getClass().getSimpleName().getBytes(), "family".getBytes());
+
     UTIL.shutdownMiniCluster();
   }
 }

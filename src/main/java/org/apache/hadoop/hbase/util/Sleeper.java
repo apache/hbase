@@ -62,7 +62,7 @@ public class Sleeper {
   public void skipSleepCycle() {
     synchronized (sleepLock) {
       triggerWake = true;
-      sleepLock.notify();
+      sleepLock.notifyAll();
     }
   }
 

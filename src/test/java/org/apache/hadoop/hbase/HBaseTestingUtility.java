@@ -1245,7 +1245,7 @@ public class HBaseTestingUtility {
       boolean checkStatus) throws Exception {
     Configuration c = new Configuration(this.conf);
     String quorumServers = ZKConfig.getZKQuorumServersString(c);
-    int sessionTimeout = 5 * 1000; // 5 seconds
+    int sessionTimeout = 500;
     ZooKeeper zk = nodeZK.getRecoverableZooKeeper().getZooKeeper();
     byte[] password = zk.getSessionPasswd();
     long sessionID = zk.getSessionId();
@@ -1253,7 +1253,7 @@ public class HBaseTestingUtility {
     ZooKeeper newZK = new ZooKeeper(quorumServers,
         sessionTimeout, EmptyWatcher.instance, sessionID, password);
     newZK.close();
-    final long sleep = sessionTimeout * 5L;
+    final long sleep = 7000; // 7s seems enough to manage the timeout
     LOG.info("ZK Closed Session 0x" + Long.toHexString(sessionID) +
       "; sleeping=" + sleep);
 

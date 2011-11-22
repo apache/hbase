@@ -59,7 +59,7 @@ public class TestFSTableDescriptors {
     assertTrue(FSTableDescriptors.createTableDescriptor(fs, testdir, htd));
     assertFalse(FSTableDescriptors.createTableDescriptor(fs, testdir, htd));
     FileStatus [] statuses = fs.listStatus(testdir);
-    assertTrue(statuses.length == 1);
+    assertTrue("statuses.length="+statuses.length, statuses.length == 1);
     for (int i = 0; i < 10; i++) {
       FSTableDescriptors.updateHTableDescriptor(fs, testdir, htd);
     }

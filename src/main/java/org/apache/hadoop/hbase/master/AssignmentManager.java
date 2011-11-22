@@ -409,7 +409,8 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized(this.regionsInTransition) {
       while (!this.master.isStopped() &&
           this.regionsInTransition.containsKey(hri.getEncodedName())) {
-        this.regionsInTransition.wait();
+        // We expect a notify, but by security we set a timout
+        this.regionsInTransition.wait(100);
       }
     }
     return intransistion;
@@ -1824,7 +1825,10 @@ public class AssignmentManager extends ZooKeeperListener {
   throws InterruptedException {
     synchronized(regions) {
       while(!regions.containsKey(regionInfo)) {
-        regions.wait();
+        // We should receive a notification, but it's
+        //  better to have a timeout to recheck the condition here:
+        //  it lowers the impact of a race condition if any
+        regions.wait(100);
       }
     }
   }

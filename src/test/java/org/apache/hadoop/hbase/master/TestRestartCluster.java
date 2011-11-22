@@ -94,8 +94,11 @@ public class TestRestartCluster {
     LOG.info("\n\nCreating tables");
     for(byte [] TABLE : TABLES) {
       UTIL.createTable(TABLE, FAMILY);
+    }
+    for(byte [] TABLE : TABLES) {
       UTIL.waitTableAvailable(TABLE, 30000);
     }
+
     List<HRegionInfo> allRegions =
       MetaScanner.listAllRegions(UTIL.getConfiguration());
     assertEquals(3, allRegions.size());

@@ -62,14 +62,7 @@ public class JVMClusterUtil {
       // the HRS#run method.  HRS#init can fail for whatever region.  In those
       // cases, we'll jump out of the run without setting online flag.  Check
       // stopRequested so we don't wait here a flag that will never be flipped.
-      while (!this.regionServer.isOnline() &&
-          !this.regionServer.isStopped()) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          // continue waiting
-        }
-      }
+      regionServer.waitForServerOnline();
     }
   }
 
@@ -118,22 +111,6 @@ public class JVMClusterUtil {
     public HMaster getMaster() {
       return this.master;
     }
-
-    /**
-     * Block until the master has come online, indicating it is ready
-     * to be used.
-     */
-    public void waitForServerOnline() {
-      // The server is marked online after init begins but before race to become
-      // the active master.
-      while (!this.master.isMasterRunning() && !this.master.isStopped()) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          // continue waiting
-        }
-      }
-    }
   }
 
   /**
@@ -165,20 +142,49 @@ public class JVMClusterUtil {
     return new JVMClusterUtil.MasterThread(server, index);
   }
 
+  private static JVMClusterUtil.MasterThread findActiveMaster(
+    List<JVMClusterUtil.MasterThread> masters) {
+    for (JVMClusterUtil.MasterThread t : masters) {
+      if (t.master.isActiveMaster()) {
+        return t;
+      }
+    }
+
+    return null;
+  }
+
   /**
-   * Start the cluster.  Waits until there is a primary master and returns its
-   * address.
+   * Start the cluster.  Waits until there is a primary master initialized
+   * and returns its address.
    * @param masters
    * @param regionservers
    * @return Address to use contacting primary master.
    */
   public static String startup(final List<JVMClusterUtil.MasterThread> masters,
       final List<JVMClusterUtil.RegionServerThread> regionservers) throws IOException {
-    if (masters != null) {
-      for (JVMClusterUtil.MasterThread t : masters) {
-        t.start();
+
+    if (masters == null || masters.isEmpty()) {
+      return null;
+    }
+
+    for (JVMClusterUtil.MasterThread t : masters) {
+      t.start();
+    }
+
+    // Wait for an active master
+    //  having an active master before starting the region threads allows
+    //  then to succeed on their connection to master
+    long startTime = System.currentTimeMillis();
+    while (findActiveMaster(masters) == null) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ignored) {
+      }
+      if (System.currentTimeMillis() > startTime + 30000) {
+        throw new RuntimeException("Master not active after 30 seconds");
       }
     }
+
     if (regionservers != null) {
       for (JVMClusterUtil.RegionServerThread t: regionservers) {
         HRegionServer hrs = t.getRegionServer();
@@ -187,19 +193,21 @@ public class JVMClusterUtil {
         t.start();
       }
     }
-    if (masters == null || masters.isEmpty()) {
-      return null;
-    }
-    // Wait for an active master
+
+    // Wait for an active master to be initialized (implies being master)
+    //  with this, when we return the cluster is complete
+    startTime = System.currentTimeMillis();
     while (true) {
-      for (JVMClusterUtil.MasterThread t : masters) {
-        if (t.master.isActiveMaster()) {
-          return t.master.getServerName().toString();
-        }
+      JVMClusterUtil.MasterThread t = findActiveMaster(masters);
+      if (t != null && t.master.isInitialized()) {
+        return t.master.getServerName().toString();
+      }
+      if (System.currentTimeMillis() > startTime + 200000) {
+        throw new RuntimeException("Master not initialized after 200 seconds");
       }
       try {
-        Thread.sleep(1000);
-      } catch(InterruptedException e) {
+        Thread.sleep(100);
+      } catch (InterruptedException ignored) {
         // Keep waiting
       }
     }

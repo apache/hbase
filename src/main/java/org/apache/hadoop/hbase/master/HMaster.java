@@ -420,11 +420,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         ", cluster-up flag was=" + wasUp);
   }
 
+  // Check if we should stop every second.
+  private Sleeper stopSleeper = new Sleeper(1000, this);
   private void loop() {
-    // Check if we should stop every second.
-    Sleeper sleeper = new Sleeper(1000, this);
     while (!this.stopped) {
-      sleeper.sleep();
+      stopSleeper.sleep();
     }
   }
 
@@ -1504,6 +1504,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public void stop(final String why) {
     LOG.info(why);
     this.stopped = true;
+    // We wake up the stopSleeper to stop immediately
+    stopSleeper.skipSleepCycle();
     // If we are a backup master, we need to interrupt wait
     if (this.activeMasterManager != null) {
       synchronized (this.activeMasterManager.clusterHasActiveMaster) {
