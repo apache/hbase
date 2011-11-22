@@ -95,6 +95,7 @@ Release 0.90.5 - Unreleased
    HBASE-4799  Catalog Janitor logic bug causes region leackage
                (Max Lapan)
    HBASE-4827  TestAdmin should clean up resources after tests
+   HBASE-4848  TestScanner failing because hostname can't be null
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

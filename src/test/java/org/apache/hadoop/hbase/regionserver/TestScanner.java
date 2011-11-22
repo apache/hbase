@@ -263,7 +263,7 @@ public class TestScanner extends HBaseTestCase {
 
       // Store some new information
 
-      HServerAddress address = new HServerAddress("foo.bar.com:1234");
+      HServerAddress address = new HServerAddress("www.example.com:1234");
 
       put = new Put(ROW_KEY, System.currentTimeMillis(), null);
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
