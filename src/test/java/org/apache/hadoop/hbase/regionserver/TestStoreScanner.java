@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.Store.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
@@ -43,6 +44,11 @@ public class TestStoreScanner extends TestCase {
   private ScanInfo scanInfo = new ScanInfo(CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE, false,
       KeyValue.COMPARATOR);
   private ScanType scanType = ScanType.USER_SCAN;
+
+  public void setUp() throws Exception {
+    super.setUp();
+    SchemaMetrics.setUseTableNameInTest(false);
+  }
 
   /*
    * Test utility for building a NavigableSet for scanners.

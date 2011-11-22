@@ -45,13 +45,6 @@ public class TestSchemaConfigured {
   private static final Path TMP_HFILE_PATH = new Path(
       "/hbase/myTable/myRegion/" + HRegion.REGION_TEMP_SUBDIR + "/hfilename");
 
-  @Test
-  public void testHeapSize() {
-    SchemaConfigured sc = new SchemaConfigured(null, TABLE_NAME, CF_NAME);
-    assertEquals(ClassSize.estimateBase(SchemaConfigured.class, true),
-        sc.heapSize());
-  }
-
   /** Test if toString generates real JSON */
   @Test
   public void testToString() throws JSONException {

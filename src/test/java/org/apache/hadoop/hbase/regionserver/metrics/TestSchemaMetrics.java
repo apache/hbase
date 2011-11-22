@@ -19,29 +19,31 @@
 
 package org.apache.hadoop.hbase.regionserver.metrics;
 
+import static org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
+    BOOL_VALUES;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-
-import static org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
-    BOOL_VALUES;
-import static org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
     BlockMetricType;
-
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
-import static org.junit.Assert.*;
 
 @Category(MediumTests.class)
 @RunWith(Parameterized.class)
@@ -211,6 +213,35 @@ public class TestSchemaMetrics {
         }
       }
     }
+  }
+
+  @Test
+  public void testGenerateSchemaMetricsPrefix() {
+    String tableName = "table1";
+    int numCF = 3;
+
+    StringBuilder expected = new StringBuilder();
+    if (useTableName) {
+      expected.append("tbl.");
+      expected.append(tableName);
+      expected.append(".");
+    }
+    expected.append("cf.");
+    Set<byte[]> families = new HashSet<byte[]>();
+    for (int i = 1; i <= numCF; i++) {
+      String cf = "cf" + i;
+      families.add(Bytes.toBytes(cf));
+      expected.append(cf);
+      if (i == numCF) {
+        expected.append(".");
+      } else {
+        expected.append("~");
+      }
+    }
+
+    String result = SchemaMetrics.generateSchemaMetricsPrefix(tableName,
+        families);
+    assertEquals(expected.toString(), result);
   }
 
 }

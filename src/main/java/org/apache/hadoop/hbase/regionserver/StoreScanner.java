@@ -20,6 +20,11 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NavigableSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -27,12 +32,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.NavigableSet;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Scanner scans both the memstore and the HStore. Coalesce KeyValue stream
@@ -45,6 +46,8 @@ class StoreScanner extends NonLazyKeyValueScanner
   private ScanQueryMatcher matcher;
   private KeyValueHeap heap;
   private boolean cacheBlocks;
+
+  private String metricNameGetSize;
 
   // Used to indicate that the scanner has closed (see HBASE-1107)
   // Doesnt need to be volatile because it's always accessed via synchronized methods
@@ -90,6 +93,7 @@ class StoreScanner extends NonLazyKeyValueScanner
   StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns)
                               throws IOException {
     this(store, scan.getCacheBlocks(), scan, columns);
+    initializeMetricNames();
     if (columns != null && scan.isRaw()) {
       throw new DoNotRetryIOException(
           "Cannot specify any column for a raw scan");
@@ -134,6 +138,7 @@ class StoreScanner extends NonLazyKeyValueScanner
       List<? extends KeyValueScanner> scanners, ScanType scanType,
       long smallestReadPoint, long earliestPutTs) throws IOException {
     this(store, false, scan, null);
+    initializeMetricNames();
     matcher = new ScanQueryMatcher(scan, store.scanInfo, null, scanType,
         smallestReadPoint, earliestPutTs);
 
@@ -151,6 +156,7 @@ class StoreScanner extends NonLazyKeyValueScanner
       StoreScanner.ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners) throws IOException {
     this(null, scan.getCacheBlocks(), scan, columns);
+    this.initializeMetricNames();
     this.matcher = new ScanQueryMatcher(scan, scanInfo, columns, scanType,
         Long.MAX_VALUE, HConstants.LATEST_TIMESTAMP);
 
@@ -159,6 +165,23 @@ class StoreScanner extends NonLazyKeyValueScanner
       scanner.seek(matcher.getStartKey());
     }
     heap = new KeyValueHeap(scanners, scanInfo.getComparator());
+  }
+
+  /**
+   * Method used internally to initialize metric names throughout the
+   * constructors.
+   * 
+   * To be called after the store variable has been initialized!
+   */
+  private void initializeMetricNames() {
+    String tableName = SchemaMetrics.UNKNOWN;
+    String family = SchemaMetrics.UNKNOWN;
+    if (store != null) {
+      tableName = store.getTableName();
+      family = Bytes.toString(store.getFamily().getName());
+    }
+    metricNameGetSize = SchemaMetrics.generateSchemaMetricsPrefix(
+        tableName, family) + "getsize";
   }
 
   /*
@@ -207,6 +230,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     return scanners;
   }
 
+  @Override
   public synchronized KeyValue peek() {
     if (this.heap == null) {
       return this.lastTop;
@@ -214,11 +238,13 @@ class StoreScanner extends NonLazyKeyValueScanner
     return this.heap.peek();
   }
 
+  @Override
   public KeyValue next() {
     // throw runtime exception perhaps?
     throw new RuntimeException("Never call StoreScanner.next()");
   }
 
+  @Override
   public synchronized void close() {
     if (this.closing) return;
     this.closing = true;
@@ -231,6 +257,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     this.lastTop = null; // If both are null, we are closed.
   }
 
+  @Override
   public synchronized boolean seek(KeyValue key) throws IOException {
     if (this.heap == null) {
 
@@ -248,6 +275,7 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @param limit
    * @return true if there are more rows, false if scanner is done
    */
+  @Override
   public synchronized boolean next(List<KeyValue> outResult, int limit) throws IOException {
 
     checkReseek();
@@ -308,6 +336,7 @@ class StoreScanner extends NonLazyKeyValueScanner
             this.heap.next();
           }
 
+          HRegion.incrNumericMetric(metricNameGetSize, kv.getLength());
           if (limit > 0 && (results.size() == limit)) {
             break LOOP;
           }
@@ -370,11 +399,13 @@ class StoreScanner extends NonLazyKeyValueScanner
     return false;
   }
 
+  @Override
   public synchronized boolean next(List<KeyValue> outResult) throws IOException {
     return next(outResult, -1);
   }
 
   // Implementation of ChangedReadersObserver
+  @Override
   public synchronized void updateReaders() throws IOException {
     if (this.closing) return;
 

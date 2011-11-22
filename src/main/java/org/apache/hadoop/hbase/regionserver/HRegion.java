@@ -62,13 +62,13 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -80,10 +80,10 @@ import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -311,9 +312,13 @@ public class HRegion implements HeapSize { // , Writable{
   // These ones are not reset to zero when queried, unlike the previous.
   public static final ConcurrentMap<String, AtomicLong> numericPersistentMetrics = new ConcurrentHashMap<String, AtomicLong>();
 
-  // Used for metrics where we want track a metrics (such as latency)
-  // over a number of operations.
-  public static final ConcurrentMap<String, Pair<AtomicLong, AtomicInteger>> timeVaryingMetrics = new ConcurrentHashMap<String, Pair<AtomicLong, AtomicInteger>>();
+  /**
+   * Used for metrics where we want track a metrics (such as latency) over a
+   * number of operations.
+   */
+  public static final ConcurrentMap<String, Pair<AtomicLong, AtomicInteger>>
+      timeVaryingMetrics = new ConcurrentHashMap<String, 
+          Pair<AtomicLong, AtomicInteger>>();
 
   public static void incrNumericMetric(String key, long amount) {
     AtomicLong oldVal = numericMetrics.get(key);
@@ -1231,7 +1236,8 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws DroppedSnapshotException Thrown when replay of hlog is required
    * because a Snapshot was not properly persisted.
    */
-  protected boolean internalFlushcache(MonitoredTask status) throws IOException {
+  protected boolean internalFlushcache(MonitoredTask status)
+      throws IOException {
     return internalFlushcache(this.log, -1, status);
   }
 
@@ -1666,6 +1672,15 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       this.updatesLock.readLock().unlock();
     }
+
+    // do after lock
+    final long after = EnvironmentEdgeManager.currentTimeMillis();
+    final String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
+        getTableDesc().getNameAsString(), familyMap.keySet());
+    if (!metricPrefix.isEmpty()) {
+      HRegion.incrTimeVaryingMetric(metricPrefix + "delete_", after - now);
+    }
+
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
@@ -1811,6 +1826,12 @@ public class HRegion implements HeapSize { // , Writable{
   @SuppressWarnings("unchecked")
   private long doMiniBatchPut(
       BatchOperationInProgress<Pair<Put, Integer>> batchOp) throws IOException {
+    String metricPrefix = null;
+    final String tableName = getTableDesc().getNameAsString();
+
+    // variable to note if all Put items are for the same CF -- metrics related
+    boolean cfSetConsistent = true;
+    long startTimeMs = EnvironmentEdgeManager.currentTimeMillis();
 
     WALEdit walEdit = new WALEdit();
     /* Run coprocessor pre hook outside of locks to avoid deadlock */
@@ -1887,6 +1908,21 @@ public class HRegion implements HeapSize { // , Writable{
         }
         lastIndexExclusive++;
         numReadyToWrite++;
+
+        // If first time around, designate a prefix for metrics based on the CF
+        // set. After that, watch for inconsistencies.
+        final String curMetricPrefix =
+            SchemaMetrics.generateSchemaMetricsPrefix(tableName,
+                put.getFamilyMap().keySet());
+
+        if (metricPrefix == null) {
+          metricPrefix = curMetricPrefix;
+        } else if (cfSetConsistent && !metricPrefix.equals(curMetricPrefix)) {
+          // The column family set for this batch put is undefined.
+          cfSetConsistent = false;
+          metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(tableName,
+              SchemaMetrics.UNKNOWN);
+        }
       }
 
       // we should record the timestamp only after we have acquired the rowLock,
@@ -2027,6 +2063,15 @@ public class HRegion implements HeapSize { // , Writable{
           releaseRowLock(toRelease);
         }
       }
+
+      // do after lock
+      final long endTimeMs = EnvironmentEdgeManager.currentTimeMillis();
+      if (metricPrefix == null) {
+        metricPrefix = SchemaMetrics.CF_BAD_FAMILY_PREFIX;
+      }
+      HRegion.incrTimeVaryingMetric(metricPrefix + "multiput_",
+          endTimeMs - startTimeMs);
+
       if (!success) {
         for (int i = firstIndex; i < lastIndexExclusive; i++) {
           if (batchOp.retCodeDetails[i].getOperationStatusCode() == OperationStatusCode.NOT_RUN) {
@@ -2273,6 +2318,14 @@ public class HRegion implements HeapSize { // , Writable{
 
     if (coprocessorHost != null) {
       coprocessorHost.postPut(put, walEdit, writeToWAL);
+    }
+
+    // do after lock
+    final long after = EnvironmentEdgeManager.currentTimeMillis();
+    final String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
+        this.getTableDesc().getNameAsString(), familyMap.keySet());
+    if (!metricPrefix.isEmpty()) {
+      HRegion.incrTimeVaryingMetric(metricPrefix + "put_", after - now);
     }
 
     if (flush) {
@@ -3045,7 +3098,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     @Override
-	public synchronized boolean next(List<KeyValue> outResults, int limit)
+    public synchronized boolean next(List<KeyValue> outResults, int limit)
         throws IOException {
       if (this.filterClosed) {
         throw new UnknownScannerException("Scanner was closed (timed out?) " +
@@ -3075,7 +3128,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     @Override
-	public synchronized boolean next(List<KeyValue> outResults)
+    public synchronized boolean next(List<KeyValue> outResults)
         throws IOException {
       // apply the batching limit by default
       return next(outResults, batch);
@@ -3172,7 +3225,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     @Override
-	public synchronized void close() {
+    public synchronized void close() {
       if (storeHeap != null) {
         storeHeap.close();
         storeHeap = null;
@@ -3839,6 +3892,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private List<KeyValue> get(Get get, boolean withCoprocessor)
   throws IOException {
+    long now = EnvironmentEdgeManager.currentTimeMillis();
     Scan scan = new Scan(get);
 
     List<KeyValue> results = new ArrayList<KeyValue>();
@@ -3862,6 +3916,14 @@ public class HRegion implements HeapSize { // , Writable{
     // post-get CP hook
     if (withCoprocessor && (coprocessorHost != null)) {
       coprocessorHost.postGet(get, results);
+    }
+
+    // do after lock
+    final long after = EnvironmentEdgeManager.currentTimeMillis();
+    final String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
+        this.getTableDesc().getNameAsString(), get.familySet());
+    if (!metricPrefix.isEmpty()) {
+      HRegion.incrTimeVaryingMetric(metricPrefix + "get_", after - now);
     }
 
     return results;
@@ -4132,6 +4194,9 @@ public class HRegion implements HeapSize { // , Writable{
   public long incrementColumnValue(byte [] row, byte [] family,
       byte [] qualifier, long amount, boolean writeToWAL)
   throws IOException {
+    // to be used for metrics
+    long before = EnvironmentEdgeManager.currentTimeMillis();
+
     checkRow(row, "increment");
     boolean flush = false;
     boolean wrongLength = false;
@@ -4202,6 +4267,12 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       closeRegionOperation();
     }
+
+    // do after lock
+    long after = EnvironmentEdgeManager.currentTimeMillis();
+    String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
+        getTableDesc().getName(), family);
+    HRegion.incrTimeVaryingMetric(metricPrefix + "increment_", after - before);
 
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
