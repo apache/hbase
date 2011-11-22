@@ -96,6 +96,7 @@ Release 0.90.5 - Unreleased
                (Max Lapan)
    HBASE-4827  TestAdmin should clean up resources after tests
    HBASE-4848  TestScanner failing because hostname can't be null
+   HBASE-3952  Guava snuck back in as a dependency via HBASE-3777
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

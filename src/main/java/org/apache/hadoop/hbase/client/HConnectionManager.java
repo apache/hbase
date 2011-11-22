@@ -23,6 +23,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -71,8 +72,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.common.collect.ImmutableMap;
 
 /**
  * A non-instantiable class that manages {@link HConnection}s.
@@ -357,20 +356,20 @@ public class HConnectionManager {
     private Map<String, String> properties;
 
     public HConnectionKey(Configuration conf) {
-      ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+      Map<String, String> m = new HashMap<String, String>();
       if (conf != null) {
         if (conf.getBoolean(HConstants.HBASE_CONNECTION_PER_CONFIG, false)) {
-          builder.put(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(System.identityHashCode(conf)));
+          m.put(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(System.identityHashCode(conf)));
         } else {
           for (String property : CONNECTION_PROPERTIES) {
             String value = conf.get(property);
             if (value != null) {
-              builder.put(property, value);
+              m.put(property, value);
             }
           }
         }
       }
-      this.properties = builder.build();
+      this.properties = Collections.unmodifiableMap(m);
     }
 
     @Override
