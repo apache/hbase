@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler;
-import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -98,28 +97,26 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
     // Code to defend against case where we get SPLIT before region open
     // processing completes; temporary till we make SPLITs go via zk -- 0.92.
     RegionState regionState = this.assignmentManager.isRegionInTransition(regionInfo);
+    boolean openedNodeDeleted = false;
     if (regionState != null
         && regionState.getState().equals(RegionState.State.OPEN)) {
-      if (deleteOpenedNode(expectedVersion)) {
-        // Remove region from in-memory transition and unassigned node from ZK
-        this.assignmentManager.regionOnline(regionInfo, this.sn);
-        debugLog(regionInfo, "The master has opened the region " +
-            regionInfo.getRegionNameAsString() + " that was online on " +
-            this.sn.toString());
-      } else {
-        LOG.error("The znode of region " + regionInfo.getRegionNameAsString() +
-          " could not be deleted.");
+      openedNodeDeleted = deleteOpenedNode(expectedVersion);
+      if (!openedNodeDeleted) {
+        LOG.error("The znode of region " + regionInfo.getRegionNameAsString()
+            + " could not be deleted.");
       }
     } else {
       LOG.warn("Skipping the onlining of " + regionInfo.getRegionNameAsString() +
         " because regions is NOT in RIT -- presuming this is because it SPLIT");
     }
-    if (this.assignmentManager.getZKTable().isDisablingOrDisabledTable(
-        regionInfo.getTableNameAsString())) {
-      debugLog(regionInfo,
-          "Opened region " + regionInfo.getRegionNameAsString() + " but "
-          + "this table is disabled, triggering close of region");
-      assignmentManager.unassign(regionInfo);
+    if (!openedNodeDeleted) {
+      if (this.assignmentManager.getZKTable().isDisablingOrDisabledTable(
+          regionInfo.getTableNameAsString())) {
+        debugLog(regionInfo, "Opened region "
+            + regionInfo.getRegionNameAsString() + " but "
+            + "this table is disabled, triggering close of region");
+        assignmentManager.unassign(regionInfo);
+      }
     }
   }
 
