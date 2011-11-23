@@ -439,6 +439,7 @@ Release 0.92.0 - Unreleased
                running 0.20.205.0+
    HBASE-4842  [hbck] Fix intermittent failures on TestHBaseFsck.testHBaseFsck
                (Jon Hsieh)
+   HBASE-4308  Race between RegionOpenedHandler and AssignmentManager (Ram)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

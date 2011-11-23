@@ -966,16 +966,36 @@ public class AssignmentManager extends ZooKeeperListener {
         ZKAssign.getRegionName(this.master.getZooKeeper(), path);
       RegionState rs = this.regionsInTransition.get(regionName);
       if (rs != null) {
+        HRegionInfo regionInfo = rs.getRegion();
         if (rs.isSplitting() || rs.isSplit()) {
           LOG.debug("Ephemeral node deleted, regionserver crashed?, " +
             "clearing from RIT; rs=" + rs);
           clearRegionFromTransition(rs.getRegion());
         } else {
-          LOG.warn("Node deleted but still in RIT: " + rs);
+          LOG.debug("The znode of region " + regionInfo.getRegionNameAsString()
+              + " has been deleted.");
+          if (rs.isOpened()) {
+            makeRegionOnline(rs, regionInfo);
+          }
         }
       }
     }
   }
+  
+  private void makeRegionOnline(RegionState rs, HRegionInfo regionInfo) {
+    regionOnline(regionInfo, rs.serverName);
+    LOG.info("The master has opened the region "
+        + regionInfo.getRegionNameAsString() + " that was online on "
+        + rs.serverName);
+    if (this.getZKTable().isDisablingOrDisabledTable(
+        regionInfo.getTableNameAsString())) {
+      debugLog(regionInfo, "Opened region "
+          + regionInfo.getRegionNameAsString() + " but "
+          + "this table is disabled, triggering close of region");
+      unassign(regionInfo);
+    }
+  }
+
 
   /**
    * New unassigned node has been created.
