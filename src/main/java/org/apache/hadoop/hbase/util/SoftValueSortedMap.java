@@ -24,6 +24,7 @@ import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -172,7 +173,13 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   }
 
   public synchronized Set<Map.Entry<K,V>> entrySet() {
-    throw new RuntimeException("Not implemented");
+    checkReferences();
+    Set<Map.Entry<K, SoftValue<K, V>>> entries = this.internalMap.entrySet();
+    Set<Map.Entry<K, V>> realEntries = new LinkedHashSet<Map.Entry<K, V>>();
+    for (Map.Entry<K, SoftValue<K, V>> entry : entries) {
+      realEntries.add(entry.getValue());
+    }
+    return realEntries;
   }
 
   public synchronized Collection<V> values() {
@@ -185,12 +192,24 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
     return hardValues;
   }
 
-  private static class SoftValue<K,V> extends SoftReference<V> {
+  private static class SoftValue<K,V> extends SoftReference<V> implements Map.Entry<K, V> {
     final K key;
 
     SoftValue(K key, V value, ReferenceQueue q) {
       super(value, q);
       this.key = key;
+    }
+
+    public K getKey() {
+      return this.key;
+    }
+
+    public V getValue() {
+      return get();
+    }
+
+    public V setValue(V value) {
+      throw new RuntimeException("Not implemented");
     }
   }
 }
