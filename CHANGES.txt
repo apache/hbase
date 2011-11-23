@@ -441,6 +441,7 @@ Release 0.92.0 - Unreleased
    HBASE-4623  Remove @deprecated Scan methods in 0.90 from TRUNK and 0.92
    HBASE-4842  [hbck] Fix intermittent failures on TestHBaseFsck.testHBaseFsck
                (Jon Hsieh)
+   HBASE-4308  Race between RegionOpenedHandler and AssignmentManager (Ram)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
