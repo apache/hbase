@@ -287,6 +287,10 @@ public class AuthenticationTokenSecretManager
 
     @Override
     public void stop(String reason) {
+      if (stopped) {
+        return;
+      }
+
       stopped = true;
       // prevent further key generation when stopping
       if (isMaster) {
