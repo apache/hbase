@@ -442,6 +442,8 @@ Release 0.92.0 - Unreleased
    HBASE-4842  [hbck] Fix intermittent failures on TestHBaseFsck.testHBaseFsck
                (Jon Hsieh)
    HBASE-4308  Race between RegionOpenedHandler and AssignmentManager (Ram)
+   HBASE-4857  Recursive loop on KeeperException in
+               AuthenticationTokenSecretManager/ZKLeaderManager
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
