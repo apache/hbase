@@ -133,7 +133,6 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         keys.getFirst().length == 0) {
       throw new IOException("Expecting at least one region.");
     }
-    int count = 0;
     List<InputSplit> splits = new ArrayList<InputSplit>(keys.getFirst().length);
     for (int i = 0; i < keys.getFirst().length; i++) {
       if ( !includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
@@ -158,8 +157,9 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         InputSplit split = new TableSplit(table.getTableName(),
           splitStart, splitStop, regionLocation);
         splits.add(split);
-        if (LOG.isDebugEnabled())
-          LOG.debug("getSplits: split -> " + (count++) + " -> " + split);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("getSplits: split -> " + i + " -> " + split);
+        }
       }
     }
     return splits;
