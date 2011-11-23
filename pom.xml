@@ -1294,6 +1294,7 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-core</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <exclusions>
             <exclusion>
               <groupId>hsqldb</groupId>
@@ -1322,6 +1323,7 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-test</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <scope>test</scope>
         </dependency>
       </dependencies>
@@ -1472,6 +1474,7 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <exclusions>
             <!--Needs more work, tightening-->
             <exclusion>
@@ -1508,6 +1511,7 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdfs</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <exclusions>
             <!--Needs more work, tightening-->
             <exclusion>
@@ -1544,6 +1548,7 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapred</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <exclusions>
             <!--Needs more work, tightening-->
             <exclusion>
@@ -1581,18 +1586,21 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common-test</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <scope>test</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdfs-test</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <scope>test</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapred-test</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <scope>test</scope>
         </dependency>
       </dependencies>
@@ -1644,6 +1652,7 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <exclusions>
             <!--Needs more work, tightening-->
             <exclusion>
@@ -1688,6 +1697,7 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdfs</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <exclusions>
             <!--Needs more work, tightening-->
             <exclusion>
@@ -1724,6 +1734,7 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapred</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <exclusions>
             <!--Needs more work, tightening-->
             <exclusion>
@@ -1761,6 +1772,7 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <type>test-jar</type>
           <scope>test</scope>
         </dependency>
@@ -1768,6 +1780,7 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdfs</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <type>test-jar</type>
           <scope>test</scope>
         </dependency>
@@ -1775,6 +1788,7 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapred-test</artifactId>
           <version>${hadoop.version}</version>
+          <optional>true</optional>
           <scope>test</scope>
         </dependency>
       </dependencies>
