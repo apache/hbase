@@ -23,7 +23,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,8 +33,8 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -511,6 +513,13 @@ public class HConnectionManager {
     private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>>
       cachedRegionLocations =
         new HashMap<Integer, SoftValueSortedMap<byte [], HRegionLocation>>();
+
+    // The presence of a server in the map implies it's likely that there is an
+    // entry in cachedRegionLocations that map to this server; but the absence
+    // of a server in this map guarentees that there is no entry in cache that
+    // maps to the absent server.
+    private final Set<String> cachedServers =
+        new HashSet<String>();
 
     // region cache prefetch is enabled by default. this set contains all
     // tables whose region cache prefetch are disabled.
@@ -1116,6 +1125,35 @@ public class HConnectionManager {
     }
 
     /*
+     * Delete all cached entries of a table that maps to a specific location.
+     *
+     * @param tablename
+     * @param server
+     */
+    private void clearCachedLocationForServer(
+        final String server) {
+      boolean deletedSomething = false;
+      synchronized (this.cachedRegionLocations) {
+        if (!cachedServers.contains(server)) {
+          return;
+        }
+        for (SoftValueSortedMap<byte[], HRegionLocation> tableLocations :
+            cachedRegionLocations.values()) {
+          for (Entry<byte[], HRegionLocation> e : tableLocations.entrySet()) {
+            if (e.getValue().getServerAddress().toString().equals(server)) {
+              tableLocations.remove(e.getKey());
+              deletedSomething = true;
+            }
+          }
+        }
+        cachedServers.remove(server);
+      }
+      if (deletedSomething && LOG.isDebugEnabled()) {
+        LOG.debug("Removed all cached region locations that map to " + server);
+      }
+    }
+
+    /*
      * @param tableName
      * @return Map of cached locations for passed <code>tableName</code>
      */
@@ -1140,6 +1178,7 @@ public class HConnectionManager {
     public void clearRegionCache() {
       synchronized(this.cachedRegionLocations) {
         this.cachedRegionLocations.clear();
+        this.cachedServers.clear();
       }
     }
 
@@ -1158,7 +1197,12 @@ public class HConnectionManager {
       byte [] startKey = location.getRegionInfo().getStartKey();
       SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
-      if (tableLocations.put(startKey, location) == null) {
+      boolean hasNewCache = false;
+      synchronized (this.cachedRegionLocations) {
+        cachedServers.add(location.getServerAddress().toString());
+        hasNewCache = (tableLocations.put(startKey, location) == null);
+      }
+      if (hasNewCache) {
         LOG.debug("Cached location for " +
             location.getRegionInfo().getRegionNameAsString() +
             " is " + location.getHostnamePort());
@@ -1281,6 +1325,17 @@ public class HConnectionManager {
         } catch (Throwable t) {
           callable.shouldRetry(t);
           t = translateException(t);
+          if (t instanceof SocketTimeoutException ||
+              t instanceof ConnectException ||
+              t instanceof RetriesExhaustedException) {
+            // if thrown these exceptions, we clear all the cache entries that
+            // map to that slow/dead server; otherwise, let cache miss and ask
+            // .META. again to find the new location
+            HRegionLocation hrl = callable.location;
+            if (hrl != null) {
+              clearCachedLocationForServer(hrl.getServerAddress().toString());
+            }
+          }
           RetriesExhaustedException.ThrowableWithExtraContext qt =
             new RetriesExhaustedException.ThrowableWithExtraContext(t,
               System.currentTimeMillis(), callable.toString());
