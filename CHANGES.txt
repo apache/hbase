@@ -445,6 +445,7 @@ Release 0.92.0 - Unreleased
    HBASE-4785  Improve recovery time of HBase client when a region server dies
    HBASE-4739  Master dying while going to close a region can leave it in transition forever
                (Gao Jinchao)
+   HBASE-4855  SplitLogManager hangs on cluster restart due to batch.installed doubly counted
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
