@@ -68,7 +68,7 @@ public class TestGlobalMemStoreSize {
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
-    
+
     // Create a table with regions
     byte [] table = Bytes.toBytes("TestGlobalMemStoreSize");
     byte [] family = Bytes.toBytes("family");
@@ -78,7 +78,7 @@ public class TestGlobalMemStoreSize {
         regionNum);
     assertEquals(regionNum,numRegions);
     waitForAllRegionsAssigned();
-    
+
     for (HRegionServer server : getOnlineRegionServers()) {
       long globalMemStoreSize = 0;
       for (HRegionInfo regionInfo : server.getOnlineRegions()) {
@@ -89,29 +89,66 @@ public class TestGlobalMemStoreSize {
       assertEquals(server.getRegionServerAccounting().getGlobalMemstoreSize(),
         globalMemStoreSize);
     }
-    
+
     // check the global memstore size after flush
     int i = 0;
     for (HRegionServer server : getOnlineRegionServers()) {
-      LOG.info("Starting flushes on " + server.getServerName() + ", size=" + server.getRegionServerAccounting().getGlobalMemstoreSize());
+      LOG.info("Starting flushes on " + server.getServerName() +
+        ", size=" + server.getRegionServerAccounting().getGlobalMemstoreSize());
+      // If meta region on this server, flush it last since if we flush it first,
+      // it could get edits while other flushes are running since this a
+      // running cluster.
+      HRegion meta = null;
       for (HRegionInfo regionInfo : server.getOnlineRegions()) {
         HRegion r = server.getFromOnlineRegions(regionInfo.getEncodedName());
-        LOG.info("Flush " + r.toString() + " on " + server.getServerName() + ", " +  r.flushcache() + ", size=" + server.getRegionServerAccounting().getGlobalMemstoreSize());;
+        if (regionInfo.isMetaRegion()) {
+          meta = r;
+          continue;
+        }
+        flush(r, server);
       }
+      // If meta, flush it last
+      if (meta != null) flush(meta, server);
       LOG.info("Post flush on " + server.getServerName());
       long now = System.currentTimeMillis();
-      long timeout = now + 3000;
+      long timeout = now + 1000;
       while(server.getRegionServerAccounting().getGlobalMemstoreSize() != 0 &&
           timeout < System.currentTimeMillis()) {
         Threads.sleep(10);
       }
-      assertEquals("Server=" + server.getServerName() + ", i=" + i++, 0,
-        server.getRegionServerAccounting().getGlobalMemstoreSize());
+      long size = server.getRegionServerAccounting().getGlobalMemstoreSize();
+      if (size > 0) {
+        // If size > 0, see if its because the meta region got edits while
+        // our test was running....
+        for (HRegionInfo regionInfo : server.getOnlineRegions()) {
+          HRegion r = server.getFromOnlineRegions(regionInfo.getEncodedName());
+          long l = r.getMemstoreSize().longValue();
+          if (l > 0) {
+            LOG.info(r.toString() + " " + l + ", reflushing");
+            r.flushcache();
+          }
+        }
+      }
+      size = server.getRegionServerAccounting().getGlobalMemstoreSize();
+      assertEquals("Server=" + server.getServerName() + ", i=" + i++, 0, size);
     }
 
     TEST_UTIL.shutdownMiniCluster();
   }
-  
+
+  /**
+   * Flush and log stats on flush
+   * @param r
+   * @param server
+   * @throws IOException
+   */
+  private void flush(final HRegion r, final HRegionServer server)
+  throws IOException {
+    LOG.info("Flush " + r.toString() + " on " + server.getServerName() +
+      ", " +  r.flushcache() + ", size=" +
+      server.getRegionServerAccounting().getGlobalMemstoreSize());
+  }
+
   /** figure out how many regions are currently being served. */
   private int getRegionCount() throws IOException {
     int total = 0;
@@ -144,4 +181,3 @@ public class TestGlobalMemStoreSize {
     }
   }
 }
-
