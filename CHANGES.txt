@@ -462,6 +462,8 @@ Release 0.92.0 - Unreleased
                we issued bulk user region close call on our way out
    HBASE-4815  Disable online altering by default, create a config for it
    HBASE-4827  TestAdmin should clean up resources after tests
+   HBASE-4864  TestMasterObserver#testRegionTransitionOperations occasionally
+               fails (Gao Jinchao)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
