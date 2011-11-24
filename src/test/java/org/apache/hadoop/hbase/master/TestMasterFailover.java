@@ -384,11 +384,13 @@ public class TestMasterFailover {
     // Let's just assign everything to first RS
     HRegionServer hrs = cluster.getRegionServer(0);
     ServerName serverName = hrs.getServerName();
-
+    HRegionInfo closingRegion = enabledRegions.remove(0);
     // we'll need some regions to already be assigned out properly on live RS
     List<HRegionInfo> enabledAndAssignedRegions = new ArrayList<HRegionInfo>();
     enabledAndAssignedRegions.add(enabledRegions.remove(0));
     enabledAndAssignedRegions.add(enabledRegions.remove(0));
+    enabledAndAssignedRegions.add(closingRegion);
+    
     List<HRegionInfo> disabledAndAssignedRegions = new ArrayList<HRegionInfo>();
     disabledAndAssignedRegions.add(disabledRegions.remove(0));
     disabledAndAssignedRegions.add(disabledRegions.remove(0));
@@ -442,23 +444,8 @@ public class TestMasterFailover {
     /*
      * ZK = CLOSING
      */
-
-//    Disabled test of CLOSING.  This case is invalid after HBASE-3181.
-//    How can an RS stop a CLOSING w/o deleting the node?  If it did ever fail
-//    and left the node in CLOSING, the RS would have aborted and we'd process
-//    these regions in server shutdown
-//
-//    // Region of enabled table being closed but not complete
-//    // Region is already assigned, don't say anything to RS but set ZK closing
-//    region = enabledAndAssignedRegions.remove(0);
-//    regionsThatShouldBeOnline.add(region);
-//    ZKAssign.createNodeClosing(zkw, region, serverName);
-//
-//    // Region of disabled table being closed but not complete
-//    // Region is already assigned, don't say anything to RS but set ZK closing
-//    region = disabledAndAssignedRegions.remove(0);
-//    regionsThatShouldBeOffline.add(region);
-//    ZKAssign.createNodeClosing(zkw, region, serverName);
+    regionsThatShouldBeOnline.add(closingRegion);
+    ZKAssign.createNodeClosing(zkw, closingRegion, serverName);
 
     /*
      * ZK = CLOSED

@@ -455,7 +455,7 @@ public class AssignmentManager extends ZooKeeperListener {
       " in state " + data.getEventType());
     synchronized (regionsInTransition) {
       switch (data.getEventType()) {
-      case RS_ZK_REGION_CLOSING:
+      case M_ZK_REGION_CLOSING:
         // If zk node of the region was updated by a live server skip this
         // region and just add it into RIT.
         if (isOnDeadServer(regionInfo, deadServers) &&
@@ -681,7 +681,7 @@ public class AssignmentManager extends ZooKeeperListener {
             regionState.getRegion(), sn, daughters));
           break;
 
-        case RS_ZK_REGION_CLOSING:
+        case M_ZK_REGION_CLOSING:
           // Should see CLOSING after we have asked it to CLOSE or additional
           // times after already being in state of CLOSING
           if (regionState == null ||
@@ -1771,13 +1771,12 @@ public class AssignmentManager extends ZooKeeperListener {
         }
         state = new RegionState(region, RegionState.State.PENDING_CLOSE);
         regionsInTransition.put(encodedName, state);
-      } else if (force && state.isPendingClose()) {
-        // JD 05/25/11
-        // in my experience this is useless, when this happens it just spins
-        debugLog(region, "Attempting to unassign region " +
-            region.getRegionNameAsString() + " which is already pending close "
-            + "but forcing an additional close");
-        state.update(RegionState.State.PENDING_CLOSE);
+      } else if (force && (state.isPendingClose() || state.isClosing())) {
+        debugLog(region,
+            "Attempting to unassign region " + region.getRegionNameAsString() + 
+                " which is already " + state.getState()  + 
+                " but forcing to send a CLOSE RPC again ");
+        state.update(state.getState());
       } else {
         debugLog(region, "Attempting to unassign region " +
           region.getRegionNameAsString() + " but it is " +
@@ -1825,6 +1824,11 @@ public class AssignmentManager extends ZooKeeperListener {
               this.regions.remove(region);
             }
           }
+        }
+        // RS is already processing this region, only need to update the timestamp
+        if (t instanceof RegionAlreadyInTransitionException) {
+          debugLog(region, "update " + state + " the timestamp.");
+          state.update(state.getState());
         }
       }
       LOG.info("Server " + server + " returned " + t + " for " +
@@ -2532,26 +2536,13 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.info("Region has been PENDING_CLOSE for too "
             + "long, running forced unassign again on region="
             + regionInfo.getRegionNameAsString());
-        try {
-          // If the server got the RPC, it will transition the node
-          // to CLOSING, so only do something here if no node exists
-          if (!ZKUtil.watchAndCheckExists(watcher, 
-              ZKAssign.getNodeName(watcher, regionInfo.getEncodedName()))) {
-            // Queue running of an unassign -- do actual unassign
-            // outside of the regionsInTransition lock.
-            invokeUnassign(regionInfo);
-          }
-        } catch (NoNodeException e) {
-          LOG.debug("Node no longer existed so not forcing another "
-              + "unassignment");
-        } catch (KeeperException e) {
-          LOG.warn("Unexpected ZK exception timing out a region close", e);
-        }
+        invokeUnassign(regionInfo);
         break;
       case CLOSING:
         LOG.info("Region has been CLOSING for too " +
           "long, this should eventually complete or the server will " +
-          "expire, doing nothing");
+          "expire, send RPC again");
+        invokeUnassign(regionInfo);
         break;
       }
     }
