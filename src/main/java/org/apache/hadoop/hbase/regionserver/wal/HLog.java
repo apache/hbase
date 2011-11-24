@@ -1359,11 +1359,6 @@ public class HLog implements Syncable {
       // Cleaning up of lastSeqWritten is in the finally clause because we
       // don't want to confuse getOldestOutstandingSeqNum()
       this.lastSeqWritten.remove(getSnapshotName(encodedRegionName));
-      Long l = this.lastSeqWritten.remove(encodedRegionName);
-      if (l != null) {
-        LOG.warn("Why is there a raw encodedRegionName in lastSeqWritten? name=" +
-          Bytes.toString(encodedRegionName) + ", seqid=" + l);
-       }
       this.cacheFlushLock.unlock();
     }
   }
