@@ -1284,8 +1284,8 @@ public class HRegion implements HeapSize { // , Writable{
     // rows then)
     status.setStatus("Obtaining lock to block concurrent updates");
     this.updatesLock.writeLock().lock();
-    long flushsize = this.memstoreSize.get();
     status.setStatus("Preparing to flush by snapshotting stores");
+    long currentMemStoreSize = 0;
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(stores.size());
     try {
       // Record the mvcc for all transactions in progress.
@@ -1307,10 +1307,8 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       this.updatesLock.writeLock().unlock();
     }
-    String s = "Finished snapshotting " + this +
-      ", commencing wait for mvcc, flushsize=" + flushsize;
-    status.setStatus(s);
-    LOG.debug(s);
+    status.setStatus("Waiting for mvcc");
+    LOG.debug("Finished snapshotting " + this + ", commencing wait for mvcc");
 
     // wait for all in-progress transactions to commit to HLog before
     // we can start the flush. This prevents
@@ -1348,7 +1346,8 @@ public class HRegion implements HeapSize { // , Writable{
       storeFlushers.clear();
 
       // Set down the memstore size by amount of flush.
-      this.addAndGetGlobalMemstoreSize(-flushsize);
+      currentMemStoreSize =
+        this.addAndGetGlobalMemstoreSize(-this.memstoreSize.get());
     } catch (Throwable t) {
       // An exception here means that the snapshot was not persisted.
       // The hlog needs to be replayed so its content is restored to memstore.
@@ -1386,17 +1385,14 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     long time = EnvironmentEdgeManager.currentTimeMillis() - startTime;
-    long memstoresize = this.memstoreSize.get();
     String msg = "Finished memstore flush of ~" +
-      StringUtils.humanReadableInt(flushsize) + "/" + flushsize +
-      ", currentsize=" +
-      StringUtils.humanReadableInt(memstoresize) + "/" + memstoresize +
-      " for region " + this + " in " + time + "ms, sequenceid=" + sequenceId +
-      ", compaction requested=" + compactionRequested +
-      ((wal == null)? "; wal=null": "");
+        StringUtils.humanReadableInt(currentMemStoreSize) + " for region " +
+        this + " in " + time + "ms, sequenceid=" + sequenceId +
+        ", compaction requested=" + compactionRequested +
+        ((wal == null)? "; wal=null": "");
     LOG.info(msg);
     status.setStatus(msg);
-    this.recentFlushes.add(new Pair<Long,Long>(time/1000, flushsize));
+    this.recentFlushes.add(new Pair<Long,Long>(time/1000,currentMemStoreSize));
 
     return compactionRequested;
   }
