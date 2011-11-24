@@ -289,8 +289,9 @@ public class MetaEditor {
     delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER);
     delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
     deleteMetaTable(catalogTracker, delete);
-    LOG.info("Deleted daughters references, qualifier=" + Bytes.toStringBinary(HConstants.SPLITA_QUALIFIER) + " and qualifier=" 
-		+ Bytes.toStringBinary(HConstants.SPLITA_QUALIFIER) + ", from parent " + parent.getRegionNameAsString());
+    LOG.info("Deleted daughters references, qualifier=" + Bytes.toStringBinary(HConstants.SPLITA_QUALIFIER) +
+      " and qualifier=" + Bytes.toStringBinary(HConstants.SPLITB_QUALIFIER) +
+      ", from parent " + parent.getRegionNameAsString());
   }
 
   public static HRegionInfo getHRegionInfo(
