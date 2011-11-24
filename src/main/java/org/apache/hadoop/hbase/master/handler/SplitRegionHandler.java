@@ -110,7 +110,7 @@ public class SplitRegionHandler extends EventHandler implements TotesHRegionInfo
             parent.getEncodedName() + ")", e);
       }
     }
-    LOG.info("Handled SPLIT report); parent=" +
+    LOG.info("Handled SPLIT event; parent=" +
       this.parent.getRegionNameAsString() +
       " daughter a=" + this.daughters.get(0).getRegionNameAsString() +
       "daughter b=" + this.daughters.get(1).getRegionNameAsString());

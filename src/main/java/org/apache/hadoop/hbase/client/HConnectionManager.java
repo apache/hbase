@@ -1816,7 +1816,7 @@ public class HConnectionManager {
       } else {
         close(true);
       }
-      LOG.debug("The connection to " + this.zooKeeper + " has been closed.");
+      if (LOG.isTraceEnabled()) LOG.debug("" + this.zooKeeper + " closed.");
     }
 
     /**
