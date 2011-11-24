@@ -446,6 +446,7 @@ Release 0.92.0 - Unreleased
                AuthenticationTokenSecretManager/ZKLeaderManager
    HBASE-4739  Master dying while going to close a region can leave it in transition
                forever (Gao Jinchao)
+   HBASE-4855  SplitLogManager hangs on cluster restart due to batch.installed doubly counted
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
