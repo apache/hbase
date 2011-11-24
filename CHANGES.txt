@@ -444,6 +444,8 @@ Release 0.92.0 - Unreleased
    HBASE-4308  Race between RegionOpenedHandler and AssignmentManager (Ram)
    HBASE-4857  Recursive loop on KeeperException in
                AuthenticationTokenSecretManager/ZKLeaderManager
+   HBASE-4739  Master dying while going to close a region can leave it in transition
+               forever (Gao Jinchao)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected

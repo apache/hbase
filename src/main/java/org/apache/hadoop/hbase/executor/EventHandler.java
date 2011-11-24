@@ -103,7 +103,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   public enum EventType {
     // Messages originating from RS (NOTE: there is NO direct communication from
     // RS to Master). These are a result of RS updates into ZK.
-    RS_ZK_REGION_CLOSING      (1),   // RS is in process of closing a region
+    //RS_ZK_REGION_CLOSING    (1),   // It is replaced by M_ZK_REGION_CLOSING(HBASE-4739)
     RS_ZK_REGION_CLOSED       (2),   // RS has finished closing a region
     RS_ZK_REGION_OPENING      (3),   // RS is in process of opening a region
     RS_ZK_REGION_OPENED       (4),   // RS has finished opening a region
@@ -132,6 +132,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     // Updates from master to ZK. This is done by the master and there is
     // nothing to process by either Master or RS
     M_ZK_REGION_OFFLINE       (50),  // Master adds this region as offline in ZK
+    M_ZK_REGION_CLOSING       (51),  // Master adds this region as closing in ZK
 
     // Master controlled events to be executed on the master
     M_SERVER_SHUTDOWN         (70),  // Master is processing shutdown of a RS

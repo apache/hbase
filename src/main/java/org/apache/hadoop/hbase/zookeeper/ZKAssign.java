@@ -287,7 +287,7 @@ public class ZKAssign {
       // Because these are already executed states.
       if (hijack && null != curDataInZNode) {
         EventType eventType = curDataInZNode.getEventType();
-        if (eventType.equals(EventType.RS_ZK_REGION_CLOSING)
+        if (eventType.equals(EventType.M_ZK_REGION_CLOSING)
             || eventType.equals(EventType.RS_ZK_REGION_CLOSED)
             || eventType.equals(EventType.RS_ZK_REGION_OPENED)) {
           return -1;
@@ -423,7 +423,7 @@ public class ZKAssign {
       HRegionInfo region)
   throws KeeperException, KeeperException.NoNodeException {
     String regionName = region.getEncodedName();
-    return deleteNode(zkw, regionName, EventType.RS_ZK_REGION_CLOSING);
+    return deleteNode(zkw, regionName, EventType.M_ZK_REGION_CLOSING);
   }
 
   /**
@@ -562,7 +562,7 @@ public class ZKAssign {
       region.getEncodedName() + " in a CLOSING state"));
 
     RegionTransitionData data = new RegionTransitionData(
-        EventType.RS_ZK_REGION_CLOSING, region.getRegionName(), serverName);
+        EventType.M_ZK_REGION_CLOSING, region.getRegionName(), serverName);
 
     String node = getNodeName(zkw, region.getEncodedName());
     return ZKUtil.createAndWatch(zkw, node, data.getBytes());
@@ -598,7 +598,7 @@ public class ZKAssign {
       HRegionInfo region, ServerName serverName, int expectedVersion)
   throws KeeperException {
     return transitionNode(zkw, region, serverName,
-        EventType.RS_ZK_REGION_CLOSING,
+        EventType.M_ZK_REGION_CLOSING,
         EventType.RS_ZK_REGION_CLOSED, expectedVersion);
   }
 
