@@ -741,7 +741,9 @@ public class SplitLogManager extends ZooKeeperListener {
       }
       this.batch = batch;
       if (batch != null) {
-        batch.installed++;
+        if (this.incarnation == 0) {
+          batch.installed++;
+        }
       }
     }
 
