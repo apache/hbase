@@ -301,8 +301,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
     if (evictOnClose && cacheConf.isBlockCacheEnabled()) {
       int numEvicted = cacheConf.getBlockCache().evictBlocksByPrefix(name
           + HFile.CACHE_KEY_SEPARATOR);
-      LOG.debug("On close, file=" + name + " evicted=" + numEvicted
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("On close, file=" + name + " evicted=" + numEvicted
           + " block(s)");
+      }
     }
     if (closeIStream && istream != null) {
       istream.close();

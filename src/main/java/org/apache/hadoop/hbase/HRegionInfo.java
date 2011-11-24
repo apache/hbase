@@ -655,9 +655,8 @@ implements WritableComparable<HRegionInfo> {
    */
   @Override
   public String toString() {
-    return "REGION => {" + HConstants.NAME + " => '" +
+    return "{" + HConstants.NAME + " => '" +
       this.regionNameStr
-      + "', TableName => '" +  Bytes.toStringBinary(this.tableName)
       + "', STARTKEY => '" +
       Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" +
       Bytes.toStringBinary(this.endKey) +

@@ -1474,7 +1474,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     // Add to online regions if all above was successful.
     addToOnlineRegions(r);
-    LOG.info("addToOnlineRegions is done" + r.getRegionInfo());
     // Update ZK, ROOT or META
     if (r.getRegionInfo().isRootRegion()) {
       RootLocationEditor.setRootLocation(getZooKeeper(),
@@ -1492,7 +1491,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           this.serverNameFromMasterPOV);
       }
     }
-    LOG.info("Done with post open deploy taks for region=" +
+    LOG.info("Done with post open deploy task for region=" +
       r.getRegionNameAsString() + ", daughter=" + daughter);
 
   }

@@ -393,7 +393,7 @@ public class SplitTransaction {
         // that it's possible for the master to miss an event.
         do {
           if (spins % 10 == 0) {
-            LOG.info("Still waiting on the master to process the split for " +
+            LOG.debug("Still waiting on the master to process the split for " +
                 this.parent.getRegionInfo().getEncodedName());
           }
           Thread.sleep(100);

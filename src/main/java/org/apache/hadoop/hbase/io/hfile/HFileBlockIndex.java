@@ -751,8 +751,8 @@ public class HFileBlockIndex {
       totalBlockUncompressedSize +=
           blockWriter.getUncompressedSizeWithoutHeader();
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Wrote a " + numLevels + "-level index with root level at pos "
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Wrote a " + numLevels + "-level index with root level at pos "
           + out.getPos() + ", " + rootChunk.getNumEntries()
           + " root-level entries, " + totalNumEntries + " total entries, "
           + StringUtils.humanReadableInt(this.totalBlockOnDiskSize) +
@@ -787,9 +787,11 @@ public class HFileBlockIndex {
       rootChunk = curInlineChunk;
       curInlineChunk = new BlockIndexChunk();
 
-      LOG.info("Wrote a single-level " + description + " index with "
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Wrote a single-level " + description + " index with "
           + rootChunk.getNumEntries() + " entries, " + rootChunk.getRootSize()
           + " bytes");
+      }
       rootChunk.writeRoot(out);
     }
 
