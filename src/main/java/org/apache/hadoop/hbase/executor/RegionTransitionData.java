@@ -83,7 +83,7 @@ public class RegionTransitionData implements Writable {
    *
    * <p>Used when the server name is known (a regionserver is setting it).
    *
-   * <p>Valid types for this constructor are {@link EventType#RS_ZK_REGION_CLOSING},
+   * <p>Valid types for this constructor are {@link EventType#M_ZK_REGION_CLOSING},
    * {@link EventType#RS_ZK_REGION_CLOSED}, {@link EventType#RS_ZK_REGION_OPENING},
    * {@link EventType#RS_ZK_REGION_SPLITTING},
    * and {@link EventType#RS_ZK_REGION_OPENED}.
@@ -127,7 +127,7 @@ public class RegionTransitionData implements Writable {
    * <p>One of:
    * <ul>
    * <li>{@link EventType#M_ZK_REGION_OFFLINE}
-   * <li>{@link EventType#RS_ZK_REGION_CLOSING}
+   * <li>{@link EventType#M_ZK_REGION_CLOSING}
    * <li>{@link EventType#RS_ZK_REGION_CLOSED}
    * <li>{@link EventType#RS_ZK_REGION_OPENING}
    * <li>{@link EventType#RS_ZK_REGION_OPENED}
