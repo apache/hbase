@@ -205,6 +205,36 @@ mvn test -Dtest=org.apache.hadoop.hbase.client.*
           <programlisting>
 mvn verify
           </programlisting>
+           <para>However, sometimes you will want to run just the integration tests. In that case, you need to run two commands, first:</para>
+          <programlisting>
+mvn failsafe:integration-test
+          </programlisting>
+          <para>This actually runs ALL the integration tests (anything in the tests folder fitting the regex: **/IntegrationTest*.java). 
+          NOTE: this command will always output "BUILD SUCCESS" even if there are test failures.
+          At this point, you could grep the output by hand looking for failed tests. However, maven will do this for us; just use:</para>
+          <programlisting>
+mvn failsafe:verify
+          </programlisting>
+          <para>The above command basically looks at all the test results (so don't remove the 'target' directory) for test failures and reports the results.</para>
+      </section>
+      <section xml:id="maven.build.commanas.integration.tests2">
+          <title>Running a subset of Integration tests</title>
+          <para>This is very similar to how you specify running a subset of unit tests (see above). To just run IntegrationTestClassXYZ.java, use:</para>
+          <programlisting>
+mvn failsafe:integration-test -Dtest=IntegrationTestClassXYZ         
+          </programlisting> 
+          <para>Pretty similar, right?
+           The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java:
+          </para>
+          <programlisting>
+mvn failsafe:integration-test -Dtest=*ClassX*         
+          </programlisting> 
+          <para>This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*".
+          You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups.This would look something like:
+          </para>
+          <programlisting>
+mvn failsafe:integration-test -Dtest=*ClassX*, *ClassY         
+          </programlisting>  
       </section>
     </section>
   
