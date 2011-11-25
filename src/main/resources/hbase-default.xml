@@ -824,4 +824,31 @@
     (You will have to restart your cluster after setting it).
     </description>
   </property>
+  <property>
+    <name>hbase.thrift.minWorkerThreads</name>
+    <value>16</value>
+    <description>
+    The "core size" of the thread pool. New threads are created on every
+    connection until this many threads are created.
+    </description>
+  </property>
+  <property>
+    <name>hbase.thrift.maxWorkerThreads</name>
+    <value>1000</value>
+    <description>
+    The maximum size of the thread pool. When the pending request queue
+    overflows, new threads are created until their number reaches this number.
+    After that, the server starts dropping connections.
+    </description>
+  </property>
+  <property>
+     <name>hbase.thrift.maxQueuedRequests</name>
+     <value>1000</value>
+     <description>
+     The maximum number of pending Thrift connections waiting in the queue. If
+     there are no idle threads in the pool, the server queues requests. Only
+     when the queue overflows, new threads are added, up to
+     hbase.thrift.maxQueuedRequests threads.
+     </description>
+   </property>
 </configuration>

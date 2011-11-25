@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.thrift;
 
 import static org.junit.Assert.*;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
+import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
@@ -47,20 +47,22 @@ import org.junit.experimental.categories.Category;
 public class TestThriftServer {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected static final int MAXVERSIONS = 3;
-  private static ByteBuffer $bb(String i) {
+
+  private static ByteBuffer asByteBuffer(String i) {
     return ByteBuffer.wrap(Bytes.toBytes(i));
   }
+
   // Static names for tables, columns, rows, and values
-  private static ByteBuffer tableAname = $bb("tableA");
-  private static ByteBuffer tableBname = $bb("tableB");
-  private static ByteBuffer columnAname = $bb("columnA:");
-  private static ByteBuffer columnBname = $bb("columnB:");
-  private static ByteBuffer rowAname = $bb("rowA");
-  private static ByteBuffer rowBname = $bb("rowB");
-  private static ByteBuffer valueAname = $bb("valueA");
-  private static ByteBuffer valueBname = $bb("valueB");
-  private static ByteBuffer valueCname = $bb("valueC");
-  private static ByteBuffer valueDname = $bb("valueD");
+  private static ByteBuffer tableAname = asByteBuffer("tableA");
+  private static ByteBuffer tableBname = asByteBuffer("tableB");
+  private static ByteBuffer columnAname = asByteBuffer("columnA:");
+  private static ByteBuffer columnBname = asByteBuffer("columnB:");
+  private static ByteBuffer rowAname = asByteBuffer("rowA");
+  private static ByteBuffer rowBname = asByteBuffer("rowB");
+  private static ByteBuffer valueAname = asByteBuffer("valueA");
+  private static ByteBuffer valueBname = asByteBuffer("valueB");
+  private static ByteBuffer valueCname = asByteBuffer("valueC");
+  private static ByteBuffer valueDname = asByteBuffer("valueD");
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -100,7 +102,11 @@ public class TestThriftServer {
   public void doTestTableCreateDrop() throws Exception {
     ThriftServer.HBaseHandler handler =
       new ThriftServer.HBaseHandler(UTIL.getConfiguration());
+    createTestTables(handler);
+    dropTestTables(handler);
+  }
 
+  public static void createTestTables(Hbase.Iface handler) throws Exception {
     // Create/enable/disable/delete tables, ensure methods act correctly
     assertEquals(handler.getTableNames().size(), 0);
     handler.createTable(tableAname, getColumnDescriptors());
@@ -109,6 +115,9 @@ public class TestThriftServer {
     assertTrue(handler.isTableEnabled(tableAname));
     handler.createTable(tableBname, new ArrayList<ColumnDescriptor>());
     assertEquals(handler.getTableNames().size(), 2);
+  }
+
+  public static void dropTestTables(Hbase.Iface handler) throws Exception {
     handler.disableTable(tableBname);
     assertFalse(handler.isTableEnabled(tableBname));
     handler.deleteTable(tableBname);
@@ -121,7 +130,7 @@ public class TestThriftServer {
     handler.disableTable(tableAname);*/
     handler.deleteTable(tableAname);
   }
-  
+
   /**
    * Tests adding a series of Mutations and BatchMutations, including a
    * delete mutation.  Also tests data retrieval, and getting back multiple
@@ -343,7 +352,7 @@ public class TestThriftServer {
     handler.disableTable(tableAname);
     handler.deleteTable(tableAname);
   }
-  
+
   /**
    * For HBASE-2556
    * Tests for GetTableRegions
@@ -357,19 +366,19 @@ public class TestThriftServer {
     int regionCount = handler.getTableRegions(tableAname).size();
     assertEquals("empty table should have only 1 region, " +
             "but found " + regionCount, regionCount, 1);
-    handler.disableTable(tableAname);    
+    handler.disableTable(tableAname);
     handler.deleteTable(tableAname);
     regionCount = handler.getTableRegions(tableAname).size();
     assertEquals("non-existing table should have 0 region, " +
-            "but found " + regionCount, regionCount, 0);    
-  } 
-  
+            "but found " + regionCount, regionCount, 0);
+  }
+
   /**
    *
    * @return a List of ColumnDescriptors for use in creating a table.  Has one
    * default ColumnDescriptor and one ColumnDescriptor with fewer versions
    */
-  private List<ColumnDescriptor> getColumnDescriptors() {
+  private static List<ColumnDescriptor> getColumnDescriptors() {
     ArrayList<ColumnDescriptor> cDescriptors = new ArrayList<ColumnDescriptor>();
 
     // A default ColumnDescriptor
