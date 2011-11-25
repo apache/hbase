@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -65,6 +64,8 @@ import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
+import org.apache.hadoop.hbase.thrift.generated.Hbase.Iface;
+import org.apache.hadoop.hbase.thrift.generated.Hbase.Processor;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
@@ -76,6 +77,7 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
@@ -83,7 +85,7 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.server.THsHaServer;
 import org.apache.thrift.server.TNonblockingServer;
 import org.apache.thrift.server.TServer;
-import org.apache.thrift.server.TThreadPoolServer;
+import org.apache.thrift.server.TServer.AbstractServerArgs;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
@@ -91,11 +93,112 @@ import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportFactory;
 
+import com.google.common.base.Joiner;
+
 /**
  * ThriftServer - this class starts up a Thrift server which implements the
  * Hbase API specified in the Hbase.thrift IDL file.
  */
 public class ThriftServer {
+
+  private static final Log LOG = LogFactory.getLog(ThriftServer.class);
+
+  private static final String MIN_WORKERS_OPTION = "minWorkers";
+  private static final String MAX_WORKERS_OPTION = "workers";
+  private static final String MAX_QUEUE_SIZE_OPTION = "queue";
+  private static final String KEEP_ALIVE_SEC_OPTION = "keepAliveSec";
+  static final String BIND_OPTION = "bind";
+  static final String COMPACT_OPTION = "compact";
+  static final String FRAMED_OPTION = "framed";
+  static final String PORT_OPTION = "port";
+
+  private static final String DEFAULT_BIND_ADDR = "0.0.0.0";
+  private static final int DEFAULT_LISTEN_PORT = 9090;
+
+  private Configuration conf;
+  TServer server;
+
+  /** An enum of server implementation selections */
+  enum ImplType {
+    HS_HA("hsha", true, THsHaServer.class, false),
+    NONBLOCKING("nonblocking", true, TNonblockingServer.class, false),
+    THREAD_POOL("threadpool", false, TBoundedThreadPoolServer.class, true);
+
+    public static final ImplType DEFAULT = THREAD_POOL;
+
+    final String option;
+    final boolean isAlwaysFramed;
+    final Class<? extends TServer> serverClass;
+    final boolean canSpecifyBindIP;
+
+    ImplType(String option, boolean isAlwaysFramed,
+        Class<? extends TServer> serverClass, boolean canSpecifyBindIP) {
+      this.option = option;
+      this.isAlwaysFramed = isAlwaysFramed;
+      this.serverClass = serverClass;
+      this.canSpecifyBindIP = canSpecifyBindIP;
+    }
+
+    /**
+     * @return <code>-option</code> so we can get the list of options from
+     *         {@link #values()}
+     */
+    @Override
+    public String toString() {
+      return "-" + option;
+    }
+
+    String getDescription() {
+      StringBuilder sb = new StringBuilder("Use the " +
+          serverClass.getSimpleName());
+      if (isAlwaysFramed) {
+        sb.append(" This implies the framed transport.");
+      }
+      if (this == DEFAULT) {
+        sb.append("This is the default.");
+      }
+      return sb.toString();
+    }
+
+    static OptionGroup createOptionGroup() {
+      OptionGroup group = new OptionGroup();
+      for (ImplType t : values()) {
+        group.addOption(new Option(t.option, t.getDescription()));
+      }
+      return group;
+    }
+
+    static ImplType getServerImpl(CommandLine cmd) {
+      ImplType chosenType = null;
+      int numChosen = 0;
+      for (ImplType t : values()) {
+        if (cmd.hasOption(t.option)) {
+          chosenType = t;
+          ++numChosen;
+        }
+      }
+      if (numChosen != 1) {
+        throw new AssertionError("Exactly one option out of " +
+            Arrays.toString(values()) + " has to be specified");
+      }
+      return chosenType;
+    }
+
+    public String simpleClassName() {
+      return serverClass.getSimpleName();
+    }
+
+    public static List<String> serversThatCannotSpecifyBindIP() {
+      List<String> l = new ArrayList<String>();
+      for (ImplType t : values()) {
+        if (!t.canSpecifyBindIP) {
+          l.add(t.simpleClassName());
+        }
+      }
+      return l;
+    }
+
+  }
 
   /**
    * The HBaseHandler is a glue object that connects Thrift RPC calls to the
@@ -713,84 +816,85 @@ public class ThriftServer {
 
     @Override
     public List<TRowResult> scannerGetList(int id,int nbRows) throws IllegalArgument, IOError {
-        LOG.debug("scannerGetList: id=" + id);
-        ResultScanner scanner = getScanner(id);
-        if (null == scanner) {
-            throw new IllegalArgument("scanner ID is invalid");
-        }
+      LOG.debug("scannerGetList: id=" + id);
+      ResultScanner scanner = getScanner(id);
+      if (null == scanner) {
+        throw new IllegalArgument("scanner ID is invalid");
+      }
 
-        Result [] results = null;
-        try {
-            results = scanner.next(nbRows);
-            if (null == results) {
-                return new ArrayList<TRowResult>();
-            }
-        } catch (IOException e) {
-            throw new IOError(e.getMessage());
+      Result [] results = null;
+      try {
+        results = scanner.next(nbRows);
+        if (null == results) {
+          return new ArrayList<TRowResult>();
         }
-        return ThriftUtilities.rowResultFromHBase(results);
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
+      return ThriftUtilities.rowResultFromHBase(results);
     }
+
     @Override
     public List<TRowResult> scannerGet(int id) throws IllegalArgument, IOError {
-        return scannerGetList(id,1);
+      return scannerGetList(id,1);
     }
 
     public int scannerOpenWithScan(ByteBuffer tableName, TScan tScan) throws IOError {
-        try {
-          HTable table = getTable(tableName);
-          Scan scan = new Scan();
-          if (tScan.isSetStartRow()) {
-              scan.setStartRow(tScan.getStartRow());
-          }
-          if (tScan.isSetStopRow()) {
-              scan.setStopRow(tScan.getStopRow());
-          }
-          if (tScan.isSetTimestamp()) {
-              scan.setTimeRange(Long.MIN_VALUE, tScan.getTimestamp());              
-          }
-          if (tScan.isSetCaching()) {
-              scan.setCaching(tScan.getCaching());
-          }
-          if(tScan.isSetColumns() && tScan.getColumns().size() != 0) {
-            for(ByteBuffer column : tScan.getColumns()) {
-              byte [][] famQf = KeyValue.parseColumn(getBytes(column));
-              if(famQf.length == 1) {
-                scan.addFamily(famQf[0]);
-              } else {
-                scan.addColumn(famQf[0], famQf[1]);
-              }
+      try {
+        HTable table = getTable(tableName);
+        Scan scan = new Scan();
+        if (tScan.isSetStartRow()) {
+          scan.setStartRow(tScan.getStartRow());
+        }
+        if (tScan.isSetStopRow()) {
+          scan.setStopRow(tScan.getStopRow());
+        }
+        if (tScan.isSetTimestamp()) {
+          scan.setTimeRange(Long.MIN_VALUE, tScan.getTimestamp());
+        }
+        if (tScan.isSetCaching()) {
+          scan.setCaching(tScan.getCaching());
+        }
+        if (tScan.isSetColumns() && tScan.getColumns().size() != 0) {
+          for(ByteBuffer column : tScan.getColumns()) {
+            byte [][] famQf = KeyValue.parseColumn(getBytes(column));
+            if(famQf.length == 1) {
+              scan.addFamily(famQf[0]);
+            } else {
+              scan.addColumn(famQf[0], famQf[1]);
             }
           }
-          if (tScan.isSetFilterString()) {
-            ParseFilter parseFilter = new ParseFilter();
-            scan.setFilter(parseFilter.parseFilterString(tScan.getFilterString()));
-          }
-          return addScanner(table.getScanner(scan));
-        } catch (IOException e) {
-          throw new IOError(e.getMessage());
         }
+        if (tScan.isSetFilterString()) {
+          ParseFilter parseFilter = new ParseFilter();
+          scan.setFilter(parseFilter.parseFilterString(tScan.getFilterString()));
+        }
+        return addScanner(table.getScanner(scan));
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
     }
 
     @Override
     public int scannerOpen(ByteBuffer tableName, ByteBuffer startRow,
-            List<ByteBuffer> columns) throws IOError {
-        try {
-          HTable table = getTable(tableName);
-          Scan scan = new Scan(getBytes(startRow));
-          if(columns != null && columns.size() != 0) {
-            for(ByteBuffer column : columns) {
-              byte [][] famQf = KeyValue.parseColumn(getBytes(column));
-              if(famQf.length == 1) {
-                scan.addFamily(famQf[0]);
-              } else {
-                scan.addColumn(famQf[0], famQf[1]);
-              }
+        List<ByteBuffer> columns) throws IOError {
+      try {
+        HTable table = getTable(tableName);
+        Scan scan = new Scan(getBytes(startRow));
+        if(columns != null && columns.size() != 0) {
+          for(ByteBuffer column : columns) {
+            byte [][] famQf = KeyValue.parseColumn(getBytes(column));
+            if(famQf.length == 1) {
+              scan.addFamily(famQf[0]);
+            } else {
+              scan.addColumn(famQf[0], famQf[1]);
             }
           }
-          return addScanner(table.getScanner(scan));
-        } catch (IOException e) {
-          throw new IOError(e.getMessage());
         }
+        return addScanner(table.getScanner(scan));
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
     }
 
     @Override
@@ -826,7 +930,7 @@ public class ThriftServer {
         Filter f = new WhileMatchFilter(
             new PrefixFilter(getBytes(startAndPrefix)));
         scan.setFilter(f);
-        if(columns != null && columns.size() != 0) {
+        if (columns != null && columns.size() != 0) {
           for(ByteBuffer column : columns) {
             byte [][] famQf = KeyValue.parseColumn(getBytes(column));
             if(famQf.length == 1) {
@@ -849,8 +953,8 @@ public class ThriftServer {
         HTable table = getTable(tableName);
         Scan scan = new Scan(getBytes(startRow));
         scan.setTimeRange(Long.MIN_VALUE, timestamp);
-        if(columns != null && columns.size() != 0) {
-          for(ByteBuffer column : columns) {
+        if (columns != null && columns.size() != 0) {
+          for (ByteBuffer column : columns) {
             byte [][] famQf = KeyValue.parseColumn(getBytes(column));
             if(famQf.length == 1) {
               scan.addFamily(famQf[0]);
@@ -873,8 +977,8 @@ public class ThriftServer {
         HTable table = getTable(tableName);
         Scan scan = new Scan(getBytes(startRow), getBytes(stopRow));
         scan.setTimeRange(Long.MIN_VALUE, timestamp);
-        if(columns != null && columns.size() != 0) {
-          for(ByteBuffer column : columns) {
+        if (columns != null && columns.size() != 0) {
+          for (ByteBuffer column : columns) {
             byte [][] famQf = KeyValue.parseColumn(getBytes(column));
             if(famQf.length == 1) {
               scan.addFamily(famQf[0]);
@@ -911,7 +1015,7 @@ public class ThriftServer {
     }
 
     @Override
-    public List<TCell> getRowOrBefore(ByteBuffer tableName, ByteBuffer row, 
+    public List<TCell> getRowOrBefore(ByteBuffer tableName, ByteBuffer row,
         ByteBuffer family) throws IOError {
       try {
         HTable table = getTable(getBytes(tableName));
@@ -966,69 +1070,98 @@ public class ThriftServer {
     }
   }
 
+  public ThriftServer(Configuration conf) {
+    this.conf = HBaseConfiguration.create(conf);
+  }
+
   //
   // Main program and support routines
   //
 
-  private static void printUsageAndExit(Options options, int exitCode) {
+  private static void printUsageAndExit(Options options, int exitCode)
+      throws ExitCodeException {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("Thrift", null, options,
-            "To start the Thrift server run 'bin/hbase-daemon.sh start thrift'\n" +
-            "To shutdown the thrift server run 'bin/hbase-daemon.sh stop thrift' or" +
-            " send a kill signal to the thrift server pid",
-            true);
-      System.exit(exitCode);
+        "To start the Thrift server run 'bin/hbase-daemon.sh start thrift'\n" +
+        "To shutdown the thrift server run 'bin/hbase-daemon.sh stop " +
+        "thrift' or send a kill signal to the thrift server pid",
+        true);
+    throw new ExitCodeException(exitCode, "");
   }
 
-  private static final String DEFAULT_LISTEN_PORT = "9090";
-
   /*
-   * Start up the Thrift server.
+   * Start up or shuts down the Thrift server, depending on the arguments.
    * @param args
    */
-  static private void doMain(final String[] args) throws Exception {
-    Log LOG = LogFactory.getLog("ThriftServer");
-
+   void doMain(final String[] args) throws Exception {
     Options options = new Options();
-    options.addOption("b", "bind", true, "Address to bind the Thrift server to. Not supported by the Nonblocking and HsHa server [default: 0.0.0.0]");
-    options.addOption("p", "port", true, "Port to bind to [default: 9090]");
-    options.addOption("f", "framed", false, "Use framed transport");
-    options.addOption("c", "compact", false, "Use the compact protocol");
+    options.addOption("b", BIND_OPTION, true, "Address to bind " +
+        "the Thrift server to. Not supported by the Nonblocking and " +
+        "HsHa server [default: " + DEFAULT_BIND_ADDR + "]");
+    options.addOption("p", PORT_OPTION, true, "Port to bind to [default: " +
+        DEFAULT_LISTEN_PORT + "]");
+    options.addOption("f", FRAMED_OPTION, false, "Use framed transport");
+    options.addOption("c", COMPACT_OPTION, false, "Use the compact protocol");
     options.addOption("h", "help", false, "Print help information");
 
-    OptionGroup servers = new OptionGroup();
-    servers.addOption(new Option("nonblocking", false, "Use the TNonblockingServer. This implies the framed transport."));
-    servers.addOption(new Option("hsha", false, "Use the THsHaServer. This implies the framed transport."));
-    servers.addOption(new Option("threadpool", false, "Use the TThreadPoolServer. This is the default."));
-    options.addOptionGroup(servers);
+    options.addOption("m", MIN_WORKERS_OPTION, true,
+        "The minimum number of worker threads for " +
+        ImplType.THREAD_POOL.simpleClassName());
+
+    options.addOption("w", MAX_WORKERS_OPTION, true,
+        "The maximum number of worker threads for " +
+        ImplType.THREAD_POOL.simpleClassName());
+
+    options.addOption("q", MAX_QUEUE_SIZE_OPTION, true,
+        "The maximum number of queued requests in " +
+        ImplType.THREAD_POOL.simpleClassName());
+
+    options.addOption("k", KEEP_ALIVE_SEC_OPTION, true,
+        "The amount of time in secods to keep a thread alive when idle in " +
+        ImplType.THREAD_POOL.simpleClassName());
+
+    options.addOptionGroup(ImplType.createOptionGroup());
 
     CommandLineParser parser = new PosixParser();
     CommandLine cmd = parser.parse(options, args);
 
-    /**
-     * This is so complicated to please both bin/hbase and bin/hbase-daemon.
-     * hbase-daemon provides "start" and "stop" arguments
-     * hbase should print the help if no argument is provided
-     */
+    // This is so complicated to please both bin/hbase and bin/hbase-daemon.
+    // hbase-daemon provides "start" and "stop" arguments
+    // hbase should print the help if no argument is provided
     List<String> commandLine = Arrays.asList(args);
     boolean stop = commandLine.contains("stop");
     boolean start = commandLine.contains("start");
-    if (cmd.hasOption("help") || !start || stop) {
+    boolean invalidStartStop = (start && stop) || (!start && !stop);
+    if (cmd.hasOption("help") || invalidStartStop) {
+      if (invalidStartStop) {
+        LOG.error("Exactly one of 'start' and 'stop' has to be specified");
+      }
       printUsageAndExit(options, 1);
     }
 
     // Get port to bind to
     int listenPort = 0;
     try {
-      listenPort = Integer.parseInt(cmd.getOptionValue("port", DEFAULT_LISTEN_PORT));
+      listenPort = Integer.parseInt(cmd.getOptionValue(PORT_OPTION,
+          String.valueOf(DEFAULT_LISTEN_PORT)));
     } catch (NumberFormatException e) {
       LOG.error("Could not parse the value provided for the port option", e);
       printUsageAndExit(options, -1);
     }
 
+    // Make optional changes to the configuration based on command-line options
+    optionToConf(cmd, MIN_WORKERS_OPTION,
+        conf, TBoundedThreadPoolServer.MIN_WORKER_THREADS_CONF_KEY);
+    optionToConf(cmd, MAX_WORKERS_OPTION,
+        conf, TBoundedThreadPoolServer.MAX_WORKER_THREADS_CONF_KEY);
+    optionToConf(cmd, MAX_QUEUE_SIZE_OPTION,
+        conf, TBoundedThreadPoolServer.MAX_QUEUED_REQUESTS_CONF_KEY);
+    optionToConf(cmd, KEEP_ALIVE_SEC_OPTION,
+        conf, TBoundedThreadPoolServer.THREAD_KEEP_ALIVE_TIME_SEC_CONF_KEY);
+
     // Construct correct ProtocolFactory
     TProtocolFactory protocolFactory;
-    if (cmd.hasOption("compact")) {
+    if (cmd.hasOption(COMPACT_OPTION)) {
       LOG.debug("Using compact protocol");
       protocolFactory = new TCompactProtocol.Factory();
     } else {
@@ -1036,70 +1169,112 @@ public class ThriftServer {
       protocolFactory = new TBinaryProtocol.Factory();
     }
 
-    HBaseHandler handler = new HBaseHandler();
-    Hbase.Processor processor = new Hbase.Processor(handler);
+    HBaseHandler handler = new HBaseHandler(conf);
+    Hbase.Processor<Hbase.Iface> processor =
+        new Hbase.Processor<Hbase.Iface>(handler);
+    ImplType implType = ImplType.getServerImpl(cmd);
 
-    TServer server;
-    if (cmd.hasOption("nonblocking") || cmd.hasOption("hsha")) {
-      if (cmd.hasOption("bind")) {
-        LOG.error("The Nonblocking and HsHa servers don't support IP address binding at the moment." +
-                " See https://issues.apache.org/jira/browse/HBASE-2155 for details.");
-        printUsageAndExit(options, -1);
+    // Construct correct TransportFactory
+    TTransportFactory transportFactory;
+    if (cmd.hasOption(FRAMED_OPTION) || implType.isAlwaysFramed) {
+      transportFactory = new TFramedTransport.Factory();
+      LOG.debug("Using framed transport");
+    } else {
+      transportFactory = new TTransportFactory();
+    }
+
+    if (cmd.hasOption(BIND_OPTION) && !implType.canSpecifyBindIP) {
+      LOG.error("Server types " + Joiner.on(", ").join(
+          ImplType.serversThatCannotSpecifyBindIP()) + " don't support IP " +
+          "address binding at the moment. See " +
+          "https://issues.apache.org/jira/browse/HBASE-2155 for details.");
+      printUsageAndExit(options, -1);
+    }
+
+    if (implType == ImplType.HS_HA || implType == ImplType.NONBLOCKING) {
+      if (cmd.hasOption(BIND_OPTION)) {
+        throw new RuntimeException("-" + BIND_OPTION + " not supported with " +
+            implType);
       }
 
-      TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(listenPort);
-      TFramedTransport.Factory transportFactory = new TFramedTransport.Factory();
+      TNonblockingServerTransport serverTransport =
+          new TNonblockingServerSocket(listenPort);
 
-     if (cmd.hasOption("nonblocking")) {
-        TNonblockingServer.Args serverArgs = new TNonblockingServer.Args(serverTransport);
-        serverArgs.processor(processor);
-        serverArgs.transportFactory(transportFactory);
-        serverArgs.protocolFactory(protocolFactory);
-
-        LOG.info("starting HBase Nonblocking Thrift server on " + Integer.toString(listenPort));
+      if (implType == ImplType.NONBLOCKING) {
+        TNonblockingServer.Args serverArgs =
+            new TNonblockingServer.Args(serverTransport);
+        setServerArgs(serverArgs, processor, transportFactory,
+            protocolFactory);
         server = new TNonblockingServer(serverArgs);
       } else {
         THsHaServer.Args serverArgs = new THsHaServer.Args(serverTransport);
         serverArgs.processor(processor);
         serverArgs.transportFactory(transportFactory);
         serverArgs.protocolFactory(protocolFactory);
-
-        LOG.info("starting HBase HsHA Thrift server on " + Integer.toString(listenPort));
         server = new THsHaServer(serverArgs);
       }
+      LOG.info("starting HBase " + implType.simpleClassName() +
+          " server on " + Integer.toString(listenPort));
+    } else if (implType == ImplType.THREAD_POOL) {
+      // Thread pool server. Get the IP address to bind to.
+      InetAddress listenAddress = getBindAddress(options, cmd);
+
+      TServerTransport serverTransport = new TServerSocket(
+          new InetSocketAddress(listenAddress, listenPort));
+
+      TBoundedThreadPoolServer.Args serverArgs = new TBoundedThreadPoolServer.Args(
+          serverTransport, conf);
+      setServerArgs(serverArgs, processor, transportFactory, protocolFactory);
+      LOG.info("starting " + ImplType.THREAD_POOL.simpleClassName() + " on "
+          + listenAddress + ":" + Integer.toString(listenPort)
+          + "; " + serverArgs);
+      server = new TBoundedThreadPoolServer(serverArgs);
     } else {
-      // Get IP address to bind to
-      InetAddress listenAddress = null;
-      if (cmd.hasOption("bind")) {
-        try {
-          listenAddress = InetAddress.getByName(cmd.getOptionValue("bind"));
-        } catch (UnknownHostException e) {
-          LOG.error("Could not bind to provided ip address", e);
-          printUsageAndExit(options, -1);
-        }
-      } else {
-        listenAddress = InetAddress.getByName("0.0.0.0");
-      }
-      TServerTransport serverTransport = new TServerSocket(new InetSocketAddress(listenAddress, listenPort));
+      throw new AssertionError("Unsupported Thrift server implementation: " +
+          implType.simpleClassName());
+    }
 
-      // Construct correct TransportFactory
-      TTransportFactory transportFactory;
-      if (cmd.hasOption("framed")) {
-        transportFactory = new TFramedTransport.Factory();
-        LOG.debug("Using framed transport");
-      } else {
-        transportFactory = new TTransportFactory();
-      }
-
-      TThreadPoolServer.Args serverArgs = new TThreadPoolServer.Args(serverTransport);
-      serverArgs.processor(processor);
-      serverArgs.protocolFactory(protocolFactory);
-      serverArgs.transportFactory(transportFactory);
-      LOG.info("starting HBase ThreadPool Thrift server on " + listenAddress + ":" + Integer.toString(listenPort));
-      server = new TThreadPoolServer(serverArgs);
+    // A sanity check that we instantiated the right type of server.
+    if (server.getClass() != implType.serverClass) {
+      throw new AssertionError("Expected to create Thrift server class " +
+          implType.serverClass.getName() + " but got " +
+          server.getClass().getName());
     }
 
     server.serve();
+  }
+
+  public void stop() {
+    server.stop();
+  }
+
+  private InetAddress getBindAddress(Options options, CommandLine cmd)
+      throws ExitCodeException {
+    InetAddress listenAddress = null;
+    String bindAddressStr = cmd.getOptionValue(BIND_OPTION, DEFAULT_BIND_ADDR);
+    try {
+      listenAddress = InetAddress.getByName(bindAddressStr);
+    } catch (UnknownHostException e) {
+      LOG.error("Could not resolve the bind address specified: " +
+          bindAddressStr, e);
+      printUsageAndExit(options, -1);
+    }
+    return listenAddress;
+  }
+
+  private static void setServerArgs(AbstractServerArgs<?> serverArgs,
+      Processor<Iface> processor, TTransportFactory transportFactory,
+      TProtocolFactory protocolFactory) {
+    serverArgs.processor(processor);
+    serverArgs.transportFactory(transportFactory);
+    serverArgs.protocolFactory(protocolFactory);
+  }
+
+  private static void optionToConf(CommandLine cmd, String option,
+      Configuration conf, String destConfKey) {
+    if (cmd.hasOption(option)) {
+      conf.set(destConfKey, cmd.getOptionValue(option));
+    }
   }
 
   /**
@@ -1107,7 +1282,12 @@ public class ThriftServer {
    * @throws Exception
    */
   public static void main(String [] args) throws Exception {
-	VersionInfo.logVersion();
-    doMain(args);
+    VersionInfo.logVersion();
+    try {
+      new ThriftServer(HBaseConfiguration.create()).doMain(args);
+    } catch (ExitCodeException ex) {
+      System.exit(ex.getExitCode());
+    }
   }
+
 }
