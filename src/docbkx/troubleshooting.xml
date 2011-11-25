@@ -574,6 +574,18 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
        </section>    
      </section>
         
+    <section xml:id="trouble.network">
+      <title>Network</title>
+      <section xml:id="trouble.network.spikes">
+        <title>Network Spikes</title>
+        <para>If you are seeing periodic network spikes you might want to check the compactionQueues to see if major 
+        compactions are happening.
+        </para>
+        <para>See <xref linkend="managed.compactions"/> for more information on managing compactions.
+        </para>
+        </section>
+    </section>
+        
     <section xml:id="trouble.rs">
       <title>RegionServer</title>
         <para>For more information on the RegionServers, see <xref linkend="regionserver.arch"/>. 

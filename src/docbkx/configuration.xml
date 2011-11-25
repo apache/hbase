@@ -1028,6 +1028,11 @@ index e70ebc6..96f8c27 100644
           throughput is affected since every request that hits that region server will take longer,
           which exacerbates the problem even more.
           </para>
+          <para>You can get a sense of whether you have too little or too many handlers by
+            <xref linkend="rpc.logging" />
+            on an individual RegionServer then tailing its logs (Queued requests
+            consume memory).
+            </para>
           </section>
       <section xml:id="big_memory">
         <title>Configuration for large memory machines</title>
@@ -1054,11 +1059,20 @@ index e70ebc6..96f8c27 100644
       Consider going to larger regions to cut down on the total number of regions
       on your cluster. Generally less Regions to manage makes for a smoother running
       cluster (You can always later manually split the big Regions should one prove
-      hot and you want to spread the request load over the cluster).  By default,
-      regions are 256MB in size.  You could run with
-      1G.  Some run with even larger regions; 4G or even larger.  Adjust
-      <code>hbase.hregion.max.filesize</code> in your <filename>hbase-site.xml</filename>.
+      hot and you want to spread the request load over the cluster).  A lower number of regions is
+       preferred, generally in the range of 20 to low-hundreds
+       per RegionServer.  Adjust the regionsize as appropriate to achieve this number. 
+       </para>
+       <para>For the 0.90.x codebase, the upper-bound of regionsize is about 4Gb, with a default of 256Mb.
+       For 0.92.x codebase, due to the HFile v2 change much larger regionsizes can be supported (e.g., 20Gb).
+       </para>
+       <para>You may need to experiment with this setting based on your hardware configuration and application needs.
+       </para>
+       <para>Adjust <code>hbase.hregion.max.filesize</code> in your <filename>hbase-site.xml</filename>.
+       RegionSize can also be set on a per-table basis via 
+       <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html">HTableDescriptor</link>.
       </para>
+      
       </section>
       <section xml:id="disable.splitting">
       <title>Managed Splitting</title>
