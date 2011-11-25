@@ -140,14 +140,6 @@
       <para>The number of regions for an HBase table is driven by the <xref
               linkend="bigger.regions" />. Also, see the architecture
           section on <xref linkend="arch.regions.size" /></para>
-       <para>A lower number of regions is preferred, generally in the range of 20 to low-hundreds
-       per RegionServer.  Adjust the regionsize as appropriate to achieve this number. 
-       </para>
-       <para>For the 0.90.x codebase, the upper-bound of regionsize is about 4Gb.
-       For 0.92.x codebase, due to the HFile v2 change much larger regionsizes can be supported (e.g., 20Gb).
-       </para>
-       <para>You may need to experiment with this setting based on your hardware configuration and application needs.
-       </para>
     </section>
 
     <section xml:id="perf.compactions.and.splits">
@@ -161,15 +153,7 @@
     <section xml:id="perf.handlers">
         <title><varname>hbase.regionserver.handler.count</varname></title>
         <para>See <xref linkend="hbase.regionserver.handler.count"/>. 
-            This setting in essence sets how many requests are
-            concurrently being processed inside the RegionServer at any
-            one time.  If set too high, then throughput may suffer as
-            the concurrent requests contend; if set too low, requests will
-            be stuck waiting to get into the machine.  You can get a
-            sense of whether you have too little or too many handlers by
-            <xref linkend="rpc.logging" />
-            on an individual RegionServer then tailing its logs (Queued requests
-            consume memory).</para>
+	    </para>
     </section>
     <section xml:id="perf.hfile.block.cache.size">
         <title><varname>hfile.block.cache.size</varname></title>
