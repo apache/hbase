@@ -1555,8 +1555,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.stopped = true;
     LOG.info("STOPPED: " + msg);
     // Wakes run() if it is sleeping
-    //sleeper.skipSleepCycle();
-    //will be uncommented later, see discussion in jira 4798
+    sleeper.skipSleepCycle();
   }
 
   public void waitForServerOnline(){
