@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable;
@@ -29,6 +31,9 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -44,7 +49,40 @@ import static org.junit.Assert.*;
  */
 @Category(MediumTests.class)
 public class TestRegionServerCoprocessorExceptionWithAbort {
+  static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
+
+  private class zkwAbortable implements Abortable {
+    @Override
+    public void abort(String why, Throwable e) {
+      throw new RuntimeException("Fatal ZK rs tracker error, why=", e);
+    }
+    @Override
+    public boolean isAborted() {
+      return false;
+    }
+  };
+
+  private class RSTracker extends ZooKeeperNodeTracker {
+    public boolean regionZKNodeWasDeleted = false;
+    public String rsNode;
+    private Thread mainThread;
+
+    public RSTracker(ZooKeeperWatcher zkw, String rsNode, Thread mainThread) {
+      super(zkw, rsNode, new zkwAbortable());
+      this.rsNode = rsNode;
+      this.mainThread = mainThread;
+    }
+
+    @Override
+    public synchronized void nodeDeleted(String path) {
+      if (path.equals(rsNode)) {
+        regionZKNodeWasDeleted = true;
+        mainThread.interrupt();
+      }
+    }
+  }
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  static final int timeout = 30000;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -61,7 +99,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testExceptionFromCoprocessorDuringPut()
       throws IOException {
     // When we try to write to TEST_TABLE, the buggy coprocessor will
@@ -75,35 +113,50 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
         TEST_UTIL.createMultiRegions(table, TEST_FAMILY));
 
     // Note which regionServer will abort (after put is attempted).
-    HRegionServer regionServer =
+    final HRegionServer regionServer =
         TEST_UTIL.getRSForFirstRegionInTable(TEST_TABLE);
+
+    // add watch so we can know when this regionserver aborted.
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+        "unittest", new zkwAbortable());
+
+    RSTracker rsTracker = new RSTracker(zkw,
+        "/hbase/rs/"+regionServer.getServerName(), Thread.currentThread());
+    rsTracker.start();
+    zkw.registerListener(rsTracker);
+
+    boolean caughtInterruption = false;
     try {
       final byte[] ROW = Bytes.toBytes("aaa");
       Put put = new Put(ROW);
       put.add(TEST_FAMILY, ROW, ROW);
       table.put(put);
     } catch (IOException e) {
-      fail("put() failed: " + e);
-    }
-    // Wait up to 30 seconds for regionserver to abort.
-    boolean regionServerAborted = false;
-    for (int i = 0; i < 30; i++) {
-      if (regionServer.isAborted()) {
-        regionServerAborted = true;
-        break;
+      // Depending on exact timing of the threads involved, zkw's interruption
+      // might be caught here ...
+      if (e.getCause().getClass().equals(InterruptedException.class)) {
+	LOG.debug("caught interruption here (during put()).");
+        caughtInterruption = true;
+      } else {
+        fail("put() failed: " + e);
       }
+    }
+    if (caughtInterruption == false) {
       try {
-        Thread.sleep(1000);
+        Thread.sleep(timeout);
+        fail("RegionServer did not abort within 30 seconds.");
       } catch (InterruptedException e) {
-        fail("InterruptedException while waiting for regionserver " +
-            "zk node to be deleted.");
+        // .. or it might be caught here.
+	LOG.debug("caught interruption here (during sleep()).");
+        caughtInterruption = true;
       }
     }
+    assertTrue("Main thread caught interruption.",caughtInterruption);
     assertTrue("RegionServer aborted on coprocessor exception, as expected.",
-        regionServerAborted);
+        rsTracker.regionZKNodeWasDeleted);
   }
 
-    public static class BuggyRegionObserver extends SimpleRegionObserver {
+  public static class BuggyRegionObserver extends SimpleRegionObserver {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
                        final Put put, final WALEdit edit,
