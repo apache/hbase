@@ -338,7 +338,7 @@
 
           <configuration>
             <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
-            <argLine>-enableassertions -Xmx1900m</argLine>
+            <argLine>-enableassertions -Xmx1900m -Djava.security.egd=file:/dev/./urandom</argLine>
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
           </configuration>
         </plugin>
