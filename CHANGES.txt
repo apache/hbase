@@ -465,6 +465,8 @@ Release 0.92.0 - Unreleased
    HBASE-4827  TestAdmin should clean up resources after tests
    HBASE-4864  TestMasterObserver#testRegionTransitionOperations occasionally
                fails (Gao Jinchao)
+   HBASE-4868  TestOfflineMetaRebuildBase#testMetaRebuild occasionally fails
+               (Gao Jinchao)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

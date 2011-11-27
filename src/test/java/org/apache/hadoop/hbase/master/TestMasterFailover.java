@@ -312,21 +312,7 @@ public class TestMasterFailover {
     log("Cluster started");
 
     // Create a ZKW to use in the test
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-      "unittest", new Abortable() {
-    	boolean aborted = false;
-        @Override
-        public void abort(String why, Throwable e) {
-          this.aborted = true;
-          throw new RuntimeException("Fatal ZK error, why=" + why, e);
-        }
-        
-        @Override
-        public boolean isAborted() {
-          return this.aborted;
-        }
-        
-    });
+    ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
 
     // get all the master threads
     List<MasterThread> masterThreads = cluster.getMasterThreads();

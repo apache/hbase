@@ -1502,7 +1502,32 @@ public class HBaseTestingUtility {
   }
   
   /**
-   * Creates an znode with OPENED state.
+   * Gets a ZooKeeperWatcher.
+   * @param TEST_UTIL
+   */
+  public static ZooKeeperWatcher getZooKeeperWatcher(
+      HBaseTestingUtility TEST_UTIL) throws ZooKeeperConnectionException,
+      IOException {
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+        "unittest", new Abortable() {
+          boolean aborted = false;
+
+          @Override
+          public void abort(String why, Throwable e) {
+            aborted = true;
+            throw new RuntimeException("Fatal ZK error, why=" + why, e);
+          }
+
+          @Override
+          public boolean isAborted() {
+            return aborted;
+          }
+        });
+    return zkw;
+  }
+  
+  /**
+   * Creates a znode with OPENED state.
    * @param TEST_UTIL
    * @param region
    * @param serverName
@@ -1516,20 +1541,7 @@ public class HBaseTestingUtility {
       HBaseTestingUtility TEST_UTIL, HRegion region,
       ServerName serverName) throws ZooKeeperConnectionException,
       IOException, KeeperException, NodeExistsException {
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-        "unittest", new Abortable() {
-          boolean aborted = false;
-          @Override
-          public void abort(String why, Throwable e) {
-            aborted = true;
-            throw new RuntimeException("Fatal ZK error, why=" + why, e);
-          }
-          @Override
-          public boolean isAborted() {
-            return aborted;
-          }
-        });
-
+    ZooKeeperWatcher zkw = getZooKeeperWatcher(TEST_UTIL);
     ZKAssign.createNodeOffline(zkw, region.getRegionInfo(), serverName);
     int version = ZKAssign.transitionNodeOpening(zkw, region
         .getRegionInfo(), serverName);

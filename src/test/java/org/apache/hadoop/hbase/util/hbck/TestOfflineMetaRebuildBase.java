@@ -24,10 +24,13 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 
 /**
@@ -61,6 +64,12 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
     // bring up the minicluster
     TEST_UTIL.startMiniZKCluster(); // tables seem enabled by default
     TEST_UTIL.restartHBaseCluster(3);
+    
+    ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
+    
+    LOG.info("Waiting for no more RIT");
+    ZKAssign.blockUntilNoRIT(zkw);
+    LOG.info("No more RIT in ZK, now doing final test verification");
 
     // everything is good again.
     assertEquals(4, scanMeta());
