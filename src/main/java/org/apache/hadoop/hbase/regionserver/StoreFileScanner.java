@@ -44,14 +44,16 @@ class StoreFileScanner implements KeyValueScanner {
   private final StoreFile.Reader reader;
   private final HFileScanner hfs;
   private KeyValue cur = null;
+  private boolean enforceMVCC = false;
 
   /**
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
    * @param hfs HFile scanner
    */
-  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs) {
+  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs, boolean useMVCC) {
     this.reader = reader;
     this.hfs = hfs;
+    this.enforceMVCC = useMVCC;
   }
 
   /**
@@ -62,11 +64,20 @@ class StoreFileScanner implements KeyValueScanner {
       Collection<StoreFile> filesToCompact,
       boolean cacheBlocks,
       boolean usePread) throws IOException {
-    List<StoreFileScanner> scanners =
-      new ArrayList<StoreFileScanner>(filesToCompact.size());
-    for (StoreFile file : filesToCompact) {
+    return getScannersForStoreFiles(filesToCompact, cacheBlocks, usePread, false);
+  }
+
+  /**
+   * Return an array of scanners corresponding to the given set of store files.
+   */
+  public static List<StoreFileScanner> getScannersForStoreFiles(
+      Collection<StoreFile> files, boolean cacheBlocks, boolean usePread,
+      boolean isCompaction) throws IOException {
+    List<StoreFileScanner> scanners = new ArrayList<StoreFileScanner>(
+        files.size());
+    for (StoreFile file : files) {
       StoreFile.Reader r = file.createReader();
-      scanners.add(r.getStoreFileScanner(cacheBlocks, usePread));
+      scanners.add(r.getStoreFileScanner(cacheBlocks, usePread, isCompaction));
     }
     return scanners;
   }
@@ -81,11 +92,13 @@ class StoreFileScanner implements KeyValueScanner {
 
   public KeyValue next() throws IOException {
     KeyValue retKey = cur;
+
     try {
       // only seek if we aren't at the end. cur == null implies 'end'.
       if (cur != null) {
         hfs.next();
         cur = hfs.getKeyValue();
+        skipKVsNewerThanReadpoint();
       }
     } catch(IOException e) {
       throw new IOException("Could not iterate " + this, e);
@@ -100,7 +113,7 @@ class StoreFileScanner implements KeyValueScanner {
         return false;
       }
       cur = hfs.getKeyValue();
-      return true;
+      return skipKVsNewerThanReadpoint();
     } catch(IOException ioe) {
       throw new IOException("Could not seek " + this, ioe);
     }
@@ -113,10 +126,39 @@ class StoreFileScanner implements KeyValueScanner {
         return false;
       }
       cur = hfs.getKeyValue();
-      return true;
+      return skipKVsNewerThanReadpoint();
     } catch (IOException ioe) {
       throw new IOException("Could not seek " + this, ioe);
     }
+  }
+
+  protected boolean skipKVsNewerThanReadpoint() throws IOException {
+    long readPoint = MultiVersionConsistencyControl.getThreadReadPoint();
+
+    // We want to ignore all key-values that are newer than our current
+    // readPoint
+    while(enforceMVCC
+        && cur != null
+        && (cur.getMemstoreTS() > readPoint)) {
+      hfs.next();
+      cur = hfs.getKeyValue();
+    }
+
+    if (cur == null) {
+      close();
+      return false;
+    }
+
+    // For the optimisation in HBASE-4346, we set the KV's memstoreTS to
+    // 0, if it is older than all the scanners' read points. It is possible
+    // that a newer KV's memstoreTS was reset to 0. But, there is an
+    // older KV which was not reset to 0 (because it was
+    // not old enough during flush). Make sure that we set it correctly now,
+    // so that the comparision order does not change.
+    if (cur.getMemstoreTS() <= readPoint) {
+      cur.setMemstoreTS(0);
+    }
+    return true;
   }
 
   public void close() {

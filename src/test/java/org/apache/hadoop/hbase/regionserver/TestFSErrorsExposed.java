@@ -123,7 +123,7 @@ public class TestFSErrorsExposed {
     StoreFile sf = new StoreFile(fs, writer.getPath(), util.getConfiguration(),
         cacheConf, BloomType.NONE);
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
-        Collections.singletonList(sf), false, true);
+        Collections.singletonList(sf), false, true, false);
     KeyValueScanner scanner = scanners.get(0);
 
     FaultyInputStream inStream = fs.inStreams.get(0).get();

@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -36,8 +38,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -70,9 +75,6 @@ public class TestHFileWriterV2 {
     HFileWriterV2 writer = new HFileWriterV2(conf, new CacheConfig(conf), fs,
         hfilePath, 4096, COMPRESS_ALGO, KeyValue.KEY_COMPARATOR);
 
-    long totalKeyLength = 0;
-    long totalValueLength = 0;
-
     Random rand = new Random(9713312); // Just a fixed seed.
 
     final int ENTRY_COUNT = 10000;
@@ -85,9 +87,6 @@ public class TestHFileWriterV2 {
       // A random-length random value.
       byte[] valueBytes = randomValue(rand);
       writer.append(keyBytes, valueBytes);
-
-      totalKeyLength += keyBytes.length;
-      totalValueLength += valueBytes.length;
 
       keys.add(keyBytes);
       values.add(valueBytes);
@@ -115,10 +114,36 @@ public class TestHFileWriterV2 {
 
     HFileBlock.FSReader blockReader =
         new HFileBlock.FSReaderV2(fsdis, COMPRESS_ALGO, fileSize);
+    // Comparator class name is stored in the trailer in version 2.
+    RawComparator<byte []> comparator = trailer.createComparator();
+    HFileBlockIndex.BlockIndexReader dataBlockIndexReader = new HFileBlockIndex.BlockIndexReader(comparator,
+        trailer.getNumDataIndexLevels());
+    HFileBlockIndex.BlockIndexReader metaBlockIndexReader = new HFileBlockIndex.BlockIndexReader(
+        Bytes.BYTES_RAWCOMPARATOR, 1);
+
+    HFileBlock.BlockIterator blockIter = blockReader.blockRange(
+        trailer.getLoadOnOpenDataOffset(),
+        fileSize - trailer.getTrailerSize());
+    // Data index. We also read statistics about the block index written after
+    // the root level.
+    dataBlockIndexReader.readMultiLevelIndexRoot(
+        blockIter.nextBlockAsStream(BlockType.ROOT_INDEX),
+        trailer.getDataIndexCount());
+
+    // Meta index.
+    metaBlockIndexReader.readRootIndex(
+        blockIter.nextBlockAsStream(BlockType.ROOT_INDEX),
+        trailer.getMetaIndexCount());
+    // File info
+    FileInfo fileInfo = new FileInfo();
+    fileInfo.readFields(blockIter.nextBlockAsStream(BlockType.FILE_INFO));
+    byte [] keyValueFormatVersion = fileInfo.get(HFileWriterV2.KEY_VALUE_VERSION);
+    boolean includeMemstoreTS = (keyValueFormatVersion != null && Bytes.toInt(keyValueFormatVersion) > 0);
 
     // Counters for the number of key/value pairs and the number of blocks
     int entriesRead = 0;
     int blocksRead = 0;
+    long memstoreTS = 0;
 
     // Scan blocks the way the reader would scan them
     fsdis.seek(0);
@@ -136,6 +161,15 @@ public class TestHFileWriterV2 {
 
         byte[] value = new byte[valueLen];
         buf.get(value);
+
+        if (includeMemstoreTS) {
+          ByteArrayInputStream byte_input = new ByteArrayInputStream(buf.array(),
+                               buf.arrayOffset() + buf.position(), buf.remaining());
+          DataInputStream data_input = new DataInputStream(byte_input);
+
+          memstoreTS = WritableUtils.readVLong(data_input);
+          buf.position(buf.position() + WritableUtils.getVIntSize(memstoreTS));
+        }
 
         // A brute-force check to see that all keys and values are correct.
         assertTrue(Bytes.compareTo(key, keys.get(entriesRead)) == 0);

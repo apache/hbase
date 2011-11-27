@@ -228,6 +228,13 @@ public class Store implements HeapSize {
   }
 
   /**
+   * @return The maximum memstoreTS in all store files.
+   */
+  public long getMaxMemstoreTS() {
+    return StoreFile.getMaxMemstoreTSInList(this.getStorefiles());
+  }
+
+  /**
    * @param tabledir
    * @param encodedName Encoded region name.
    * @param family
@@ -391,10 +398,15 @@ public class Store implements HeapSize {
       ArrayList<StoreFile> newFiles = new ArrayList<StoreFile>(storefiles);
       newFiles.add(sf);
       this.storefiles = sortAndClone(newFiles);
-      notifyChangedReadersObservers();
     } finally {
+      // We need the lock, as long as we are updating the storefiles
+      // or changing the memstore. Let us release it before calling
+      // notifyChangeReadersObservers. See HBASE-4485 for a possible
+      // deadlock scenario that could have happened if continue to hold
+      // the lock.
       this.lock.writeLock().unlock();
     }
+    notifyChangedReadersObservers();
     LOG.info("Successfully loaded store file " + srcPath
         + " into store " + this + " (new location: " + dstPath + ")");
   }
@@ -476,6 +488,8 @@ public class Store implements HeapSize {
       throws IOException {
     StoreFile.Writer writer;
     String fileName;
+    // Find the smallest read point across all the Scanners.
+    long smallestReadPoint = region.getSmallestReadPoint();
     long flushed = 0;
     // Don't flush if there are no entries.
     if (set.size() == 0) {
@@ -488,7 +502,7 @@ public class Store implements HeapSize {
     // pass true as the StoreScanner's retainDeletesInOutput argument.
     InternalScanner scanner = new StoreScanner(this, scan,
         Collections.singletonList(new CollectionBackedScanner(set,
-            this.comparator)), true);
+            this.comparator)), true, this.region.getSmallestReadPoint());
     try {
       // TODO:  We can fail in the below block before we complete adding this
       // flush to list of store files.  Add cleanup of anything put on filesystem
@@ -506,6 +520,14 @@ public class Store implements HeapSize {
             hasMore = scanner.next(kvs);
             if (!kvs.isEmpty()) {
               for (KeyValue kv : kvs) {
+                // If we know that this KV is going to be included always, then let us
+                // set its memstoreTS to 0. This will help us save space when writing to disk.
+                if (kv.getMemstoreTS() <= smallestReadPoint) {
+                  // let us not change the original KV. It could be in the memstore
+                  // changing its memstoreTS could affect other threads/scanners.
+                  kv = kv.shallowCopy();
+                  kv.setMemstoreTS(0);
+                }
                 writer.append(kv);
                 flushed += this.memstore.heapSizeChange(kv, true);
               }
@@ -587,15 +609,21 @@ public class Store implements HeapSize {
       ArrayList<StoreFile> newList = new ArrayList<StoreFile>(storefiles);
       newList.add(sf);
       storefiles = sortAndClone(newList);
+
       this.memstore.clearSnapshot(set);
-
-      // Tell listeners of the change in readers.
-      notifyChangedReadersObservers();
-
-      return needsCompaction();
     } finally {
+      // We need the lock, as long as we are updating the storefiles
+      // or changing the memstore. Let us release it before calling
+      // notifyChangeReadersObservers. See HBASE-4485 for a possible
+      // deadlock scenario that could have happened if continue to hold
+      // the lock.
       this.lock.writeLock().unlock();
     }
+
+    // Tell listeners of the change in readers.
+    notifyChangedReadersObservers();
+
+    return needsCompaction();
   }
 
   /*
@@ -606,6 +634,34 @@ public class Store implements HeapSize {
     for (ChangedReadersObserver o: this.changedReaderObservers) {
       o.updateReaders();
     }
+  }
+
+  protected List<KeyValueScanner> getScanners(boolean cacheBlocks,
+      boolean isGet,
+      boolean isCompaction) throws IOException {
+    List<StoreFile> storeFiles;
+    List<KeyValueScanner> memStoreScanners;
+    this.lock.readLock().lock();
+    try {
+      storeFiles = this.getStorefiles();
+      memStoreScanners = this.memstore.getScanners();
+    } finally {
+      this.lock.readLock().unlock();
+    }
+
+    // First the store file scanners
+
+    // TODO this used to get the store files in descending order,
+    // but now we get them in ascending order, which I think is
+    // actually more correct, since memstore get put at the end.
+    List<StoreFileScanner> sfScanners = StoreFileScanner
+      .getScannersForStoreFiles(storeFiles, cacheBlocks, isGet, isCompaction);
+    List<KeyValueScanner> scanners =
+      new ArrayList<KeyValueScanner>(sfScanners.size()+1);
+    scanners.addAll(sfScanners);
+    // Then the memstore scanners
+    scanners.addAll(memStoreScanners);
+    return scanners;
   }
 
   /*
@@ -1128,18 +1184,21 @@ public class Store implements HeapSize {
 
     // For each file, obtain a scanner:
     List<StoreFileScanner> scanners = StoreFileScanner
-      .getScannersForStoreFiles(filesToCompact, false, false);
+      .getScannersForStoreFiles(filesToCompact, false, false, true);
 
     // Make the instantiation lazy in case compaction produces no product; i.e.
     // where all source cells are expired or deleted.
     StoreFile.Writer writer = null;
+    // Find the smallest read point across all the Scanners.
+    long smallestReadPoint = region.getSmallestReadPoint();
+    MultiVersionConsistencyControl.setThreadReadPoint(smallestReadPoint);
     try {
       InternalScanner scanner = null;
       try {
         Scan scan = new Scan();
         scan.setMaxVersions(family.getMaxVersions());
         /* include deletes, unless we are doing a major compaction */
-        scanner = new StoreScanner(this, scan, scanners, !majorCompaction);
+        scanner = new StoreScanner(this, scan, scanners, !majorCompaction, smallestReadPoint);
         if (region.getCoprocessorHost() != null) {
           InternalScanner cpScanner = region.getCoprocessorHost().preCompact(
               this, scanner);
@@ -1166,6 +1225,9 @@ public class Store implements HeapSize {
           if (writer != null) {
             // output to writer:
             for (KeyValue kv : kvs) {
+              if (kv.getMemstoreTS() <= smallestReadPoint) {
+                kv.setMemstoreTS(0);
+              }
               writer.append(kv);
               // update progress per key
               ++progress.currentCompactedKVs;
@@ -1268,8 +1330,8 @@ public class Store implements HeapSize {
           this.family.getBloomFilterType());
       result.createReader();
     }
-    this.lock.writeLock().lock();
     try {
+      this.lock.writeLock().lock();
       try {
         // Change this.storefiles so it reflects new state but do not
         // delete old store files until we have sent out notification of
@@ -1285,34 +1347,40 @@ public class Store implements HeapSize {
         }
 
         this.storefiles = sortAndClone(newStoreFiles);
+      } finally {
+        // We need the lock, as long as we are updating the storefiles
+        // or changing the memstore. Let us release it before calling
+        // notifyChangeReadersObservers. See HBASE-4485 for a possible
+        // deadlock scenario that could have happened if continue to hold
+        // the lock.
+        this.lock.writeLock().unlock();
+      }
 
-        // Tell observers that list of StoreFiles has changed.
-        notifyChangedReadersObservers();
-        // Finally, delete old store files.
-        for (StoreFile hsf: compactedFiles) {
-          hsf.deleteReader();
-        }
-      } catch (IOException e) {
-        e = RemoteExceptionHandler.checkIOException(e);
-        LOG.error("Failed replacing compacted files in " + this.storeNameStr +
-          ". Compacted file is " + (result == null? "none": result.toString()) +
-          ".  Files replaced " + compactedFiles.toString() +
-          " some of which may have been already removed", e);
+      // Tell observers that list of StoreFiles has changed.
+      notifyChangedReadersObservers();
+      // Finally, delete old store files.
+      for (StoreFile hsf: compactedFiles) {
+        hsf.deleteReader();
       }
-      // 4. Compute new store size
-      this.storeSize = 0L;
-      this.totalUncompressedBytes = 0L;
-      for (StoreFile hsf : this.storefiles) {
-        StoreFile.Reader r = hsf.getReader();
-        if (r == null) {
-          LOG.warn("StoreFile " + hsf + " has a null Reader");
-          continue;
-        }
-        this.storeSize += r.length();
-        this.totalUncompressedBytes += r.getTotalUncompressedBytes();
+    } catch (IOException e) {
+      e = RemoteExceptionHandler.checkIOException(e);
+      LOG.error("Failed replacing compacted files in " + this.storeNameStr +
+        ". Compacted file is " + (result == null? "none": result.toString()) +
+        ".  Files replaced " + compactedFiles.toString() +
+        " some of which may have been already removed", e);
+    }
+
+    // 4. Compute new store size
+    this.storeSize = 0L;
+    this.totalUncompressedBytes = 0L;
+    for (StoreFile hsf : this.storefiles) {
+      StoreFile.Reader r = hsf.getReader();
+      if (r == null) {
+        LOG.warn("StoreFile " + hsf + " has a null Reader");
+        continue;
       }
-    } finally {
-      this.lock.writeLock().unlock();
+      this.storeSize += r.length();
+      this.totalUncompressedBytes += r.getTotalUncompressedBytes();
     }
     return result;
   }
@@ -1423,7 +1491,7 @@ public class Store implements HeapSize {
       firstOnRow = new KeyValue(lastKV.getRow(), HConstants.LATEST_TIMESTAMP);
     }
     // Get a scanner that caches blocks and that uses pread.
-    HFileScanner scanner = r.getHFileReader().getScanner(true, true);
+    HFileScanner scanner = r.getHFileReader().getScanner(true, true, false);
     // Seek scanner.  If can't seek it, return.
     if (!seekToScanner(scanner, firstOnRow, firstKV)) return;
     // If we found candidate on firstOnRow, just return. THIS WILL NEVER HAPPEN!
@@ -1614,7 +1682,7 @@ public class Store implements HeapSize {
    * Return a scanner for both the memstore and the HStore files
    * @throws IOException
    */
-  public KeyValueScanner getScanner(Scan scan,
+  public StoreScanner getScanner(Scan scan,
       final NavigableSet<byte []> targetCols) throws IOException {
     lock.readLock().lock();
     try {
@@ -1771,7 +1839,7 @@ public class Store implements HeapSize {
       throws IOException {
     this.lock.readLock().lock();
     try {
-      // TODO: Make this operation atomic w/ RWCC
+      // TODO: Make this operation atomic w/ MVCC
       return this.memstore.upsert(kvs);
     } finally {
       this.lock.readLock().unlock();

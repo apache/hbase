@@ -641,6 +641,10 @@ public class MemStore implements HeapSize {
     private Iterator<KeyValue> kvsetIt;
     private Iterator<KeyValue> snapshotIt;
 
+    // The kvset and snapshot at the time of creating this scanner
+    volatile KeyValueSkipListSet kvsetAtCreation;
+    volatile KeyValueSkipListSet snapshotAtCreation;
+
     // Sub lists on which we're iterating
     private SortedSet<KeyValue> kvTail;
     private SortedSet<KeyValue> snapshotTail;
@@ -671,10 +675,13 @@ public class MemStore implements HeapSize {
 
     MemStoreScanner() {
       super();
+
+      kvsetAtCreation = kvset;
+      snapshotAtCreation = snapshot;
     }
 
     protected KeyValue getNext(Iterator<KeyValue> it) {
-      long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
+      long readPoint = MultiVersionConsistencyControl.getThreadReadPoint();
 
       while (it.hasNext()) {
         KeyValue v = it.next();
@@ -702,8 +709,8 @@ public class MemStore implements HeapSize {
 
       // kvset and snapshot will never be null.
       // if tailSet can't find anything, SortedSet is empty (not null).
-      kvTail = kvset.tailSet(key);
-      snapshotTail = snapshot.tailSet(key);
+      kvTail = kvsetAtCreation.tailSet(key);
+      snapshotTail = snapshotAtCreation.tailSet(key);
 
       return seekInSubLists(key);
     }

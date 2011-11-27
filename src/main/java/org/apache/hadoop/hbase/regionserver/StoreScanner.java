@@ -67,7 +67,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
         columns, store.ttl, store.comparator.getRawComparator(),
         store.minVersions, store.versionsToReturn(scan.getMaxVersions()),
-        false);
+        false, Long.MAX_VALUE);
 
     this.isGet = scan.isGetScan();
     // pass columns = try to filter out unnecessary ScanFiles
@@ -96,16 +96,18 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    * @param store who we scan
    * @param scan the spec
    * @param scanners ancilliary scanners
+   * @param smallestReadPoint the readPoint that we should use for tracking versions
+   * @param retainDeletesInOutput should we retain deletes after compaction?
    */
   StoreScanner(Store store, Scan scan, List<? extends KeyValueScanner> scanners,
-      boolean retainDeletesInOutput)
+      boolean retainDeletesInOutput, long smallestReadPoint)
   throws IOException {
     this.store = store;
     this.cacheBlocks = false;
     this.isGet = false;
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
         null, store.ttl, store.comparator.getRawComparator(), store.minVersions,
-        store.versionsToReturn(scan.getMaxVersions()), retainDeletesInOutput);
+        store.versionsToReturn(scan.getMaxVersions()), retainDeletesInOutput, smallestReadPoint);
 
     // Seek all scanners to the initial key
     for(KeyValueScanner scanner : scanners) {
@@ -126,7 +128,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     this.isGet = false;
     this.cacheBlocks = scan.getCacheBlocks();
     this.matcher = new ScanQueryMatcher(scan, colFamily, columns, ttl,
-        comparator.getRawComparator(), 0, scan.getMaxVersions(), false);
+        comparator.getRawComparator(), 0, scan.getMaxVersions(), false,
+        Long.MAX_VALUE);
 
     // Seek all scanners to the initial key
     for(KeyValueScanner scanner : scanners) {
@@ -139,19 +142,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    * @return List of scanners ordered properly.
    */
   private List<KeyValueScanner> getScanners() throws IOException {
-    // First the store file scanners
-
-    // TODO this used to get the store files in descending order,
-    // but now we get them in ascending order, which I think is
-    // actually more correct, since memstore get put at the end.
-    List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks, isGet);
-    List<KeyValueScanner> scanners =
-      new ArrayList<KeyValueScanner>(sfScanners.size()+1);
-    scanners.addAll(sfScanners);
-    // Then the memstore scanners
-    scanners.addAll(this.store.memstore.getScanners());
-    return scanners;
+    return this.store.getScanners(cacheBlocks, isGet, false);
   }
 
   /*
@@ -169,24 +160,27 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       memOnly = false;
       filesOnly = false;
     }
-    List<KeyValueScanner> scanners = new LinkedList<KeyValueScanner>();
-    // First the store file scanners
-    if (memOnly == false) {
-      List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks, isGet);
+    List<KeyValueScanner> allStoreScanners =
+        this.store.getScanners(cacheBlocks, isGet, false);
 
-      // include only those scan files which pass all filters
-      for (StoreFileScanner sfs : sfScanners) {
-        if (sfs.shouldSeek(scan, columns)) {
-          scanners.add(sfs);
+    List<KeyValueScanner> scanners =
+        new ArrayList<KeyValueScanner>(allStoreScanners.size());
+
+    // include only those scan files which pass all filters
+    for (KeyValueScanner kvs : allStoreScanners) {
+      if (kvs instanceof StoreFileScanner) {
+        if (memOnly == false
+            && ((StoreFileScanner) kvs).shouldSeek(scan, columns)) {
+          scanners.add(kvs);
+        }
+      } else {
+        // kvs is a MemStoreScanner
+        if (filesOnly == false && this.store.memstore.shouldSeek(scan)) {
+          scanners.add(kvs);
         }
       }
     }
 
-    // Then the memstore scanners
-    if ((filesOnly == false) && (this.store.memstore.shouldSeek(scan))) {
-        scanners.addAll(this.store.memstore.getScanners());
-    }
     return scanners;
   }
 

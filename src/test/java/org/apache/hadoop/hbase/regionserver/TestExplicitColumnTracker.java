@@ -54,7 +54,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     long timestamp = 0;
     //"Match"
     for(byte [] col : scannerColumns){
-      result.add(exp.checkColumn(col, 0, col.length, ++timestamp));
+      result.add(exp.checkColumn(col, 0, col.length, ++timestamp, false));
     }
 
     assertEquals(expected.size(), result.size());
@@ -80,9 +80,9 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     List<MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);             // col1
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL); // col2
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);             // col3    
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);             // col3
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW); // col4
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);             // col5    
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);             // col5
     int maxVersions = 1;
 
     //Create "Scanner"
@@ -166,13 +166,13 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
         Long.MAX_VALUE);
     for (int i = 0; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
-      explicit.checkColumn(col, 0, col.length, 1);
+      explicit.checkColumn(col, 0, col.length, 1, false);
     }
     explicit.update();
 
     for (int i = 1; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
-      explicit.checkColumn(col, 0, col.length, 1);
+      explicit.checkColumn(col, 0, col.length, 1, false);
     }
   }
 

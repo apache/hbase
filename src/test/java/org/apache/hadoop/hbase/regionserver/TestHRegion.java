@@ -1446,12 +1446,12 @@ public class TestHRegion extends HBaseTestCase {
     scan.addFamily(fam2);
     scan.addFamily(fam4);
     is = (RegionScannerImpl) region.getScanner(scan);
-    ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
+    MultiVersionConsistencyControl.resetThreadReadPoint(region.getMVCC());
     assertEquals(1, ((RegionScannerImpl)is).storeHeap.getHeap().size());
 
     scan = new Scan();
     is = (RegionScannerImpl) region.getScanner(scan);
-    ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
+    MultiVersionConsistencyControl.resetThreadReadPoint(region.getMVCC());
     assertEquals(families.length -1,
         ((RegionScannerImpl)is).storeHeap.getHeap().size());
   }

@@ -106,7 +106,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
    * @return MatchCode telling ScanQueryMatcher what action to take
    */
   public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset,
-      int length, long timestamp) {
+      int length, long timestamp, boolean ignoreCount) {
     do {
       // No more columns left, we are done with this query
       if(this.columns.size() == 0) {
@@ -125,6 +125,8 @@ public class ExplicitColumnTracker implements ColumnTracker {
       // Column Matches. If it is not a duplicate key, increment the version count
       // and include.
       if(ret == 0) {
+        if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
+
         //If column matches, check if it is a duplicate timestamp
         if (sameAsPreviousTS(timestamp)) {
           //If duplicate, skip this Key

@@ -290,7 +290,6 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   }
 
   protected static abstract class Scanner implements HFileScanner {
-    protected HFile.Reader reader;
     protected ByteBuffer blockBuffer;
 
     protected boolean cacheBlocks;
@@ -299,20 +298,16 @@ public abstract class AbstractHFileReader implements HFile.Reader {
 
     protected int currKeyLen;
     protected int currValueLen;
+    protected int currMemstoreTSLen;
+    protected long currMemstoreTS;
 
     protected int blockFetches;
 
-    public Scanner(final HFile.Reader reader, final boolean cacheBlocks,
+    public Scanner(final boolean cacheBlocks,
         final boolean pread, final boolean isCompaction) {
-      this.reader = reader;
       this.cacheBlocks = cacheBlocks;
       this.pread = pread;
       this.isCompaction = isCompaction;
-    }
-
-    @Override
-    public Reader getReader() {
-      return reader;
     }
 
     @Override
@@ -322,7 +317,7 @@ public abstract class AbstractHFileReader implements HFile.Reader {
 
     @Override
     public String toString() {
-      return "HFileScanner for reader " + String.valueOf(reader);
+      return "HFileScanner for reader " + String.valueOf(getReader());
     }
 
     protected void assertSeeked() {

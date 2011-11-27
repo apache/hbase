@@ -77,7 +77,7 @@ public class ScanQueryMatcher {
   public ScanQueryMatcher(Scan scan, byte [] family,
       NavigableSet<byte[]> columns, long ttl,
       KeyValue.KeyComparator rowComparator, int minVersions, int maxVersions,
-      boolean retainDeletesInOutput) {
+      boolean retainDeletesInOutput, long readPointToUse) {
     this.tr = scan.getTimeRange();
     this.rowComparator = rowComparator;
     this.deletes =  new ScanDeleteTracker();
@@ -85,6 +85,7 @@ public class ScanQueryMatcher {
     this.startKey = KeyValue.createFirstOnRow(scan.getStartRow());
     this.filter = scan.getFilter();
     this.retainDeletesInOutput = retainDeletesInOutput;
+    this.maxReadPointToTrackVersions = readPointToUse;
 
     // Single branch to deal with two types of reads (columns vs all in family)
     if (columns == null || columns.size() == 0) {
@@ -105,13 +106,16 @@ public class ScanQueryMatcher {
       /* By default we will not include deletes */
       /* deletes are included explicitly (for minor compaction) */
       this(scan, family, columns, ttl, rowComparator, minVersions, maxVersions,
-          false);
+          false, Long.MAX_VALUE /* max Readpoint to track versions */);
   }
   public ScanQueryMatcher(Scan scan, byte [] family,
       NavigableSet<byte[]> columns, long ttl,
       KeyValue.KeyComparator rowComparator, int maxVersions) {
     this(scan, family, columns, ttl, rowComparator, 0, maxVersions);
   }
+
+  /** readPoint over which the KVs are unconditionally included */
+  protected long maxReadPointToTrackVersions;
 
   /**
    * Determines if the caller should do one of several things:
@@ -229,7 +233,8 @@ public class ScanQueryMatcher {
       }
     }
 
-    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength, timestamp);
+    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength,
+        timestamp, kv.getMemstoreTS() > maxReadPointToTrackVersions);
     /*
      * According to current implementation, colChecker can only be
      * SEEK_NEXT_COL, SEEK_NEXT_ROW, SKIP or INCLUDE. Therefore, always return
