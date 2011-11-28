@@ -873,6 +873,7 @@ Release 0.90.5 - Unreleased
    HBASE-4848  TestScanner failing because hostname can't be null
    HBASE-4862  Splitting hlog and opening region concurrently may cause data loss
                (Chunhui Shen)
+   HBASE-4773  HBaseAdmin may leak ZooKeeper connections (Xufeng)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
