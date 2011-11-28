@@ -744,6 +744,8 @@ Release 0.92.0 - Unreleased
    HBASE-4805  Allow better control of resource consumption in HTable (Lars H)
    HBASE-4851  hadoop maven dependency needs to be an optional one
                (Roman Shaposhnik)
+   HBASE-4869  Backport to 0.92: HBASE-4797 [availability] Skip recovered.edits
+               files with edits older than what region currently has (Jimmy Xiang)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

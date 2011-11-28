@@ -34,6 +34,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -51,10 +53,10 @@ import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -63,8 +65,12 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
@@ -1298,7 +1304,7 @@ public class TestHRegion extends HBaseTestCase {
       LOG.info("" + addContent(region, fam3));
       region.flushcache();
       region.compactStores();
-      byte [] splitRow = region.checkSplit();      
+      byte [] splitRow = region.checkSplit();
       assertNotNull(splitRow);
       LOG.info("SplitRow: " + Bytes.toString(splitRow));
       HRegion [] subregions = splitRegion(region, splitRow);
@@ -2172,7 +2178,7 @@ public class TestHRegion extends HBaseTestCase {
     } catch (Exception exception) {
         // Expected.
     }
-    
+
 
     assertICV(row1, fam1, qual1, row1Field1);
     assertICV(row1, fam1, qual2, row1Field2);
@@ -2304,7 +2310,7 @@ public class TestHRegion extends HBaseTestCase {
       LOG.info("" + addContent(region, fam3));
       region.flushcache();
       region.compactStores();
-      byte [] splitRow = region.checkSplit();      
+      byte [] splitRow = region.checkSplit();
       assertNotNull(splitRow);
       LOG.info("SplitRow: " + Bytes.toString(splitRow));
       HRegion [] regions = splitRegion(region, splitRow);
@@ -2339,7 +2345,7 @@ public class TestHRegion extends HBaseTestCase {
         // To make regions splitable force compaction.
         for (int i = 0; i < regions.length; i++) {
           regions[i].compactStores();
-          midkeys[i] = regions[i].checkSplit();          
+          midkeys[i] = regions[i].checkSplit();
         }
 
         TreeMap<String, HRegion> sortedMap = new TreeMap<String, HRegion>();
@@ -2811,6 +2817,115 @@ public class TestHRegion extends HBaseTestCase {
     region.get(g, null);
   }
 
+  public void testSkipRecoveredEditsReplay() throws Exception {
+    String method = "testSkipRecoveredEditsReplay";
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family = Bytes.toBytes("family");
+    Configuration conf = HBaseConfiguration.create();
+    initHRegion(tableName, method, conf, family);
+    Path regiondir = region.getRegionDir();
+    FileSystem fs = region.getFilesystem();
+    byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+
+    Path recoveredEditsDir = HLog.getRegionDirRecoveredEditsDir(regiondir);
+
+    long maxSeqId = 1050;
+    long minSeqId = 1000;
+
+    for (long i = minSeqId; i <= maxSeqId; i += 10) {
+      Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
+      HLog.Writer writer = HLog.createWriter(fs, recoveredEdits, conf);
+
+      long time = System.nanoTime();
+      WALEdit edit = new WALEdit();
+      edit.add(new KeyValue(row, family, Bytes.toBytes(i),
+          time, KeyValue.Type.Put, Bytes.toBytes(i)));
+      writer.append(new HLog.Entry(new HLogKey(regionName, tableName,
+          i, time, HConstants.DEFAULT_CLUSTER_ID), edit));
+
+      writer.close();
+    }
+    MonitoredTask status = TaskMonitor.get().createStatus(method);
+    long seqId = region.replayRecoveredEditsIfAny(regiondir, minSeqId-1, null, status);
+    assertEquals(maxSeqId, seqId);
+    Get get = new Get(row);
+    Result result = region.get(get, null);
+    for (long i = minSeqId; i <= maxSeqId; i += 10) {
+      List<KeyValue> kvs = result.getColumn(family, Bytes.toBytes(i));
+      assertEquals(1, kvs.size());
+      assertEquals(Bytes.toBytes(i), kvs.get(0).getValue());
+    }
+  }
+
+  public void testSkipRecoveredEditsReplaySomeIgnored() throws Exception {
+    String method = "testSkipRecoveredEditsReplaySomeIgnored";
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family = Bytes.toBytes("family");
+    initHRegion(tableName, method, HBaseConfiguration.create(), family);
+    Path regiondir = region.getRegionDir();
+    FileSystem fs = region.getFilesystem();
+    byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+
+    Path recoveredEditsDir = HLog.getRegionDirRecoveredEditsDir(regiondir);
+
+    long maxSeqId = 1050;
+    long minSeqId = 1000;
+
+    for (long i = minSeqId; i <= maxSeqId; i += 10) {
+      Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
+      HLog.Writer writer = HLog.createWriter(fs, recoveredEdits, conf);
+
+      long time = System.nanoTime();
+      WALEdit edit = new WALEdit();
+      edit.add(new KeyValue(row, family, Bytes.toBytes(i),
+          time, KeyValue.Type.Put, Bytes.toBytes(i)));
+      writer.append(new HLog.Entry(new HLogKey(regionName, tableName,
+          i, time, HConstants.DEFAULT_CLUSTER_ID), edit));
+
+      writer.close();
+    }
+    long recoverSeqId = 1030;
+    MonitoredTask status = TaskMonitor.get().createStatus(method);
+    long seqId = region.replayRecoveredEditsIfAny(regiondir, recoverSeqId-1, null, status);
+    assertEquals(maxSeqId, seqId);
+    Get get = new Get(row);
+    Result result = region.get(get, null);
+    for (long i = minSeqId; i <= maxSeqId; i += 10) {
+      List<KeyValue> kvs = result.getColumn(family, Bytes.toBytes(i));
+      if (i < recoverSeqId) {
+        assertEquals(0, kvs.size());
+      } else {
+        assertEquals(1, kvs.size());
+        assertEquals(Bytes.toBytes(i), kvs.get(0).getValue());
+      }
+    }
+  }
+
+  public void testSkipRecoveredEditsReplayAllIgnored() throws Exception {
+    String method = "testSkipRecoveredEditsReplayAllIgnored";
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family = Bytes.toBytes("family");
+    initHRegion(tableName, method, HBaseConfiguration.create(), family);
+    Path regiondir = region.getRegionDir();
+    FileSystem fs = region.getFilesystem();
+
+    Path recoveredEditsDir = HLog.getRegionDirRecoveredEditsDir(regiondir);
+    for (int i = 1000; i < 1050; i += 10) {
+      Path recoveredEdits = new Path(
+          recoveredEditsDir, String.format("%019d", i));
+      FSDataOutputStream dos=  fs.create(recoveredEdits);
+      dos.writeInt(i);
+      dos.close();
+    }
+    long minSeqId = 2000;
+    Path recoveredEdits = new Path(
+        recoveredEditsDir, String.format("%019d", minSeqId-1));
+    FSDataOutputStream dos=  fs.create(recoveredEdits);
+    dos.close();
+    long seqId = region.replayRecoveredEditsIfAny(regiondir, minSeqId, null, null);
+    assertEquals(minSeqId, seqId);
+  }
+
   public void testIndexesScanWithOneDeletedRow() throws IOException {
     byte[] tableName = Bytes.toBytes("testIndexesScanWithOneDeletedRow");
     byte[] family = Bytes.toBytes("family");
@@ -2866,13 +2981,13 @@ public class TestHRegion extends HBaseTestCase {
     HColumnDescriptor hcd = new HColumnDescriptor(fam1, Integer.MAX_VALUE,
         HColumnDescriptor.DEFAULT_COMPRESSION, false, true,
         HColumnDescriptor.DEFAULT_TTL, "rowcol");
-    
+
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
     Path path = new Path(DIR + "testBloomFilterSize");
     region = HRegion.createHRegion(info, path, conf, htd);
-    
+
     int num_unique_rows = 10;
     int duplicate_multiplier =2;
     int num_storefiles = 4;
@@ -2889,7 +3004,7 @@ public class TestHRegion extends HBaseTestCase {
       }
       region.flushcache();
     }
-    //before compaction 
+    //before compaction
     Store store = region.getStore(fam1);
     List<StoreFile> storeFiles = store.getStorefiles();
     for (StoreFile storefile : storeFiles) {
@@ -2899,10 +3014,10 @@ public class TestHRegion extends HBaseTestCase {
       assertEquals(num_unique_rows*duplicate_multiplier, reader.getEntries());
       assertEquals(num_unique_rows, reader.getFilterEntries());
     }
-    
-    region.compactStores(true); 
-    
-    //after compaction 
+
+    region.compactStores(true);
+
+    //after compaction
     storeFiles = store.getStorefiles();
     for (StoreFile storefile : storeFiles) {
       StoreFile.Reader reader = storefile.getReader();
@@ -2911,9 +3026,9 @@ public class TestHRegion extends HBaseTestCase {
       assertEquals(num_unique_rows*duplicate_multiplier*num_storefiles,
           reader.getEntries());
       assertEquals(num_unique_rows, reader.getFilterEntries());
-    }  
+    }
   }
-  
+
   public void testAllColumnsWithBloomFilter() throws IOException {
     byte [] TABLE = Bytes.toBytes("testAllColumnsWithBloomFilter");
     byte [] FAMILY = Bytes.toBytes("family");
@@ -3004,13 +3119,13 @@ public class TestHRegion extends HBaseTestCase {
     final int DEFAULT_BLOCK_SIZE = 1024;
     htu.getConfiguration().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     htu.getConfiguration().setInt("dfs.replication", 2);
-    
-    
+
+
     // set up a cluster with 3 nodes
     MiniHBaseCluster cluster;
     String dataNodeHosts[] = new String[] { "host1", "host2", "host3" };
     int regionServersCount = 3;
-	    
+
     try {
       cluster = htu.startMiniCluster(1, regionServersCount, dataNodeHosts);
       byte [][] families = {fam1, fam2};
@@ -3020,31 +3135,31 @@ public class TestHRegion extends HBaseTestCase {
       byte row[] = Bytes.toBytes("row1");
       byte col[] = Bytes.toBytes("col1");
 
-      Put put = new Put(row);	        
+      Put put = new Put(row);
       put.add(fam1, col, 1, Bytes.toBytes("test1"));
       put.add(fam2, col, 1, Bytes.toBytes("test2"));
       ht.put(put);
-      
+
       HRegion firstRegion = htu.getHBaseCluster().
         getRegions(Bytes.toBytes(this.getName())).get(0);
       firstRegion.flushcache();
       HDFSBlocksDistribution blocksDistribution1 =
         firstRegion.getHDFSBlocksDistribution();
-      
+
       // given the default replication factor is 2 and we have 2 HFiles,
       // we will have total of 4 replica of blocks on 3 datanodes; thus there
       // must be at least one host that have replica for 2 HFiles. That host's
       // weight will be equal to the unique block weight.
       long uniqueBlocksWeight1 =
         blocksDistribution1.getUniqueBlocksTotalWeight();
-      
+
       String topHost = blocksDistribution1.getTopHosts().get(0);
       long topHostWeight = blocksDistribution1.getWeight(topHost);
       assertTrue(uniqueBlocksWeight1 == topHostWeight);
-      
+
       // use the static method to compute the value, it should be the same.
       // static method is used by load balancer or other components
-      HDFSBlocksDistribution blocksDistribution2 = 
+      HDFSBlocksDistribution blocksDistribution2 =
         HRegion.computeHDFSBlocksDistribution(htu.getConfiguration(),
         firstRegion.getTableDesc(),
         firstRegion.getRegionInfo().getEncodedName());
@@ -3056,7 +3171,7 @@ public class TestHRegion extends HBaseTestCase {
         htu.shutdownMiniCluster();
       }
   }
-  
+
   private void putData(int startRow, int numRows, byte [] qf,
       byte [] ...families)
   throws IOException {
