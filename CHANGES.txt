@@ -447,8 +447,6 @@ Release 0.92.0 - Unreleased
    HBASE-4739  Master dying while going to close a region can leave it in transition
                forever (Gao Jinchao)
    HBASE-4855  SplitLogManager hangs on cluster restart due to batch.installed doubly counted
-   HBASE-4862  Splitting hlog and opening region concurrently may cause data loss
-               (Chunhui Shen)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
@@ -873,6 +871,8 @@ Release 0.90.5 - Unreleased
                cause data loss (bluedavy via Lars H)
    HBASE-4800  Result.compareResults is incorrect (James Taylor and Lars H)
    HBASE-4848  TestScanner failing because hostname can't be null
+   HBASE-4862  Splitting hlog and opening region concurrently may cause data loss
+               (Chunhui Shen)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
