@@ -19,7 +19,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -27,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -1104,6 +1109,58 @@ public class TestHLogSplit {
     final Path corruptDir = new Path(conf.get(HConstants.HBASE_DIR), conf.get(
         "hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt"));
     assertEquals(1, fs.listStatus(corruptDir).length);
+  }
+
+  /**
+   * @throws IOException
+   * @see https://issues.apache.org/jira/browse/HBASE-4862
+   */
+  @Test
+  public void testConcurrentSplitLogAndReplayRecoverEdit() throws IOException {
+    LOG.info("testConcurrentSplitLogAndReplayRecoverEdit");
+    // Generate hlogs for our destination region
+    String regionName = "r0";
+    final Path regiondir = new Path(tabledir, regionName);
+    regions = new ArrayList<String>();
+    regions.add(regionName);
+    generateHLogs(-1);
+
+    HLogSplitter logSplitter = new HLogSplitter(
+        conf, hbaseDir, hlogDir, oldLogDir, fs) {
+      protected HLog.Writer createWriter(FileSystem fs, Path logfile, Configuration conf)
+      throws IOException {
+        HLog.Writer writer = HLog.createWriter(fs, logfile, conf);
+        // After creating writer, simulate region's
+        // replayRecoveredEditsIfAny() which gets SplitEditFiles of this
+        // region and delete them, excluding files with '.temp' suffix.
+        NavigableSet<Path> files = HLog.getSplitEditFilesSorted(this.fs,
+            regiondir);
+        if (files != null && !files.isEmpty()) {
+          for (Path file : files) {
+            if (!this.fs.delete(file, false)) {
+              LOG.error("Failed delete of " + file);
+            } else {
+              LOG.debug("Deleted recovered.edits file=" + file);
+            }
+          }
+        }
+        return writer;
+      }
+    };
+    try{
+      logSplitter.splitLog();
+    } catch (IOException e) {
+      LOG.info(e);
+      Assert.fail("Throws IOException when spliting "
+          + "log, it is most likely because writing file does not "
+          + "exist which is caused by concurrent replayRecoveredEditsIfAny()");
+    }
+    if (fs.exists(corruptDir)) {
+      if (fs.listStatus(corruptDir).length > 0) {
+        Assert.fail("There are some corrupt logs, "
+                + "it is most likely caused by concurrent replayRecoveredEditsIfAny()");
+      }
+    }
   }
 
   private void flushToConsole(String s) {
