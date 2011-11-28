@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.List;
@@ -69,7 +70,7 @@ import org.apache.hadoop.util.StringUtils;
 public class HBaseAdmin implements Abortable, Closeable {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
 //  private final HConnection connection;
-  private final HConnection connection;
+  private HConnection connection;
   private volatile Configuration conf;
   private final long pause;
   private final int numRetries;
@@ -92,7 +93,32 @@ public class HBaseAdmin implements Abortable, Closeable {
     this.pause = this.conf.getLong("hbase.client.pause", 1000);
     this.numRetries = this.conf.getInt("hbase.client.retries.number", 10);
     this.retryLongerMultiplier = this.conf.getInt("hbase.client.retries.longer.multiplier", 10);
-    this.connection.getMaster();
+    int tries = 0;
+    for (; tries < numRetries; ++tries) {
+      try {
+        this.connection.getMaster();
+        break;
+      } catch (MasterNotRunningException mnre) {
+        HConnectionManager.deleteConnection(this.conf, false);
+        this.connection = HConnectionManager.getConnection(this.conf);
+      } catch (UndeclaredThrowableException ute) {
+        HConnectionManager.deleteConnection(this.conf, false);
+        this.connection = HConnectionManager.getConnection(this.conf);
+      }
+      try { // Sleep
+        Thread.sleep(getPauseTime(tries));
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        // we should delete connection between client and zookeeper
+        HConnectionManager.deleteConnection(this.conf, false);
+        throw new MasterNotRunningException("Interrupted");
+      }
+    }
+    if (tries >= numRetries) {
+      // we should delete connection between client and zookeeper
+      HConnectionManager.deleteConnection(this.conf, false);
+      throw new MasterNotRunningException("Retried " + numRetries + " times");
+    }
   }
 
   /**

@@ -99,6 +99,7 @@ Release 0.90.5 - Unreleased
    HBASE-3952  Guava snuck back in as a dependency via HBASE-3777
    HBASE-4862  Splitting hlog and opening region concurrently may cause data loss
                (Chunhui Shen)
+   HBASE-4773  HBaseAdmin may leak ZooKeeper connections (Xufeng)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
