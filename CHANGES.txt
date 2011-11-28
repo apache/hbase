@@ -449,6 +449,7 @@ Release 0.92.0 - Unreleased
    HBASE-4855  SplitLogManager hangs on cluster restart due to batch.installed doubly counted
    HBASE-4877  TestHCM failing sporadically on jenkins and always for me on an
                ubuntu machine
+   HBASE-4878  Master crash when splitting hlog may cause data loss (Chunhui Shen)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
