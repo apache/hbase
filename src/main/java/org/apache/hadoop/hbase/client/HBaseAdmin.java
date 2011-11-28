@@ -116,10 +116,14 @@ public class HBaseAdmin implements Abortable, Closeable {
         Thread.sleep(getPauseTime(tries));
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
+        // we should delete connection between client and zookeeper
+        HConnectionManager.deleteStaleConnection(this.connection);
         throw new MasterNotRunningException("Interrupted");
       }
     }
     if (tries >= numRetries) {
+      // we should delete connection between client and zookeeper
+      HConnectionManager.deleteStaleConnection(this.connection);
       throw new MasterNotRunningException("Retried " + numRetries + " times");
     }
   }
