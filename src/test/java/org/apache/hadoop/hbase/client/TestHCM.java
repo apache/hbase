@@ -180,31 +180,46 @@ public class TestHCM {
    */
   @Test
   public void testConnectionUniqueness() throws Exception {
+    int zkmaxconnections = TEST_UTIL.getConfiguration().
+      getInt(HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS,
+        HConstants.DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS);
+    // Test up to a max that is < the maximum number of zk connections.  If we
+    // go above zk connections, we just fall into cycle where we are failing
+    // to set up a session and test runs for a long time.
+    int maxConnections = Math.min(zkmaxconnections - 1, 20);
+    List<HConnection> connections = new ArrayList<HConnection>();
     HConnection previousConnection = null;
-    for (int i = 0; i < HConnectionManager.MAX_CACHED_HBASE_INSTANCES + 10; i++) {
-      // set random key to differentiate the connection from previous ones
-      Configuration configuration = TEST_UTIL.getConfiguration();
-      configuration.set("some_key", String.valueOf(_randy.nextInt()));
-      configuration.set(HConstants.HBASE_CLIENT_INSTANCE_ID,
-          String.valueOf(_randy.nextInt()));
-      LOG.info("The hash code of the current configuration is: "
-          + configuration.hashCode());
-      HConnection currentConnection = HConnectionManager
-          .getConnection(configuration);
-      if (previousConnection != null) {
-        assertTrue("Got the same connection even though its key changed!",
-            previousConnection != currentConnection);
-      }
-      // change the configuration, so that it is no longer reachable from the
-      // client's perspective. However, since its part of the LRU doubly linked
-      // list, it will eventually get thrown out, at which time it should also
-      // close the corresponding {@link HConnection}.
-      configuration.set("other_key", String.valueOf(_randy.nextInt()));
+    try {
+      for (int i = 0; i < maxConnections; i++) {
+        // set random key to differentiate the connection from previous ones
+        Configuration configuration = TEST_UTIL.getConfiguration();
+        configuration.set("some_key", String.valueOf(_randy.nextInt()));
+        configuration.set(HConstants.HBASE_CLIENT_INSTANCE_ID,
+            String.valueOf(_randy.nextInt()));
+        LOG.info("The hash code of the current configuration is: "
+            + configuration.hashCode());
+        HConnection currentConnection =
+          HConnectionManager.getConnection(configuration);
+        if (previousConnection != null) {
+          assertTrue("Got the same connection even though its key changed!",
+              previousConnection != currentConnection);
+        }
+        // change the configuration, so that it is no longer reachable from the
+        // client's perspective. However, since its part of the LRU doubly linked
+        // list, it will eventually get thrown out, at which time it should also
+        // close the corresponding {@link HConnection}.
+        configuration.set("other_key", String.valueOf(_randy.nextInt()));
 
-      previousConnection = currentConnection;
-      LOG.info("The current HConnectionManager#HBASE_INSTANCES cache size is: "
-          + getHConnectionManagerCacheSize());
-      Thread.sleep(50);
+        previousConnection = currentConnection;
+        LOG.info("The current HConnectionManager#HBASE_INSTANCES cache size is: "
+            + getHConnectionManagerCacheSize());
+        Thread.sleep(50);
+      }
+    } finally {
+      for (HConnection c: connections) {
+        // Clean up connections made so we don't interfere w/ subsequent tests.
+        HConnectionManager.deleteConnection(c.getConfiguration(), true);
+      }
     }
   }
 
