@@ -447,6 +447,8 @@ Release 0.92.0 - Unreleased
    HBASE-4739  Master dying while going to close a region can leave it in transition
                forever (Gao Jinchao)
    HBASE-4855  SplitLogManager hangs on cluster restart due to batch.installed doubly counted
+   HBASE-4862  Splitting hlog and opening region concurrently may cause data loss
+               (Chunhui Shen)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
