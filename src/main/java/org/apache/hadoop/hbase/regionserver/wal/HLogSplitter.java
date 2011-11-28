@@ -43,10 +43,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
@@ -378,8 +378,30 @@ public class HLogSplitter {
     if (!fs.exists(dir)) {
       if (!fs.mkdirs(dir)) LOG.warn("mkdir failed on " + dir);
     }
-    return new Path(dir, formatRecoveredEditsFileName(logEntry.getKey()
-        .getLogSeqNum()));
+    // Append file name ends with RECOVERED_LOG_TMPFILE_SUFFIX to ensure
+    // region's replayRecoveredEdits will not delete it
+    String fileName = formatRecoveredEditsFileName(logEntry.getKey()
+        .getLogSeqNum());
+    fileName = getTmpRecoveredEditsFileName(fileName);
+    return new Path(dir, fileName);
+  }
+
+  static String getTmpRecoveredEditsFileName(String fileName) {
+    return fileName + HLog.RECOVERED_LOG_TMPFILE_SUFFIX;
+  }
+
+  /**
+   * Convert path to a file under RECOVERED_EDITS_DIR directory without
+   * RECOVERED_LOG_TMPFILE_SUFFIX
+   * @param srcPath
+   * @return dstPath without RECOVERED_LOG_TMPFILE_SUFFIX
+   */
+  static Path getCompletedRecoveredEditsFilePath(Path srcPath) {
+    String fileName = srcPath.getName();
+    if (fileName.endsWith(HLog.RECOVERED_LOG_TMPFILE_SUFFIX)) {
+      fileName = fileName.split(HLog.RECOVERED_LOG_TMPFILE_SUFFIX)[0];
+    }
+    return new Path(srcPath.getParent(), fileName);
   }
 
   static String formatRecoveredEditsFileName(final long seqid) {
@@ -771,9 +793,33 @@ public class HLogSplitter {
           thrown.add(ioe);
           continue;
         }
-        paths.add(wap.p);
         LOG.info("Closed path " + wap.p +" (wrote " + wap.editsWritten + " edits in "
             + (wap.nanosSpent / 1000/ 1000) + "ms)");
+        Path dst = getCompletedRecoveredEditsFilePath(wap.p);
+        try {
+          if (!dst.equals(wap.p) && fs.exists(dst)) {
+            LOG.warn("Found existing old edits file. It could be the "
+                + "result of a previous failed split attempt. Deleting " + dst
+                + ", length=" + fs.getFileStatus(dst).getLen());
+            if (!fs.delete(dst, false)) {
+              LOG.warn("Failed deleting of old " + dst);
+              throw new IOException("Failed deleting of old " + dst);
+            }
+          }
+          // Skip the unit tests which create a splitter that reads and writes
+          // the data without touching disk. TestHLogSplit#testThreading is an
+          // example.
+          if (fs.exists(wap.p)) {
+            if (!fs.rename(wap.p, dst)) {
+              throw new IOException("Failed renaming " + wap.p + " to " + dst);
+            }
+          }
+        } catch (IOException ioe) {
+          LOG.error("Couldn't rename " + wap.p + " to " + dst, ioe);
+          thrown.add(ioe);
+          continue;
+        }
+        paths.add(dst);
       }
       if (!thrown.isEmpty()) {
         throw MultipleIOException.createIOException(thrown);

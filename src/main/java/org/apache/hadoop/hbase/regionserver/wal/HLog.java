@@ -117,6 +117,7 @@ public class HLog implements Syncable {
   private static final String RECOVERED_EDITS_DIR = "recovered.edits";
   private static final Pattern EDITFILES_NAME_PATTERN =
     Pattern.compile("-?[0-9]+");
+  static final String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
   
   private final FileSystem fs;
   private final Path dir;
@@ -1446,7 +1447,8 @@ public class HLog implements Syncable {
   }
 
   /**
-   * Returns sorted set of edit files made by wal-log splitter.
+   * Returns sorted set of edit files made by wal-log splitter, excluding files
+   * with '.temp' suffix.
    * @param fs
    * @param regiondir
    * @return Files in passed <code>regiondir</code> as a sorted set.
@@ -1470,6 +1472,11 @@ public class HLog implements Syncable {
             // it a timestamp suffix.  See moveAsideBadEditsFile.
             Matcher m = EDITFILES_NAME_PATTERN.matcher(p.getName());
             result = fs.isFile(p) && m.matches();
+            // Skip the file whose name ends with RECOVERED_LOG_TMPFILE_SUFFIX,
+            // because it means splithlog thread is writting this file.
+            if (p.getName().endsWith(RECOVERED_LOG_TMPFILE_SUFFIX)) {
+              result = false;
+            }
           } catch (IOException e) {
             LOG.warn("Failed isFile check on " + p);
           }
