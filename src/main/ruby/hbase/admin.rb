@@ -271,13 +271,8 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Truncates table (deletes all records by recreating the table)
-    def truncate(table_name, conf = nil)
-      h_table = nil
-      unless conf
-        h_table = org.apache.hadoop.hbase.client.HTable.new(table_name)
-      else
-        h_table = org.apache.hadoop.hbase.client.HTable.new(conf, table_name)
-      end
+    def truncate(table_name, conf = @conf)
+      h_table = org.apache.hadoop.hbase.client.HTable.new(conf, table_name)
       table_description = h_table.getTableDescriptor()
       yield 'Disabling table...' if block_given?
       disable(table_name)
