@@ -1739,7 +1739,7 @@
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapred</artifactId>
+          <artifactId>hadoop-mapreduce-client-common</artifactId>
           <version>${hadoop.version}</version>
           <optional>true</optional>
           <exclusions>
@@ -1793,9 +1793,32 @@
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapred-test</artifactId>
+          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
           <version>${hadoop.version}</version>
           <optional>true</optional>
+          <type>test-jar</type>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-app</artifactId>
+          <version>${hadoop.version}</version>
+          <optional>true</optional>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-hs</artifactId>
+          <version>${hadoop.version}</version>
+          <optional>true</optional>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-tests</artifactId>
+          <version>${hadoop.version}</version>
+          <optional>true</optional>
+          <type>test-jar</type>
           <scope>test</scope>
         </dependency>
       </dependencies>
