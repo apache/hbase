@@ -1093,7 +1093,7 @@ public class TestAdmin {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
     List<HRegionInfo> onlineRegions = rs.getOnlineRegions();
     for (HRegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+      if (!regionInfo.isMetaTable()) {
         info = regionInfo;
         admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(), rs
             .getServerName().getServerName());
@@ -1114,7 +1114,7 @@ public class TestAdmin {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
     List<HRegionInfo> onlineRegions = rs.getOnlineRegions();
     for (HRegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+      if (!regionInfo.isMetaTable()) {
         if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion1")) {
           info = regionInfo;
           admin.closeRegionWithEncodedRegionName("sample", rs.getServerName()
@@ -1136,7 +1136,7 @@ public class TestAdmin {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
     List<HRegionInfo> onlineRegions = rs.getOnlineRegions();
     for (HRegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+      if (!regionInfo.isMetaTable()) {
 
         if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion2")) {
           info = regionInfo;
@@ -1167,7 +1167,7 @@ public class TestAdmin {
     try {
       List<HRegionInfo> onlineRegions = rs.getOnlineRegions();
       for (HRegionInfo regionInfo : onlineRegions) {
-        if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+        if (!regionInfo.isMetaTable()) {
           if (regionInfo.getRegionNameAsString()
               .contains("TestHBACloseRegion3")) {
             admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(),
@@ -1191,7 +1191,7 @@ public class TestAdmin {
     try {
       List<HRegionInfo> onlineRegions = rs.getOnlineRegions();
       for (HRegionInfo regionInfo : onlineRegions) {
-        if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+        if (!regionInfo.isMetaTable()) {
           if (regionInfo.getRegionNameAsString()
               .contains("TestHBACloseRegionWhenServerNameIsEmpty")) {
             admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(),
@@ -1214,7 +1214,7 @@ public class TestAdmin {
 
     List<HRegionInfo> onlineRegions = rs.getOnlineRegions();
     for (HRegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+      if (!regionInfo.isMetaTable()) {
         if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion4")) {
           info = regionInfo;
           admin.closeRegionWithEncodedRegionName(regionInfo

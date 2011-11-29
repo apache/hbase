@@ -693,7 +693,7 @@ public class TestMasterObserver {
     int moveCnt = openRegions.size()/2;
     for (int i=0; i<moveCnt; i++) {
       HRegionInfo info = openRegions.get(i);
-      if (!(info.isMetaRegion() || info.isRootRegion())) {
+      if (!info.isMetaTable()) {
         master.move(openRegions.get(i).getEncodedNameAsBytes(), destRS);
       }
     }

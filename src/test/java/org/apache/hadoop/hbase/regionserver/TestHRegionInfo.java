@@ -114,4 +114,10 @@ public class TestHRegionInfo {
     } catch (IllegalArgumentException iae) {
     }
   }
+
+  @Test
+  public void testMetaTables() {
+    assertTrue(HRegionInfo.ROOT_REGIONINFO.isMetaTable());
+    assertTrue(HRegionInfo.FIRST_META_REGIONINFO.isMetaTable());
+  }
 }

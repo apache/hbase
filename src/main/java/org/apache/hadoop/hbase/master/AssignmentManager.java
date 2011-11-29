@@ -360,8 +360,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // its a clean cluster startup, else its a failover.
     boolean regionsToProcess = false;
     for (Map.Entry<HRegionInfo, ServerName> e: this.regions.entrySet()) {
-      if (!e.getKey().isMetaRegion()
-          && !e.getKey().isRootRegion()
+      if (!e.getKey().isMetaTable()
           && e.getValue() != null) {
         LOG.debug("Found " + e + " out on cluster");
         regionsToProcess = true;
@@ -489,7 +488,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
         // Just insert region into RIT
         // If this never updates the timeout will trigger new assignment
-        if (regionInfo.isMetaRegion() || regionInfo.isRootRegion()) {
+        if (regionInfo.isMetaTable()) {
           regionsInTransition.put(encodedRegionName, new RegionState(
               regionInfo, RegionState.State.OPENING, data.getStamp(), data
                   .getOrigin()));
@@ -1514,7 +1513,7 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   private void debugLog(HRegionInfo region, String string) {
-    if (region.isMetaTable() || region.isRootRegion()) {
+    if (region.isMetaTable()) {
       LOG.info(string);
     } else {
       LOG.debug(string);

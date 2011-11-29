@@ -448,6 +448,8 @@ Release 0.92.0 - Unreleased
    HBASE-4855  SplitLogManager hangs on cluster restart due to batch.installed doubly counted
    HBASE-4877  TestHCM failing sporadically on jenkins and always for me on an ubuntu machine
    HBASE-4878  Master crash when splitting hlog may cause data loss (Chunhui Shen)
+   HBASE-4889  HRegionInfo.isMetaTable() should be true for -ROOT- regions
+               (Daniel Gómez Ferro)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
