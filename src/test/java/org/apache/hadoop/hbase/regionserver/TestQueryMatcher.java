@@ -98,7 +98,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     // 2,4,5
     
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new Store.ScanInfo(fam2,
-        0, 1, ttl, false, rowComparator), get.getFamilyMap().get(fam2));
+        0, 1, ttl, false, 0, rowComparator), get.getFamilyMap().get(fam2));
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, 1, data));
@@ -142,7 +142,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     expected.add(ScanQueryMatcher.MatchCode.DONE);
 
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new Store.ScanInfo(fam2,
-        0, 1, ttl, false, rowComparator), null);
+        0, 1, ttl, false, 0, rowComparator), null);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, 1, data));
@@ -193,7 +193,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     };
 
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new Store.ScanInfo(fam2,
-        0, 1, testTTL, false, rowComparator), get.getFamilyMap().get(fam2));
+        0, 1, testTTL, false, 0, rowComparator), get.getFamilyMap().get(fam2));
 
     long now = System.currentTimeMillis();
     KeyValue [] kvs = new KeyValue[] {
@@ -245,7 +245,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     };
 
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new Store.ScanInfo(fam2,
-        0, 1, testTTL, false, rowComparator), null);
+        0, 1, testTTL, false, 0, rowComparator), null);
 
     long now = System.currentTimeMillis();
     KeyValue [] kvs = new KeyValue[] {

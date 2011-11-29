@@ -90,7 +90,7 @@ public class TestMemStore extends TestCase {
     List<KeyValue> result = new ArrayList<KeyValue>();
     MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
     ScanInfo scanInfo = new ScanInfo(null, 0, 1, HConstants.LATEST_TIMESTAMP, false,
-        this.memstore.comparator);
+        0, this.memstore.comparator);
     ScanType scanType = ScanType.USER_SCAN;
     StoreScanner s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     int count = 0;
@@ -554,7 +554,7 @@ public class TestMemStore extends TestCase {
     //starting from each row, validate results should contain the starting row
     for (int startRowId = 0; startRowId < ROW_COUNT; startRowId++) {
       ScanInfo scanInfo = new ScanInfo(FAMILY, 0, 1, Integer.MAX_VALUE, false,
-          this.memstore.comparator);
+          0, this.memstore.comparator);
       ScanType scanType = ScanType.USER_SCAN;
       InternalScanner scanner = new StoreScanner(new Scan(
           Bytes.toBytes(startRowId)), scanInfo, scanType, null,

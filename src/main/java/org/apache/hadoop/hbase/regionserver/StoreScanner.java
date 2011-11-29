@@ -155,10 +155,19 @@ class StoreScanner extends NonLazyKeyValueScanner
   StoreScanner(final Scan scan, Store.ScanInfo scanInfo,
       StoreScanner.ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners) throws IOException {
+    this(scan, scanInfo, scanType, columns, scanners,
+        HConstants.LATEST_TIMESTAMP);
+  }
+
+  // Constructor for testing.
+  StoreScanner(final Scan scan, Store.ScanInfo scanInfo,
+      StoreScanner.ScanType scanType, final NavigableSet<byte[]> columns,
+      final List<KeyValueScanner> scanners, long earliestPutTs)
+          throws IOException {
     this(null, scan.getCacheBlocks(), scan, columns);
     this.initializeMetricNames();
     this.matcher = new ScanQueryMatcher(scan, scanInfo, columns, scanType,
-        Long.MAX_VALUE, HConstants.LATEST_TIMESTAMP);
+        Long.MAX_VALUE, earliestPutTs);
 
     // Seek all scanners to the initial key
     for (KeyValueScanner scanner : scanners) {

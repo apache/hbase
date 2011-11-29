@@ -234,7 +234,7 @@ public class TestCompaction extends HBaseTestCase {
       Store.ScanInfo old = store.scanInfo;
       Store.ScanInfo si = new Store.ScanInfo(old.getFamily(),
           old.getMinVersions(), old.getMaxVersions(), ttl,
-          old.getKeepDeletedCells(), old.getComparator());
+          old.getKeepDeletedCells(), 0, old.getComparator());
       store.scanInfo = si;
     }
     Thread.sleep(1000);
@@ -445,7 +445,7 @@ public class TestCompaction extends HBaseTestCase {
         Store.ScanInfo old = store.scanInfo;
         Store.ScanInfo si = new Store.ScanInfo(old.getFamily(),
             old.getMinVersions(), old.getMaxVersions(), ttl,
-            old.getKeepDeletedCells(), old.getComparator());
+            old.getKeepDeletedCells(), 0, old.getComparator());
         store.scanInfo = si;
       }
       Thread.sleep(ttl);

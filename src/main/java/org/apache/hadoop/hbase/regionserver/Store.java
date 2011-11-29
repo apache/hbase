@@ -193,9 +193,14 @@ public class Store extends SchemaConfigured implements HeapSize {
       // second -> ms adjust for user data
       this.ttl *= 1000;
     }
+    // used by ScanQueryMatcher
+    long timeToPurgeDeletes =
+        Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
+    LOG.info("time to purge deletes set to " + timeToPurgeDeletes +
+        "ms in store " + this);
     scanInfo = new ScanInfo(family.getName(), family.getMinVersions(),
         family.getMaxVersions(), ttl, family.getKeepDeletedCells(),
-        this.comparator);
+        timeToPurgeDeletes, this.comparator);
     this.memstore = new MemStore(conf, this.comparator);
     this.storeNameStr = getColumnFamilyName();
 
@@ -2039,6 +2044,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     private int maxVersions;
     private long ttl;
     private boolean keepDeletedCells;
+    private long timeToPurgeDeletes;
     private KVComparator comparator;
 
     public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
@@ -2050,17 +2056,21 @@ public class Store extends SchemaConfigured implements HeapSize {
      * @param minVersions Store's MIN_VERSIONS setting
      * @param maxVersions Store's VERSIONS setting
      * @param ttl Store's TTL (in ms)
+     * @param timeToPurgeDeletes duration in ms after which a delete marker can
+     *        be purged during a major compaction.
      * @param keepDeletedCells Store's keepDeletedCells setting
      * @param comparator The store's comparator
      */
     public ScanInfo(byte[] family, int minVersions, int maxVersions, long ttl,
-        boolean keepDeletedCells, KVComparator comparator) {
+        boolean keepDeletedCells, long timeToPurgeDeletes,
+        KVComparator comparator) {
 
       this.family = family;
       this.minVersions = minVersions;
       this.maxVersions = maxVersions;
       this.ttl = ttl;
       this.keepDeletedCells = keepDeletedCells;
+      this.timeToPurgeDeletes = timeToPurgeDeletes;
       this.comparator = comparator;
     }
 
@@ -2082,6 +2092,10 @@ public class Store extends SchemaConfigured implements HeapSize {
 
     public boolean getKeepDeletedCells() {
       return keepDeletedCells;
+    }
+    
+    public long getTimeToPurgeDeletes() {
+      return timeToPurgeDeletes;
     }
 
     public KVComparator getComparator() {
