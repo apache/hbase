@@ -600,12 +600,12 @@ implements WritableComparable<HRegionInfo> {
    * either <code>.META.</code> or <code>-ROOT-</code>
    */
   public boolean isMetaTable() {
-    return Bytes.equals(tableName, HRegionInfo.FIRST_META_REGIONINFO.getTableName());
+    return isRootRegion() || isMetaRegion();
   }
 
   /** @return true if this region is a meta region */
   public boolean isMetaRegion() {
-     return isMetaTable();
+     return Bytes.equals(tableName, HRegionInfo.FIRST_META_REGIONINFO.getTableName());
   }
 
   /**

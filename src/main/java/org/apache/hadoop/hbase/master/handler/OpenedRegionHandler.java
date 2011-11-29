@@ -141,7 +141,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
   }
 
   private void debugLog(HRegionInfo region, String string) {
-    if (region.isMetaTable() || region.isRootRegion()) {
+    if (region.isMetaTable()) {
       LOG.info(string);
     } else {
       LOG.debug(string);
