@@ -69,14 +69,6 @@
       <directory>target/site</directory>
       <outputDirectory>docs</outputDirectory>
     </fileSet>
-    <fileSet>
-      <directory>src/packages</directory>
-      <outputDirectory>sbin</outputDirectory>
-      <fileMode>755</fileMode>
-      <includes>
-          <include>update-hbase-env.sh</include>
-      </includes>
-    </fileSet>
   </fileSets>
   <dependencySets>
     <dependencySet>
