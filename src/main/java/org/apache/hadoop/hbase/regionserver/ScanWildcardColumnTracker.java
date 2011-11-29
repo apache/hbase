@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Keeps track of the columns for a scan if they are not explicitly specified
@@ -53,7 +54,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   public ScanWildcardColumnTracker(int minVersion, int maxVersion, long ttl) {
     this.maxVersions = maxVersion;
     this.minVersions = minVersion;
-    this.oldestStamp = System.currentTimeMillis() - ttl;
+    this.oldestStamp = EnvironmentEdgeManager.currentTimeMillis() - ttl;
   }
 
   /**

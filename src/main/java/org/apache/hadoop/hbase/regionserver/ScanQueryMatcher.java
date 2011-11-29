@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 
@@ -103,6 +104,27 @@ public class ScanQueryMatcher {
    * */
   private boolean hasNullColumn = true;
 
+  // By default, when hbase.hstore.time.to.purge.deletes is 0ms, a delete
+  // marker is always removed during a major compaction. If set to non-zero
+  // value then major compaction will try to keep a delete marker around for
+  // the given number of milliseconds. We want to keep the delete markers
+  // around a bit longer because old puts might appear out-of-order. For
+  // example, during log replication between two clusters.
+  //
+  // If the delete marker has lived longer than its column-family's TTL then
+  // the delete marker will be removed even if time.to.purge.deletes has not
+  // passed. This is because all the Puts that this delete marker can influence
+  // would have also expired. (Removing of delete markers on col family TTL will
+  // not happen if min-versions is set to non-zero)
+  //
+  // But, if time.to.purge.deletes has not expired then a delete
+  // marker will not be removed just because there are no Puts that it is
+  // currently influencing. This is because Puts, that this delete can
+  // influence.  may appear out of order.
+  private final long timeToPurgeDeletes;
+  
+  private final boolean isUserScan;
+
   /**
    * Construct a QueryMatcher for a scan
    * @param scan
@@ -113,8 +135,7 @@ public class ScanQueryMatcher {
    */
   public ScanQueryMatcher(Scan scan, Store.ScanInfo scanInfo,
       NavigableSet<byte[]> columns, StoreScanner.ScanType scanType,
-      long readPointToUse,
-      long earliestPutTs) {
+      long readPointToUse, long earliestPutTs) {
     this.tr = scan.getTimeRange();
     this.rowComparator = scanInfo.getComparator().getRawComparator();
     this.deletes =  new ScanDeleteTracker();
@@ -124,14 +145,16 @@ public class ScanQueryMatcher {
     this.filter = scan.getFilter();
     this.earliestPutTs = earliestPutTs;
     this.maxReadPointToTrackVersions = readPointToUse;
+    this.timeToPurgeDeletes = scanInfo.getTimeToPurgeDeletes();
 
     /* how to deal with deletes */
+    this.isUserScan = scanType == ScanType.USER_SCAN;
     // keep deleted cells: if compaction or raw scan
-    this.keepDeletedCells = (scanInfo.getKeepDeletedCells() && scanType != ScanType.USER_SCAN) || scan.isRaw();
+    this.keepDeletedCells = (scanInfo.getKeepDeletedCells() && !isUserScan) || scan.isRaw();
     // retain deletes: if minor compaction or raw scan
     this.retainDeletesInOutput = scanType == ScanType.MINOR_COMPACT || scan.isRaw();
     // seePastDeleteMarker: user initiated scans
-    this.seePastDeleteMarkers = scanInfo.getKeepDeletedCells() && scanType == ScanType.USER_SCAN;
+    this.seePastDeleteMarkers = scanInfo.getKeepDeletedCells() && isUserScan;
 
     int maxVersions = Math.min(scan.getMaxVersions(), scanInfo.getMaxVersions());
     // Single branch to deal with two types of reads (columns vs all in family)
@@ -261,8 +284,12 @@ public class ScanQueryMatcher {
         }
         // Can't early out now, because DelFam come before any other keys
       }
-      if (retainDeletesInOutput) {
-        // always include
+      if (retainDeletesInOutput ||
+          (!isUserScan &&
+              (EnvironmentEdgeManager.currentTimeMillis() - timestamp) <= 
+              timeToPurgeDeletes)) {
+        // always include or it is not time yet to check whether it is OK
+        // to purge deltes or not
         return MatchCode.INCLUDE;
       } else if (keepDeletedCells) {
         if (timestamp < earliestPutTs) {
