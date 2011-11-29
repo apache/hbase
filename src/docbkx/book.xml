@@ -271,6 +271,12 @@ for(Result result : htable.getScanner(scan)) {
         <link xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/HTable.html#delete%28org.apache.hadoop.hbase.client.Delete%29">
         HTable.delete</link>.
         </para>
+        <para>HBase does not modify data in place, and so deletes are handled by creating new markers called <emphasis>tombstones</emphasis>.
+        These tombstones, along with the dead values, are cleaned up on major compactions.
+        </para>
+        <para>See <xref linkend="version.delete"/> for more information on deleting versions of columns.         
+        </para>
+ 
       </section>
             
     </section>
@@ -428,28 +434,20 @@ htable.put(put);
           
         </section>
 
-        <section>
+        <section xml:id="version.delete">
           <title>Delete</title>
 
-          <para>When performing a delete operation in HBase, there are two
-          ways to specify the versions to be deleted</para>
-
-          <itemizedlist>
-            <listitem>
-              <para>Delete all versions older than a certain timestamp</para>
+          <para>There are three different types of internal delete markers: 
+            <itemizedlist>
+            <listitem><para>Delete:  for a specific version of a column.</para>
             </listitem>
-
-            <listitem>
-              <para>Delete the version at a specific timestamp</para>
+            <listitem><para>Delete column:  for all versions of a column.</para>
+            </listitem>
+            <listitem><para>Delete family:  for all columns of a particular ColumnFamily</para>
             </listitem>
           </itemizedlist>
-
-          <para>A delete can apply to a complete row, a complete column
-          family, or to just one column. It is only in the last case that you
-          can delete explicit versions. For the deletion of a row or all the
-          columns within a family, it always works by deleting all cells older
-          than a certain version.</para>
-
+          When deleting an entire row, HBase will internally create a tombstone for each ColumnFamily (i.e., not each individual column).
+         </para>
           <para>Deletes work by creating <emphasis>tombstone</emphasis>
           markers. For example, let's suppose we want to delete a row. For
           this you can specify a version, or else by default the
@@ -466,8 +464,10 @@ htable.put(put);
             </footnote>. If the version you specified when deleting a row is
           larger than the version of any value in the row, then you can
           consider the complete row to be deleted.</para>
+          <para>Also see <xref linkend="keyvalue"/> for more information on the internal KeyValue format.
+          </para>
         </section>
-      </section>
+       </section>
 
       <section>
         <title>Current Limitations</title>
@@ -1113,6 +1113,20 @@ if (!b) {
 }
     </programlisting>
    </section>
+   <section xml:id="mapreduce.example.summary.noreducer">
+    <title>HBase MapReduce Summary Without Reducer</title>
+       <para>It is also possible to perform summaries without a reducer - if you use HBase as the reducer.
+       </para> 
+       <para>There would need to exist an HTable target table for the job summary.  The HTable method <code>incrementColumnValue</code>
+       would be used to atomically increment values.  From a performance perspective, it might make sense to keep a Map 
+       of values with their values to be incremeneted for each map-task, and make one update per key at during the <code>
+       cleanup</code> method of the mapper.  However, your milage may vary depending on the number of rows to be processed and 
+       unique keys.
+       </para>
+       <para>In the end, the summary results are in HBase.
+       </para>
+   </section>
+   
    </section> <!--  mr examples -->
    <section xml:id="mapreduce.htable.access">
    <title>Accessing Other HBase Tables in a MapReduce Job</title>

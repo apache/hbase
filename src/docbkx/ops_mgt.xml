@@ -132,6 +132,30 @@
     </section>
            
     </section>  <!--  tools -->
+
+  <section xml:id="ops.regionmgt">
+    <title>Region Management</title>
+    <section xml:id="ops.regionmgt.majorcompact">
+      <title>Major Compaction</title>
+      <para>Major compactions can be requested via the HBase shell or <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html#majorCompact%28java.lang.String%29">HBaseAdmin.majorCompact</link>.
+      </para>
+      <para>Note:  major compactions do NOT do region merges.  See <xref linkend="compaction"/> for more information about compactions.
+      
+      </para>
+    </section>
+    <section xml:id="ops.regionmgt.merge">
+      <title>Merge</title>
+      <para>Merge is a utility that can merge adjoining regions in the same table (see org.apache.hadoop.hbase.util.Merge).</para>
+<programlisting>$ bin/hbase org.apache.hbase.util.Merge &lt;tablename&gt; &lt;region1&gt; &lt;region2&gt;
+</programlisting>
+      <para>If you feel you have too many regions and want to consolidate them, Merge is the utility you need.  Merge must
+      run be done when the cluster is down.  
+      See the <link xlink:href="http://ofps.oreilly.com/titles/9781449396107/performance.html">O'Reilly HBase Book</link> for
+      an example of usage.
+      </para>
+      
+    </section>
+  </section>
     
     <section xml:id="node.management"><title>Node Management</title>
      <section xml:id="decommission"><title>Node Decommission</title>
@@ -340,7 +364,6 @@ false
     <para>See <link xlink:href="http://hbase.apache.org/replication.html">Cluster Replication</link>.
     </para>
   </section>
-  
   <section xml:id="ops.backup">
     <title >HBase Backup</title>
     <para>There are two broad strategies for performing HBase backups: backing up with a full cluster shutdown, and backing up on a live cluster. 
