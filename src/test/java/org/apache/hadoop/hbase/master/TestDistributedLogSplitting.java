@@ -219,7 +219,7 @@ public class TestDistributedLogSplitting {
     Iterator<HRegionInfo> it = regions.iterator();
     while (it.hasNext()) {
       HRegionInfo region = it.next();
-      if (region.isMetaRegion() || region.isRootRegion()) {
+      if (region.isMetaTable()) {
         it.remove();
       }
     }
@@ -339,7 +339,7 @@ public class TestDistributedLogSplitting {
       HRegionServer hrs = rst.getRegionServer();
       List<HRegionInfo> hris = hrs.getOnlineRegions();
       for (HRegionInfo hri : hris) {
-        if (hri.isMetaRegion() || hri.isRootRegion()) {
+        if (hri.isMetaTable()) {
           continue;
         }
         LOG.debug("adding data to rs = " + rst.getName() +

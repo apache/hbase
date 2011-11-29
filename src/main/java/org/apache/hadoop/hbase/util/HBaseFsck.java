@@ -1095,7 +1095,7 @@ public class HBaseFsck {
   throws IOException, KeeperException, InterruptedException {
     List <HbckInfo> metaRegions = Lists.newArrayList();
     for (HbckInfo value : regionInfo.values()) {
-      if (value.metaEntry.isMetaTable()) {
+      if (value.metaEntry.isMetaRegion()) {
         metaRegions.add(value);
       }
     }
@@ -1501,7 +1501,7 @@ public class HBaseFsck {
     private List<HRegionInfo> filterOnlyMetaRegions(List<HRegionInfo> regions) {
       List<HRegionInfo> ret = Lists.newArrayList();
       for (HRegionInfo hri : regions) {
-        if (hri.isMetaRegion() || hri.isRootRegion()) {
+        if (hri.isMetaTable()) {
           ret.add(hri);
         }
       }
