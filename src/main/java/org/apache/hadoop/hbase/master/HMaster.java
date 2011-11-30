@@ -965,6 +965,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   @Override
   public void shutdown() {
+    this.assignmentManager.shutdown();
     this.serverManager.shutdownCluster();
     try {
       this.clusterStatusTracker.setClusterDown();

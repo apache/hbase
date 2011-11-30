@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
@@ -312,10 +313,37 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Stoppable, Ab
 
   /**
    * Opens the specified region.
-   * @param region region to open
+   * 
+   * @param region
+   *          region to open
+   * @param versionOfOfflineNode
+   *          the version of znode to compare when RS transitions the znode from
+   *          OFFLINE state.
+   * @return RegionOpeningState 
+   *         OPENED -         if region open request was successful.
+   *         ALREADY_OPENED - if the region was already opened. 
+   *         FAILED_OPENING - if region opening failed.
    * @throws IOException
    */
-  public void openRegion(final HRegionInfo region) throws IOException;
+  public RegionOpeningState openRegion(final HRegionInfo region) throws IOException;
+  
+  /**
+   * Opens the specified region.
+   * 
+   * @param region
+   *          region to open
+   * @param versionOfOfflineNode
+   *          the version of znode to compare when RS transitions the znode from
+   *          OFFLINE state.
+   * @return RegionOpeningState 
+   *         OPENED -         if region open request was successful.
+   *         ALREADY_OPENED - if the region was already opened. 
+   *         FAILED_OPENING - if region opening failed.
+   * @throws IOException
+   */
+  public RegionOpeningState openRegion(HRegionInfo region,
+      int versionOfOfflineNode) throws IOException;
+    
 
   /**
    * Opens the specified regions.

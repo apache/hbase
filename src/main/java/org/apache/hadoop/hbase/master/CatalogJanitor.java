@@ -157,6 +157,7 @@ class CatalogJanitor extends Chore {
     }
   }
 
+
   /**
    * Get HRegionInfo from passed Map of row values.
    * @param result Map to do lookup in.
