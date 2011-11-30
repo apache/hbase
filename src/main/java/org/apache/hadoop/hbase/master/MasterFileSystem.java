@@ -268,9 +268,7 @@ public class MasterFileSystem {
     }
       
     if (distributedLogSplitting) {
-      for (ServerName serverName : serverNames) {
-        splitLogManager.handleDeadWorker(serverName.toString());
-      }
+      splitLogManager.handleDeadWorkers(serverNames);
       splitTime = EnvironmentEdgeManager.currentTimeMillis();
       try {
         splitLogSize = splitLogManager.splitLogDistributed(logDirs);

@@ -671,14 +671,15 @@ public class HLogSplitter {
     return String.format("%019d", seqid);
   }
 
-  /*
-   * Parse a single hlog and put the edits in @splitLogsMap
+  /**
+   * Parse a single hlog and put the edits in entryBuffers
    *
-   * @param logfile to split
-   * @param splitLogsMap output parameter: a map with region names as keys and a
-   * list of edits as values
-   * @param fs the filesystem
+   * @param in the hlog reader
+   * @param path the path of the log file
+   * @param entryBuffers the buffer to hold the parsed edits
+   * @param fs the file system
    * @param conf the configuration
+   * @param skipErrors indicator if CorruptedLogFileException should be thrown instead of IOException
    * @throws IOException
    * @throws CorruptedLogFileException if hlog is corrupted
    */

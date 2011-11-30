@@ -275,7 +275,7 @@ public class TestDistributedLogSplitting {
     // slm.splitLogDistributed(logDir);
     FileStatus[] logfiles = fs.listStatus(logDir);
     TaskBatch batch = new TaskBatch();
-    slm.installTask(logfiles[0].getPath().toString(), batch);
+    slm.enqueueSplitTask(logfiles[0].getPath().toString(), batch);
     //waitForCounter but for one of the 2 counters
     long curt = System.currentTimeMillis();
     long endt = curt + 30000;
@@ -372,13 +372,9 @@ public class TestDistributedLogSplitting {
         byte [] qualifier = Bytes.toBytes("c" + Integer.toString(i));
         e.add(new KeyValue(row, family, qualifier,
             System.currentTimeMillis(), value));
-        // LOG.info("Region " + i + ": " + e);
         j++;
         log.append(hris.get(j % n), table, e, System.currentTimeMillis(), htd);
         counts[j % n] += 1;
-        // if ((i % 8096) == 0) {
-        // log.sync();
-        //  }
       }
     }
     log.sync();

@@ -1546,8 +1546,8 @@ public class AssignmentManager extends ZooKeeperListener {
     // In case of reassignment the current state in memory need not be
     // OFFLINE. 
     if (!hijack && !state.isClosed() && !state.isOffline()) {
-      this.master.abort("Unexpected state trying to OFFLINE; " + state,
-          new IllegalStateException());
+      String msg = "Unexpected state : " + state + " .. Cannot transit it to OFFLINE.";
+      this.master.abort(msg, new IllegalStateException(msg));
       return -1;
     }
     boolean allowZNodeCreation = false;
