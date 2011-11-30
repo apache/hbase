@@ -523,8 +523,41 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
             </para>
             
        </section>    
-
     </section>
+    
+    <section xml:id="trouble.mapreduce">
+      <title>MapReduce</title>
+      <section xml:id="trouble.mapreduce.local">
+        <title>You Think You're On The Cluster, But You're Actually Local</title>
+        <para>This following stacktrace happened using <code>ImportTsv</code>, but things like this
+        can happen on any job with a mis-configuration.        
+<programlisting>
+    WARN mapred.LocalJobRunner: job_local_0001
+java.lang.IllegalArgumentException: Can't read partitions file
+       at org.apache.hadoop.hbase.mapreduce.hadoopbackport.TotalOrderPartitioner.setConf(TotalOrderPartitioner.java:111)
+       at org.apache.hadoop.util.ReflectionUtils.setConf(ReflectionUtils.java:62)
+       at org.apache.hadoop.util.ReflectionUtils.newInstance(ReflectionUtils.java:117)
+       at org.apache.hadoop.mapred.MapTask$NewOutputCollector.&lt;init&gt;(MapTask.java:560)
+       at org.apache.hadoop.mapred.MapTask.runNewMapper(MapTask.java:639)
+       at org.apache.hadoop.mapred.MapTask.run(MapTask.java:323)
+       at org.apache.hadoop.mapred.LocalJobRunner$Job.run(LocalJobRunner.java:210)
+Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
+       at org.apache.hadoop.fs.RawLocalFileSystem.getFileStatus(RawLocalFileSystem.java:383)
+       at org.apache.hadoop.fs.FilterFileSystem.getFileStatus(FilterFileSystem.java:251)
+       at org.apache.hadoop.fs.FileSystem.getLength(FileSystem.java:776)
+       at org.apache.hadoop.io.SequenceFile$Reader.&lt;init&gt;(SequenceFile.java:1424)
+       at org.apache.hadoop.io.SequenceFile$Reader.&lt;init&gt;(SequenceFile.java:1419)
+       at org.apache.hadoop.hbase.mapreduce.hadoopbackport.TotalOrderPartitioner.readPartitions(TotalOrderPartitioner.java:296)
+</programlisting>
+      .. see the critical portion of the stack?  It's...
+<programlisting>
+       at org.apache.hadoop.mapred.LocalJobRunner$Job.run(LocalJobRunner.java:210)
+</programlisting>
+       LocalJobRunner means the job is running locally, not on the cluster.
+      </para>        
+      </section>
+    </section>
+    
     <section xml:id="trouble.namenode">
       <title>NameNode</title>
        <para>For more information on the NameNode, see <xref linkend="arch.hdfs"/>. 
