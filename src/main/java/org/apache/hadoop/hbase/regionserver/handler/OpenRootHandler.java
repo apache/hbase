@@ -29,8 +29,15 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
  * This is executed after receiving an OPEN RPC from the master for root.
  */
 public class OpenRootHandler extends OpenRegionHandler {
+  
   public OpenRootHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo) {
-    super(server, rsServices, regionInfo, EventType.M_RS_OPEN_ROOT);
+    super(server, rsServices, regionInfo, EventType.M_RS_OPEN_ROOT, -1);
+  }
+  public OpenRootHandler(final Server server,
+      final RegionServerServices rsServices, HRegionInfo regionInfo,
+      int versionOfOfflineNode) {
+    super(server, rsServices, regionInfo, EventType.M_RS_OPEN_ROOT,
+        versionOfOfflineNode);
   }
 }

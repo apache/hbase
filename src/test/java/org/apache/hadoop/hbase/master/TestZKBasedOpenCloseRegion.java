@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -111,31 +112,12 @@ public class TestZKBasedOpenCloseRegion {
     HRegionInfo hri = getNonMetaRegion(regionServer.getOnlineRegions());
     LOG.debug("Asking RS to close region " + hri.getRegionNameAsString());
 
-    AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
     AtomicBoolean reopenEventProcessed = new AtomicBoolean(false);
 
-    EventHandlerListener closeListener =
-      new ReopenEventListener(hri.getRegionNameAsString(),
-          closeEventProcessed, EventType.RS_ZK_REGION_CLOSED);
-    cluster.getMaster().executorService.
-      registerListener(EventType.RS_ZK_REGION_CLOSED, closeListener);
-
-    EventHandlerListener openListener =
-      new ReopenEventListener(hri.getRegionNameAsString(),
-          reopenEventProcessed, EventType.RS_ZK_REGION_OPENED);
-    cluster.getMaster().executorService.
-      registerListener(EventType.RS_ZK_REGION_OPENED, openListener);
-
     LOG.info("Unassign " + hri.getRegionNameAsString());
-    cluster.getMaster().assignmentManager.unassign(hri);
 
-    while (!closeEventProcessed.get()) {
-      Threads.sleep(100);
-    }
+    regionServer.closeRegion(hri, false); 
 
-    while (!reopenEventProcessed.get()) {
-      Threads.sleep(100);
-    }
     
     //Test a region is reopened on a same region server.
     reopenEventProcessed.set(false);    
@@ -147,7 +129,7 @@ public class TestZKBasedOpenCloseRegion {
     assertTrue(master.isActiveMaster());
     
     hri = getNonMetaRegion(regionServer.getOnlineRegions());
-    openListener =
+    EventHandlerListener openListener =
       new ReopenEventListener(hri.getRegionNameAsString(),
           reopenEventProcessed, EventType.RS_ZK_REGION_OPENED);
     cluster.getMaster().executorService.

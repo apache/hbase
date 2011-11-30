@@ -1,5 +1,5 @@
 /**
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,26 +17,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.handler;
+package org.apache.hadoop.hbase.master;
+
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 /**
- * Handles opening of a meta region on a region server.
- * <p>
- * This is executed after receiving an OPEN RPC from the master for meta.
+ * A callable object that invokes the corresponding action that needs to be
+ * taken for assignment of a region in transition. 
+ * Implementing as future callable we are able to act on the timeout
+ * asynchronously.
  */
-public class OpenMetaHandler extends OpenRegionHandler {
-  public OpenMetaHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo) {
-    super(server,rsServices,  regionInfo, EventType.M_RS_OPEN_META, -1);
+public class AssignCallable implements Callable<Object> {
+  private AssignmentManager assignmentManager;
+
+  private HRegionInfo hri;
+  
+  public AssignCallable(AssignmentManager assignmentManager, HRegionInfo hri) {
+    this.assignmentManager = assignmentManager;
+    this.hri = hri;
   }
-  public OpenMetaHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo,
-      int versionOfOfflineNode) {
-    super(server, rsServices, regionInfo, EventType.M_RS_OPEN_META,
-        versionOfOfflineNode);
+
+  @Override
+  public Object call() throws Exception {
+    assignmentManager.assign(hri, true, true, true);
+    return null;
   }
 }
