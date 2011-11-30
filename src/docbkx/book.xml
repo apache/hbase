@@ -1704,7 +1704,7 @@ scan.setFilter(filter);
              <listitem>columnfamily</listitem>
              <listitem>columnqualifier</listitem>
              <listitem>timestamp</listitem>
-             <listitem>keytype (e.g., Put, Delete)</listitem>
+             <listitem>keytype (e.g., Put, Delete, DeleteColumn, DeleteFamily)</listitem>
            </itemizedlist>
         </para>
         <para>For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/KeyValue.html">KeyValue source code</link>.
