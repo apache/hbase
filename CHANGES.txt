@@ -101,6 +101,7 @@ Release 0.90.5 - Unreleased
                (Chunhui Shen)
    HBASE-4773  HBaseAdmin may leak ZooKeeper connections (Xufeng)
    HBASE-4352  Apply version of hbase-4015 to branch
+   HBASE-4900  Fix javadoc warnings out on 0.90 branch
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
