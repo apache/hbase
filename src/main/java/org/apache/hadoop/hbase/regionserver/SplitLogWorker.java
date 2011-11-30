@@ -54,8 +54,8 @@ import org.apache.zookeeper.data.Stat;
  * <p>
  * If a worker has successfully moved the task from state UNASSIGNED to
  * OWNED then it owns the task. It keeps heart beating the manager by
- * periodically moving the task from OWNED to OWNED state. On success it
- * moves the task to SUCCESS. On unrecoverable error it moves task state to
+ * periodically moving the task from UNASSIGNED to OWNED state. On success it
+ * moves the task to TASK_DONE. On unrecoverable error it moves task state to
  * ERR. If it cannot continue but wants the master to retry the task then it
  * moves the task state to RESIGNED.
  * <p>
@@ -70,7 +70,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
   Thread worker;
   private final String serverName;
-  private final TaskExecutor executor;
+  private final TaskExecutor splitTaskExecutor;
   private long zkretries;
 
   private Object taskReadyLock = new Object();
@@ -83,10 +83,10 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
 
   public SplitLogWorker(ZooKeeperWatcher watcher, Configuration conf,
-      String serverName, TaskExecutor executor) {
+      String serverName, TaskExecutor splitTaskExecutor) {
     super(watcher);
     this.serverName = serverName;
-    this.executor = executor;
+    this.splitTaskExecutor = splitTaskExecutor;
     this.zkretries = conf.getLong("hbase.splitlog.zk.retries", 3);
   }
 
@@ -247,7 +247,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
       }
 
       currentVersion = stat.getVersion();
-      if (ownTask(true) == false) {
+      if (attemptToOwnTask(true) == false) {
         tot_wkr_failed_to_grab_task_lost_race.incrementAndGet();
         return;
       }
@@ -263,12 +263,12 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
       t = System.currentTimeMillis();
       TaskExecutor.Status status;
 
-      status = executor.exec(ZKSplitLog.getFileName(currentTask),
+      status = splitTaskExecutor.exec(ZKSplitLog.getFileName(currentTask),
           new CancelableProgressable() {
 
         @Override
         public boolean progress() {
-          if (ownTask(false) == false) {
+          if (attemptToOwnTask(false) == false) {
             LOG.warn("Failed to heartbeat the task" + currentTask);
             return false;
           }
@@ -327,7 +327,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
    * <p>
    * @return true if task path is successfully locked
    */
-  private boolean ownTask(boolean isFirstTime) {
+  private boolean attemptToOwnTask(boolean isFirstTime) {
     try {
       Stat stat = this.watcher.getRecoverableZooKeeper().setData(currentTask,
           TaskState.TASK_OWNED.get(serverName), currentVersion);
@@ -405,7 +405,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         String taskpath = currentTask;
         if (taskpath != null && taskpath.equals(path)) {
           // have to compare data. cannot compare version because then there
-          // will be race with ownTask()
+          // will be race with attemptToOwnTask()
           // cannot just check whether the node has been transitioned to
           // UNASSIGNED because by the time this worker sets the data watch
           // the node might have made two transitions - from owned by this
@@ -446,7 +446,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
   @Override
   public void nodeDataChanged(String path) {
-    // there will be a self generated dataChanged event every time ownTask()
+    // there will be a self generated dataChanged event every time attemptToOwnTask()
     // heartbeats the task znode by upping its version
     synchronized (grabTaskLock) {
       if (workerInGrabTask) {

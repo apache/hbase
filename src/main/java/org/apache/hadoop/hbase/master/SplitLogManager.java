@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskFinisher.Status;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -243,12 +244,12 @@ public class SplitLogManager extends ZooKeeperListener {
       // recover-lease is done. totalSize will be under in most cases and the
       // metrics that it drives will also be under-reported.
       totalSize += lf.getLen();
-      if (installTask(lf.getPath().toString(), batch) == false) {
+      if (enqueueSplitTask(lf.getPath().toString(), batch) == false) {
         throw new IOException("duplicate log split scheduled for "
             + lf.getPath());
       }
     }
-    waitTasks(batch, status);
+    waitForSplittingCompletion(batch, status);
     if (batch.done != batch.installed) {
       stopTrackingTasks(batch);
       tot_mgr_log_split_batch_err.incrementAndGet();
@@ -278,7 +279,14 @@ public class SplitLogManager extends ZooKeeperListener {
     return totalSize;
   }
 
-  boolean installTask(String taskname, TaskBatch batch) {
+  /**
+   * Add a task entry to splitlog znode if it is not already there.
+   * 
+   * @param taskname the path of the log to be split
+   * @param batch the batch this task belongs to
+   * @return true if a new entry is created, false if it is already there.
+   */
+  boolean enqueueSplitTask(String taskname, TaskBatch batch) {
     tot_mgr_log_split_start.incrementAndGet();
     String path = ZKSplitLog.getEncodedNodeName(watcher, taskname);
     Task oldtask = createTaskIfAbsent(path, batch);
@@ -292,7 +300,7 @@ public class SplitLogManager extends ZooKeeperListener {
     return false;
   }
 
-  private void waitTasks(TaskBatch batch, MonitoredTask status) {
+  private void waitForSplittingCompletion(TaskBatch batch, MonitoredTask status) {
     synchronized (batch) {
       while ((batch.done + batch.error) != batch.installed) {
         try {
@@ -371,7 +379,7 @@ public class SplitLogManager extends ZooKeeperListener {
   }
 
   private void createNodeFailure(String path) {
-    // TODO the Manger should split the log locally instead of giving up
+    // TODO the Manager should split the log locally instead of giving up
     LOG.warn("failed to create task node" + path);
     setDone(path, FAILURE);
   }
@@ -767,16 +775,30 @@ public class SplitLogManager extends ZooKeeperListener {
     }
   }
 
-  void handleDeadWorker(String worker_name) {
+  void handleDeadWorker(String workerName) {
     // resubmit the tasks on the TimeoutMonitor thread. Makes it easier
     // to reason about concurrency. Makes it easier to retry.
     synchronized (deadWorkersLock) {
       if (deadWorkers == null) {
         deadWorkers = new HashSet<String>(100);
       }
-      deadWorkers.add(worker_name);
+      deadWorkers.add(workerName);
     }
-    LOG.info("dead splitlog worker " + worker_name);
+    LOG.info("dead splitlog worker " + workerName);
+  }
+
+  void handleDeadWorkers(List<ServerName> serverNames) {
+    List<String> workerNames = new ArrayList<String>(serverNames.size());
+    for (ServerName serverName : serverNames) {
+      workerNames.add(serverName.toString());
+    }
+    synchronized (deadWorkersLock) {
+      if (deadWorkers == null) {
+        deadWorkers = new HashSet<String>(100);
+      }
+      deadWorkers.addAll(workerNames);
+    }
+    LOG.info("dead splitlog workers " + workerNames);
   }
 
   /**
@@ -871,7 +893,7 @@ public class SplitLogManager extends ZooKeeperListener {
         } else {
           Long retry_count = (Long)ctx;
           LOG.warn("create rc =" + KeeperException.Code.get(rc) + " for " +
-              path + " retry=" + retry_count);
+              path + " remaining retries=" + retry_count);
           if (retry_count == 0) {
             tot_mgr_node_create_err.incrementAndGet();
             createNodeFailure(path);
@@ -900,7 +922,7 @@ public class SplitLogManager extends ZooKeeperListener {
       if (rc != 0) {
         Long retry_count = (Long) ctx;
         LOG.warn("getdata rc = " + KeeperException.Code.get(rc) + " " +
-            path + " retry=" + retry_count);
+            path + " remaining retries=" + retry_count);
         if (retry_count == 0) {
           tot_mgr_get_data_err.incrementAndGet();
           getDataSetWatchFailure(path);
@@ -930,7 +952,7 @@ public class SplitLogManager extends ZooKeeperListener {
           tot_mgr_node_delete_err.incrementAndGet();
           Long retry_count = (Long) ctx;
           LOG.warn("delete rc=" + KeeperException.Code.get(rc) + " for " +
-              path + " retry=" + retry_count);
+              path + " remaining retries=" + retry_count);
           if (retry_count == 0) {
             LOG.warn("delete failed " + path);
             deleteNodeFailure(path);
@@ -965,7 +987,7 @@ public class SplitLogManager extends ZooKeeperListener {
       if (rc != 0) {
         Long retry_count = (Long)ctx;
         LOG.warn("rc=" + KeeperException.Code.get(rc) + " for "+ path +
-            " retry=" + retry_count);
+            " remaining retries=" + retry_count);
         if (retry_count == 0) {
           createRescanFailure();
         } else {
