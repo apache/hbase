@@ -225,7 +225,7 @@ public class TestHFileOutputFormat  {
       Class<?> clazz =
         Class.forName("org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl");
       Constructor<?> c = clazz.
-          getConstructor(job.getConfiguration().getClass(), TaskAttemptID.class);
+          getConstructor(Configuration.class, TaskAttemptID.class);
       context = (TaskAttemptContext)c.newInstance(job.getConfiguration(), id);
     } else {
       context = org.apache.hadoop.hbase.mapreduce.hadoopbackport.InputSampler.

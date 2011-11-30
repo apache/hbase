@@ -450,6 +450,8 @@ Release 0.92.0 - Unreleased
    HBASE-4878  Master crash when splitting hlog may cause data loss (Chunhui Shen)
    HBASE-4889  HRegionInfo.isMetaTable() should be true for -ROOT- regions
                (Daniel Gómez Ferro)
+   HBASE-4885  Building against Hadoop 0.23 uses out-of-date MapReduce artifacts
+               (Tom White)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
