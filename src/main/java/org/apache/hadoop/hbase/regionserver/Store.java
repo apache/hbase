@@ -53,6 +53,8 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
@@ -109,9 +111,6 @@ public class Store extends SchemaConfigured implements HeapSize {
   private final int maxFilesToCompact;
   private final long minCompactSize;
   private final long maxCompactSize;
-  // compactRatio: double on purpose!  Float.MAX < Long.MAX < Double.MAX
-  // With float, java will downcast your long to float for comparisons (bad)
-  private double compactRatio;
   private long lastCompactSize = 0;
   volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
@@ -221,7 +220,6 @@ public class Store extends SchemaConfigured implements HeapSize {
       this.region.memstoreFlushSize);
     this.maxCompactSize
       = conf.getLong("hbase.hstore.compaction.max.size", Long.MAX_VALUE);
-    this.compactRatio = conf.getFloat("hbase.hstore.compaction.ratio", 1.2F);
     this.compactionKVMax = conf.getInt("hbase.hstore.compaction.kv.max", 10);
 
     if (Store.closeCheckInterval == 0) {
@@ -1040,35 +1038,35 @@ public class Store extends SchemaConfigured implements HeapSize {
           override = region.getCoprocessorHost().preCompactSelection(
               this, candidates);
         }
-        List<StoreFile> filesToCompact;
+        CompactSelection filesToCompact;
         if (override) {
           // coprocessor is overriding normal file selection
-          filesToCompact = candidates;
+          filesToCompact = new CompactSelection(conf, candidates);
         } else {
           filesToCompact = compactSelection(candidates);
         }
 
         if (region.getCoprocessorHost() != null) {
           region.getCoprocessorHost().postCompactSelection(this,
-              ImmutableList.copyOf(filesToCompact));
+              ImmutableList.copyOf(filesToCompact.getFilesToCompact()));
         }
 
         // no files to compact
-        if (filesToCompact.isEmpty()) {
+        if (filesToCompact.getFilesToCompact().isEmpty()) {
           return null;
         }
 
         // basic sanity check: do not try to compact the same StoreFile twice.
-        if (!Collections.disjoint(filesCompacting, filesToCompact)) {
+        if (!Collections.disjoint(filesCompacting, filesToCompact.getFilesToCompact())) {
           // TODO: change this from an IAE to LOG.error after sufficient testing
           Preconditions.checkArgument(false, "%s overlaps with %s",
               filesToCompact, filesCompacting);
         }
-        filesCompacting.addAll(filesToCompact);
+        filesCompacting.addAll(filesToCompact.getFilesToCompact());
         Collections.sort(filesCompacting, StoreFile.Comparators.FLUSH_TIME);
 
         // major compaction iff all StoreFiles are included
-        boolean isMajor = (filesToCompact.size() == this.storefiles.size());
+        boolean isMajor = (filesToCompact.getFilesToCompact().size() == this.storefiles.size());
         if (isMajor) {
           // since we're enqueuing a major, update the compaction wait interval
           this.forceMajor = false;
@@ -1089,6 +1087,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   public void finishRequest(CompactionRequest cr) {
+    cr.finishRequest();
     synchronized (filesCompacting) {
       filesCompacting.removeAll(cr.getFiles());
     }
@@ -1113,7 +1112,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @return subset copy of candidate list that meets compaction criteria
    * @throws IOException
    */
-  List<StoreFile> compactSelection(List<StoreFile> candidates)
+  CompactSelection compactSelection(List<StoreFile> candidates)
       throws IOException {
     // ASSUMPTION!!! filesCompacting is locked when calling this function
 
@@ -1128,41 +1127,47 @@ public class Store extends SchemaConfigured implements HeapSize {
      *    | |  | |  | |  | | | | | |
      *    | |  | |  | |  | | | | | |
      */
-    List<StoreFile> filesToCompact = new ArrayList<StoreFile>(candidates);
+    CompactSelection compactSelection = new CompactSelection(conf, candidates);
 
     boolean forcemajor = this.forceMajor && filesCompacting.isEmpty();
     if (!forcemajor) {
       // do not compact old files above a configurable threshold
       // save all references. we MUST compact them
       int pos = 0;
-      while (pos < filesToCompact.size() &&
-             filesToCompact.get(pos).getReader().length() > maxCompactSize &&
-             !filesToCompact.get(pos).isReference()) ++pos;
-      filesToCompact.subList(0, pos).clear();
+      while (pos < compactSelection.getFilesToCompact().size() &&
+             compactSelection.getFilesToCompact().get(pos).getReader().length()
+               > maxCompactSize &&
+             !compactSelection.getFilesToCompact().get(pos).isReference()) ++pos;
+      compactSelection.clearSubList(0, pos);
     }
 
-    if (filesToCompact.isEmpty()) {
+    if (compactSelection.getFilesToCompact().isEmpty()) {
       LOG.debug(this.getHRegionInfo().getEncodedName() + " - " +
         this.storeNameStr + ": no store files to compact");
-      return filesToCompact;
+      compactSelection.emptyFileList();
+      return compactSelection;
     }
 
     // major compact on user action or age (caveat: we have too many files)
-    boolean majorcompaction = filesToCompact.size() < this.maxFilesToCompact
-      && (forcemajor || isMajorCompaction(filesToCompact));
+    boolean majorcompaction =
+      (forcemajor || isMajorCompaction(compactSelection.getFilesToCompact()))
+      && compactSelection.getFilesToCompact().size() < this.maxFilesToCompact;
 
-    if (!majorcompaction && !hasReferences(filesToCompact)) {
+    if (!majorcompaction &&
+        !hasReferences(compactSelection.getFilesToCompact())) {
       // we're doing a minor compaction, let's see what files are applicable
       int start = 0;
-      double r = this.compactRatio;
+      double r = compactSelection.getCompactSelectionRatio();
 
       // skip selection algorithm if we don't have enough files
-      if (filesToCompact.size() < this.minFilesToCompact) {
-        return Collections.emptyList();
+      if (compactSelection.getFilesToCompact().size() < this.minFilesToCompact) {
+        compactSelection.emptyFileList();
+        return compactSelection;
       }
 
       // remove bulk import files that request to be excluded from minors
-      filesToCompact.removeAll(Collections2.filter(filesToCompact,
+      compactSelection.getFilesToCompact().removeAll(Collections2.filter(
+          compactSelection.getFilesToCompact(),
           new Predicate<StoreFile>() {
             public boolean apply(StoreFile input) {
               return input.excludeFromMinorCompaction();
@@ -1175,11 +1180,11 @@ public class Store extends SchemaConfigured implements HeapSize {
        */
 
       // get store file sizes for incremental compacting selection.
-      int countOfFiles = filesToCompact.size();
+      int countOfFiles = compactSelection.getFilesToCompact().size();
       long [] fileSizes = new long[countOfFiles];
       long [] sumSize = new long[countOfFiles];
       for (int i = countOfFiles-1; i >= 0; --i) {
-        StoreFile file = filesToCompact.get(i);
+        StoreFile file = compactSelection.getFilesToCompact().get(i);
         fileSizes[i] = file.getReader().length();
         // calculate the sum of fileSizes[i,i+maxFilesToCompact-1) for algo
         int tooFar = i + this.maxFilesToCompact - 1;
@@ -1209,26 +1214,28 @@ public class Store extends SchemaConfigured implements HeapSize {
       int end = Math.min(countOfFiles, start + this.maxFilesToCompact);
       long totalSize = fileSizes[start]
                      + ((start+1 < countOfFiles) ? sumSize[start+1] : 0);
-      filesToCompact = filesToCompact.subList(start, end);
+      compactSelection = compactSelection.getSubList(start, end);
 
       // if we don't have enough files to compact, just wait
-      if (filesToCompact.size() < this.minFilesToCompact) {
+      if (compactSelection.getFilesToCompact().size() < this.minFilesToCompact) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Skipped compaction of " + this.storeNameStr
             + ".  Only " + (end - start) + " file(s) of size "
             + StringUtils.humanReadableInt(totalSize)
             + " have met compaction criteria.");
         }
-        return Collections.emptyList();
+        compactSelection.emptyFileList();
+        return compactSelection;
       }
     } else {
       // all files included in this compaction, up to max
-      if (filesToCompact.size() > this.maxFilesToCompact) {
-        int pastMax = filesToCompact.size() - this.maxFilesToCompact;
-        filesToCompact.subList(0, pastMax).clear();
+      if (compactSelection.getFilesToCompact().size() > this.maxFilesToCompact) {
+        int pastMax =
+          compactSelection.getFilesToCompact().size() - this.maxFilesToCompact;
+        compactSelection.clearSubList(0, pastMax);
       }
     }
-    return filesToCompact;
+    return compactSelection;
   }
 
   /**
@@ -2014,11 +2021,10 @@ public class Store extends SchemaConfigured implements HeapSize {
     return this.cacheConf;
   }
 
-  public static final long FIXED_OVERHEAD =
+  public static final long FIXED_OVERHEAD = 
       ClassSize.align(new SchemaConfigured().heapSize()
           + (18 * ClassSize.REFERENCE) + (7 * Bytes.SIZEOF_LONG)
-          + (1 * Bytes.SIZEOF_DOUBLE) + (5 * Bytes.SIZEOF_INT)
-          + Bytes.SIZEOF_BOOLEAN);
+          + (5 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK

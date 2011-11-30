@@ -48,7 +48,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     static final Log LOG = LogFactory.getLog(CompactionRequest.class);
     private final HRegion r;
     private final Store s;
-    private final List<StoreFile> files;
+    private final CompactSelection compactSelection;
     private final long totalSize;
     private final boolean isMajor;
     private int p;
@@ -56,21 +56,25 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     private HRegionServer server = null;
 
     public CompactionRequest(HRegion r, Store s,
-        List<StoreFile> files, boolean isMajor, int p) {
+        CompactSelection files, boolean isMajor, int p) {
       Preconditions.checkNotNull(r);
       Preconditions.checkNotNull(files);
 
       this.r = r;
       this.s = s;
-      this.files = files;
+      this.compactSelection = files;
       long sz = 0;
-      for (StoreFile sf : files) {
+      for (StoreFile sf : files.getFilesToCompact()) {
         sz += sf.getReader().length();
       }
       this.totalSize = sz;
       this.isMajor = isMajor;
       this.p = p;
       this.timeInNanos = System.nanoTime();
+    }
+
+    public void finishRequest() {
+      this.compactSelection.finishRequest();
     }
 
     /**
@@ -116,9 +120,14 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       return s;
     }
 
+    /** Gets the compact selection object for the request */
+    public CompactSelection getCompactSelection() {
+      return compactSelection;
+    }
+
     /** Gets the StoreFiles for the request */
     public List<StoreFile> getFiles() {
-      return files;
+      return compactSelection.getFilesToCompact();
     }
 
     /** Gets the total size of all StoreFiles in compaction */
@@ -147,7 +156,8 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     @Override
     public String toString() {
       String fsList = Joiner.on(", ").join(
-          Collections2.transform(Collections2.filter(files,
+          Collections2.transform(Collections2.filter(
+              compactSelection.getFilesToCompact(),
               new Predicate<StoreFile>() {
                 public boolean apply(StoreFile sf) {
                   return sf.getReader() != null;
@@ -160,7 +170,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
 
       return "regionName=" + r.getRegionNameAsString() +
         ", storeName=" + new String(s.getFamily().getName()) +
-        ", fileCount=" + files.size() +
+        ", fileCount=" + compactSelection.getFilesToCompact().size() +
         ", fileSize=" + StringUtils.humanReadableInt(totalSize) +
           ((fsList.isEmpty()) ? "" : " (" + fsList + ")") +
         ", priority=" + p + ", time=" + timeInNanos;
