@@ -300,7 +300,7 @@ false
    <section xml:id="rs_metrics">
    <title>RegionServer Metrics</title>
           <section xml:id="hbase.regionserver.blockCacheCount"><title><varname>hbase.regionserver.blockCacheCount</varname></title>
-          <para>Block cache item count in memory.  This is the number of blocks of storefiles (HFiles) in the cache.</para>
+          <para>Block cache item count in memory.  This is the number of blocks of StoreFiles (HFiles) in the cache.</para>
 		  </section>
          <section xml:id="hbase.regionserver.blockCacheFree"><title><varname>hbase.regionserver.blockCacheFree</varname></title>
           <para>Block cache memory available (bytes).</para>
@@ -312,7 +312,7 @@ false
           <para>Block cache size in memory (bytes).  i.e., memory in use by the BlockCache</para>
 		  </section>
           <section xml:id="hbase.regionserver.compactionQueueSize"><title><varname>hbase.regionserver.compactionQueueSize</varname></title>
-          <para>Size of the compaction queue.  This is the number of stores in the region that have been targeted for compaction.</para>
+          <para>Size of the compaction queue.  This is the number of Stores in the RegionServer that have been targeted for compaction.</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsReadLatency_avg_time"><title><varname>hbase.regionserver.fsReadLatency_avg_time</varname></title>
           <para>Filesystem read latency (ms).  This is the average time to read from HDFS.</para>
@@ -342,13 +342,13 @@ false
           <para>Total number of read and write requests.  Requests correspond to RegionServer RPC calls, thus a single Get will result in 1 request, but a Scan with caching set to 1000 will result in 1 request for each 'next' call (i.e., not each row).  A bulk-load request will constitute 1 request per HFile.</para>
 		  </section>
           <section xml:id="hbase.regionserver.storeFileIndexSizeMB"><title><varname>hbase.regionserver.storeFileIndexSizeMB</varname></title>
-          <para>Sum of all the storefile index sizes in this RegionServer (MB)</para>
+          <para>Sum of all the StoreFile index sizes in this RegionServer (MB)</para>
 		  </section>
           <section xml:id="hbase.regionserver.stores"><title><varname>hbase.regionserver.stores</varname></title>
-          <para>Number of stores open on the RegionServer.  A store corresponds to a column family.  For example, if a table (which contains the column family) has 3 regions on a RegionServer, there will be 3 stores open for that column family. </para>
+          <para>Number of Stores open on the RegionServer.  A Store corresponds to a ColumnFamily.  For example, if a table (which contains the column family) has 3 regions on a RegionServer, there will be 3 stores open for that column family. </para>
 		  </section>
           <section xml:id="hbase.regionserver.storeFiles"><title><varname>hbase.regionserver.storeFiles</varname></title>
-          <para>Number of store filles open on the RegionServer.  A store may have more than one storefile (HFile).</para>
+          <para>Number of StoreFiles open on the RegionServer.  A store may have more than one StoreFile (HFile).</para>
 		  </section>
    </section>
   </section>
