@@ -554,6 +554,11 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
        at org.apache.hadoop.mapred.LocalJobRunner$Job.run(LocalJobRunner.java:210)
 </programlisting>
        LocalJobRunner means the job is running locally, not on the cluster.
+      </para>
+      <para>See 
+      <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath">
+      http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath</link> for more 
+      information on HBase MapReduce jobs and classpaths.
       </para>        
       </section>
     </section>

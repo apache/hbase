@@ -867,9 +867,11 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
 
   <chapter xml:id="mapreduce">
   <title>HBase and MapReduce</title>
-  <para>See <link xlink:href="http://hbase.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#package_description">HBase and MapReduce</link> up in javadocs.
+  <para>See <link xlink:href="http://hbase.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#package_description">
+  HBase and MapReduce</link> up in javadocs.
   Start there.  Below is some additional help.</para>
-  <para>For more information about MapReduce, see the <link xlink:href="http://hadoop.apache.org/common/docs/current/mapred_tutorial.html">Hadoop MapReduce Tutorial</link>.</para>
+  <para>For more information about MapReduce (i.e., the framework in general), see the
+   <link xlink:href="http://hadoop.apache.org/common/docs/current/mapred_tutorial.html">Hadoop MapReduce Tutorial</link>.</para>
   <section xml:id="splitter">
     <title>Map-Task Spitting</title>
     <section xml:id="splitter.default">
@@ -1117,7 +1119,7 @@ if (!b) {
     <title>HBase MapReduce Summary Without Reducer</title>
        <para>It is also possible to perform summaries without a reducer - if you use HBase as the reducer.
        </para> 
-       <para>There would need to exist an HTable target table for the job summary.  The HTable method <code>incrementColumnValue</code>
+       <para>An HBase target table would need to exist for the job summary.  The HTable method <code>incrementColumnValue</code>
        would be used to atomically increment values.  From a performance perspective, it might make sense to keep a Map 
        of values with their values to be incremeneted for each map-task, and make one update per key at during the <code>
        cleanup</code> method of the mapper.  However, your milage may vary depending on the number of rows to be processed and 
