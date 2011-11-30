@@ -278,7 +278,7 @@ public class HConnectionManager {
    * of a {@link HConnection} instance based on the given {@link Configuration}.
    *
    * <p>
-   * If you find yourself wanting to use a {@link Connection} for a relatively
+   * If you find yourself wanting to use a {@link HConnection} for a relatively
    * short duration of time, and do not want to deal with the hassle of creating
    * and cleaning up that resource, then you should consider using this
    * convenience class.

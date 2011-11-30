@@ -316,9 +316,6 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Stoppable, Ab
    * 
    * @param region
    *          region to open
-   * @param versionOfOfflineNode
-   *          the version of znode to compare when RS transitions the znode from
-   *          OFFLINE state.
    * @return RegionOpeningState 
    *         OPENED -         if region open request was successful.
    *         ALREADY_OPENED - if the region was already opened. 
