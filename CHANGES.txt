@@ -100,7 +100,6 @@ Release 0.90.5 - Unreleased
    HBASE-4862  Splitting hlog and opening region concurrently may cause data loss
                (Chunhui Shen)
    HBASE-4773  HBaseAdmin may leak ZooKeeper connections (Xufeng)
-   HBASE-4900  Fix javadoc warnings out on 0.90 branch
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

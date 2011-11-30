@@ -140,6 +140,7 @@ public class FSUtils {
   /**
    * Check whether dfs is in safemode. 
    * @param conf 
+   * @return true if dfs is in safemode.
    * @throws IOException
    */
   public static void checkDfsSafeMode(final Configuration conf) 

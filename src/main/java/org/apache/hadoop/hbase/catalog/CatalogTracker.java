@@ -101,7 +101,7 @@ public class CatalogTracker {
    * begin active tracking by executing {@link #start()} post construction.
    * Does not timeout.
    * @param zk
-   * @param conf Configuration instance
+   * @param connection server connection
    * @param abortable if fatal exception
    * @throws IOException 
    */
@@ -115,7 +115,7 @@ public class CatalogTracker {
    * Constructs the catalog tracker.  Find current state of catalog tables and
    * begin active tracking by executing {@link #start()} post construction.
    * @param zk
-   * @param conf
+   * @param connection server connection
    * @param abortable if fatal exception
    * @param defaultTimeout Timeout to use.  Pass zero for no timeout
    * ({@link Object#wait(long)} when passed a <code>0</code> waits for ever).

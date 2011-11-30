@@ -405,19 +405,19 @@ public final class HConstants {
   public static int DEFAULT_HBASE_META_SCANNER_CACHING = 100;
 
   /**
-   * Parameter name for unique identifier for this Configuration
-   * instance. If there are two or more Configuration instances that,
+   * Parameter name for unique identifier for this {@link Configuration}
+   * instance. If there are two or more {@link Configuration} instances that,
    * for all intents and purposes, are the same except for their instance ids,
-   * then they will not be able to share the same HConnection instance.
+   * then they will not be able to share the same {@link Connection} instance.
    * On the other hand, even if the instance ids are the same, it could result
-   * in non-shared HConnection instances if some of the other connection
+   * in non-shared {@link Connection} instances if some of the other connection
    * parameters differ.
    */
   public static String HBASE_CLIENT_INSTANCE_ID = "hbase.client.instance.id";
 
   /**
-   * If this parameter is set true then HConnectionManager will not share
-   * HConnection instances with different Configuration instances.
+   * If this parameter is set true then {@link HConnectionManager} will not share
+   * {@link HConnection} instances with different {@link Configuration} instances.
    */
    public static String HBASE_CONNECTION_PER_CONFIG = "hbase.connection.per.config";
 
