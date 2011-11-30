@@ -1004,7 +1004,7 @@ public static class MyMapper extends TableMapper&lt;ImmutableBytesWritable, Put&
     </para>
     </section>
     <section xml:id="mapreduce.example.summary">
-    <title>HBase MapReduce Summary Example</title>
+    <title>HBase MapReduce Summary to HBase Example</title>
     <para>The following example uses HBase as a MapReduce source and sink with a summarization step.  This example will 
     count the number of distinct instances of a value in a table and write those summarized counts in another table.
     <programlisting>
@@ -1116,7 +1116,7 @@ if (!b) {
     </programlisting>
    </section>
    <section xml:id="mapreduce.example.summary.noreducer">
-    <title>HBase MapReduce Summary Without Reducer</title>
+    <title>HBase MapReduce Summary to HBase Without Reducer</title>
        <para>It is also possible to perform summaries without a reducer - if you use HBase as the reducer.
        </para> 
        <para>An HBase target table would need to exist for the job summary.  The HTable method <code>incrementColumnValue</code>
@@ -1125,6 +1125,40 @@ if (!b) {
        cleanup</code> method of the mapper.  However, your milage may vary depending on the number of rows to be processed and 
        unique keys.
        </para>
+       <para>In the end, the summary results are in HBase.
+       </para>
+   </section>
+   <section xml:id="mapreduce.example.summary.rdbms">
+    <title>HBase MapReduce Summary to RDBMS</title>
+       <para>Sometimes it is more appropriate to generate summaries to an RDBMS.  For these cases, it is possible
+       to generate summaries directly to an RDBMS via a custom reducer.  The <code>setup</code> method
+       can connect to an RDBMS (the connection information can be passed via custom parameters in the context) and the
+       cleanup method can close the connection.
+       </para> 
+       <para>It is critical to understand that number of reducers for the job affects the summarization implementation, you
+       you'll have to design this into your reducer.  Specifically, whether it is designed to run as a singleton (one reducer)
+       or multiple reducers.  Neither is right or wrong, it depends on your use-case.  
+       </para>
+    <programlisting>
+ public static class MyRdbmsReducer extends Reducer&lt;Text, IntWritable, Text, IntWritable&gt;  {
+
+	private Connection c = null;
+	
+	public void setup(Context context) {
+  		// create DB connection...
+  	}
+        
+	public void reduce(Text key, Iterable&lt;IntWritable&gt; values, Context context) throws IOException, InterruptedException {
+		// do summarization
+		// in this example the keys are Text, but this is just an example
+	}
+	
+	public void cleanup(Context context) {
+  		// close db connection
+  	}
+	
+}
+    </programlisting>
        <para>In the end, the summary results are in HBase.
        </para>
    </section>
