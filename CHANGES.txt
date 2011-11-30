@@ -129,7 +129,6 @@ Release 0.90.5 - Unreleased
                (Jonathan Hsieh)
    HBASE-4806  Fix logging message in HbaseObjectWritable
                (Jonathan Hsieh via todd)
-   HBASE-4352  Apply version of hbase-4015 to branch
 
 
   NEW FEATURE
