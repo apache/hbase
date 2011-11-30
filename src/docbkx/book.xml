@@ -1135,7 +1135,7 @@ if (!b) {
        can connect to an RDBMS (the connection information can be passed via custom parameters in the context) and the
        cleanup method can close the connection.
        </para> 
-       <para>It is critical to understand that number of reducers for the job affects the summarization implementation, you
+       <para>It is critical to understand that number of reducers for the job affects the summarization implementation, and
        you'll have to design this into your reducer.  Specifically, whether it is designed to run as a singleton (one reducer)
        or multiple reducers.  Neither is right or wrong, it depends on your use-case.  
        </para>
