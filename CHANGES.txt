@@ -452,6 +452,8 @@ Release 0.92.0 - Unreleased
                (Daniel Gómez Ferro)
    HBASE-4885  Building against Hadoop 0.23 uses out-of-date MapReduce artifacts
                (Tom White)
+   HBASE-4918  HTablePool Constructor may cause unintended behavior
+               (Naoki Kitora)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
