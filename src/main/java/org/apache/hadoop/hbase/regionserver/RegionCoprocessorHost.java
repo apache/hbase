@@ -954,13 +954,13 @@ public class RegionCoprocessorHost
   public Result preIncrement(Increment increment)
       throws IOException {
     boolean bypass = false;
-    Result result = new Result();
+    Result result = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).preIncrement(ctx, increment, result);
+          result = ((RegionObserver)env.getInstance()).preIncrement(ctx, increment);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }
@@ -978,14 +978,14 @@ public class RegionCoprocessorHost
    * @param result the result returned by postIncrement
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postIncrement(final Increment increment, Result result)
+  public Result postIncrement(final Increment increment, Result result)
       throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).postIncrement(ctx, increment, result);
+          result = ((RegionObserver)env.getInstance()).postIncrement(ctx, increment, result);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }
@@ -994,6 +994,7 @@ public class RegionCoprocessorHost
         }
       }
     }
+    return result;
   }
 
   /**

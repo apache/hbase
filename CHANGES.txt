@@ -750,6 +750,8 @@ Release 0.92.0 - Unreleased
                (Roman Shaposhnik)
    HBASE-4869  Backport to 0.92: HBASE-4797 [availability] Skip recovered.edits
                files with edits older than what region currently has (Jimmy Xiang)
+   HBASE-4903  Return a result from RegionObserver.preIncrement
+               (Daniel Gómez Ferro via Lars H)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

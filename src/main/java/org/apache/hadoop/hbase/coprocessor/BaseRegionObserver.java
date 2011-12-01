@@ -17,7 +17,6 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.util.List;
-import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -200,13 +199,15 @@ public abstract class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
-  public void preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Increment increment, final Result result) throws IOException {
+  public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Increment increment) throws IOException {
+    return null;
   }
 
   @Override
-  public void postIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+  public Result postIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Increment increment, final Result result) throws IOException {
+    return result;
   }
 
   @Override

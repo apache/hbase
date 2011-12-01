@@ -16,8 +16,8 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -38,8 +38,6 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-
-import java.io.IOException;
 
 /**
  * Coprocessors implement this interface to observe and mediate client actions
@@ -466,13 +464,11 @@ public interface RegionObserver extends Coprocessor {
    * coprocessors
    * @param c the environment provided by the region server
    * @param increment increment object
-   * @param result The result to return to the client if default processing
-   * is bypassed. Can be modified. Will not be used if default processing
-   * is not bypassed.
+   * @return result to return to the client if bypassing default processing
    * @throws IOException if an error occurred on the coprocessor
    */
-  void preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Increment increment, final Result result)
+  Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Increment increment)
     throws IOException;
 
   /**
@@ -482,10 +478,11 @@ public interface RegionObserver extends Coprocessor {
    * coprocessors
    * @param c the environment provided by the region server
    * @param increment increment object
-   * @param result the result returned by increment, can be modified
+   * @param result the result returned by increment
+   * @return the result to return to the client
    * @throws IOException if an error occurred on the coprocessor
    */
-  void postIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
+  Result postIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment, final Result result)
     throws IOException;
 

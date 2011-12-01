@@ -2860,7 +2860,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       resVal = region.increment(incVal, lock,
           increment.getWriteToWAL());
       if (region.getCoprocessorHost() != null) {
-        region.getCoprocessorHost().postIncrement(incVal, resVal);
+        resVal = region.getCoprocessorHost().postIncrement(incVal, resVal);
       }
       return resVal;
     } catch (IOException e) {
