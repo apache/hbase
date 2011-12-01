@@ -186,13 +186,15 @@ public abstract class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
-  public void preAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Append append, final Result result) throws IOException {
+  public Result preAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Append append) throws IOException {
+    return null;
   }
 
   @Override
-  public void postAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
+  public Result postAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Append append, final Result result) throws IOException {
+    return result;
   }
 
   @Override
@@ -211,13 +213,15 @@ public abstract class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
-  public void preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Increment increment, final Result result) throws IOException {
+  public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Increment increment) throws IOException {
+    return null;
   }
 
   @Override
-  public void postIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+  public Result postIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Increment increment, final Result result) throws IOException {
+    return result;
   }
 
   @Override
