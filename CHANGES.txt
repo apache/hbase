@@ -736,6 +736,8 @@ Release 0.92.0 - Unreleased
    HBASE-4779  TestHTablePool, TestScanWithBloomError, TestRegionSplitCalculator are
                not tagged and TestPoolMap should not use TestSuite (N Keywal)
    HBASE-4805  Allow better control of resource consumption in HTable (Lars H)
+   HBASE-4903  Return a result from RegionObserver.preIncrement
+               (Daniel Gómez Ferro via Lars H)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

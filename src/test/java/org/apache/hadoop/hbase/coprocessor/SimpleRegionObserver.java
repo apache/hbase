@@ -371,15 +371,17 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Increment increment, final Result result) throws IOException {
+  public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Increment increment) throws IOException {
     hadPreIncrement = true;
+    return null;
   }
 
   @Override
-  public void postIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public Result postIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment, final Result result) throws IOException {
     hadPostIncrement = true;
+    return result;
   }
 
   public boolean hadPreGet() {
