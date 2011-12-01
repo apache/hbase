@@ -2042,50 +2042,74 @@ hbase> describe 't1'</programlisting>
                 </para>
             </answer>
         </qandaentry>
+    </qandadiv>
+    <qandadiv xml:id="faq.config"><title>Configuration</title>
+        <qandaentry xml:id="faq.config.started">
+            <question><para>How can I get started with my first cluster?</para></question>
+            <answer>
+                <para>
+                    See <xref linkend="quickstart" />.
+                </para>
+            </answer>
+            </qandaentry>
+        <qandaentry xml:id="faq.config.started">
+            <question><para>Where can I learn about the rest of the configuration options?</para></question>
+            <answer>
+                <para>
+                    See <xref linkend="configuration" />.
+                </para>
+            </answer>
+            </qandaentry>
+    </qandadiv>
+    <qandadiv xml:id="faq.design"><title>Schema Design / Data Access</title>
+        <qandaentry xml:id="faq.design.schema">
+            <question><para>How should I design my schema in HBase?</para></question>
+            <answer>
+                <para>
+                    See <xref linkend="datamodel" /> and <xref linkend="schema" />
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry>
+            <question><para>
+                    How can I store (fill in the blank) in HBase?
+            </para></question>
+            <answer>
+                <para>
+                See <xref linkend="supported.datatypes" />.
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry xml:id="secondary.indices">
+            <question><para>
+                    How can I handle secondary indexes in HBase?
+            </para></question>
+            <answer>
+                <para>
+                See <xref linkend="secondary.indexes" />
+                </para>
+            </answer>
+        </qandaentry>
         <qandaentry xml:id="faq.changing.rowkeys">
             <question><para>Can I change a table's rowkeys?</para></question>
             <answer>
                 <para>
-                    No.  See <xref linkend="changing.rowkeys" />.
+                    This is a very common quesiton.  You can't.  See <xref linkend="changing.rowkeys" />.
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry>
+            <question><para>
+                    How can I get a column 'slice': i.e. I have a million columns in my row but I only want to look at columns bbbb-bbbd?
+            </para></question>
+            <answer>
+                <para>
+                  See <classname>org.apache.hadoop.hbase.filter.ColumnRangeFilter</classname>    
                 </para>
             </answer>
         </qandaentry>
     </qandadiv>
-    <qandadiv xml:id="ec2"><title>Amazon EC2</title>
-        <qandaentry>
-            <question><para>
-            I am running HBase on Amazon EC2 and...
-            </para></question>
-            <answer>
-                <para>
- 	            See Troubleshooting <xref linkend="trouble.ec2" /> and Performance <xref linkend="perf.ec2" /> sections.                
-               </para>
-            </answer>
-        </qandaentry>
-    </qandadiv>
-        <qandadiv><title>Building HBase</title>
-        <qandaentry>
-            <question><para>
-When I build, why do I always get <code>Unable to find resource 'VM_global_library.vm'</code>?
-            </para></question>
-            <answer>
-                <para>
-                    Ignore it.  Its not an error.  It is <link xlink:href="http://jira.codehaus.org/browse/MSITE-286">officially ugly</link> though.
-                </para>
-            </answer>
-        </qandaentry>
-    </qandadiv>
-    <qandadiv><title>Runtime</title>
-        <qandaentry>
-            <question><para>
-                    I'm having problems with my HBase cluster, how can I troubleshoot it?
-            </para></question>
-            <answer>
-                <para>
-                See <xref linkend="trouble" />.
-                </para>
-            </answer>
-        </qandaentry>
+    <qandadiv><title>Performance and Troubleshooting</title>
         <qandaentry>
             <question><para>
                    How can I improve HBase cluster performance?
@@ -2093,6 +2117,16 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
             <answer>
                 <para>
                 See <xref linkend="performance" />.
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry>
+            <question><para>
+                    How can I troubleshoot my HBase cluster?
+            </para></question>
+            <answer>
+                <para>
+                See <xref linkend="trouble" />.
                 </para>
             </answer>
         </qandaentry>
@@ -2109,30 +2143,32 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
             </answer>
         </qandaentry>
     </qandadiv>
-    <qandadiv><title xml:id="howdoi">How do I...?</title>
-        <qandaentry xml:id="secondary.indices">
+    <qandadiv xml:id="ec2"><title>Amazon EC2</title>
+        <qandaentry>
             <question><para>
-                    Secondary Indexes in HBase?
+            I am running HBase on Amazon EC2 and...
             </para></question>
             <answer>
                 <para>
-                See <xref linkend="secondary.indexes" />
+ 	            EC2 issues are a special case.  See Troubleshooting <xref linkend="trouble.ec2" /> and Performance <xref linkend="perf.ec2" /> sections.                
+               </para>
+            </answer>
+        </qandaentry>
+    </qandadiv>
+    <qandadiv><title xml:id="faq.operations">Operations</title>
+        <qandaentry>
+            <question><para>
+                    How do I manage my HBase cluster?
+            </para></question>
+            <answer>
+                <para>
+                    See <xref linkend="ops_mgt" />
                 </para>
             </answer>
         </qandaentry>
         <qandaentry>
             <question><para>
-                    Store (fill in the blank) in HBase?
-            </para></question>
-            <answer>
-                <para>
-                See <xref linkend="supported.datatypes" />.
-                </para>
-            </answer>
-        </qandaentry>
-        <qandaentry>
-            <question><para>
-                    Back up my HBase Cluster?
+                    How do I back up my HBase cluster?
             </para></question>
             <answer>
                 <para>
@@ -2140,13 +2176,15 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
                 </para>
             </answer>
         </qandaentry>
+    </qandadiv>
+        <qandadiv><title>Building HBase</title>
         <qandaentry>
             <question><para>
-                    Get a column 'slice': i.e. I have a million columns in my row but I only want to look at columns bbbb-bbbd?
+When I build, why do I always get <code>Unable to find resource 'VM_global_library.vm'</code>?
             </para></question>
             <answer>
                 <para>
-                  See <classname>org.apache.hadoop.hbase.filter.ColumnRangeFilter</classname>    
+                    Ignore it.  Its not an error.  It is <link xlink:href="http://jira.codehaus.org/browse/MSITE-286">officially ugly</link> though.
                 </para>
             </answer>
         </qandaentry>
