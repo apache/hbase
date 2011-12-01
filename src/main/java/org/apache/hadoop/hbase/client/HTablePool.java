@@ -95,7 +95,7 @@ public class HTablePool implements Closeable {
    */
   public HTablePool(final Configuration config, final int maxSize,
       final HTableInterfaceFactory tableFactory) {
-    this(config, maxSize, null, PoolType.Reusable);
+    this(config, maxSize, tableFactory, PoolType.Reusable);
   }
 
   /**
