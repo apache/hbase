@@ -22,20 +22,37 @@
   </properties>
   
   <body>
-    <section>
+    <section name="Welcome to Apache HBase!">
+    <p>HBase is the <a href="http://hadoop.apache.org">Hadoop</a> database.  Think of it as a super-fast reliable Big Data store.
+    </p>
+    </section>
+    <section name="When Would I Use HBase?">
     <p>
-    HBase is the <a href="http://hadoop.apache.org">Hadoop</a> database. Use it when you need random, realtime read/write access to your Big Data.
+    Use HBase when you need random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware.
-HBase is an open-source, distributed, versioned, column-oriented store modeled after Google' <a href="http://labs.google.com/papers/bigtable.html">Bigtable: A Distributed Storage System for Structured</a> by Chang et al. Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of Hadoop.
-HBase includes:
+HBase is an open-source, distributed, versioned, column-oriented store modeled after Google' <a href="http://labs.google.com/papers/bigtable.html">Bigtable: A Distributed Storage System for Structured</a> by Chang et al.
+ Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of Hadoop and HDFS.
+    </p>
+    </section>
+    <section name="Features">
+    <p>
+HBase provides:
 <ul>
-    <li>Convenient base classes for backing Hadoop MapReduce jobs with HBase tables including cascading, hive and pig source and sink modules
+    <li>Strictly consistent reads and writes.
 </li>
-    <li>Query predicate push down via server side scan and get filters
+    <li>Automatic and configurable sharding of tables
 </li>
-    <li>Optimizations for real time queries
+    <li>Automatic failover support between RegionServers.
 </li>
-    <li>A Thrift gateway and a REST-ful Web service that supports XML, Protobuf, and binary data encoding options
+    <li>Convenient base classes for backing Hadoop MapReduce jobs with HBase tables.
+</li>
+    <li>Easy to use Java API for client access.
+</li>
+    <li>Block cache and Bloom Filters for real-time queries.
+</li>
+    <li>Query predicate push down via server side Filters
+</li>
+    <li>Thrift gateway and a REST-ful Web service that supports XML, Protobuf, and binary data encoding options
 </li>
     <li>Extensible jruby-based (JIRB) shell
 </li>
@@ -43,9 +60,12 @@ HBase includes:
 </li>
 </ul>
 </p>
+     </section>
+     <section name="Where Can I Get More Information?">
+   <p>See the <a href="http://hbase.apache.org/book/faq.html">Apache HBase Book FAQ</a>, and the other documentation links on the left!
+   </p>
     </section>
-
-        <section name="News">
+     <section name="News">
             <p>November 29th, <a href="http://www.meetup.com/hackathon/events/41025972/">Developer Pow-Wow in SF</a> at Salesforce HQ</p>
             <p>November 7th, <a href="http://www.meetup.com/hbaseusergroup/events/35682812/">HBase Meetup in NYC (6PM)</a> at the AppNexus office</p>
             <p>August 22nd, <a href="http://www.meetup.com/hbaseusergroup/events/28518471/">HBase Hackathon (11AM) and Meetup (6PM)</a> at FB in PA</p>
