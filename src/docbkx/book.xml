@@ -1200,6 +1200,63 @@ if (!b) {
  
   <chapter xml:id="architecture">
     <title>Architecture</title>
+	<section xml:id="arch.overview">
+	<title>Overview</title>
+	  <section xml:id="arch.overview.nosql">
+	  <title>NoSQL?</title>
+	  <para>HBase is a type of "NoSQL" database.  "NoSQL" is a general term meaning that the database isn't an RDBMS which
+	  supports SQL as it's primary access language, but there are many types of NoSQL databases:  BerkeleyDB is an 
+	  example of a local NoSQL database, whereas HBase is very much a distributed database.  Technically speaking,
+	  HBase is really more a "Data Store" than "Data Base" because it lacks many of the features you find in an RDBMS,
+	  such as typed columns, secondary indexes, triggers, and advanced query languages, etc.
+	  </para>
+	  <para>However, HBase has many features which supports both linear and modular scaling.  HBase clusters expand
+	  by adding RegionServers that are hosted on commodity class servers. If a cluster expands from 10 to 20 
+	  RegionServers, for example, it doubles both in terms of storage and as well as processing capacity.
+	  RDBMS can scale well, but only up to a point - specifically, the size of a single database server - and for the best
+	  performance requires specialized hardware and storage devices.  HBase features of note are:
+	        <itemizedlist>
+              <listitem>Strongly consistent reads/writes:  HBase is not an "eventually consistent" DataStore.  This 
+              makes it very suitable for tasks such as high-speed counter aggregation.  </listitem>
+              <listitem>Automatic sharding:  HBase tables are distributed on the cluster via regions, and regions are
+              automatically split and re-distributed as your data grows.</listitem>
+              <listitem>Automatic RegionServer failover</listitem>
+              <listitem>Hadoop/HDFS Integration:  HBase supports HDFS out of the box as it's distributed file system.</listitem>
+              <listitem>MapReduce:  HBase supports massively parallelized processing via MapReduce for using HBase as both 
+              source and sink.</listitem>
+              <listitem>Java Client API:  HBase supports an easy to use Java API for programmatic access.</listitem>
+              <listitem>Thrift/REST API:  HBase also supports Thrift and REST for non-Java front-ends.</listitem>
+              <listitem>Block Cache and Bloom Filters:  HBase supports a Block Cache and Bloom Filters for high volume query optimization.</listitem>
+              <listitem>Operational Management:  HBase provides build-in web-pages for operational insight as well as JMX metrics.</listitem>
+            </itemizedlist>
+	  </para>
+      </section>      
+	
+	  <section xml:id="arch.overview.when">
+	    <title>When Should I Use HBase?</title>
+	          <para>First, make sure you have enough data.  HBase isn't suitable for every problem.  If you have 
+                hundreds of millions or billions of rows, then HBase is a good candidate.  If you only have a few 
+                thousand/million rows, then using a traditional RDBMS might be a better choice due to the 
+                fact that all of your data might wind up on a single node (or two) and the rest of the cluster may
+                be sitting idle.
+	          </para>
+	          <para>Second, make sure you have enough hardware.  Even HDFS doesn't do well with anything less than
+                5 DataNodes (due to things such as HDFS block replication which has a default of 3), plus a NameNode.
+                </para>
+                <para>HBase can run quite well stand-alone on a laptop - but this should be considered a development
+                configuration only.
+                </para>
+      </section>
+      <section xml:id="arch.overview.hbasehdfs">
+        <title>What Is The Difference Between HBase and Hadoop/HDFS?</title>
+          <para><link xlink:href="http://hadoop.apache.org/hdfs/">HDFS</link> is a distributed file system that is well suited for the storage of large files. 
+          It's documentation states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files. 
+          HBase, on the other hand, is built on top of HDFS and provides fast record lookups (and updates) for large tables. 
+          This can sometimes be a point of conceptual confusion.  HBase internally puts your data in indexed "StoreFiles" that exist
+          on HDFS for high-speed lookups.  See the <xref linkend="datamodel" /> and the rest of this chapter for more information on how HBase achieves its goals.
+         </para>
+      </section>
+	</section>
 
 	<section xml:id="arch.catalog">
 	 <title>Catalog Tables</title>
@@ -2000,17 +2057,7 @@ hbase> describe 't1'</programlisting>
         <qandaentry>
                 <question><para>When should I use HBase?</para></question>
             <answer>
-                <para>
-              Anybody can download and give HBase a spin, even on a laptop.  The scope of this answer is when 
-              would it be best to use HBase in a <emphasis>real</emphasis> deployment.
-                </para>
-                <para>First, make sure you have enough hardware.  Even HDFS doesn't do well with anything less than
-                5 DataNodes (due to things such as HDFS block replication which has a default of 3), plus a NameNode.
-                Second, make sure you have enough data.  HBase isn't suitable for every problem.  If you have 
-                hundreds of millions or billions of rows, then HBase is a good candidate.  If you only have a few 
-                thousand/million rows, then using a traditional RDBMS might be a better choice due to the 
-                fact that all of your data might wind up on a single node (or two) and the rest of the cluster may
-                be sitting idle.
+                <para>See the <xref linkend="arch.overview" /> in the Architecture chapter.
                 </para>
             </answer>
         </qandaentry>
@@ -2028,17 +2075,6 @@ hbase> describe 't1'</programlisting>
                 <para>
                     Not really.  SQL-ish support for HBase via <link xlink:href="http://hive.apache.org/">Hive</link> is in development, however Hive is based on MapReduce which is not generally suitable for low-latency requests.
                     See the <xref linkend="datamodel" /> section for examples on the HBase client.
-                </para>
-            </answer>
-        </qandaentry>
-        <qandaentry xml:id="faq.hdfs.hbase">
-            <question><para>How does HBase work on top of HDFS?</para></question>
-            <answer>
-                <para>
-                    <link xlink:href="http://hadoop.apache.org/hdfs/">HDFS</link> is a distributed file system that is well suited for the storage of large files.  It's documentation 
-                    states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files. 
-                    HBase, on the other hand, is built on top of HDFS and provides fast record lookups (and updates) for large tables.  This can sometimes be a point of conceptual confusion.
-                    See the <xref linkend="datamodel" /> and <xref linkend="architecture" /> sections for more information on how HBase achieves its goals.
                 </para>
             </answer>
         </qandaentry>
@@ -2105,6 +2141,16 @@ hbase> describe 't1'</programlisting>
             <answer>
                 <para>
                   See <classname>org.apache.hadoop.hbase.filter.ColumnRangeFilter</classname>    
+                </para>
+            </answer>
+        </qandaentry>
+    </qandadiv>
+    <qandadiv xml:id="faq.mapreduce"><title>MapReduce</title>
+        <qandaentry xml:id="faq.mapreduce.use">
+            <question><para>How can I use MapReduce with HBase?</para></question>
+            <answer>
+                <para>
+                    See <xref linkend="mapreduce" />
                 </para>
             </answer>
         </qandaentry>
