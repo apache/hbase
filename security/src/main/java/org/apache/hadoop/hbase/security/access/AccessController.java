@@ -785,11 +785,12 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Increment increment, final Result result)
+  public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Increment increment)
       throws IOException {
     requirePermission(TablePermission.Action.WRITE, c.getEnvironment(),
         increment.getFamilyMap().keySet());
+    return null;
   }
 
   @Override
