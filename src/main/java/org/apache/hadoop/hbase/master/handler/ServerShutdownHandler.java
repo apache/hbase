@@ -286,7 +286,22 @@ public class ServerShutdownHandler extends EventHandler {
           if (processDeadRegion(e.getKey(), e.getValue(),
               this.services.getAssignmentManager(),
               this.server.getCatalogTracker())) {
-            this.services.getAssignmentManager().assign(e.getKey(), true);
+            RegionState rit = this.services.getAssignmentManager().isRegionInTransition(e.getKey());
+            ServerName addressFromAM = this.services.getAssignmentManager()
+                .getRegionServerOfRegion(e.getKey());
+            if (rit != null && !rit.isClosing() && !rit.isPendingClose()) {
+              // Skip regions that were in transition unless CLOSING or
+              // PENDING_CLOSE
+              LOG.info("Skip assigning region " + rit.toString());
+            } else if (addressFromAM != null
+                && !addressFromAM.equals(this.serverName)) {
+              LOG.debug("Skip assigning region "
+                    + e.getKey().getRegionNameAsString()
+                    + " because it has been opened in "
+                    + addressFromAM.getServerName());
+              } else {
+                this.services.getAssignmentManager().assign(e.getKey(), true);
+              }
           }
         }
       }
