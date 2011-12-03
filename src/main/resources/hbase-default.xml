@@ -438,7 +438,7 @@
     This is the minimum hfile blocksize to emit.  Usually in hbase, writing
     hfiles, the blocksize is gotten from the table schema (HColumnDescriptor)
     but in the mapreduce outputformat context, we don't have access to the
-    schema so get blocksize from Configuation.  The smaller you make
+    schema so get blocksize from Configuration.  The smaller you make
     the blocksize, the bigger your index and the less you fetch on a
     random-access.  Set the blocksize down if you have small cells and want
     faster random-access of individual cells.
