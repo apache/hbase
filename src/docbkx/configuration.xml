@@ -975,7 +975,7 @@ index e70ebc6..96f8c27 100644
       </para>
       </section>
 
-      <section xml:id="recommended_configurations"><title>Recommended Configuations</title>
+      <section xml:id="recommended_configurations"><title>Recommended Configurations</title>
           <section xml:id="zookeeper.session.timeout"><title><varname>zookeeper.session.timeout</varname></title>
           <para>The default timeout is three minutes (specified in milliseconds). This means
               that if a server crashes, it will be three minutes before the Master notices
