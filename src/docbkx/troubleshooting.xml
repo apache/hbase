@@ -211,6 +211,10 @@ export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above
         <link xlink:href="http://search-hadoop.com">search-hadoop.com</link> indexes all the mailing lists and is great for historical searches.  
         </para>
       </section>
+      <section xml:id="trouble.resources.irc">
+        <title>IRC</title>
+        <para>#hbase on irc.freenode.net</para>
+      </section>
       <section xml:id="trouble.resources.jira">
         <title>JIRA</title>
         <para>
