@@ -1938,119 +1938,11 @@ scan.setFilter(filter);
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="ops_mgt.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="developer.xml" />
 
-  <appendix xml:id="compression">
-
-    <title >Compression In HBase<indexterm><primary>Compression</primary></indexterm></title>
-
-    <section xml:id="compression.test">
-    <title>CompressionTest Tool</title>
-    <para>
-    HBase includes a tool to test compression is set up properly.
-    To run it, type <code>/bin/hbase org.apache.hadoop.hbase.util.CompressionTest</code>. 
-    This will emit usage on how to run the tool.
-    </para>
-    </section>
-
-    <section xml:id="hbase.regionserver.codecs">
-    <title>
-    <varname>
-    hbase.regionserver.codecs
-    </varname>
-    </title>
-    <para>
-    To have a RegionServer test a set of codecs and fail-to-start if any
-    code is missing or misinstalled, add the configuration
-    <varname>
-    hbase.regionserver.codecs
-    </varname>
-    to your <filename>hbase-site.xml</filename> with a value of
-    codecs to test on startup.  For example if the 
-    <varname>
-    hbase.regionserver.codecs
-    </varname> value is <code>lzo,gz</code> and if lzo is not present
-    or improperly installed, the misconfigured RegionServer will fail
-    to start.
-    </para>
-    <para>
-    Administrators might make use of this facility to guard against
-    the case where a new server is added to cluster but the cluster
-    requires install of a particular coded.
-    </para>
-    </section>
-
-    <section xml:id="lzo.compression">
-    <title>
-    LZO
-    </title>
-      <para>Unfortunately, HBase cannot ship with LZO because of
-      the licensing issues; HBase is Apache-licensed, LZO is GPL.
-      Therefore LZO install is to be done post-HBase install.
-      See the <link xlink:href="http://wiki.apache.org/hadoop/UsingLzoCompression">Using LZO Compression</link>
-      wiki page for how to make LZO work with HBase.
-      </para>
-      <para>A common problem users run into when using LZO is that while initial
-      setup of the cluster runs smooth, a month goes by and some sysadmin goes to
-      add a machine to the cluster only they'll have forgotten to do the LZO
-      fixup on the new machine.  In versions since HBase 0.90.0, we should
-      fail in a way that makes it plain what the problem is, but maybe not. </para>
-      <para>See <xref linkend="hbase.regionserver.codecs" />
-      for a feature to help protect against failed LZO install.</para>
-    </section>
-
-    <section xml:id="gzip.compression">
-    <title>
-    GZIP
-    </title>
-    <para>
-    GZIP will generally compress better than LZO though slower.
-    For some setups, better compression may be preferred.
-    Java will use java's GZIP unless the native Hadoop libs are
-    available on the CLASSPATH; in this case it will use native
-    compressors instead (If the native libs are NOT present,
-    you will see lots of <emphasis>Got brand-new compressor</emphasis>
-    reports in your logs; see <xref linkend="brand.new.compressor" />).
-    </para>
-    </section>
-    <section xml:id="snappy.compression">
-    <title>
-    SNAPPY
-    </title>
-    <para>
-        If snappy is installed, HBase can make use of it (courtesy of
-        <link xlink:href="http://code.google.com/p/hadoop-snappy/">hadoop-snappy</link>
-        <footnote><para>See <link xlink:href="http://search-hadoop.com/m/Ds8d51c263B1/%2522Hadoop-Snappy+in+synch+with+Hadoop+trunk%2522&amp;subj=Hadoop+Snappy+in+synch+with+Hadoop+trunk">Alejandro's note</link> up on the list on difference between Snappy in Hadoop
-        and Snappy in HBase</para></footnote>).
-
-        <orderedlist>
-            <listitem>
-                <para>
-                    Build and install <link xlink:href="http://code.google.com/p/snappy/">snappy</link> on all nodes
-                    of your cluster.
-                </para>
-            </listitem>
-            <listitem>
-                <para>
-        Use CompressionTest to verify snappy support is enabled and the libs can be loaded ON ALL NODES of your cluster:
-        <programlisting>$ hbase org.apache.hadoop.hbase.util.CompressionTest hdfs://host/path/to/hbase snappy</programlisting>
-                </para>
-            </listitem>
-            <listitem>
-                <para>
-        Create a column family with snappy compression and verify it in the hbase shell:
-        <programlisting>$ hbase> create 't1', { NAME => 'cf1', COMPRESSION => 'SNAPPY' }
-hbase> describe 't1'</programlisting>
-        In the output of the "describe" command, you need to ensure it lists "COMPRESSION => 'SNAPPY'"
-                </para>
-            </listitem>
-
-        </orderedlist>
-
-    </para>
-    </section>
-
-  </appendix>
-
-  <appendix xml:id="faq">
+<bibliography>
+  <section>
+  </section>
+</bibliography>
+<appendix xml:id="faq">
     <title >FAQ</title>
     <qandaset defaultlabel='faq'>
         <qandadiv><title>General</title>
@@ -2223,19 +2115,129 @@ hbase> describe 't1'</programlisting>
             </answer>
         </qandaentry>
     </qandadiv>
-        <qandadiv><title>Building HBase</title>
+        <qandadiv><title>HBase in Action</title>
         <qandaentry>
-            <question><para>
-When I build, why do I always get <code>Unable to find resource 'VM_global_library.vm'</code>?
-            </para></question>
+            <question><para>Where can I find interesting videos and presentations on HBase?</para></question>
             <answer>
                 <para>
-                    Ignore it.  Its not an error.  It is <link xlink:href="http://jira.codehaus.org/browse/MSITE-286">officially ugly</link> though.
+                    See <xref linkend="other.info" />
                 </para>
             </answer>
         </qandaentry>
-    </qandadiv>
+        </qandadiv>
     </qandaset>
+  </appendix>
+
+  <appendix xml:id="compression">
+
+    <title >Compression In HBase<indexterm><primary>Compression</primary></indexterm></title>
+
+    <section xml:id="compression.test">
+    <title>CompressionTest Tool</title>
+    <para>
+    HBase includes a tool to test compression is set up properly.
+    To run it, type <code>/bin/hbase org.apache.hadoop.hbase.util.CompressionTest</code>. 
+    This will emit usage on how to run the tool.
+    </para>
+    </section>
+
+    <section xml:id="hbase.regionserver.codecs">
+    <title>
+    <varname>
+    hbase.regionserver.codecs
+    </varname>
+    </title>
+    <para>
+    To have a RegionServer test a set of codecs and fail-to-start if any
+    code is missing or misinstalled, add the configuration
+    <varname>
+    hbase.regionserver.codecs
+    </varname>
+    to your <filename>hbase-site.xml</filename> with a value of
+    codecs to test on startup.  For example if the 
+    <varname>
+    hbase.regionserver.codecs
+    </varname> value is <code>lzo,gz</code> and if lzo is not present
+    or improperly installed, the misconfigured RegionServer will fail
+    to start.
+    </para>
+    <para>
+    Administrators might make use of this facility to guard against
+    the case where a new server is added to cluster but the cluster
+    requires install of a particular coded.
+    </para>
+    </section>
+
+    <section xml:id="lzo.compression">
+    <title>
+    LZO
+    </title>
+      <para>Unfortunately, HBase cannot ship with LZO because of
+      the licensing issues; HBase is Apache-licensed, LZO is GPL.
+      Therefore LZO install is to be done post-HBase install.
+      See the <link xlink:href="http://wiki.apache.org/hadoop/UsingLzoCompression">Using LZO Compression</link>
+      wiki page for how to make LZO work with HBase.
+      </para>
+      <para>A common problem users run into when using LZO is that while initial
+      setup of the cluster runs smooth, a month goes by and some sysadmin goes to
+      add a machine to the cluster only they'll have forgotten to do the LZO
+      fixup on the new machine.  In versions since HBase 0.90.0, we should
+      fail in a way that makes it plain what the problem is, but maybe not. </para>
+      <para>See <xref linkend="hbase.regionserver.codecs" />
+      for a feature to help protect against failed LZO install.</para>
+    </section>
+
+    <section xml:id="gzip.compression">
+    <title>
+    GZIP
+    </title>
+    <para>
+    GZIP will generally compress better than LZO though slower.
+    For some setups, better compression may be preferred.
+    Java will use java's GZIP unless the native Hadoop libs are
+    available on the CLASSPATH; in this case it will use native
+    compressors instead (If the native libs are NOT present,
+    you will see lots of <emphasis>Got brand-new compressor</emphasis>
+    reports in your logs; see <xref linkend="brand.new.compressor" />).
+    </para>
+    </section>
+    <section xml:id="snappy.compression">
+    <title>
+    SNAPPY
+    </title>
+    <para>
+        If snappy is installed, HBase can make use of it (courtesy of
+        <link xlink:href="http://code.google.com/p/hadoop-snappy/">hadoop-snappy</link>
+        <footnote><para>See <link xlink:href="http://search-hadoop.com/m/Ds8d51c263B1/%2522Hadoop-Snappy+in+synch+with+Hadoop+trunk%2522&amp;subj=Hadoop+Snappy+in+synch+with+Hadoop+trunk">Alejandro's note</link> up on the list on difference between Snappy in Hadoop
+        and Snappy in HBase</para></footnote>).
+
+        <orderedlist>
+            <listitem>
+                <para>
+                    Build and install <link xlink:href="http://code.google.com/p/snappy/">snappy</link> on all nodes
+                    of your cluster.
+                </para>
+            </listitem>
+            <listitem>
+                <para>
+        Use CompressionTest to verify snappy support is enabled and the libs can be loaded ON ALL NODES of your cluster:
+        <programlisting>$ hbase org.apache.hadoop.hbase.util.CompressionTest hdfs://host/path/to/hbase snappy</programlisting>
+                </para>
+            </listitem>
+            <listitem>
+                <para>
+        Create a column family with snappy compression and verify it in the hbase shell:
+        <programlisting>$ hbase> create 't1', { NAME => 'cf1', COMPRESSION => 'SNAPPY' }
+hbase> describe 't1'</programlisting>
+        In the output of the "describe" command, you need to ensure it lists "COMPRESSION => 'SNAPPY'"
+                </para>
+            </listitem>
+
+        </orderedlist>
+
+    </para>
+    </section>
+
   </appendix>
 
   <appendix>
@@ -2245,7 +2247,6 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
       <para>Ted Dunning redid YCSB so its mavenized and added facility for verifying workloads.  See <link xlink:href="https://github.com/tdunning/YCSB">Ted Dunning's YCSB</link>.</para>
 
   </appendix>
-
 
 <appendix xml:id="hfilev2">
    <title>HFile format version 2</title>
@@ -2710,9 +2711,34 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
    </informaltable>
    <para/></section></section></appendix>
 
+  <appendix xml:id="other.info">
+      <title>Other Information about HBase</title>
+       <section xml:id="other.info.videos"><title>HBase Videos</title>
+         <para><link xlink:href="http://www.cloudera.com/videos/intorduction-hbase-todd-lipcon">Introduction to HBase</link> by Todd Lipcon.
+         </para>
+         <para><link xlink:href="http://www.cloudera.com/videos/hadoop-world-2011-presentation-video-building-realtime-big-data-services-at-facebook-with-hadoop-and-hbase">Building Real Time Services at Facebook with HBase</link> by Jonathan Gray.
+         </para>
+       </section>
+       <section xml:id="other.info.sites"><title>Sites</title>
+         <para><link xlink:href="http://www.cloudera.com/blog/category/hbase/">Cloudera's HBase Blog</link> has a lot of links to useful HBase information.
+		<itemizedlist>
+			<listitem><link xlink:href="http://www.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/">CAP Confusion</link> is a relevant presentation for background information on
+			distributed storage systems.
+			</listitem>
+		</itemizedlist>
+         </para>
+         <para><link xlink:href="http://wiki.apache.org/hadoop/HBase/HBasePresentations">HBase Wiki</link> has a page with a number of presentations.
+         </para>
+       </section>
+       <section xml:id="other.info.sites"><title>Books</title>
+       <para><link xlink:href="http://shop.oreilly.com/product/0636920014348.do">HBase:  The Definitive Guide</link> by Lars George.
+       </para>
+       </section>
+  </appendix>
+
   <appendix xml:id="asf" ><title>HBase and the Apache Software Foundation</title>
     <para>HBase is a project in the Apache Software Foundation and as such there are responsibilities to the ASF to ensure
-    a healthy project.
+    a healthy project.</para>
        <section xml:id="asf.devprocess"><title>ASF Development Process</title>
         <para>See the <link xlink:href="http://www.apache.org/dev/#committers">Apache Development Process page</link> 
         for all sorts of information on how the ASF is structured (e.g., PMC, committers, contributors), to tips on contributing
@@ -2724,7 +2750,6 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
          lead and the committers.  See <link xlink:href="http://www.apache.org/foundation/board/reporting">ASF board reporting</link> for more information.
          </para>
        </section>
-    </para>
   </appendix>
 
   <index xml:id="book_index">

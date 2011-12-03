@@ -160,6 +160,11 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
 [INFO] -----------------------------------------------------------------------</programlisting>
         </para>
       </section>
+      <section xml:id="build.gotchas"><title>Build Gotchas</title>
+			<para>If you see <code>Unable to find resource 'VM_global_library.vm'</code>, ignore it.  
+			Its not an error.  It is <link xlink:href="http://jira.codehaus.org/browse/MSITE-286">officially ugly</link> though.
+           </para>
+      </section>
     </section> <!--  build -->
     
     <section xml:id="maven.build.commands"> 
