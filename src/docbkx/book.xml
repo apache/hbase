@@ -2714,9 +2714,16 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
   <appendix xml:id="other.info">
       <title>Other Information about HBase</title>
        <section xml:id="other.info.videos"><title>HBase Videos</title>
-         <para><link xlink:href="http://www.cloudera.com/videos/intorduction-hbase-todd-lipcon">Introduction to HBase</link> by Todd Lipcon.
+         <para><link xlink:href="http://www.cloudera.com/videos/intorduction-hbase-todd-lipcon">Introduction to HBase</link> by Todd Lipcon (2010).
          </para>
-         <para><link xlink:href="http://www.cloudera.com/videos/hadoop-world-2011-presentation-video-building-realtime-big-data-services-at-facebook-with-hadoop-and-hbase">Building Real Time Services at Facebook with HBase</link> by Jonathan Gray.
+         <para><link xlink:href="http://www.cloudera.com/videos/hadoop-world-2011-presentation-video-building-realtime-big-data-services-at-facebook-with-hadoop-and-hbase">Building Real Time Services at Facebook with HBase</link> by Jonathan Gray (2011).
+         </para>
+         <para><link xlink:href="http://www.cloudera.com/videos/hw10_video_how_stumbleupon_built_and_advertising_platform_using_hbase_and_hadoop">HBase and Hadoop, Mxing Real-Time and Batch Processing at StumbleUpon</link> by JD Cryans (2010),
+         </para>
+         
+       </section>
+       <section xml:id="other.info.pres"><title>HBase Presentations</title>
+         <para><link xlink:href="http://www.cloudera.com/resource/hadoop-world-2011-presentation-slides-advanced-hbase-schema-design">Advanced HBase Schema Design</link> by Lars George (2011)
          </para>
        </section>
        <section xml:id="other.info.sites"><title>Sites</title>
