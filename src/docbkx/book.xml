@@ -2714,16 +2714,25 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
   <appendix xml:id="other.info">
       <title>Other Information about HBase</title>
        <section xml:id="other.info.videos"><title>HBase Videos</title>
-         <para><link xlink:href="http://www.cloudera.com/videos/intorduction-hbase-todd-lipcon">Introduction to HBase</link> by Todd Lipcon (2010).
+         <para>Introduction to HBase
+            <itemizedlist>
+			  <listitem><link xlink:href="http://www.cloudera.com/videos/chicago_data_summit_apache_hbase_an_introduction_todd_lipcon">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
+			  </listitem>
+			  <listitem><link xlink:href="http://www.cloudera.com/videos/intorduction-hbase-todd-lipcon">Introduction to HBase</link> by Todd Lipcon (2010).
+			  </listitem>
+			</itemizedlist>
          </para>
-         <para><link xlink:href="http://www.cloudera.com/videos/hadoop-world-2011-presentation-video-building-realtime-big-data-services-at-facebook-with-hadoop-and-hbase">Building Real Time Services at Facebook with HBase</link> by Jonathan Gray (2011).
+         <para><link xlink:href="http://www.cloudera.com/videos/hadoop-world-2011-presentation-video-building-realtime-big-data-services-at-facebook-with-hadoop-and-hbase">Building Real Time Services at Facebook with HBase</link> by Jonathan Gray (Hadoop World 2011).
          </para>
-         <para><link xlink:href="http://www.cloudera.com/videos/hw10_video_how_stumbleupon_built_and_advertising_platform_using_hbase_and_hadoop">HBase and Hadoop, Mxing Real-Time and Batch Processing at StumbleUpon</link> by JD Cryans (2010),
+         <para><link xlink:href="http://www.cloudera.com/videos/hw10_video_how_stumbleupon_built_and_advertising_platform_using_hbase_and_hadoop">HBase and Hadoop, Mixing Real-Time and Batch Processing at StumbleUpon</link> by JD Cryans (Hadoop World 2010).
          </para>
-         
+         <para><link xlink:href="http://www.slideshare.net/cloudera/hw09-practical-h-base-getting-the-most-from-your-h-base-install">Getting The Most From Your HBase Install</link> Ryan Rawson, Jonathan Gray (Hadoop World 2009).
+         </para>
        </section>
-       <section xml:id="other.info.pres"><title>HBase Presentations</title>
-         <para><link xlink:href="http://www.cloudera.com/resource/hadoop-world-2011-presentation-slides-advanced-hbase-schema-design">Advanced HBase Schema Design</link> by Lars George (2011)
+       <section xml:id="other.info.pres"><title>HBase Presentations (Slides)</title>
+         <para><link xlink:href="http://www.cloudera.com/resource/hadoop-world-2011-presentation-slides-advanced-hbase-schema-design">Advanced HBase Schema Design</link> by Lars George (Hadoop World 2011).
+         </para>
+         <para><link xlink:href="http://www.slideshare.net/cloudera/chicago-data-summit-apache-hbase-an-introduction">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
          </para>
        </section>
        <section xml:id="other.info.sites"><title>Sites</title>
@@ -2737,9 +2746,9 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
          <para><link xlink:href="http://wiki.apache.org/hadoop/HBase/HBasePresentations">HBase Wiki</link> has a page with a number of presentations.
          </para>
        </section>
-       <section xml:id="other.info.sites"><title>Books</title>
-       <para><link xlink:href="http://shop.oreilly.com/product/0636920014348.do">HBase:  The Definitive Guide</link> by Lars George.
-       </para>
+       <section xml:id="other.info.books"><title>Books</title>
+         <para><link xlink:href="http://shop.oreilly.com/product/0636920014348.do">HBase:  The Definitive Guide</link> by Lars George.
+         </para>
        </section>
   </appendix>
 
