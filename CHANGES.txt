@@ -457,6 +457,7 @@ Release 0.92.0 - Unreleased
    HBASE-4899  Region would be assigned twice easily with continually killing
                server and moving region in testing environment
                (Chunhui Shen)
+   HBASE-4945  NPE in HRegion.bulkLoadHFiles (Andrew P and Lars H)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

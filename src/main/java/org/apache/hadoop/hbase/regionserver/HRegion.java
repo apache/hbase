@@ -2729,19 +2729,18 @@ public class HRegion implements HeapSize { // , Writable{
               "No such column family " + Bytes.toStringBinary(familyName));
           ioes.add(ioe);
           failures.add(p);
-        }
-
-        try {
-          store.assertBulkLoadHFileOk(new Path(path));
-        } catch (WrongRegionException wre) {
-          // recoverable (file doesn't fit in region)
-          failures.add(p);
-        } catch (IOException ioe) {
-          // unrecoverable (hdfs problem)
-          ioes.add(ioe);
+        } else {
+          try {
+            store.assertBulkLoadHFileOk(new Path(path));
+          } catch (WrongRegionException wre) {
+            // recoverable (file doesn't fit in region)
+            failures.add(p);
+          } catch (IOException ioe) {
+            // unrecoverable (hdfs problem)
+            ioes.add(ioe);
+          }
         }
       }
-
 
       // validation failed, bail out before doing anything permanent.
       if (failures.size() != 0) {
