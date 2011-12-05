@@ -451,6 +451,7 @@ Release 0.92.0 - Unreleased
                ubuntu machine
    HBASE-4878  Master crash when splitting hlog may cause data loss (Chunhui Shen)
    HBASE-4945  NPE in HRegion.bulkLoadHFiles (Andrew P and Lars H)
+   HBASE-4942  HMaster is unable to start of HFile V1 is used (Honghua Zhu)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
