@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
@@ -123,6 +124,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   private final String storeNameStr;
   private CompactionProgress progress;
   private final int compactionKVMax;
+  private final boolean verifyBulkLoads;
 
   // not private for testing
   /* package */ScanInfo scanInfo;
@@ -221,6 +223,9 @@ public class Store extends SchemaConfigured implements HeapSize {
     this.maxCompactSize
       = conf.getLong("hbase.hstore.compaction.max.size", Long.MAX_VALUE);
     this.compactionKVMax = conf.getInt("hbase.hstore.compaction.kv.max", 10);
+
+    this.verifyBulkLoads = conf.getBoolean("hbase.hstore.bulkload.verify",
+        false);
 
     if (Store.closeCheckInterval == 0) {
       Store.closeCheckInterval = conf.getInt(
@@ -355,9 +360,8 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   /**
-   * This throws a WrongRegionException if the bulkHFile does not fit in this
-   * region.
-   *
+   * This throws a WrongRegionException if the HFile does not fit in this
+   * region, or an InvalidHFileException if the HFile is not valid.
    */
   void assertBulkLoadHFileOk(Path srcPath) throws IOException {
     HFile.Reader reader  = null;
@@ -385,6 +389,34 @@ public class Store extends SchemaConfigured implements HeapSize {
         throw new WrongRegionException(
             "Bulk load file " + srcPath.toString() + " does not fit inside region "
             + this.region);
+      }
+
+      if (verifyBulkLoads) {
+        KeyValue prevKV = null;
+        HFileScanner scanner = reader.getScanner(false, false, false);
+        scanner.seekTo();
+        do {
+          KeyValue kv = scanner.getKeyValue();
+          if (prevKV != null) {
+            if (Bytes.compareTo(prevKV.getBuffer(), prevKV.getRowOffset(),
+                prevKV.getRowLength(), kv.getBuffer(), kv.getRowOffset(),
+                kv.getRowLength()) > 0) {
+              throw new InvalidHFileException("Previous row is greater than"
+                  + " current row: path=" + srcPath + " previous="
+                  + Bytes.toStringBinary(prevKV.getKey()) + " current="
+                  + Bytes.toStringBinary(kv.getKey()));
+            }
+            if (Bytes.compareTo(prevKV.getBuffer(), prevKV.getFamilyOffset(),
+                prevKV.getFamilyLength(), kv.getBuffer(), kv.getFamilyOffset(),
+                kv.getFamilyLength()) != 0) {
+              throw new InvalidHFileException("Previous key had different"
+                  + " family compared to current key: path=" + srcPath
+                  + " previous=" + Bytes.toStringBinary(prevKV.getFamily())
+                  + " current=" + Bytes.toStringBinary(kv.getFamily()));
+            }
+          }
+          prevKV = kv;
+        } while (scanner.next());
       }
     } finally {
       if (reader != null) reader.close();
