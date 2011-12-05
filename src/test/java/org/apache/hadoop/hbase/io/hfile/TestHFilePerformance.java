@@ -162,7 +162,7 @@ public class TestHFilePerformance extends TestCase {
     if ("HFile".equals(fileType)){
         System.out.println("HFile write method: ");
         HFile.Writer writer =
-          HFile.getWriterFactory(conf).createWriter(fout,
+          HFile.getWriterFactoryNoCache(conf).createWriter(fout,
              minBlockSize, codecName, null);
 
         // Writing value in one shot.

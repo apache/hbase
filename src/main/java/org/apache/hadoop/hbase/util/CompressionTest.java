@@ -106,7 +106,7 @@ public class CompressionTest {
   throws Exception {
     Configuration conf = HBaseConfiguration.create();
     HFile.Writer writer =
-      HFile.getWriterFactory(conf).createWriter(
+      HFile.getWriterFactoryNoCache(conf).createWriter(
       fs, path, HFile.DEFAULT_BLOCKSIZE, codec, null);
     writer.append(Bytes.toBytes("testkey"), Bytes.toBytes("testval"));
     writer.appendFileInfo(Bytes.toBytes("infokey"), Bytes.toBytes("infoval"));
