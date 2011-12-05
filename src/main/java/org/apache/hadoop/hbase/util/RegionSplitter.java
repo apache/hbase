@@ -564,8 +564,15 @@ public class RegionSplitter {
       byte[] split = region.getSecond();
 
       // see if the new split daughter region has come online
-      HRegionInfo dri = table.getRegionLocation(split).getRegionInfo();
-      if (dri.isOffline() || !Bytes.equals(dri.getStartKey(), split)) {
+      try {
+        HRegionInfo dri = table.getRegionLocation(split).getRegionInfo();
+        if (dri.isOffline() || !Bytes.equals(dri.getStartKey(), split)) {
+          logicalSplitting.add(region);
+          continue;
+        }
+      } catch (NoServerForRegionException nsfre) {
+        // NSFRE will occur if the old META entry has no server assigned
+        LOG.info(nsfre);
         logicalSplitting.add(region);
         continue;
       }
