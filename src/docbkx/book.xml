@@ -83,7 +83,7 @@
     <section xml:id="conceptual.view"><title>Conceptual View</title>
 	<para>
         The following example is a slightly modified form of the one on page
-        2 of the <link xlink:href="http://labs.google.com/papers/bigtable.html">BigTable</link> paper.
+        2 of the <link xlink:href="http://research.google.com/archive/bigtable.html">BigTable</link> paper.
     There is a table called <varname>webtable</varname> that contains two column families named
     <varname>contents</varname> and <varname>anchor</varname>.
     In this example, <varname>anchor</varname> contains two
@@ -1738,7 +1738,7 @@ scan.setFilter(filter);
       <title>StoreFile (HFile)</title>
       <section><title>HFile Format</title>
           <para>The <emphasis>hfile</emphasis> file format is based on
-              the SSTable file described in the <link xlink:href="http://labs.google.com/papers/bigtable.html">BigTable [2006]</link> paper and on
+              the SSTable file described in the <link xlink:href="http://research.google.com/archive/bigtable.html">BigTable [2006]</link> paper and on
               Hadoop's <link xlink:href="http://hadoop.apache.org/common/docs/current/api/org/apache/hadoop/io/file/tfile/TFile.html">tfile</link>
               (The unit test suite and the compression harness were taken directly from tfile). 
               Schubert Zhang's blog post on <link xlink:ref="http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html">HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs</link> makes for a thorough introduction to HBase's hfile.  Matteo Bertozzi has also put up a
@@ -1938,10 +1938,6 @@ scan.setFilter(filter);
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="ops_mgt.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="developer.xml" />
 
-<bibliography>
-  <section>
-  </section>
-</bibliography>
 <appendix xml:id="faq">
     <title >FAQ</title>
     <qandaset defaultlabel='faq'>
@@ -2726,19 +2722,25 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
          </para>
          <para><link xlink:href="http://www.cloudera.com/videos/hw10_video_how_stumbleupon_built_and_advertising_platform_using_hbase_and_hadoop">HBase and Hadoop, Mixing Real-Time and Batch Processing at StumbleUpon</link> by JD Cryans (Hadoop World 2010).
          </para>
-         <para><link xlink:href="http://www.slideshare.net/cloudera/hw09-practical-h-base-getting-the-most-from-your-h-base-install">Getting The Most From Your HBase Install</link> Ryan Rawson, Jonathan Gray (Hadoop World 2009).
-         </para>
        </section>
        <section xml:id="other.info.pres"><title>HBase Presentations (Slides)</title>
          <para><link xlink:href="http://www.cloudera.com/resource/hadoop-world-2011-presentation-slides-advanced-hbase-schema-design">Advanced HBase Schema Design</link> by Lars George (Hadoop World 2011).
          </para>
          <para><link xlink:href="http://www.slideshare.net/cloudera/chicago-data-summit-apache-hbase-an-introduction">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
          </para>
+         <para><link xlink:href="http://www.slideshare.net/cloudera/hw09-practical-h-base-getting-the-most-from-your-h-base-install">Getting The Most From Your HBase Install</link> by Ryan Rawson, Jonathan Gray (Hadoop World 2009).
+         </para>
+       </section>
+       <section xml:id="other.info.papers"><title>Papers</title>
+         <para><link xlink:href="http://research.google.com/archive/bigtable.html">BigTable</link> by Google (2006).
+         </para>
+         <para><link xlink:href="http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf">No Relation: The Mixed Blessings of Non-Relational Databases</link> by Ian Varley (2009).
+         </para>
        </section>
        <section xml:id="other.info.sites"><title>Sites</title>
          <para><link xlink:href="http://www.cloudera.com/blog/category/hbase/">Cloudera's HBase Blog</link> has a lot of links to useful HBase information.
 		<itemizedlist>
-			<listitem><link xlink:href="http://www.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/">CAP Confusion</link> is a relevant presentation for background information on
+			<listitem><link xlink:href="http://www.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/">CAP Confusion</link> is a relevant entry for background information on
 			distributed storage systems.
 			</listitem>
 		</itemizedlist>
