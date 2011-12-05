@@ -759,6 +759,7 @@ Release 0.92.0 - Unreleased
                files with edits older than what region currently has (Jimmy Xiang)
    HBASE-4903  Return a result from RegionObserver.preIncrement
                (Daniel Gómez Ferro via Lars H)
+   HBASE-4944  Optionally verify bulk loaded HFiles
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
