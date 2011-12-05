@@ -1497,6 +1497,12 @@ scan.setFilter(filter);
           to filter based on the lead portion of Column (aka Qualifier) names.
           </para>
         </section>
+        <section xml:id="client.filter.kvm.crf "><title>ColumnRangeFilter</title>
+			<para>Use <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnRangeFilter.html">ColumnRangeFilter</link> to get a column 'slice':
+			 i.e. if you have a million columns in a row but you only want to look at columns bbbb-bbbd.
+            </para>
+            <para>Note:  Introduced in HBase 0.92</para>
+        </section>
       </section>
       <section xml:id="client.filter.row"><title>RowKey</title>
         <section xml:id="client.filter.row.rf"><title>RowFilter</title>
@@ -2022,13 +2028,11 @@ scan.setFilter(filter);
                 </para>
             </answer>
         </qandaentry>
-        <qandaentry>
-            <question><para>
-                    How can I get a column 'slice': i.e. I have a million columns in my row but I only want to look at columns bbbb-bbbd?
-            </para></question>
+        <qandaentry xml:id="faq.apis">
+            <question><para>What APIs does HBase support?</para></question>
             <answer>
                 <para>
-                  See <classname>org.apache.hadoop.hbase.filter.ColumnRangeFilter</classname>    
+                    See <xref linkend="datamodel" />, <xref linkend="client" /> and <xref linkend="nonjava.jvm"/>.
                 </para>
             </answer>
         </qandaentry>
@@ -2061,18 +2065,6 @@ scan.setFilter(filter);
             <answer>
                 <para>
                 See <xref linkend="trouble" />.
-                </para>
-            </answer>
-        </qandaentry>
-        <qandaentry xml:id="brand.new.compressor">
-            <question><para>Why are logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got
-            brand-new compressor' messages?</para></question>
-            <answer>
-                <para>
-                    Because we are not using the native versions of compression
-                    libraries.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-1900">HBASE-1900 Put back native support when hadoop 0.21 is released</link>.
-                    Copy the native libs from hadoop under hbase lib dir or
-                    symlink them into place and the message should go away.
                 </para>
             </answer>
         </qandaentry>
@@ -2248,6 +2240,7 @@ hbase> describe 't1'</programlisting>
    <title>HFile format version 2</title>
 
    <section><title>Motivation </title>
+   <para>Note:  this feature was introduced in HBase 0.92</para>
    <para>We found it necessary to revise the HFile format after encountering high memory usage and slow startup times caused by large Bloom filters and block indexes in the region server. Bloom filters can get as large as 100 MB per HFile, which adds up to 2 GB when aggregated over 20 regions. Block indexes can grow as large as 6 GB in aggregate size over the same set of regions. A region is not considered opened until all of its block index data is loaded. Large Bloom filters produce a different performance problem: the first get request that requires a Bloom filter lookup will incur the latency of loading the entire Bloom filter bit array.</para>
    <para>To speed up region server startup we break Bloom filters and block indexes into multiple blocks and write those blocks out as they fill up, which also reduces the HFile writer’s memory footprint. In the Bloom filter case, “filling up a block” means accumulating enough keys to efficiently utilize a fixed-size bit array, and in the block index case we accumulate an “index block” of the desired size. Bloom filter blocks and index blocks (we call these “inline blocks”) become interspersed with data blocks, and as a side effect we can no longer rely on the difference between block offsets to determine data block length, as it was done in version 1.</para>
    <para>HFile is a low-level file format by design, and it should not deal with application-specific details such as Bloom filters, which are handled at StoreFile level. Therefore, we call Bloom filter blocks in an HFile "inline" blocks. We also supply HFile with an interface to write those inline blocks. </para>

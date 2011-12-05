@@ -50,6 +50,7 @@
     </para>
           <section xml:id="thrift.filter-language"><title>Filter Language</title>
              <section xml:id="use-case"><title>Use Case</title>
+               <para>Note:  this feature was introduced in HBase 0.92</para>
                <para>This allows the user to perform server-side filtering when accessing HBase over Thrift. The user specifies a filter via a string. The string is parsed on the server to construct the filter</para>
              </section>
 
