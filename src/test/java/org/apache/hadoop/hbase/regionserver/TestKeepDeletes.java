@@ -133,6 +133,9 @@ public class TestKeepDeletes extends HBaseTestCase {
     r = region.get(g, null);
     checkResult(r, c0, c0, T1);
     assertEquals(0, countDeleteMarkers(region));
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   /**
@@ -180,6 +183,9 @@ public class TestKeepDeletes extends HBaseTestCase {
     kvs = new ArrayList<KeyValue>();
     scan.next(kvs);
     assertTrue(kvs.isEmpty());
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   /**
@@ -222,6 +228,9 @@ public class TestKeepDeletes extends HBaseTestCase {
     region.compactStores(true);
     // major compaction deleted it
     assertEquals(0, countDeleteMarkers(region));
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   /**
@@ -243,6 +252,9 @@ public class TestKeepDeletes extends HBaseTestCase {
     } catch (DoNotRetryIOException dnre) {
       // ok!
     }
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   /**
@@ -287,6 +299,9 @@ public class TestKeepDeletes extends HBaseTestCase {
     assertTrue(kvs.get(3).isDeleteType());
     assertEquals(kvs.get(4).getValue(), T2);
     assertEquals(kvs.get(5).getValue(), T1);
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   /**
@@ -327,6 +342,9 @@ public class TestKeepDeletes extends HBaseTestCase {
     // major compaction removes all, since there are no puts they affect
     region.compactStores(true);
     assertEquals(0, countDeleteMarkers(region));
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   /**
@@ -387,6 +405,9 @@ public class TestKeepDeletes extends HBaseTestCase {
     // so after this collection all markers
     region.compactStores(true);
     assertEquals(0, countDeleteMarkers(region));
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   /**
@@ -464,6 +485,9 @@ public class TestKeepDeletes extends HBaseTestCase {
     checkGet(region, T2, c0, c1, ts+3);
     checkGet(region, T2, c1, c0, ts+3, T2, T1);
     checkGet(region, T2, c1, c1, ts+3, T2, T1);
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   /**
@@ -556,6 +580,9 @@ public class TestKeepDeletes extends HBaseTestCase {
     region.compactStores(true);
     region.compactStores(true);
     assertEquals(1, countDeleteMarkers(region));
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   /**
@@ -604,6 +631,9 @@ public class TestKeepDeletes extends HBaseTestCase {
     scanner.next(kvs);
     assertEquals(4, kvs.size());
     scanner.close();
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   /**
@@ -679,6 +709,9 @@ public class TestKeepDeletes extends HBaseTestCase {
     // so after the next compaction the last family delete marker is also gone
     region.compactStores(true);
     assertEquals(0, countDeleteMarkers(region));
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   private void checkGet(HRegion region, byte[] row, byte[] fam, byte[] col,
@@ -689,7 +722,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     g.setTimeRange(0L, time);
     Result r = region.get(g, null);
     checkResult(r, fam, col, vals);
-    
+
   }
 
   private int countDeleteMarkers(HRegion region) throws IOException {
@@ -707,7 +740,7 @@ public class TestKeepDeletes extends HBaseTestCase {
       }
       kvs.clear();
     } while (hasMore);
-    scan.close();    
+    scan.close();
     return res;
   }
 

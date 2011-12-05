@@ -388,6 +388,12 @@ public class TestStore extends TestCase {
     assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
   }
 
+  @Override
+  protected void tearDown() throws Exception {
+    super.tearDown();
+    EnvironmentEdgeManagerTestHelper.reset();
+  }
+
   public void testICV_negMemstoreSize()  throws IOException {
       init(this.getName());
 

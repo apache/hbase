@@ -30,9 +30,9 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
@@ -45,7 +45,7 @@ import org.junit.experimental.categories.Category;
  * be delayed. Check that the last two, which are undelayed, return before the
  * first one.
  */
-@Category(SmallTests.class)
+@Category(MediumTests.class) // Fails sometimes with small tests
 public class TestDelayedRpc {
   public static RpcServer rpcServer;
 
@@ -233,11 +233,15 @@ public class TestDelayedRpc {
 
     @Override
     public void run() {
-      Integer result = new Integer(server.test(delay));
-      if (results != null) {
-        synchronized (results) {
-          results.add(result);
+      try {
+        Integer result = new Integer(server.test(delay));
+        if (results != null) {
+          synchronized (results) {
+            results.add(result);
+          }
         }
+      } catch (Exception e) {
+         fail("Unexpected exception: "+e.getMessage());
       }
     }
   }

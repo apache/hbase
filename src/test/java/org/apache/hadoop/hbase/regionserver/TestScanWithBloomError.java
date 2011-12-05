@@ -104,6 +104,7 @@ public class TestScanWithBloomError {
     scanColSet(new int[]{1, 4, 6, 7}, new int[]{1, 6, 7});
 
     region.close();
+    region.getLog().closeAndDelete();
   }
 
   private void scanColSet(int[] colSet, int[] expectedResultCols)

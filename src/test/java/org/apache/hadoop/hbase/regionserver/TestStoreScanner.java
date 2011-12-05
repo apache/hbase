@@ -41,7 +41,8 @@ import java.util.NavigableSet;
 import java.util.TreeSet;
 import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
 
-@Category(SmallTests.class)
+// Can't be small as it plays with EnvironmentEdgeManager
+@Category(MediumTests.class)
 public class TestStoreScanner extends TestCase {
   private static final String CF_STR = "cf";
   final byte [] CF = Bytes.toBytes(CF_STR);
@@ -502,69 +503,73 @@ public class TestStoreScanner extends TestCase {
   }
 
   public void testDeleteMarkerLongevity() throws Exception {
-    final long now = System.currentTimeMillis();
-    EnvironmentEdgeManagerTestHelper.injectEdge(new EnvironmentEdge() {
-      public long currentTimeMillis() {
-        return now;
-      }
-    });
-    KeyValue [] kvs = new KeyValue[] {
+    try {
+      final long now = System.currentTimeMillis();
+      EnvironmentEdgeManagerTestHelper.injectEdge(new EnvironmentEdge() {
+        public long currentTimeMillis() {
+          return now;
+        }
+      });
+      KeyValue[] kvs = new KeyValue[]{
         /*0*/ new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null,
-          now-100, KeyValue.Type.DeleteFamily), // live
+        now - 100, KeyValue.Type.DeleteFamily), // live
         /*1*/ new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null,
-          now-1000, KeyValue.Type.DeleteFamily), // expired
-        /*2*/ KeyValueTestUtil.create("R1", "cf", "a", now-50,
-          KeyValue.Type.Put, "v3"), // live
-        /*3*/ KeyValueTestUtil.create("R1", "cf", "a", now-55,
-          KeyValue.Type.Delete, "dontcare"), // live
-        /*4*/ KeyValueTestUtil.create("R1", "cf", "a", now-55,
-          KeyValue.Type.Put, "deleted-version v2"), // deleted
-        /*5*/ KeyValueTestUtil.create("R1", "cf", "a", now-60,
-          KeyValue.Type.Put, "v1"), // live
-        /*6*/ KeyValueTestUtil.create("R1", "cf", "a", now-65,
-          KeyValue.Type.Put, "v0"), // max-version reached
+        now - 1000, KeyValue.Type.DeleteFamily), // expired
+        /*2*/ KeyValueTestUtil.create("R1", "cf", "a", now - 50,
+        KeyValue.Type.Put, "v3"), // live
+        /*3*/ KeyValueTestUtil.create("R1", "cf", "a", now - 55,
+        KeyValue.Type.Delete, "dontcare"), // live
+        /*4*/ KeyValueTestUtil.create("R1", "cf", "a", now - 55,
+        KeyValue.Type.Put, "deleted-version v2"), // deleted
+        /*5*/ KeyValueTestUtil.create("R1", "cf", "a", now - 60,
+        KeyValue.Type.Put, "v1"), // live
+        /*6*/ KeyValueTestUtil.create("R1", "cf", "a", now - 65,
+        KeyValue.Type.Put, "v0"), // max-version reached
         /*7*/ KeyValueTestUtil.create("R1", "cf", "a",
-          now-100, KeyValue.Type.DeleteColumn, "dont-care"), // max-version
-        /*8*/ KeyValueTestUtil.create("R1", "cf", "b", now-600,
-          KeyValue.Type.DeleteColumn, "dont-care"), //expired
-        /*9*/ KeyValueTestUtil.create("R1", "cf", "b", now-70,
-           KeyValue.Type.Put, "v2"), //live
-        /*10*/ KeyValueTestUtil.create("R1", "cf", "b", now-750,
-           KeyValue.Type.Put, "v1"), //expired
-        /*11*/ KeyValueTestUtil.create("R1", "cf", "c", now-500,
-           KeyValue.Type.Delete, "dontcare"), //expired
-        /*12*/ KeyValueTestUtil.create("R1", "cf", "c", now-600,
-           KeyValue.Type.Put, "v1"), //expired
-        /*13*/ KeyValueTestUtil.create("R1", "cf", "c", now-1000,
-           KeyValue.Type.Delete, "dontcare"), //expired
-        /*14*/ KeyValueTestUtil.create("R1", "cf", "d", now-60,
-           KeyValue.Type.Put, "expired put"), //live
-        /*15*/ KeyValueTestUtil.create("R1", "cf", "d", now-100,
-           KeyValue.Type.Delete, "not-expired delete"), //live
-    };
-    List<KeyValueScanner> scanners = scanFixture(kvs);
-    Scan scan = new Scan();
-    scan.setMaxVersions(2);
-    Store.ScanInfo scanInfo = new Store.ScanInfo(Bytes.toBytes("cf"),
+        now - 100, KeyValue.Type.DeleteColumn, "dont-care"), // max-version
+        /*8*/ KeyValueTestUtil.create("R1", "cf", "b", now - 600,
+        KeyValue.Type.DeleteColumn, "dont-care"), //expired
+        /*9*/ KeyValueTestUtil.create("R1", "cf", "b", now - 70,
+        KeyValue.Type.Put, "v2"), //live
+        /*10*/ KeyValueTestUtil.create("R1", "cf", "b", now - 750,
+        KeyValue.Type.Put, "v1"), //expired
+        /*11*/ KeyValueTestUtil.create("R1", "cf", "c", now - 500,
+        KeyValue.Type.Delete, "dontcare"), //expired
+        /*12*/ KeyValueTestUtil.create("R1", "cf", "c", now - 600,
+        KeyValue.Type.Put, "v1"), //expired
+        /*13*/ KeyValueTestUtil.create("R1", "cf", "c", now - 1000,
+        KeyValue.Type.Delete, "dontcare"), //expired
+        /*14*/ KeyValueTestUtil.create("R1", "cf", "d", now - 60,
+        KeyValue.Type.Put, "expired put"), //live
+        /*15*/ KeyValueTestUtil.create("R1", "cf", "d", now - 100,
+        KeyValue.Type.Delete, "not-expired delete"), //live
+      };
+      List<KeyValueScanner> scanners = scanFixture(kvs);
+      Scan scan = new Scan();
+      scan.setMaxVersions(2);
+      Store.ScanInfo scanInfo = new Store.ScanInfo(Bytes.toBytes("cf"),
         0 /* minVersions */,
         2 /* maxVersions */, 500 /* ttl */,
         false /* keepDeletedCells */,
         200, /* timeToPurgeDeletes */
         KeyValue.COMPARATOR);
-    StoreScanner scanner =
+      StoreScanner scanner =
         new StoreScanner(scan, scanInfo,
-            StoreScanner.ScanType.MAJOR_COMPACT, null, scanners,
-            HConstants.OLDEST_TIMESTAMP);
-    List<KeyValue> results = new ArrayList<KeyValue>();
-    results = new ArrayList<KeyValue>();
-    assertEquals(true, scanner.next(results));
-    assertEquals(kvs[0], results.get(0));
-    assertEquals(kvs[2], results.get(1));
-    assertEquals(kvs[3], results.get(2));
-    assertEquals(kvs[5], results.get(3));
-    assertEquals(kvs[9], results.get(4));
-    assertEquals(kvs[14], results.get(5));
-    assertEquals(kvs[15], results.get(6));
-    assertEquals(7, results.size());
-   }
+          StoreScanner.ScanType.MAJOR_COMPACT, null, scanners,
+          HConstants.OLDEST_TIMESTAMP);
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      results = new ArrayList<KeyValue>();
+      assertEquals(true, scanner.next(results));
+      assertEquals(kvs[0], results.get(0));
+      assertEquals(kvs[2], results.get(1));
+      assertEquals(kvs[3], results.get(2));
+      assertEquals(kvs[5], results.get(3));
+      assertEquals(kvs[9], results.get(4));
+      assertEquals(kvs[14], results.get(5));
+      assertEquals(kvs[15], results.get(6));
+      assertEquals(7, results.size());
+    }finally{
+    EnvironmentEdgeManagerTestHelper.reset();
+    }
+  }
 }

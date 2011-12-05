@@ -308,6 +308,7 @@ public class TestMultiColumnScanner {
     LOG.info("Number of row/col pairs deleted at least once: " +
        lastDelTimeMap.size());
     region.close();
+    region.getLog().closeAndDelete();
   }
 
   static HRegion createRegion(String tableName,

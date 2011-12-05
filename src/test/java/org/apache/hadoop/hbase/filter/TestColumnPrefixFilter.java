@@ -97,6 +97,9 @@ public class TestColumnPrefixFilter {
       while(scanner.next(results));
       assertEquals(prefixMap.get(s).size(), results.size());
     }
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   @Test
@@ -157,6 +160,9 @@ public class TestColumnPrefixFilter {
       while(scanner.next(results));
       assertEquals(prefixMap.get(s).size(), results.size());
     }
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   List<String> generateRandomWords(int numberOfWords, String suffix) {

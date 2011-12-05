@@ -1339,6 +1339,7 @@ public class TestHRegion extends HBaseTestCase {
         for (int i = 0; i < subregions.length; i++) {
           try {
             subregions[i].close();
+            subregions[i].getLog().closeAndDelete();
           } catch (IOException e) {
             // Ignore.
           }
