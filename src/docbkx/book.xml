@@ -2701,7 +2701,7 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
    <para/></section></section></appendix>
 
   <appendix xml:id="other.info">
-      <title>Other Information about HBase</title>
+      <title>Other Information About HBase</title>
        <section xml:id="other.info.videos"><title>HBase Videos</title>
          <para>Introduction to HBase
             <itemizedlist>
