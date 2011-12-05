@@ -1405,6 +1405,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       ratio = blockCache.getStats().getHitCachingRatio();
       percent = (int) (ratio * 100);
       this.metrics.blockCacheHitCachingRatio.set(percent);
+      // past N period block cache hit / hit caching ratios
+      cacheStats.rollMetricsPeriod();
+      ratio = cacheStats.getHitRatioPastNPeriods();
+      percent = (int) (ratio * 100);
+      this.metrics.blockCacheHitRatioPastNPeriods.set(percent);
+      ratio = cacheStats.getHitCachingRatioPastNPeriods();
+      percent = (int) (ratio * 100);
+      this.metrics.blockCacheHitCachingRatioPastNPeriods.set(percent);
     }
     float localityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(
       getServerName().getHostname());

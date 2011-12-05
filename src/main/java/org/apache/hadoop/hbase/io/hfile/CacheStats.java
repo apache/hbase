@@ -25,6 +25,12 @@ import java.util.concurrent.atomic.AtomicLong;
  * Class that implements cache metrics.
  */
 public class CacheStats {
+
+  /** Sliding window statistics. The number of metric periods to include in
+   * sliding window hit ratio calculations.
+   */
+  static final int DEFAULT_WINDOW_PERIODS = 5;
+
   /** The number of getBlock requests that were cache hits */
   private final AtomicLong hitCount = new AtomicLong(0);
   /**
@@ -45,6 +51,39 @@ public class CacheStats {
   private final AtomicLong evictionCount = new AtomicLong(0);
   /** The total number of blocks that have been evicted */
   private final AtomicLong evictedBlockCount = new AtomicLong(0);
+
+  /** The number of metrics periods to include in window */
+  private final int numPeriodsInWindow;
+  /** Hit counts for each period in window */
+  private final long [] hitCounts;
+  /** Caching hit counts for each period in window */
+  private final long [] hitCachingCounts;
+  /** Access counts for each period in window */
+  private final long [] requestCounts;
+  /** Caching access counts for each period in window */
+  private final long [] requestCachingCounts;
+  /** Last hit count read */
+  private long lastHitCount = 0;
+  /** Last hit caching count read */
+  private long lastHitCachingCount = 0;
+  /** Last request count read */
+  private long lastRequestCount = 0;
+  /** Last request caching count read */
+  private long lastRequestCachingCount = 0;
+  /** Current window index (next to be updated) */
+  private int windowIndex = 0;
+
+  public CacheStats() {
+    this(DEFAULT_WINDOW_PERIODS);
+  }
+
+  public CacheStats(int numPeriodsInWindow) {
+    this.numPeriodsInWindow = numPeriodsInWindow;
+    this.hitCounts = initializeZeros(numPeriodsInWindow);
+    this.hitCachingCounts = initializeZeros(numPeriodsInWindow);
+    this.requestCounts = initializeZeros(numPeriodsInWindow);
+    this.requestCachingCounts = initializeZeros(numPeriodsInWindow);
+  }
 
   public void miss(boolean caching) {
     missCount.incrementAndGet();
@@ -114,5 +153,44 @@ public class CacheStats {
 
   public double evictedPerEviction() {
     return ((float)getEvictedCount()/(float)getEvictionCount());
+  }
+
+  public void rollMetricsPeriod() {
+    hitCounts[windowIndex] = getHitCount() - lastHitCount;
+    lastHitCount = getHitCount();
+    hitCachingCounts[windowIndex] =
+      getHitCachingCount() - lastHitCachingCount;
+    lastHitCachingCount = getHitCachingCount();
+    requestCounts[windowIndex] = getRequestCount() - lastRequestCount;
+    lastRequestCount = getRequestCount();
+    requestCachingCounts[windowIndex] =
+      getRequestCachingCount() - lastRequestCachingCount;
+    lastRequestCachingCount = getRequestCachingCount();
+    windowIndex = (windowIndex + 1) % numPeriodsInWindow;
+  }
+
+  public double getHitRatioPastNPeriods() {
+    double ratio = ((double)sum(hitCounts)/(double)sum(requestCounts));
+    return Double.isNaN(ratio) ? 0 : ratio;
+  }
+
+  public double getHitCachingRatioPastNPeriods() {
+    double ratio =
+      ((double)sum(hitCachingCounts)/(double)sum(requestCachingCounts));
+    return Double.isNaN(ratio) ? 0 : ratio;
+  }
+
+  private static long sum(long [] counts) {
+    long sum = 0;
+    for (long count : counts) sum += count;
+    return sum;
+  }
+
+  private static long [] initializeZeros(int n) {
+    long [] zeros = new long [n];
+    for (int i=0; i<n; i++) {
+      zeros[i] = 0L;
+    }
+    return zeros;
   }
 }

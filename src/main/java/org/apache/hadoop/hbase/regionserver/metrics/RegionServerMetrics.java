@@ -113,6 +113,12 @@ public class RegionServerMetrics implements Updater {
    */
   public final MetricsIntValue blockCacheHitCachingRatio = new MetricsIntValue("blockCacheHitCachingRatio", registry);
 
+  /** Block hit ratio for past N periods. */
+  public final MetricsIntValue blockCacheHitRatioPastNPeriods = new MetricsIntValue("blockCacheHitRatioPastNPeriods", registry);
+
+  /** Block hit caching ratio for past N periods */
+  public final MetricsIntValue blockCacheHitCachingRatioPastNPeriods = new MetricsIntValue("blockCacheHitCachingRatioPastNPeriods", registry);
+
   /*
    * Count of requests to the regionservers since last call to metrics update
    */
@@ -295,6 +301,8 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
       this.blockCacheHitCachingRatio.pushMetric(this.metricsRecord);
       this.hdfsBlocksLocalityIndex.pushMetric(this.metricsRecord);
+      this.blockCacheHitRatioPastNPeriods.pushMetric(this.metricsRecord);
+      this.blockCacheHitCachingRatioPastNPeriods.pushMetric(this.metricsRecord);
 
       // Mix in HFile and HLog metrics
       // Be careful. Here is code for MTVR from up in hadoop:
