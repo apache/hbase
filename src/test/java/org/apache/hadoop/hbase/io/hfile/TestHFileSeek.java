@@ -122,7 +122,7 @@ public class TestHFileSeek extends TestCase {
     FSDataOutputStream fout = createFSOutput(path, fs);
     try {
       Writer writer =
-        HFile.getWriterFactory(conf).createWriter(fout,
+        HFile.getWriterFactoryNoCache(conf).createWriter(fout,
           options.minBlockSize, options.compress, null);
       try {
         BytesWritable key = new BytesWritable();

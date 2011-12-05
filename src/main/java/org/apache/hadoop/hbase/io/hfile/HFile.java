@@ -259,9 +259,14 @@ public class HFile {
 
   /**
    * Returns the factory to be used to create {@link HFile} writers.
+   * Disables block cache access for all writers created through the
+   * returned factory.
    */
-  public static final WriterFactory getWriterFactory(Configuration conf) {
-    return HFile.getWriterFactory(conf, new CacheConfig(conf));
+  public static final WriterFactory getWriterFactoryNoCache(Configuration
+       conf) {
+    Configuration tempConf = new Configuration(conf);
+    tempConf.setFloat(CacheConfig.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
+    return HFile.getWriterFactory(conf, new CacheConfig(tempConf));
   }
 
   /**
