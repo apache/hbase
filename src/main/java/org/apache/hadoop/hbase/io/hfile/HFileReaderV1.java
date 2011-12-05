@@ -352,7 +352,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
   @Override
   public void close(boolean evictOnClose) throws IOException {
-    if (evictOnClose) {
+    if (evictOnClose && cacheConf.isBlockCacheEnabled()) {
       int numEvicted = 0;
       for (int i = 0; i < dataBlockIndexReader.getRootBlockCount(); i++) {
         if (cacheConf.getBlockCache().evictBlock(HFile.getBlockCacheKey(name,
