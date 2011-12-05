@@ -200,6 +200,7 @@ public class TestSplitTransaction {
         daughtersRowCount += count;
       } finally {
         openRegion.close();
+        openRegion.getLog().closeAndDelete();
       }
     }
     assertEquals(rowcount, daughtersRowCount);
@@ -255,6 +256,7 @@ public class TestSplitTransaction {
         daughtersRowCount += count;
       } finally {
         openRegion.close();
+        openRegion.getLog().closeAndDelete();
       }
     }
     assertEquals(rowcount, daughtersRowCount);

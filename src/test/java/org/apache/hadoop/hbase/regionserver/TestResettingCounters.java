@@ -94,5 +94,7 @@ public class TestResettingCounters {
       assertTrue(Bytes.equals(kvs[i].getQualifier(), qualifiers[i]));
       assertEquals(6, Bytes.toLong(kvs[i].getValue()));
     }
+    region.close();
+    region.getLog().closeAndDelete();
   }
 }

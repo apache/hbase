@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -29,7 +30,7 @@ import static junit.framework.Assert.assertEquals;
  * Tests that the incrementing environment edge increments time instead of using
  * the default.
  */
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 public class TestIncrementingEnvironmentEdge {
 
   @Test

@@ -307,11 +307,11 @@ echo "Small tests executed after $exeTime minutes"
 if (test $parallelMaven -gt 0)
 then 
   echo "Running tests with two maven instances in parallel"
-  $mvnCommand -P nonParallelTests test -Dtest=$runList1  $args &
+  $mvnCommand -P localTests test -Dtest=$runList1  $args &
   
   #give some time  to the fist process if there is anything to compile
   sleep 30
-  $mvnCommand -P nonParallelTests test -Dtest=$runList2  $args
+  $mvnCommand -P localTests test -Dtest=$runList2  $args
 
   #wait for forked process to finish
   wait
@@ -326,14 +326,14 @@ then
   if (test $runAllTests -eq 1 && test ${#flakyTests} -gt 5)
   then
     echo "Running flaky tests"
-    $mvnCommand -P nonParallelTests test -Dtest=$flakyTests $args
+    $mvnCommand -P localTests test -Dtest=$flakyTests $args
     cleanProcess
     exeTime=$(((`date +%s` - $startTime)/60))
     echo "Flaky tests executed after $exeTime minutes"    
   fi
 else
   echo "Running tests with a single maven instance, no parallelization"
-  $mvnCommand -P nonParallelTests test -Dtest=$runList1,$runList2,$flakyTests $args
+  $mvnCommand -P localTests test -Dtest=$runList1,$runList2,$flakyTests $args
   cleanProcess  
   exeTime=$(((`date +%s` - $startTime)/60))
   echo "Single maven instance tests executed after $exeTime minutes"     
@@ -420,7 +420,7 @@ then
   if (test $replayFailed -gt 0)
   then
     echo "Replaying all tests that failed"
-    $mvnCommand -P nonParallelTests test -Dtest=$replayList  $args
+    $mvnCommand -P localTests test -Dtest=$replayList  $args
     echo "Replaying done"
   fi
 fi

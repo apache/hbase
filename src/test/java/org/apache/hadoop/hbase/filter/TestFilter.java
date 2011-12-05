@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
@@ -163,7 +164,9 @@ public class TestFilter extends HBaseTestCase {
   }
 
   protected void tearDown() throws Exception {
-    this.region.close();
+    HLog hlog = region.getLog();
+    region.close();
+    hlog.closeAndDelete();
     super.tearDown();
   }
 

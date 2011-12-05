@@ -157,6 +157,9 @@ public class TestColumnSeeking {
       assertEquals(kvSet.size(), results.size());
       assertTrue(results.containsAll(kvSet));
     }
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   @SuppressWarnings("unchecked")
@@ -263,6 +266,9 @@ public class TestColumnSeeking {
       assertEquals(kvSet.size(), results.size());
       assertTrue(results.containsAll(kvSet));
     }
+
+    region.close();
+    region.getLog().closeAndDelete();
   }
 
   List<String> generateRandomWords(int numberOfWords, String suffix) {

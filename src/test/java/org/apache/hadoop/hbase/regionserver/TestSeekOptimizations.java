@@ -427,6 +427,7 @@ public class TestSeekOptimizations {
   public void tearDown() throws IOException {
     if (region != null) {
       region.close();
+      region.getLog().closeAndDelete();
     }
 
     // We have to re-set the lazy seek flag back to the default so that other

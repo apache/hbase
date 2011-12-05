@@ -36,7 +36,8 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests for {@link FSTableDescriptors}.
  */
-@Category(SmallTests.class)
+// Do not support to be executed in he same JVM as other tests
+@Category(MediumTests.class)
 public class TestFSTableDescriptors {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestFSTableDescriptors.class);
