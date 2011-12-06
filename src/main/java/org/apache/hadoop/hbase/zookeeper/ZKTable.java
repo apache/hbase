@@ -81,8 +81,6 @@ public class ZKTable {
 
   /**
    * Gets a list of all the tables set as disabled in zookeeper.
-   * @param zkw
-   * @return list of disabled tables, empty list if none
    * @throws KeeperException
    */
   private void populateTableStates()
@@ -90,6 +88,7 @@ public class ZKTable {
     synchronized (this.cache) {
       List<String> children =
         ZKUtil.listChildrenNoWatch(this.watcher, this.watcher.tableZNode);
+      if (children == null) return;
       for (String child: children) {
         TableState state = getTableState(this.watcher, child);
         if (state != null) this.cache.put(child, state);

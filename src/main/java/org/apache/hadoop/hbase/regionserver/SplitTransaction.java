@@ -818,6 +818,7 @@ public class SplitTransaction {
    * @param region region to be created as offline
    * @param serverName server event originates from
    * @return Version of znode created.
+   * @throws KeeperException 
    * @throws IOException 
    */
   private static int createNodeSplitting(final ZooKeeperWatcher zkw,
