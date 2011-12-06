@@ -28,14 +28,18 @@
       xmlns:html="http://www.w3.org/1999/xhtml"
       xmlns:db="http://docbook.org/ns/docbook">
   <info>
+    
     <title><link xlink:href="http://www.hbase.org">
+    Apache HBase Book
+    </link></title>
+    <subtitle><link xlink:href="http://www.hbase.org">
            <inlinemediaobject>
                <imageobject>
                    <imagedata align="middle" valign="middle" fileref="hbase_logo.png" />
                </imageobject>
            </inlinemediaobject>
        </link>
-    </title>
+    </subtitle>
       <copyright><year>2011</year><holder>Apache Software Foundation</holder></copyright>
       <abstract>
     <para>This is the official book of
@@ -48,11 +52,12 @@
 
     <revhistory>
       <revision>
-        <date />
-        <revdescription>HBase version</revdescription>
         <revnumber>
           <?eval ${project.version}?>
         </revnumber>
+        <date>
+          <?eval ${buildDate}?>
+        </date>
       </revision>
     </revhistory>
   </info>

@@ -520,7 +520,10 @@
           <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
           <targetDirectory>${basedir}/target/site/book/</targetDirectory>
           <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
+          <htmlCustomization>src/docbkx/customization.xsl</htmlCustomization>
           <imgSrcPath>../images/</imgSrcPath>
+          <tocSectionDepth>1</tocSectionDepth>
+          <insertXrefPageNumber>yes</insertXrefPageNumber>
         </configuration>
             <goals>
               <goal>generate-html</goal>
@@ -538,6 +541,8 @@
           <targetDirectory>${basedir}/target/site/</targetDirectory>
           <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
           <imgSrcPath>images/</imgSrcPath>
+          <tocSectionDepth>1</tocSectionDepth>
+          <insertXrefPageNumber>yes</insertXrefPageNumber>
         </configuration>
             <goals>
               <goal>generate-html</goal>
@@ -849,6 +854,12 @@
   </build>
 
   <properties>
+    <maven.build.timestamp.format>
+      yyyy-MM-dd'T'HH:mm
+    </maven.build.timestamp.format>
+    <buildDate>
+      ${maven.build.timestamp}
+    </buildDate>
     <compileSource>1.6</compileSource>
 
     <!-- Dependencies -->
