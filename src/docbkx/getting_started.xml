@@ -138,8 +138,8 @@ hbase(main):001:0&gt; </programlisting></para>
 
       <para><programlisting>hbase(main):003:0&gt; create 'test', 'cf'
 0 row(s) in 1.2200 seconds
-hbase(main):003:0&gt; list 'table'
-test
+hbase(main):003:0&gt; list 'test'
+..
 1 row(s) in 0.0550 seconds
 hbase(main):004:0&gt; put 'test', 'row1', 'cf:a', 'value1'
 0 row(s) in 0.0560 seconds
