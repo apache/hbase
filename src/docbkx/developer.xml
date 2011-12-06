@@ -166,6 +166,221 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
            </para>
       </section>
     </section> <!--  build -->
+
+    <section xml:id="hbase.tests">
+    <title>Tests</title>
+
+<para>HBase tests are divided into two groups: <xref linkend="hbase.unittests"/> and
+<xref linkend="integration.tests" />.
+Unit tests are run by the Apache Continuous Integration server and by developers
+when they are verifying a fix does not cause breakage elsewhere in the code base.
+Integration tests are generally long-running tests that are invoked out-of-bound of
+the CI server when you want to do more intensive testing beyond the unit test set.
+Integration tests, for example, are run proving a release candidate or a production
+deploy. Below we go into more detail on each of these test types.  Developers at a
+minimum should familiarize themselves with the unit test detail; unit tests in
+HBase have a character not usually seen in other projects.</para> 
+
+<section xml:id="hbase.unittests">
+<title>Unit Tests</title>
+<para>HBase unit tests are subdivided into three categories: small, medium and large, with
+corresponding JUnit <link xlink:href="http://www.junit.org/node/581">categories</link>:
+<classname>SmallTests</classname>, <classname>MediumTests</classname>,
+<classname>LargeTests</classname>.  JUnit categories are denoted using java annotations
+and look like this in your unit test code.
+<programlisting>...
+@Category(SmallTests.class)
+public class TestHRegionInfo {
+
+  @Test
+  public void testCreateHRegionInfoName() throws Exception {
+    // ...
+  }
+}</programlisting>
+The above example shows how to mark a test as belonging to the small category.
+</para>
+<para>
+<emphasis>Small</emphasis> tests are executed in a shared JVM. We put in this category all the tests that can
+be executed quickly in a shared JVM.  The maximum execution time for a test is 15 seconds,
+and they do not use a cluster.  <emphasis>Medium</emphasis> tests represent tests that must be executed
+before proposing a patch. They are designed to run in less than 30 minutes altogether,
+and are quite stable in their results. They are designed to last less than 50 seconds
+individually. They can use a cluster, and each of them is executed in a separate JVM.
+<emphasis>Large</emphasis> tests are everything else. They are typically integration-like
+tests (yes, some large tests should be moved out to be HBase <xref linkend="integration.tests" />),
+regression tests for specific bugs, timeout tests, performance tests.
+They are executed before a commit on the pre-integration machines. They can be run on
+the developer machine as well.
+</para>
+<para>HBase uses a patched maven surefire plugin and maven profiles to implement its
+unit test characterizations.</para>
+
+<section xml:id="hbase.unittests.cmds">
+<title>Running tests</title>
+<para>Below we describe how to run the HBase junit categories.</para>
+
+<section xml:id="hbase.unittests.cmds.test">
+<title>Default: small and medium category tests
+</title>
+<para>Running <programlisting>mvn run</programlisting> will execute all small tests in a single JVM and medium tests in a separate JVM for
+each test instance. Medium tests are NOT executed if there is an error in a small test.
+Large tests are NOT executed.  There is one report for small tests, and one report for
+medium tests if they are executed.
+</para>
+</section>
+
+<section xml:id="hbase.unittests.cmds.test.runAllTests">
+<title>Running all tests</title>
+<para>Running <programlisting>mvn test -P runAllTests</programlisting>
+will execute small tests in a single JVM then medium and large tests in a separate JVM for each test.
+Medium and large tests are NOT executed if there is an error in a small test.
+Large tests are NOT executed if there is an error in a small or medium test.
+There is one report for small tests, and one report for medium and large tests if they are executed
+</para>
+</section>
+
+<section xml:id="hbase.unittests.cmds.test.localtests.mytest">
+<title>Running a single test or all tests in a package</title>
+<para>To run an individual test, <classname>MyTest</classname>, do
+<programlisting>mvn test -P localTests -Dtest=MyTest</programlisting>  You can also
+pass multiple individual tests comma-delimited: e.g.
+<programlisting>mvn test -P localTests -Dtest=MyTest1,MyTest2,MyTest3</programlisting>
+You can also pass a package and all tests under the package will be run by doing as follows:
+<programlisting>mvn test -P localTests -Dtest=org.apache.hadoop.hbase.client.*</programlisting>.
+</para>
+
+<para>
+The <code>-P localTests</code>  will remove the JUnit category effect (without this specific profile,
+the profiles are taken into account).  It will actually use the official release of surefire
+and the old connector (The HBase build uses a patched version of the maven surefire plugin).
+junit tests are executed in separated JVM.  You will see a new message at the end of the
+report: "[INFO] Tests are skipped". It's harmless.
+</para>
+</section>
+
+<section xml:id="hbase.unittests.cmds.test.profiles">
+<title>Other test invocation permutations</title>
+<para>Running <programlisting>mvn test -P runSmallTests</programlisting> will execute small tests only, in a single JVM.
+</para>
+<para>Running <programlisting>mvn test -P runMediumTests</programlisting> will execute medium tests in a single JVM.
+</para>
+<para>Running <programlisting>mvn test -P runLargeTests</programlisting> execute medium tests in a single JVM.
+</para>
+
+<para>It's also possible to use the script <command>hbasetests.sh</command>. This script runs the medium and
+large tests in parallel with two maven instances, and provide a single report.
+It must be executed from the directory which contains the <filename>pom.xml</filename>.</para>
+<para>For example running
+<programlisting>./dev-support/hbasetests.sh</programlisting> will execute small and medium tests.
+Running <programlisting>./dev-support/hbasetests.sh runAllTests</programlisting> will execute all tests.
+Running <programlisting>./dev-support/hbasetests.sh replayFailed</programlisting> will rerun the failed tests a
+second time, in a separate jvm and without parallelisation.
+</para>
+</section>
+</section>
+
+<section xml:id="hbase.tests.writing">
+<title>Writing Tests</title>
+<section xml:id="hbase.tests.rules">
+<title>General rules</title>
+<itemizedlist>
+<listitem>
+As much as possible, tests should be written as category small tests.
+</listitem>
+<listitem>
+All tests must be written to support parallel execution on the same machine, hence they should not use shared resources as fixed ports or fixed file names.
+</listitem>
+<listitem>
+Tests should not overlog. More than 100 lines/second makes the logs complex to read and use i/o that are hence not available for the other tests.
+</listitem>
+<listitem>
+Tests can be written with <classname>HBaseTestingUtility</classname>.
+This class offers helper functions to create a temp directory and do the cleanup, or to start a cluster.
+Categories and execution time
+</listitem>
+<listitem>
+All tests must be categorized, if not they could be skipped.
+</listitem>
+<listitem>
+All tests should be written to be as fast as possible.
+</listitem>
+<listitem>
+Small category tests should last less than 15 seconds, and must not have any side effect.
+</listitem>
+<listitem>
+Medium category tests should last less than 50 seconds.
+</listitem>
+<listitem>
+Large category tests should last less than 3 minutes.  This should ensure a good parallelization for people using it, and ease the analysis when the test fails.
+</listitem>
+</itemizedlist>
+</section>
+<section xml:id="hbase.tests.sleeps">
+<title>Sleeps in tests</title>
+<para>Whenever possible, tests should not use <methodname>Thread.sleep</methodname>, but rather waiting for the real event they need. This is faster and clearer for the reader.
+Tests should not do a <methodname>Thread.sleep</methodname> without testing an ending condition. This allows understanding what the test is waiting for. Moreover, the test will work whatever the machine performance is.
+Sleep should be minimal to be as fast as possible. Waiting for a variable should be done in a 40ms sleep loop. Waiting for a socket operation should be done in a 200 ms sleep loop.
+</para>
+</section>
+
+<section xml:id="hbase.tests.cluster">
+<title>Tests using a cluster
+</title>
+
+<para>Tests using a HRegion do not have to start a cluster: A region can use the local file system.
+Start/stopping a cluster cost around 10 seconds. They should not be started per test method but per test class.
+Started cluster must be shutdown using <methodname>HBaseTestingUtility#shutdownMiniCluster</methodname>, which cleans the directories.
+As most as possible, tests should use the default settings for the cluster. When they don't, they should document it. This will allow to share the cluster later.
+</para>
+</section>
+</section>
+</section>
+
+<section xml:id="integration.tests">
+<title>Integration Tests</title>
+<para>HBase integration Tests are tests that are beyond HBase unit tests.  They
+are generally long-lasting, sizeable (the test can be asked to 1M rows or 1B rows),
+targetable (they can take configuration that will point them at the ready-made cluster
+they are to run against; integration tests do not include cluster start/stop code),
+and verifying success, integration tests rely on public APIs only; they do not
+attempt to examine server internals asserring success/fail. Integration tests
+are what you would run when you need to more elaborate proofing of a release candidate
+beyond what unit tests can do. They are not generally run on the Apache Continuous Integration
+build server.
+</para>
+<para>
+Integration tests currently live under the <filename>src/test</filename> directory and
+will match the regex: <filename>**/IntegrationTest*.java</filename>. 
+</para>
+<para>HBase 0.92 added a <varname>verify</varname> maven target.
+Invoking it, for example by doing <code>mvn verify</code>, will
+run all the phases up to and including the verify phase via the
+maven <link xlink:href="http://maven.apache.org/plugins/maven-failsafe-plugin/">failsafe plugin</link>,
+running all the above mentioned HBase unit tests as well as tests that are in the HBase integration test group.
+If you just want to run the integration tests, you need to run two commands. First:
+          <code>mvn failsafe:integration-test</code>.
+This actually runs ALL the integration tests.
+          <note><para>This command will always output <code>BUILD SUCCESS</code> even if there are test failures.
+          </para></note>
+          At this point, you could grep the output by hand looking for failed tests. However, maven will do this for us; just use:
+          <programlisting>mvn failsafe:verify</programlisting>
+          The above command basically looks at all the test results (so don't remove the 'target' directory) for test failures and reports the results.</para>
+
+      <section xml:id="maven.build.commanas.integration.tests2">
+          <title>Running a subset of Integration tests</title>
+          <para>This is very similar to how you specify running a subset of unit tests (see above).
+To just run <classname>IntegrationTestClassXYZ.java</classname>, use:
+          <programlisting>mvn failsafe:integration-test -Dtest=IntegrationTestClassXYZ</programlisting> 
+          Pretty similar, right?
+          The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java:
+          <programlisting>mvn failsafe:integration-test -Dtest=*ClassX*</programlisting> 
+          This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*".
+          You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups.This would look something like:
+          <programlisting>mvn failsafe:integration-test -Dtest=*ClassX*, *ClassY</programlisting>  
+          </para>
+      </section>
+    </section>
+</section> <!-- tests -->
     
     <section xml:id="maven.build.commands"> 
        <title>Maven Build Commands</title>
@@ -179,67 +394,17 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
 mvn compile
           </programlisting>
        </section>       
+
        <section xml:id="maven.build.commands.unitall"> 
-          <title>Run all Unit Tests</title>
-          <programlisting>
-mvn test
-          </programlisting>
+          <title>Running all or individual Unit Tests</title>
+          <para>See the <xref linkend="hbase.unittests.cmds" /> section
+          above in <xref linkend="hbase.unittests" /></para>
        </section>       
-       <section xml:id="maven.build.commands.unit"> 
-          <title>Run a Single Unit Test</title>
-          <programlisting>
-mvn test -Dtest=TestXYZ
-          </programlisting>
-       </section>       
-       <section xml:id="maven.build.commands.unit2"> 
-          <title>Run a Few Unit Tests</title>
-          <programlisting>
-mvn test -Dtest=TestXYZ,TestABC
-          </programlisting>
-       </section>       
-       <section xml:id="maven.build.commands.unit.package"> 
-          <title>Run all Unit Tests for a Package</title>
-          <programlisting>
-mvn test -Dtest=org.apache.hadoop.hbase.client.*
-          </programlisting>
-       </section>
+
        <section xml:id="maven.build.commanas.integration.tests"> 
-          <title>Integration Tests</title>
-          <para>HBase 0.92 added a <varname>verify</varname> maven target. Invoking it with run all the phases up to and including the verify phase via the maven <link xlink:href="http://maven.apache.org/plugins/maven-failsafe-plugin/">failsafe plugin</link>, running all the unit tests as well as the long running unit and integration tests.
+          <title>Running all or individual Integration Tests</title>
+          <para>See <xref linkend="integration.tests" />
           </para>
-          <programlisting>
-mvn verify
-          </programlisting>
-           <para>However, sometimes you will want to run just the integration tests. In that case, you need to run two commands, first:</para>
-          <programlisting>
-mvn failsafe:integration-test
-          </programlisting>
-          <para>This actually runs ALL the integration tests (anything in the tests folder fitting the regex: **/IntegrationTest*.java). 
-          NOTE: this command will always output "BUILD SUCCESS" even if there are test failures.
-          At this point, you could grep the output by hand looking for failed tests. However, maven will do this for us; just use:</para>
-          <programlisting>
-mvn failsafe:verify
-          </programlisting>
-          <para>The above command basically looks at all the test results (so don't remove the 'target' directory) for test failures and reports the results.</para>
-      </section>
-      <section xml:id="maven.build.commanas.integration.tests2">
-          <title>Running a subset of Integration tests</title>
-          <para>This is very similar to how you specify running a subset of unit tests (see above). To just run IntegrationTestClassXYZ.java, use:</para>
-          <programlisting>
-mvn failsafe:integration-test -Dtest=IntegrationTestClassXYZ         
-          </programlisting> 
-          <para>Pretty similar, right?
-           The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java:
-          </para>
-          <programlisting>
-mvn failsafe:integration-test -Dtest=*ClassX*         
-          </programlisting> 
-          <para>This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*".
-          You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups.This would look something like:
-          </para>
-          <programlisting>
-mvn failsafe:integration-test -Dtest=*ClassX*, *ClassY         
-          </programlisting>  
       </section>
     </section>
   
