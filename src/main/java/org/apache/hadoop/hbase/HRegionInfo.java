@@ -775,11 +775,14 @@ implements WritableComparable<HRegionInfo> {
 
     // Compare end keys.
     result = Bytes.compareTo(this.endKey, o.endKey);
+
     if (result != 0) {
+      if (this.getEndKey().length == 0) return 1; // this is last region
+      if (o.getEndKey().length == 0) return -1; // o is the last region
       return result;
     }
     if (this.offLine == o.offLine)
-        return 0;
+      return 0;
     if (this.offLine == true) return -1;
         
     return 1;
