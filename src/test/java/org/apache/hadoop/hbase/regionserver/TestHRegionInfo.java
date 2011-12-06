@@ -116,6 +116,16 @@ public class TestHRegionInfo {
   }
 
   @Test
+  public void testLastRegionCompare() {
+    HTableDescriptor tableDesc = new HTableDescriptor("testtable");
+    HRegionInfo hrip = new HRegionInfo(
+        tableDesc.getName(), Bytes.toBytes("a"), new byte[0]);
+    HRegionInfo hric = new HRegionInfo(
+        tableDesc.getName(), Bytes.toBytes("a"), Bytes.toBytes("b"));
+    assertTrue(hrip.compareTo(hric) > 0);
+  }
+
+  @Test
   public void testMetaTables() {
     assertTrue(HRegionInfo.ROOT_REGIONINFO.isMetaTable());
     assertTrue(HRegionInfo.FIRST_META_REGIONINFO.isMetaTable());

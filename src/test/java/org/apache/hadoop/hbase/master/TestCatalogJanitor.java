@@ -333,23 +333,50 @@ public class TestCatalogJanitor {
   /**
    * Make sure parent gets cleaned up even if daughter is cleaned up before it.
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   @Test
   public void testParentCleanedEvenIfDaughterGoneFirst()
   throws IOException, InterruptedException {
+    parentWithSpecifiedEndKeyCleanedEvenIfDaughterGoneFirst(
+      "testParentCleanedEvenIfDaughterGoneFirst", Bytes.toBytes("eee"));
+  }
+
+  /**
+   * Make sure last parent with empty end key gets cleaned up even if daughter is cleaned up before it.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @Test
+  public void testLastParentCleanedEvenIfDaughterGoneFirst()
+  throws IOException, InterruptedException {
+    parentWithSpecifiedEndKeyCleanedEvenIfDaughterGoneFirst(
+      "testLastParentCleanedEvenIfDaughterGoneFirst", new byte[0]);
+  }
+
+  /**
+   * Make sure parent with specified end key gets cleaned up even if daughter is cleaned up before it.
+   *
+   * @param rootDir the test case name, used as the HBase testing utility root
+   * @param lastEndKey the end key of the split parent
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  private void parentWithSpecifiedEndKeyCleanedEvenIfDaughterGoneFirst(
+  final String rootDir, final byte[] lastEndKey)
+  throws IOException, InterruptedException {
     HBaseTestingUtility htu = new HBaseTestingUtility();
-    setRootDirAndCleanIt(htu, "testParentCleanedEvenIfDaughterGoneFirst");
+    setRootDirAndCleanIt(htu, rootDir);
     Server server = new MockServer(htu);
     MasterServices services = new MockMasterServices(server);
     CatalogJanitor janitor = new CatalogJanitor(server, services);
     final HTableDescriptor htd = createHTableDescriptor();
 
-    // Create regions: aaa->eee, aaa->ccc, aaa->bbb, bbb->ccc, etc.
+    // Create regions: aaa->{lastEndKey}, aaa->ccc, aaa->bbb, bbb->ccc, etc.
 
     // Parent
     HRegionInfo parent = new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
-      Bytes.toBytes("eee"));
+      lastEndKey);
     // Sleep a second else the encoded name on these regions comes out
     // same for all with same start key and made in same second.
     Thread.sleep(1001);
@@ -366,13 +393,13 @@ public class TestCatalogJanitor {
 
     // Daughter b
     HRegionInfo splitb = new HRegionInfo(htd.getName(), Bytes.toBytes("ccc"),
-      Bytes.toBytes("eee"));
+      lastEndKey);
     Thread.sleep(1001);
     // Make Daughters of daughterb; splitba and splitbb.
     HRegionInfo splitba = new HRegionInfo(htd.getName(), Bytes.toBytes("ccc"),
       Bytes.toBytes("ddd"));
     HRegionInfo splitbb = new HRegionInfo(htd.getName(), Bytes.toBytes("ddd"),
-      Bytes.toBytes("eee"));
+    lastEndKey);
 
     // First test that our Comparator works right up in CatalogJanitor.
     // Just fo kicks.
