@@ -23,6 +23,7 @@ import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -554,6 +555,8 @@ public class CatalogTracker {
       LOG.debug("Connecting to " + sn, e);
     } catch (SocketException e) {
       LOG.debug("Exception connecting to " + sn);
+    } catch (UnknownHostException e) {
+      LOG.debug("Unknown host exception connecting to  " + sn);
     } catch (IOException ioe) {
       Throwable cause = ioe.getCause();
       if (cause != null && cause instanceof EOFException) {
