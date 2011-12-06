@@ -722,6 +722,412 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
           for more information on ZooKeeper sizing.
             </para>
             </section>
+            
+
+            <section xml:id="zk.sasl.auth">
+              <title>SASL Authentication with ZooKeeper</title>
+              <para>Newer releases of HBase (&gt;= 0.92) will
+              support connecting to a ZooKeeper Quorum that supports
+              SASL authentication (which is available in Zookeeper
+              versions 3.4.0 or later).</para>
+              
+              <para>This describes how to set up HBase to mutually
+              authenticate with a ZooKeeper Quorum. ZooKeeper/HBase
+              mutual authentication (<link
+              xlink:href="https://issues.apache.org/jira/browse/HBASE-2418">HBASE-2418</link>)
+              is required as part of a complete secure HBase configuration
+              (<link
+              xlink:href="https://issues.apache.org/jira/browse/HBASE-3025">HBASE-3025</link>).
+
+              For simplicity of explication, this section ignores
+              additional configuration required (Secure HDFS and Coprocessor
+              configuration).  It's recommended to begin with an
+              HBase-managed Zookeeper configuration (as opposed to a
+              standalone Zookeeper quorum) for ease of learning.
+              </para>
+
+              <section><title>Operating System Prerequisites</title></section>
+
+              <para>
+                  You need to have a working Kerberos KDC setup. For
+                  each <code>$HOST</code> that will run a ZooKeeper
+                  server, you should have a principle
+                  <code>zookeeper/$HOST</code>.  For each such host,
+                  add a service key (using the <code>kadmin</code> or
+                  <code>kadmin.local</code> tool's <code>ktadd</code>
+                  command) for <code>zookeeper/$HOST</code> and copy
+                  this file to <code>$HOST</code>, and make it
+                  readable only to the user that will run zookeeper on
+                  <code>$HOST</code>. Note the location of this file,
+                  which we will use below as
+                  <filename>$PATH_TO_ZOOKEEPER_KEYTAB</filename>.
+              </para>
+
+              <para>
+                Similarly, for each <code>$HOST</code> that will run
+                an HBase server (master or regionserver), you should
+                have a principle: <code>hbase/$HOST</code>. For each
+                host, add a keytab file called
+                <filename>hbase.keytab</filename> containing a service
+                key for <code>hbase/$HOST</code>, copy this file to
+                <code>$HOST</code>, and make it readable only to the
+                user that will run an HBase service on
+                <code>$HOST</code>. Note the location of this file,
+                which we will use below as
+                <filename>$PATH_TO_HBASE_KEYTAB</filename>.
+              </para>
+
+              <para>
+                Each user who will be an HBase client should also be
+                given a Kerberos principal. This principal should
+                usually have a password assigned to it (as opposed to,
+                as with the HBase servers, a keytab file) which only
+                this user knows. The client's principal's
+                <code>maxrenewlife</code> should be set so that it can
+                be renewed enough so that the user can complete their
+                HBase client processes. For example, if a user runs a
+                long-running HBase client process that takes at most 3
+                days, we might create this user's principal within
+                <code>kadmin</code> with: <code>addprinc -maxrenewlife
+                3days</code>. The Zookeeper client and server
+                libraries manage their own ticket refreshment by
+                running threads that wake up periodically to do the
+                refreshment.
+              </para>
+
+                <para>On each host that will run an HBase client
+                (e.g. <code>hbase shell</code>), add the following
+                file to the HBase home directory's <filename>conf</filename>
+                directory:</para>
+
+                <programlisting>
+                  Client {
+                    com.sun.security.auth.module.Krb5LoginModule required
+                    useKeyTab=false
+                    useTicketCache=true;
+                  };
+                </programlisting>
+
+                <para>We'll refer to this JAAS configuration file as
+                <filename>$CLIENT_CONF</filename> below.</para>
+
+              <section>
+                <title>HBase-managed Zookeeper Configuration</title>
+
+                <para>On each node that will run a zookeeper, a
+                master, or a regionserver, create a <link
+                xlink:href="http://docs.oracle.com/javase/1.4.2/docs/guide/security/jgss/tutorials/LoginConfigFile.html">JAAS</link>
+                configuration file in the conf directory of the node's
+                <filename>HBASE_HOME</filename> directory that looks like the
+                following:</para>
+
+                <programlisting>
+                  Server {
+                    com.sun.security.auth.module.Krb5LoginModule required
+                    useKeyTab=true
+                    keyTab="$PATH_TO_ZOOKEEPER_KEYTAB"
+                    storeKey=true
+                    useTicketCache=false
+                    principal="zookeeper/$HOST";
+                  };
+                  Client {
+                    com.sun.security.auth.module.Krb5LoginModule required
+                    useKeyTab=true
+                    useTicketCache=false
+                    keyTab="$PATH_TO_HBASE_KEYTAB"
+                    principal="hbase/$HOST";
+                  };
+                </programlisting>
+                
+                where the <filename>$PATH_TO_HBASE_KEYTAB</filename> and
+                <filename>$PATH_TO_ZOOKEEPER_KEYTAB</filename> files are what
+                you created above, and <code>$HOST</code> is the hostname for that
+                node.
+
+                <para>The <code>Server</code> section will be used by
+                the Zookeeper quorum server, while the
+                <code>Client</code> section will be used by the HBase
+                master and regionservers. The path to this file should
+                be substituted for the text <filename>$HBASE_SERVER_CONF</filename>
+                in the <filename>hbase-env.sh</filename>
+                listing below.</para>
+
+                <para>
+                  The path to this file should be substituted for the
+                  text <filename>$CLIENT_CONF</filename> in the
+                  <filename>hbase-env.sh</filename> listing below.
+                </para>
+
+                <para>Modify your <filename>hbase-env.sh</filename> to include the
+                following:</para>
+
+                <programlisting>
+                  export HBASE_OPTS="-Djava.security.auth.login.config=$CLIENT_CONF"
+                  export HBASE_MANAGES_ZK=true
+                  export HBASE_ZOOKEEPER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
+                  export HBASE_MASTER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
+                  export HBASE_REGIONSERVER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
+                </programlisting>
+
+                where <filename>$HBASE_SERVER_CONF</filename> and
+                <filename>$CLIENT_CONF</filename> are the full paths to the
+                JAAS configuration files created above.
+
+                <para>Modify your <filename>hbase-site.xml</filename> on each node
+                that will run zookeeper, master or regionserver to contain:</para>
+
+                <programlisting><![CDATA[
+                  <configuration>
+                    <property>
+                      <name>hbase.zookeeper.quorum</name>
+                      <value>$ZK_NODES</value>
+                    </property>
+                    <property>
+                      <name>hbase.cluster.distributed</name>
+                      <value>true</value>
+                    </property>
+                    <property>
+                      <name>hbase.zookeeper.property.authProvider.1</name>
+                      <value>org.apache.zookeeper.server.auth.SASLAuthenticationProvider</value>
+                    </property>
+                    <property>
+                      <name>hbase.zookeeper.property.kerberos.removeHostFromPrincipal</name>
+                      <value>true</value>
+                    </property>
+                    <property>
+                      <name>hbase.zookeeper.property.kerberos.removeRealmFromPrincipal</name>
+                      <value>true</value>
+                    </property>
+                  </configuration>
+                  ]]></programlisting>
+
+                <para>where <code>$ZK_NODES</code> is the
+                comma-separated list of hostnames of the Zookeeper
+                Quorum hosts.</para>
+
+                <para>Start your hbase cluster by running one or more
+                of the following set of commands on the appropriate
+                hosts:
+                </para>
+
+                <programlisting>
+                  bin/hbase zookeeper start
+                  bin/hbase master start
+                  bin/hbase regionserver start
+                </programlisting>
+
+              </section>
+
+              <section><title>External Zookeeper Configuration</title>
+                <para>Add a JAAS configuration file that looks like:
+
+                <programlisting>
+                  Client {
+                    com.sun.security.auth.module.Krb5LoginModule required
+                    useKeyTab=true
+                    useTicketCache=false
+                    keyTab="$PATH_TO_HBASE_KEYTAB"
+                    principal="hbase/$HOST";
+                  };
+                </programlisting>
+
+                where the <filename>$PATH_TO_HBASE_KEYTAB</filename> is the keytab 
+                created above for HBase services to run on this host, and <code>$HOST</code> is the
+                hostname for that node. Put this in the HBase home's
+                configuration directory. We'll refer to this file's
+                full pathname as <filename>$HBASE_SERVER_CONF</filename> below.</para>
+
+                <para>Modify your hbase-env.sh to include the following:</para>
+
+                <programlisting>
+                  export HBASE_OPTS="-Djava.security.auth.login.config=$CLIENT_CONF"
+                  export HBASE_MANAGES_ZK=false
+                  export HBASE_MASTER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
+                  export HBASE_REGIONSERVER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
+                </programlisting>
+
+
+                <para>Modify your <filename>hbase-site.xml</filename> on each node
+                that will run a master or regionserver to contain:</para>
+
+                <programlisting><![CDATA[
+                  <configuration>
+                    <property>
+                      <name>hbase.zookeeper.quorum</name>
+                      <value>$ZK_NODES</value>
+                    </property>
+                    <property>
+                      <name>hbase.cluster.distributed</name>
+                      <value>true</value>
+                    </property>
+                  </configuration>
+                  ]]>
+                </programlisting>
+
+                <para>where <code>$ZK_NODES</code> is the
+                comma-separated list of hostnames of the Zookeeper
+                Quorum hosts.</para>
+
+                <para>
+                  Add a <filename>zoo.cfg</filename> for each Zookeeper Quorum host containing:
+                  <programlisting>
+                      authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
+                      kerberos.removeHostFromPrincipal=true
+                      kerberos.removeRealmFromPrincipal=true
+                  </programlisting>
+
+                  Also on each of these hosts, create a JAAS configuration file containing:
+
+                  <programlisting>
+                  Server {
+                    com.sun.security.auth.module.Krb5LoginModule required
+                    useKeyTab=true
+                    keyTab="$PATH_TO_ZOOKEEPER_KEYTAB"
+                    storeKey=true
+                    useTicketCache=false
+                    principal="zookeeper/$HOST";
+                  };
+                  </programlisting>
+
+                  where <code>$HOST</code> is the hostname of each
+                  Quorum host. We will refer to the full pathname of
+                  this file as <filename>$ZK_SERVER_CONF</filename> below.
+
+                </para>
+
+                <para>
+                  Start your Zookeepers on each Zookeeper Quorum host with:
+                  
+                  <programlisting>
+                    SERVER_JVMFLAGS="-Djava.security.auth.login.config=$ZK_SERVER_CONF" bin/zkServer start
+                  </programlisting>
+
+                </para>
+
+                <para>
+                  Start your HBase cluster by running one or more of the following set of commands on the appropriate nodes:
+                </para>
+
+                <programlisting>
+                  bin/hbase master start
+                  bin/hbase regionserver start
+                </programlisting>
+
+
+              </section>
+
+              <section>
+                <title>Zookeeper Server Authentication Log Output</title>
+                <para>If the configuration above is successful,
+                you should see something similar to the following in
+                your Zookeeper server logs:
+                <programlisting>
+11/12/05 22:43:39 INFO zookeeper.Login: successfully logged in.
+11/12/05 22:43:39 INFO server.NIOServerCnxnFactory: binding to port 0.0.0.0/0.0.0.0:2181
+11/12/05 22:43:39 INFO zookeeper.Login: TGT refresh thread started.
+11/12/05 22:43:39 INFO zookeeper.Login: TGT valid starting at:        Mon Dec 05 22:43:39 UTC 2011
+11/12/05 22:43:39 INFO zookeeper.Login: TGT expires:                  Tue Dec 06 22:43:39 UTC 2011
+11/12/05 22:43:39 INFO zookeeper.Login: TGT refresh sleeping until: Tue Dec 06 18:36:42 UTC 2011
+..
+11/12/05 22:43:59 INFO auth.SaslServerCallbackHandler: 
+  Successfully authenticated client: authenticationID=hbase/ip-10-166-175-249.us-west-1.compute.internal@HADOOP.LOCALDOMAIN; 
+  authorizationID=hbase/ip-10-166-175-249.us-west-1.compute.internal@HADOOP.LOCALDOMAIN.
+11/12/05 22:43:59 INFO auth.SaslServerCallbackHandler: Setting authorizedID: hbase
+11/12/05 22:43:59 INFO server.ZooKeeperServer: adding SASL authorization for authorizationID: hbase
+                </programlisting>
+                  
+                </para>
+
+              </section>
+
+              <section>
+                <title>Zookeeper Client Authentication Log Output</title>
+                <para>On the Zookeeper client side (HBase master or regionserver),
+                you should see something similar to the following:
+
+                <programlisting>
+11/12/05 22:43:59 INFO zookeeper.ZooKeeper: Initiating client connection, connectString=ip-10-166-175-249.us-west-1.compute.internal:2181 sessionTimeout=180000 watcher=master:60000
+11/12/05 22:43:59 INFO zookeeper.ClientCnxn: Opening socket connection to server /10.166.175.249:2181
+11/12/05 22:43:59 INFO zookeeper.RecoverableZooKeeper: The identifier of this process is 14851@ip-10-166-175-249
+11/12/05 22:43:59 INFO zookeeper.Login: successfully logged in.
+11/12/05 22:43:59 INFO client.ZooKeeperSaslClient: Client will use GSSAPI as SASL mechanism.
+11/12/05 22:43:59 INFO zookeeper.Login: TGT refresh thread started.
+11/12/05 22:43:59 INFO zookeeper.ClientCnxn: Socket connection established to ip-10-166-175-249.us-west-1.compute.internal/10.166.175.249:2181, initiating session
+11/12/05 22:43:59 INFO zookeeper.Login: TGT valid starting at:        Mon Dec 05 22:43:59 UTC 2011
+11/12/05 22:43:59 INFO zookeeper.Login: TGT expires:                  Tue Dec 06 22:43:59 UTC 2011
+11/12/05 22:43:59 INFO zookeeper.Login: TGT refresh sleeping until: Tue Dec 06 18:30:37 UTC 2011
+11/12/05 22:43:59 INFO zookeeper.ClientCnxn: Session establishment complete on server ip-10-166-175-249.us-west-1.compute.internal/10.166.175.249:2181, sessionid = 0x134106594320000, negotiated timeout = 180000
+                </programlisting>
+                </para>
+              </section>
+
+              <section>
+                <title>Configuration from Scratch</title>
+
+                This has been tested on the current standard Amazon
+                Linux AMI.  First setup KDC and principals as
+                described above. Next checkout code and run a sanity
+                check.
+                
+                <programlisting>
+                git clone git://git.apache.org/hbase.git
+                cd hbase
+                mvn -Psecurity,localTests clean test -Dtest=TestZooKeeperACL
+                </programlisting>
+
+                Then configure HBase as described above.
+                Manually edit target/cached_classpath.txt (see below)..
+
+                <programlisting>
+                bin/hbase zookeeper &amp;
+                bin/hbase master &amp;
+                bin/hbase regionserver &amp;
+                </programlisting>
+              </section>
+
+
+              <section>
+                <title>Future improvements</title>
+
+                <section><title>Fix target/cached_classpath.txt</title>
+                <para>
+                You must override the standard hadoop-core jar file from the
+                <code>target/cached_classpath.txt</code>
+                file with the version containing the HADOOP-7070 fix. You can use the following script to do this:
+
+                <programlisting>
+                  echo `find ~/.m2 -name "*hadoop-core*7070*SNAPSHOT.jar"` ':' `cat target/cached_classpath.txt` | sed 's/ //g' > target/tmp.txt 
+                  mv target/tmp.txt target/cached_classpath.txt
+                </programlisting>
+
+                </para>
+
+                </section>
+
+                <section>
+                  <title>Set JAAS configuration
+                  programmatically</title> 
+
+
+                  This would avoid the need for a separate Hadoop jar
+                  that fixes <link xlink:href="https://issues.apache.org/jira/browse/HADOOP-7070">HADOOP-7070</link>.
+                </section>
+                
+                <section>
+                  <title>Elimination of 
+                  <code>kerberos.removeHostFromPrincipal</code> and 
+                  <code>kerberos.removeRealmFromPrincipal</code></title>
+                </section>
+                
+              </section>
+
+
+            </section> <!-- SASL Authentication with ZooKeeper -->
+
+
+
+
+
      </section>     <!--  zookeeper -->        
     
     
