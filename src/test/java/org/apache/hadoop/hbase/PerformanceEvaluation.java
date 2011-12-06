@@ -121,6 +121,7 @@ public class PerformanceEvaluation {
   private int R = ROWS_PER_GB;
   private boolean flushCommits = true;
   private boolean writeToWAL = true;
+  private int presplitRegions = 0;
 
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
   /**
@@ -465,16 +466,51 @@ public class PerformanceEvaluation {
    */
   private boolean checkTable(HBaseAdmin admin) throws IOException {
     HTableDescriptor tableDescriptor = getTableDescriptor();
-    boolean tableExists = admin.tableExists(tableDescriptor.getName());
-    if (!tableExists) {
-      admin.createTable(tableDescriptor);
-      LOG.info("Table " + tableDescriptor + " created");
+    if (this.presplitRegions > 0) {
+      // presplit requested
+      if (admin.tableExists(tableDescriptor.getName())) {
+        admin.disableTable(tableDescriptor.getName());
+        admin.deleteTable(tableDescriptor.getName());
+      }
+
+      byte[][] splits = getSplits();
+      for (int i=0; i < splits.length; i++) {
+        LOG.debug(" split " + i + ": " + Bytes.toStringBinary(splits[i]));
+      }
+      admin.createTable(tableDescriptor, splits);
+      LOG.info ("Table created with " + this.presplitRegions + " splits");
     }
-    return !tableExists;
+    else {
+      boolean tableExists = admin.tableExists(tableDescriptor.getName());
+      if (!tableExists) {
+        admin.createTable(tableDescriptor);
+        LOG.info("Table " + tableDescriptor + " created");
+      }
+    }
+    boolean tableExists = admin.tableExists(tableDescriptor.getName());
+    return tableExists;
   }
 
   protected HTableDescriptor getTableDescriptor() {
     return TABLE_DESCRIPTOR;
+  }
+
+  /**
+   * generates splits based on total number of rows and specified split regions
+   *
+   * @return splits : array of byte []
+   */
+  protected  byte[][] getSplits() {
+    if (this.presplitRegions == 0)
+      return new byte [0][];
+
+    byte[][] splits = new byte[this.presplitRegions][];
+    int jump = this.R  / this.presplitRegions;
+    for (int i=0; i <this.presplitRegions; i++) {
+      int rowkey = jump * i;
+      splits[i] = format(rowkey);
+    }
+    return splits;
   }
 
   /*
@@ -1184,6 +1220,7 @@ public class PerformanceEvaluation {
     System.err.println(" rows            Rows each client runs. Default: One million");
     System.err.println(" flushCommits    Used to determine if the test should flush the table.  Default: false");
     System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
+    System.err.println(" presplit        Create presplit table. Recommended for accurate perf analysis (see guide).  Default: disabled");
     System.err.println();
     System.err.println("Command:");
     for (CmdDescriptor command : commands.values()) {
@@ -1257,6 +1294,12 @@ public class PerformanceEvaluation {
         final String writeToWAL = "--writeToWAL=";
         if (cmd.startsWith(writeToWAL)) {
           this.writeToWAL = Boolean.parseBoolean(cmd.substring(writeToWAL.length()));
+          continue;
+        }
+
+        final String presplit = "--presplit=";
+        if (cmd.startsWith(presplit)) {
+          this.presplitRegions = Integer.parseInt(cmd.substring(presplit.length()));
           continue;
         }
 
