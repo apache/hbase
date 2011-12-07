@@ -406,6 +406,17 @@ mvn compile
           <para>See <xref linkend="integration.tests" />
           </para>
       </section>
+
+       <section xml:id="maven.build.hadoop"> 
+          <title>To build against hadoop 0.22.x or 0.23.x</title>
+          <programlisting>
+mvn -Dhadoop.profile=22 ...
+          </programlisting>
+<para>That is, designate build with hadoop.profile 22.  Pass 23 for hadoop.profile to build against hadoop 0.23.
+Tests do not all pass as of this writing so you may need ot pass <code>-DskipTests</code> unless you are inclined
+to fix the failing tests.
+</para>
+      </section>
     </section>
   
     <section xml:id="getting.involved"> 
