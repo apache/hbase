@@ -158,8 +158,14 @@ class CatalogJanitor extends Chore {
       // Compare end keys.
       result = Bytes.compareTo(left.getEndKey(), right.getEndKey());
       if (result != 0) {
-        if (left.getEndKey().length == 0) return -1;  // left is last region
-        if (right.getEndKey().length == 0) return 1;  // right is the last region
+        if (left.getStartKey().length != 0
+                && left.getEndKey().length == 0) {
+            return -1;  // left is last region
+        }
+        if (right.getStartKey().length != 0
+                && right.getEndKey().length == 0) {
+            return 1;  // right is the last region
+        }
         return -result; // Flip the result so parent comes first.
       }
       return result;
