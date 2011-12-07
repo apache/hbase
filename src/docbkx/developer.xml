@@ -222,7 +222,7 @@ unit test characterizations.</para>
 <section xml:id="hbase.unittests.cmds.test">
 <title>Default: small and medium category tests
 </title>
-<para>Running <programlisting>mvn run</programlisting> will execute all small tests in a single JVM and medium tests in a separate JVM for
+<para>Running <programlisting>mvn test</programlisting> will execute all small tests in a single JVM and medium tests in a separate JVM for
 each test instance. Medium tests are NOT executed if there is an error in a small test.
 Large tests are NOT executed.  There is one report for small tests, and one report for
 medium tests if they are executed.
@@ -241,12 +241,12 @@ There is one report for small tests, and one report for medium and large tests i
 
 <section xml:id="hbase.unittests.cmds.test.localtests.mytest">
 <title>Running a single test or all tests in a package</title>
-<para>To run an individual test, <classname>MyTest</classname>, do
+<para>To run an individual test, e.g. <classname>MyTest</classname>, do
 <programlisting>mvn test -P localTests -Dtest=MyTest</programlisting>  You can also
-pass multiple individual tests comma-delimited: e.g.
+pass multiple, individual tests as a comma-delimited list:
 <programlisting>mvn test -P localTests -Dtest=MyTest1,MyTest2,MyTest3</programlisting>
-You can also pass a package and all tests under the package will be run by doing as follows:
-<programlisting>mvn test -P localTests -Dtest=org.apache.hadoop.hbase.client.*</programlisting>.
+You can also pass a package, which will run all tests under the package:
+<programlisting>mvn test -P localTests -Dtest=org.apache.hadoop.hbase.client.*</programlisting>
 </para>
 
 <para>
@@ -358,7 +358,7 @@ run all the phases up to and including the verify phase via the
 maven <link xlink:href="http://maven.apache.org/plugins/maven-failsafe-plugin/">failsafe plugin</link>,
 running all the above mentioned HBase unit tests as well as tests that are in the HBase integration test group.
 If you just want to run the integration tests, you need to run two commands. First:
-          <code>mvn failsafe:integration-test</code>.
+          <programlisting>mvn failsafe:integration-test</programlisting>
 This actually runs ALL the integration tests.
           <note><para>This command will always output <code>BUILD SUCCESS</code> even if there are test failures.
           </para></note>
