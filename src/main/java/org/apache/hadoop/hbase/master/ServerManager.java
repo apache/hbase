@@ -518,7 +518,6 @@ public class ServerManager {
       Thread.sleep(interval);
       slept += interval;
       count = countOfRegionServers();
-      if (count == oldcount && count > 0) break;
 
       String msg;
       if (count == oldcount && count >= minToStart && slept >= timeout) {
