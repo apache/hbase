@@ -543,6 +543,21 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
             </para>
             
        </section>    
+       <section xml:id="trouble.client.oome.directmemory.leak">
+            <title>Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing)</title>
+            <para>
+You are likely running into the issue that is described and worked through in
+the mail thread <link xhref="http://search-hadoop.com/m/ubhrX8KvcH/Suspected+memory+leak&amp;subj=Re+Suspected+memory+leak">HBase, mail # user - Suspected memory leak</link>
+and continued over in <link xhref="http://search-hadoop.com/m/p2Agc1Zy7Va/MaxDirectMemorySize+Was%253A+Suspected+memory+leak&amp;subj=Re+FeedbackRe+Suspected+memory+leak">HBase, mail # dev - FeedbackRe: Suspected memory leak</link>.
+A workaround is passing your client-side JVM a reasonable value for <code>-XX:MaxDirectMemorySize</code>.  By default,
+the <varname>MaxDirectMemorySize</varname> is equal to your <code>-Xmx</code> max heapsize setting (if <code>-Xmx</code> is set).
+Try seting it to something smaller (for example, one user had success setting it to <code>1g</code> when
+they had a client-side heap of <code>12g</code>).  If you set it too small, it will bring on <code>FullGCs</code> so keep
+it  a bit hefty.  You want to make this setting client-side only especially if you are running the new experiemental
+server-side off-heap cache since this feature depends on being able to use big direct buffers (You may have to keep
+separate client-side and server-side config dirs).
+            </para>
+       </section>    
     </section>
     
     <section xml:id="trouble.mapreduce">
