@@ -64,7 +64,8 @@ HBase provides:
 </p>
      </section>
      <section name="Where Can I Get More Information?">
-   <p>See the <a href="http://hbase.apache.org/book/faq.html">Apache HBase Book FAQ</a>, and the other documentation links on the left!
+   <p>See the <a href="http://hbase.apache.org/book/architecture.html#arch.overview">Architecture Overview</a>, the <a href="http://hbase.apache.org/book/faq.html">Apache HBase Book FAQ</a>,
+    and the other documentation links on the left!
    </p>
     </section>
      <section name="News">
