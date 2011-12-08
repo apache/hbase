@@ -461,6 +461,8 @@ Release 0.92.0 - Unreleased
    HBASE-4942  HMaster is unable to start of HFile V1 is used (honghua Zhu)
    HBASE-4860  RegionSplitter Should Allow NSFRE during logical split verification
    HBASE-4610  Port HBASE-3380 (Master failover can split logs of live servers) to 92/trunk
+   HBASE-4976  Add compaction/flush queue size metrics mistakenly removed by HFile v2
+               (Mikhail Bautin)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
