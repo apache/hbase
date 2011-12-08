@@ -463,6 +463,8 @@ Release 0.92.0 - Unreleased
    HBASE-4610  Port HBASE-3380 (Master failover can split logs of live servers) to 92/trunk
    HBASE-4976  Add compaction/flush queue size metrics mistakenly removed by HFile v2
                (Mikhail Bautin)
+   HBASE-4982  graceful_stop.sh does not pass on the --config its passed to its
+               internal invocations of other hbase scripts
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
