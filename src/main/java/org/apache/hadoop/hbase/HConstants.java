@@ -144,6 +144,12 @@ public final class HConstants {
   /** Default limit on concurrent client-side zookeeper connections */
   public static final int DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS = 30;
 
+  /** Configuration key for ZooKeeper session timeout */
+  public static final String ZK_SESSION_TIMEOUT = "zookeeper.session.timeout";
+
+  /** Default value for ZooKeeper session timeout */
+  public static final int DEFAULT_ZK_SESSION_TIMEOUT = 180 * 1000;
+
   /** Parameter name for port region server listens on. */
   public static final String REGIONSERVER_PORT = "hbase.regionserver.port";
 
@@ -152,6 +158,10 @@ public final class HConstants {
 
   /** default port for region server web api */
   public static final int DEFAULT_REGIONSERVER_INFOPORT = 60030;
+
+  /** A flag that enables automatic selection of regionserver info port */
+  public static final String REGIONSERVER_INFO_PORT_AUTO =
+    "hbase.regionserver.info.port.auto";
 
   /** Parameter name for what region server interface to use. */
   public static final String REGION_SERVER_CLASS = "hbase.regionserver.class";
@@ -203,6 +213,10 @@ public final class HConstants {
 
   /** Used to construct the name of the compaction directory during compaction */
   public static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
+
+  /** Conf key for the max file size after which we split the region */
+  public static final String HREGION_MAX_FILESIZE =
+      "hbase.hregion.max.filesize";
 
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
@@ -504,9 +518,9 @@ public final class HConstants {
    */
   public static final String
       REPLICATION_ENABLE_KEY = "hbase.replication";
-  public static final String 
+  public static final String
       REPLICATION_SOURCE_SERVICE_CLASSNAME = "hbase.replication.source.service";
-  public static final String 
+  public static final String
       REPLICATION_SINK_SERVICE_CLASSNAME = "hbase.replication.sink.service";
   public static final String REPLICATION_SERVICE_CLASSNAME_DEFAULT =
     "org.apache.hadoop.hbase.replication.regionserver.Replication";
@@ -546,6 +560,12 @@ public final class HConstants {
   public static final Pattern CP_HTD_ATTR_VALUE_PARAM_PATTERN = Pattern.compile(
       "(" + CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN + ")=(" +
       CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + "),?");
+
+  /** The delay when re-trying a socket operation in a loop (HBASE-4712) */
+  public static final int SOCKET_RETRY_WAIT_MS = 200;
+
+  /** Host name of the local machine */
+  public static final String LOCALHOST = "localhost";
 
   private HConstants() {
     // Can't be instantiated with this ctor.

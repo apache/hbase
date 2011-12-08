@@ -3278,7 +3278,7 @@ public class TestHRegion extends HBaseTestCase {
 
     // This size should make it so we always split using the addContent
     // below.  After adding all data, the first region is 1.3M
-    conf.setLong("hbase.hregion.max.filesize", 1024 * 128);
+    conf.setLong(HConstants.HREGION_MAX_FILESIZE, 1024 * 128);
     return conf;
   }
 

@@ -33,6 +33,7 @@ import java.security.PrivilegedAction;
 import java.util.Comparator;
 import java.util.Iterator;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -312,7 +313,7 @@ public class Bytes {
       return "null";
     return toStringBinary(b, 0, b.length);
   }
-  
+
   /**
    * Converts the given byte buffer, from its array offset to its limit, to
    * a string. The position and the mark are ignored.
@@ -852,7 +853,7 @@ public class Bytes {
     offset = putInt(result, offset, val.scale());
     return putBytes(result, offset, valueBytes, 0, valueBytes.length);
   }
-  
+
   /**
    * @param vint Integer to make a vint of.
    * @return Vint as bytes array.
@@ -960,7 +961,7 @@ public class Bytes {
     return LexicographicalComparerHolder.BEST_COMPARER.
       compareTo(buffer1, offset1, length1, buffer2, offset2, length2);
   }
-  
+
   interface Comparer<T> {
     abstract public int compareTo(T buffer1, int offset1, int length1,
         T buffer2, int offset2, int length2);
@@ -982,7 +983,7 @@ public class Bytes {
   static class LexicographicalComparerHolder {
     static final String UNSAFE_COMPARER_NAME =
         LexicographicalComparerHolder.class.getName() + "$UnsafeComparer";
-    
+
     static final Comparer<byte[]> BEST_COMPARER = getBestComparer();
     /**
      * Returns the Unsafe-using Comparer, or falls back to the pure-Java
@@ -1001,7 +1002,7 @@ public class Bytes {
         return lexicographicalComparerJavaImpl();
       }
     }
-    
+
     enum PureJavaComparer implements Comparer<byte[]> {
       INSTANCE;
 
@@ -1027,7 +1028,7 @@ public class Bytes {
         return length1 - length2;
       }
     }
-    
+
     @VisibleForTesting
     enum UnsafeComparer implements Comparer<byte[]> {
       INSTANCE;
@@ -1164,7 +1165,7 @@ public class Bytes {
     if (left == null || right == null) return false;
     if (left.length != right.length) return false;
     if (left.length == 0) return true;
-    
+
     // Since we're often comparing adjacent sorted data,
     // it's usual to have equal arrays except for the very last byte
     // so check that first
@@ -1172,7 +1173,7 @@ public class Bytes {
 
     return compareTo(left, right) == 0;
   }
-  
+
   public static boolean equals(final byte[] left, int leftOffset, int leftLen,
                                final byte[] right, int rightOffset, int rightLen) {
     // short circuit case
@@ -1188,7 +1189,7 @@ public class Bytes {
     if (leftLen == 0) {
       return true;
     }
-    
+
     // Since we're often comparing adjacent sorted data,
     // it's usual to have equal arrays except for the very last byte
     // so check that first
@@ -1197,7 +1198,7 @@ public class Bytes {
     return LexicographicalComparerHolder.BEST_COMPARER.
       compareTo(left, leftOffset, leftLen, right, rightOffset, rightLen) == 0;
   }
-  
+
 
   /**
    * Return true if the byte array on the right is a prefix of the byte
@@ -1207,7 +1208,7 @@ public class Bytes {
     return bytes != null && prefix != null &&
       bytes.length >= prefix.length &&
       LexicographicalComparerHolder.BEST_COMPARER.
-        compareTo(bytes, 0, prefix.length, prefix, 0, prefix.length) == 0;      
+        compareTo(bytes, 0, prefix.length, prefix, 0, prefix.length) == 0;
   }
 
   /**
@@ -1379,7 +1380,7 @@ public class Bytes {
    */
   public static Iterable<byte[]> iterateOnSplits(
       final byte[] a, final byte[]b, boolean inclusive, final int num)
-  {  
+  {
     byte [] aPadded;
     byte [] bPadded;
     if (a.length < b.length) {
@@ -1419,7 +1420,7 @@ public class Bytes {
 
     final Iterator<byte[]> iterator = new Iterator<byte[]>() {
       private int i = -1;
-      
+
       @Override
       public boolean hasNext() {
         return i < num+1;
@@ -1430,7 +1431,7 @@ public class Bytes {
         i++;
         if (i == 0) return a;
         if (i == num + 1) return b;
-        
+
         BigInteger curBI = startBI.add(intervalBI.multiply(BigInteger.valueOf(i)));
         byte [] padded = curBI.toByteArray();
         if (padded[1] == 0)
@@ -1444,9 +1445,9 @@ public class Bytes {
       public void remove() {
         throw new UnsupportedOperationException();
       }
-      
+
     };
-    
+
     return new Iterable<byte[]>() {
       @Override
       public Iterator<byte[]> iterator() {
@@ -1628,7 +1629,7 @@ public class Bytes {
   /**
    * Reads a fixed-size field and interprets it as a string padded with zeros.
    */
-  public static String readStringFixedSize(final DataInput in, int size) 
+  public static String readStringFixedSize(final DataInput in, int size)
       throws IOException {
     byte[] b = new byte[size];
     in.readFully(b);

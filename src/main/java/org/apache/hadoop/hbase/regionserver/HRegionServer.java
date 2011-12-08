@@ -1512,7 +1512,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (port < 0) return port;
     String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
     // check if auto port bind enabled
-    boolean auto = this.conf.getBoolean("hbase.regionserver.info.port.auto", false);
+    boolean auto = this.conf.getBoolean(HConstants.REGIONSERVER_INFO_PORT_AUTO,
+        false);
     while (true) {
       try {
         this.infoServer = new InfoServer("regionserver", addr, port, false, this.conf);

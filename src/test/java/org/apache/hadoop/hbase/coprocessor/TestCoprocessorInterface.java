@@ -54,11 +54,11 @@ public class TestCoprocessorInterface extends HBaseTestCase {
   private static class CustomScanner implements RegionScanner {
 
     private RegionScanner delegate;
-    
+
     public CustomScanner(RegionScanner delegate) {
       this.delegate = delegate;
     }
-    
+
     @Override
     public boolean next(List<KeyValue> results) throws IOException {
       return delegate.next(results);
@@ -83,9 +83,9 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     public boolean isFilterDone() {
       return delegate.isFilterDone();
     }
-    
+
   }
-  
+
   public static class CoprocessorImpl extends BaseRegionObserver {
 
     private boolean startCalled;
@@ -195,11 +195,11 @@ public class TestCoprocessorInterface extends HBaseTestCase {
       addContent(region, fam3);
       region.flushcache();
     }
-    
+
     region.compactStores();
 
     byte [] splitRow = region.checkSplit();
-    
+
     assertNotNull(splitRow);
     HRegion [] regions = split(region, splitRow);
     for (int i = 0; i < regions.length; i++) {
@@ -216,7 +216,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     assertTrue(scanner instanceof CustomScanner);
     // this would throw an exception before HBASE-4197
     scanner.next(new ArrayList<KeyValue>());
-    
+
     assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());
     assertTrue("Coprocessor not stopped", ((CoprocessorImpl)c).wasStopped());
     assertTrue(((CoprocessorImpl)c).wasOpened());
@@ -303,7 +303,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     TEST_UTIL.getConfiguration().setLong("hbase.client.pause", 15 * 1000);
     // This size should make it so we always split using the addContent
     // below.  After adding all data, the first region is 1.3M
-    TEST_UTIL.getConfiguration().setLong("hbase.hregion.max.filesize",
+    TEST_UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE,
         1024 * 128);
     TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster",
         true);

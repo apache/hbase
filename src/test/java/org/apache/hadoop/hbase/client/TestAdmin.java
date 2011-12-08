@@ -96,7 +96,7 @@ public class TestAdmin {
 
   @Test
   public void testDeleteEditUnknownColumnFamilyAndOrTable() throws IOException {
-    // Test we get exception if we try to 
+    // Test we get exception if we try to
     final String nonexistent = "nonexistent";
     HColumnDescriptor nonexistentHcd = new HColumnDescriptor(nonexistent);
     Exception exception = null;
@@ -312,7 +312,7 @@ public class TestAdmin {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test 
+  @Test
   public void testOnlineChangeTableSchema() throws IOException, InterruptedException {
     final byte [] tableName = Bytes.toBytes("changeTableSchemaOnline");
     TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
@@ -398,7 +398,7 @@ public class TestAdmin {
     this.admin.listTables();
     assertFalse(this.admin.tableExists(tableName));
   }
-  
+
   @Test
   public void testShouldFailOnlineSchemaUpdateIfOnlineSchemaIsNotEnabled()
       throws Exception {
@@ -699,7 +699,7 @@ public class TestAdmin {
 
   /**
    * Test round-robin assignment on enableTable.
-   * 
+   *
    * @throws IOException
    */
   @Test
@@ -751,7 +751,7 @@ public class TestAdmin {
     assertTrue(entryList.size() == 3);
     assertTrue((entryList.get(2).getValue() - entryList.get(0).getValue()) < 2);
   }
-  
+
   /**
    * Multi-family scenario. Tests forcing split from client and
    * having scanners successfully ride over split.
@@ -1223,7 +1223,7 @@ public class TestAdmin {
     } catch (IllegalArgumentException e) {
     }
   }
-  
+
 
   @Test
   public void testCloseRegionWhenServerNameIsEmpty() throws Exception {
@@ -1312,12 +1312,12 @@ public class TestAdmin {
       this.admin.deleteTable(tableName);
     }
   }
-  
+
 
   /**
    * For HBASE-2556
    * @throws IOException
-   */  
+   */
   @Test
   public void testGetTableRegions() throws IOException {
 
@@ -1336,11 +1336,11 @@ public class TestAdmin {
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
     List<HRegionInfo> RegionInfos = admin.getTableRegions(tableName);
-    
+
     assertEquals("Tried to create " + expectedRegions + " regions " +
         "but only found " + RegionInfos.size(),
         expectedRegions, RegionInfos.size());
-    
+
  }
 
   @Test
@@ -1372,7 +1372,7 @@ public class TestAdmin {
 
   private void setUpforLogRolling() {
     // Force a region split after every 768KB
-    TEST_UTIL.getConfiguration().setLong("hbase.hregion.max.filesize",
+    TEST_UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE,
         768L * 1024L);
 
     // We roll the log after every 32 writes
@@ -1415,7 +1415,7 @@ public class TestAdmin {
     TEST_UTIL.getConfiguration().setInt(
         "hbase.regionserver.hlog.lowreplication.rolllimit", 3);
   }
-  
+
   private HRegionServer startAndWriteData(String tableName, byte[] value)
       throws IOException {
     // When the META table can be opened, the region servers are running
@@ -1446,7 +1446,7 @@ public class TestAdmin {
     }
     return regionServer;
   }
-  
+
   /**
    * HBASE-4417 checkHBaseAvailable() doesn't close zk connections
    */
@@ -1457,5 +1457,5 @@ public class TestAdmin {
       HBaseAdmin.checkHBaseAvailable(conf);
     }
   }
-  
+
 }

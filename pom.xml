@@ -287,9 +287,9 @@
       <releases>
         <enabled>true</enabled>
       </releases>
-    </repository>    
+    </repository>
   </repositories>
-  
+
   <pluginRepositories>
     <pluginRepository>
       <id>ghelmling.testing</id>
@@ -302,7 +302,7 @@
         <enabled>true</enabled>
       </releases>
     </pluginRepository>
-  </pluginRepositories>  
+  </pluginRepositories>
 
   <build>
     <!-- Some plugins (javadoc for example) can be used in the normal build- and the site phase.
@@ -325,14 +325,14 @@
           <dependencies>
             <!-- by default surefire selects dynamically the connector to the unit tests tool.
               We want to use always the same as the different connectors
-               can have different bugs and behaviour.                
+               can have different bugs and behaviour.
             -->
             <dependency>
               <groupId>org.apache.maven.surefire</groupId>
               <artifactId>${surefire.provider}</artifactId>
               <version>${surefire.version}</version>
             </dependency>
-          </dependencies>          
+          </dependencies>
 
           <configuration>
             <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
@@ -349,13 +349,13 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${surefire.version}</version>
-          <dependencies>          
+          <dependencies>
             <dependency>
               <groupId>org.apache.maven.surefire</groupId>
               <artifactId>${surefire.provider}</artifactId>
               <version>${surefire.version}</version>
-            </dependency>   
-          </dependencies>          
+            </dependency>
+          </dependencies>
           <configuration>
             <includes>
               <include>${integrationtest.include}</include>
@@ -364,7 +364,7 @@
               <exlude>${unittest.include}</exlude>
               <exclude>**/*$*</exclude>
               <exclude>${test.exclude.pattern}</exclude>
-            </excludes>          
+            </excludes>
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
             <environmentVariables>
               <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/nativelib</LD_LIBRARY_PATH>
@@ -639,22 +639,22 @@
             <goals><goal>test</goal></goals>
             <configuration>
               <skip>${surefire.skipSecondPart}</skip>
-              <testFailureIgnore>false</testFailureIgnore>                  
+              <testFailureIgnore>false</testFailureIgnore>
               <forkMode>always</forkMode>
               <parallel>none</parallel>
               <groups>${surefire.secondPartGroups}</groups>
             </configuration>
           </execution>
-        </executions>         
+        </executions>
       </plugin>
-      <!--  Run integration tests with mvn verify --> 
+      <!--  Run integration tests with mvn verify -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
           <configuration>
             <skip>false</skip>
-            <forkMode>always</forkMode>             
-          </configuration>          
+            <forkMode>always</forkMode>
+          </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
@@ -867,6 +867,7 @@
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.4</commons-codec.version>
     <commons-httpclient.version>3.1</commons-httpclient.version><!-- pretty outdated -->
+    <commons-io.version>2.1</commons-io.version>
     <commons-lang.version>2.5</commons-lang.version>
     <commons-logging.version>1.1.1</commons-logging.version>
     <commons-math.version>2.1</commons-math.version>
@@ -888,31 +889,31 @@
     <zookeeper.version>3.4.0</zookeeper.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
 
-    <package.prefix>/usr</package.prefix>	           
-    <package.conf.dir>/etc/hbase</package.conf.dir>  
+    <package.prefix>/usr</package.prefix>
+    <package.conf.dir>/etc/hbase</package.conf.dir>
     <package.log.dir>/var/log/hbase</package.log.dir>
     <package.pid.dir>/var/run/hbase</package.pid.dir>
-    <package.release>1</package.release>	       
+    <package.release>1</package.release>
     <!-- also must update this when we bump version -->
-    <package.version>0.91.0</package.version>	       
+    <package.version>0.91.0</package.version>
     <final.name>${project.artifactId}-${project.version}</final.name>
 
     <!-- Test inclusion patterns used by failsafe configuration -->
     <unittest.include>**/Test*.java</unittest.include>
     <integrationtest.include>**/IntegrationTest*.java</integrationtest.include>
-    
+
     <surefire.version>2.11-TRUNK-HBASE-2</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
-    
-    <!-- default: run small & medium -->    
-    <surefire.skipFirstPart>false</surefire.skipFirstPart> 
+
+    <!-- default: run small & medium -->
+    <surefire.skipFirstPart>false</surefire.skipFirstPart>
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
-    
+
     <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
     <surefire.firstPartParallel>none</surefire.firstPartParallel>
-    <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>    
-    
-    <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups> 
+    <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+
+    <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
     <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
   </properties>
 
@@ -953,6 +954,11 @@
       <groupId>commons-httpclient</groupId>
       <artifactId>commons-httpclient</artifactId>
       <version>${commons-httpclient.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>${commons-io.version}</version>
     </dependency>
     <dependency>
       <groupId>commons-lang</groupId>
@@ -1053,8 +1059,8 @@
       <artifactId>servlet-api-2.5</artifactId>
       <version>${jetty.jspapi.version}</version>
     </dependency>
-    <!-- While jackson is also a dependency of both jersey and avro, these 
-         can bring in jars from different, incompatible versions. We force 
+    <!-- While jackson is also a dependency of both jersey and avro, these
+         can bring in jars from different, incompatible versions. We force
          the same version with these dependencies -->
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
@@ -1280,7 +1286,7 @@
         </plugins>
       </build>
     </profile>
-    
+
     <profile>
       <id>os.linux</id>
       <activation>
@@ -1429,7 +1435,7 @@
         </plugins>
       </build>
     </profile>
-    
+
     <!-- profile for building against Hadoop 0.20+security-->
     <profile>
       <id>security</id>
@@ -1876,8 +1882,8 @@
         </plugins>
       </build>
     </profile>
-    
-    <!-- profiles for the tests 
+
+    <!-- profiles for the tests
          See as well the properties of the project for the values
          when no profile is active.     -->
     <profile> <!-- Use it to launch the tests without parallelisation -->
@@ -1888,11 +1894,11 @@
       <properties>
         <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
         <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>             
+        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
       </properties>
     </profile>
-    
-    <profile> <!-- Use it to launch the tests in parallel in the same JVM  -->  
+
+    <profile> <!-- Use it to launch the tests in parallel in the same JVM  -->
       <id>parallelTests</id>
         <activation>
         <activeByDefault>false</activeByDefault>
@@ -1900,11 +1906,11 @@
       <properties>
         <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
         <surefire.firstPartParallel>classes</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>        
+        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
       </properties>
-    </profile>    
-    
-    <profile> <!-- Use it to launch the tests in the same JVM  -->  
+    </profile>
+
+    <profile> <!-- Use it to launch the tests in the same JVM  -->
       <id>singleJVMTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -1912,14 +1918,14 @@
       <properties>
         <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
         <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>      
-        
-        <surefire.skipFirstPart>false</surefire.skipFirstPart> 
-        <surefire.skipSecondPart>true</surefire.skipSecondPart> 
-        <surefire.firstPartGroups></surefire.firstPartGroups>         
+        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups></surefire.firstPartGroups>
       </properties>
-    </profile>     
-    
+    </profile>
+
     <profile> <!-- Use it to launch small tests only -->
       <id>runSmallTests</id>
       <activation>
@@ -1928,14 +1934,14 @@
       <properties>
         <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
         <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount> 
-             
-        <surefire.skipFirstPart>false</surefire.skipFirstPart> 
-        <surefire.skipSecondPart>true</surefire.skipSecondPart> 
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups> 
+        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
         <surefire.secondPartGroups></surefire.secondPartGroups>
       </properties>
-    </profile>      
+    </profile>
 
     <profile> <!-- Use it to launch medium tests only -->
       <id>runMediumTests</id>
@@ -1944,13 +1950,13 @@
       </activation>
       <properties>
         <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
-        <surefire.skipFirstPart>false</surefire.skipFirstPart> 
-        <surefire.skipSecondPart>true</surefire.skipSecondPart> 
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.firstPartGroups> 
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.firstPartGroups>
         <surefire.secondPartGroups></surefire.secondPartGroups>
       </properties>
-    </profile>    
-    
+    </profile>
+
     <profile> <!-- Use it to launch large tests only -->
       <id>runLargeTests</id>
       <activation>
@@ -1958,13 +1964,13 @@
       </activation>
       <properties>
         <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
-        <surefire.skipFirstPart>false</surefire.skipFirstPart> 
-        <surefire.skipSecondPart>true</surefire.skipSecondPart> 
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.LargeTests</surefire.firstPartGroups> 
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.LargeTests</surefire.firstPartGroups>
         <surefire.secondPartGroups></surefire.secondPartGroups>
       </properties>
-    </profile>  
-    
+    </profile>
+
     <profile> <!-- Use it to launch small & medium tests -->
       <id>runDevTests</id>
       <activation>
@@ -1973,15 +1979,15 @@
       <properties>
         <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
         <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount> 
-              
-        <surefire.skipFirstPart>false</surefire.skipFirstPart> 
-        <surefire.skipSecondPart>false</surefire.skipSecondPart> 
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups> 
+        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>false</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
         <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
       </properties>
-    </profile>         
-    
+    </profile>
+
     <profile> <!-- Use it to launch all tests -->
       <id>runAllTests</id>
       <activation>
@@ -1990,43 +1996,43 @@
       <properties>
         <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
         <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount> 
-              
-        <surefire.skipFirstPart>false</surefire.skipFirstPart> 
+        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups> 
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
         <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests,org.apache.hadoop.hbase.LargeTests</surefire.secondPartGroups>
       </properties>
-    </profile>  
+    </profile>
 
     <profile> <!-- Use it skip the surefire tests but no the failsafe tests -->
       <id>skipSurefireTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
-      <properties>              
-        <surefire.skipFirstPart>true</surefire.skipFirstPart> 
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
       </properties>
-    </profile>    
-    
+    </profile>
+
     <profile> <!-- Use it to launch tests locally-->
       <id>localTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.provider>surefire-junit4</surefire.provider> 
-        <surefire.version>2.10</surefire.version>         
-      
-        <surefire.firstPartForkMode>always</surefire.firstPartForkMode>      
-        <surefire.skipFirstPart>false</surefire.skipFirstPart> 
+        <surefire.provider>surefire-junit4</surefire.provider>
+        <surefire.version>2.10</surefire.version>
+
+        <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups></surefire.firstPartGroups>       
+        <surefire.firstPartGroups></surefire.firstPartGroups>
       </properties>
     </profile>
   </profiles>
- 
+
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
   <reporting>
     <plugins>

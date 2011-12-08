@@ -25,7 +25,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,6 +67,8 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Keying;
+import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -73,7 +78,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
@@ -93,6 +97,13 @@ public class HBaseTestingUtility {
   private static final Log LOG = LogFactory.getLog(HBaseTestingUtility.class);
   private Configuration conf;
   private MiniZooKeeperCluster zkCluster = null;
+
+  /**
+   * The default number of regions per regionserver when creating a pre-split
+   * table.
+   */
+  private static int DEFAULT_REGIONS_PER_SERVER = 5;
+
   /**
    * Set if we were passed a zkCluster.  If so, we won't shutdown zk as
    * part of general shutdown.
@@ -394,7 +405,7 @@ public class HBaseTestingUtility {
   public MiniZooKeeperCluster startMiniZKCluster() throws Exception {
     return startMiniZKCluster(1);
   }
-  
+
   /**
    * Call this if you only want a zk cluster.
    * @param zooKeeperServerNum
@@ -403,18 +414,18 @@ public class HBaseTestingUtility {
    * @see #shutdownMiniZKCluster()
    * @return zk cluster started.
    */
-  public MiniZooKeeperCluster startMiniZKCluster(int zooKeeperServerNum) 
+  public MiniZooKeeperCluster startMiniZKCluster(int zooKeeperServerNum)
       throws Exception {
     File zkClusterFile = new File(getClusterTestDir().toString());
     return startMiniZKCluster(zkClusterFile, zooKeeperServerNum);
   }
-  
+
   private MiniZooKeeperCluster startMiniZKCluster(final File dir)
     throws Exception {
     return startMiniZKCluster(dir,1);
   }
-  
-  private MiniZooKeeperCluster startMiniZKCluster(final File dir, 
+
+  private MiniZooKeeperCluster startMiniZKCluster(final File dir,
       int zooKeeperServerNum)
   throws Exception {
     if (this.zkCluster != null) {
@@ -469,7 +480,7 @@ public class HBaseTestingUtility {
     return startMiniCluster(1, numSlaves);
   }
 
-  
+
   /**
    * start minicluster
    * @throws Exception
@@ -481,8 +492,8 @@ public class HBaseTestingUtility {
   throws Exception {
     return startMiniCluster(numMasters, numSlaves, null);
   }
-  
-  
+
+
   /**
    * Start up a minicluster of hbase, optionally dfs, and zookeeper.
    * Modifies Configuration.  Homes the cluster data directory under a random
@@ -514,7 +525,7 @@ public class HBaseTestingUtility {
     if ( dataNodeHosts != null && dataNodeHosts.length != 0) {
       numDataNodes = dataNodeHosts.length;
     }
-    
+
     LOG.info("Starting up minicluster with " + numMasters + " master(s) and " +
         numSlaves + " regionserver(s) and " + numDataNodes + " datanode(s)");
 
@@ -1557,7 +1568,7 @@ public class HBaseTestingUtility {
 
     return getFromStoreFile(store,get);
   }
-  
+
   /**
    * Gets a ZooKeeperWatcher.
    * @param TEST_UTIL
@@ -1582,7 +1593,7 @@ public class HBaseTestingUtility {
         });
     return zkw;
   }
-  
+
   /**
    * Creates a znode with OPENED state.
    * @param TEST_UTIL
@@ -1606,7 +1617,7 @@ public class HBaseTestingUtility {
         version);
     return zkw;
   }
-  
+
   public static void assertKVListsEqual(String additionalMsg,
       final List<KeyValue> expected,
       final List<KeyValue> actual) {
@@ -1644,7 +1655,7 @@ public class HBaseTestingUtility {
 
   public String getClusterKey() {
     return conf.get(HConstants.ZOOKEEPER_QUORUM) + ":"
-        + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT) + ":" 
+        + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT) + ":"
         + conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
             HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
   }
@@ -1739,7 +1750,7 @@ public class HBaseTestingUtility {
     return MIN_RANDOM_PORT
         + new Random().nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
   }
-  
+
   public static int randomFreePort() {
     int port = 0;
     do {
@@ -1752,6 +1763,79 @@ public class HBaseTestingUtility {
       }
     } while (port == 0);
     return port;
+  }
+
+  public static void waitForHostPort(String host, int port)
+      throws IOException {
+    final int maxTimeMs = 10000;
+    final int maxNumAttempts = maxTimeMs / HConstants.SOCKET_RETRY_WAIT_MS;
+    IOException savedException = null;
+    LOG.info("Waiting for server at " + host + ":" + port);
+    for (int attempt = 0; attempt < maxNumAttempts; ++attempt) {
+      try {
+        Socket sock = new Socket(InetAddress.getByName(host), port);
+        sock.close();
+        savedException = null;
+        LOG.info("Server at " + host + ":" + port + " is available");
+        break;
+      } catch (UnknownHostException e) {
+        throw new IOException("Failed to look up " + host, e);
+      } catch (IOException e) {
+        savedException = e;
+      }
+      Threads.sleepWithoutInterrupt(HConstants.SOCKET_RETRY_WAIT_MS);
+    }
+
+    if (savedException != null) {
+      throw savedException;
+    }
+  }
+
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
+      byte[] tableName, byte[] columnFamily) throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(columnFamily));
+
+    int totalNumberOfRegions = 0;
+    try {
+      HBaseAdmin admin = new HBaseAdmin(conf);
+
+      // create a table a pre-splits regions.
+      // The number of splits is set as:
+      //    region servers * regions per region server).
+      int numberOfServers = admin.getClusterStatus().getServers().size();
+      if (numberOfServers == 0) {
+        throw new IllegalStateException("No live regionservers");
+      }
+
+      totalNumberOfRegions = numberOfServers * DEFAULT_REGIONS_PER_SERVER;
+      LOG.info("Number of live regionservers: " + numberOfServers + ", " +
+          "pre-splitting table into " + totalNumberOfRegions + " regions " +
+          "(default regions per server: " + DEFAULT_REGIONS_PER_SERVER + ")");
+
+      byte[][] splits = new RegionSplitter.HexStringSplit().split(
+          totalNumberOfRegions);
+
+      admin.createTable(desc, splits);
+    } catch (MasterNotRunningException e) {
+      LOG.error("Master not running", e);
+      throw new IOException(e);
+    } catch (TableExistsException e) {
+      LOG.warn("Table " + Bytes.toStringBinary(tableName) +
+          " already exists, continuing");
+    }
+    return totalNumberOfRegions;
+  }
+
+  public static int getMetaRSPort(Configuration conf) throws IOException {
+    HTable table = new HTable(conf, HConstants.META_TABLE_NAME);
+    HRegionLocation hloc = table.getRegionLocation(Bytes.toBytes(""));
+    return hloc.getPort();
   }
 
 }

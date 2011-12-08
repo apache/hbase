@@ -62,7 +62,7 @@ public class TestMergeTable {
    * Hand-makes regions of a mergeable size and adds the hand-made regions to
    * hand-made meta.  The hand-made regions are created offline.  We then start
    * up mini cluster, disables the hand-made table and starts in on merging.
-   * @throws Exception 
+   * @throws Exception
    */
   @Test (timeout=300000) public void testMergeTable() throws Exception {
     // Table we are manually creating offline.
@@ -70,7 +70,7 @@ public class TestMergeTable {
     desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
 
     // Set maximum regionsize down.
-    UTIL.getConfiguration().setLong("hbase.hregion.max.filesize", 64L * 1024L * 1024L);
+    UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE, 64L * 1024L * 1024L);
     // Make it so we don't split.
     UTIL.getConfiguration().setInt("hbase.regionserver.regionSplitLimit", 0);
     // Startup hdfs.  Its in here we'll be putting our manually made regions.

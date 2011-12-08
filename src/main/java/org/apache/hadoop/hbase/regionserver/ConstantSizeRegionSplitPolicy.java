@@ -34,17 +34,17 @@ class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
 
     // By default we split region if a file > HConstants.DEFAULT_MAX_FILE_SIZE.
     if (maxFileSize == HConstants.DEFAULT_MAX_FILE_SIZE) {
-      maxFileSize = getConf().getLong("hbase.hregion.max.filesize",
+      maxFileSize = getConf().getLong(HConstants.HREGION_MAX_FILESIZE,
         HConstants.DEFAULT_MAX_FILE_SIZE);
     }
     this.desiredMaxFileSize = maxFileSize;
   }
-  
+
   @Override
   boolean shouldSplit() {
     boolean force = region.shouldForceSplit();
     boolean foundABigStore = false;
-    
+
     for (Store store : region.getStores().values()) {
       // If any of the stores are unable to split (eg they contain reference files)
       // then don't split

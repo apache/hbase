@@ -83,7 +83,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     final Configuration conf = context.getConfiguration();
     final FileSystem fs = outputdir.getFileSystem(conf);
     // These configs. are from hbase-*.xml
-    final long maxsize = conf.getLong("hbase.hregion.max.filesize",
+    final long maxsize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
         HConstants.DEFAULT_MAX_FILE_SIZE);
     final int blocksize = conf.getInt("hbase.mapreduce.hfileoutputformat.blocksize",
         HFile.DEFAULT_BLOCKSIZE);
@@ -254,12 +254,12 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
           + Bytes.toStringBinary(first.get()));
     }
     sorted.remove(first);
-    
+
     // Write the actual file
     FileSystem fs = partitionsPath.getFileSystem(conf);
-    SequenceFile.Writer writer = SequenceFile.createWriter(fs, 
+    SequenceFile.Writer writer = SequenceFile.createWriter(fs,
         conf, partitionsPath, ImmutableBytesWritable.class, NullWritable.class);
-    
+
     try {
       for (ImmutableBytesWritable startKey : sorted) {
         writer.append(startKey, NullWritable.get());
@@ -268,7 +268,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       writer.close();
     }
   }
-  
+
   /**
    * Configure a MapReduce Job to perform an incremental load into the given
    * table. This
@@ -279,7 +279,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    *   <li>Sets the output key/value class to match HFileOutputFormat's requirements</li>
    *   <li>Sets the reducer up to perform the appropriate sorting (either KeyValueSortReducer or
    *     PutSortReducer)</li>
-   * </ul> 
+   * </ul>
    * The user should be sure to set the map output value class to either KeyValue or Put before
    * running this function.
    */
@@ -313,7 +313,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     LOG.info("Configuring " + startKeys.size() + " reduce partitions " +
         "to match current region count");
     job.setNumReduceTasks(startKeys.size());
-    
+
     Path partitionsPath = new Path(job.getWorkingDirectory(),
         "partitions_" + System.currentTimeMillis());
     LOG.info("Writing partition information to " + partitionsPath);
@@ -321,7 +321,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     FileSystem fs = partitionsPath.getFileSystem(conf);
     writePartitions(conf, partitionsPath, startKeys);
     partitionsPath.makeQualified(fs);
-    
+
     URI cacheUri;
     try {
       // Below we make explicit reference to the bundled TOP.  Its cheating.
@@ -334,10 +334,10 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     }
     DistributedCache.addCacheFile(cacheUri, conf);
     DistributedCache.createSymlink(conf);
-    
+
     // Set compression algorithms based on column families
     configureCompression(table, conf);
-    
+
     LOG.info("Incremental table output configured.");
   }
 
@@ -366,9 +366,9 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * Run inside the task to deserialize column family to compression algorithm
    * map from the
    * configuration.
-   * 
+   *
    * Package-private for unit tests only.
-   * 
+   *
    * @return a map from column family to the name of the configured compression
    *         algorithm
    */
@@ -380,7 +380,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       if (familySplit.length != 2) {
         continue;
       }
-      
+
       try {
         compressionMap.put(URLDecoder.decode(familySplit[0], "UTF-8").getBytes(),
             URLDecoder.decode(familySplit[1], "UTF-8"));
@@ -395,9 +395,9 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   /**
    * Serialize column family to compression algorithm map to configuration.
    * Invoked while configuring the MR job for incremental load.
-   * 
+   *
    * Package-private for unit tests only.
-   * 
+   *
    * @throws IOException
    *           on failure to read column family descriptors
    */
