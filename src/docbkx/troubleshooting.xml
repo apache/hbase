@@ -930,4 +930,29 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
           
     </section>
     
+    <section xml:id="trouble.versions">
+       <title>HBase and Hadoop version issues</title>      
+          <section xml:id="trouble.versions.205">
+             <title><code>NoClassDefFoundError</code> when trying to run 0.90.x on hadoop-0.20.205.x (or hadoop-1.0.x)</title>
+             <para>HBase 0.90.x does not ship with hadoop-0.20.205.x, etc.  To make it run, you need to replace the hadoop
+             jars that HBase shipped with in its <filename>lib</filename> directory with those of the Hadoop you want to
+             run HBase on.  If even after replacing Hadoop jars you get the below exception:
+<computeroutput>
+sv4r6s38: Exception in thread "main" java.lang.NoClassDefFoundError: org/apache/commons/configuration/Configuration
+sv4r6s38:       at org.apache.hadoop.metrics2.lib.DefaultMetricsSystem.&lt;init>(DefaultMetricsSystem.java:37)
+sv4r6s38:       at org.apache.hadoop.metrics2.lib.DefaultMetricsSystem.&lt;clinit>(DefaultMetricsSystem.java:34)
+sv4r6s38:       at org.apache.hadoop.security.UgiInstrumentation.create(UgiInstrumentation.java:51)
+sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.initialize(UserGroupInformation.java:209)
+sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.ensureInitialized(UserGroupInformation.java:177)
+sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.isSecurityEnabled(UserGroupInformation.java:229)
+sv4r6s38:       at org.apache.hadoop.security.KerberosName.&lt;clinit>(KerberosName.java:83)
+sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.initialize(UserGroupInformation.java:202)
+sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.ensureInitialized(UserGroupInformation.java:177)
+</computeroutput>
+you need to copy under <filename>hbase/lib</filename>, the <filename>commons-configuration-X.jar</filename> you find
+in your Hadoop's <filename>lib</filename> directory.  That should fix the above complaint.
+</para>
+</section>
+</section>
+    
   </chapter>
