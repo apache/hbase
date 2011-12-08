@@ -23,14 +23,14 @@
   
   <body>
     <section name="Welcome to Apache HBase!">
-    <p>HBase is the <a href="http://hadoop.apache.org">Hadoop</a> database.  Think of it as a super-fast reliable Big Data store.
+    <p>HBase is the <a href="http://hadoop.apache.org">Hadoop</a> database.  Think of it as a distributed scalable Big Data store.
     </p>
     </section>
     <section name="When Would I Use HBase?">
     <p>
     Use HBase when you need random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware.
-HBase is an open-source, distributed, versioned, column-oriented store modeled after Google' <a href="http://labs.google.com/papers/bigtable.html">Bigtable: A Distributed Storage System for Structured</a> by Chang et al.
+HBase is an open-source, distributed, versioned, column-oriented store modeled after Google' <a href="http://research.google.com/archive/bigtable.html">Bigtable: A Distributed Storage System for Structured</a> by Chang et al.
  Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of Hadoop and HDFS.
     </p>
     </section>
@@ -38,6 +38,8 @@ HBase is an open-source, distributed, versioned, column-oriented store modeled a
     <p>
 HBase provides:
 <ul>
+    <li>Linear and modular scalability.
+</li>
     <li>Strictly consistent reads and writes.
 </li>
     <li>Automatic and configurable sharding of tables
