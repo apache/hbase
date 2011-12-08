@@ -218,10 +218,11 @@ module Hbase
         startrow = args["STARTROW"] || ''
         stoprow = args["STOPROW"]
         timestamp = args["TIMESTAMP"]
-        columns = args["COLUMNS"] || args["COLUMN"] || get_all_columns
+        columns = args["COLUMNS"] || args["COLUMN"] || []
         cache = args["CACHE_BLOCKS"] || true
         versions = args["VERSIONS"] || 1
         timerange = args[TIMERANGE]
+        raw = args["RAW"] || false
 
         # Normalize column names
         columns = [columns] if columns.class == String
@@ -254,6 +255,7 @@ module Hbase
         scan.setCacheBlocks(cache)
         scan.setMaxVersions(versions) if versions > 1
         scan.setTimeRange(timerange[0], timerange[1]) if timerange
+        scan.setRaw(raw)
       else
         scan = org.apache.hadoop.hbase.client.Scan.new
       end
@@ -335,7 +337,11 @@ module Hbase
         end
       end
 
-      val = "timestamp=#{kv.getTimestamp}, value=#{org.apache.hadoop.hbase.util.Bytes::toStringBinary(kv.getValue)}"
+      if kv.isDelete
+        val = "timestamp=#{kv.getTimestamp}, type=#{org.apache.hadoop.hbase.KeyValue::Type::codeToType(kv.getType)}"
+      else
+        val = "timestamp=#{kv.getTimestamp}, value=#{org.apache.hadoop.hbase.util.Bytes::toStringBinary(kv.getValue)}"
+      end
       (maxlength != -1) ? val[0, maxlength] : val
     end
 
