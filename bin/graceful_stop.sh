@@ -70,32 +70,32 @@ hostname=$1
 filename="/tmp/$hostname"
 # Run the region mover script.
 echo "Disabling balancer!"
-echo 'balance_switch false' | "$bin"/hbase shell
+echo 'balance_switch false' | "$bin"/hbase --config ${HBASE_CONF_DIR} shell
 echo "Unloading $hostname region(s)"
-HBASE_NOEXEC=true "$bin"/hbase org.jruby.Main "$bin"/region_mover.rb --file=$filename $debug unload $hostname
+HBASE_NOEXEC=true "$bin"/hbase --config ${HBASE_CONF_DIR} org.jruby.Main "$bin"/region_mover.rb --file=$filename $debug unload $hostname
 echo "Unloaded $hostname region(s)"
 # Stop the server. Have to put hostname into its own little file for hbase-daemons.sh
 hosts="/tmp/$(basename $0).$$.tmp"
 echo $hostname >> $hosts
 if [ "$thrift" != "" ]; then
-  "$bin"/hbase-daemons.sh --hosts ${hosts} stop thrift
+  "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop thrift
 fi
 if [ "$rest" != "" ]; then
-  "$bin"/hbase-daemons.sh --hosts ${hosts} stop rest
+  "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop rest
 fi
-"$bin"/hbase-daemons.sh --hosts ${hosts} stop regionserver
+"$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop regionserver
 if [ "$restart" != "" ]; then
-  "$bin"/hbase-daemons.sh --hosts ${hosts} start regionserver
+  "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start regionserver
   if [ "$thrift" != "" ]; then
     # -b 0.0.0.0 says listen on all interfaces rather than just default.
-    "$bin"/hbase-daemons.sh --hosts ${hosts} start thrift -b 0.0.0.0
+    "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start thrift -b 0.0.0.0
   fi
   if [ "$rest" != "" ]; then
-    "$bin"/hbase-daemons.sh --hosts ${hosts} start rest
+    "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start rest
   fi
   if [ "$reload" != "" ]; then
     echo "Reloading $hostname region(s)"
-    HBASE_NOEXEC=true "$bin"/hbase org.jruby.Main "$bin"/region_mover.rb --file=$filename $debug load $hostname
+    HBASE_NOEXEC=true "$bin"/hbase --config ${HBASE_CONF_DIR} org.jruby.Main "$bin"/region_mover.rb --file=$filename $debug load $hostname
     echo "Reloaded $hostname region(s)"
   fi
 fi
