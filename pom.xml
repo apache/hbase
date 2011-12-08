@@ -522,7 +522,7 @@
           <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
           <htmlCustomization>src/docbkx/customization.xsl</htmlCustomization>
           <imgSrcPath>../images/</imgSrcPath>
-          <tocSectionDepth>1</tocSectionDepth>
+          <tocMaxDepth>2</tocMaxDepth>
           <insertXrefPageNumber>yes</insertXrefPageNumber>
         </configuration>
             <goals>
@@ -541,7 +541,7 @@
           <targetDirectory>${basedir}/target/site/</targetDirectory>
           <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
           <imgSrcPath>images/</imgSrcPath>
-          <tocSectionDepth>1</tocSectionDepth>
+          <tocMaxDepth>2</tocMaxDepth>
           <insertXrefPageNumber>yes</insertXrefPageNumber>
         </configuration>
             <goals>
