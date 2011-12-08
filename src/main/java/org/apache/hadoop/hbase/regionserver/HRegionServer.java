@@ -759,12 +759,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       LOG.info("stopping server " + this.serverNameFromMasterPOV +
         "; all regions closed.");
     }
-    
-    //fsOk flag may be changed when closing regions throws exception. 
+
+    //fsOk flag may be changed when closing regions throws exception.
     if (!this.killed && this.fsOk) {
       closeWAL(abortRequested ? false : true);
     }
-    
+
     // Make sure the proxy is down.
     if (this.hbaseMaster != null) {
       HBaseRPC.stopProxy(this.hbaseMaster);
@@ -1389,6 +1389,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         (int) (totalStaticBloomSize / 1024));
     this.metrics.readRequestsCount.set(readRequestsCount);
     this.metrics.writeRequestsCount.set(writeRequestsCount);
+    this.metrics.compactionQueueSize.set(compactSplitThread
+        .getCompactionQueueSize());
+    this.metrics.flushQueueSize.set(cacheFlusher
+        .getFlushQueueSize());
 
     BlockCache blockCache = cacheConfig.getBlockCache();
     if (blockCache != null) {
@@ -1674,7 +1678,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public boolean isAborted() {
     return this.abortRequested;
   }
-  
+
   /*
    * Simulate a kill -9 of this server. Exits w/o closing regions or cleaninup
    * logs but it does close socket in case want to bring up server on old
@@ -2575,16 +2579,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     return RegionOpeningState.OPENED;
   }
-  
+
   private void checkIfRegionInTransition(HRegionInfo region,
       String currentAction) throws RegionAlreadyInTransitionException {
     byte[] encodedName = region.getEncodedNameAsBytes();
     if (this.regionsInTransitionInRS.containsKey(encodedName)) {
       boolean openAction = this.regionsInTransitionInRS.get(encodedName);
       // The below exception message will be used in master.
-      throw new RegionAlreadyInTransitionException("Received:" + currentAction + 
+      throw new RegionAlreadyInTransitionException("Received:" + currentAction +
         " for the region:" + region.getRegionNameAsString() +
-        " ,which we are already trying to " + 
+        " ,which we are already trying to " +
         (openAction ? OPEN : CLOSE)+ ".");
     }
   }
@@ -2621,7 +2625,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     checkIfRegionInTransition(region, CLOSE);
     return closeRegion(region, false, zk);
   }
-  
+
   @Override
   @QosPriority(priority=HIGH_QOS)
   public boolean closeRegion(byte[] encodedRegionName, boolean zk) throws IOException {
@@ -2655,7 +2659,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.service.submit(crh);
     return true;
   }
-  
+
   /**
    * @param encodedRegionName
    *          encodedregionName to close
@@ -3282,7 +3286,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS() {
     return this.regionsInTransitionInRS;
   }
-  
+
   public ExecutorService getExecutorService() {
     return service;
   }
@@ -3305,7 +3309,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // read in the name of the source replication class from the config file.
     String sourceClassname = conf.get(HConstants.REPLICATION_SOURCE_SERVICE_CLASSNAME,
                                HConstants.REPLICATION_SERVICE_CLASSNAME_DEFAULT);
-    
+
     // read in the name of the sink replication class from the config file.
     String sinkClassname = conf.get(HConstants.REPLICATION_SINK_SERVICE_CLASSNAME,
                              HConstants.REPLICATION_SERVICE_CLASSNAME_DEFAULT);
@@ -3330,7 +3334,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   static private ReplicationService newReplicationInstance(String classname,
-    Configuration conf, HRegionServer server, FileSystem fs, Path logDir, 
+    Configuration conf, HRegionServer server, FileSystem fs, Path logDir,
     Path oldLogDir) throws IOException{
 
     Class<?> clazz = null;
