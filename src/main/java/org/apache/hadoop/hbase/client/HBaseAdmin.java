@@ -100,11 +100,14 @@ public class HBaseAdmin implements Abortable, Closeable {
     this.numRetries = this.conf.getInt("hbase.client.retries.number", 10);
     this.retryLongerMultiplier = this.conf.getInt(
         "hbase.client.retries.longer.multiplier", 10);
+
     int tries = 0;
-    for (; tries < numRetries; ++tries) {
+    while ( true ){
       try {
+
         this.connection.getMaster();
-        break;
+        return;
+
       } catch (MasterNotRunningException mnre) {
         HConnectionManager.deleteStaleConnection(this.connection);
         this.connection = HConnectionManager.getConnection(this.conf);
@@ -112,19 +115,23 @@ public class HBaseAdmin implements Abortable, Closeable {
         HConnectionManager.deleteStaleConnection(this.connection);
         this.connection = HConnectionManager.getConnection(this.conf);
       }
-      try { // Sleep
+
+      tries++;
+      if (tries >= numRetries) {
+        // we should delete connection between client and zookeeper
+        HConnectionManager.deleteStaleConnection(this.connection);
+        throw new MasterNotRunningException("Retried " + numRetries + " times");
+      }
+
+      try {
         Thread.sleep(getPauseTime(tries));
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         // we should delete connection between client and zookeeper
         HConnectionManager.deleteStaleConnection(this.connection);
-        throw new MasterNotRunningException("Interrupted");
+        throw new MasterNotRunningException(
+          "Interrupted after "+tries+" tries");
       }
-    }
-    if (tries >= numRetries) {
-      // we should delete connection between client and zookeeper
-      HConnectionManager.deleteStaleConnection(this.connection);
-      throw new MasterNotRunningException("Retried " + numRetries + " times");
     }
   }
 
