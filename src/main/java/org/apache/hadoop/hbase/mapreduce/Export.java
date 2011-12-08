@@ -48,6 +48,7 @@ import org.apache.commons.logging.LogFactory;
 public class Export {
   private static final Log LOG = LogFactory.getLog(Export.class);
   final static String NAME = "export";
+  final static String RAW_SCAN="hbase.mapreduce.include.deleted.rows";
 
   /**
    * Mapper.
@@ -115,6 +116,11 @@ public class Export {
     // Set cache blocks
     s.setCacheBlocks(false);
     // Set Scan Column Family
+    boolean raw = Boolean.parseBoolean(conf.get(RAW_SCAN));
+    if (raw) {
+      s.setRaw(raw);
+    }
+    
     if (conf.get(TableInputFormat.SCAN_COLUMN_FAMILY) != null) {
       s.addFamily(Bytes.toBytes(conf.get(TableInputFormat.SCAN_COLUMN_FAMILY)));
     }
@@ -124,8 +130,8 @@ public class Export {
         LOG.info("Setting Scan Filter for Export.");
       s.setFilter(exportFilter);
     }
-    LOG.info("verisons=" + versions + ", starttime=" + startTime +
-      ", endtime=" + endTime);
+    LOG.info("versions=" + versions + ", starttime=" + startTime +
+      ", endtime=" + endTime + ", keepDeletedCells=" + raw);
     return s;
   }
 
@@ -159,6 +165,7 @@ public class Export {
     System.err.println("  Additionally, the following SCAN properties can be specified");
     System.err.println("  to control/limit what is exported..");
     System.err.println("   -D " + TableInputFormat.SCAN_COLUMN_FAMILY + "=<familyName>");
+    System.err.println("   -D " + RAW_SCAN + "=true");
   }
 
   /**

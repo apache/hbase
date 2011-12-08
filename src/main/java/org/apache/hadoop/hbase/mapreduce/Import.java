@@ -27,6 +27,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -47,7 +49,7 @@ public class Import {
    * Write table content out to files in hdfs.
    */
   static class Importer
-  extends TableMapper<ImmutableBytesWritable, Put> {
+  extends TableMapper<ImmutableBytesWritable, Mutation> {
     private Map<byte[], byte[]> cfRenameMap;
       
     /**
@@ -63,15 +65,15 @@ public class Import {
       Context context)
     throws IOException {
       try {
-        context.write(row, resultToPut(row, value));
+        writeResult(row, value, context);
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
     }
 
-    private Put resultToPut(ImmutableBytesWritable key, Result result)
-    throws IOException {
-      Put put = new Put(key.get());
+    private void writeResult(ImmutableBytesWritable key, Result result, Context context)
+    throws IOException, InterruptedException {
+      Put put = null;
       for (KeyValue kv : result.raw()) {
         if(cfRenameMap != null) {
             // If there's a rename mapping for this CF, create a new KeyValue
@@ -93,11 +95,24 @@ public class Import {
                         kv.getValueLength());     // value length
             } 
         }
-        put.add(kv);
+        if (kv.isDelete()) {
+          // Deletes need to be written one-by-one,
+          // since family deletes overwrite column(s) deletes
+          context.write(key, new Delete(kv));
+        } else {
+          // Puts are gathered into a single Put object
+          // and written when finished
+          if (put == null) { 
+            put = new Put(key.get());
+          }
+          put.add(kv);
+        }
       }
-      return put;
+      if (put != null) {
+        context.write(key, put);
+      }
     }
-    
+
     @Override
     public void setup(Context context) {
       // Make a map from sourceCfName to destCfName by parsing a config key

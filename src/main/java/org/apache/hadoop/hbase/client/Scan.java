@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -164,6 +163,9 @@ public class Scan extends OperationWithAttributes implements Writable {
       } else {
         addFamily(fam);
       }
+    }
+    for (Map.Entry<String, byte[]> attr : scan.getAttributesMap().entrySet()) {
+      setAttribute(attr.getKey(), attr.getValue());
     }
   }
 
