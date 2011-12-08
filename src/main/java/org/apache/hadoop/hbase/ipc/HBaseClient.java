@@ -583,9 +583,11 @@ public class HBaseClient {
         }
         int state = in.readInt(); // Read the state.  Currently unused.
         if (isError) {
-          //noinspection ThrowableInstanceNeverThrown
-          call.setException(new RemoteException( WritableUtils.readString(in),
-              WritableUtils.readString(in)));
+          if (call != null) {
+            //noinspection ThrowableInstanceNeverThrown
+            call.setException(new RemoteException(WritableUtils.readString(in),
+                WritableUtils.readString(in)));
+          }
         } else {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
