@@ -61,7 +61,7 @@ public class CompactSplitThread implements CompactionRequestor {
    * stop splitting after number of online regions is greater than this.
    */
   private int regionSplitLimit;
-  
+
   /** @param server */
   CompactSplitThread(HRegionServer server) {
     super();
@@ -81,7 +81,7 @@ public class CompactSplitThread implements CompactionRequestor {
       // we have a complicated default. see HBASE-3877
       long flushSize = conf.getLong("hbase.hregion.memstore.flush.size",
           HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
-      long splitSize = conf.getLong("hbase.hregion.max.filesize",
+      long splitSize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
           HConstants.DEFAULT_MAX_FILE_SIZE);
       throttleSize = Math.min(flushSize * 2, splitSize / 2);
     }
@@ -94,7 +94,7 @@ public class CompactSplitThread implements CompactionRequestor {
     final String n = Thread.currentThread().getName();
 
     this.largeCompactions = new ThreadPoolExecutor(largeThreads, largeThreads,
-        60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>(), 
+        60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>(),
         new ThreadFactory() {
           @Override
           public Thread newThread(Runnable r) {

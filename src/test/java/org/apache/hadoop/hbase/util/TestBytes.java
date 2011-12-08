@@ -25,6 +25,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 
 import junit.framework.TestCase;
@@ -163,7 +164,7 @@ public class TestBytes extends TestCase {
       assertEquals(decimals[i], Bytes.toBigDecimal(b2, 1, b.length));
     }
   }
-  
+
   private byte [] bytesWithOffset(byte [] src) {
     // add one byte in front to test offset
     byte [] result = new byte[src.length + 1];
@@ -171,7 +172,7 @@ public class TestBytes extends TestCase {
     System.arraycopy(src, 0, result, 1, src.length);
     return result;
   }
-  
+
   public void testBinarySearch() throws Exception {
     byte [][] arr = {
         {1},

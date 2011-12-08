@@ -493,7 +493,7 @@ public class HConnectionManager {
     private MasterAddressTracker masterAddressTracker;
     private RootRegionTracker rootRegionTracker;
     private ClusterId clusterId;
-    
+
     private final Object metaRegionLock = new Object();
 
     private final Object userRegionLock = new Object();
@@ -687,7 +687,7 @@ public class HConnectionManager {
         throw new MasterNotRunningException(errorMsg);
       }
     }
-    
+
     public boolean isMasterRunning()
     throws MasterNotRunningException, ZooKeeperConnectionException {
       if (this.master == null) {
@@ -800,7 +800,7 @@ public class HConnectionManager {
         try {
           ServerName servername =
             this.rootRegionTracker.waitRootRegionLocation(this.rpcTimeout);
-          LOG.debug("Lookedup root region location, connection=" + this +
+          LOG.debug("Looked up root region location, connection=" + this +
             "; serverName=" + ((servername == null)? "": servername.toString()));
           if (servername == null) return null;
           return new HRegionLocation(HRegionInfo.ROOT_REGIONINFO,
@@ -987,7 +987,7 @@ public class HConnectionManager {
             throw new NoServerForRegionException("No server address listed " +
               "in " + Bytes.toString(parentTable) + " for region " +
               regionInfo.getRegionNameAsString() + " containing row " +
-              Bytes.toStringBinary(row));            
+              Bytes.toStringBinary(row));
           }
 
           // Instantiate the location
@@ -1072,7 +1072,7 @@ public class HConnectionManager {
       if (!matchingRegions.isEmpty()) {
         HRegionLocation possibleRegion = null;
         try {
-          possibleRegion = matchingRegions.get(matchingRegions.lastKey());          
+          possibleRegion = matchingRegions.get(matchingRegions.lastKey());
         } catch (NoSuchElementException nsee) {
           LOG.warn("checkReferences() might have removed the key", nsee);
         }
@@ -1738,7 +1738,7 @@ public class HConnectionManager {
     public boolean isClosed() {
       return this.closed;
     }
-    
+
     @Override
     public boolean isAborted(){
       return this.aborted;

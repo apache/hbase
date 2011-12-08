@@ -79,7 +79,7 @@ import com.google.common.collect.Sets;
  * <p>
  * <b>Question:</b> How do I turn off automatic splitting? <br>
  * <b>Answer:</b> Automatic splitting is determined by the configuration value
- * <i>"hbase.hregion.max.filesize"</i>. It is not recommended that you set this
+ * <i>HConstants.HREGION_MAX_FILESIZE</i>. It is not recommended that you set this
  * to Long.MAX_VALUE in case you forget about manual splits. A suggested setting
  * is 100GB, which would result in > 1hr major compactions if reached.
  * <p>

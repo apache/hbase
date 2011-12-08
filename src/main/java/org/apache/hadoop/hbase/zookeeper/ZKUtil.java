@@ -33,15 +33,18 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.EmptyWatcher;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.KeeperException.NoNodeException;
+import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 
@@ -91,7 +94,8 @@ public class ZKUtil {
     if(ensemble == null) {
       throw new IOException("Unable to determine ZooKeeper ensemble");
     }
-    int timeout = conf.getInt("zookeeper.session.timeout", 180 * 1000);
+    int timeout = conf.getInt(HConstants.ZK_SESSION_TIMEOUT,
+        HConstants.DEFAULT_ZK_SESSION_TIMEOUT);
     LOG.debug(descriptor + " opening connection to ZooKeeper with ensemble (" +
         ensemble + ")");
     int retry = conf.getInt("zookeeper.recovery.retry", 3);
@@ -1115,5 +1119,47 @@ public class ZKUtil {
           znode.startsWith(zkw.assignmentZNode) ?
               RegionTransitionData.fromBytes(data).toString()
               : StringUtils.abbreviate(Bytes.toStringBinary(data), 32)))));
+  }
+
+  /**
+   * Waits for HBase installation's base (parent) znode to become available.
+   * @throws IOException on ZK errors
+   */
+  public static void waitForBaseZNode(Configuration conf) throws IOException {
+    LOG.info("Waiting until the base znode is available");
+    String parentZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
+        HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+    ZooKeeper zk = new ZooKeeper(ZKConfig.getZKQuorumServersString(conf),
+        conf.getInt(HConstants.ZK_SESSION_TIMEOUT,
+        HConstants.DEFAULT_ZK_SESSION_TIMEOUT), EmptyWatcher.instance);
+
+    final int maxTimeMs = 10000;
+    final int maxNumAttempts = maxTimeMs / HConstants.SOCKET_RETRY_WAIT_MS;
+
+    KeeperException keeperEx = null;
+    try {
+      try {
+        for (int attempt = 0; attempt < maxNumAttempts; ++attempt) {
+          try {
+            if (zk.exists(parentZNode, false) != null) {
+              LOG.info("Parent znode exists: " + parentZNode);
+              keeperEx = null;
+              break;
+            }
+          } catch (KeeperException e) {
+            keeperEx = e;
+          }
+          Threads.sleepWithoutInterrupt(HConstants.SOCKET_RETRY_WAIT_MS);
+        }
+      } finally {
+        zk.close();
+      }
+    } catch (InterruptedException ex) {
+      Thread.currentThread().interrupt();
+    }
+
+    if (keeperEx != null) {
+      throw new IOException(keeperEx);
+    }
   }
 }

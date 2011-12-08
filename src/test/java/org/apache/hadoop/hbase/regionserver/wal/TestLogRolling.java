@@ -115,7 +115,7 @@ public class TestLogRolling  {
   public static void setUpBeforeClass() throws Exception {
     /**** configuration for testLogRolling ****/
     // Force a region split after every 768KB
-    TEST_UTIL.getConfiguration().setLong("hbase.hregion.max.filesize", 768L * 1024L);
+    TEST_UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE, 768L * 1024L);
 
     // We roll the log after every 32 writes
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.maxlogentries", 32);
@@ -281,7 +281,7 @@ public class TestLogRolling  {
       }
     }
   }
-  
+
   /**
    * Give me the HDFS pipeline for this log file
    */
@@ -308,9 +308,9 @@ public class TestLogRolling  {
    * Requires an HDFS jar with HDFS-826 & syncFs() support (HDFS-200)
    * @throws IOException
    * @throws InterruptedException
-   * @throws InvocationTargetException 
+   * @throws InvocationTargetException
    * @throws IllegalAccessException
-   * @throws IllegalArgumentException 
+   * @throws IllegalArgumentException
     */
   @Test
   public void testLogRollOnDatanodeDeath() throws IOException,

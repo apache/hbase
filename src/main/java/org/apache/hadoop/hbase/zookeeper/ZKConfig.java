@@ -96,7 +96,7 @@ public class ZKConfig {
     int leaderPort = conf.getInt("hbase.zookeeper.leaderport", 3888);
 
     final String[] serverHosts = conf.getStrings(HConstants.ZOOKEEPER_QUORUM,
-                                                 "localhost");
+                                                 HConstants.LOCALHOST);
     for (int i = 0; i < serverHosts.length; ++i) {
       String serverHost = serverHosts[i];
       String address = serverHost + ":" + peerPort + ":" + leaderPort;
@@ -160,7 +160,7 @@ public class ZKConfig {
       // Special case for 'hbase.cluster.distributed' property being 'true'
       if (key.startsWith("server.")) {
         if (conf.get(HConstants.CLUSTER_DISTRIBUTED).equals(HConstants.CLUSTER_IS_DISTRIBUTED)
-            && value.startsWith("localhost")) {
+            && value.startsWith(HConstants.LOCALHOST)) {
           String msg = "The server in zoo.cfg cannot be set to localhost " +
               "in a fully-distributed setup because it won't be reachable. " +
               "See \"Getting Started\" for more information.";

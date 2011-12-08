@@ -145,7 +145,7 @@ class HMerge {
     throws IOException {
       this.conf = conf;
       this.fs = fs;
-      this.maxFilesize = conf.getLong("hbase.hregion.max.filesize",
+      this.maxFilesize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
           HConstants.DEFAULT_MAX_FILE_SIZE);
 
       this.tabledir = new Path(

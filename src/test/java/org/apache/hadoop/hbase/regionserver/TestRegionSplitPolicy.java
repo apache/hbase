@@ -48,36 +48,36 @@ public class TestRegionSplitPolicy {
     mockRegion = Mockito.mock(HRegion.class);
     Mockito.doReturn(htd).when(mockRegion).getTableDesc();
     Mockito.doReturn(hri).when(mockRegion).getRegionInfo();
-    
+
     stores = new TreeMap<byte[], Store>(Bytes.BYTES_COMPARATOR);
     Mockito.doReturn(stores).when(mockRegion).getStores();
   }
-  
+
   @Test
   public void testCreateDefault() throws IOException {
-    conf.setLong("hbase.hregion.max.filesize", 1234L);
-    
+    conf.setLong(HConstants.HREGION_MAX_FILESIZE, 1234L);
+
     // Using a default HTD, should pick up the file size from
     // configuration.
     ConstantSizeRegionSplitPolicy policy =
         (ConstantSizeRegionSplitPolicy)RegionSplitPolicy.create(
             mockRegion, conf);
     assertEquals(1234L, policy.getDesiredMaxFileSize());
-    
+
     // If specified in HTD, should use that
     htd.setMaxFileSize(9999L);
     policy = (ConstantSizeRegionSplitPolicy)RegionSplitPolicy.create(
         mockRegion, conf);
-    assertEquals(9999L, policy.getDesiredMaxFileSize());    
+    assertEquals(9999L, policy.getDesiredMaxFileSize());
   }
-  
+
   @Test
   public void testConstantSizePolicy() throws IOException {
     htd.setMaxFileSize(1024L);
-    
+
     ConstantSizeRegionSplitPolicy policy =
       (ConstantSizeRegionSplitPolicy)RegionSplitPolicy.create(mockRegion, conf);
-    
+
     // For no stores, should not split
     assertFalse(policy.shouldSplit());
 
@@ -86,9 +86,9 @@ public class TestRegionSplitPolicy {
     Mockito.doReturn(2000L).when(mockStore).getSize();
     Mockito.doReturn(true).when(mockStore).canSplit();
     stores.put(new byte[]{1}, mockStore);
-    
+
     assertTrue(policy.shouldSplit());
-    
+
     // Act as if there's a reference file or some other reason it can't split.
     // This should prevent splitting even though it's big enough.
     Mockito.doReturn(false).when(mockStore).canSplit();
@@ -96,26 +96,26 @@ public class TestRegionSplitPolicy {
 
     // Reset splittability after above
     Mockito.doReturn(true).when(mockStore).canSplit();
-    
+
     // Set to a small size but turn on forceSplit. Should result in a split.
     Mockito.doReturn(true).when(mockRegion).shouldForceSplit();
     Mockito.doReturn(100L).when(mockStore).getSize();
     assertTrue(policy.shouldSplit());
-    
+
     // Turn off forceSplit, should not split
     Mockito.doReturn(false).when(mockRegion).shouldForceSplit();
     assertFalse(policy.shouldSplit());
   }
-  
+
   @Test
   public void testGetSplitPoint() throws IOException {
     ConstantSizeRegionSplitPolicy policy =
       (ConstantSizeRegionSplitPolicy)RegionSplitPolicy.create(mockRegion, conf);
-    
+
     // For no stores, should not split
     assertFalse(policy.shouldSplit());
     assertNull(policy.getSplitPoint());
-    
+
     // Add a store above the requisite size. Should split.
     Store mockStore = Mockito.mock(Store.class);
     Mockito.doReturn(2000L).when(mockStore).getSize();
@@ -126,7 +126,7 @@ public class TestRegionSplitPolicy {
 
     assertEquals("store 1 split",
         Bytes.toString(policy.getSplitPoint()));
-    
+
     // Add a bigger store. The split point should come from that one
     Store mockStore2 = Mockito.mock(Store.class);
     Mockito.doReturn(4000L).when(mockStore2).getSize();
@@ -134,7 +134,7 @@ public class TestRegionSplitPolicy {
     Mockito.doReturn(Bytes.toBytes("store 2 split"))
       .when(mockStore2).getSplitPoint();
     stores.put(new byte[]{2}, mockStore2);
-    
+
     assertEquals("store 2 split",
         Bytes.toString(policy.getSplitPoint()));
   }

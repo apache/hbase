@@ -23,9 +23,9 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
 
 /**
- * Class used as an empty watche for the tests
+ * An empty ZooKeeper watcher
  */
-public class EmptyWatcher implements Watcher{
+public class EmptyWatcher implements Watcher {
   public static EmptyWatcher instance = new EmptyWatcher();
   private EmptyWatcher() {}
 
