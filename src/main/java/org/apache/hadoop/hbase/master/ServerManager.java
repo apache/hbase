@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
-import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 
 /**
@@ -559,20 +558,16 @@ public class ServerManager {
    * <p>
    * @param server server to open a region
    * @param region region to open
-   * @param versionOfOfflineNode that needs to be present in the offline node
-   * when RS tries to change the state from OFFLINE to other states.
    */
-  public RegionOpeningState sendRegionOpen(final HServerInfo server,
-      HRegionInfo region, int versionOfOfflineNode)
+  public void sendRegionOpen(HServerInfo server, HRegionInfo region)
   throws IOException {
     HRegionInterface hri = getServerConnection(server);
     if (hri == null) {
-      LOG.warn("Attempting to send OPEN RPC to server " + server.toString() +
-        " failed because no RPC connection found to this server");
-      return RegionOpeningState.FAILED_OPENING;
+      LOG.warn("Attempting to send OPEN RPC to server " + server.getServerName()
+          + " failed because no RPC connection found to this server");
+      return;
     }
-    return (versionOfOfflineNode == -1) ? hri.openRegion(region) : hri
-        .openRegion(region, versionOfOfflineNode);
+    hri.openRegion(region);
   }
 
   /**

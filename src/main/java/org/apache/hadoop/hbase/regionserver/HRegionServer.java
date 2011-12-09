@@ -67,7 +67,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterAddressTracker;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -2125,40 +2124,24 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   // Region open/close direct RPCs
 
-  @QosPriority(priority=HIGH_QOS)
-  public RegionOpeningState openRegion(HRegionInfo region)
-  throws IOException {
-    return openRegion(region, -1);
-  }
   @Override
   @QosPriority(priority=HIGH_QOS)
-  public RegionOpeningState openRegion(HRegionInfo region, int versionOfOfflineNode)
+  public void openRegion(HRegionInfo region)
   throws IOException {
     if (this.regionsInTransitionInRS.contains(region.getEncodedNameAsBytes())) {
       throw new RegionAlreadyInTransitionException("open", region.getEncodedName());
-    }
-    HRegion onlineRegion = this.getFromOnlineRegions(region.getEncodedName());
-    if (null != onlineRegion) {
-      LOG.warn("Attempted open of " + region.getEncodedName()
-          + " but already online on this server");
-      return RegionOpeningState.ALREADY_OPENED;
     }
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
     if (this.stopped) throw new RegionServerStoppedException();
     this.regionsInTransitionInRS.add(region.getEncodedNameAsBytes());
-    // Need to pass the expected version in the constructor.
     if (region.isRootRegion()) {
-      this.service.submit(new OpenRootHandler(this, this, region,
-          versionOfOfflineNode));
-    } else if (region.isMetaRegion()) {
-      this.service.submit(new OpenMetaHandler(this, this, region,
-          versionOfOfflineNode));
+      this.service.submit(new OpenRootHandler(this, this, region));
+    } else if(region.isMetaRegion()) {
+      this.service.submit(new OpenMetaHandler(this, this, region));
     } else {
-      this.service.submit(new OpenRegionHandler(this, this, region,
-          versionOfOfflineNode));
+      this.service.submit(new OpenRegionHandler(this, this, region));
     }
-    return RegionOpeningState.OPENED;
   }
 
   @Override
