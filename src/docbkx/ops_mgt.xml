@@ -91,9 +91,11 @@
           <listitem><varname>rs.impl</varname>  hbase.regionserver.impl of the peer cluster. </listitem>
           <listitem><varname>starttime</varname>  Beginning of the time range.  Without endtime means starttime to forever.</listitem>
           <listitem><varname>endtime</varname>  End of the time range.  Without endtime means starttime to forever.</listitem>
+          <listitem><varname>versions</varname>  Number of cell versions to copy.</listitem>
           <listitem><varname>new.name</varname>  New table's name.</listitem>
           <listitem><varname>peer.adr</varname>  Address of the peer cluster given in the format hbase.zookeeper.quorum:hbase.zookeeper.client.port:zookeeper.znode.parent</listitem>
           <listitem><varname>families</varname>  Comma-separated list of ColumnFamilies to copy.</listitem>
+          <listitem><varname>all.cells</varname>  Also copy delete markers and uncollected deleted cells (advanced option).</listitem>
         </itemizedlist>
          Args:
         <itemizedlist>

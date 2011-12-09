@@ -42,10 +42,12 @@ public class CopyTable {
   static String rsImpl = null;
   static long startTime = 0;
   static long endTime = 0;
+  static int versions = -1;
   static String tableName = null;
   static String newTableName = null;
   static String peerAddress = null;
   static String families = null;
+  static boolean allCells = false;
 
   /**
    * Sets up the actual job.
@@ -66,6 +68,12 @@ public class CopyTable {
     if (startTime != 0) {
       scan.setTimeRange(startTime,
           endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime);
+    }
+    if (allCells) {
+      scan.setRaw(true);
+    }
+    if (versions >= 0) {
+      scan.setMaxVersions(versions);
     }
     if(families != null) {
       String[] fams = families.split(",");
@@ -113,12 +121,14 @@ public class CopyTable {
     System.err.println(" starttime    beginning of the time range");
     System.err.println("              without endtime means from starttime to forever");
     System.err.println(" endtime      end of the time range");
+    System.err.println(" versions     number of cell versions to copy");
     System.err.println(" new.name     new table's name");
     System.err.println(" peer.adr     Address of the peer cluster given in the format");
     System.err.println("              hbase.zookeeer.quorum:hbase.zookeeper.client.port:zookeeper.znode.parent");
     System.err.println(" families     comma-separated list of families to copy");
     System.err.println("              To copy from cf1 to cf2, give sourceCfName:destCfName. ");
     System.err.println("              To keep the same name, just give \"cfName\"");
+    System.err.println(" all.cells    also copy delete markers and deleted cells");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" tablename    Name of the table to copy");
@@ -170,6 +180,12 @@ public class CopyTable {
           continue;
         }
 
+        final String versionsArgKey = "--versions=";
+        if (cmd.startsWith(versionsArgKey)) {
+          versions = Integer.parseInt(cmd.substring(versionsArgKey.length()));
+          continue;
+        }
+
         final String newNameArgKey = "--new.name=";
         if (cmd.startsWith(newNameArgKey)) {
           newTableName = cmd.substring(newNameArgKey.length());
@@ -185,6 +201,11 @@ public class CopyTable {
         final String familiesArgKey = "--families=";
         if (cmd.startsWith(familiesArgKey)) {
           families = cmd.substring(familiesArgKey.length());
+          continue;
+        }
+
+        if (cmd.startsWith("--all.cells")) {
+          allCells = true;
           continue;
         }
 
