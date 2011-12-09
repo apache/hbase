@@ -202,14 +202,16 @@ public class TestCatalogJanitor {
       return false;
     }
 
+    private boolean stopped = false;
+
     @Override
     public void stop(String why) {
-      //no-op
+      stopped = true;
     }
 
     @Override
     public boolean isStopped() {
-      return false;
+      return stopped;
     }
 
     @Override
@@ -458,6 +460,9 @@ public class TestCatalogJanitor {
 
     // Super parent should get cleaned up now both splita and splitb are gone.
     assertTrue(janitor.cleanParent(parent, regions.get(parent)));
+
+    services.stop("test finished");
+    janitor.join();
   }
 
   private String setRootDirAndCleanIt(final HBaseTestingUtility htu,
