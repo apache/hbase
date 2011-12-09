@@ -469,6 +469,7 @@ Release 0.92.0 - Unreleased
                (Shrijeet Paliwal)
    HBASE-4946  HTable.coprocessorExec (and possibly coprocessorProxy) does not work with
                dynamically loaded coprocessors (Andrei Dragomir)
+   HBASE-4969  tautology in HRegionInfo.readFields (Prakash Khemani)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
