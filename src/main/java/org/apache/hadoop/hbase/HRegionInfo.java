@@ -737,7 +737,7 @@ implements WritableComparable<HRegionInfo> {
          throw new IOException("HTD not found in input buffer", eofe);
       }
       this.hashCode = in.readInt();
-    } else if (getVersion() == VERSION) {
+    } else if (getVersion() == version) {
       this.endKey = Bytes.readByteArray(in);
       this.offLine = in.readBoolean();
       this.regionId = in.readLong();
