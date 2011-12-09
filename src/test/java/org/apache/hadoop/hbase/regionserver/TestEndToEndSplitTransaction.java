@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
@@ -84,6 +86,8 @@ public class TestEndToEndSplitTransaction {
     // note that this replicates some code from SplitTransaction
     // 2nd daughter first
     server.postOpenDeployTasks(regions.getSecond(), server.getCatalogTracker(), true);
+    // Add to online regions
+    server.addToOnlineRegions(regions.getSecond());
     // THIS is the crucial point:
     // the 2nd daughter was added, so querying before the split key should fail.
     assertFalse(test(con, tableName, firstRow, server));
@@ -92,6 +96,8 @@ public class TestEndToEndSplitTransaction {
 
     // first daughter second
     server.postOpenDeployTasks(regions.getFirst(), server.getCatalogTracker(), true);
+    // Add to online regions
+    server.addToOnlineRegions(regions.getFirst());
     assertTrue(test(con, tableName, firstRow, server));
     assertTrue(test(con, tableName, lastRow, server));
 
