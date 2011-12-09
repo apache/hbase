@@ -232,6 +232,7 @@ public class TestAdmin {
       ok = false;
     }
     assertTrue(ok);
+    ht.close();
   }
 
   @Test
@@ -281,6 +282,9 @@ public class TestAdmin {
       ok = false;
     }
     assertTrue(ok);
+
+    ht1.close();
+    ht2.close();
   }
 
   @Test
@@ -288,7 +292,7 @@ public class TestAdmin {
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
     TEST_UTIL.createTable(Bytes.toBytes("testCreateTable"),
-      HConstants.CATALOG_FAMILY);
+      HConstants.CATALOG_FAMILY).close();
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
   }
@@ -306,6 +310,7 @@ public class TestAdmin {
     HTable table = new HTable(TEST_UTIL.getConfiguration(), "myTestTable");
     HTableDescriptor confirmedHtd = table.getTableDescriptor();
     assertEquals(htd.compareTo(confirmedHtd), 0);
+    table.close();
   }
 
   @Test
@@ -330,7 +335,7 @@ public class TestAdmin {
         "hbase.online.schema.update.enable", true);
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
-    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
 
@@ -418,7 +423,7 @@ public class TestAdmin {
         "hbase.online.schema.update.enable", false);
     HTableDescriptor[] tables = admin.listTables();
     int numTables = tables.length;
-    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
 
@@ -576,6 +581,7 @@ public class TestAdmin {
     assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
     verifyRoundRobinDistribution(ht, expectedRegions);
+    ht.close();
 
     // Now test using start/end with a number of regions
 
@@ -595,8 +601,8 @@ public class TestAdmin {
     admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
-    ht = new HTable(TEST_UTIL.getConfiguration(), TABLE_2);
-    regions = ht.getRegionsInfo();
+    HTable ht2 = new HTable(TEST_UTIL.getConfiguration(), TABLE_2);
+    regions = ht2.getRegionsInfo();
     assertEquals("Tried to create " + expectedRegions + " regions " +
         "but only found " + regions.size(),
         expectedRegions, regions.size());
@@ -634,7 +640,8 @@ public class TestAdmin {
     assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {9,9,9,9,9,9,9,9,9,9}));
     assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-    verifyRoundRobinDistribution(ht, expectedRegions);
+    verifyRoundRobinDistribution(ht2, expectedRegions);
+    ht2.close();
 
     // Try once more with something that divides into something infinite
 
@@ -650,14 +657,17 @@ public class TestAdmin {
     admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
-    ht = new HTable(TEST_UTIL.getConfiguration(), TABLE_3);
-    regions = ht.getRegionsInfo();
+
+    HTable ht3 = new HTable(TEST_UTIL.getConfiguration(), TABLE_3);
+    regions = ht3.getRegionsInfo();
     assertEquals("Tried to create " + expectedRegions + " regions " +
         "but only found " + regions.size(),
         expectedRegions, regions.size());
     System.err.println("Found " + regions.size() + " regions");
 
-    verifyRoundRobinDistribution(ht, expectedRegions);
+    verifyRoundRobinDistribution(ht3, expectedRegions);
+    ht3.close();
+
 
     // Try an invalid case where there are duplicate split keys
     splitKeys = new byte [][] {
@@ -670,14 +680,15 @@ public class TestAdmin {
     byte [] TABLE_4 = Bytes.add(tableName, Bytes.toBytes("_4"));
     desc = new HTableDescriptor(TABLE_4);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HBaseAdmin ladmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     try {
-      admin.createTable(desc, splitKeys);
+      ladmin.createTable(desc, splitKeys);
       assertTrue("Should not be able to create this table because of " +
           "duplicate split keys", false);
     } catch(IllegalArgumentException iae) {
       // Expected
     }
+    ladmin.close();
   }
 
   @Test
@@ -856,6 +867,7 @@ public class TestAdmin {
       }
     } finally {
       TEST_UTIL.deleteTable(tableName);
+      table.close();
     }
   }
 
@@ -876,7 +888,7 @@ public class TestAdmin {
   @Test
   public void testEnableDisableAddColumnDeleteColumn() throws Exception {
     byte [] tableName = Bytes.toBytes("testMasterAdmin");
-    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
     this.admin.disableTable(tableName);
     try {
       new HTable(TEST_UTIL.getConfiguration(), tableName);
@@ -967,7 +979,7 @@ public class TestAdmin {
     admin.createTable(new HTableDescriptor(name + "SOMEUPPERCASE"));
     admin.createTable(new HTableDescriptor(name));
     // Before fix, below would fail throwing a NoServerForRegionException.
-    new HTable(TEST_UTIL.getConfiguration(), name);
+    new HTable(TEST_UTIL.getConfiguration(), name).close();
   }
 
   /***
@@ -989,6 +1001,7 @@ public class TestAdmin {
     HBaseAdmin hbaseadmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     hbaseadmin.createTable(new HTableDescriptor(name), startKey, endKey,
       expectedRegions);
+    hbaseadmin.close();
   }
 
   /**
@@ -1004,6 +1017,7 @@ public class TestAdmin {
     Put put = new Put(value);
     put.add(HConstants.CATALOG_FAMILY, HConstants.CATALOG_FAMILY, value);
     table.put(put);
+    table.close();
   }
 
   /**
@@ -1045,7 +1059,7 @@ public class TestAdmin {
   @Test (expected=TableExistsException.class)
   public void testTableExistsExceptionWithATable() throws IOException {
     final byte [] name = Bytes.toBytes("testTableExistsExceptionWithATable");
-    TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
+    TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY).close();
     TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
   }
 
@@ -1057,7 +1071,7 @@ public class TestAdmin {
   public void testTableNotEnabledExceptionWithATable() throws IOException {
     final byte [] name = Bytes.toBytes(
       "testTableNotEnabledExceptionWithATable");
-    TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
+    TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY).close();
     this.admin.disableTable(name);
     this.admin.disableTable(name);
   }
@@ -1070,8 +1084,12 @@ public class TestAdmin {
   public void testTableNotDisabledExceptionWithATable() throws IOException {
     final byte [] name = Bytes.toBytes(
       "testTableNotDisabledExceptionWithATable");
-    TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
+    HTable t = TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
+    try {
     this.admin.enableTable(name);
+    }finally {
+       t.close();
+    }
   }
 
   /**
@@ -1087,7 +1105,7 @@ public class TestAdmin {
   public void testShouldCloseTheRegionBasedOnTheEncodedRegionName()
       throws Exception {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion");
-    HBaseAdmin admin = createTable(TABLENAME);
+    createTableWithDefaultConf(TABLENAME);
 
     HRegionInfo info = null;
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
@@ -1108,7 +1126,7 @@ public class TestAdmin {
   @Test
   public void testCloseRegionIfInvalidRegionNameIsPassed() throws Exception {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion1");
-    HBaseAdmin admin = createTable(TABLENAME);
+    createTableWithDefaultConf(TABLENAME);
 
     HRegionInfo info = null;
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
@@ -1130,7 +1148,7 @@ public class TestAdmin {
   @Test
   public void testCloseRegionThatFetchesTheHRIFromMeta() throws Exception {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion2");
-    HBaseAdmin admin = createTable(TABLENAME);
+    createTableWithDefaultConf(TABLENAME);
 
     HRegionInfo info = null;
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
@@ -1160,7 +1178,7 @@ public class TestAdmin {
   @Test
   public void testCloseRegionWhenServerNameIsNull() throws Exception {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion3");
-    HBaseAdmin admin = createTable(TABLENAME);
+    createTableWithDefaultConf(TABLENAME);
 
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
 
@@ -1184,7 +1202,7 @@ public class TestAdmin {
   @Test
   public void testCloseRegionWhenServerNameIsEmpty() throws Exception {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegionWhenServerNameIsEmpty");
-    HBaseAdmin admin = createTable(TABLENAME);
+    createTableWithDefaultConf(TABLENAME);
 
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
 
@@ -1207,7 +1225,7 @@ public class TestAdmin {
   @Test
   public void testCloseRegionWhenEncodedRegionNameIsNotGiven() throws Exception {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion4");
-    HBaseAdmin admin = createTable(TABLENAME);
+    createTableWithDefaultConf(TABLENAME);
 
     HRegionInfo info = null;
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
@@ -1238,6 +1256,14 @@ public class TestAdmin {
     htd.addFamily(hcd);
     admin.createTable(htd, null);
     return admin;
+  }
+
+  private void createTableWithDefaultConf(byte[] TABLENAME) throws IOException {
+    HTableDescriptor htd = new HTableDescriptor(TABLENAME);
+    HColumnDescriptor hcd = new HColumnDescriptor("value");
+    htd.addFamily(hcd);
+
+    admin.createTable(htd, null);
   }
 
 
@@ -1288,7 +1314,6 @@ public class TestAdmin {
 
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
     List<HRegionInfo> RegionInfos = admin.getTableRegions(tableName);
@@ -1375,7 +1400,8 @@ public class TestAdmin {
   private HRegionServer startAndWriteData(String tableName, byte[] value)
       throws IOException {
     // When the META table can be opened, the region servers are running
-    new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
+    new HTable(
+      TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME).close();
     HRegionServer regionServer = TEST_UTIL.getHBaseCluster()
         .getRegionServerThreads().get(0).getRegionServer();
 
@@ -1400,6 +1426,8 @@ public class TestAdmin {
         }
       }
     }
+
+    table.close();
     return regionServer;
   }
   

@@ -472,6 +472,7 @@ Release 0.92.0 - Unreleased
    HBASE-4969  tautology in HRegionInfo.readFields (Prakash Khemani)
    HBASE-4994  TestHeapSize broke in trunk
    HBASE-4995  Increase zk maxClientCnxns to give us some head room
+   HBASE-4974  Remove some resources leaks on the tests (nkeywal)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

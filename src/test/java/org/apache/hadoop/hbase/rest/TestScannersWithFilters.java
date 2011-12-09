@@ -201,7 +201,9 @@ public class TestScannersWithFilters {
         table.delete(d);
       }
       numRows -= 2;
+      table.close();
     }
+    admin.close();
   }
 
   @AfterClass

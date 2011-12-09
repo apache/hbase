@@ -527,7 +527,10 @@ public class HBaseTestingUtility {
     while (s.next() != null) {
       continue;
     }
+    s.close();
+    t.close();
     LOG.info("Minicluster is up");
+    //getHBaseAdmin();
     return this.hbaseCluster;
   }
 
@@ -546,6 +549,8 @@ public class HBaseTestingUtility {
       // do nothing
     }
     LOG.info("HBase has been restarted");
+    s.close();
+    t.close();
   }
 
   /**
@@ -669,7 +674,9 @@ public class HBaseTestingUtility {
     for(byte[] family : families) {
       desc.addFamily(new HColumnDescriptor(family));
     }
-    getHBaseAdmin().createTable(desc);
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.createTable(desc);
+    admin.close();
     return new HTable(c, tableName);
   }
 
@@ -696,7 +703,9 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       desc.addFamily(hcd);
     }
-    getHBaseAdmin().createTable(desc);
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.createTable(desc);
+    admin.close();
     return new HTable(c, tableName);
   }
 
@@ -735,7 +744,9 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       desc.addFamily(hcd);
     }
-    getHBaseAdmin().createTable(desc);
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.createTable(desc);
+    admin.close();
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
@@ -760,7 +771,9 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       desc.addFamily(hcd);
     }
-    getHBaseAdmin().createTable(desc);
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.createTable(desc);
+    admin.close();
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
@@ -788,7 +801,9 @@ public class HBaseTestingUtility {
       desc.addFamily(hcd);
       i++;
     }
-    getHBaseAdmin().createTable(desc);
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.createTable(desc);
+    admin.close();
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
@@ -800,6 +815,7 @@ public class HBaseTestingUtility {
     HBaseAdmin admin = new HBaseAdmin(getConfiguration());
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
+    admin.close();
   }
 
   /**
@@ -817,6 +833,7 @@ public class HBaseTestingUtility {
       table.delete(del);
     }
     resScan = table.getScanner(scan);
+    resScan.close();
     return table;
   }
 
@@ -1006,11 +1023,16 @@ public class HBaseTestingUtility {
     HConnection conn = table.getConnection();
     conn.clearRegionCache();
     // assign all the new regions IF table is enabled.
-    if (getHBaseAdmin().isTableEnabled(table.getTableName())) {
+    HBaseAdmin admin = getHBaseAdmin();
+    if (admin.isTableEnabled(table.getTableName())) {
       for(HRegionInfo hri : newRegions) {
         hbaseCluster.getMaster().assignRegion(hri);
       }
     }
+
+    admin.close();
+    meta.close();
+
     return count;
   }
 
@@ -1042,6 +1064,8 @@ public class HBaseTestingUtility {
       LOG.info("createMultiRegionsInMeta: inserted " + hri.toString());
       newRegions.add(hri);
     }
+
+    meta.close();
     return newRegions;
   }
 
@@ -1061,6 +1085,7 @@ public class HBaseTestingUtility {
       rows.add(result.getRow());
     }
     s.close();
+    t.close();
     return rows;
   }
 
@@ -1084,6 +1109,7 @@ public class HBaseTestingUtility {
       }
     }
     s.close();
+    t.close();
     return rows;
   }
 
@@ -1211,7 +1237,7 @@ public class HBaseTestingUtility {
     Thread.sleep(sleep);
 
     if (checkStatus) {
-      new HTable(new Configuration(conf), HConstants.META_TABLE_NAME);
+      new HTable(new Configuration(conf), HConstants.META_TABLE_NAME).close();
     }
   }
 
@@ -1255,6 +1281,7 @@ public class HBaseTestingUtility {
   public void closeRegion(byte[] regionName) throws IOException {
     HBaseAdmin admin = getHBaseAdmin();
     admin.closeRegion(regionName, null);
+    admin.close();
   }
 
   /**
@@ -1345,6 +1372,7 @@ public class HBaseTestingUtility {
           System.currentTimeMillis() - startWait < timeoutMillis);
       Thread.sleep(200);
     }
+    admin.close();
   }
 
   /**
@@ -1482,6 +1510,7 @@ public class HBaseTestingUtility {
         result.clear();
       }
     }
+    scanner.close();
     return result;
   }
 
