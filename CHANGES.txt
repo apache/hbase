@@ -453,6 +453,8 @@ Release 0.92.0 - Unreleased
    HBASE-4945  NPE in HRegion.bulkLoadHFiles (Andrew P and Lars H)
    HBASE-4942  HMaster is unable to start of HFile V1 is used (Honghua Zhu)
    HBASE-4610  Port HBASE-3380 (Master failover can split logs of live servers) to 92/trunk
+   HBASE-4946  HTable.coprocessorExec (and possibly coprocessorProxy) does not work with
+               dynamically loaded coprocessors (Andrei Dragomir)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
