@@ -724,7 +724,7 @@
   </property>
   <property>
     <name>hbase.zookeeper.property.maxClientCnxns</name>
-    <value>30</value>
+    <value>300</value>
     <description>Property from ZooKeeper's config zoo.cfg.
     Limit on number of concurrent connections (at the socket level) that a
     single client, identified by IP address, may make to a single member of

@@ -120,7 +120,7 @@ public final class HConstants {
   public static final String ZOOKEEPER_MAX_CLIENT_CNXNS = "hbase.zookeeper.property.maxClientCnxns";
 
   /** Default limit on concurrent client-side zookeeper connections */
-  public static final int DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS = 30;
+  public static final int DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS = 300;
 
   /** Parameter name for port region server listens on. */
   public static final String REGIONSERVER_PORT = "hbase.regionserver.port";
