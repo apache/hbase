@@ -33,8 +33,13 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.coprocessor.Exec;
+import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,6 +53,9 @@ public class TestCoprocessorEndpoint {
   private static final byte[] TEST_FAMILY = Bytes.toBytes("TestFamily");
   private static final byte[] TEST_QUALIFIER = Bytes.toBytes("TestQualifier");
   private static byte[] ROW = Bytes.toBytes("testRow");
+  
+  private static final String protocolName =  "org.apache.hadoop.hbase.CustomProtocol";
+  private static final String methodName = "myFunc";
 
   private static final int ROWSIZE = 20;
   private static final int rowSeperator1 = 5;
@@ -169,6 +177,28 @@ public class TestCoprocessorEndpoint {
       expectedResult += i;
     }
     assertEquals("Invalid result", sumResult, expectedResult);
+  }
+
+  @Test
+  public void testExecDeserialization() throws IOException {
+    DataOutputBuffer dob = new DataOutputBuffer();
+    dob.writeUTF(methodName);
+    dob.writeInt(1);
+    Scan scan = new Scan();
+    HbaseObjectWritable.writeObject(dob, scan, Scan.class, new Configuration());
+    dob.writeUTF("org.apache.hadoop.hbase.client.Scan");
+    Bytes.writeByteArray(dob, new byte[]{'a'});
+    // this is the dynamic protocol name
+    dob.writeUTF(protocolName);
+
+    DataInputBuffer dib = new DataInputBuffer();
+    dib.reset(dob.getData(), dob.getLength());
+
+    Exec after = new Exec();
+    after.readFields(dib);
+    // no error thrown
+    assertEquals(after.getProtocolName(), protocolName);
+    assertEquals(after.getMethodName(), methodName);
   }
 
   private static byte[][] makeN(byte[] base, int n) {

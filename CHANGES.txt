@@ -467,6 +467,8 @@ Release 0.92.0 - Unreleased
                internal invocations of other hbase scripts
    HBASE-4980  Null pointer exception in HBaseClient receiveResponse
                (Shrijeet Paliwal)
+   HBASE-4946  HTable.coprocessorExec (and possibly coprocessorProxy) does not work with
+               dynamically loaded coprocessors (Andrei Dragomir)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
