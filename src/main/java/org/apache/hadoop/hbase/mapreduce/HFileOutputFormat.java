@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -315,7 +316,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     job.setNumReduceTasks(startKeys.size());
 
     Path partitionsPath = new Path(job.getWorkingDirectory(),
-        "partitions_" + System.currentTimeMillis());
+                                   "partitions_" + UUID.randomUUID());
     LOG.info("Writing partition information to " + partitionsPath);
 
     FileSystem fs = partitionsPath.getFileSystem(conf);
