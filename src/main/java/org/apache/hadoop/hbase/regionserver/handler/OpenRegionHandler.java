@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
@@ -110,10 +109,11 @@ public class OpenRegionHandler extends EventHandler {
         tryTransitionToFailedOpen(regionInfo);
         return;
       }
-
       boolean failed = true;
       if (tickleOpening("post_region_open")) {
-        if (updateMeta(region)) failed = false;
+        if (updateMeta(region)) {
+          failed = false;
+        }
       }
       if (failed || this.server.isStopped() ||
           this.rsServices.isStopping()) {
@@ -132,6 +132,8 @@ public class OpenRegionHandler extends EventHandler {
         cleanupFailedOpen(region);
         return;
       }
+      // Successful region open, and add it to OnlineRegions
+      this.rsServices.addToOnlineRegions(region);
 
       // Done!  Successful region open
       LOG.debug("Opened " + name + " on server:" +
@@ -212,9 +214,10 @@ public class OpenRegionHandler extends EventHandler {
   }
 
   /**
-   * Thread to run region post open tasks.  Call {@link #getException()} after
+   * Thread to run region post open tasks. Call {@link #getException()} after
    * the thread finishes to check for exceptions running
-   * {@link RegionServerServices#postOpenDeployTasks(HRegion, org.apache.hadoop.hbase.catalog.CatalogTracker, boolean)}.
+   * {@link RegionServerServices#postOpenDeployTasks(HRegion, org.apache.hadoop.hbase.catalog.CatalogTracker, boolean)}
+   * .
    */
   static class PostOpenDeployTasksThread extends Thread {
     private Exception exception = null;
@@ -348,7 +351,6 @@ public class OpenRegionHandler extends EventHandler {
 
   private void cleanupFailedOpen(final HRegion region) throws IOException {
     if (region != null) region.close();
-    this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
   }
 
   /**

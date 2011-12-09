@@ -57,6 +57,7 @@ public interface RegionServerServices extends OnlineRegions {
   /**
    * Tasks to perform after region open to complete deploy of region on
    * regionserver
+   * 
    * @param r Region to open.
    * @param ct Instance of {@link CatalogTracker}
    * @param daughter True if this is daughter of a split
