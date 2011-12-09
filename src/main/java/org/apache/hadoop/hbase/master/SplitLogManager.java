@@ -331,22 +331,24 @@ public class SplitLogManager extends ZooKeeperListener {
         LOG.debug("unacquired orphan task is done " + path);
       }
     } else {
-      // if in stopTrackingTasks() we were to make tasks orphan instead of
-      // forgetting about them then we will have to handle the race when
-      // accessing task.batch here.
-      if (!task.isOrphan()) {
-        synchronized (task.batch) {
-          if (status == SUCCESS) {
-            task.batch.done++;
-          } else {
-            task.batch.error++;
-          }
-          if ((task.batch.done + task.batch.error) == task.batch.installed) {
-            task.batch.notify();
+      synchronized (task) {
+        task.deleted = true;
+        // if in stopTrackingTasks() we were to make tasks orphan instead of
+        // forgetting about them then we will have to handle the race when
+        // accessing task.batch here.
+        if (!task.isOrphan()) {
+          synchronized (task.batch) {
+            if (status == SUCCESS) {
+              task.batch.done++;
+            } else {
+              task.batch.error++;
+            }
+            if ((task.batch.done + task.batch.error) == task.batch.installed) {
+              task.batch.notify();
+            }
           }
         }
       }
-      task.deleted = true;
     }
     // delete the task node in zk. Keep trying indefinitely - its an async
     // call and no one is blocked waiting for this node to be deleted. All
@@ -593,12 +595,27 @@ public class SplitLogManager extends ZooKeeperListener {
    */
   private Task createTaskIfAbsent(String path, TaskBatch batch) {
     Task oldtask;
+    // batch.installed is only changed via this function and
+    // a single thread touches batch.installed.
     oldtask = tasks.putIfAbsent(path, new Task(batch));
-    if (oldtask != null && oldtask.isOrphan()) {
-        LOG.info("Previously orphan task " + path +
-            " is now being waited upon");
-        oldtask.setBatch(batch);
-        return (null);
+    if (oldtask != null) {
+      synchronized (oldtask) {
+        // new task was not used.
+        batch.installed--;
+        if (oldtask.isOrphan()) {
+          if (oldtask.deleted) {
+            // The task is already done. Do not install the batch for this
+            // task because it might be too late for setDone() to update
+            // batch.done. There is no need for the batch creator to wait for
+            // this task to complete.
+            return (null);
+          }
+          LOG.info("Previously orphan task " + path +
+              " is now being waited upon");
+          oldtask.setBatch(batch);
+          return (null);
+        }
+      }
     }
     return oldtask;
   }
@@ -741,9 +758,7 @@ public class SplitLogManager extends ZooKeeperListener {
       }
       this.batch = batch;
       if (batch != null) {
-        if (this.incarnation == 0) {
-          batch.installed++;
-        }
+        batch.installed++;
       }
     }
 
