@@ -41,8 +41,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -361,7 +361,10 @@ public class SplitTransaction {
         try {
           // add 2nd daughter first (see HBASE-4335)
           services.postOpenDeployTasks(b, server.getCatalogTracker(), true);
+          // Should add it to OnlineRegions
+          services.addToOnlineRegions(b);
           services.postOpenDeployTasks(a, server.getCatalogTracker(), true);
+          services.addToOnlineRegions(a);
         } catch (KeeperException ke) {
           throw new IOException(ke);
         }
