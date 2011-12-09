@@ -142,7 +142,7 @@ public final class HConstants {
       ZK_CFG_PROPERTY_PREFIX + "dataDir";
 
   /** Default limit on concurrent client-side zookeeper connections */
-  public static final int DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS = 30;
+  public static final int DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS = 300;
 
   /** Configuration key for ZooKeeper session timeout */
   public static final String ZK_SESSION_TIMEOUT = "zookeeper.session.timeout";
