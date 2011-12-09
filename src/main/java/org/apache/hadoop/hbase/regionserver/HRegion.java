@@ -50,6 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -181,6 +182,9 @@ public class HRegion implements HeapSize { // , Writable{
   // Registered region protocol handlers
   private ClassToInstanceMap<CoprocessorProtocol>
       protocolHandlers = MutableClassToInstanceMap.create();
+  
+  private Map<String, Class<? extends CoprocessorProtocol>>
+      protocolHandlerNames = Maps.newHashMap();
 
   /**
    * Temporary subdirectory of the region directory used for compaction output.
@@ -4397,6 +4401,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     protocolHandlers.putInstance(protocol, handler);
+    protocolHandlerNames.put(protocol.getName(), protocol);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Registered protocol handler: region="+
           Bytes.toStringBinary(getRegionName())+" protocol="+protocol.getName());
@@ -4422,6 +4427,19 @@ public class HRegion implements HeapSize { // , Writable{
   public ExecResult exec(Exec call)
       throws IOException {
     Class<? extends CoprocessorProtocol> protocol = call.getProtocol();
+    if (protocol == null) {
+      String protocolName = call.getProtocolName();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received dynamic protocol exec call with protocolName " + protocolName);
+      }
+      // detect the actual protocol class
+      protocol  = protocolHandlerNames.get(protocolName);
+      if (protocol == null) {
+        throw new HBaseRPC.UnknownProtocolException(protocol,
+            "No matching handler for protocol "+protocolName+
+            " in region "+Bytes.toStringBinary(getRegionName()));
+      }
+    }
     if (!protocolHandlers.containsKey(protocol)) {
       throw new HBaseRPC.UnknownProtocolException(protocol,
           "No matching handler for protocol "+protocol.getName()+

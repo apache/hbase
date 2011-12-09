@@ -56,6 +56,7 @@ public class Exec extends Invocation implements Row {
   /** Row key used as a reference for any region lookups */
   private byte[] referenceRow;
   private Class<? extends CoprocessorProtocol> protocol;
+  private String protocolName;
 
   public Exec() {
   }
@@ -68,6 +69,11 @@ public class Exec extends Invocation implements Row {
     this.conf = configuration;
     this.referenceRow = row;
     this.protocol = protocol;
+    this.protocolName = protocol.getName();
+  }
+
+  public String getProtocolName() {
+    return protocolName;
   }
 
   public Class<? extends CoprocessorProtocol> getProtocol() {
@@ -117,12 +123,6 @@ public class Exec extends Invocation implements Row {
     }
     // fields for Exec
     referenceRow = Bytes.readByteArray(in);
-    String protocolName = in.readUTF();
-    try {
-      protocol = (Class<CoprocessorProtocol>)conf.getClassByName(protocolName);
-    }
-    catch (ClassNotFoundException cnfe) {
-      throw new IOException("Protocol class "+protocolName+" not found", cnfe);
-    }
+    protocolName = in.readUTF();
   }
 }
