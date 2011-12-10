@@ -774,10 +774,10 @@
 
                 <!-- Using Unix tar to preserve symlinks -->
                 <exec executable="tar" failonerror="yes"
-                  dir="${project.build.directory}/${project.build.finalName}">
+                  dir="${project.build.directory}">
                     <arg value="czf"/>
                     <arg value="${project.build.directory}/${project.build.finalName}.tar.gz"/>
-                    <arg value="."/>
+                    <arg value="${project.build.finalName}"/>
                 </exec>
 
               </target>
