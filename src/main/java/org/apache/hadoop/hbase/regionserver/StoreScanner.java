@@ -51,6 +51,8 @@ class StoreScanner extends NonLazyKeyValueScanner
   private final boolean isGet;
   private final boolean explicitColumnQuery;
   private final boolean useRowColBloom;
+  private final Scan scan;
+  private final NavigableSet<byte[]> columns;
 
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
@@ -71,6 +73,8 @@ class StoreScanner extends NonLazyKeyValueScanner
     isGet = scan.isGetScan();
     int numCol = columns == null ? 0 : columns.size();
     explicitColumnQuery = numCol > 0;
+    this.scan = scan;
+    this.columns = columns;
 
     // We look up row-column Bloom filters for multi-column queries as part of
     // the seek operation. However, we also look the row-column Bloom filter
@@ -190,13 +194,6 @@ class StoreScanner extends NonLazyKeyValueScanner
   }
 
   /*
-   * @return List of scanners ordered properly.
-   */
-  private List<KeyValueScanner> getScanners() throws IOException {
-    return this.store.getScanners(cacheBlocks, isGet, false, null);
-  }
-
-  /*
    * @return List of scanners to seek, possibly filtered by StoreFile.
    */
   private List<KeyValueScanner> getScanners(Scan scan,
@@ -253,7 +250,7 @@ class StoreScanner extends NonLazyKeyValueScanner
   public synchronized boolean seek(KeyValue key) throws IOException {
     if (this.heap == null) {
 
-      List<KeyValueScanner> scanners = getScanners();
+      List<KeyValueScanner> scanners = getScanners(scan, columns);
 
       heap = new KeyValueHeap(scanners, store.comparator);
     }
@@ -443,10 +440,7 @@ class StoreScanner extends NonLazyKeyValueScanner
       throw new RuntimeException("StoreScanner.reseek run on an existing heap!");
     }
 
-    /* When we have the scan object, should we not pass it to getScanners()
-     * to get a limited set of scanners? We did so in the constructor and we
-     * could have done it now by storing the scan object from the constructor */
-    List<KeyValueScanner> scanners = getScanners();
+    List<KeyValueScanner> scanners = getScanners(scan, columns);
 
     for(KeyValueScanner scanner : scanners) {
       scanner.seek(lastTopKey);
