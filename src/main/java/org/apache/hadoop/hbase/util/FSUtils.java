@@ -746,7 +746,96 @@ public class FSUtils {
       throws IOException {
     // region name to its best locality region server mapping
     MapWritable regionToBestLocalityRSMapping = new MapWritable();
+    getRegionLocalityMappingFromFS(fs, rootPath, threadPoolSize, conf,
+        desiredTable, regionToBestLocalityRSMapping, null);
+    return regionToBestLocalityRSMapping;
+  }
 
+  /**
+   * This function is to scan the root path of the file system to get the
+   * degree of locality for each region on each of the servers having at least
+   * one block of that region.
+   *
+   * @param fs
+   *          the file system to use
+   * @param rootPath
+   *          the root path to start from
+   * @param threadPoolSize
+   *          the thread pool size to use
+   * @param conf
+   *          the configuration to use
+   * @return the mapping from region encoded name to a map of server names to
+   *           locality fraction
+   * @throws IOException
+   *           in case of file system errors or interrupts
+   */
+  public static Map<String, Map<String, Float>> getRegionDegreeLocalityMappingFromFS(
+      final FileSystem fs, final Path rootPath, int threadPoolSize,
+      final Configuration conf) throws IOException {
+    return getRegionDegreeLocalityMappingFromFS(fs, rootPath, threadPoolSize,
+        conf, null);
+  }
+
+  /**
+   * This function is to scan the root path of the file system to get the
+   * degree of locality for each region on each of the servers having at least
+   * one block of that region.
+   *
+   * @param fs
+   *          the file system to use
+   * @param rootPath
+   *          the root path to start from
+   * @param threadPoolSize
+   *          the thread pool size to use
+   * @param conf
+   *          the configuration to use
+   * @param desiredTable
+   *          the table you wish to scan locality for
+   * @return the mapping from region encoded name to a map of server names to
+   *           locality fraction
+   * @throws IOException
+   *           in case of file system errors or interrupts
+   */
+  public static Map<String, Map<String, Float>> getRegionDegreeLocalityMappingFromFS(
+      final FileSystem fs, final Path rootPath, int threadPoolSize,
+      final Configuration conf, final String desiredTable) throws IOException {
+    Map<String, Map<String, Float>> regionDegreeLocalityMapping =
+        new ConcurrentHashMap<String, Map<String, Float>>();
+    getRegionLocalityMappingFromFS(fs, rootPath, threadPoolSize, conf,
+        desiredTable, null, regionDegreeLocalityMapping);
+    return regionDegreeLocalityMapping;
+  }
+
+  /**
+   * This function is to scan the root path of the file system to get either the
+   * mapping between the region name and its best locality region server or the
+   * degree of locality of each region on each of the servers having at least
+   * one block of that region. The output map parameters are both optional.
+   *
+   * @param fs
+   *          the file system to use
+   * @param rootPath
+   *          the root path to start from
+   * @param threadPoolSize
+   *          the thread pool size to use
+   * @param conf
+   *          the configuration to use
+   * @param desiredTable
+   *          the table you wish to scan locality for
+   * @param regionToBestLocalityRSMapping
+   *          the map into which to put the best locality mapping or null
+   * @param regionDegreeLocalityMapping
+   *          the map into which to put the locality degree mapping or null,
+   *          must be a thread-safe implementation
+   * @throws IOException
+   *           in case of file system errors or interrupts
+   */
+  private static void getRegionLocalityMappingFromFS(
+      final FileSystem fs, final Path rootPath, int threadPoolSize,
+      final Configuration conf, final String desiredTable,
+      MapWritable regionToBestLocalityRSMapping,
+      Map<String, Map<String, Float>> regionDegreeLocalityMapping)
+      throws IOException {
     long startTime = System.currentTimeMillis();
     Path queryPath;
     if (null == desiredTable) {
@@ -791,7 +880,7 @@ public class FSUtils {
     FileStatus[] statusList = fs.globStatus(queryPath, pathFilter);
 
     if (null == statusList) {
-      return regionToBestLocalityRSMapping;
+      return;
     } else {
       LOG.debug("Query Path: " + queryPath + " ; # list of files: " +
           statusList.length);
@@ -821,7 +910,7 @@ public class FSUtils {
         }
 
         tpe.execute(new FSRegionScanner(fs, regionPath,
-            regionToBestLocalityRSMapping));
+            regionToBestLocalityRSMapping, regionDegreeLocalityMapping));
       }
     } finally {
       tpe.shutdown();
@@ -847,7 +936,6 @@ public class FSUtils {
     String overheadMsg = "Scan DFS for locality info takes " + overhead + " ms";
 
     LOG.info(overheadMsg);
-    return regionToBestLocalityRSMapping;
   }
 
 }
@@ -866,16 +954,23 @@ class FSRegionScanner implements Runnable {
   private FileSystem fs;
 
   /**
-   * The locality mapping returned by the above getRegionLocalityMappingFromFS
-   * method
+   * Maps each region to the RS with highest locality for that region.
    */
   private MapWritable regionToBestLocalityRSMapping;
 
+  /**
+   * Maps region encoded names to maps of hostnames to fractional locality of
+   * that region on that host.
+   */
+  private Map<String, Map<String, Float>> regionDegreeLocalityMapping;
+
   FSRegionScanner(FileSystem fs, Path regionPath,
-      MapWritable regionToBestLocalityRSMapping) {
+      MapWritable regionToBestLocalityRSMapping,
+      Map<String, Map<String, Float>> regionDegreeLocalityMapping) {
     this.fs = fs;
     this.regionPath = regionPath;
     this.regionToBestLocalityRSMapping = regionToBestLocalityRSMapping;
+    this.regionDegreeLocalityMapping = regionDegreeLocalityMapping;
   }
 
   @Override
@@ -926,29 +1021,47 @@ class FSRegionScanner implements Runnable {
         }
       }
 
-      int largestBlkCount = 0;
-      String hostToRun = null;
-      for (Map.Entry<String, AtomicInteger> entry : blockCountMap.entrySet()) {
-        String host = entry.getKey();
+      if (regionToBestLocalityRSMapping != null) {
+        int largestBlkCount = 0;
+        String hostToRun = null;
+        for (Map.Entry<String, AtomicInteger> entry : blockCountMap.entrySet()) {
+          String host = entry.getKey();
 
-        int tmp = entry.getValue().get();
-        if (tmp > largestBlkCount) {
-          largestBlkCount = tmp;
-          hostToRun = host;
+          int tmp = entry.getValue().get();
+          if (tmp > largestBlkCount) {
+            largestBlkCount = tmp;
+            hostToRun = host;
+          }
+        }
+
+        // empty regions could make this null
+        if (null == hostToRun) {
+          return;
+        }
+
+        if (hostToRun.endsWith(".")) {
+          hostToRun = hostToRun.substring(0, hostToRun.length()-1);
+        }
+        String name = tableName + ":" + regionPath.getName();
+        synchronized (regionToBestLocalityRSMapping) {
+          regionToBestLocalityRSMapping.put(new Text(name), new Text(hostToRun));
         }
       }
 
-      // empty regions could make this null
-      if (null == hostToRun) {
-        return;
-      }
-
-      if (hostToRun.endsWith(".")) {
-        hostToRun = hostToRun.substring(0, hostToRun.length()-1);
-      }
-      String name = tableName + ":" + regionPath.getName();
-      synchronized (regionToBestLocalityRSMapping) {
-        regionToBestLocalityRSMapping.put(new Text(name), new Text(hostToRun));
+      if (regionDegreeLocalityMapping != null && totalBlkCount > 0) {
+        Map<String, Float> hostLocalityMap = new HashMap<String, Float>();
+        for (Map.Entry<String, AtomicInteger> entry : blockCountMap.entrySet()) {
+          String host = entry.getKey();
+          if (host.endsWith(".")) {
+            host = host.substring(0, host.length() - 1);
+          }
+          // Locality is fraction of blocks local to this host.
+          float locality = ((float)entry.getValue().get()) / totalBlkCount;
+          hostLocalityMap.put(host, locality);
+        }
+        // Put the locality map into the result map, keyed by the encoded name
+        // of the region.
+        regionDegreeLocalityMapping.put(regionPath.getName(), hostLocalityMap);
       }
     } catch (IOException e) {
       LOG.warn("Problem scanning file system", e);
