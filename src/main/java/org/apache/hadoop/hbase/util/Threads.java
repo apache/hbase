@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Thread Utility
@@ -119,4 +120,28 @@ public class Threads {
       e.printStackTrace();
     }
   }
+
+  /**
+   * Sleeps for the given amount of time even if interrupted. Preserves
+   * the interrupt status.
+   * @param msToWait the amount of time to sleep in milliseconds
+   */
+  public static void sleepWithoutInterrupt(long msToWait) {
+    long timeMillis = System.currentTimeMillis();
+    boolean interrupted = false;
+    while (msToWait > 0) {
+      try {
+        Thread.sleep(msToWait);
+      } catch (InterruptedException ex) {
+        long timePassed = System.currentTimeMillis() - timeMillis;
+        msToWait -= timePassed;
+        timeMillis += timePassed;
+        interrupted = true;
+      }
+    }
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
 }

@@ -18,6 +18,17 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -35,7 +46,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -46,9 +56,9 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
@@ -69,7 +79,6 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.server.THsHaServer;
 import org.apache.thrift.server.TNonblockingServer;
 import org.apache.thrift.server.TServer;
-import org.apache.thrift.server.TThreadPoolServer;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
@@ -77,22 +86,14 @@ import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportFactory;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
 /**
  * ThriftServer - this class starts up a Thrift server which implements the
  * Hbase API specified in the Hbase.thrift IDL file.
  */
 public class ThriftServer {
+
+  private static final Class<? extends TServer>
+      THREAD_POOL_SERVER_CLASS = HBaseThreadPoolServer.class;
 
   /**
    * The HBaseHandler is a glue object that connects Thrift RPC calls to the
@@ -1063,15 +1064,24 @@ public class ThriftServer {
     options.addOption("f", "framed", false, "Use framed transport");
     options.addOption("c", "compact", false, "Use the compact protocol");
     options.addOption("h", "help", false, "Print help information");
+    options.addOption("m", "minWorkers", true, "The minimum number of worker " +
+        "threads for " + THREAD_POOL_SERVER_CLASS.getSimpleName());
+    options.addOption("w", "workers", true, "The maximum number of worker " +
+        "threads for " + THREAD_POOL_SERVER_CLASS.getSimpleName());
+    options.addOption("q", "queue", true, "The maximum number of queued " +
+        "requests in " + THREAD_POOL_SERVER_CLASS.getSimpleName());
 
     OptionGroup servers = new OptionGroup();
     servers.addOption(new Option("nonblocking", false, "Use the TNonblockingServer. This implies the framed transport."));
     servers.addOption(new Option("hsha", false, "Use the THsHaServer. This implies the framed transport."));
-    servers.addOption(new Option("threadpool", false, "Use the TThreadPoolServer. This is the default."));
+    servers.addOption(new Option("threadpool", false, "Use "
+        + THREAD_POOL_SERVER_CLASS.getSimpleName() + ". This is the default."));
     options.addOptionGroup(servers);
 
     CommandLineParser parser = new PosixParser();
     CommandLine cmd = parser.parse(options, args);
+
+    Configuration conf = HBaseConfiguration.create();
 
     /**
      * This is so complicated to please both bin/hbase and bin/hbase-daemon.
@@ -1094,6 +1104,26 @@ public class ThriftServer {
       printUsageAndExit(options, -1);
     }
 
+    // Make optional changes to the configuration based on command-line options
+    if (cmd.hasOption("minWorkers")) {
+      conf.set(HBaseThreadPoolServer.MIN_WORKER_THREADS_CONF_KEY,
+          cmd.getOptionValue("minWorkers"));
+    }
+
+    if (cmd.hasOption("workers")) {
+      conf.set(HBaseThreadPoolServer.MAX_WORKER_THREADS_CONF_KEY,
+          cmd.getOptionValue("workers"));
+    }
+
+    if (cmd.hasOption("queue")) {
+      conf.set(HBaseThreadPoolServer.MAX_QUEUED_REQUESTS_CONF_KEY,
+          cmd.getOptionValue("queue"));
+    }
+
+    // Only instantiate this when finished modifying the configuration
+    HBaseThreadPoolServer.Options serverOptions =
+      new HBaseThreadPoolServer.Options(conf);
+
     // Construct correct ProtocolFactory
     TProtocolFactory protocolFactory;
     if (cmd.hasOption("compact")) {
@@ -1104,8 +1134,7 @@ public class ThriftServer {
       protocolFactory = new TBinaryProtocol.Factory();
     }
 
-    HBaseHandler handler = new HBaseHandler(
-        HBaseConfiguration.create());
+    HBaseHandler handler = new HBaseHandler(conf);
     Hbase.Processor processor = new Hbase.Processor(handler);
 
     TServer server;
@@ -1150,8 +1179,23 @@ public class ThriftServer {
         transportFactory = new TTransportFactory();
       }
 
-      LOG.info("starting HBase ThreadPool Thrift server on " + listenAddress + ":" + Integer.toString(listenPort));
-      server = new TThreadPoolServer(processor, serverTransport, transportFactory, protocolFactory);
+      LOG.info("starting " + THREAD_POOL_SERVER_CLASS.getSimpleName() + " on "
+          + listenAddress + ":" + Integer.toString(listenPort)
+          + "; minimum number of worker threads="
+          + serverOptions.minWorkerThreads
+          + ", maximum number of worker threads="
+          + serverOptions.maxWorkerThreads + ", queued requests="
+          + serverOptions.maxQueuedRequests);
+
+      server = new HBaseThreadPoolServer(processor, serverTransport,
+          transportFactory, protocolFactory, serverOptions);
+
+      if (server.getClass() != THREAD_POOL_SERVER_CLASS) {
+        // A sanity check that we instantiated the right thing.
+        throw new RuntimeException("Expected thread pool server class " +
+            THREAD_POOL_SERVER_CLASS.getName() + " but got " +
+            server.getClass().getName());
+      }
     }
 
     server.serve();
