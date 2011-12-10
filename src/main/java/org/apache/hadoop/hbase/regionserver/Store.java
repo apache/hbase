@@ -591,7 +591,8 @@ public class Store extends SchemaConfigured implements HeapSize {
   throws IOException {
     return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
         this.compression, this.comparator, this.conf,
-        this.family.getBloomFilterType(), this.family.getBloomFilterErrorRate(), maxKeyCount);
+        this.family.getBloomFilterType(), this.family.getBloomFilterErrorRate(),
+        maxKeyCount, region.getFavoredNodes());
   }
 
   /*

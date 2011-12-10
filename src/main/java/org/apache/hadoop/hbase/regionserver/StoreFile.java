@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
@@ -631,7 +632,7 @@ public class StoreFile {
           long maxKeyCount)
   throws IOException {
       return createWriter(fs, dir, blocksize, algorithm, c, conf, bloomType,
-        BloomFilterFactory.getErrorRate(conf), maxKeyCount);
+        BloomFilterFactory.getErrorRate(conf), maxKeyCount, null);
   }
 
   /**
@@ -647,6 +648,7 @@ public class StoreFile {
    * @param bloomType column family setting for bloom filters
    * @param bloomErrorRate column family setting for bloom filter error rate
    * @param maxKeyCount estimated maximum number of keys we expect to add
+   * @param favoredNodes if using DFS, try to place replicas on these nodes
    * @return HFile.Writer
    * @throws IOException
    */
@@ -658,7 +660,8 @@ public class StoreFile {
                                               final Configuration conf,
                                               BloomType bloomType,
                                               float bloomErrorRate,
-                                              long maxKeyCount)
+                                              long maxKeyCount,
+                                              InetSocketAddress[] favoredNodes)
       throws IOException {
 
     if (!fs.exists(dir)) {
@@ -671,7 +674,8 @@ public class StoreFile {
 
     return new Writer(fs, path, blocksize,
         algorithm == null? HFile.DEFAULT_COMPRESSION_ALGORITHM: algorithm,
-        conf, c == null ? KeyValue.COMPARATOR: c, bloomType, bloomErrorRate, maxKeyCount);
+        conf, c == null ? KeyValue.COMPARATOR: c, bloomType, bloomErrorRate,
+        maxKeyCount, favoredNodes);
   }
 
   /**
@@ -780,8 +784,16 @@ public class StoreFile {
             Compression.Algorithm compress, final Configuration conf,
             final KVComparator comparator, BloomType bloomType,  long maxKeys)
             throws IOException {
+     this(fs, path, blocksize, compress, conf, comparator, bloomType,
+          BloomFilterFactory.getErrorRate(conf), maxKeys, null);
+    }
+
+    public Writer(FileSystem fs, Path path, int blocksize,
+        Compression.Algorithm compress, final Configuration conf,
+        final KVComparator comparator, BloomType bloomType,
+        float bloomErrorRate, long maxKeys) throws IOException {
       this(fs, path, blocksize, compress, conf, comparator, bloomType,
-          BloomFilterFactory.getErrorRate(conf), maxKeys);
+          bloomErrorRate, maxKeys, null);
     }
 
     /**
@@ -796,16 +808,18 @@ public class StoreFile {
      * @param bloomErrorRate error rate for bloom filter
      * @param maxKeys the expected maximum number of keys to be added. Was used
      *        for Bloom filter size in {@link HFile} format version 1.
+     * @param favoredNodes if using DFS, try to place replicas on these nodes
      * @throws IOException problem writing to FS
      */
     public Writer(FileSystem fs, Path path, int blocksize,
         Compression.Algorithm compress, final Configuration conf,
-        final KVComparator comparator, BloomType bloomType, float bloomErrorRate, long maxKeys)
+        final KVComparator comparator, BloomType bloomType,
+        float bloomErrorRate, long maxKeys, InetSocketAddress[] favoredNodes)
         throws IOException {
 
       writer = HFile.getWriterFactory(conf).createWriter(
           fs, path, blocksize, HFile.getBytesPerChecksum(conf, fs.getConf()),
-          compress, comparator.getRawComparator());
+          compress, comparator.getRawComparator(), favoredNodes);
 
       this.kvComparator = comparator;
 

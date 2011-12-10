@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -36,8 +38,10 @@ import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.Progressable;
 
 /**
  * Common functionality needed by all versions of {@link HFile} writers.
@@ -273,6 +277,35 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
   /** A helper method to create HFile output streams in constructors */
   protected static FSDataOutputStream createOutputStream(Configuration conf,
       FileSystem fs, Path path, int bytesPerChecksum) throws IOException {
+    return fs.create(path, FsPermission.getDefault(), true,
+        fs.getConf().getInt("io.file.buffer.size", 4096),
+        fs.getDefaultReplication(), fs.getDefaultBlockSize(), bytesPerChecksum,
+        null);
+  }
+
+  /** A helper method to create HFile output streams in constructors */
+  protected static FSDataOutputStream createOutputStream(Configuration conf,
+      FileSystem fs, Path path, int bytesPerChecksum,
+      InetSocketAddress[] favoredNodes) throws IOException {
+    if (fs instanceof DistributedFileSystem) {
+      // Try to use the favoredNodes version via reflection to allow backwards-
+      // compatibility.
+      try {
+        return (FSDataOutputStream) DistributedFileSystem.class
+            .getDeclaredMethod("create", Path.class, FsPermission.class,
+                boolean.class, int.class, short.class, long.class, int.class,
+                Progressable.class, InetSocketAddress[].class)
+            .invoke(fs, path, FsPermission.getDefault(), true,
+                fs.getConf().getInt("io.file.buffer.size", 4096),
+                fs.getDefaultReplication(), fs.getDefaultBlockSize(),
+                bytesPerChecksum, null, favoredNodes);
+      } catch (InvocationTargetException ite) {
+        // Function was properly called, but threw it's own exception.
+        throw new IOException(ite.getCause());
+      } catch (Exception e) {
+        // Ignore all other exceptions. related to reflection failure.
+      }
+    }
     return fs.create(path, FsPermission.getDefault(), true,
         fs.getConf().getInt("io.file.buffer.size", 4096),
         fs.getDefaultReplication(), fs.getDefaultBlockSize(), bytesPerChecksum,

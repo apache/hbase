@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -97,6 +98,15 @@ public class HFileWriterV1 extends AbstractHFileWriter {
 
     @Override
     public Writer createWriter(FileSystem fs, Path path, int blockSize,
+        int bytesPerChecksum, Compression.Algorithm compressAlgo,
+        final KeyComparator comparator, InetSocketAddress[] favoredNodes)
+        throws IOException {
+      return new HFileWriterV1(conf, fs, path, blockSize, bytesPerChecksum,
+          compressAlgo, comparator, favoredNodes);
+    }
+
+    @Override
+    public Writer createWriter(FileSystem fs, Path path, int blockSize,
         int bytesPerChecksum, String compressAlgoName,
         final KeyComparator comparator) throws IOException {
       return new HFileWriterV1(conf, fs, path, blockSize, bytesPerChecksum,
@@ -143,6 +153,15 @@ public class HFileWriterV1 extends AbstractHFileWriter {
       final KeyComparator comparator) throws IOException {
     super(conf, createOutputStream(conf, fs, path, bytesPerChecksum), path,
         blockSize, compress, comparator);
+  }
+
+  /** Constructor that takes a path, creates and closes the output stream. */
+  public HFileWriterV1(Configuration conf, FileSystem fs, Path path,
+      int blockSize, int bytesPerChecksum, Compression.Algorithm compress,
+      final KeyComparator comparator, InetSocketAddress[] favoredNodes)
+      throws IOException {
+    super(conf, createOutputStream(conf, fs, path, bytesPerChecksum,
+        favoredNodes), path, blockSize, compress, comparator);
   }
 
   /** Constructor that takes a stream. */

@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.Closeable;
 import java.io.DataInput;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -252,6 +253,11 @@ public class HFile {
     public abstract Writer createWriter(FileSystem fs, Path path,
         int blockSize, int bytesPerChecksum, Compression.Algorithm compress,
         final KeyComparator comparator) throws IOException;
+
+    public abstract Writer createWriter(FileSystem fs, Path path,
+        int blockSize, int bytesPerChecksum, Compression.Algorithm compress,
+        final KeyComparator comparator, InetSocketAddress[] favoredNodes)
+        throws IOException;
 
     public abstract Writer createWriter(FileSystem fs, Path path,
         int blockSize, int bytesPerChecksum, String compress,

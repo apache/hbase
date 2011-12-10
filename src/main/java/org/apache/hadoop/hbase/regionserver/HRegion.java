@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
+import java.net.InetSocketAddress;
 import java.text.ParseException;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -205,6 +206,10 @@ public class HRegion implements HeapSize {
     }
     return minimumReadPoint;
   }
+
+  // When writing store files for this region, replicas will preferrably be
+  // placed on these nodes, if non-null.
+  private InetSocketAddress[] favoredNodes = null;
 
   /*
    * Data structure of write state flags used coordinating flushes,
@@ -1525,9 +1530,33 @@ public class HRegion implements HeapSize {
     }
   }
 
+  /**
+   * @return the nodes on which to place replicas of all store files, or null if
+   * there are no favored nodes.=
+   */
+  public InetSocketAddress[] getFavoredNodes() {
+    return this.favoredNodes;
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // set() methods for client use.
   //////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Set the favored nodes on which to place replicas of all store files. The
+   * array can be null to set no preference for favored nodes, but elements of
+   * the array must not be null. Placement of replicas on favored nodes is best-
+   * effort only and the filesystem may choose different nodes.
+   * @param favoredNodes the favored nodes, or null
+   */
+  public void setFavoredNodes(InetSocketAddress[] favoredNodes) {
+    if (favoredNodes == null) {
+      this.favoredNodes = null;
+      return;
+    }
+    this.favoredNodes = Arrays.copyOf(favoredNodes, favoredNodes.length);
+  }
+
   /**
    * @param delete delete object
    * @param lockid existing lock id, or null for grab a lock
