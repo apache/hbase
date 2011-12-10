@@ -31,7 +31,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -88,7 +88,6 @@ public class HBaseFsck {
   public static final long DEFAULT_TIME_LAG = 60000; // default value of 1 minute
   public static final long DEFAULT_SLEEP_BEFORE_RERUN = 10000;
 
-  private static final int MAX_NUM_THREADS = 50; // #threads to contact regions
   private static final long THREADS_KEEP_ALIVE_SECONDS = 60;
 
   private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
@@ -112,7 +111,6 @@ public class HBaseFsck {
   
   // Empty regioninfo qualifiers in .META.
   private Set<Result> emptyRegionInfoQualifiers = new HashSet<Result>();
-  private int numThreads = MAX_NUM_THREADS;
   private HBaseAdmin admin;
 
   ThreadPoolExecutor executor; // threads to retrieve data from regionservers
@@ -128,10 +126,11 @@ public class HBaseFsck {
       ZooKeeperConnectionException, IOException {
     this.conf = conf;
 
-    numThreads = conf.getInt("hbasefsck.numthreads", numThreads);
-    executor = new ThreadPoolExecutor(0, numThreads,
+    int numThreads = conf.getInt("hbasefsck.numthreads", Integer.MAX_VALUE);
+    executor = new ThreadPoolExecutor(1, numThreads,
         THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<Runnable>());
+        new SynchronousQueue<Runnable>());
+    executor.allowCoreThreadTimeOut(true);
   }
 
   public void connect() throws MasterNotRunningException,
