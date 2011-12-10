@@ -474,6 +474,9 @@ Release 0.92.0 - Unreleased
    HBASE-4995  Increase zk maxClientCnxns to give us some head room
    HBASE-4974  Remove some resources leaks on the tests (nkeywal)
    HBASE-4859  Correctly PreWarm HBCK ThreadPool
+   HBASE-4922  [packaging] Assembly tars up hbase in a subdir; i.e. after untar
+               hbase-0.92.0 has a subdir named 0.92.0
+               (Roman Shaposhnik)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
