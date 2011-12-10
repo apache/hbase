@@ -1619,7 +1619,7 @@ public class HMaster extends Thread implements HMasterInterface,
       HServerAddress serverAddress = new HServerAddress(hostnameAndPort);
 
       // Assign the specified host to be the preferred host for the specified region.
-      this.regionManager.addRegionToPreferredAssignment(serverAddress, hri);
+      this.regionManager.assignmentManager.addTransientAssignment(serverAddress, hri);
 
       // Close the region so that it will be re-opened by the preferred host.
       modifyTable(tableName, HConstants.Modify.CLOSE_REGION, new Writable[]{args[0]});

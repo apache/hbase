@@ -813,7 +813,8 @@ public class ServerManager {
       for (Map.Entry<String, HServerLoad> entry : serversToLoad.entrySet()) {
         HServerInfo hsi = serversToServerInfo.get(entry.getKey());
         if (null != hsi) {
-          if (!this.master.getRegionManager().hasPreferredAssignment(hsi.getServerAddress())) {
+          if (!this.master.getRegionManager().assignmentManager
+              .hasPreferredAssignment(hsi.getServerAddress())) {
             totalLoad += entry.getValue().getNumberOfRegions();
           } else {
             // Master has held some regions for this server, ignore this server

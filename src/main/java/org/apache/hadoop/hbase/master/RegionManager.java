@@ -34,6 +34,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
@@ -87,33 +88,8 @@ public class RegionManager {
 
   private static final byte [] META_REGION_PREFIX = Bytes.toBytes(".META.,");
 
-  /**
-   * Preferred assignment map
-   * key -> Region server
-   * value -> set of regions to be assigned to this region server
-   *
-   */
-  private final Map<HServerAddress, Set<HRegionInfo>> preferredAssignmentMap =
-                 new ConcurrentHashMap<HServerAddress, Set<HRegionInfo>>();
+  final PreferredAssignmentManager assignmentManager;
 
-  /**
-   * Set of all regions that have a preferred assignment, used for quick lookup
-   */
-  private final Set<HRegionInfo> regionsWithPreferredAssignment =
-                                      new TreeSet<HRegionInfo>();
-
-  /**
-   * Thread to handle timeout of Regions that have a preferred assignment.
-   */
-  private final PreferredAssignmentHandler preferredAssignmentHandlerThread;
-
-  /**
-   * Delay queue for regions. Regions that have a "preferred assignment" are
-   * held for a particular timeout. Regions are removed from the queue after a
-   * timeout, and are assigned to the next available region server
-   */
-  private final DelayQueue<PreferredAssignment> preferredAssignmentTimeout =
-                                    new DelayQueue<PreferredAssignment>();
   /**
    * Map key -> tableName, value -> ThrottledRegionReopener
    * An entry is created in the map before an alter operation is performed on the
@@ -204,15 +180,13 @@ public class RegionManager {
         ZooKeeperWrapper.getInstance(conf, master.getZKWrapperName());
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
     this.loadBalancer = new LoadBalancer(conf);
+    this.assignmentManager = new PreferredAssignmentManager(master);
 
     // The root region
     rootScannerThread = new RootScanner(master);
 
     // Scans the meta table
     metaScannerThread = new MetaScanner(master);
-
-    // Scans for preferred assignment timeout
-    this.preferredAssignmentHandlerThread = new PreferredAssignmentHandler();
 
     zooKeeperNumRetries = conf.getInt(HConstants.ZOOKEEPER_RETRIES,
         HConstants.DEFAULT_ZOOKEEPER_RETRIES);
@@ -223,8 +197,7 @@ public class RegionManager {
   }
 
   void start() {
-    Threads.setDaemonThreadRunning(preferredAssignmentHandlerThread,
-    "RegionManager.preferredAssignmentHandler");
+    assignmentManager.start();
     Threads.setDaemonThreadRunning(rootScannerThread,
       "RegionManager.rootScanner");
     Threads.setDaemonThreadRunning(metaScannerThread,
@@ -522,7 +495,7 @@ public class RegionManager {
     // set of regions we want to assign to this server
     Set<RegionState> regionsToAssign = new HashSet<RegionState>();
 
-    Set<HRegionInfo> regions = preferredAssignmentMap.get(addr);
+    Set<HRegionInfo> regions = assignmentManager.getPreferredAssignments(addr);
     if (null != regions) {
       isPreferredAssignment.setValue(true);
       // One could use regionsInTransition.keySet().containsAll(regions) but
@@ -533,7 +506,7 @@ public class RegionManager {
         RegionState state = regionsInTransition.get(ri.getRegionNameAsString());
         if (null != state && state.isUnassigned()) {
           regionsToAssign.add(state);
-          removeRegionFromPreferredAssignment(addr, ri);
+          assignmentManager.removeTransientAssignment(addr, ri);
         }
       }
       StringBuilder regionNames = new StringBuilder();
@@ -600,11 +573,9 @@ public class RegionManager {
           continue;
         }
 
-        synchronized (regionsWithPreferredAssignment) {
-          // if we are holding it, don't give it away to any other server
-          if (regionsWithPreferredAssignment.contains(s.getRegionInfo())) {
-            continue;
-          }
+        // if we are holding it, don't give it away to any other server
+        if (assignmentManager.hasTransientAssignment(s.getRegionInfo())) {
+          continue;
         }
         if (assignmentByLocality && !i.isRootRegion() && !i.isMetaRegion()) {
           Text preferredHostNameTxt =
@@ -1173,6 +1144,9 @@ public class RegionManager {
     }
     if (force || (!s.isPendingOpen() && !s.isOpen())) {
       s.setUnassigned();
+      // Refresh assignment information when a region is marked unassigned so
+      // that it opens on the preferred server.
+      this.assignmentManager.putTransientFromPersistent(info);
     }
   }
 
@@ -1260,6 +1234,11 @@ public class RegionManager {
       }
       s.setClosing(serverName, setOffline);
       this.regionsInTransition.put(regionInfo.getRegionNameAsString(), s);
+      if (!setOffline) {
+        // Refresh assignment information when a region is closed and not
+        // marked offline so that it opens on the preferred server.
+        this.assignmentManager.putTransientFromPersistent(regionInfo);
+      }
     }
   }
 
@@ -1600,6 +1579,8 @@ public class RegionManager {
     }
   }
 
+
+
   /**
    * Class to balance region servers load.
    * It keeps Region Servers load in slop range by unassigning Regions
@@ -1925,83 +1906,7 @@ public class RegionManager {
     }
   }
 
-  private class PreferredAssignmentHandler extends Thread {
-    public PreferredAssignmentHandler() {
-    }
 
-    @Override
-    public void run() {
-      LOG.debug("Started PreferredAssignmentHandler");
-      PreferredAssignment plan = null;
-      while (!master.getClosed().get()) {
-        try {
-          // check if any regions waiting time expired
-          plan = preferredAssignmentTimeout.poll(master.getConfiguration()
-              .getInt(HConstants.THREAD_WAKE_FREQUENCY, 30 * 1000),
-              TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-          // no problem, just continue
-          continue;
-        }
-        if (null == plan) {
-          continue;
-        }
-        if (removeRegionFromPreferredAssignment(plan.getServer(),
-            plan.getRegionInfo())) {
-          LOG.info("Removed region from preferred assignment: " +
-              plan.getRegionInfo().getRegionNameAsString());
-        }
-      }
-    }
-  }
-
-  private class PreferredAssignment implements Delayed {
-    private long creationTime;
-    private HRegionInfo region;
-    private HServerAddress server;
-    private long millisecondDelay;
-
-    PreferredAssignment(HRegionInfo region, HServerAddress addr,
-        long creationTime, long millisecondDelay) {
-      this.region = region;
-      this.server = addr;
-      this.creationTime = creationTime;
-      this.millisecondDelay = millisecondDelay;
-    }
-
-    public HServerAddress getServer() {
-      return this.server;
-    }
-
-    public HRegionInfo getRegionInfo() {
-      return this.region;
-    }
-
-    @Override
-    public int compareTo(Delayed arg0) {
-      long delta = this.getDelay(TimeUnit.MILLISECONDS)
-          - arg0.getDelay(TimeUnit.MILLISECONDS);
-      return (this.equals(arg0) ? 0 : (delta > 0 ? 1 : (delta < 0 ? -1 : 0)));
-    }
-
-    @Override
-    public long getDelay(TimeUnit unit) {
-      return unit.convert(
-          (this.creationTime + millisecondDelay) - System.currentTimeMillis(),
-          TimeUnit.MILLISECONDS);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (o instanceof PreferredAssignment) {
-        if (((PreferredAssignment) o).getServer().equals(this.getServer()) &&
-         ((PreferredAssignment) o).getRegionInfo().equals(this.getRegionInfo())) {
-          return true;
-        }
-      }
-      return false;
-    }
-  }
 
   /**
    * Method used to do housekeeping for holding regions for a RegionServer going
@@ -2017,54 +1922,9 @@ public class RegionManager {
     LOG.debug("Holding regions of restartng server: " +
         regionServer.getServerName());
     HServerAddress addr = regionServer.getServerAddress();
-    addRegionToPreferredAssignment(addr, regions);
-  }
-
-  public boolean hasPreferredAssignment(final HServerAddress hsa) {
-    if (preferredAssignmentMap.containsKey(hsa)) {
-      return true;
-    }
-    return false;
-  }
-
-  private void addRegionToPreferredAssignment(HServerAddress server,
-      Set<HRegionInfo> regions) {
     for (HRegionInfo region : regions) {
-      addRegionToPreferredAssignment(server, region);
+      assignmentManager.addTransientAssignment(addr, region);
     }
-  }
-
-  public void addRegionToPreferredAssignment(HServerAddress server,
-      HRegionInfo region) {
-    synchronized (regionsWithPreferredAssignment) {
-      if (!preferredAssignmentMap.containsKey(server)) {
-        Set<HRegionInfo> regions = new TreeSet<HRegionInfo>();
-        preferredAssignmentMap.put(server, regions);
-      }
-      preferredAssignmentMap.get(server).add(region);
-      regionsWithPreferredAssignment.add(region);
-    }
-    // Add to delay queue
-    long millisecondDelay = master.getConfiguration().getLong(
-        "hbase.regionserver.preferredAssignment.regionHoldPeriod", 60000);
-    preferredAssignmentTimeout.add(new PreferredAssignment(region, server,
-        System.currentTimeMillis(), millisecondDelay));
-  }
-
-  private boolean removeRegionFromPreferredAssignment(HServerAddress server,
-      HRegionInfo region) {
-    synchronized (regionsWithPreferredAssignment) {
-      if (preferredAssignmentMap.containsKey(server)) {
-        preferredAssignmentMap.get(server).remove(region);
-        // If no more regions are held for this region server
-        if (preferredAssignmentMap.get(server).size() == 0) {
-          preferredAssignmentMap.remove(server);
-        }
-        regionsWithPreferredAssignment.remove(region);
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
