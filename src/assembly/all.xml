@@ -41,17 +41,24 @@
     </fileSet>
     <fileSet>
       <directory>src</directory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
     </fileSet>
     <fileSet>
       <directory>conf</directory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
     </fileSet>
     <fileSet>
       <directory>bin</directory>
-      <fileMode>755</fileMode>
+      <fileMode>0755</fileMode>
+      <directoryMode>0755</directoryMode>
     </fileSet>
     <fileSet>
       <directory>src/main/ruby</directory>
       <outputDirectory>lib/ruby</outputDirectory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
     </fileSet>
     <fileSet>
       <directory>target</directory>
@@ -60,14 +67,20 @@
           <include>${project.build.finalName}.jar</include>
           <include>${project.build.finalName}-tests.jar</include>
       </includes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
     </fileSet>
     <fileSet>
       <directory>target/hbase-webapps</directory>
       <outputDirectory>hbase-webapps</outputDirectory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
     </fileSet>
     <fileSet>
       <directory>target/site</directory>
       <outputDirectory>docs</outputDirectory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0644</directoryMode>
     </fileSet>
     <fileSet>
       <directory>src/packages</directory>
@@ -86,6 +99,8 @@
       <excludes>
         <exclude>org.apache.hbase:hbase</exclude>
       </excludes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0644</directoryMode>
     </dependencySet>
   </dependencySets>
 </assembly>
