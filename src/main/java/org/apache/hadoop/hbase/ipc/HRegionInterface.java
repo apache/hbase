@@ -541,4 +541,7 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
    * region names as returned by {@link HRegionInfo#getEncodedName()} 
    */
   public byte[][] rollHLogWriter() throws IOException, FailedLogCloseException;
+
+  @Override
+  public void stop(String why);
 }
