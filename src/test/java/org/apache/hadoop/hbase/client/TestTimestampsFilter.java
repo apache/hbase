@@ -111,7 +111,7 @@ public class TestTimestampsFilter {
     // do some verification before flush
     verifyInsertedValues(ht, FAMILY);
 
-    flush();
+    TEST_UTIL.flush();
 
     // do some verification after flush
     verifyInsertedValues(ht, FAMILY);
@@ -241,7 +241,7 @@ public class TestTimestampsFilter {
     deleteOneVersion(ht, FAMILY, 0, 0, 4);
 
     if (flushTables) {
-      flush();
+      TEST_UTIL.flush();
     }
 
     // request a bunch of versions including the deleted version. We should
@@ -278,16 +278,6 @@ public class TestTimestampsFilter {
         checkOneCell(kvs[1], cf, rowIdx, colIdx, 70);
         checkOneCell(kvs[2], cf, rowIdx, colIdx, 1);
       }
-    }
-  }
-
-  // Flush tables. Since flushing is asynchronous, sleep for a bit.
-  private void flush() throws IOException {
-    TEST_UTIL.flush();
-    try {
-      Thread.sleep(3000);
-    } catch (InterruptedException i) {
-      // ignore
     }
   }
 

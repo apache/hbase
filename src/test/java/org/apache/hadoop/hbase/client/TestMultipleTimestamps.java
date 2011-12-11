@@ -100,7 +100,7 @@ public class TestMultipleTimestamps {
 
     put(ht, FAMILY, putRows, putColumns, putTimestamps);
 
-    flush(TABLE);
+    TEST_UTIL.flush(TABLE);
 
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
@@ -139,7 +139,7 @@ public class TestMultipleTimestamps {
 
     put(ht, FAMILY, putRows, putColumns, putTimestamps);
 
-    flush(TABLE);
+    TEST_UTIL.flush(TABLE);
 
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
@@ -178,7 +178,7 @@ public class TestMultipleTimestamps {
 
     put(ht, FAMILY, putRows, putColumns, putTimestamps);
 
-    flush(TABLE);
+    TEST_UTIL.flush(TABLE);
 
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
@@ -228,9 +228,9 @@ public class TestMultipleTimestamps {
     int scanMaxVersions = 5;
 
     put(ht, FAMILY, putRows1, putColumns1, putTimestamps1);
-    flush(TABLE);
+    TEST_UTIL.flush(TABLE);
     put(ht, FAMILY, putRows2, putColumns2, putTimestamps2);
-    flush(TABLE);
+    TEST_UTIL.flush(TABLE);
     put(ht, FAMILY, putRows3, putColumns3, putTimestamps3);
 
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
@@ -283,7 +283,7 @@ public class TestMultipleTimestamps {
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
 
     if (flushTables) {
-      flush(TABLE);
+      TEST_UTIL.flush(TABLE);
     }
 
     // delete version 4.
@@ -313,7 +313,7 @@ public class TestMultipleTimestamps {
     // For row:0, col:0: insert versions 1 through 5.
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
 
-    flush(TABLE);
+    TEST_UTIL.flush(TABLE);
 
     // delete all versions before 4.
     deleteAllVersionsBefore(ht, FAMILY, 0, 0, 4);
@@ -336,7 +336,7 @@ public class TestMultipleTimestamps {
     // For row:0, col:0: insert versions 1 through 5.
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
 
-    flush(TABLE);
+    TEST_UTIL.flush(TABLE);
 
     // delete all versions before 4.
     deleteColumn(ht, FAMILY, 0, 0);
@@ -359,7 +359,7 @@ public class TestMultipleTimestamps {
     // For row:0, col:0: insert versions 1 through 5.
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
 
-    flush(TABLE);
+    TEST_UTIL.flush(TABLE);
 
     // delete all versions before 4.
     deleteFamily(ht, FAMILY, 0);
@@ -368,16 +368,6 @@ public class TestMultipleTimestamps {
     // only get back entries for the versions that exist.
     KeyValue kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L));
     assertEquals(0, kvs.length);
-  }
-
-  // Flush tables. Since flushing is asynchronous, sleep for a bit.
-  private void flush(byte [] tableName) throws IOException {
-    TEST_UTIL.flush(tableName);
-    try {
-      Thread.sleep(3000);
-    } catch (InterruptedException i) {
-      // ignore
-    }
   }
 
   /**
