@@ -483,6 +483,7 @@ Release 0.92.0 - Unreleased
                (Gaojinchao)
    HBASE-4881  Unhealthy region is on service caused by rollback of region splitting
                (Chunhui Shen)
+   HBASE-4997  SplitLogManager can have a race on batch.installed (Prakash Khemani)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
