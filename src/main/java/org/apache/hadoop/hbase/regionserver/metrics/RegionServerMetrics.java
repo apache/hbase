@@ -180,10 +180,16 @@ public class RegionServerMetrics implements Updater {
     new MetricsIntValue("flushQueueSize", registry);
 
   /**
-   * filesystem read latency
+   * filesystem sequential read latency
    */
   public final MetricsTimeVaryingRate fsReadLatency =
     new MetricsTimeVaryingRate("fsReadLatency", registry);
+
+  /**
+   * filesystem positional read latency
+   */
+  public final MetricsTimeVaryingRate fsPreadLatency =
+    new MetricsTimeVaryingRate("fsPreadLatency", registry);
 
   /**
    * filesystem write latency

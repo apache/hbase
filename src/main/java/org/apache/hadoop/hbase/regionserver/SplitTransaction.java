@@ -723,12 +723,18 @@ public class SplitTransaction {
         break;
 
       case CLOSED_PARENT_REGION:
-        // So, this returns a seqid but if we just closed and then reopened, we
-        // should be ok. On close, we flushed using sequenceid obtained from
-        // hosting regionserver so no need to propagate the sequenceid returned
-        // out of initialize below up into regionserver as we normally do.
-        // TODO: Verify.
-        this.parent.initialize();
+        try {
+          // So, this returns a seqid but if we just closed and then reopened, we
+          // should be ok. On close, we flushed using sequenceid obtained from
+          // hosting regionserver so no need to propagate the sequenceid returned
+          // out of initialize below up into regionserver as we normally do.
+          // TODO: Verify.
+          this.parent.initialize();
+        } catch (IOException e) {
+          LOG.error("Failed rollbacking CLOSED_PARENT_REGION of region " +
+            this.parent.getRegionNameAsString(), e);
+          throw new RuntimeException(e);
+        }
         break;
 
       case STARTED_REGION_A_CREATION:

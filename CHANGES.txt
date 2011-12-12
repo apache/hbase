@@ -481,6 +481,8 @@ Release 0.92.0 - Unreleased
                (Honghua Zhu)
    HBASE-5008  The clusters can't provide services because Region can't flush
                (Gaojinchao)
+   HBASE-4881  Unhealthy region is on service caused by rollback of region splitting
+               (Chunhui Shen)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
