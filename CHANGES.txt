@@ -1,4 +1,9 @@
 HBase Change Log
+Release 0.90.6 - Unreleased
+  BUG FIXES
+   HBASE-5008  The clusters can't provide services because Region can't flush
+               (Gaojinchao)
+
 Release 0.90.5 - Unreleased
   BUG FIXES
    HBASE-4160  HBase shell move and online may be unusable if region name or

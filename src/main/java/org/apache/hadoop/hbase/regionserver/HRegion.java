@@ -365,7 +365,8 @@ public class HRegion implements HeapSize { // , Writable{
     FSUtils.deleteDirectory(this.fs, new Path(regiondir, MERGEDIR));
 
     this.writestate.setReadOnly(this.regionInfo.getTableDesc().isReadOnly());
-
+    
+    this.writestate.flushRequested = false;
     this.writestate.compacting = false;
     this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
     // Use maximum of log sequenceid or that which was found in stores
