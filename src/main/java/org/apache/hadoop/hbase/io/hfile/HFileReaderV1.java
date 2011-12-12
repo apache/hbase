@@ -237,8 +237,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
       hfileBlock.expectType(BlockType.META);
 
       long delta = System.nanoTime() - startTimeNs;
-      HFile.readTimeNano.addAndGet(delta);
-      HFile.readOps.incrementAndGet();
+      HFile.preadTimeNano.addAndGet(delta);
+      HFile.preadOps.incrementAndGet();
       getSchemaMetrics().updateOnCacheMiss(BlockCategory.META, false, delta);
 
       // Cache the block
@@ -316,8 +316,13 @@ public class HFileReaderV1 extends AbstractHFileReader {
       ByteBuffer buf = hfileBlock.getBufferWithoutHeader();
 
       long delta = System.nanoTime() - startTimeNs;
-      HFile.readTimeNano.addAndGet(delta);
-      HFile.readOps.incrementAndGet();
+      if (pread) {
+        HFile.preadTimeNano.addAndGet(delta);
+        HFile.preadOps.incrementAndGet();
+      } else {
+        HFile.readTimeNano.addAndGet(delta);
+        HFile.readOps.incrementAndGet();
+      }
       getSchemaMetrics().updateOnCacheMiss(BlockCategory.DATA, isCompaction,
           delta);
 
