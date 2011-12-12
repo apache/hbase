@@ -2127,6 +2127,74 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return result;
   }
 
+  @Override
+  public List<String> getStoreFileList(byte[] regionName, byte[] columnFamily)
+    throws IllegalArgumentException {
+    return getStoreFileList(regionName, new byte[][]{columnFamily});
+  }
+
+  @Override
+  public List<String> getStoreFileList(byte[] regionName, byte[][] columnFamilies)
+    throws IllegalArgumentException {
+    HRegion region = getOnlineRegion(regionName);
+    if (region == null) {
+      throw new IllegalArgumentException("No region: " + new String(regionName)
+          + " available");
+    }
+    return region.getStoreFileList(columnFamilies);
+  }
+
+  public List<String> getStoreFileList(byte[] regionName)
+    throws IllegalArgumentException {
+    HRegion region = getOnlineRegion(regionName);
+    if (region == null) {
+      throw new IllegalArgumentException("No region: " + new String(regionName)
+          + " available");
+    }
+    Set<byte[]> columnFamilies = region.getStores().keySet();
+    int nCF = columnFamilies.size();
+    return region.getStoreFileList(columnFamilies.toArray(new byte[nCF][]));
+  }
+  
+ /**
+  * Flushes the given region
+  */
+  public void flushRegion(byte[] regionName)
+    throws IllegalArgumentException, IOException {
+    HRegion region = getOnlineRegion(regionName);
+    if (region == null) {
+      throw new IllegalArgumentException("No region : " + new String(regionName)
+      + " available");
+    }
+    region.flushcache();
+  }
+
+ /**
+   * Flushes the given region if lastFlushTime < ifOlderThanTS
+   */
+   public void flushRegion(byte[] regionName, long ifOlderThanTS)
+     throws IllegalArgumentException, IOException {
+     HRegion region = getOnlineRegion(regionName);
+     if (region == null) {
+       throw new IllegalArgumentException("No region : " + new String(regionName)
+       + " available");
+     }
+     if (region.getLastFlushTime() < ifOlderThanTS) region.flushcache();
+   }
+
+  /**
+   * Gets last flush time for the given region
+   * @return the last flush time for a region
+   */
+  public long getLastFlushTime(byte[] regionName) {
+    HRegion region = getOnlineRegion(regionName);
+    if (region == null) {
+      throw new IllegalArgumentException("No region : " + new String(regionName)
+      + " available");
+    }
+    return region.getLastFlushTime();
+  }
+ 
   /**
    *
    * @param regionName

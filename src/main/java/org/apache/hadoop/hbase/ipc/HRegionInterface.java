@@ -83,6 +83,53 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
   throws NotServingRegionException, ConnectException, IOException;
 
   /**
+   * Flush the given region
+   * @param region name
+   */
+  public void flushRegion(byte[] regionName)
+    throws IllegalArgumentException, IOException;
+
+  /**
+   * Flush the given region if lastFlushTime < ifOlderThanTS
+   * @param region name
+   * @param timestamp
+   */
+  public void flushRegion(byte[] regionName, long ifOlderThanTS)
+    throws IllegalArgumentException, IOException;
+
+  /**
+   * Gets last flush time for the given region
+   * @return the last flush time for a region
+   */
+  public long getLastFlushTime(byte[] regionName);
+
+  /**
+   * Get a list of store files for a particular CF in a particular region
+   * @param region name
+   * @param CF name
+   * @return the list of store files
+   */
+  public List<String> getStoreFileList(byte[] regionName, byte[] columnFamily)
+    throws IllegalArgumentException;
+
+  /**
+   * Get a list of store files for a set of CFs in a particular region
+   * @param region name
+   * @param CF names
+   * @return the list of store files
+   */
+  public List<String> getStoreFileList(byte[] regionName, byte[][] columnFamilies)
+    throws IllegalArgumentException;
+
+  /**
+   * Get a list of store files for all CFs in a particular region
+   * @param region name
+   * @return the list of store files
+   */
+  public List<String> getStoreFileList(byte[] regionName)
+    throws IllegalArgumentException;
+
+  /**
    * Return all the data for the row that matches <i>row</i> exactly,
    * or the one that immediately preceeds it.
    *
@@ -423,6 +470,7 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
    * @param regionInfo region to flush
    * @throws NotServingRegionException
    * @throws IOException
+   * @deprecated use {@link #flushRegion(byte[])} instead
    */
   void flushRegion(HRegionInfo regionInfo)
   throws NotServingRegionException, IOException;
