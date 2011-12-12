@@ -153,21 +153,34 @@ public class HFile {
    */
   public final static int MIN_NUM_HFILE_PATH_LEVELS = 5;
 
-  // For measuring latency of "typical" reads and writes
+  // For measuring latency of "sequential" reads and writes
   static volatile AtomicInteger readOps = new AtomicInteger();
   static volatile AtomicLong readTimeNano = new AtomicLong();
   static volatile AtomicInteger writeOps = new AtomicInteger();
   static volatile AtomicLong writeTimeNano = new AtomicLong();
+  // For measuring latency of pread
+  static volatile AtomicInteger preadOps = new AtomicInteger();
+  static volatile AtomicLong preadTimeNano = new AtomicLong();
 
   // for test purpose
   public static volatile AtomicLong dataBlockReadCnt = new AtomicLong(0);
 
+  // number of sequential reads
   public static final int getReadOps() {
     return readOps.getAndSet(0);
   }
 
   public static final long getReadTimeMs() {
     return readTimeNano.getAndSet(0) / 1000000;
+  }
+
+  // number of positional reads
+  public static final int getPreadOps() {
+    return preadOps.getAndSet(0);
+  }
+
+  public static final long getPreadTimeMs() {
+    return preadTimeNano.getAndSet(0) / 1000000;
   }
 
   public static final int getWriteOps() {

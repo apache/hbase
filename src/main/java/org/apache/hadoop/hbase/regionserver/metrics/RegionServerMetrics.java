@@ -186,10 +186,16 @@ public class RegionServerMetrics implements Updater {
     new MetricsIntValue("flushQueueSize", registry);
 
   /**
-   * filesystem read latency
+   * filesystem sequential read latency
    */
   public final MetricsTimeVaryingRate fsReadLatency =
     new MetricsTimeVaryingRate("fsReadLatency", registry);
+
+  /**
+   * filesystem positional read latency
+   */
+  public final MetricsTimeVaryingRate fsPreadLatency =
+    new MetricsTimeVaryingRate("fsPreadLatency", registry);
 
   /**
    * filesystem write latency
@@ -317,9 +323,12 @@ public class RegionServerMetrics implements Updater {
       addHLogMetric(HLog.getWriteTime(), this.fsWriteLatency);
       addHLogMetric(HLog.getWriteSize(), this.fsWriteSize);
       addHLogMetric(HLog.getSyncTime(), this.fsSyncLatency);
-      // HFile metrics
-      int ops = HFile.getReadOps();
+      // HFile metrics, sequential reads
+      int ops = HFile.getReadOps(); 
       if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTimeMs());
+      // HFile metrics, positional reads
+      ops = HFile.getPreadOps(); 
+      if (ops != 0) this.fsPreadLatency.inc(ops, HFile.getPreadTimeMs());
       /* NOTE: removed HFile write latency.  2 reasons:
        * 1) Mixing HLog latencies are far higher priority since they're 
        *      on-demand and HFile is used in background (compact/flush)
