@@ -479,6 +479,8 @@ Release 0.92.0 - Unreleased
                (Roman Shaposhnik)
    HBASE-5007  HBaseAdmin.stopRegionServer do not stop the region server
                (Honghua Zhu)
+   HBASE-5008  The clusters can't provide services because Region can't flush
+               (Gaojinchao)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

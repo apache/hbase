@@ -476,6 +476,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     this.writestate.setReadOnly(this.htableDescriptor.isReadOnly());
 
+    this.writestate.flushRequested = false;
     this.writestate.compacting = 0;
 
     // Initialize split policy
