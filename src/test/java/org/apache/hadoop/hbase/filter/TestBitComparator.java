@@ -64,4 +64,9 @@ public class TestBitComparator extends TestCase {
     BitComparator comparator = new BitComparator(comparatorBytes, operator);
     assertEquals(comparator.compareTo(data), expected);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

@@ -290,4 +290,9 @@ public class TestColumnSeeking {
     List<String> wordList = new ArrayList<String>(wordSet);
     return wordList;
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

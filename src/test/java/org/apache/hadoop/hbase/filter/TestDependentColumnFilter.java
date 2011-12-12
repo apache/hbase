@@ -242,4 +242,9 @@ public class TestDependentColumnFilter extends TestCase {
       filter.filterRow(accepted);
       assertEquals("check cell retention", 2, accepted.size());
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

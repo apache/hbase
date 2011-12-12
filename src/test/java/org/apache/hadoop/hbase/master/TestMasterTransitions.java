@@ -532,4 +532,9 @@ public class TestMasterTransitions {
   private static byte [] getTestQualifier() {
     return getTestFamily();
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

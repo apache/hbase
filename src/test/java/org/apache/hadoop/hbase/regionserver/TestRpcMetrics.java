@@ -134,4 +134,9 @@ public class TestRpcMetrics {
   public boolean wasSet(String name) {
     return METRICS.get(name) != null ? METRICS.get(name) : false;
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

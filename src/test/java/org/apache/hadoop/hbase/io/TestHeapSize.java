@@ -324,4 +324,9 @@ public class TestHeapSize extends TestCase {
     assertEquals(ClassSize.estimateBase(SchemaConfigured.class, true),
         sc.heapSize());
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

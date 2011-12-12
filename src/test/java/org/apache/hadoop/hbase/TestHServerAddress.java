@@ -82,4 +82,9 @@ public class TestHServerAddress {
       (HServerAddress)Writables.getWritable(bytes, new HServerAddress());
     assertNotSame(hsa1, deserialized);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

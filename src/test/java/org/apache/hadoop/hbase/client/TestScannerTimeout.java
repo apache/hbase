@@ -212,4 +212,9 @@ public class TestScannerTimeout {
     LOG.info("END ************ END test3686b");
 
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

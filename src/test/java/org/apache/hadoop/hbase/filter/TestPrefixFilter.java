@@ -100,4 +100,9 @@ public class TestPrefixFilter extends TestCase {
   private byte [] createRow(final char c) {
     return Bytes.toBytes(HOST_PREFIX + Character.toString(c));
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

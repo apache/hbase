@@ -418,4 +418,9 @@ public class TestMinVersions extends HBaseTestCase {
       assertEquals(kvs.get(i).getValue(), vals[i]);
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

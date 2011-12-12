@@ -274,4 +274,9 @@ public class TestZooKeeper {
 
     ZKUtil.createAndFailSilent(zk2, aclZnode);
  }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

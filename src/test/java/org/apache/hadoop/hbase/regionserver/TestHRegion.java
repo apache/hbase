@@ -3330,4 +3330,9 @@ public class TestHRegion extends HBaseTestCase {
                  "value-version-" + ts, Bytes.toString(kv.getValue()));
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

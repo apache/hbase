@@ -376,5 +376,10 @@ public class TestTimestampsFilter {
     del.deleteColumn(cf, column, version);
     ht.delete(del);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+
 

@@ -63,4 +63,9 @@ public class TestRootPath extends TestCase {
       LOG.info("Got expected exception when checking invalid path:", e);
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

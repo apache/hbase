@@ -96,4 +96,9 @@ public class TestHServerInfo {
     int compare2 = hsi2.compareTo(hsi1);
     assertTrue((compare1 > 0)? compare2 < 0: compare2 > 0);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

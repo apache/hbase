@@ -290,4 +290,9 @@ public class TestBytes extends TestCase {
     assertEquals("", Bytes.readStringFixedSize(dis, 9));
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

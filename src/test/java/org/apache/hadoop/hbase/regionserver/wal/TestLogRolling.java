@@ -549,4 +549,9 @@ public class TestLogRolling  {
       assertFalse(rsThread.getRegionServer().isAborted());
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

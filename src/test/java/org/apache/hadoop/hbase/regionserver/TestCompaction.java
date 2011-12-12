@@ -519,4 +519,9 @@ public class TestCompaction extends HBaseTestCase {
     fail("testCompactionWithCorruptResult failed since no exception was" +
         "thrown while completing a corrupt file");
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

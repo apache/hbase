@@ -106,4 +106,9 @@ public class TestScan {
     Assert.assertTrue(scan.getAttributesMap().isEmpty());
     Assert.assertNull(scan.getAttributesMap().get("attribute1"));
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

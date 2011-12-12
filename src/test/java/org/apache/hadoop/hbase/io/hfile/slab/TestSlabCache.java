@@ -107,4 +107,9 @@ public class TestSlabCache {
   public void testHeapSizeChanges(){
     CacheTestUtils.testHeapSizeChanges(cache, BLOCK_SIZE);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

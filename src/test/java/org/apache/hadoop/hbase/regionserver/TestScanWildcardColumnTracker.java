@@ -122,4 +122,9 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
     assertEquals(true, ok);
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

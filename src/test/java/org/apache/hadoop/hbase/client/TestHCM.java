@@ -267,4 +267,9 @@ public class TestHCM {
     assertTrue(c1 != c3);
     assertTrue(c2 != c3);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

@@ -88,4 +88,9 @@ public class TestOfflineMetaRebuildHole extends OfflineMetaRebuildTestCore {
         ERROR_CODE.NOT_IN_META_OR_DEPLOYED, ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
         ERROR_CODE.NOT_IN_META_OR_DEPLOYED, });
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

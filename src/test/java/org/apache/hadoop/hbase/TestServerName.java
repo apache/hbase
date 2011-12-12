@@ -81,4 +81,9 @@ public class TestServerName {
     assertNotSame(5677,
       ServerName.getServerStartcodeFromServerName(sn.toString()));
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

@@ -163,4 +163,9 @@ public class TestHLogMethods {
     HLog.Entry entry = new HLog.Entry(key, edit);
     return entry;
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

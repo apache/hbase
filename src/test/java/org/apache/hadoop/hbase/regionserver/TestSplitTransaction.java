@@ -299,4 +299,9 @@ public class TestSplitTransaction {
     return HRegion.openHRegion(testdir, hri, htd, wal,
       TEST_UTIL.getConfiguration());
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

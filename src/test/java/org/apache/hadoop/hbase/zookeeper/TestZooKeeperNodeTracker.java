@@ -312,4 +312,9 @@ public class TestZooKeeperNodeTracker {
     @Override
     public void process(WatchedEvent event) {}
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

@@ -177,4 +177,8 @@ public class TestAssignmentManager {
     // Unassign region.
     am.unassign(hri);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

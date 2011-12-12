@@ -54,4 +54,9 @@ public class TestCompare extends TestCase {
     b = new HRegionInfo(t.getName(), Bytes.toBytes("aaaa"), Bytes.toBytes("eeee"));
     assertTrue(a.compareTo(b) < 0);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

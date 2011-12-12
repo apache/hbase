@@ -239,4 +239,9 @@ public class TestTableResource {
     model.getObjectFromMessage(response.getBody());
     checkTableInfo(model);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

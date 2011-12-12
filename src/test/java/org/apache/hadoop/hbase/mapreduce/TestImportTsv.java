@@ -256,4 +256,9 @@ public class TestImportTsv {
   public static String toU8Str(byte[] bytes) throws UnsupportedEncodingException {
     return new String(bytes, HConstants.UTF8_ENCODING);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

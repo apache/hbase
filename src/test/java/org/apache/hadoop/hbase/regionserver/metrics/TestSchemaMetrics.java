@@ -244,4 +244,9 @@ public class TestSchemaMetrics {
     assertEquals(expected.toString(), result);
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

@@ -215,4 +215,9 @@ public class TestMasterCoprocessorExceptionWithRemove {
       fail("Failed to create table after buggy coprocessor removal: " + e);
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

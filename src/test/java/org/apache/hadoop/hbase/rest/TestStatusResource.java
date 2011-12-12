@@ -110,4 +110,9 @@ public class TestStatusResource {
     model.getObjectFromMessage(response.getBody());
     validate(model);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

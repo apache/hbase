@@ -103,4 +103,9 @@ public class TestSortedCopyOnWriteSet {
     }
     assertTrue(size > 0);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

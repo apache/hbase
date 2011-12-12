@@ -114,4 +114,9 @@ public class TestReplicationAdmin {
     admin.removePeer(ID_ONE);
     assertEquals(1, admin.getPeersCount());
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

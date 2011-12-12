@@ -358,4 +358,9 @@ public class TestCompoundBloomFilter {
     assertEquals(0, rowKV.getQualifier().length);
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

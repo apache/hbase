@@ -129,4 +129,9 @@ public class TestHRegionInfo {
     assertTrue(HRegionInfo.ROOT_REGIONINFO.isMetaTable());
     assertTrue(HRegionInfo.FIRST_META_REGIONINFO.isMetaTable());
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

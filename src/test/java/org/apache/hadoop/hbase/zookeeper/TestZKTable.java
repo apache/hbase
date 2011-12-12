@@ -92,4 +92,9 @@ public class TestZKTable {
     assertTrue(zkt.isEnabledTable(name));
     assertFalse(zkt.isEnablingTable(name));
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

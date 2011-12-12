@@ -149,4 +149,9 @@ public class TestGzipFilter {
     response = client.get(scannerUrl);
     assertEquals(response.getCode(), 204);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

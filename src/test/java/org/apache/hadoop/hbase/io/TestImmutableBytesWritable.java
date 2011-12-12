@@ -132,4 +132,9 @@ public class TestImmutableBytesWritable extends TestCase {
       "Comparing " + a + " and " + b + " as objects (inverse)",
       -signum(comparator.compare(b, a)), expectedSignum);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

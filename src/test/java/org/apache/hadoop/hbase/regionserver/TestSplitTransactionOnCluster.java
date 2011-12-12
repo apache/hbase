@@ -454,4 +454,9 @@ public class TestSplitTransactionOnCluster {
       Thread.sleep(100);
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

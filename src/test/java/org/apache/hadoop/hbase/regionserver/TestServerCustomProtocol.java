@@ -366,4 +366,9 @@ public class TestServerCustomProtocol {
     assertEquals("Invalid result for row '"+Bytes.toStringBinary(row)+"'",
         expected, results.get(region));
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

@@ -103,4 +103,9 @@ public class TestHBaseFsckComparator {
     assertTrue(HBaseFsck.cmp.compare(hi1, hi2) < 0);
     assertTrue(HBaseFsck.cmp.compare(hi2, hi1) > 0);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

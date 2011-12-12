@@ -86,4 +86,9 @@ public class TestCloseRegionHandler {
       assertTrue(server.isStopped());
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

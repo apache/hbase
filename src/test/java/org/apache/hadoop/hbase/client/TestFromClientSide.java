@@ -4448,4 +4448,9 @@ public class TestFromClientSide {
         System.currentTimeMillis() + ", cur=" + store.getNumberOfstorefiles());
     assertEquals(count, store.getNumberOfstorefiles());
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

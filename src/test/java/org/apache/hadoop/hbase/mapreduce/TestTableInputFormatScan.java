@@ -344,4 +344,9 @@ public class TestTableInputFormatScan {
     assertTrue(job.isComplete());
     LOG.info("After map/reduce completion - job " + jobName);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

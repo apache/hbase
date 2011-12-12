@@ -161,4 +161,9 @@ public class TestSchemaResource {
     // return read-only setting back to default
     conf.set("hbase.rest.readonly", "false");
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

@@ -164,4 +164,9 @@ public class TestByteBloomFilter extends TestCase {
     assertEquals(640, ByteBloomFilter.computeFoldableByteSize(5001, 4));
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

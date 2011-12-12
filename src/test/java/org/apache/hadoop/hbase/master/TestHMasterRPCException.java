@@ -59,4 +59,9 @@ public class TestHMasterRPCException {
       fail("Unexpected throwable: " + t);
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

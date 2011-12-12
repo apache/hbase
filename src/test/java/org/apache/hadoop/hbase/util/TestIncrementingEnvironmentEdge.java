@@ -41,4 +41,9 @@ public class TestIncrementingEnvironmentEdge {
     assertEquals(3, edge.currentTimeMillis());
     assertEquals(4, edge.currentTimeMillis());
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

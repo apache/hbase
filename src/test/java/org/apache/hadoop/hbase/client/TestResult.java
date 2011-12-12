@@ -121,4 +121,9 @@ public class TestResult extends TestCase {
       assertTrue(x.getMessage().startsWith("This result was different:"));
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

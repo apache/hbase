@@ -994,4 +994,9 @@ public class TestMasterFailover {
   private void log(String string) {
     LOG.info("\n\n" + string + " \n\n");
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+
