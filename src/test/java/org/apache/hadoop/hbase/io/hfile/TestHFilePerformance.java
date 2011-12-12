@@ -386,4 +386,9 @@ public class TestHFilePerformance extends TestCase {
             " the same method several times and flood cache every time and average it to get a" +
             " better number.");
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

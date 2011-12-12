@@ -108,4 +108,9 @@ public class TestInfoServers {
     assertTrue("expected=" + expected + ", content=" + content,
       content.contains(expected));
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

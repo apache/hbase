@@ -113,4 +113,9 @@ public class TestMasterAddressManager {
       lock.acquire();
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

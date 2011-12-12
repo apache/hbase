@@ -287,4 +287,9 @@ public class TestMergeTool extends HBaseTestCase {
       log.closeAndDelete();
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

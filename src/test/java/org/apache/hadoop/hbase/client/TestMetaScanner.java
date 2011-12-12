@@ -94,4 +94,9 @@ public class TestMetaScanner {
     verify(visitor, times(1)).processRow((Result)anyObject());
         
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

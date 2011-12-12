@@ -351,4 +351,8 @@ public class TestHTablePool {
 					pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
 		}
 	}
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

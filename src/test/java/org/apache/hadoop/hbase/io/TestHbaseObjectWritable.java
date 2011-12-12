@@ -262,4 +262,9 @@ public class TestHbaseObjectWritable extends TestCase {
       this.key = Text.readString(in);
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

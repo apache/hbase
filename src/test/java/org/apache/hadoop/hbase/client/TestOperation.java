@@ -131,4 +131,9 @@ public class TestOperation {
     assertEquals("Qualifier incorrect in Delete.toJSON()", 
         Bytes.toStringBinary(QUALIFIER), kvMap.get("qualifier"));
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

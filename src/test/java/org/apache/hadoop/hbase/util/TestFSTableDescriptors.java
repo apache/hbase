@@ -250,4 +250,9 @@ public class TestFSTableDescriptors {
       assertTrue(clist[i].equals(i == 0? farFuture: i == 1? future: bare));
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

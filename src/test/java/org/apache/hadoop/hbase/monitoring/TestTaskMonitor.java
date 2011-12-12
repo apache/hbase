@@ -101,4 +101,9 @@ public class TestTaskMonitor {
     assertEquals("task 10", tm.getTasks().get(0).getDescription());
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

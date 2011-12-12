@@ -66,4 +66,9 @@ public class TestKeyValueScanFixture extends TestCase {
     assertEquals(null, scan.peek());
     assertEquals(null, scan.next());
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

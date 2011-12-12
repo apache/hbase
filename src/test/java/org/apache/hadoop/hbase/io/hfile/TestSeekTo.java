@@ -145,4 +145,9 @@ public class TestSeekTo extends HBaseTestCase {
     assertEquals(1, blockIndexReader.rootBlockContainingKey(
         toKV("l").getKey(), 0, klen));
  }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

@@ -380,4 +380,9 @@ public class TestMultiColumnScanner {
     return lst;
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

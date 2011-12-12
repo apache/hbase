@@ -197,4 +197,9 @@ public class TestDrainingServer {
     return TEST_UTIL.getMiniHBaseCluster().countServedRegions() ==
       (COUNT_OF_REGIONS + 2 /*catalog regions*/);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

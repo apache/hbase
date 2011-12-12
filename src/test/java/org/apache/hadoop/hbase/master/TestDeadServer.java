@@ -58,4 +58,9 @@ public class TestDeadServer {
     assertFalse(ds.isDeadServer(deadServer));
     assertFalse(ds.cleanPreviousInstance(deadServerHostComingAlive));
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

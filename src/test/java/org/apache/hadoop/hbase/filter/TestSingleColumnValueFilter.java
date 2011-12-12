@@ -171,4 +171,9 @@ public class TestSingleColumnValueFilter extends TestCase {
     newFilter = serializationTest(regexFilter);
     regexFilterTests(newFilter);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

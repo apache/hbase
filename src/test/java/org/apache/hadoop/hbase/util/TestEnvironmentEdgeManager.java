@@ -63,4 +63,9 @@ public class TestEnvironmentEdgeManager {
     verify(mock).currentTimeMillis();
     assertEquals(expectation, result);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

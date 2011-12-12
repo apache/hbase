@@ -328,4 +328,9 @@ public class TestFilterList extends TestCase {
     assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
         minKeyValue));
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

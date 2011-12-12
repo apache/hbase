@@ -112,4 +112,9 @@ public class TestVersionModel extends TestCase {
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

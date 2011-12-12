@@ -296,4 +296,9 @@ public class TestHFileWriterV2 {
         randomValue(rand));
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

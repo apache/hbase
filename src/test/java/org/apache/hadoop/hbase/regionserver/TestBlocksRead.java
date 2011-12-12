@@ -421,4 +421,8 @@ public class TestBlocksRead extends HBaseTestCase {
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col99", 201);
 	}
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

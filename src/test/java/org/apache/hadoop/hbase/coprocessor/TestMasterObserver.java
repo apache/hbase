@@ -707,4 +707,9 @@ public class TestMasterObserver {
     assertTrue("Coprocessor should be called on region rebalancing",
         cp.wasBalanceCalled());
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

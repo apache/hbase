@@ -85,4 +85,9 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
     assertEquals(16, tableRowCount(conf, table));
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

@@ -112,4 +112,9 @@ public class TestTransform {
     value = response.getBody();
     assertTrue(Bytes.equals(value, VALUE_2));
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

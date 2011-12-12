@@ -125,4 +125,9 @@ public class TestHTableUtil {
    assertEquals(count, rows.size());
  }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

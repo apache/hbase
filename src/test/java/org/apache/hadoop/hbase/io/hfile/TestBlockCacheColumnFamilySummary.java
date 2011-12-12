@@ -120,4 +120,9 @@ public class TestBlockCacheColumnFamilySummary {
     assertEquals("mapSize",1,bcs.size());
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

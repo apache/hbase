@@ -514,4 +514,9 @@ public class TestScanner extends HBaseTestCase {
     LOG.info("Found " + count + " items");
     return count;
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

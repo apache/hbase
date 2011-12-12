@@ -67,4 +67,9 @@ public class TestBase64 extends TestCase {
       assertTrue(uris[i++].compareTo(e.getValue()) == 0);
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

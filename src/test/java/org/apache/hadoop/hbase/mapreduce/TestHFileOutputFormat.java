@@ -797,4 +797,9 @@ public class TestHFileOutputFormat  {
           "usage: TestHFileOutputFormat newtable | incremental");
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

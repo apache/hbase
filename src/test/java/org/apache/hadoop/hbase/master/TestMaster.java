@@ -141,4 +141,9 @@ public class TestMaster {
     public void beforeProcess(EventHandler event) {
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

@@ -95,4 +95,9 @@ public class TestClockSkewDetection {
       LOG.info("Recieved expected exception: "+e);
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

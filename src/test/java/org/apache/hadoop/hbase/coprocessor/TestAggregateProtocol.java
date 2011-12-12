@@ -784,4 +784,9 @@ public class TestAggregateProtocol {
     std = aClient.std(TEST_TABLE, ci, scan);
     assertEquals(Double.NaN, std, 0);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

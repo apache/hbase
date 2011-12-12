@@ -1516,4 +1516,9 @@ public class TestFilter extends HBaseTestCase {
       verifyScanFullNoValues(s, expectedKVs, useLen);
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

@@ -436,4 +436,9 @@ public class TestSeekOptimizations {
         StoreScanner.LAZY_SEEK_ENABLED_BY_DEFAULT);
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

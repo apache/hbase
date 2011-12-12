@@ -74,4 +74,9 @@ public class TestReplicationPeer {
     Assert.fail("ReplicationPeer ZooKeeper session was not properly expired.");
   }
 
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

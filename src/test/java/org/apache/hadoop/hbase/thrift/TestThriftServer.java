@@ -460,4 +460,9 @@ public class TestThriftServer {
     handler.scannerGet(scannerId);
     handler.scannerClose(scannerId);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+

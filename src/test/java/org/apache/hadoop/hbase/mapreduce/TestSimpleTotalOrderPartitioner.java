@@ -66,4 +66,9 @@ public class TestSimpleTotalOrderPartitioner extends HBaseTestCase {
     partition = p.getPartition(endBytes, HConstants.EMPTY_BYTE_ARRAY, 3);
     assertEquals(2, partition);
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
+
