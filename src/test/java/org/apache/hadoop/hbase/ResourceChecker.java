@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
+import java.util.*;
 
 
 /**
@@ -160,5 +161,19 @@ public class ResourceChecker {
     }
 
     return isOk;
+  }
+
+  /**
+   * Helper function: print the threads
+   */
+  public static void printThreads(){
+    Set<Thread> threads = Thread.getAllStackTraces().keySet();
+    System.out.println("name; state; isDameon; isAlive; isInterrupted");
+    for (Thread t: threads){
+      System.out.println(
+        t.getName()+";"+t.getState()+";"+t.isDaemon()+";"+t.isAlive()+
+          ";"+t.isInterrupted()
+      );
+    }
   }
 }

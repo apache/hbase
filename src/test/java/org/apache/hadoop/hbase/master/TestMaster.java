@@ -69,9 +69,9 @@ public class TestMaster {
     HMaster m = cluster.getMaster();
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
-    TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
-    TEST_UTIL.loadTable(new HTable(TEST_UTIL.getConfiguration(), TABLENAME),
-      FAMILYNAME);
+    HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
+    TEST_UTIL.loadTable(ht, FAMILYNAME);
+    ht.close();
 
     List<Pair<HRegionInfo, ServerName>> tableRegions =
       MetaReader.getTableRegionsAndLocations(m.getCatalogTracker(),
@@ -113,6 +113,7 @@ public class TestMaster {
     } finally {
       proceed.countDown();
     }
+    admin.close();
   }
 
   static class RegionSplitListener implements EventHandlerListener {

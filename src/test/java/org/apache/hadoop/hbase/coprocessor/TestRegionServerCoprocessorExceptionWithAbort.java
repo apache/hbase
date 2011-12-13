@@ -154,6 +154,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
     assertTrue("Main thread caught interruption.",caughtInterruption);
     assertTrue("RegionServer aborted on coprocessor exception, as expected.",
         rsTracker.regionZKNodeWasDeleted);
+    table.close();
   }
 
   public static class BuggyRegionObserver extends SimpleRegionObserver {

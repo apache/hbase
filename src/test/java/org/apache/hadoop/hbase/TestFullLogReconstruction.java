@@ -121,6 +121,8 @@ public class TestFullLogReconstruction {
       newCount++;
     }
     assertEquals(count, newCount);
+    results.close();
+    table.close();
   }
 
   @org.junit.Rule

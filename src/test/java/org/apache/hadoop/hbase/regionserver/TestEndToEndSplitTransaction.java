@@ -56,9 +56,9 @@ public class TestEndToEndSplitTransaction {
   public void testMasterOpsWhileSplitting() throws Exception {
     byte[] tableName = Bytes.toBytes("TestSplit");
     byte[] familyName = Bytes.toBytes("fam");
-    TEST_UTIL.createTable(tableName, familyName);
-    TEST_UTIL.loadTable(new HTable(TEST_UTIL.getConfiguration(), tableName),
-        familyName);
+    HTable ht = TEST_UTIL.createTable(tableName, familyName);
+    TEST_UTIL.loadTable(ht, familyName);
+    ht.close();
     HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     byte []firstRow = Bytes.toBytes("aaa");
     byte []splitRow = Bytes.toBytes("lll");

@@ -81,6 +81,7 @@ public class TestRegionObserverBypass {
     // before HBASE-4331, this would throw an exception
     t.put(p);
     checkRowAndDelete(t,row1,0);
+    t.close();
   }
 
   /**
@@ -169,6 +170,7 @@ public class TestRegionObserverBypass {
     checkRowAndDelete(t,row1,0);
     checkRowAndDelete(t,row2,1);
     checkRowAndDelete(t,row3,0);
+    t.close();
   }
 
   private void checkRowAndDelete(HTable t, byte[] row, int count) throws IOException {

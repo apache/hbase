@@ -89,7 +89,7 @@ public class TestInstantSchemaChangeSplit extends InstantSchemaChangeTestBase {
       assertEquals(tableHcd.getMaxVersions(), 99);
     }
     LOG.info("End testInstantSchemaChangeExclusions() ");
-
+    ht.close();
  }
 
   /**
@@ -145,6 +145,7 @@ public class TestInstantSchemaChangeSplit extends InstantSchemaChangeTestBase {
         MasterSchemaChangeTracker.MasterAlterStatus.AlterState.FAILURE);
     assertTrue(mas.getErrorCause() != null);
     LOG.info("End testInstantSchemaChangeWhileRSOpenRegionFailure() ");
+    ht.close();
  }
 
   @Test
@@ -209,6 +210,7 @@ public class TestInstantSchemaChangeSplit extends InstantSchemaChangeTestBase {
     int result = Bytes.compareTo(value, tvalue);
     assertEquals(result, 0);
     LOG.info("End testConcurrentInstantSchemaChangeAndSplit() ");
+    ht.close();
   }
       
 

@@ -71,7 +71,7 @@ public class TestInstantSchemaChange extends InstantSchemaChangeTestBase {
     int result = Bytes.compareTo(value, tvalue);
     assertEquals(result, 0);
     LOG.info("END testInstantSchemaChangeForModifyTable()");
-
+    ht.close();
   }
 
   @Test
@@ -100,7 +100,7 @@ public class TestInstantSchemaChange extends InstantSchemaChangeTestBase {
     int result = Bytes.compareTo(value, tvalue);
     assertEquals(result, 0);
     LOG.info("End testInstantSchemaChangeForAddColumn() ");
-
+    ht.close();
  }
 
   @Test
@@ -158,6 +158,7 @@ public class TestInstantSchemaChange extends InstantSchemaChangeTestBase {
     HColumnDescriptor hcd = modifiedHtd.getFamily(Bytes.toBytes("C"));
     assertTrue(hcd == null);
     LOG.info("End testInstantSchemaChangeForDeleteColumn() ");
+    ht.close();
  }
 
   @Test
@@ -175,6 +176,7 @@ public class TestInstantSchemaChange extends InstantSchemaChangeTestBase {
     MasterSchemaChangeTracker msct =
     TEST_UTIL.getHBaseCluster().getMaster().getSchemaChangeTracker();
     assertTrue(msct.doesSchemaChangeNodeExists(tableName) == false);
+    ht.close();
   }
 
   /**
@@ -246,6 +248,7 @@ public class TestInstantSchemaChange extends InstantSchemaChangeTestBase {
     int result2 = Bytes.compareTo(value, tvalue2);
     assertEquals(result2, 0);
     LOG.info("END testConcurrentInstantSchemaChangeForModifyTable()");
+    ht.close();
   }
 
   /**
@@ -307,6 +310,7 @@ public class TestInstantSchemaChange extends InstantSchemaChangeTestBase {
     assertEquals(result, 0);
 
     LOG.info("End testInstantSchemaChangeWithLoadBalancerRunning() ");
+    ht.close();
   }
 
 

@@ -162,6 +162,7 @@ public class TestTimestampsFilter {
         checkOneCell(kvs[offset + 2], FAMILY, rowIdx, colIdx, 6);
       }
     }
+    ht.close();
   }
 
   @Test
@@ -208,6 +209,8 @@ public class TestTimestampsFilter {
         "value2-3");
     assertEquals(Bytes.toString(result.list().get(1).getValue()),
         "value4-3");
+
+    ht.close();
   }
 
   /**
@@ -251,6 +254,8 @@ public class TestTimestampsFilter {
     checkOneCell(kvs[0], FAMILY, 0, 0, 5);
     checkOneCell(kvs[1], FAMILY, 0, 0, 3);
     checkOneCell(kvs[2], FAMILY, 0, 0, 2);
+
+    ht.close();
   }
 
   private void verifyInsertedValues(HTable ht, byte[] cf) throws IOException {

@@ -128,6 +128,7 @@ public class TestRegionObserverInterface {
         new Boolean[] {true, true, true, true, true}
     );
     util.deleteTable(tableName);
+    table.close();
   }
 
   @Test
@@ -152,6 +153,7 @@ public class TestRegionObserverInterface {
         new Boolean[] {true, true}
     );
     util.deleteTable(tableName);
+    table.close();
   }
 
   @Test
@@ -201,6 +203,7 @@ public class TestRegionObserverInterface {
         new Boolean[] {true, true}
     );
     util.deleteTable(tableName);
+    table.close();
   }
 
   @Test
@@ -245,6 +248,7 @@ public class TestRegionObserverInterface {
         new Boolean[] {true}
     );
     util.deleteTable(tableName);
+    table.close();
   }
 
   /* Overrides compaction to only output rows with keys that are even numbers */
@@ -374,6 +378,7 @@ public class TestRegionObserverInterface {
     } finally {
       scanner.close();
     }
+    table.close();
   }
 
   // check each region whether the coprocessor upcalls are called or not.

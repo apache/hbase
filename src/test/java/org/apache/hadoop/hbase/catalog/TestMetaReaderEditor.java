@@ -141,6 +141,7 @@ public class TestMetaReaderEditor {
     writer.stop = true;
     reader.join();
     writer.join();
+    t.close();
   }
 
   /**

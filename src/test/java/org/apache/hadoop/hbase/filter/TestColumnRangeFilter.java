@@ -239,6 +239,7 @@ public class TestColumnRangeFilter {
 
       assertEquals(rangeMap.get(s).size(), results.size());
     }
+    ht.close();
   }
 
   List<String> generateRandomWords(int numberOfWords, int maxLengthOfWords) {

@@ -62,7 +62,7 @@ public class TestInfoServers {
   @Test
   public void testInfoServersRedirect() throws Exception {
     // give the cluster time to start up
-    new HTable(UTIL.getConfiguration(), ".META.");
+    new HTable(UTIL.getConfiguration(), ".META.").close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/index.html"), "master-status");
@@ -82,7 +82,7 @@ public class TestInfoServers {
   @Test
   public void testInfoServersStatusPages() throws Exception {
     // give the cluster time to start up
-    new HTable(UTIL.getConfiguration(), ".META.");
+    new HTable(UTIL.getConfiguration(), ".META.").close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/master-status"), "META");
