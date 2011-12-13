@@ -675,7 +675,7 @@ public class HLog implements Syncable {
       writer.init(fs, path, conf);
       return writer;
     } catch (Exception e) {
-      IOException ie = new IOException("cannot get log writer");
+      IOException ie = new IOException("cannot get log writer", e);
       ie.initCause(e);
       throw ie;
     }

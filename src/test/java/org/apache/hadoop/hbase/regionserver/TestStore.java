@@ -585,8 +585,16 @@ public class TestStore extends TestCase {
         Progressable progress) throws IOException {
       return new FaultyOutputStream(super.create(f, permission,
           overwrite, bufferSize, replication, blockSize, progress), faultPos);
-    }    
+    }
 
+    @Override
+    public FSDataOutputStream createNonRecursive(Path f, boolean overwrite,
+        int bufferSize, short replication, long blockSize, Progressable progress)
+    throws IOException {
+      // Fake it.  Call create instead.  The default implementation throws an IOE
+      // that this is not supported.
+      return create(f, overwrite, bufferSize, replication, blockSize, progress);
+    }
   }
 
   static class FaultyOutputStream extends FSDataOutputStream {

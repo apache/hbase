@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -28,16 +31,18 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
 public class TestReplicationSource {
 
@@ -45,7 +50,7 @@ public class TestReplicationSource {
       LogFactory.getLog(TestReplicationSource.class);
   private final static HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
-  private static FileSystem fs;
+  private static FileSystem FS;
   private static Path oldLogDir;
   private static Path logDir;
   private static Configuration conf = HBaseConfiguration.create();
@@ -56,11 +61,13 @@ public class TestReplicationSource {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniDFSCluster(1);
-    fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    oldLogDir = new Path(fs.getHomeDirectory(),
+    FS = TEST_UTIL.getDFSCluster().getFileSystem();
+    oldLogDir = new Path(FS.getHomeDirectory(),
         HConstants.HREGION_OLDLOGDIR_NAME);
-    logDir = new Path(fs.getHomeDirectory(),
+    if (FS.exists(oldLogDir)) FS.delete(oldLogDir, true);
+    logDir = new Path(FS.getHomeDirectory(),
         HConstants.HREGION_LOGDIR_NAME);
+    if (FS.exists(logDir)) FS.delete(logDir, true);
   }
 
   /**
@@ -72,7 +79,9 @@ public class TestReplicationSource {
   @Test
   public void testLogMoving() throws Exception{
     Path logPath = new Path(logDir, "log");
-    HLog.Writer writer = HLog.createWriter(fs, logPath, conf);
+    if (!FS.exists(logDir)) FS.mkdirs(logDir);
+    if (!FS.exists(oldLogDir)) FS.mkdirs(oldLogDir);
+    HLog.Writer writer = HLog.createWriter(FS, logPath, conf);
     for(int i = 0; i < 3; i++) {
       byte[] b = Bytes.toBytes(Integer.toString(i));
       KeyValue kv = new KeyValue(b,b,b);
@@ -84,12 +93,12 @@ public class TestReplicationSource {
     }
     writer.close();
 
-    HLog.Reader reader = HLog.getReader(fs, logPath, conf);
+    HLog.Reader reader = HLog.getReader(FS, logPath, conf);
     HLog.Entry entry = reader.next();
     assertNotNull(entry);
 
     Path oldLogPath = new Path(oldLogDir, "log");
-    fs.rename(logPath, oldLogPath);
+    FS.rename(logPath, oldLogPath);
 
     entry = reader.next();
     assertNotNull(entry);
