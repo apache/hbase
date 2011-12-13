@@ -203,9 +203,9 @@
       <url>https://repository.apache.org/content/repositories/releases/</url>
     </repository>
     <repository>
-      <id>hadoop-non-releases</id>
-      <name>Hadoop non-releases</name>
-      <url>http://people.apache.org/~rawson/repo/</url>
+      <id>apache non-releases</id>
+      <name>Apache non-releases</name>
+      <url>http://people.apache.org/~stack/m2/repository</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -450,7 +450,7 @@
       <plugin>
         <groupId>com.agilejava.docbkx</groupId>
         <artifactId>docbkx-maven-plugin</artifactId>
-        <version>2.0.11</version>
+        <version>2.0.13</version>
         <executions>
           <execution>
               <id>multipage</id>
@@ -795,6 +795,7 @@
     <commons-lang.version>2.5</commons-lang.version>
     <commons-logging.version>1.1.1</commons-logging.version>
     <commons-math.version>2.1</commons-math.version>
+    <commons-configuration.version>1.6</commons-configuration.version>
     <guava.version>r09</guava.version>
     <jackson.version>1.5.5</jackson.version>
     <jasper.version>5.5.23</jasper.version>
@@ -802,7 +803,7 @@
     <jetty.version>6.1.26</jetty.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <jersey.version>1.4</jersey.version>
-    <jruby.version>1.6.0</jruby.version>
+    <jruby.version>1.6.5</jruby.version>
     <junit.version>4.10</junit.version>
     <log4j.version>1.2.16</log4j.version>
     <mockito-all.version>1.8.5</mockito-all.version>
@@ -810,7 +811,7 @@
     <slf4j.version>1.5.8</slf4j.version><!-- newer version available -->
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.7.0</thrift.version>
-    <zookeeper.version>3.4.0</zookeeper.version>
+    <zookeeper.version>3.4.1rc0</zookeeper.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
 
     <package.prefix>/usr</package.prefix>	           
@@ -857,6 +858,11 @@
       <groupId>commons-cli</groupId>
       <artifactId>commons-cli</artifactId>
       <version>${commons-cli.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-configuration</groupId>
+      <artifactId>commons-configuration</artifactId>
+      <version>${commons-configuration.version}</version>
     </dependency>
     <dependency>
      <groupId>com.github.stephenc.high-scale-lib</groupId>
@@ -1272,20 +1278,16 @@
       </build>
     </profile>
 
-    <!-- profile for building against Hadoop 0.20.0 : This is the default. -->
+    <!-- profile for building against Hadoop 1.0.x: This is the default. -->
     <profile>
-      <id>hadoop-0.20</id>
+      <id>hadoop-1.0</id>
       <activation>
         <property>
           <name>!hadoop.profile</name>
         </property>
       </activation>
       <properties>
-        <!--The below was made by patching branch-0.20-append
-        at revision 1034499 with this hdfs-895 patch:
-        https://issues.apache.org/jira/secure/attachment/12459473/hdfs-895-branch-20-append.txt
-        -->
-        <hadoop.version>0.20.205.0</hadoop.version>
+        <hadoop.version>1.0.0rc2</hadoop.version>
       </properties>
       <dependencies>
         <dependency>
@@ -1316,7 +1318,6 @@
             </exclusion>
           </exclusions>
         </dependency>
-        <!-- test deps for hadoop-0.20 profile -->
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-test</artifactId>
