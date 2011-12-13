@@ -74,7 +74,9 @@ public class HBaseConfiguration extends Configuration {
   private static void checkForClusterFreeMemoryLimit(Configuration conf) {
       float globalMemstoreLimit = conf.getFloat("hbase.regionserver.global.memstore.upperLimit", 0.4f);
       int gml = (int)(globalMemstoreLimit * CONVERT_TO_PERCENTAGE);
-      float blockCacheUpperLimit = conf.getFloat("hfile.block.cache.size", 0.2f);
+      float blockCacheUpperLimit =
+        conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
+          HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
       int bcul = (int)(blockCacheUpperLimit * CONVERT_TO_PERCENTAGE);
       if (CONVERT_TO_PERCENTAGE - (gml + bcul)
               < (int)(CONVERT_TO_PERCENTAGE * 
