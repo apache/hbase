@@ -495,6 +495,14 @@ public final class HConstants {
   public static final String HBASE_REGION_SPLIT_POLICY_KEY =
     "hbase.regionserver.region.split.policy";
 
+  /**
+   * Configuration key for the size of the block cache
+   */
+  public static final String HFILE_BLOCK_CACHE_SIZE_KEY =
+    "hfile.block.cache.size";
+
+  public static final float HFILE_BLOCK_CACHE_SIZE_DEFAULT = 0.25f;
+
   /*
     * Minimum percentage of free heap necessary for a successful cluster startup.
     */

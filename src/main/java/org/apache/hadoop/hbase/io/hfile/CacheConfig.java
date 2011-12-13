@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.DirectMemoryUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -33,12 +34,6 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class CacheConfig {
   private static final Log LOG = LogFactory.getLog(CacheConfig.class.getName());
-
-  /**
-   * Configuration key for the size of the block cache, in bytes.
-   */
-  public static final String HFILE_BLOCK_CACHE_SIZE_KEY =
-    "hfile.block.cache.size";
 
   /**
    * Configuration key to cache data blocks on write. There are separate
@@ -312,13 +307,14 @@ public class CacheConfig {
     if (globalBlockCache != null) return globalBlockCache;
     if (blockCacheDisabled) return null;
 
-    float cachePercentage = conf.getFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.2f);
+    float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
+      HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
     if (cachePercentage == 0L) {
       blockCacheDisabled = true;
       return null;
     }
     if (cachePercentage > 1.0) {
-      throw new IllegalArgumentException(HFILE_BLOCK_CACHE_SIZE_KEY +
+      throw new IllegalArgumentException(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY +
         " must be between 0.0 and 1.0, not > 1.0");
     }
 

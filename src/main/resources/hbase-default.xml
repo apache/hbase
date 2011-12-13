@@ -445,13 +445,13 @@
     </description>
   </property>
   <property>
-      <name>hfile.block.cache.size</name>
-      <value>0.2</value>
-      <description>
-          Percentage of maximum heap (-Xmx setting) to allocate to block cache
-          used by HFile/StoreFile. Default of 0.2 means allocate 20%.
-          Set to 0 to disable.
-      </description>
+    <name>hfile.block.cache.size</name>
+    <value>0.25</value>
+    <description>
+        Percentage of maximum heap (-Xmx setting) to allocate to block cache
+        used by HFile/StoreFile. Default of 0.25 means allocate 25%.
+        Set to 0 to disable but it's not recommended.
+    </description>
   </property>
   <property>
     <name>hbase.hash.type</name>

@@ -81,8 +81,6 @@ import com.google.common.collect.Ordering;
 public class StoreFile {
   static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
 
-  static final String HFILE_BLOCK_CACHE_SIZE_KEY = "hfile.block.cache.size";
-
   public static enum BloomType {
     /**
      * Bloomfilters disabled
