@@ -206,7 +206,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   throws IOException, KeeperException, InterruptedException {
     this.conf = new Configuration(conf);
     // Disable the block cache on the master
-    this.conf.setFloat(CacheConfig.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
+    this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     // Set how many times to retry talking to another server over HConnection.
     HConnectionManager.setServerSideHConnectionRetries(this.conf, LOG);
     // Server to handle client requests.
