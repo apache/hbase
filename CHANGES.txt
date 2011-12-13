@@ -30,6 +30,7 @@ Release 0.92.0 - Unreleased
    HBASE-4648  Bytes.toBigDecimal() doesn't use offset (Bryan Keller via Lars H)
    HBASE-4715  Remove stale broke .rb scripts from bin dir
    HBASE-3433  Remove the KV copy of every KV in Scan; introduced by HBASE-3232 (Lars H)
+   HBASE-5017  Bump the default hfile.block.cache.size because of HFileV2
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster

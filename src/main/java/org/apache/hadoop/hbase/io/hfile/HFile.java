@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
@@ -278,7 +279,7 @@ public class HFile {
   public static final WriterFactory getWriterFactoryNoCache(Configuration
        conf) {
     Configuration tempConf = new Configuration(conf);
-    tempConf.setFloat(CacheConfig.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
+    tempConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     return HFile.getWriterFactory(conf, new CacheConfig(tempConf));
   }
 
