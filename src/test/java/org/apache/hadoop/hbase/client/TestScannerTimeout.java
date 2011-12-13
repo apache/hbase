@@ -68,6 +68,7 @@ public class TestScannerTimeout {
       put.add(SOME_BYTES, SOME_BYTES, SOME_BYTES);
       table.put(put);
     }
+    table.close();
   }
 
   /**
@@ -111,6 +112,8 @@ public class TestScannerTimeout {
     } catch (ScannerTimeoutException e) {
       LOG.info("Got the timeout " + e.getMessage(), e);
       return;
+    }  finally {
+      table.close();
     }
     fail("We should be timing out");
     LOG.info("END ************ test2481");
@@ -140,6 +143,7 @@ public class TestScannerTimeout {
     Result[] results = r.next(NB_ROWS);
     assertEquals(NB_ROWS, results.length);
     r.close();
+    higherScanTimeoutTable.close();
     LOG.info("END ************ test2772");
 
   }
@@ -176,6 +180,7 @@ public class TestScannerTimeout {
     }
     assertEquals(NB_ROWS, count);
     r.close();
+    table.close();
     LOG.info("************ END TEST3686A");
   }
   
@@ -209,6 +214,7 @@ public class TestScannerTimeout {
     }
     assertEquals(NB_ROWS, count);
     r.close();
+    higherScanTimeoutTable.close();
     LOG.info("END ************ END test3686b");
 
   }

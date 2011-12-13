@@ -127,6 +127,7 @@ public class TestGlobalMemStoreSize {
       assertEquals("Server=" + server.getServerName() + ", i=" + i++, 0, size);
     }
 
+    ht.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 

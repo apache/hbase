@@ -140,6 +140,7 @@ public class TestDistributedLogSplitting {
 
     assertEquals(NUM_REGIONS_TO_CREATE * NUM_ROWS_PER_REGION,
         TEST_UTIL.countRows(ht));
+    ht.close();
   }
 
   @Test(expected=OrphanHLogAfterSplitException.class, timeout=300000)

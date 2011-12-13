@@ -110,6 +110,9 @@ public class TestHBaseTestingUtility {
       res = table2.get(get);
       assertEquals(0, res.size());
 
+      table1.close();
+      table2.close();
+
     } finally {
       htu3.shutdownMiniCluster();
       htu2.shutdownMiniCluster();

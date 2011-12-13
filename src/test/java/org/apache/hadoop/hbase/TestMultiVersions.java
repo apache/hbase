@@ -110,6 +110,8 @@ public class TestMultiVersions {
         UTIL.getMiniHBaseCluster().flushcache();
       }
     });
+
+    table.close();
   }
 
   /**
@@ -135,6 +137,7 @@ public class TestMultiVersions {
     HTable table = new HTable(UTIL.getConfiguration(), tableName);
     table.put(put);
     // Shut down and restart the HBase cluster
+    table.close();
     UTIL.shutdownMiniHBaseCluster();
     LOG.debug("HBase cluster shut down -- restarting");
     UTIL.startMiniHBaseCluster(1, 1);
@@ -171,6 +174,7 @@ public class TestMultiVersions {
     assertTrue(versionMap.size() == 2);
     assertTrue(Bytes.equals(value1, versionMap.get(timestamp1)));
     assertTrue(Bytes.equals(value2, versionMap.get(timestamp2)));
+    table.close();
   }
 
   /**
@@ -231,6 +235,7 @@ public class TestMultiVersions {
         }
         assertTrue(cellCount == 1);
       }
+      table.close();
     }
 
     // Case 1: scan with LATEST_TIMESTAMP. Should get two rows

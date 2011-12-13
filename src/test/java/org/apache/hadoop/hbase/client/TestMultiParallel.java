@@ -57,6 +57,7 @@ public class TestMultiParallel {
     UTIL.startMiniCluster(slaves);
     HTable t = UTIL.createTable(Bytes.toBytes(TEST_TABLE), Bytes.toBytes(FAMILY));
     UTIL.createMultiRegions(t, Bytes.toBytes(FAMILY));
+    t.close();
   }
 
   @AfterClass public static void afterClass() throws Exception {
@@ -126,6 +127,7 @@ public class TestMultiParallel {
     poolField.setAccessible(true);
     ThreadPoolExecutor tExecutor = (ThreadPoolExecutor) poolField.get(table);
     assertEquals(slaves, tExecutor.getLargestPoolSize());
+    table.close();
   }
 
   @Test(timeout=300000) 
@@ -165,6 +167,7 @@ public class TestMultiParallel {
             .getValue()));
       }
     }
+    table.close();
   }
 
   @Test
@@ -194,6 +197,7 @@ public class TestMultiParallel {
     assertEquals(2, r.length);
     assertTrue(r[0] instanceof Throwable);
     assertTrue(r[1] instanceof Result);
+    table.close();
   }
 
   /**
@@ -259,6 +263,7 @@ public class TestMultiParallel {
       int regions = t.getRegionServer().getOnlineRegions().size();
       Assert.assertTrue("Count of regions=" + regions, regions > 10);
     }
+    table.close();
     LOG.info("done");
   }
 
@@ -282,6 +287,7 @@ public class TestMultiParallel {
     }
 
     validateLoadedData(table);
+    table.close();
   }
 
   @Test(timeout=300000) 
@@ -310,7 +316,7 @@ public class TestMultiParallel {
       get.addColumn(BYTES_FAMILY, QUALIFIER);
       Assert.assertFalse(table.exists(get));
     }
-
+    table.close();
   }
 
   @Test(timeout=300000)
@@ -339,7 +345,7 @@ public class TestMultiParallel {
       get.addColumn(BYTES_FAMILY, QUALIFIER);
       Assert.assertFalse(table.exists(get));
     }
-
+    table.close();
   }
 
   @Test(timeout=300000)
@@ -376,7 +382,7 @@ public class TestMultiParallel {
       validateResult(r, qual, VALUE);
       idx++;
     }
-
+    table.close();
   }
 
   @Test(timeout=300000)
@@ -445,6 +451,8 @@ public class TestMultiParallel {
     get.addColumn(BYTES_FAMILY, qual2);
     Result r = table.get(get);
     validateResult(r, qual2, val2);
+
+    table.close();
   }
 
   // // Helper methods ////

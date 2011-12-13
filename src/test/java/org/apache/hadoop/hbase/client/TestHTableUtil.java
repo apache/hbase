@@ -89,6 +89,7 @@ public class TestHTableUtil {
     }
     LOG.info("bucket put count=" + count);
     assertEquals(count, puts.size());
+    ht.close();
    }
 
   private Put createPut(String row) {
@@ -123,6 +124,7 @@ public class TestHTableUtil {
    }
    LOG.info("bucket batch count=" + count);
    assertEquals(count, rows.size());
+   ht.close();
  }
 
 

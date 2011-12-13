@@ -115,6 +115,8 @@ public class TestMultipleTimestamps {
     assertEquals(2, kvs.length);
     checkOneCell(kvs[0], FAMILY, 5, 3, 4);
     checkOneCell(kvs[1], FAMILY, 5, 3, 3);
+
+    ht.close();
   }
 
   @Test
@@ -152,6 +154,8 @@ public class TestMultipleTimestamps {
     kvs = scanner.next().raw();
     assertEquals(1, kvs.length);
     checkOneCell(kvs[0], FAMILY, 5, 3, 3);
+
+    ht.close();
   }
 
   @Test
@@ -197,6 +201,8 @@ public class TestMultipleTimestamps {
     checkOneCell(kvs[1], FAMILY, 7, 3, 2);
     checkOneCell(kvs[2], FAMILY, 7, 5, 3);
     checkOneCell(kvs[3], FAMILY, 7, 5, 2);
+
+    ht.close();
   }
 
   @Test
@@ -254,6 +260,8 @@ public class TestMultipleTimestamps {
     kvs = scanner.next().raw();
     assertEquals(1, kvs.length);
     checkOneCell(kvs[0], FAMILY, 7, 3, 4);
+
+    ht.close();
   }
 
   @Test
@@ -297,6 +305,8 @@ public class TestMultipleTimestamps {
     checkOneCell(kvs[0], FAMILY, 0, 0, 5);
     checkOneCell(kvs[1], FAMILY, 0, 0, 3);
     checkOneCell(kvs[2], FAMILY, 0, 0, 2);
+
+    ht.close();
   }
 
   @Test
@@ -322,6 +332,8 @@ public class TestMultipleTimestamps {
     // only get back entries for the versions that exist.
     KeyValue kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L));
     assertEquals(0, kvs.length);
+
+    ht.close();
   }
 
   @Test
@@ -345,6 +357,8 @@ public class TestMultipleTimestamps {
     // only get back entries for the versions that exist.
     KeyValue kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L));
     assertEquals(0, kvs.length);
+
+    ht.close();
   }
 
   @Test
@@ -368,6 +382,8 @@ public class TestMultipleTimestamps {
     // only get back entries for the versions that exist.
     KeyValue kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L));
     assertEquals(0, kvs.length);
+
+    ht.close();
   }
 
   /**

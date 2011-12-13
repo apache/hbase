@@ -134,6 +134,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
             "zk node to be deleted.");
       }
     }
+    table.close();
   }
 
   @org.junit.Rule

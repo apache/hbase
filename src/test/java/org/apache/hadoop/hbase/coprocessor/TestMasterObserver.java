@@ -706,6 +706,7 @@ public class TestMasterObserver {
     boolean balanceRun = master.balance();
     assertTrue("Coprocessor should be called on region rebalancing",
         cp.wasBalanceCalled());
+    table.close();
   }
 
   @org.junit.Rule

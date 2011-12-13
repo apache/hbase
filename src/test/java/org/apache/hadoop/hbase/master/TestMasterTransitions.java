@@ -64,6 +64,7 @@ public class TestMasterTransitions {
     int countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
     TEST_UTIL.waitUntilAllRegionsAssigned(countOfRegions);
     addToEachStartKey(countOfRegions);
+    t.close();
   }
 
   @AfterClass public static void afterAllTests() throws Exception {
@@ -496,6 +497,8 @@ public class TestMasterTransitions {
     }
     s.close();
     Assert.assertEquals(expected, rows);
+    t.close();
+    meta.close();
     return rows;
   }
 
@@ -513,6 +516,7 @@ public class TestMasterTransitions {
     }
     s.close();
     LOG.info("Counted=" + rows);
+    t.close();
     return rows;
   }
 

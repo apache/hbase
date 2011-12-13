@@ -96,7 +96,7 @@ public class TestZooKeeper {
   throws IOException, InterruptedException {
     LOG.info("testClientSessionExpired");
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
-    new HTable(c, HConstants.META_TABLE_NAME);
+    new HTable(c, HConstants.META_TABLE_NAME).close();
     String quorumServers = ZKConfig.getZKQuorumServersString(c);
     int sessionTimeout = 5 * 1000; // 5 seconds
     HConnection connection = HConnectionManager.getConnection(c);
@@ -165,7 +165,7 @@ public class TestZooKeeper {
         Bytes.toBytes("col"), Bytes.toBytes("testdata"));
     LOG.info("Putting table " + tableName);
     table.put(put);
-
+    table.close();
   }
 
   @Test
@@ -187,6 +187,8 @@ public class TestZooKeeper {
       assertFalse(HConnectionManager.getConnection(localMeta.getConfiguration())
           .getZooKeeperWatcher().getQuorum().equals(HConnectionManager
               .getConnection(otherConf).getZooKeeperWatcher().getQuorum()));
+      localMeta.close();
+      ipMeta.close();
     } catch (Exception e) {
       e.printStackTrace();
       fail();

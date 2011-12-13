@@ -97,6 +97,7 @@ public class TestAggregateProtocol {
           .toBytes(l * 10));
       table.put(p2);
     }
+    table.close();
   }
 
   /**

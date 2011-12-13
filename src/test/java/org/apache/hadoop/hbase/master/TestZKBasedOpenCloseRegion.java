@@ -73,6 +73,7 @@ public class TestZKBasedOpenCloseRegion {
     countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
     waitUntilAllRegionsAssigned();
     addToEachStartKey(countOfRegions);
+    t.close();
   }
 
   @AfterClass public static void afterAllTests() throws Exception {
@@ -332,6 +333,7 @@ public class TestZKBasedOpenCloseRegion {
       LOG.info("Found=" + rows);
       Threads.sleep(1000);
     }
+    meta.close();
   }
 
   /*
@@ -366,6 +368,8 @@ public class TestZKBasedOpenCloseRegion {
     }
     s.close();
     Assert.assertEquals(expected, rows);
+    t.close();
+    meta.close();
     return rows;
   }
 

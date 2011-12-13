@@ -94,6 +94,8 @@ public class TestMetaMigrationRemovingHTD {
     // Assert that we find all 100 rows that are in the data we loaded.  If
     // so then we must have migrated it from 0.90 to 0.92.
     Assert.assertEquals(ROWCOUNT, count);
+    scanner.close();
+    t.close();
   }
 
   private static File untar(final File testdir) throws IOException {
@@ -305,6 +307,7 @@ public class TestMetaMigrationRemovingHTD {
       newRegions.add(hri);
       count++;
     }
+    meta.close();
     return count;
   }
 
@@ -349,6 +352,7 @@ public class TestMetaMigrationRemovingHTD {
       newRegions.add(hri);
       count++;
     }
+    meta.close();
     return count;
   }
 

@@ -795,6 +795,7 @@ public class PerformanceEvaluation {
       if (flushCommits) {
         this.table.flushCommits();
       }
+      table.close();
     }
 
     /*

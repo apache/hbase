@@ -92,7 +92,7 @@ public class TestMetaScanner {
     doReturn(true).when(visitor).processRow((Result)anyObject());
     MetaScanner.metaScan(conf, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1);
     verify(visitor, times(1)).processRow((Result)anyObject());
-        
+    table.close();
   }
 
   @org.junit.Rule

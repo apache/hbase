@@ -295,7 +295,7 @@ public class TestRollingRestart {
 
     // TODO: Bring random 3 of 4 RS down at the same time
 
-
+    ht.close();
     // Stop the cluster
     TEST_UTIL.shutdownMiniCluster();
   }

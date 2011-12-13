@@ -126,6 +126,7 @@ public class TestRegionRebalancing {
     }
     UTIL.getHBaseCluster().getMaster().balance();
     assertRegionsAreBalanced();
+    table.close();
   }
 
   /** figure out how many regions are currently being served. */

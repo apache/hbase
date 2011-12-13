@@ -161,6 +161,7 @@ public class TestInstantSchemaChangeFailover {
     assertTrue(ZKUtil.checkExists(zkw, nodePath) == -1);
     LOG.info("result2 = " + result2);
     LOG.info("end testInstantSchemaChangeWhileRSCrash()");
+    ht.close();
   }
 
   /**
@@ -205,6 +206,7 @@ public class TestInstantSchemaChangeFailover {
     assertEquals(result2, 0);
     LOG.info("result2 = " + result2);
     LOG.info("end testInstantSchemaChangeWhileRandomRSCrashAndStart()");
+    ht.close();
   }
 
   /**
@@ -246,6 +248,7 @@ public class TestInstantSchemaChangeFailover {
     assertEquals(result2, 0);
     LOG.info("result2 = " + result2);
     LOG.info("end testInstantSchemaChangeWhileMasterFailover()");
+    ht.close();
   }
 
   /**

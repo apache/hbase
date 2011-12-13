@@ -3178,6 +3178,8 @@ public class TestHRegion extends HBaseTestCase {
         blocksDistribution2.getUniqueBlocksTotalWeight();
 
       assertTrue(uniqueBlocksWeight1 == uniqueBlocksWeight2);
+
+      ht.close();
       } finally {
         htu.shutdownMiniCluster();
       }

@@ -94,6 +94,7 @@ public class TestCoprocessorEndpoint {
       (table.getRegionsInfo().size() != 2)) {
       Thread.sleep(250);
     }
+    table.close();
   }
 
   @AfterClass
@@ -128,12 +129,12 @@ public class TestCoprocessorEndpoint {
     assertEquals(6f, workResult10, 0.01);
     Text workResult11 = protocol.doWork(new Text("foo"));
     assertEquals(new Text("foo"), workResult11);
+    table.close();
   }
 
   @Test
   public void testAggregation() throws Throwable {
     HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
-    Scan scan;
     Map<byte[], Long> results;
 
     // scan: for all regions
@@ -177,6 +178,7 @@ public class TestCoprocessorEndpoint {
       expectedResult += i;
     }
     assertEquals("Invalid result", sumResult, expectedResult);
+    table.close();
   }
 
   @Test
