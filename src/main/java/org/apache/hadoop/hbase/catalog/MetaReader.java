@@ -262,7 +262,12 @@ public class MetaReader {
     try {
       Result data;
       while((data = metaServer.next(scannerid)) != null) {
-        if (!data.isEmpty()) visitor.visit(data);
+        if (!data.isEmpty()) {
+          // Break if visit returns false.
+          if (!visitor.visit(data)) {
+            break;
+          }
+        }
       }
     } finally {
       metaServer.close(scannerid);

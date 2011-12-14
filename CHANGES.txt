@@ -3,6 +3,8 @@ Release 0.90.6 - Unreleased
   BUG FIXES
    HBASE-5008  The clusters can't provide services because Region can't flush
                (Gaojinchao)
+   HBASE-5020  MetaReader#fullScan doesn't stop scanning when vistor returns
+               false in 0.90 version (Chunhui Shen)
 
 Release 0.90.5 - Unreleased
   BUG FIXES
