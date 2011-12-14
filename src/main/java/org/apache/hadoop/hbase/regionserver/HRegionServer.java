@@ -2203,9 +2203,18 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       RegionScanner s = scanners.remove(this.scannerName);
       if (s != null) {
         try {
+          HRegion region = getRegion(s.getRegionInfo().getRegionName());
+          if (region != null && region.getCoprocessorHost() != null) {
+            region.getCoprocessorHost().preScannerClose(s);
+          }
+
           s.close();
+          if (region != null && region.getCoprocessorHost() != null) {
+            region.getCoprocessorHost().postScannerClose(s);
+          }
         } catch (IOException e) {
-          LOG.error("Closing scanner", e);
+          LOG.error("Closing scanner for "
+              + s.getRegionInfo().getRegionNameAsString(), e);
         }
       }
     }
