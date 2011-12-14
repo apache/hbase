@@ -516,48 +516,73 @@ public class ServerManager {
   }
 
   /**
-   * Waits for the regionservers to report in.
+   * Wait for the region servers to report in.
+   * We will wait until one of this condition is met:
+   *  - the master is stopped
+   *  - the 'hbase.master.wait.on.regionservers.timeout' is reached
+   *  - the 'hbase.master.wait.on.regionservers.maxtostart' number of
+   *    region servers is reached
+   *  - the 'hbase.master.wait.on.regionservers.mintostart' is reached AND
+   *   there have been no new region server in for
+   *      'hbase.master.wait.on.regionservers.interval' time
+   *
    * @throws InterruptedException
    */
   public void waitForRegionServers(MonitoredTask status)
   throws InterruptedException {
-    long interval = this.master.getConfiguration().
+    final long interval = this.master.getConfiguration().
       getLong("hbase.master.wait.on.regionservers.interval", 1500);
-    long timeout = this.master.getConfiguration().
+    final long timeout = this.master.getConfiguration().
     getLong("hbase.master.wait.on.regionservers.timeout", 4500);
-    int minToStart = this.master.getConfiguration().
+    final int minToStart = this.master.getConfiguration().
     getInt("hbase.master.wait.on.regionservers.mintostart", 1);
-    int maxToStart = this.master.getConfiguration().
-    getInt("hbase.master.wait.on.regionservers.maxtostart", Integer.MAX_VALUE);    
-    // So, number of regionservers > 0 and its been n since last check in, break,
-    // else just stall here
-    int count = 0;
-    long slept = 0;
-    for (int oldcount = countOfRegionServers(); !this.master.isStopped();) {
-      Thread.sleep(interval);
-      slept += interval;
-      count = countOfRegionServers();
+    final int maxToStart = this.master.getConfiguration().
+    getInt("hbase.master.wait.on.regionservers.maxtostart", Integer.MAX_VALUE);
 
-      String msg;
-      if (count == oldcount && count >= minToStart && slept >= timeout) {
-        LOG.info("Finished waiting for regionserver count to settle; " +
-            "count=" + count + ", sleptFor=" + slept);
-        break;
+    long now =  System.currentTimeMillis();
+    final long startTime = now;
+    long slept = 0;
+    long lastLogTime = 0;
+    long lastCountChange = startTime;
+    int count = countOfRegionServers();
+    int oldCount = 0;
+    while (
+      !this.master.isStopped() &&
+        slept < timeout &&
+        count < maxToStart &&
+        !(lastCountChange+interval > now && count >= minToStart)
+      ){
+
+      // Log some info at every interval time or if there is a change
+      if (oldCount != count || lastLogTime+interval < now){
+        lastLogTime = now;
+        String msg =
+          "Waiting for region servers count to settle; currently"+
+            " checked in " + count + ", slept for " + slept + " ms," +
+            " expecting minimum of " + minToStart + ", maximum of "+ maxToStart+
+            ", timeout of "+timeout+" ms, interval of "+interval+" ms.";
+        LOG.info(msg);
+        status.setStatus(msg);
       }
-      if (count >= maxToStart) {
-        LOG.info("At least the max configured number of regionserver(s) have " +
-            "checked in: " + count);
-        break;
+
+      // We sleep for some time
+      final long sleepTime = 50;
+      Thread.sleep(sleepTime);
+      now =  System.currentTimeMillis();
+      slept = now - startTime;
+
+      oldCount = count;
+      count = countOfRegionServers();
+      if (count != oldCount) {
+        lastCountChange = now;
       }
-      if (count == 0) {
-        msg = "Waiting on regionserver(s) to checkin";
-      } else {
-        msg = "Waiting on regionserver(s) count to settle; currently=" + count;
-      }
-      LOG.info(msg);
-      status.setStatus(msg);
-      oldcount = count;
     }
+
+    LOG.info("Finished waiting for region servers count to settle;" +
+      " checked in " + count + ", slept for " + slept + " ms," +
+      " expecting minimum of " + minToStart + ", maximum of "+ maxToStart+","+
+      " master is "+ (this.master.isStopped() ? "stopped.": "running.")
+    );
   }
 
   /**

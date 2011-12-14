@@ -561,6 +561,12 @@ public class HBaseTestingUtility {
   throws IOException, InterruptedException {
     // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
     createRootDir();
+
+    // These settings will make the server waits until this exact number of
+    //  regions servers are connected.
+    conf.setInt("hbase.master.wait.on.regionservers.mintostart", numSlaves);
+    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", numSlaves);
+
     Configuration c = new Configuration(this.conf);
     this.hbaseCluster = new MiniHBaseCluster(c, numMasters, numSlaves);
     // Don't leave here till we've done a successful scan of the .META.

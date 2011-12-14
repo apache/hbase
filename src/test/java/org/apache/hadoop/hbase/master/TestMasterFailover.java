@@ -71,8 +71,6 @@ public class TestMasterFailover {
 
     // Create config to use for this cluster
     Configuration conf = HBaseConfiguration.create();
-    conf.setInt("hbase.master.wait.on.regionservers.mintostart", 3);
-    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", 3);
 
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
