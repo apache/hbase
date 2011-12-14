@@ -261,6 +261,7 @@ public class TestHFilePerformance extends TestCase {
             }
             break;
         }
+      reader.close();
     } else if("SequenceFile".equals(fileType)){
 
         SequenceFile.Reader reader;
