@@ -1554,6 +1554,8 @@ scan.setFilter(filter);
            <para>Periodically, and when there are not any regions in transition,
              a load balancer will run and move regions around to balance cluster load.
              See <xref linkend="balancer_config" /> for configuring this property.</para>
+             <para>See <xref linkend="regions.arch.assignment"/> for more information on region assignment.
+             </para>
          </section>
          <section xml:id="master.processes.catalog"><title>CatalogJanitor</title>
            <para>Periodically checks and cleans up the .META. table.  See <xref linkend="arch.catalog.meta" /> for more information on META.</para>
@@ -1714,6 +1716,90 @@ scan.setFilter(filter);
       </para>
     </section>
 
+      <section xml:id="regions.arch.assignment">
+        <title>Region-RegionServer Assignment</title>
+        <para>This section describes how Regions are assigned to RegionServers.
+         </para>
+
+        <section xml:id="regions.arch.assignment.startup">
+          <title>Startup</title>
+          <para>When HBase starts regions are assigned as follows (short version):
+           </para>
+            <orderedlist>
+              <listitem>
+                <para>The Master invokes the <code>AssignmentManager</code> upon startup.</para>
+              </listitem>
+              <listitem>
+                <para>The <code>AssignmentManager</code> looks at the existing region assignments
+                in META.</para>
+              </listitem>
+              <listitem>
+                <para>If the region assignment is still valid (i.e., if the RegionServer) is still online
+                then the assignment is kept.
+                </para>
+              </listitem>
+              <listitem>
+                <para>If the assignment is invalid, then the <code>LoadBalancerFactory</code> is invoked to assign the 
+                region.  The <code>DefaultLoadBalancer</code> will randomly assign the region to a RegionServer. 
+                </para>
+              </listitem>
+      </orderedlist>
+        
+        </section>
+
+        <section xml:id="regions.arch.assignment.failover">
+          <title>Failover</title>
+          <para>When a RegionServer fails (short version):
+           </para>
+            <orderedlist>
+              <listitem>
+                <para>The regions immediately become unavailable because the RegionServer is down.</para>
+              </listitem>
+              <listitem>
+                <para>The Master will detect that the RegionServer has failed.</para>
+              </listitem>
+              <listitem>
+                <para>The region assignments will be considered invalid and will be re-assigned just
+                like the startup sequence.    
+                </para>
+              </listitem>
+            </orderedlist>
+        
+        </section>
+
+        <section xml:id="regions.arch.balancer">
+          <title>Region Load Balancing</title>
+          <para>
+          Regions can be periodically moved by the <xref linkend="master.processes.loadbalancer" />.
+          </para>
+        </section>
+
+      </section>  <!--  assignment -->
+
+      <section xml:id="regions.arch.locality">
+        <title>Region-RegionServer Locality</title>
+        <para>Over time, Region-RegionServer locality is achieved via the an aspect of
+        HDFS block replication.  The HDFS client when choosing where to write it replicas,
+        by default does as follows:
+           <orderedlist>
+             <listitem>First replica is written to local node
+             </listitem>
+             <listitem>Second replica to another node in same rack
+             </listitem>
+             <listitem>Third replica to a node in another rack (if sufficient nodes)
+             </listitem>
+           </orderedlist>
+          HBase eventually achieves locality for a region after a flush a compaction. 
+          In a RegionServer failover situation a RegionServer may be assigned regions with non-local
+          StoreFiles (i.e., none of the replicas are local), however eventually as new data is written
+          in the region, or the table is compacted and StoreFiles are re-written, they will become "local"
+          to the RegionServer.  
+        </para>
+        <para>For more information, see <link xlink:href="http://hadoop.apache.org/common/docs/r0.20.205.0/hdfs_design.html#Replica+Placement%3A+The+First+Baby+Steps">HDFS Design on Replica Placement</link>
+        and also Lars George's blog on <link xlink:href="http://www.larsgeorge.com/2010/05/hbase-file-locality-in-hdfs.html">HBase and HDFS locality</link>.      
+        </para>
+      </section>
+
       <section>
         <title>Region Splits</title>
 
@@ -1723,15 +1809,6 @@ scan.setFilter(filter);
         the parent's hosting RegionServer and then reports the split to the
         Master. See <xref linkend="disable.splitting" /> for how to manually manage
         splits (and for why you might do this)</para>
-      </section>
-
-      <section xml:id="regions.arch.balancer">
-        <title>Region Load Balancing</title>
-
-        <para>
-        Regions can be periodically moved by the <xref linkend="master.processes.loadbalancer" />.
-        </para>
-       
       </section>
 
       <section xml:id="store">
@@ -2729,13 +2806,15 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
          <para><link xlink:href="http://www.slideshare.net/cloudera/hw09-practical-h-base-getting-the-most-from-your-h-base-install">Getting The Most From Your HBase Install</link> by Ryan Rawson, Jonathan Gray (Hadoop World 2009).
          </para>
        </section>
-       <section xml:id="other.info.papers"><title>Papers</title>
+       <section xml:id="other.info.papers"><title>HBase Papers</title>
          <para><link xlink:href="http://research.google.com/archive/bigtable.html">BigTable</link> by Google (2006).
+         </para>
+         <para><link xlink:href="http://www.larsgeorge.com/2010/05/hbase-file-locality-in-hdfs.html">HBase and HDFS Locality</link> by Lars George (2010).
          </para>
          <para><link xlink:href="http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf">No Relation: The Mixed Blessings of Non-Relational Databases</link> by Ian Varley (2009).
          </para>
        </section>
-       <section xml:id="other.info.sites"><title>Sites</title>
+       <section xml:id="other.info.sites"><title>HBase Sites</title>
          <para><link xlink:href="http://www.cloudera.com/blog/category/hbase/">Cloudera's HBase Blog</link> has a lot of links to useful HBase information.
 		<itemizedlist>
 			<listitem><link xlink:href="http://www.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/">CAP Confusion</link> is a relevant entry for background information on
@@ -2746,10 +2825,15 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
          <para><link xlink:href="http://wiki.apache.org/hadoop/HBase/HBasePresentations">HBase Wiki</link> has a page with a number of presentations.
          </para>
        </section>
-       <section xml:id="other.info.books"><title>Books</title>
+       <section xml:id="other.info.books"><title>HBase Books</title>
          <para><link xlink:href="http://shop.oreilly.com/product/0636920014348.do">HBase:  The Definitive Guide</link> by Lars George.
          </para>
        </section>
+       <section xml:id="other.info.books.hadoop"><title>Hadoop Books</title>
+         <para><link xlink:href="http://shop.oreilly.com/product/9780596521981.do">Hadoop:  The Definitive Guide</link> by Tom White.
+         </para>
+       </section>
+       
   </appendix>
 
   <appendix xml:id="asf" ><title>HBase and the Apache Software Foundation</title>
