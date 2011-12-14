@@ -456,6 +456,7 @@ Release 0.92.0 - Unreleased
    HBASE-4610  Port HBASE-3380 (Master failover can split logs of live servers) to 92/trunk
    HBASE-4946  HTable.coprocessorExec (and possibly coprocessorProxy) does not work with
                dynamically loaded coprocessors (Andrei Dragomir)
+   HBASE-5026  Add coprocessor hook to HRegionServer.ScannerListener.leaseExpired()
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
