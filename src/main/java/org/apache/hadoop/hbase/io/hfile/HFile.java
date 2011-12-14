@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -142,9 +141,6 @@ public class HFile {
   /** Default compression name: none. */
   public final static String DEFAULT_COMPRESSION =
     DEFAULT_COMPRESSION_ALGORITHM.getName();
-
-  /** Separator between HFile name and offset in block cache key */
-  static final char CACHE_KEY_SEPARATOR = '_';
 
   /**
    * We assume that HFile path ends with
@@ -505,8 +501,8 @@ public class HFile {
     System.exit(prettyPrinter.run(args));
   }
 
-  public static String getBlockCacheKey(String hfileName, long offset) {
-    return hfileName + CACHE_KEY_SEPARATOR + offset;
+  public static BlockCacheKey getBlockCacheKey(String hfileName, long offset) {
+    return new BlockCacheKey(hfileName, offset);
   }
 
   /**

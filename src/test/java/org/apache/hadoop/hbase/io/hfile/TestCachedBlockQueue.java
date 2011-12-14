@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
 
-import java.util.LinkedList;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 
 import junit.framework.TestCase;
@@ -65,7 +64,7 @@ public class TestCachedBlockQueue extends TestCase {
     assertEquals(queue.heapSize(), expectedSize);
 
     for (int i = 1; i <= 8; i++) {
-      assertEquals(queue.pollLast().getName(), "cb"+i);      
+      assertEquals(queue.pollLast().getCacheKey().getHfileName(), "cb"+i);      
     }
   }
 
@@ -110,14 +109,14 @@ public class TestCachedBlockQueue extends TestCase {
     assertEquals(queue.heapSize(), expectedSize);
 
     for (int i = 0; i <= 8; i++) {
-      assertEquals(queue.pollLast().getName(), "cb"+i);      
+      assertEquals(queue.pollLast().getCacheKey().getHfileName(), "cb"+i);      
     }
   }
 
   private static class CachedBlock extends org.apache.hadoop.hbase.io.hfile.CachedBlock
   {
     public CachedBlock(final long heapSize, String name, long accessTime) {
-      super(name,
+      super(new BlockCacheKey(name, 0),
           new Cacheable() {
             @Override
             public long heapSize() {

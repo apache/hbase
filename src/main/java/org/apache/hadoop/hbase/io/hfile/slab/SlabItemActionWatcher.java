@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.io.hfile.slab;
 
+import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+
 /**
  * Interface for objects that want to know when actions occur in a SingleSizeCache.
  * */
@@ -31,7 +33,7 @@ interface SlabItemActionWatcher {
    * @param key the key of the item being evicted
    * @param notifier the object notifying the SlabCache of the eviction.
    */
-  void onEviction(String key, SingleSizeCache notifier);
+  void onEviction(BlockCacheKey key, SingleSizeCache notifier);
   
   /**
    * This is called as a callback when an item is inserted into a SingleSizeCache.
@@ -39,5 +41,5 @@ interface SlabItemActionWatcher {
    * @param key the key of the item being added
    * @param notifier the object notifying the SlabCache of the insertion..
    */
-  void onInsertion(String key, SingleSizeCache notifier);
+  void onInsertion(BlockCacheKey key, SingleSizeCache notifier);
 }

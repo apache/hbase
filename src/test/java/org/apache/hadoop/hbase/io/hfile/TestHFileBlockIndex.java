@@ -468,8 +468,7 @@ public class TestHFileBlockIndex {
       LOG.info("Index block size: " + indexBlockSize + ", compression: "
           + compr);
       // Evict all blocks that were cached-on-write by the previous invocation.
-      blockCache.evictBlocksByPrefix(hfilePath.getName()
-          + HFile.CACHE_KEY_SEPARATOR);
+      blockCache.evictBlocksByHfileName(hfilePath.getName());
 
       conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, indexBlockSize);
       Set<String> keyStrSet = new HashSet<String>();

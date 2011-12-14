@@ -27,50 +27,44 @@ import org.apache.hadoop.conf.Configuration;
 /**
  * Block cache interface. Anything that implements the {@link Cacheable}
  * interface can be put in the cache.
- *
- * TODO: Add filename or hash of filename to block cache key.
  */
 public interface BlockCache {
   /**
    * Add block to cache.
-   * @param blockName Zero-based file block number.
+   * @param cacheKey The block's cache key.
    * @param buf The block contents wrapped in a ByteBuffer.
    * @param inMemory Whether block should be treated as in-memory
    */
-  public void cacheBlock(String blockName, Cacheable buf, boolean inMemory);
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory);
 
   /**
    * Add block to cache (defaults to not in-memory).
-   * @param blockName Zero-based file block number.
+   * @param cacheKey The block's cache key.
    * @param buf The object to cache.
    */
-  public void cacheBlock(String blockName, Cacheable buf);
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf);
 
   /**
    * Fetch block from cache.
-   * @param blockName Block number to fetch.
+   * @param cacheKey Block to fetch.
    * @param caching Whether this request has caching enabled (used for stats)
    * @return Block or null if block is not in 2 cache.
    */
-  public Cacheable getBlock(String blockName, boolean caching);
+  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching);
 
   /**
    * Evict block from cache.
-   * @param blockName Block name to evict
+   * @param cacheKey Block to evict
    * @return true if block existed and was evicted, false if not
    */
-  public boolean evictBlock(String blockName);
+  public boolean evictBlock(BlockCacheKey cacheKey);
 
   /**
-   * Evicts all blocks with name starting with the given prefix. This is
-   * necessary in cases we need to evict all blocks that belong to a particular
-   * HFile. In HFile v2 all blocks consist of the storefile name (UUID), an
-   * underscore, and the block offset in the file. An efficient implementation
-   * would avoid scanning all blocks in the cache.
+   * Evicts all blocks for the given HFile.
    *
    * @return the number of blocks evicted
    */
-  public int evictBlocksByPrefix(String string);
+  public int evictBlocksByHfileName(String hfileName);
 
   /**
    * Get the statistics for this block cache.
