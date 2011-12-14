@@ -191,6 +191,7 @@ public class TestLoadIncrementalHFiles {
       count++;
     } while (scanner.next());
     assertTrue(count > 0);
+    reader.close();
     return count;
   }
 

@@ -90,6 +90,8 @@ public class TestHalfStoreFileReader {
 
     Reference top = new Reference(midkey, Reference.Range.top);
     doTestOfScanAndReseek(p, fs, top, cacheConf);
+
+    r.close();
   }
 
   private void doTestOfScanAndReseek(Path p, FileSystem fs, Reference bottom,

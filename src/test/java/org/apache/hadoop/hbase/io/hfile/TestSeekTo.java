@@ -93,6 +93,8 @@ public class TestSeekTo extends HBaseTestCase {
     assertEquals("i", toRowStr(scanner.getKeyValue()));
     assertEquals(true, scanner.seekBefore(toKV("l").getKey()));
     assertEquals("k", toRowStr(scanner.getKeyValue()));
+
+    reader.close();
   }
 
   public void testSeekTo() throws Exception {
@@ -113,6 +115,8 @@ public class TestSeekTo extends HBaseTestCase {
 
     assertEquals(1, scanner.seekTo(toKV("l").getKey()));
     assertEquals("k", toRowStr(scanner.getKeyValue()));
+
+    reader.close();
   }
 
   public void testBlockContainingKey() throws Exception {
@@ -144,6 +148,8 @@ public class TestSeekTo extends HBaseTestCase {
         toKV("k").getKey(), 0, klen));
     assertEquals(1, blockIndexReader.rootBlockContainingKey(
         toKV("l").getKey(), 0, klen));
+
+    reader.close();
  }
 
   @org.junit.Rule

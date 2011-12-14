@@ -296,6 +296,7 @@ public class TestHFileOutputFormat  {
           "...." + timeRangeTracker.getMaximumTimestamp());
       assertEquals(1000, timeRangeTracker.getMinimumTimestamp());
       assertEquals(2000, timeRangeTracker.getMaximumTimestamp());
+      rd.close();
     } finally {
       if (writer != null && context != null) writer.close(context);
       dir.getFileSystem(conf).delete(dir, true);

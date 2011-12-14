@@ -87,6 +87,8 @@ public class TestReseekTo {
       scanner.reseekTo(Bytes.toBytes(key));
       assertEquals(value, scanner.getValueString());
     }
+
+    reader.close();
   }
 
 

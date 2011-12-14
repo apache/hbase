@@ -572,6 +572,7 @@ public class TestHFileBlockIndex {
           reader.getTrailer().getUncompressedDataIndexSize());
 
       reader.close();
+      reader2.close();
     }
   }
 
