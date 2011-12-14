@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -53,7 +54,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  **/
 public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
 
-  private final ConcurrentHashMap<String, SingleSizeCache> backingStore;
+  private final ConcurrentHashMap<BlockCacheKey, SingleSizeCache> backingStore;
   private final TreeMap<Integer, SingleSizeCache> sizer;
   static final Log LOG = LogFactory.getLog(SlabCache.class);
   static final int STAT_THREAD_PERIOD_SECS = 60 * 5;
@@ -85,7 +86,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
     this.requestStats = new SlabStats();
     this.successfullyCachedStats = new SlabStats();
 
-    backingStore = new ConcurrentHashMap<String, SingleSizeCache>();
+    backingStore = new ConcurrentHashMap<BlockCacheKey, SingleSizeCache>();
     sizer = new TreeMap<Integer, SingleSizeCache>();
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
         STAT_THREAD_PERIOD_SECS, STAT_THREAD_PERIOD_SECS, TimeUnit.SECONDS);
@@ -184,7 +185,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
   }
 
   /**
-   * Cache the block with the specified name and buffer. First finds what size
+   * Cache the block with the specified key and buffer. First finds what size
    * SingleSlabCache it should fit in. If the block doesn't fit in any, it will
    * return without doing anything.
    * <p>
@@ -192,10 +193,10 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
    * is done, it is assumed that you are reinserting the same exact block due to
    * a race condition, and will throw a runtime exception.
    *
-   * @param blockName block name
+   * @param cacheKey block cache key
    * @param cachedItem block buffer
    */
-  public void cacheBlock(String blockName, Cacheable cachedItem) {
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem) {
     Entry<Integer, SingleSizeCache> scacheEntry = getHigherBlock(cachedItem
         .getSerializedLength());
 
@@ -212,15 +213,15 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
      * This will throw a runtime exception if we try to cache the same value
      * twice
      */
-    scache.cacheBlock(blockName, cachedItem);
+    scache.cacheBlock(cacheKey, cachedItem);
   } 
 
   /**
    * We don't care about whether its in memory or not, so we just pass the call
    * through.
    */
-  public void cacheBlock(String blockName, Cacheable buf, boolean inMemory) {
-    cacheBlock(blockName, buf);
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+    cacheBlock(cacheKey, buf);
   }
 
   public CacheStats getStats() {
@@ -234,7 +235,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
    * @param caching
    * @return buffer of specified block name, or null if not in cache
    */
-  public Cacheable getBlock(String key, boolean caching) {
+  public Cacheable getBlock(BlockCacheKey key, boolean caching) {
     SingleSizeCache cachedBlock = backingStore.get(key);
     if (cachedBlock == null) {
       stats.miss(caching);
@@ -255,24 +256,24 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
    * Evicts a block from the cache. This is public, and thus contributes to the
    * the evict counter.
    */
-  public boolean evictBlock(String key) {
-    SingleSizeCache cacheEntry = backingStore.get(key);
+  public boolean evictBlock(BlockCacheKey cacheKey) {
+    SingleSizeCache cacheEntry = backingStore.get(cacheKey);
     if (cacheEntry == null) {
       return false;
     } else {
-      cacheEntry.evictBlock(key);
+      cacheEntry.evictBlock(cacheKey);
       return true;
     }
   }
 
   @Override
-  public void onEviction(String key, SingleSizeCache notifier) {
+  public void onEviction(BlockCacheKey key, SingleSizeCache notifier) {
     stats.evicted();
     backingStore.remove(key);
   }
   
   @Override
-  public void onInsertion(String key, SingleSizeCache notifier) {
+  public void onInsertion(BlockCacheKey key, SingleSizeCache notifier) {
     backingStore.put(key, notifier);
   }
 
@@ -402,10 +403,10 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
     }
   }
 
-  public int evictBlocksByPrefix(String prefix) {
+  public int evictBlocksByHfileName(String hfileName) {
     int numEvicted = 0;
-    for (String key : backingStore.keySet()) {
-      if (key.startsWith(prefix)) {
+    for (BlockCacheKey key : backingStore.keySet()) {
+      if (key.getHfileName().equals(hfileName)) {
         if (evictBlock(key))
           ++numEvicted;
       }

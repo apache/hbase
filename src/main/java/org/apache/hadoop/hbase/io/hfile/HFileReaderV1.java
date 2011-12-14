@@ -211,7 +211,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
     long startTimeNs = System.nanoTime();
 
-    String cacheKey = HFile.getBlockCacheKey(name, offset);
+    BlockCacheKey cacheKey = HFile.getBlockCacheKey(name, offset);
 
     // Per meta key from any given file, synchronize reads for said block
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
@@ -271,7 +271,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
     }
 
     long offset = dataBlockIndexReader.getRootBlockOffset(block);
-    String cacheKey = HFile.getBlockCacheKey(name, offset);
+    BlockCacheKey cacheKey = HFile.getBlockCacheKey(name, offset);
 
     // For any given block from any given file, synchronize reads for said
     // block.

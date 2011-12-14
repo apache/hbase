@@ -33,14 +33,14 @@ import org.apache.hadoop.conf.Configuration;
  */
 public class SimpleBlockCache implements BlockCache {
   private static class Ref extends SoftReference<Cacheable> {
-    public String blockId;
-    public Ref(String blockId, Cacheable block, ReferenceQueue q) {
+    public BlockCacheKey blockId;
+    public Ref(BlockCacheKey blockId, Cacheable block, ReferenceQueue q) {
       super(block, q);
       this.blockId = blockId;
     }
   }
-  private Map<String,Ref> cache =
-    new HashMap<String,Ref>();
+  private Map<BlockCacheKey,Ref> cache =
+    new HashMap<BlockCacheKey,Ref>();
 
   private ReferenceQueue q = new ReferenceQueue();
   public int dumps = 0;
@@ -68,26 +68,26 @@ public class SimpleBlockCache implements BlockCache {
     return cache.size();
   }
 
-  public synchronized Cacheable getBlock(String blockName, boolean caching) {
+  public synchronized Cacheable getBlock(BlockCacheKey cacheKey, boolean caching) {
     processQueue(); // clear out some crap.
-    Ref ref = cache.get(blockName);
+    Ref ref = cache.get(cacheKey);
     if (ref == null)
       return null;
     return ref.get();
   }
 
-  public synchronized void cacheBlock(String blockName, Cacheable block) {
-    cache.put(blockName, new Ref(blockName, block, q));
+  public synchronized void cacheBlock(BlockCacheKey cacheKey, Cacheable block) {
+    cache.put(cacheKey, new Ref(cacheKey, block, q));
   }
 
-  public synchronized void cacheBlock(String blockName, Cacheable block,
+  public synchronized void cacheBlock(BlockCacheKey cacheKey, Cacheable block,
       boolean inMemory) {
-    cache.put(blockName, new Ref(blockName, block, q));
+    cache.put(cacheKey, new Ref(cacheKey, block, q));
   }
 
   @Override
-  public boolean evictBlock(String blockName) {
-    return cache.remove(blockName) != null;
+  public boolean evictBlock(BlockCacheKey cacheKey) {
+    return cache.remove(cacheKey) != null;
   }
 
   public void shutdown() {
@@ -119,7 +119,7 @@ public class SimpleBlockCache implements BlockCache {
   }
 
   @Override
-  public int evictBlocksByPrefix(String string) {
+  public int evictBlocksByHfileName(String string) {
     throw new UnsupportedOperationException();
   }
 

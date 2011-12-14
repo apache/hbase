@@ -78,28 +78,28 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public void cacheBlock(String blockName, Cacheable buf, boolean inMemory) {
-    onHeapCache.cacheBlock(blockName, buf, inMemory);
-    offHeapCache.cacheBlock(blockName, buf);
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+    onHeapCache.cacheBlock(cacheKey, buf, inMemory);
+    offHeapCache.cacheBlock(cacheKey, buf);
   }
 
   @Override
-  public void cacheBlock(String blockName, Cacheable buf) {
-    onHeapCache.cacheBlock(blockName, buf);
-    offHeapCache.cacheBlock(blockName, buf);
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
+    onHeapCache.cacheBlock(cacheKey, buf);
+    offHeapCache.cacheBlock(cacheKey, buf);
   }
 
   @Override
-  public Cacheable getBlock(String blockName, boolean caching) {
+  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching) {
     Cacheable cachedBlock;
 
-    if ((cachedBlock = onHeapCache.getBlock(blockName, caching)) != null) {
+    if ((cachedBlock = onHeapCache.getBlock(cacheKey, caching)) != null) {
       stats.hit(caching);
       return cachedBlock;
 
-    } else if ((cachedBlock = offHeapCache.getBlock(blockName, caching)) != null) {
+    } else if ((cachedBlock = offHeapCache.getBlock(cacheKey, caching)) != null) {
       if (caching) {
-        onHeapCache.cacheBlock(blockName, cachedBlock);
+        onHeapCache.cacheBlock(cacheKey, cachedBlock);
       }
       stats.hit(caching);
       return cachedBlock;
@@ -110,10 +110,10 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public boolean evictBlock(String blockName) {
+  public boolean evictBlock(BlockCacheKey cacheKey) {
     stats.evict();
-    boolean cacheA = onHeapCache.evictBlock(blockName);
-    boolean cacheB = offHeapCache.evictBlock(blockName);
+    boolean cacheA = onHeapCache.evictBlock(cacheKey);
+    boolean cacheB = offHeapCache.evictBlock(cacheKey);
     boolean evicted = cacheA || cacheB;
     if (evicted) {
       stats.evicted();
@@ -154,9 +154,9 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public int evictBlocksByPrefix(String prefix) {
-    onHeapCache.evictBlocksByPrefix(prefix);
-    offHeapCache.evictBlocksByPrefix(prefix);
+  public int evictBlocksByHfileName(String hfileName) {
+    onHeapCache.evictBlocksByHfileName(hfileName);
+    offHeapCache.evictBlocksByHfileName(hfileName);
     return 0;
   }
 
