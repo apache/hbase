@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.DirectMemoryUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 
 /**
  * Stores all of the cache objects and configuration for a single HFile.
@@ -205,6 +206,19 @@ public class CacheConfig {
    */
   public boolean shouldCacheDataOnRead() {
     return isBlockCacheEnabled() && cacheDataOnRead;
+  }
+
+  /**
+   * Should we cache a block of a particular category? We always cache
+   * important blocks such as index blocks, as long as the block cache is
+   * available.
+   */
+  public boolean shouldCacheBlockOnRead(BlockCategory category) {
+    boolean shouldCache = isBlockCacheEnabled()
+        && (cacheDataOnRead ||
+            category == BlockCategory.INDEX ||
+            category == BlockCategory.BLOOM);
+    return shouldCache;
   }
 
   /**

@@ -19,9 +19,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.ByteArrayInputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -32,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
@@ -229,7 +228,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
    */
   @Override
   public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize,
-      boolean cacheBlock, boolean pread, final boolean isCompaction)
+      final boolean cacheBlock, boolean pread, final boolean isCompaction)
       throws IOException {
     if (dataBlockIndexReader == null) {
       throw new IOException("Block index not loaded");
@@ -251,8 +250,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
     try {
       blockLoads.incrementAndGet();
 
-      // Check cache for block. If found return.
-      cacheBlock &= cacheConf.shouldCacheDataOnRead();
       if (cacheConf.isBlockCacheEnabled()) {
         HFileBlock cachedBlock =
           (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey, cacheBlock);
@@ -266,19 +263,21 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       // Load block from filesystem.
       long startTimeNs = System.nanoTime();
-      HFileBlock dataBlock = fsBlockReader.readBlockData(dataBlockOffset,
+      HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset,
           onDiskBlockSize, -1, pread);
+      BlockCategory blockCategory = hfileBlock.getBlockType().getCategory();
 
       HFile.readTimeNano.addAndGet(System.nanoTime() - startTimeNs);
       HFile.readOps.incrementAndGet();
 
       // Cache the block
-      if (cacheBlock) {
-        cacheConf.getBlockCache().cacheBlock(cacheKey, dataBlock,
+      if (cacheBlock && cacheConf.shouldCacheBlockOnRead(
+        hfileBlock.getBlockType().getCategory())) {
+        cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
             cacheConf.isInMemory());
       }
 
-      return dataBlock;
+      return hfileBlock;
     } finally {
       offsetLock.releaseLockEntry(lockEntry);
     }

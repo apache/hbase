@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
@@ -212,6 +213,12 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
     String cacheKey = HFile.getBlockCacheKey(name, offset);
 
+    BlockCategory effectiveCategory = BlockCategory.META;
+    if (metaBlockName.equals(HFileWriterV1.BLOOM_FILTER_META_KEY) ||
+        metaBlockName.equals(HFileWriterV1.BLOOM_FILTER_DATA_KEY)) {
+      effectiveCategory = BlockCategory.BLOOM;
+    }
+
     // Per meta key from any given file, synchronize reads for said block
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
       metaLoads.incrementAndGet();
@@ -219,7 +226,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
       if (cacheConf.isBlockCacheEnabled()) {
         HFileBlock cachedBlock =
           (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
-              cacheConf.shouldCacheDataOnRead());
+              cacheConf.shouldCacheBlockOnRead(effectiveCategory));
         if (cachedBlock != null) {
           cacheHits.incrementAndGet();
           return cachedBlock.getBufferWithoutHeader();
@@ -236,7 +243,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
       HFile.readOps.incrementAndGet();
 
       // Cache the block
-      if (cacheConf.shouldCacheDataOnRead() && cacheBlock) {
+      if (cacheBlock && cacheConf.shouldCacheBlockOnRead(effectiveCategory)) {
         cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
             cacheConf.isInMemory());
       }
@@ -310,7 +317,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
       HFile.readOps.incrementAndGet();
 
       // Cache the block
-      if (cacheConf.shouldCacheDataOnRead() && cacheBlock) {
+      if (cacheBlock && cacheConf.shouldCacheBlockOnRead(
+        hfileBlock.getBlockType().getCategory())) {
         cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
             cacheConf.isInMemory());
       }
