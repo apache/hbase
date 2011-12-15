@@ -1142,7 +1142,8 @@ if (!b) {
        </para> 
        <para>It is critical to understand that number of reducers for the job affects the summarization implementation, and
        you'll have to design this into your reducer.  Specifically, whether it is designed to run as a singleton (one reducer)
-       or multiple reducers.  Neither is right or wrong, it depends on your use-case.  
+       or multiple reducers.  Neither is right or wrong, it depends on your use-case.  Recognize that the more reducers that
+       are assigned to the job, the more simultaneous connections to the RDBMS will be created - this will scale, but only to a point. 
        </para>
     <programlisting>
  public static class MyRdbmsReducer extends Reducer&lt;Text, IntWritable, Text, IntWritable&gt;  {
@@ -1164,7 +1165,7 @@ if (!b) {
 	
 }
     </programlisting>
-       <para>In the end, the summary results are in HBase.
+       <para>In the end, the summary results are written to your RDBMS table/s.
        </para>
    </section>
    
@@ -1731,12 +1732,14 @@ scan.setFilter(filter);
               </listitem>
               <listitem>The <code>AssignmentManager</code> looks at the existing region assignments in META.
               </listitem>
-              <listitem>If the region assignment is still valid (i.e., if the RegionServer) is still online
+              <listitem>If the region assignment is still valid (i.e., if the RegionServer is still online)
                 then the assignment is kept.
               </listitem>
               <listitem>If the assignment is invalid, then the <code>LoadBalancerFactory</code> is invoked to assign the 
-                region.  The <code>DefaultLoadBalancer</code> will randomly assign the region to a RegionServer and
-                update META.
+                region.  The <code>DefaultLoadBalancer</code> will randomly assign the region to a RegionServer.
+              </listitem>
+              <listitem>META is updated with the RegionServer assignment (if needed) and the RegionServer start codes 
+              (start time of the RegionServer process) upon region opening by the RegionServer.
               </listitem>
            </orderedlist>
           </para>
@@ -1755,7 +1758,6 @@ scan.setFilter(filter);
               </listitem>
             </orderedlist>
            </para>
-        
         </section>
 
         <section xml:id="regions.arch.balancer">
@@ -1769,9 +1771,8 @@ scan.setFilter(filter);
 
       <section xml:id="regions.arch.locality">
         <title>Region-RegionServer Locality</title>
-        <para>Over time, Region-RegionServer locality is achieved via the an aspect of
-        HDFS block replication.  The HDFS client when choosing where to write it replicas,
-        by default does as follows:
+        <para>Over time, Region-RegionServer locality is achieved via HDFS block replication.
+          The HDFS client does the following by default when choosing locations to write replicas:
            <orderedlist>
              <listitem>First replica is written to local node
              </listitem>
@@ -1780,9 +1781,9 @@ scan.setFilter(filter);
              <listitem>Third replica is written to a node in another rack (if sufficient nodes)
              </listitem>
            </orderedlist>
-          HBase eventually achieves locality for a region after a flush a compaction. 
+          Thus, HBase eventually achieves locality for a region after a flush or a compaction. 
           In a RegionServer failover situation a RegionServer may be assigned regions with non-local
-          StoreFiles (i.e., none of the replicas are local), however eventually as new data is written
+          StoreFiles (because none of the replicas are local), however as new data is written
           in the region, or the table is compacted and StoreFiles are re-written, they will become "local"
           to the RegionServer.  
         </para>
@@ -2045,6 +2046,16 @@ scan.setFilter(filter);
                 </para>
             </answer>
         </qandaentry>
+    </qandadiv>
+    <qandadiv xml:id="faq.arch"><title>Architecture</title>
+        <qandaentry xml:id="faq.arch.regions">
+            <question><para>How does HBase handle Region-RegionServer assignment and locality?</para></question>
+            <answer>
+                <para>
+                    See <xref linkend="regions.arch" />.
+                </para>
+            </answer>
+            </qandaentry>
     </qandadiv>
     <qandadiv xml:id="faq.config"><title>Configuration</title>
         <qandaentry xml:id="faq.config.started">
