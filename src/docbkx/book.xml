@@ -1319,6 +1319,8 @@ if (!b) {
 	    <title>Startup Sequencing</title>
 	    <para>The META location is set in ROOT first.  Then META is updated with server and startcode values.
 	    </para>
+	    <para>For information on region-RegionServer assignment, see <xref linkend="regions.arch.assignment"/>.
+	    </para>
 	    </section>	   
      </section>  <!--  catalog -->
      
@@ -1724,46 +1726,35 @@ scan.setFilter(filter);
         <section xml:id="regions.arch.assignment.startup">
           <title>Startup</title>
           <para>When HBase starts regions are assigned as follows (short version):
-           </para>
             <orderedlist>
-              <listitem>
-                <para>The Master invokes the <code>AssignmentManager</code> upon startup.</para>
+              <listitem>The Master invokes the <code>AssignmentManager</code> upon startup.
               </listitem>
-              <listitem>
-                <para>The <code>AssignmentManager</code> looks at the existing region assignments
-                in META.</para>
+              <listitem>The <code>AssignmentManager</code> looks at the existing region assignments in META.
               </listitem>
-              <listitem>
-                <para>If the region assignment is still valid (i.e., if the RegionServer) is still online
+              <listitem>If the region assignment is still valid (i.e., if the RegionServer) is still online
                 then the assignment is kept.
-                </para>
               </listitem>
-              <listitem>
-                <para>If the assignment is invalid, then the <code>LoadBalancerFactory</code> is invoked to assign the 
-                region.  The <code>DefaultLoadBalancer</code> will randomly assign the region to a RegionServer. 
-                </para>
+              <listitem>If the assignment is invalid, then the <code>LoadBalancerFactory</code> is invoked to assign the 
+                region.  The <code>DefaultLoadBalancer</code> will randomly assign the region to a RegionServer and
+                update META.
               </listitem>
-      </orderedlist>
-        
+           </orderedlist>
+          </para>
         </section>
 
         <section xml:id="regions.arch.assignment.failover">
           <title>Failover</title>
           <para>When a RegionServer fails (short version):
-           </para>
             <orderedlist>
-              <listitem>
-                <para>The regions immediately become unavailable because the RegionServer is down.</para>
+              <listitem>The regions immediately become unavailable because the RegionServer is down.
               </listitem>
-              <listitem>
-                <para>The Master will detect that the RegionServer has failed.</para>
+              <listitem>The Master will detect that the RegionServer has failed.
               </listitem>
-              <listitem>
-                <para>The region assignments will be considered invalid and will be re-assigned just
+              <listitem>The region assignments will be considered invalid and will be re-assigned just
                 like the startup sequence.    
-                </para>
               </listitem>
             </orderedlist>
+           </para>
         
         </section>
 
@@ -1784,9 +1775,9 @@ scan.setFilter(filter);
            <orderedlist>
              <listitem>First replica is written to local node
              </listitem>
-             <listitem>Second replica to another node in same rack
+             <listitem>Second replica is written to another node in same rack
              </listitem>
-             <listitem>Third replica to a node in another rack (if sufficient nodes)
+             <listitem>Third replica is written to a node in another rack (if sufficient nodes)
              </listitem>
            </orderedlist>
           HBase eventually achieves locality for a region after a flush a compaction. 
