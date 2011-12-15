@@ -34,10 +34,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,7 +53,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import static org.apache.hadoop.hbase.regionserver.TestMultiColumnScanner.*;
 import static org.junit.Assert.*;
 
 /**
@@ -63,6 +67,8 @@ public class TestScanWithBloomError {
     LogFactory.getLog(TestScanWithBloomError.class);
 
   private static final String TABLE_NAME = "ScanWithBloomError";
+  private static final String FAMILY = "myCF";
+  private static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
   private static final String ROW = "theRow";
   private static final String QUALIFIER_PREFIX = "qual";
   private static final byte[] ROW_BYTES = Bytes.toBytes(ROW);
@@ -73,7 +79,7 @@ public class TestScanWithBloomError {
   private Configuration conf;
 
   private final static HBaseTestingUtility TEST_UTIL =
-    new HBaseTestingUtility();
+      new HBaseTestingUtility();
 
   @Parameters
   public static final Collection<Object[]> parameters() {
@@ -96,8 +102,10 @@ public class TestScanWithBloomError {
 
   @Test
   public void testThreeStoreFiles() throws IOException {
-    region = createRegion(TABLE_NAME, Compression.Algorithm.GZ, bloomType,
-        MAX_VERSIONS);
+    region = TEST_UTIL.createTestRegion(TABLE_NAME,
+        FAMILY, Compression.Algorithm.GZ, bloomType,
+        TestMultiColumnScanner.MAX_VERSIONS,
+        HColumnDescriptor.DEFAULT_BLOCKCACHE, HFile.DEFAULT_BLOCKSIZE);
     createStoreFile(new int[] {1, 2, 6});
     createStoreFile(new int[] {1, 2, 3, 7});
     createStoreFile(new int[] {1, 9});
@@ -178,8 +186,10 @@ public class TestScanWithBloomError {
   }
 
   private void addColumnSetToScan(Scan scan, int[] colIds) {
-    for (int colId : colIds)
-      scan.addColumn(FAMILY_BYTES, Bytes.toBytes(qualFromId(colId)));
+    for (int colId : colIds) {
+      scan.addColumn(FAMILY_BYTES,
+          Bytes.toBytes(qualFromId(colId)));
+    }
   }
 
   private String qualFromId(int colId) {
@@ -194,7 +204,7 @@ public class TestScanWithBloomError {
       String qual = qualFromId(colId);
       allColIds.add(colId);
       KeyValue kv = KeyValueTestUtil.create(ROW, FAMILY,
-          qual, ts, createValue(ROW, qual, ts));
+          qual, ts, TestMultiColumnScanner.createValue(ROW, qual, ts));
       p.add(kv);
     }
     region.put(p);

@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -64,6 +65,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -1872,6 +1874,26 @@ public class HBaseTestingUtility {
     HTable table = new HTable(conf, HConstants.META_TABLE_NAME);
     HRegionLocation hloc = table.getRegionLocation(Bytes.toBytes(""));
     return hloc.getPort();
+  }
+
+  public HRegion createTestRegion(String tableName, String cfName,
+      Compression.Algorithm comprAlgo, BloomType bloomType, int maxVersions,
+      boolean blockCacheEnabled, int blockSize) throws IOException {
+    HColumnDescriptor hcd =
+      new HColumnDescriptor(Bytes.toBytes(cfName), maxVersions,
+          comprAlgo.getName(),
+          HColumnDescriptor.DEFAULT_IN_MEMORY,
+          blockCacheEnabled,
+          HColumnDescriptor.DEFAULT_TTL,
+          bloomType.toString());
+    hcd.setBlocksize(HFile.DEFAULT_BLOCKSIZE);
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(hcd);
+    HRegionInfo info =
+        new HRegionInfo(Bytes.toBytes(tableName), null, null, false);
+    HRegion region =
+        HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), htd);
+    return region;
   }
 
 }

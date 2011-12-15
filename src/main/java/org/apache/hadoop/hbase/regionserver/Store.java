@@ -53,9 +53,8 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
-import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
@@ -294,6 +293,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       }
       StoreFile curfile = new StoreFile(fs, p, this.conf, this.cacheConf,
           this.family.getBloomFilterType());
+      passSchemaMetricsTo(curfile);
       curfile.createReader();
       long length = curfile.getReader().length();
       this.storeSize += length;
@@ -448,6 +448,7 @@ public class Store extends SchemaConfigured implements HeapSize {
 
     StoreFile sf = new StoreFile(fs, dstPath, this.conf, this.cacheConf,
         this.family.getBloomFilterType());
+    passSchemaMetricsTo(sf);
     sf.createReader();
 
     LOG.info("Moved hfile " + srcPath + " into store directory " +
@@ -651,6 +652,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     status.setStatus("Flushing " + this + ": reopening flushed file");
     StoreFile sf = new StoreFile(this.fs, dstPath, this.conf, this.cacheConf,
         this.family.getBloomFilterType());
+    passSchemaMetricsTo(sf);
     StoreFile.Reader r = sf.createReader();
     this.storeSize += r.length();
     this.totalUncompressedBytes += r.getTotalUncompressedBytes();
@@ -690,13 +692,11 @@ public class Store extends SchemaConfigured implements HeapSize {
     StoreFile.Writer w = StoreFile.createWriter(fs, region.getTmpDir(),
         blocksize, compression, comparator, conf, cacheConf,
         family.getBloomFilterType(), maxKeyCount);
-    if (w.writer instanceof SchemaConfigured) {
-      // The store file writer's path does not include the CF name, so we need
-      // to configure the HFile writer directly.
-      SchemaConfigured sc = (SchemaConfigured) w.writer;
-      SchemaConfigured.resetSchemaMetricsConf(sc);
-      passSchemaMetricsTo(sc);
-    }
+    // The store file writer's path does not include the CF name, so we need
+    // to configure the HFile writer directly.
+    SchemaConfigured sc = (SchemaConfigured) w.writer;
+    SchemaConfigured.resetSchemaMetricsConf(sc);
+    passSchemaMetricsTo(sc);
     return w;
   }
 
@@ -1417,6 +1417,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     try {
       storeFile = new StoreFile(this.fs, path, this.conf,
           this.cacheConf, this.family.getBloomFilterType());
+      passSchemaMetricsTo(storeFile);
       storeFile.createReader();
     } catch (IOException e) {
       LOG.error("Failed to open store file : " + path
@@ -1468,6 +1469,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       }
       result = new StoreFile(this.fs, destPath, this.conf, this.cacheConf,
           this.family.getBloomFilterType());
+      passSchemaMetricsTo(result);
       result.createReader();
     }
     try {

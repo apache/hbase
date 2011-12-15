@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -168,7 +169,7 @@ public class CreateRandomStoreFile {
           BLOOM_FILTER_OPTION));
     }
 
-    int blockSize = conf.getInt("hfile.min.blocksize.size", 65536);
+    int blockSize = HFile.DEFAULT_BLOCKSIZE;
     if (cmdLine.hasOption(BLOCK_SIZE_OPTION))
       blockSize = Integer.valueOf(cmdLine.getOptionValue(BLOCK_SIZE_OPTION));
     

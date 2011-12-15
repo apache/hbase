@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtility.assertKVListsEqual;
-import static org.apache.hadoop.hbase.regionserver.TestMultiColumnScanner.*;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -37,11 +36,16 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -63,6 +67,9 @@ public class TestSeekOptimizations {
       LogFactory.getLog(TestSeekOptimizations.class);
 
   // Constants
+  private static final String FAMILY = "myCF";
+  private static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
+
   private static final int PUTS_PER_ROW_COL = 50;
   private static final int DELETES_PER_ROW_COL = 10;
 
@@ -111,6 +118,9 @@ public class TestSeekOptimizations {
   private StoreFile.BloomType bloomType;
 
   private long totalSeekDiligent, totalSeekLazy;
+  
+  private final static HBaseTestingUtility TEST_UTIL =
+      new HBaseTestingUtility();
 
   @Parameters
   public static final Collection<Object[]> parameters() {
@@ -131,9 +141,10 @@ public class TestSeekOptimizations {
 
   @Test
   public void testMultipleTimestampRanges() throws IOException {
-    region = TestMultiColumnScanner.createRegion(
-        TestSeekOptimizations.class.getName(), comprAlgo, bloomType,
-        Integer.MAX_VALUE);
+    region = TEST_UTIL.createTestRegion(
+        TestSeekOptimizations.class.getName(), FAMILY, comprAlgo, bloomType,
+        Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_BLOCKCACHE,
+        HFile.DEFAULT_BLOCKSIZE);
 
     // Delete the given timestamp and everything before.
     final long latestDelTS = USE_MANY_STORE_FILES ? 1397 : -1;
@@ -412,7 +423,8 @@ public class TestSeekOptimizations {
           region.delete(del, null, true);
         }
 
-        // Add remaining timestamps (those we have not deleted) to expected results
+        // Add remaining timestamps (those we have not deleted) to expected
+        // results
         for (long ts : putTimestamps) {
           expectedKVs.add(new KeyValue(rowBytes, FAMILY_BYTES, qualBytes, ts,
               KeyValue.Type.Put));
