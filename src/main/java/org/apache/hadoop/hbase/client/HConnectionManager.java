@@ -192,7 +192,18 @@ public class HConnectionManager {
    *          .
    */
   public static void deleteConnection(Configuration conf, boolean stopProxy) {
-    deleteConnection(new HConnectionKey(conf), stopProxy);
+    deleteConnection(new HConnectionKey(conf), stopProxy, false);
+  }
+  
+  /**
+   * Delete stale connection information for the instance specified by configuration.
+   * This will then close connection to
+   * the zookeeper ensemble and let go of all resources.
+   *
+   * @param connection
+   */
+  public static void deleteStaleConnection(HConnection connection) {
+    deleteConnection(connection, true, true);
   }
 
   /**
@@ -205,31 +216,31 @@ public class HConnectionManager {
       Set<HConnectionKey> connectionKeys = new HashSet<HConnectionKey>();
       connectionKeys.addAll(HBASE_INSTANCES.keySet());
       for (HConnectionKey connectionKey : connectionKeys) {
-        deleteConnection(connectionKey, stopProxy);
+        deleteConnection(connectionKey, stopProxy, false);
       }
       HBASE_INSTANCES.clear();
     }
   }
 
-  private static void deleteConnection(HConnection connection, boolean stopProxy) {
+  private static void deleteConnection(HConnection connection, boolean stopProxy, boolean staleConnection) {
     synchronized (HBASE_INSTANCES) {
       for (Entry<HConnectionKey, HConnectionImplementation> connectionEntry : HBASE_INSTANCES
           .entrySet()) {
         if (connectionEntry.getValue() == connection) {
-          deleteConnection(connectionEntry.getKey(), stopProxy);
+          deleteConnection(connectionEntry.getKey(), stopProxy, staleConnection);
           break;
         }
       }
     }
   }
 
-  private static void deleteConnection(HConnectionKey connectionKey, boolean stopProxy) {
+  private static void deleteConnection(HConnectionKey connectionKey, boolean stopProxy, boolean staleConnection) {
     synchronized (HBASE_INSTANCES) {
       HConnectionImplementation connection = HBASE_INSTANCES
           .get(connectionKey);
       if (connection != null) {
         connection.decCount();
-        if (connection.isZeroReference()) {
+        if (connection.isZeroReference() || staleConnection) {
           HBASE_INSTANCES.remove(connectionKey);
           connection.close(stopProxy);
         } else if (stopProxy) {
@@ -1535,7 +1546,7 @@ public class HConnectionManager {
       }
       if (t != null) LOG.fatal(msg, t);
       else LOG.fatal(msg);
-      this.closed = true;
+      HConnectionManager.deleteStaleConnection(this);
     }
 
     public void stopProxyOnClose(boolean stopProxy) {
@@ -1594,7 +1605,7 @@ public class HConnectionManager {
     }
 
     public void close() {
-      HConnectionManager.deleteConnection(this, stopProxy);
+      HConnectionManager.deleteConnection(this, stopProxy, false);
       LOG.debug("The connection to " + this.zooKeeper + " has been closed.");
     }
 
