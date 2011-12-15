@@ -745,6 +745,7 @@ Release 0.92.0 - Unreleased
    HBASE-4805  Allow better control of resource consumption in HTable (Lars H)
    HBASE-4903  Return a result from RegionObserver.preIncrement
                (Daniel Gómez Ferro via Lars H)
+   HBASE-4683  Always cache index and bloom blocks
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

@@ -232,7 +232,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
    */
   @Override
   public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize,
-      boolean cacheBlock, boolean pread, final boolean isCompaction)
+      final boolean cacheBlock, boolean pread, final boolean isCompaction)
       throws IOException {
     if (dataBlockIndexReader == null) {
       throw new IOException("Block index not loaded");
@@ -255,7 +255,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
       blockLoads.incrementAndGet();
 
       // Check cache for block. If found return.
-      cacheBlock &= cacheConf.shouldCacheDataOnRead();
       if (cacheConf.isBlockCacheEnabled()) {
         HFileBlock cachedBlock =
           (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey, cacheBlock);
@@ -275,10 +274,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       // Load block from filesystem.
       long startTimeNs = System.nanoTime();
-      HFileBlock dataBlock = fsBlockReader.readBlockData(dataBlockOffset,
+      HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset,
           onDiskBlockSize, -1, pread);
-      passSchemaMetricsTo(dataBlock);
-      BlockCategory blockCategory = dataBlock.getBlockType().getCategory();
+      passSchemaMetricsTo(hfileBlock);
+      BlockCategory blockCategory = hfileBlock.getBlockType().getCategory();
 
       long delta = System.nanoTime() - startTimeNs;
       if (pread) {
@@ -291,15 +290,17 @@ public class HFileReaderV2 extends AbstractHFileReader {
       getSchemaMetrics().updateOnCacheMiss(blockCategory, isCompaction, delta);
 
       // Cache the block
-      if (cacheBlock) {
-        cacheConf.getBlockCache().cacheBlock(cacheKey, dataBlock,
+      if (cacheBlock && cacheConf.shouldCacheBlockOnRead(
+              hfileBlock.getBlockType().getCategory())) {
+        cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
             cacheConf.isInMemory());
       }
 
-      if (dataBlock.getBlockType() == BlockType.DATA)
+      if (hfileBlock.getBlockType() == BlockType.DATA) {
         HFile.dataBlockReadCnt.incrementAndGet();
+      }
 
-      return dataBlock;
+      return hfileBlock;
     } finally {
       offsetLock.releaseLockEntry(lockEntry);
     }

@@ -19,7 +19,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,15 +37,17 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,14 +65,13 @@ public class TestMultiColumnScanner {
 
   private static final Log LOG = LogFactory.getLog(TestMultiColumnScanner.class);
 
-  private static final String TABLE_NAME = "TestMultiColumnScanner";
+  private static final String TABLE_NAME =
+      TestMultiColumnScanner.class.getSimpleName();
+
   static final int MAX_VERSIONS = 50;
 
-  // These fields are used in TestScanWithBloomError
-  static final String FAMILY = "CF";
-  static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
-
-  private SchemaMetrics schemaMetrics;
+  private static final String FAMILY = "CF";
+  private static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
 
   /**
    * The size of the column qualifier set used. Increasing this parameter
@@ -107,9 +110,6 @@ public class TestMultiColumnScanner {
   private Compression.Algorithm comprAlgo;
   private StoreFile.BloomType bloomType;
 
-  private long lastBlocksRead;
-  private long lastCacheHits;
-
   // Some static sanity-checking.
   static {
     assertTrue(BIG_LONG > 0.9 * Long.MAX_VALUE); // Guard against typos.
@@ -122,7 +122,6 @@ public class TestMultiColumnScanner {
   @Before
   public void setUp() {
     SchemaMetrics.configureGlobally(TEST_UTIL.getConfiguration());
-    schemaMetrics = SchemaMetrics.getInstance(TABLE_NAME, FAMILY);
   }
 
 
@@ -137,43 +136,11 @@ public class TestMultiColumnScanner {
     this.bloomType = bloomType;
   }
 
-  private long getBlocksRead() {
-    return HRegion.getNumericMetric(schemaMetrics.getBlockMetricName(
-        BlockType.BlockCategory.ALL_CATEGORIES, false,
-        BlockMetricType.READ_COUNT));
-  }
-
-  private long getCacheHits() {
-    return HRegion.getNumericMetric(schemaMetrics.getBlockMetricName(
-        BlockType.BlockCategory.ALL_CATEGORIES, false,
-        BlockMetricType.CACHE_HIT));
-  }
-
-  private void saveBlockStats() {
-    lastBlocksRead = getBlocksRead();
-    lastCacheHits = getCacheHits();
-  }
-
-  private void showBlockStats() {
-    long blocksRead = blocksReadDelta();
-    long cacheHits = cacheHitsDelta();
-    LOG.info("Compression: " + comprAlgo + ", Bloom type: "
-        + bloomType + ", blocks read: " + blocksRead + ", block cache hits: "
-        + cacheHits + ", misses: " + (blocksRead - cacheHits));
-  }
-
-  private long cacheHitsDelta() {
-    return getCacheHits() - lastCacheHits;
-  }
-
-  private long blocksReadDelta() {
-    return getBlocksRead() - lastBlocksRead;
-  }
-
   @Test
   public void testMultiColumnScanner() throws IOException {
-    HRegion region = createRegion(TABLE_NAME, comprAlgo, bloomType,
-        MAX_VERSIONS);
+    HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME, FAMILY, comprAlgo,
+        bloomType, MAX_VERSIONS, HColumnDescriptor.DEFAULT_BLOCKCACHE,
+        HFile.DEFAULT_BLOCKSIZE);
     List<String> rows = sequentialStrings("row", NUM_ROWS);
     List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
     List<KeyValue> kvs = new ArrayList<KeyValue>();
@@ -309,26 +276,6 @@ public class TestMultiColumnScanner {
        lastDelTimeMap.size());
     region.close();
     region.getLog().closeAndDelete();
-  }
-
-  static HRegion createRegion(String tableName,
-      Compression.Algorithm comprAlgo, BloomType bloomType, int maxVersions)
-      throws IOException {
-    HColumnDescriptor hcd =
-      new HColumnDescriptor(FAMILY_BYTES, maxVersions,
-          comprAlgo.getName(),
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          HColumnDescriptor.DEFAULT_TTL,
-          bloomType.toString());
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(hcd);
-    HRegionInfo info =
-        new HRegionInfo(Bytes.toBytes(tableName), null, null, false);
-    HRegion region = HRegion.createHRegion(
-        info, TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(),
-        htd);
-    return region;
   }
 
   private static String getRowQualStr(KeyValue kv) {

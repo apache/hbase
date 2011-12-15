@@ -82,7 +82,7 @@ import com.google.common.collect.Ordering;
  * The reason for this weird pattern where you use a different instance for the
  * writer and a reader is that we write once but read a lot more.
  */
-public class StoreFile {
+public class StoreFile extends SchemaConfigured {
   static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
 
   public static enum BloomType {
@@ -496,6 +496,11 @@ public class StoreFile {
           this.cacheConf, this.reference);
     } else {
       this.reader = new Reader(this.fs, this.path, this.cacheConf);
+    }
+
+    if (isSchemaConfigured()) {
+      SchemaConfigured.resetSchemaMetricsConf(reader);
+      passSchemaMetricsTo(reader);
     }
 
     computeHDFSBlockDistribution();
@@ -1574,6 +1579,11 @@ public class StoreFile {
 
     public long getMaxTimestamp() {
       return timeRangeTracker.maximumTimestamp;
+    }
+
+    @Override
+    public void schemaConfigurationChanged() {
+      passSchemaMetricsTo((SchemaConfigured) reader);
     }
   }
 

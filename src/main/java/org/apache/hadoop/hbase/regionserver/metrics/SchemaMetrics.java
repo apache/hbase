@@ -172,6 +172,9 @@ public class SchemaMetrics {
   public static final String CF_UNKNOWN_PREFIX = CF_PREFIX + UNKNOWN + ".";
   public static final String CF_BAD_FAMILY_PREFIX = CF_PREFIX + "__badfamily.";
 
+  /** Use for readability when obtaining non-compaction counters */
+  public static final boolean NO_COMPACTION = false;
+
   /**
    * A special schema metric value that means "all tables aggregated" or
    * "all column families aggregated" when used as a table name or a column
@@ -732,7 +735,12 @@ public class SchemaMetrics {
       m.remove(k);
     }
   }
-  private static Map<String, Long> diffMetrics(Map<String, Long> a,
+
+  /**
+   * @return the difference between two sets of metrics (second minus first).
+   *         Only includes keys that have nonzero difference.
+   */
+  public static Map<String, Long> diffMetrics(Map<String, Long> a,
       Map<String, Long> b) {
     Set<String> allKeys = new TreeSet<String>(a.keySet());
     allKeys.addAll(b.keySet());

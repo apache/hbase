@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.ClassSize;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONStringer;
 import org.junit.Test;
@@ -110,10 +109,29 @@ public class TestSchemaConfigured {
   }
 
   @Test(expected=IllegalStateException.class)
-  public void testConfigureWithUnconfigured() {
-    SchemaConfigured unconfigured = new SchemaConfigured();
+  public void testConfigureWithUnconfigured1() {
+    SchemaConfigured unconfigured = new SchemaConfigured(null, "t1", null);
     SchemaConfigured target = new SchemaConfigured();
     unconfigured.passSchemaMetricsTo(target);
+  }
+
+  @Test(expected=IllegalStateException.class)
+  public void testConfigureWithUnconfigured2() {
+    SchemaConfigured unconfigured = new SchemaConfigured(null, null, "cf1");
+    SchemaConfigured target = new SchemaConfigured();
+    unconfigured.passSchemaMetricsTo(target);
+  }
+
+  /**
+   * Configuring with an uninitialized object is equivalent to re-setting
+   * schema metrics configuration.
+   */
+  public void testConfigureWithNull() {
+    SchemaConfigured unconfigured = new SchemaConfigured();
+    SchemaConfigured target = new SchemaConfigured(null, "t1", "cf1");
+    unconfigured.passSchemaMetricsTo(target);
+    assertTrue(target.getTableName() == null);
+    assertTrue(target.getColumnFamilyName() == null);
   }
 
   public void testConfigurePartiallyDefined() {
@@ -138,7 +156,15 @@ public class TestSchemaConfigured {
   public void testConflictingConf() {
     SchemaConfigured sc = new SchemaConfigured(null, "t1", "cf1");
     SchemaConfigured target = new SchemaConfigured(null, "t2", "cf1");
-   target.passSchemaMetricsTo(sc);
+    sc.passSchemaMetricsTo(target);
+  }
+
+  /** We allow setting CF to unknown and then reconfiguring it */
+  public void testReconfigureUnknownCF() {
+    SchemaConfigured sc = new SchemaConfigured(null, "t1", "cf1");
+    SchemaConfigured target =
+        new SchemaConfigured(null, "t1", SchemaMetrics.UNKNOWN);
+    sc.passSchemaMetricsTo(target);
   }
 
   /**

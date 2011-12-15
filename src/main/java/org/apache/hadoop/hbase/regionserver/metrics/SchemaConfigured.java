@@ -1,6 +1,4 @@
 /*
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -115,8 +113,8 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
       } else {
         cfName = splits[splits.length - 2];
         if (cfName.equals(HRegion.REGION_TEMP_SUBDIR)) {
-          // This is probably a compaction output file. We will set the real CF
-          // name later.
+          // This is probably a compaction or flush output file. We will set
+          // the real CF name later.
           cfName = null;
         } else {
           cfName = cfName.intern();
@@ -148,8 +146,8 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
   public SchemaConfigured(Configuration conf, String tableName, String cfName)
   {
     this(conf);
-    this.tableName = tableName.intern();
-    this.cfName = cfName.intern();
+    this.tableName = tableName != null ? tableName.intern() : tableName;
+    this.cfName = cfName != null ? cfName.intern() : cfName;
   }
 
   public SchemaConfigured(SchemaAware that) {
@@ -187,9 +185,15 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
    * object.
    */
   public void passSchemaMetricsTo(SchemaConfigured target) {
+    if (isNull()) {
+      resetSchemaMetricsConf(target);
+      return;
+    }
+
     if (!isSchemaConfigured()) {
       // Cannot configure another object if we are not configured ourselves.
-      throw new IllegalStateException("Table name/CF not initialized");
+      throw new IllegalStateException("Table name/CF not initialized: " +
+          schemaConfAsJSON());
     }
 
     if (conflictingWith(target)) {
@@ -198,6 +202,7 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
           tableName + "\", CF name to \"" + cfName + "\" from " +
           target.schemaConfAsJSON());
     }
+
     target.tableName = tableName.intern();
     target.cfName = cfName.intern();
     target.schemaMetrics = schemaMetrics;
@@ -215,6 +220,7 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
     target.tableName = null;
     target.cfName = null;
     target.schemaMetrics = null;
+    target.schemaConfigurationChanged();
   }
 
   @Override
@@ -229,6 +235,10 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
 
   protected boolean isSchemaConfigured() {
     return tableName != null && cfName != null;
+  }
+
+  private boolean isNull() {
+    return tableName == null && cfName == null && schemaMetrics == null;
   }
 
   /**

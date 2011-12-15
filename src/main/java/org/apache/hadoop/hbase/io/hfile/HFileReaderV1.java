@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
@@ -213,6 +214,12 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
     BlockCacheKey cacheKey = HFile.getBlockCacheKey(name, offset);
 
+    BlockCategory effectiveCategory = BlockCategory.META;
+    if (metaBlockName.equals(HFileWriterV1.BLOOM_FILTER_META_KEY) ||
+        metaBlockName.equals(HFileWriterV1.BLOOM_FILTER_DATA_KEY)) {
+      effectiveCategory = BlockCategory.BLOOM;
+    }
+
     // Per meta key from any given file, synchronize reads for said block
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
       metaLoads.incrementAndGet();
@@ -221,10 +228,11 @@ public class HFileReaderV1 extends AbstractHFileReader {
       if (cacheConf.isBlockCacheEnabled()) {
         HFileBlock cachedBlock =
           (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
-              cacheConf.shouldCacheDataOnRead());
+              cacheConf.shouldCacheBlockOnRead(effectiveCategory));
         if (cachedBlock != null) {
           cacheHits.incrementAndGet();
-          getSchemaMetrics().updateOnCacheHit(BlockCategory.META, false);
+          getSchemaMetrics().updateOnCacheHit(effectiveCategory,
+              SchemaMetrics.NO_COMPACTION);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Cache Miss, please load.
@@ -239,10 +247,11 @@ public class HFileReaderV1 extends AbstractHFileReader {
       long delta = System.nanoTime() - startTimeNs;
       HFile.preadTimeNano.addAndGet(delta);
       HFile.preadOps.incrementAndGet();
-      getSchemaMetrics().updateOnCacheMiss(BlockCategory.META, false, delta);
+      getSchemaMetrics().updateOnCacheMiss(effectiveCategory,
+          SchemaMetrics.NO_COMPACTION, delta);
 
       // Cache the block
-      if (cacheConf.shouldCacheDataOnRead() && cacheBlock) {
+      if (cacheBlock && cacheConf.shouldCacheBlockOnRead(effectiveCategory)) {
         cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
             cacheConf.isInMemory());
       }
@@ -288,7 +297,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
               cacheConf.shouldCacheDataOnRead());
         if (cachedBlock != null) {
           cacheHits.incrementAndGet();
-          getSchemaMetrics().updateOnCacheHit(BlockCategory.DATA,
+          getSchemaMetrics().updateOnCacheHit(cachedBlock.getBlockType().getCategory(),
               isCompaction);
           return cachedBlock.getBufferWithoutHeader();
         }
@@ -327,7 +336,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
           delta);
 
       // Cache the block
-      if (cacheConf.shouldCacheDataOnRead() && cacheBlock) {
+      if (cacheBlock && cacheConf.shouldCacheBlockOnRead(
+          hfileBlock.getBlockType().getCategory())) {
         cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
             cacheConf.isInMemory());
       }
@@ -455,7 +465,6 @@ public class HFileReaderV1 extends AbstractHFileReader {
         throw e;
       }
       if (blockBuffer.remaining() <= 0) {
-        // LOG.debug("Fetch next block");
         currBlock++;
         if (currBlock >= reader.getDataBlockIndexReader().getRootBlockCount()) {
           // damn we are at the end
@@ -671,7 +680,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
   @Override
   public DataInput getGeneralBloomFilterMetadata() throws IOException {
-    ByteBuffer buf = getMetaBlock(HFileWriterV1.BLOOM_FILTER_META_KEY, false);
+    // Always cache Bloom filter blocks.
+    ByteBuffer buf = getMetaBlock(HFileWriterV1.BLOOM_FILTER_META_KEY, true);
     if (buf == null)
       return null;
     ByteArrayInputStream bais = new ByteArrayInputStream(buf.array(),
