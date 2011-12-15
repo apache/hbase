@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase;
 import com.sun.management.UnixOperatingSystemMXBean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
@@ -64,6 +65,10 @@ public class ResourceChecker {
       }
     }
 
+    public long getConnectionCount(){
+      return HConnectionTestingUtility.getConnectionCount();
+    }
+
     static {
       osStats =
         ManagementFactory.getOperatingSystemMXBean();
@@ -92,6 +97,8 @@ public class ResourceChecker {
 
   private long initialThreadsCount;
   private long initialFileHandlesCount;
+  private long initialConnectionCount;
+
 
   public boolean checkThreads(String tagLine) {
     boolean isOk = true;
@@ -126,8 +133,11 @@ public class ResourceChecker {
     }
 
     logInfo(tagLine);
+
     initialThreadsCount = rc.getThreadsCount();
     initialFileHandlesCount = rc.getOpenFileDescriptorCount();
+    initialConnectionCount= rc.getConnectionCount();
+
     check(tagLine);
   }
 
@@ -140,11 +150,17 @@ public class ResourceChecker {
         rc.getOpenFileDescriptorCount() + " file descriptors" +
         (initialFileHandlesCount > 0 ?
           " (was " + initialFileHandlesCount + "). " : " ") +
+        rc.getConnectionCount() + " connections" +
+        (initialConnectionCount > 0 ?
+          " (was " + initialConnectionCount + "), " : ", ") +
         (initialThreadsCount > 0 && rc.getThreadsCount() > initialThreadsCount ?
           " -thread leak?- " : "") +
         (initialFileHandlesCount > 0 &&
           rc.getOpenFileDescriptorCount() > initialFileHandlesCount ?
-          " -file handle leak?- " : "")
+          " -file handle leak?- " : "") +
+        (initialConnectionCount > 0 &&
+          rc.getConnectionCount() > initialConnectionCount ?
+          " -connection leak?- " : "" )
     );
   }
 
