@@ -226,6 +226,7 @@ public class TestColumnRangeFilter {
         }
       }
       long scanTime = System.currentTimeMillis() - timeBeforeScan;
+      scanner.close();
       LOG.info("scan time = " + scanTime + "ms");
       LOG.info("found " + results.size() + " results");
       LOG.info("Expecting " + rangeMap.get(s).size() + " results");

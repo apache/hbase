@@ -124,6 +124,8 @@ public class TestStoreFileBlockCacheSummary {
    assertEquals("table", TEST_TABLE2, e.getTable());
    assertEquals("cf", TEST_CF, e.getColumnFamily());
 
+   ht.close();
+   ht2.close();
  }
 
  private void addRows(HTable ht, byte[] family) throws IOException {

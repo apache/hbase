@@ -116,6 +116,8 @@ public class TestHalfStoreFileReader {
     int ret = scanner.reseekTo(getLastOnCol(curr).getKey());
     //System.out.println("Last reseek: " + ret);
     assertTrue( ret > 0 );
+
+    halfreader.close(true);
   }
 
   private KeyValue getLastOnCol(KeyValue curr) {
