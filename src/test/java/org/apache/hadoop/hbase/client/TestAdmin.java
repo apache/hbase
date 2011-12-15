@@ -49,11 +49,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtilsForTests;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 
 
@@ -1481,9 +1477,12 @@ public class TestAdmin {
   @Test
   public void testCheckHBaseAvailableClosesConnection() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    for(int i=0; i<1000;i++) {
-      HBaseAdmin.checkHBaseAvailable(conf);
-    }
+
+    int initialCount = HConnectionTestingUtility.getConnectionCount();
+    HBaseAdmin.checkHBaseAvailable(conf);
+    int finalCount = HConnectionTestingUtility.getConnectionCount();
+
+    Assert.assertEquals(initialCount, finalCount) ;
   }
 
   @org.junit.Rule

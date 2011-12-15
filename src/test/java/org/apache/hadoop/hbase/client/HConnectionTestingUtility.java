@@ -28,7 +28,6 @@ import org.mockito.Mockito;
 /**
  * {@link HConnection} testing utility.
  */
-@Category(SmallTests.class)
 public class HConnectionTestingUtility {
   /*
    * Not part of {@link HBaseTestingUtility} because this class is not
@@ -83,6 +82,16 @@ public class HConnectionTestingUtility {
         HConnectionManager.HBASE_INSTANCES.put(connectionKey, connection);
       }
       return connection;
+    }
+  }
+
+
+  /**
+   * @return Count of extant connection instances
+   */
+  public static int getConnectionCount() {
+    synchronized (HConnectionManager.HBASE_INSTANCES) {
+      return HConnectionManager.HBASE_INSTANCES.size();
     }
   }
 }
