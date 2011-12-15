@@ -477,6 +477,16 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public void remove(final byte [] key) {
     values.remove(new ImmutableBytesWritable(key));
   }
+  
+  /**
+   * Remove metadata represented by the key from the {@link #values} map
+   * 
+   * @param key Key whose key and value we're to remove from HTableDescriptor
+   * parameters.
+   */
+  public void remove(final String key) {
+    remove(Bytes.toBytes(key));
+  }
 
   /**
    * Check if the readOnly flag of the table is set. If the readOnly flag is 
@@ -788,6 +798,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * <em> INTERNAL </em> This method is a part of {@link WritableComparable} interface 
    * and is used for de-serialization of the HTableDescriptor over RPC
    */
+  @Override
   public void readFields(DataInput in) throws IOException {
     int version = in.readInt();
     if (version < 3)
@@ -822,6 +833,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * <em> INTERNAL </em> This method is a part of {@link WritableComparable} interface 
    * and is used for serialization of the HTableDescriptor over RPC
    */
+  @Override
   public void write(DataOutput out) throws IOException {
 	out.writeInt(TABLE_DESCRIPTOR_VERSION);
     Bytes.writeByteArray(out, name);
@@ -850,6 +862,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @return 0 if the contents of the descriptors are exactly matching, 
    * 		 1 if there is a mismatch in the contents 
    */
+  @Override
   public int compareTo(final HTableDescriptor other) {
     int result = Bytes.compareTo(this.name, other.name);
     if (result == 0) {
@@ -1052,6 +1065,38 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     return false;
   }
 
+  /**
+   * Remove a coprocessor from those set on the table
+   * @param className Class name of the co-processor
+   */
+  public void removeCoprocessor(String className) {
+    ImmutableBytesWritable match = null;
+    Matcher keyMatcher;
+    Matcher valueMatcher;
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e : this.values
+        .entrySet()) {
+      keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e
+          .getKey().get()));
+      if (!keyMatcher.matches()) {
+        continue;
+      }
+      valueMatcher = HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(Bytes
+          .toString(e.getValue().get()));
+      if (!valueMatcher.matches()) {
+        continue;
+      }
+      // get className and compare
+      String clazz = valueMatcher.group(2).trim(); // classname is the 2nd field
+      // remove the CP if it is present
+      if (clazz.equals(className.trim())) {
+        match = e.getKey();
+        break;
+      }
+    }
+    // if we found a match, remove it
+    if (match != null)
+      this.values.remove(match);
+  }
   
   /**
    * Returns the {@link Path} object representing the table directory under 

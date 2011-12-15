@@ -868,6 +868,11 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
     </para>
   </section>  
 
+  <section xml:id="constraints"><title>Constraints</title>
+    <para>HBase currently supports 'constraints' in traditional (SQL) database parlance. The advised usage for Constraints is in enforcing business rules for attributes in the table (eg. make sure values are in the range 1-10).
+    Constraints could also be used to enforce referential integrity, but this is strongly discouraged as it will dramatically decrease the write throughput of the tables where integrity checking enabled.</para>
+  </section>
+
   </chapter>   <!--  schema design -->
 
   <chapter xml:id="mapreduce">
