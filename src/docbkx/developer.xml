@@ -225,7 +225,8 @@ unit test characterizations.</para>
 <para>Running <programlisting>mvn test</programlisting> will execute all small tests in a single JVM and medium tests in a separate JVM for
 each test instance. Medium tests are NOT executed if there is an error in a small test.
 Large tests are NOT executed.  There is one report for small tests, and one report for
-medium tests if they are executed.
+medium tests if they are executed. To run small and medium tests with the security
+profile enabled, do <programlisting>mvn test -P security</programlisting>
 </para>
 </section>
 
