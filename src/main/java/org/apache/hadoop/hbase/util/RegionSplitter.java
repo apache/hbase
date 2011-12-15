@@ -382,6 +382,7 @@ public class RegionSplitter {
           Thread.sleep(10 * 1000); // sleep
         }
       }
+      table.close();
     }
 
     LOG.debug("Finished creating table with " + splitCount + " regions");
@@ -566,7 +567,7 @@ public class RegionSplitter {
           }
         }
       }
-      LOG.debug("All regions have been sucesfully split!");
+      LOG.debug("All regions have been successfully split!");
     } finally {
       long tDiff = System.currentTimeMillis() - startTime;
       LOG.debug("TOTAL TIME = "
@@ -576,6 +577,9 @@ public class RegionSplitter {
           + org.apache.hadoop.util.StringUtils.formatTime(tDiff / splitCount));
 
       splitOut.close();
+      if (table != null){
+        table.close();
+      }
     }
     fs.delete(splitFile, false);
   }

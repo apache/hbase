@@ -126,7 +126,13 @@ public class TestHBaseFsck {
     assertNoErrors(doFsck(conf, false));
 
     // comment needed - what is the purpose of this line
-    new HTable(conf, Bytes.toBytes(table)).getScanner(new Scan());
+    HTable t = new HTable(conf, Bytes.toBytes(table));
+    ResultScanner s = t.getScanner(new Scan());
+    s.close();
+    t.close();
+
+    scanner.close();
+    meta.close();
   }
 
   private HRegionInfo createRegion(Configuration conf, final HTableDescriptor

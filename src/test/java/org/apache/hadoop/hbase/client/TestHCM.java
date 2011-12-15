@@ -140,6 +140,7 @@ public class TestHCM {
     conn.deleteCachedLocation(TABLE_NAME, ROW);
     HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
+    conn.close();
     table.close();
   }
 
