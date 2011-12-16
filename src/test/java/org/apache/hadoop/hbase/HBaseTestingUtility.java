@@ -579,9 +579,8 @@ public class HBaseTestingUtility {
     }
     s.close();
     t.close();
-
-    getHBaseAdmin(); // create immediately the hbaseAdmin
     LOG.info("Minicluster is up");
+    //getHBaseAdmin();
     return this.hbaseCluster;
   }
 
@@ -643,10 +642,6 @@ public class HBaseTestingUtility {
    * @throws IOException
    */
   public void shutdownMiniHBaseCluster() throws IOException {
-    if (hbaseAdmin != null) {
-      hbaseAdmin.close();
-      hbaseAdmin = null;
-    }
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
       // Wait till hbase is down before going on to shutdown zk.
@@ -728,7 +723,9 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       desc.addFamily(hcd);
     }
-    getHBaseAdmin().createTable(desc, startKey, endKey, numRegions);
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.createTable(desc, startKey, endKey, numRegions);
+    admin.close();
     return new HTable(getConfiguration(), tableName);
   }
 
@@ -747,7 +744,9 @@ public class HBaseTestingUtility {
     for(byte[] family : families) {
       desc.addFamily(new HColumnDescriptor(family));
     }
-    getHBaseAdmin().createTable(desc);
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.createTable(desc);
+    admin.close();
     return new HTable(c, tableName);
   }
 
@@ -774,7 +773,9 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       desc.addFamily(hcd);
     }
-    getHBaseAdmin().createTable(desc);
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.createTable(desc);
+    admin.close();
     return new HTable(c, tableName);
   }
 
@@ -813,7 +814,9 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       desc.addFamily(hcd);
     }
-    getHBaseAdmin().createTable(desc);
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.createTable(desc);
+    admin.close();
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
@@ -838,7 +841,9 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       desc.addFamily(hcd);
     }
-    getHBaseAdmin().createTable(desc);
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.createTable(desc);
+    admin.close();
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
@@ -866,7 +871,9 @@ public class HBaseTestingUtility {
       desc.addFamily(hcd);
       i++;
     }
-    getHBaseAdmin().createTable(desc);
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.createTable(desc);
+    admin.close();
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
@@ -875,8 +882,10 @@ public class HBaseTestingUtility {
    * @param tableName existing table
    */
   public void deleteTable(byte[] tableName) throws IOException {
-    getHBaseAdmin().disableTable(tableName);
-    getHBaseAdmin().deleteTable(tableName);
+    HBaseAdmin admin = new HBaseAdmin(getConfiguration());
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
+    admin.close();
   }
 
   /**
@@ -1084,12 +1093,14 @@ public class HBaseTestingUtility {
     HConnection conn = table.getConnection();
     conn.clearRegionCache();
     // assign all the new regions IF table is enabled.
-    if (getHBaseAdmin().isTableEnabled(table.getTableName())) {
+    HBaseAdmin admin = getHBaseAdmin();
+    if (admin.isTableEnabled(table.getTableName())) {
       for(HRegionInfo hri : newRegions) {
         hbaseCluster.getMaster().assignRegion(hri);
       }
     }
 
+    admin.close();
     meta.close();
 
     return count;
@@ -1312,21 +1323,14 @@ public class HBaseTestingUtility {
 
   /**
    * Returns a HBaseAdmin instance.
-   * This instance is shared between HBaseTestingUtility intance users.
-   * Don't close it, it will be closed automatically when the
-   * cluster shutdowns
    *
    * @return The HBaseAdmin instance.
    * @throws IOException
    */
-  public synchronized HBaseAdmin getHBaseAdmin()
+  public HBaseAdmin getHBaseAdmin()
   throws IOException {
-    if (hbaseAdmin == null){
-      hbaseAdmin = new HBaseAdmin(new Configuration(getConfiguration()));
-    }
-    return hbaseAdmin;
+    return new HBaseAdmin(new Configuration(getConfiguration()));
   }
-  private HBaseAdmin hbaseAdmin = null;
 
   /**
    * Closes the named region.
@@ -1345,7 +1349,9 @@ public class HBaseTestingUtility {
    * @throws IOException
    */
   public void closeRegion(byte[] regionName) throws IOException {
-    getHBaseAdmin().closeRegion(regionName, null);
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.closeRegion(regionName, null);
+    admin.close();
   }
 
   /**
@@ -1437,12 +1443,14 @@ public class HBaseTestingUtility {
 
   public void waitTableAvailable(byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
+    HBaseAdmin admin = getHBaseAdmin();
     long startWait = System.currentTimeMillis();
-    while (!getHBaseAdmin().isTableAvailable(table)) {
+    while (!admin.isTableAvailable(table)) {
       assertTrue("Timed out waiting for table " + Bytes.toStringBinary(table),
           System.currentTimeMillis() - startWait < timeoutMillis);
       Thread.sleep(200);
     }
+    admin.close();
   }
 
   /**
@@ -1852,7 +1860,6 @@ public class HBaseTestingUtility {
           totalNumberOfRegions);
 
       admin.createTable(desc, splits);
-      admin.close();
     } catch (MasterNotRunningException e) {
       LOG.error("Master not running", e);
       throw new IOException(e);
@@ -1866,7 +1873,6 @@ public class HBaseTestingUtility {
   public static int getMetaRSPort(Configuration conf) throws IOException {
     HTable table = new HTable(conf, HConstants.META_TABLE_NAME);
     HRegionLocation hloc = table.getRegionLocation(Bytes.toBytes(""));
-    table.close();
     return hloc.getPort();
   }
 

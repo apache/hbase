@@ -197,7 +197,6 @@ public class TestFromClientSide {
      assertArrayEquals(T2, kvs[3].getValue());
      assertArrayEquals(T1, kvs[4].getValue());
      scanner.close();
-     h.close();
    }
 
    /**

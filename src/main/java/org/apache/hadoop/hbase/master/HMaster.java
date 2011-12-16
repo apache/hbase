@@ -1478,12 +1478,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         LOG.error("Error call master coprocessor preShutdown()", ioe);
       }
     }
-    if (this.assignmentManager != null) this.assignmentManager.shutdown();
-    if (this.serverManager != null) this.serverManager.shutdownCluster();
+    this.assignmentManager.shutdown();
+    this.serverManager.shutdownCluster();
     try {
-      if (this.clusterStatusTracker != null){
-        this.clusterStatusTracker.setClusterDown();
-      }
+      this.clusterStatusTracker.setClusterDown();
     } catch (KeeperException e) {
       LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
     }

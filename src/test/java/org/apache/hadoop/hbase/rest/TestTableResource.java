@@ -123,7 +123,6 @@ public class TestTableResource {
     assertEquals(m.size(), 2);
     regionMap = m;
     LOG.info("regions: " + regionMap);
-    table.close();
   }
 
   @AfterClass
