@@ -791,6 +791,7 @@ Release 0.92.0 - Unreleased
                (Daniel Gómez Ferro via Lars H)
    HBASE-4944  Optionally verify bulk loaded HFiles
    HBASE-4683  Always cache index and bloom blocks
+   HBASE-5001  Improve the performance of block cache keys
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

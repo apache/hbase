@@ -154,7 +154,7 @@ public class CacheTestUtils {
 
   public static void hammerSingleKey(final BlockCache toBeTested,
       int BlockSize, int numThreads, int numQueries) throws Exception {
-    final String key = "key";
+    final BlockCacheKey key = new BlockCacheKey("key", 0);
     final byte[] buf = new byte[5 * 1024];
     Arrays.fill(buf, (byte) 5);
 
@@ -205,7 +205,7 @@ public class CacheTestUtils {
         @Override
         public void doAnAction() throws Exception {
           for (int j = 0; j < 100; j++) {
-            String key = "key_" + finalI + "_" + j;
+            BlockCacheKey key = new BlockCacheKey("key_" + finalI + "_" + j, 0);
             Arrays.fill(buf, (byte) (finalI * j));
             final ByteArrayCacheable bac = new ByteArrayCacheable(buf);
 
@@ -314,14 +314,14 @@ public class CacheTestUtils {
         ;
 
       returnedBlocks[i] = new HFileBlockPair();
-      returnedBlocks[i].blockName = strKey;
+      returnedBlocks[i].blockName = new BlockCacheKey(strKey, 0);
       returnedBlocks[i].block = generated;
     }
     return returnedBlocks;
   }
 
   private static class HFileBlockPair {
-    String blockName;
+    BlockCacheKey blockName;
     HFileBlock block;
   }
 }

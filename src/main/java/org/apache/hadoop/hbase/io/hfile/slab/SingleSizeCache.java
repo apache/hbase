@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
@@ -53,7 +54,7 @@ import com.google.common.collect.MapMaker;
  **/
 public class SingleSizeCache implements BlockCache, HeapSize {
   private final Slab backingStore;
-  private final ConcurrentMap<String, CacheablePair> backingMap;
+  private final ConcurrentMap<BlockCacheKey, CacheablePair> backingMap;
   private final int numBlocks;
   private final int blockSize;
   private final CacheStats stats;
@@ -90,9 +91,9 @@ public class SingleSizeCache implements BlockCache, HeapSize {
     // This evictionListener is called whenever the cache automatically
     // evicts
     // something.
-    MapEvictionListener<String, CacheablePair> listener = new MapEvictionListener<String, CacheablePair>() {
+    MapEvictionListener<BlockCacheKey, CacheablePair> listener = new MapEvictionListener<BlockCacheKey, CacheablePair>() {
       @Override
-      public void onEviction(String key, CacheablePair value) {
+      public void onEviction(BlockCacheKey key, CacheablePair value) {
         timeSinceLastAccess.set(System.nanoTime()
             - value.recentlyAccessed.get());
         stats.evict();
@@ -106,7 +107,7 @@ public class SingleSizeCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public void cacheBlock(String blockName, Cacheable toBeCached) {
+  public void cacheBlock(BlockCacheKey blockName, Cacheable toBeCached) {
     ByteBuffer storedBlock;
 
     try {
@@ -138,7 +139,7 @@ public class SingleSizeCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public Cacheable getBlock(String key, boolean caching) {
+  public Cacheable getBlock(BlockCacheKey key, boolean caching) {
     CacheablePair contentBlock = backingMap.get(key);
     if (contentBlock == null) {
       stats.miss(caching);
@@ -170,7 +171,7 @@ public class SingleSizeCache implements BlockCache, HeapSize {
    * @param key the key of the entry we are going to evict
    * @return the evicted ByteBuffer
    */
-  public boolean evictBlock(String key) {
+  public boolean evictBlock(BlockCacheKey key) {
     stats.evict();
     CacheablePair evictedBlock = backingMap.remove(key);
 
@@ -181,7 +182,7 @@ public class SingleSizeCache implements BlockCache, HeapSize {
 
   }
 
-  private void doEviction(String key, CacheablePair evictedBlock) {
+  private void doEviction(BlockCacheKey key, CacheablePair evictedBlock) {
     long evictedHeap = 0;
     synchronized (evictedBlock) {
       if (evictedBlock.serializedData == null) {
@@ -282,8 +283,8 @@ public class SingleSizeCache implements BlockCache, HeapSize {
 
   /* Since its offheap, it doesn't matter if its in memory or not */
   @Override
-  public void cacheBlock(String blockName, Cacheable buf, boolean inMemory) {
-    this.cacheBlock(blockName, buf);
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+    this.cacheBlock(cacheKey, buf);
   }
 
   /*
@@ -291,10 +292,10 @@ public class SingleSizeCache implements BlockCache, HeapSize {
    * implemented in the event we want to use this as a standalone cache.
    */
   @Override
-  public int evictBlocksByPrefix(String prefix) {
+  public int evictBlocksByHfileName(String hfileName) {
     int evictedCount = 0;
-    for (String e : backingMap.keySet()) {
-      if (e.startsWith(prefix)) {
+    for (BlockCacheKey e : backingMap.keySet()) {
+      if (e.getHfileName().equals(hfileName)) {
         this.evictBlock(e);
       }
     }

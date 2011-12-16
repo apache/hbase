@@ -138,9 +138,6 @@ public class HFile {
   public final static String DEFAULT_COMPRESSION =
     DEFAULT_COMPRESSION_ALGORITHM.getName();
 
-  /** Separator between HFile name and offset in block cache key */
-  static final char CACHE_KEY_SEPARATOR = '_';
-
   // For measuring latency of "typical" reads and writes
   static volatile AtomicLong readOps = new AtomicLong();
   static volatile AtomicLong readTimeNano = new AtomicLong();
@@ -453,8 +450,8 @@ public class HFile {
     System.exit(prettyPrinter.run(args));
   }
 
-  public static String getBlockCacheKey(String hfileName, long offset) {
-    return hfileName + CACHE_KEY_SEPARATOR + offset;
+  public static BlockCacheKey getBlockCacheKey(String hfileName, long offset) {
+    return new BlockCacheKey(hfileName, offset);
   }
 
   /**

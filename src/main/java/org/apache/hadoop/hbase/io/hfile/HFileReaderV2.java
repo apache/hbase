@@ -183,7 +183,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
-      String cacheKey = HFile.getBlockCacheKey(name, metaBlockOffset);
+      BlockCacheKey cacheKey = HFile.getBlockCacheKey(name, metaBlockOffset);
 
       cacheBlock &= cacheConf.shouldCacheDataOnRead();
       if (cacheConf.isBlockCacheEnabled()) {
@@ -245,7 +245,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
     // the other choice is to duplicate work (which the cache would prevent you
     // from doing).
 
-    String cacheKey = HFile.getBlockCacheKey(name, dataBlockOffset);
+    BlockCacheKey cacheKey = HFile.getBlockCacheKey(name, dataBlockOffset);
     IdLock.Entry lockEntry = offsetLock.getLockEntry(dataBlockOffset);
     try {
       blockLoads.incrementAndGet();
@@ -310,8 +310,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
   public void close(boolean evictOnClose) throws IOException {
     if (evictOnClose && cacheConf.isBlockCacheEnabled()) {
-      int numEvicted = cacheConf.getBlockCache().evictBlocksByPrefix(name
-          + HFile.CACHE_KEY_SEPARATOR);
+      int numEvicted = cacheConf.getBlockCache().evictBlocksByHfileName(name);
       if (LOG.isTraceEnabled()) {
         LOG.trace("On close, file=" + name + " evicted=" + numEvicted
           + " block(s)");
