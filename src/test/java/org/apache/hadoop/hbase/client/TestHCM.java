@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.commons.httpclient.HostConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -112,14 +114,8 @@ public class TestHCM {
       getHConnectionManagerCacheSize());
   }
 
-  private static int getHConnectionManagerCacheSize()
-  throws SecurityException, NoSuchFieldException,
-  IllegalArgumentException, IllegalAccessException {
-    Field cacheField =
-      HConnectionManager.class.getDeclaredField("HBASE_INSTANCES");
-    cacheField.setAccessible(true);
-    Map<?, ?> cache = (Map<?, ?>) cacheField.get(null);
-    return cache.size();
+  private static int getHConnectionManagerCacheSize(){
+    return HConnectionTestingUtility.getConnectionCount();
   }
 
   /**
@@ -187,12 +183,12 @@ public class TestHCM {
     // go above zk connections, we just fall into cycle where we are failing
     // to set up a session and test runs for a long time.
     int maxConnections = Math.min(zkmaxconnections - 1, 20);
-    List<HConnection> connections = new ArrayList<HConnection>();
+    List<HConnection> connections = new ArrayList<HConnection>(maxConnections);
     HConnection previousConnection = null;
     try {
       for (int i = 0; i < maxConnections; i++) {
         // set random key to differentiate the connection from previous ones
-        Configuration configuration = TEST_UTIL.getConfiguration();
+        Configuration configuration = new Configuration(TEST_UTIL.getConfiguration());
         configuration.set("some_key", String.valueOf(_randy.nextInt()));
         configuration.set(HConstants.HBASE_CLIENT_INSTANCE_ID,
             String.valueOf(_randy.nextInt()));
@@ -214,6 +210,7 @@ public class TestHCM {
         LOG.info("The current HConnectionManager#HBASE_INSTANCES cache size is: "
             + getHConnectionManagerCacheSize());
         Thread.sleep(50);
+        connections.add(currentConnection);
       }
     } finally {
       for (HConnection c: connections) {
@@ -225,11 +222,13 @@ public class TestHCM {
 
   @Test
   public void testClosing() throws Exception {
-    Configuration configuration = TEST_UTIL.getConfiguration();
+    Configuration configuration =
+      new Configuration(TEST_UTIL.getConfiguration());
     configuration.set(HConstants.HBASE_CLIENT_INSTANCE_ID,
         String.valueOf(_randy.nextInt()));
 
     HConnection c1 = HConnectionManager.createConnection(configuration);
+    // We create two connections with the same key.
     HConnection c2 = HConnectionManager.createConnection(configuration);
 
     HConnection c3 = HConnectionManager.getConnection(configuration);
@@ -247,9 +246,14 @@ public class TestHCM {
     c3.close();
     assertTrue(c3.isClosed());
     // c3 was removed from the cache
-    assertTrue(HConnectionManager.getConnection(configuration) != c3);
+    HConnection c5 = HConnectionManager.getConnection(configuration);
+    assertTrue(c5 != c3);
 
     assertFalse(c2.isClosed());
+    c2.close();
+    assertTrue(c2.isClosed());
+    c5.close();
+    assertTrue(c5.isClosed());
   }
 
   /**
