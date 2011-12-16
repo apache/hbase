@@ -487,7 +487,6 @@ Release 0.92.0 - Unreleased
                (Chunhui Shen)
    HBASE-4997  SplitLogManager can have a race on batch.installed (Prakash Khemani)
    HBASE-5026  Add coprocessor hook to HRegionServer.ScannerListener.leaseExpired()
-   HBASE-4935  hbase 0.92.0 doesn't work going against 0.20.205.0, its packaged hadoop
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
