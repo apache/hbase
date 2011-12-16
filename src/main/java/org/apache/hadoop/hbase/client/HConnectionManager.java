@@ -276,6 +276,9 @@ public class HConnectionManager {
         } else if (stopProxy) {
           connection.stopProxyOnClose(stopProxy);
         }
+      }else {
+        LOG.error("Connection not found in the list, can't delete it "+
+          "(connection key="+connectionKey+"). May be the key was modified?");
       }
     }
   }
@@ -469,6 +472,14 @@ public class HConnectionManager {
         }
       }
       return true;
+    }
+
+    @Override
+    public String toString() {
+      return "HConnectionKey{" +
+        "properties=" + properties +
+        ", username='" + username + '\'' +
+        '}';
     }
   }
 
