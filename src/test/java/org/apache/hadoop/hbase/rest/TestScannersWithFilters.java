@@ -201,6 +201,7 @@ public class TestScannersWithFilters {
       numRows -= 2;
       table.close();
     }
+    admin.close();
   }
 
   @AfterClass

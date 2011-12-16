@@ -67,6 +67,7 @@ public class TestMaster {
   public void testMasterOpsWhileSplitting() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
     HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
     TEST_UTIL.loadTable(ht, FAMILYNAME);
@@ -90,7 +91,7 @@ public class TestMaster {
       registerListener(EventType.RS_ZK_REGION_SPLIT, list);
 
     LOG.info("Splitting table");
-    TEST_UTIL.getHBaseAdmin().split(TABLENAME);
+    admin.split(TABLENAME);
     LOG.info("Waiting for split result to be about to open");
     split.await(60, TimeUnit.SECONDS);
     try {
@@ -112,6 +113,7 @@ public class TestMaster {
     } finally {
       proceed.countDown();
     }
+    admin.close();
   }
 
   static class RegionSplitListener implements EventHandlerListener {

@@ -123,8 +123,7 @@ public class TestLogRollAbort {
     LOG.info("Starting testRSAbortWithUnflushedEdits()");
 
     // When the META table can be opened, the region servers are running
-    new HTable(TEST_UTIL.getConfiguration(),
-      HConstants.META_TABLE_NAME).close();
+    new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
 
     // Create the test table and open it
     String tableName = this.getClass().getSimpleName();

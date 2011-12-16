@@ -233,8 +233,6 @@ public class OfflineMetaRebuildTestCore {
     }
     meta.delete(dels);
     meta.flushCommits();
-    scanner.close();
-    meta.close();
   }
 
   /**

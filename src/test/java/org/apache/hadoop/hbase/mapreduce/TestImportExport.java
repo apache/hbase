@@ -186,7 +186,6 @@ public class TestImportExport {
         HColumnDescriptor.DEFAULT_BLOOMFILTER,
         HConstants.REPLICATION_SCOPE_LOCAL));
     UTIL.getHBaseAdmin().createTable(desc);
-    t.close();
     t = new HTable(UTIL.getConfiguration(), IMPORT_TABLE);
     args = new String[] {
         IMPORT_TABLE,
@@ -214,6 +213,5 @@ public class TestImportExport {
     assertEquals(now+2, res[4].getTimestamp());
     assertEquals(now+1, res[5].getTimestamp());
     assertEquals(now, res[6].getTimestamp());
-    t.close();
   }
 }
