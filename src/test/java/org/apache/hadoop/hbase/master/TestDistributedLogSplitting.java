@@ -19,12 +19,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_final_transistion_failed;
-import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_task_acquired;
-import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_task_err;
-import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_task_resigned;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -248,6 +246,15 @@ public class TestDistributedLogSplitting {
     assertEquals(NUM_LOG_LINES, count);
   }
 
+  /**
+   * The original intention of this test was to force an abort of a region
+   * server and to make sure that the failure path in the region servers is
+   * properly evaluated. But it is difficult to ensure that the region server
+   * doesn't finish the log splitting before it aborts. Also now, there is
+   * this code path where the master will preempt the region server when master
+   * detects that the region server has aborted.
+   * @throws Exception
+   */
   @Test (timeout=300000)
   public void testWorkerAbort() throws Exception {
     LOG.info("testWorkerAbort");
@@ -281,21 +288,26 @@ public class TestDistributedLogSplitting {
     slm.installTask(logfiles[0].getPath().toString(), batch);
     //waitForCounter but for one of the 2 counters
     long curt = System.currentTimeMillis();
-    long endt = curt + 30000;
+    long waitTime = 30000;
+    long endt = curt + waitTime;
     while (curt < endt) {
       if ((tot_wkr_task_resigned.get() + tot_wkr_task_err.get() + 
-          tot_wkr_final_transistion_failed.get()) == 0) {
+          tot_wkr_final_transistion_failed.get() + tot_wkr_task_done.get() +
+          tot_wkr_preempt_task.get()) == 0) {
         Thread.yield();
         curt = System.currentTimeMillis();
       } else {
-        assertEquals(1, (tot_wkr_task_resigned.get() + tot_wkr_task_err.get() +
-            tot_wkr_final_transistion_failed.get()));
+        assertEquals(1, (tot_wkr_task_resigned.get() + tot_wkr_task_err.get() + 
+            tot_wkr_final_transistion_failed.get() + tot_wkr_task_done.get() +
+            tot_wkr_preempt_task.get()));
         return;
       }
     }
-    assertEquals(1, batch.done);
-    // fail("region server completed the split before aborting");
-    return;
+    fail("none of the following counters went up in " + waitTime + 
+        " milliseconds - " +
+        "tot_wkr_task_resigned, tot_wkr_task_err, " +
+        "tot_wkr_final_transistion_failed, tot_wkr_task_done, " +
+        "tot_wkr_preempt_task");
   }
 
   HTable installTable(ZooKeeperWatcher zkw, String tname, String fname,
