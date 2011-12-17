@@ -1372,7 +1372,7 @@
         </property>
       </activation>
       <properties>
-        <hadoop.version>1.0.0rc2</hadoop.version>
+        <hadoop.version>1.0.0rc3</hadoop.version>
       </properties>
       <dependencies>
         <dependency>
@@ -1443,7 +1443,7 @@
     <profile>
       <id>security</id>
       <properties>
-        <hadoop.version>0.20.205.1-7070-SNAPSHOT</hadoop.version>
+        <hadoop.version>1.0.0rc3</hadoop.version>
       </properties>
       <build>
         <finalName>${project.artifactId}-${project.version}-security</finalName>
