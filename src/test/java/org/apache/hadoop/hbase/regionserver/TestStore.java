@@ -587,7 +587,6 @@ public class TestStore extends TestCase {
           overwrite, bufferSize, replication, blockSize, progress), faultPos);
     }
 
-    @Override
     public FSDataOutputStream createNonRecursive(Path f, boolean overwrite,
         int bufferSize, short replication, long blockSize, Progressable progress)
     throws IOException {
