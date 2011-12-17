@@ -1510,7 +1510,7 @@
         </property>
       </activation>
       <properties>
-        <hadoop.version>0.22.0-SNAPSHOT</hadoop.version>
+        <hadoop.version>0.22.0</hadoop.version>
       </properties>
       <dependencies>
         <dependency>
