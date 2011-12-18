@@ -2735,6 +2735,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return this.requestCount;
   }
 
+  /**
+   * @return time stamp in millis of when this region server was started
+   */
+  public long getStartcode() {
+    return this.startcode;
+  }
+
   /** @return reference to FlushRequester */
   public FlushRequester getFlushRequester() {
     return this.cacheFlusher;

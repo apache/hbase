@@ -795,6 +795,8 @@ Release 0.92.0 - Unreleased
    HBASE-4944  Optionally verify bulk loaded HFiles
    HBASE-4683  Always cache index and bloom blocks
    HBASE-5001  Improve the performance of block cache keys
+   HBASE-4934  Display Master server and Regionserver start time on respective
+               info servers (Jonathan Hsieh)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
