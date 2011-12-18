@@ -199,7 +199,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   private volatile boolean loadBalancerRunning = false;
 
-  
+  // Time stamps for when a hmaster was started and when it became active
+  private long masterStartTime;
+  private long masterActiveTime;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -301,6 +304,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         "(Also watching cluster state node)");
       Thread.sleep(c.getInt("zookeeper.session.timeout", 180 * 1000));
     }
+    
   }
 
   /**
@@ -317,6 +321,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     MonitoredTask startupStatus =
       TaskMonitor.get().createStatus("Master startup");
     startupStatus.setDescription("Master startup");
+    masterStartTime = System.currentTimeMillis();
     try {
       /*
        * Block on becoming the active master.
@@ -458,6 +463,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
      */
 
     status.setStatus("Initializing Master file system");
+    this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
     this.fileSystemManager = new MasterFileSystem(this, this, metrics);
 
@@ -1353,6 +1359,20 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     return CoprocessorHost.getLoadedCoprocessors().toString();
   }
 
+  /**
+   * @return timestamp in millis when HMaster was started.
+   */
+  public long getMasterStartTime() {
+    return masterStartTime;
+  }
+
+  /**
+   * @return timestamp in millis when HMaster became the active master.
+   */
+  public long getMasterActiveTime() {
+    return masterActiveTime;
+  }
+  
   /**
    * @return array of coprocessor SimpleNames.
    */

@@ -111,6 +111,8 @@ org.apache.hadoop.hbase.HBaseConfiguration;
   </td>
   <td>Coprocessors currently loaded loaded by the master</td>
 </tr>
+<tr><td>HMaster Start Time</td><td><% new Date(master.getMasterStartTime()) %></td><td>Date stamp of when this HMaster was started</td></tr>
+<tr><td>HMaster Active Time</td><td><% new Date(master.getMasterActiveTime()) %></td><td>Date stamp of when this HMaster became active</td></tr>
 </table>
 
 <& ../common/TaskMonitorTmpl; filter = filter &>
@@ -202,7 +204,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 </%java>
 
 <table>
-<tr><th rowspan="<% servers.size() + 1%>"></th><th>ServerName</th><th>Load</th></tr>
+<tr><th rowspan="<% servers.size() + 1%>"></th><th>ServerName</th><th>Start time</th><th>Load</th></tr>
 <%java>
    ServerName [] serverNames = servers.toArray(new ServerName[servers.size()]);
      Arrays.sort(serverNames);
@@ -217,12 +219,13 @@ org.apache.hadoop.hbase.HBaseConfiguration;
          totalRegions += hsl.getNumberOfRegions();
          totalRequests += hsl.getNumberOfRequests();
        }
+       long startcode = serverName.getStartcode();
 </%java>
-<tr><td><a href="<% url %>"><% serverName %></a></td></td><td><% loadStr %></td></tr>
+<tr><td><a href="<% url %>"><% serverName %></a></td><td><% new Date(startcode) %></td><td><% loadStr %></td></tr>
 <%java>
     }
 </%java>
-<tr><th>Total: </th><td>servers: <% servers.size() %></td><td>requestsPerSecond=<% totalRequests %>, numberOfOnlineRegions=<% totalRegions %></td></tr>
+<tr><th>Total: </th><td>servers: <% servers.size() %></td><td></td><td>requestsPerSecond=<% totalRequests %>, numberOfOnlineRegions=<% totalRegions %></td></tr>
 </table>
 
 <p>Load is requests per second and count of regions loaded</p>

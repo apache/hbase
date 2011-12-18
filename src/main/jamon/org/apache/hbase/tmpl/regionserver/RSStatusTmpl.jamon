@@ -96,6 +96,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
     <% java.util.Arrays.toString(regionServer.getCoprocessors()) %>
   </td>
   <td>Coprocessors currently loaded by this regionserver</td>
+<tr><td>RS Start Time</td><td><% new Date(regionServer.getStartcode()) %></td><td>Date stamp of when this region server was started</td></tr>
 </tr>
 </table>
 
