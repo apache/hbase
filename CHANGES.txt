@@ -490,6 +490,7 @@ Release 0.92.0 - Unreleased
    HBASE-5029  TestDistributedLogSplitting fails on occasion (Prakash Khemani)
    HBASE-5049  TestHLogSplit.testLogRollAfterSplitStart not working due to HBASE-5006
                (Jimmy Xiang)
+   HBASE-5040  Secure HBase builds fail
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
