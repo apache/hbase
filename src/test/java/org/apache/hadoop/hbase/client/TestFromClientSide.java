@@ -44,6 +44,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -67,6 +69,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.hbase.client.HTable.DaemonThreadFactory;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -3849,6 +3852,29 @@ public class TestFromClientSide {
       }
       assertTrue("Not found: " + Bytes.toString(tables[i]), found);
     }
+  }
+
+  /**
+   * simple test that just executes parts of the client
+   * API that accept a pre-created HConnction instance
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testUnmanagedHConnection() throws IOException {
+    final byte[] tableName = Bytes.toBytes("testUnmanagedHConnection");
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    HConnection conn = HConnectionManager.createConnection(TEST_UTIL
+        .getConfiguration());
+    ExecutorService pool = new ThreadPoolExecutor(1, Integer.MAX_VALUE,
+        60, TimeUnit.SECONDS,
+        new SynchronousQueue<Runnable>(),
+        new DaemonThreadFactory());
+    ((ThreadPoolExecutor)pool).allowCoreThreadTimeOut(true);
+    HTable t = new HTable(tableName, conn, pool);
+    HBaseAdmin ha = new HBaseAdmin(conn);
+    assertTrue(ha.tableExists(tableName));
+    assertTrue(t.get(new Get(ROW)).isEmpty());
   }
 
   @Test

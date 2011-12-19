@@ -623,14 +623,20 @@ public class HConnectionManager {
     throws MasterNotRunningException, ZooKeeperConnectionException {
 
       // Check if we already have a good master connection
-      if (master != null) {
-        if (master.isMasterRunning()) {
+      try {
+        if (master != null && master.isMasterRunning()) {
           return master;
         }
+      } catch (UndeclaredThrowableException ute) {
+        // log, but ignore, the loop below will attempt to reconnect
+        LOG.info("Exception contacting master. Retrying...", ute.getCause());
       }
+
       checkIfBaseNodeAvailable();
       ServerName sn = null;
       synchronized (this.masterLock) {
+        this.master = null;
+
         for (int tries = 0;
           !this.closed &&
           !this.masterChecked && this.master == null &&
@@ -679,15 +685,19 @@ public class HConnectionManager {
             throw new RuntimeException("Thread was interrupted while trying to connect to master.");
           }
         }
-        this.masterChecked = true;
-      }
-      if (this.master == null) {
-        if (sn == null) {
-          throw new MasterNotRunningException();
+        // Avoid re-checking in the future if this is a managed HConnection,
+        // even if we failed to acquire a master.
+        // (this is to retain the existing behavior before HBASE-5058)
+        this.masterChecked = managed;
+
+        if (this.master == null) {
+          if (sn == null) {
+            throw new MasterNotRunningException();
+          }
+          throw new MasterNotRunningException(sn.toString());
         }
-        throw new MasterNotRunningException(sn.toString());
+        return this.master;
       }
-      return this.master;
     }
 
     private void checkIfBaseNodeAvailable() throws MasterNotRunningException {
