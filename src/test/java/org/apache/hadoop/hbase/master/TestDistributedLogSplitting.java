@@ -255,7 +255,6 @@ public class TestDistributedLogSplitting {
    * detects that the region server has aborted.
    * @throws Exception
    */
-  @Ignore
   @Test (timeout=300000)
   public void testWorkerAbort() throws Exception {
     LOG.info("testWorkerAbort");
