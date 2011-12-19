@@ -833,6 +833,11 @@ Release 0.92.0 - Unreleased
    HBASE-2742  Provide strong authentication with a secure RPC engine
    HBASE-3025  Coprocessor based access control
 
+Release 0.90.6 - Unreleased
+
+  BUG FIXES
+   HBASE-4970  Add a parameter so that keepAliveTime of Htable thread pool can be changed (gaojinchao)
+
 Release 0.90.5 - Unreleased
 
   BUG FIXES
