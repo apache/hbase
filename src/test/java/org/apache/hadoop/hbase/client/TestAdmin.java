@@ -82,12 +82,11 @@ public class TestAdmin {
 
   @Before
   public void setUp() throws Exception {
-    this.admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    this.admin = TEST_UTIL.getHBaseAdmin();
   }
 
   @After
   public void tearDown() throws Exception {
-    this.admin.close();
   }
 
   @Test
