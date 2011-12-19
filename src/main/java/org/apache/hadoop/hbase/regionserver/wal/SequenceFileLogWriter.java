@@ -211,7 +211,12 @@ public class SequenceFileLogWriter implements HLog.Writer {
   @Override
   public void close() throws IOException {
     if (this.writer != null) {
-      this.writer.close();
+      try {
+        this.writer.close();
+      } catch (NullPointerException npe) {
+        // Can get a NPE coming up from down in DFSClient$DFSOutputStream#close
+        LOG.warn(npe);
+      }
       this.writer = null;
     }
   }
