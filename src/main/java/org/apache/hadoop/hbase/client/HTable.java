@@ -202,13 +202,15 @@ public class HTable implements HTableInterface, Closeable {
     if (maxThreads == 0) {
       maxThreads = 1; // is there a better default?
     }
-
+    
+    long keepAliveTime = conf.getLong("hbase.htable.threads.keepAliveTime", 60);
+    
     // Using the "direct handoff" approach, new threads will only be created
     // if it is necessary and will grow unbounded. This could be bad but in HCM
     // we only create as many Runnables as there are region servers. It means
     // it also scales when new region servers are added.
     this.pool = new ThreadPoolExecutor(1, maxThreads,
-        60, TimeUnit.SECONDS,
+        keepAliveTime, TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(),
         new DaemonThreadFactory());
     ((ThreadPoolExecutor)this.pool).allowCoreThreadTimeOut(true);
