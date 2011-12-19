@@ -104,6 +104,7 @@ public class CatalogTracker {
   private final MetaNodeTracker metaNodeTracker;
   private final AtomicBoolean metaAvailable = new AtomicBoolean(false);
   private boolean instantiatedzkw = false;
+  private Abortable abortable;
 
   /*
    * Do not clear this address once set.  Its needed when we do
@@ -183,8 +184,21 @@ public class CatalogTracker {
     this.connection = connection;
     if (abortable == null) {
       // A connection is abortable.
-      abortable = this.connection;
+      this.abortable = this.connection;
     }
+    Abortable throwableAborter = new Abortable() {
+
+      @Override
+      public void abort(String why, Throwable e) {
+        throw new RuntimeException(why, e);
+      }
+
+      @Override
+      public boolean isAborted() {
+        return true;
+      }
+
+    };
     if (zk == null) {
       // Create our own.  Set flag so we tear it down on stop.
       this.zookeeper =
@@ -194,10 +208,10 @@ public class CatalogTracker {
     } else {
       this.zookeeper = zk;
     }
-    this.rootRegionTracker = new RootRegionTracker(zookeeper, abortable);
+    this.rootRegionTracker = new RootRegionTracker(zookeeper, throwableAborter);
     final CatalogTracker ct = this;
     // Override nodeDeleted so we get notified when meta node deleted
-    this.metaNodeTracker = new MetaNodeTracker(zookeeper, abortable) {
+    this.metaNodeTracker = new MetaNodeTracker(zookeeper, throwableAborter) {
       public void nodeDeleted(String path) {
         if (!path.equals(node)) return;
         ct.resetMetaLocation();
@@ -215,8 +229,14 @@ public class CatalogTracker {
    */
   public void start() throws IOException, InterruptedException {
     LOG.debug("Starting catalog tracker " + this);
-    this.rootRegionTracker.start();
-    this.metaNodeTracker.start();
+    try {
+      this.rootRegionTracker.start();
+      this.metaNodeTracker.start();
+    } catch (RuntimeException e) {
+      Throwable t = e.getCause();
+      this.abortable.abort(e.getMessage(), t);
+      throw new IOException("Attempt to start root/meta tracker failed.", t);
+    }
   }
 
   /**
