@@ -1688,7 +1688,7 @@
         </property>
       </activation>
       <properties>
-        <hadoop.version>0.23.0-SNAPSHOT</hadoop.version>
+        <hadoop.version>0.23.1-SNAPSHOT</hadoop.version>
       </properties>
       <dependencies>
         <dependency>
