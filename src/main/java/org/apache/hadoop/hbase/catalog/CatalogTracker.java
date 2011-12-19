@@ -75,6 +75,7 @@ public class CatalogTracker {
   private HServerAddress metaLocation;
   private final int defaultTimeout;
   private boolean stopped = false;
+  private HConnection abortable;
 
   public static final byte [] ROOT_REGION =
     HRegionInfo.ROOT_REGIONINFO.getRegionName();
@@ -134,10 +135,19 @@ public class CatalogTracker {
     this.connection = connection;
     this.zookeeper = (zk == null) ? this.connection.getZooKeeperWatcher() : zk;
     if (abortable == null) {
-      abortable = this.connection;
+      this.abortable = this.connection;
     }
-    this.rootRegionTracker = new RootRegionTracker(zookeeper, abortable);
-    this.metaNodeTracker = new MetaNodeTracker(zookeeper, this, abortable);
+    Abortable throwableAborter = new Abortable() {
+
+      @Override
+      public void abort(String why, Throwable e) {
+        throw new RuntimeException(why, e);
+      }
+      
+    };
+    
+    this.rootRegionTracker = new RootRegionTracker(zookeeper, throwableAborter);
+    this.metaNodeTracker = new MetaNodeTracker(zookeeper, this, throwableAborter);
     this.defaultTimeout = defaultTimeout;
   }
 
@@ -149,9 +159,16 @@ public class CatalogTracker {
    * @throws InterruptedException 
    */
   public void start() throws IOException, InterruptedException {
-    this.rootRegionTracker.start();
-    this.metaNodeTracker.start();
-    LOG.debug("Starting catalog tracker " + this);
+    
+    try {
+      this.rootRegionTracker.start();
+      this.metaNodeTracker.start();
+      LOG.debug("Starting catalog tracker " + this);
+    }catch (RuntimeException e){
+      Throwable t = e.getCause();
+      this.abortable.abort(e.getMessage(), t);
+      throw new IOException("Attempt to start root/meta tracker failed.", t);
+    }
   }
 
   /**

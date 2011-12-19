@@ -7,6 +7,7 @@ Release 0.90.6 - Unreleased
                false in 0.90 version (Chunhui Shen)
    HBASE-4893  HConnectionImplementation is closed but not deleted (Mubarak)
    HBASE-4970  Add a parameter so that keepAliveTime of Htable thread pool can be changed (gaojinchao)
+   HBASE-5060  HBase client is blocked forever (Jinchao)
 
 Release 0.90.5 - Unreleased
   BUG FIXES
