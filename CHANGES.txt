@@ -885,6 +885,11 @@ Release 0.92.0 - Unreleased
    HBASE-3025  Coprocessor based access control
    HBASE-2418  Support for ZooKeeper authentication
 
+Release 0.90.6 - Unreleased
+
+  BUG FIXES
+   HBASE-4970  Add a parameter so that keepAliveTime of Htable thread pool can be changed (gaojinchao)
+
 Release 0.90.5 - Unreleased
 
   BUG FIXES
