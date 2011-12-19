@@ -111,8 +111,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
         htd.addFamily(new HColumnDescriptor(family(i)));
       }
 
-      HBaseAdmin admin = util.getHBaseAdmin();
-      admin.createTable(htd);
+      util.getHBaseAdmin().createTable(htd);
     } catch (TableExistsException tee) {
       LOG.info("Table " + table + " already exists");
     }

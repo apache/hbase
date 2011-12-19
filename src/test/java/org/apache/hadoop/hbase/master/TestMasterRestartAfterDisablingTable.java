@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -96,7 +97,10 @@ public class TestMasterRestartAfterDisablingTable {
     cluster.waitForActiveAndReadyMaster();
 
     log("Enabling table\n");
-    TEST_UTIL.getHBaseAdmin().enableTable(table);
+    // Need a new Admin, the previous one is on the old master
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    admin.enableTable(table);
+    admin.close();
     log("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     log("Verifying there are " + numRegions + " assigned on cluster\n");

@@ -126,6 +126,7 @@ public class TestConstraint {
       Throwable t = causes.get(0);
       assertEquals(ConstraintException.class, t.getClass());
     }
+    table.close();
   }
 
   /**
@@ -230,6 +231,7 @@ public class TestConstraint {
     table.put(put);
     // and we make sure that constraints were not run...
     assertFalse(CheckWasRunConstraint.wasRun);
+    table.close();
   }
 
   @After
