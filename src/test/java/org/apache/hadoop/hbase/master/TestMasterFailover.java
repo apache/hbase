@@ -123,6 +123,9 @@ public class TestMasterFailover {
     }
     assertEquals(1, numActive);
     assertEquals(2, masterThreads.size());
+    int rsCount = masterThreads.get(activeIndex).getMaster().getClusterStatus().getServersSize();
+    LOG.info("Active master managing " + rsCount +  " regions servers");
+    assertEquals(3, rsCount);
 
     // kill the active master
     LOG.debug("\n\nStopping the active master\n");
@@ -135,8 +138,13 @@ public class TestMasterFailover {
     LOG.debug("\n\nVerifying backup master is now active\n");
     // should only have one master now
     assertEquals(1, masterThreads.size());
+
     // and he should be active
-    assertTrue(masterThreads.get(0).getMaster().isActiveMaster());
+    HMaster active = masterThreads.get(0).getMaster();
+    int rss = active.getClusterStatus().getServersSize();
+    LOG.info("Active master managing " + rss +  " regions servers");
+    assertTrue(active.isActiveMaster());
+    assertEquals(3, rss);
 
     // Stop the cluster
     TEST_UTIL.shutdownMiniCluster();
