@@ -1738,21 +1738,25 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private ServerName getMaster() {
     ServerName masterServerName = null;
     long previousLogTime = 0;
-    while ((masterServerName = this.masterAddressManager.getMasterAddress()) == null) {
-      if (!keepLooping()) return null;
-      if (System.currentTimeMillis() > (previousLogTime+1000)){
-        LOG.debug("No master found; retry");
-        previousLogTime = System.currentTimeMillis();
-      }
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException ignored) {
-      }
-    }
-    InetSocketAddress isa =
-      new InetSocketAddress(masterServerName.getHostname(), masterServerName.getPort());
     HMasterRegionInterface master = null;
     while (keepLooping() && master == null) {
+      masterServerName = this.masterAddressManager.getMasterAddress();
+      if (masterServerName == null) {
+        if (!keepLooping()) {
+          // give up with no connection.
+          LOG.debug("No master found and cluster is stopped; bailing out");
+          return null;
+        }
+        LOG.debug("No master found; retry");
+        previousLogTime = System.currentTimeMillis();
+
+        sleeper.sleep();
+        continue;
+      }
+
+      InetSocketAddress isa =
+        new InetSocketAddress(masterServerName.getHostname(), masterServerName.getPort());
+
       LOG.info("Attempting connect to Master server at " +
         this.masterAddressManager.getMasterAddress());
       try {
