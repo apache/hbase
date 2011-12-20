@@ -492,6 +492,7 @@ Release 0.92.0 - Unreleased
                (Jimmy Xiang)
    HBASE-5040  Secure HBase builds fail
    HBASE-5062  Missing logons if security is enabled
+   HBASE-4935  hbase 0.92.0 doesn't work going against 0.20.205.0, its packaged hadoop
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

@@ -106,7 +106,9 @@ public class SequenceFileLogReader implements HLog.Reader {
             Field fIn = FilterInputStream.class.getDeclaredField("in");
             fIn.setAccessible(true);
             Object realIn = fIn.get(this.in);
-            if (realIn.getClass() == DFSInputStream.class) {
+            // In hadoop 0.22, DFSInputStream is a standalone class.  Before this,
+            // it was an inner class of DFSClient.
+            if (realIn.getClass().getName().endsWith("DFSInputStream")) {
               Method getFileLength = realIn.getClass().
                 getDeclaredMethod("getFileLength", new Class<?> []{});
               getFileLength.setAccessible(true);
