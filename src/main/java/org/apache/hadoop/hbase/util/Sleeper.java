@@ -95,8 +95,8 @@ public class Sleeper {
         if (slept - this.period > MINIMAL_DELTA_FOR_LOGGING) {
           LOG.warn("We slept " + slept + "ms instead of " + this.period +
               "ms, this is likely due to a long " +
-              "garbage collecting pause and it's usually bad, " +
-              "see http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A9");
+              "garbage collecting pause and it's usually bad, see " +
+              "http://hbase.apache.org/book.html#trouble.rs.runtime.zkexpired");
         }
       } catch(InterruptedException iex) {
         // We we interrupted because we're meant to stop?  If not, just
