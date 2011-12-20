@@ -457,6 +457,7 @@ Release 0.92.0 - Unreleased
    HBASE-4946  HTable.coprocessorExec (and possibly coprocessorProxy) does not work with
                dynamically loaded coprocessors (Andrei Dragomir)
    HBASE-5026  Add coprocessor hook to HRegionServer.ScannerListener.leaseExpired()
+   HBASE-4935  hbase 0.92.0 doesn't work going against 0.20.205.0, its packaged hadoop
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
