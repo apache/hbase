@@ -26,15 +26,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -67,7 +66,12 @@ public class HFilePrettyPrinter {
   private boolean printStats;
   private boolean checkRow;
   private boolean checkFamily;
+  private boolean isSeekToRow = false;
 
+  /**
+   * The row which the user wants to specify and print all the KeyValues for.
+   */
+  private byte[] row = null;
   private Configuration conf;
 
   private List<Path> files = new ArrayList<Path>();
@@ -87,6 +91,8 @@ public class HFilePrettyPrinter {
     options.addOption("a", "checkfamily", false, "Enable family check");
     options.addOption("f", "file", true,
         "File to scan. Pass full-path; e.g. hdfs://a:9000/hbase/.META./12/34");
+    options.addOption("w", "seekToRow", true,
+      "Seek to this row and print all the kvs for this row only");
     options.addOption("r", "region", true,
         "Region to scan. Pass region name; e.g. '.META.,,1'");
     options.addOption("s", "stats", false, "Print statistics");
@@ -113,6 +119,17 @@ public class HFilePrettyPrinter {
 
     if (cmd.hasOption("f")) {
       files.add(new Path(cmd.getOptionValue("f")));
+    }
+
+    if (cmd.hasOption("w")) {
+      String key = cmd.getOptionValue("w");
+      if (key != null && key.length() != 0) {
+        row = key.getBytes();
+        isSeekToRow = true;
+      } else {
+        System.err.println("Invalid row is specified.");
+        System.exit(-1);
+      }
     }
 
     if (cmd.hasOption("r")) {
@@ -198,8 +215,16 @@ public class HFilePrettyPrinter {
       // scan over file and read key/value's and check if requested
       HFileScanner scanner = reader.getScanner(false, false, false);
       fileStats = new KeyValueStatsCollector();
-      if (scanner.seekTo())
-        scanKeysValues(file, fileStats, scanner);
+      boolean shouldScanKeysValues = false;
+      if (this.isSeekToRow) {
+        // seek to the first kv on this row
+        shouldScanKeysValues = 
+          (scanner.seekTo(KeyValue.createFirstOnRow(this.row).getKey()) != -1);
+      } else {
+        shouldScanKeysValues = scanner.seekTo();
+      }
+      if (shouldScanKeysValues)
+        scanKeysValues(file, fileStats, scanner, row);
     }
 
     // print meta data
@@ -220,11 +245,19 @@ public class HFilePrettyPrinter {
     reader.close();
   }
 
-  private void scanKeysValues(Path file, KeyValueStatsCollector fileStats, HFileScanner scanner)
-      throws IOException {
+  private void scanKeysValues(Path file, KeyValueStatsCollector fileStats,
+      HFileScanner scanner,  byte[] row) throws IOException {
     KeyValue pkv = null;
     do {
       KeyValue kv = scanner.getKeyValue();
+      if (row != null && row.length != 0) {
+        int result = Bytes.compareTo(kv.getRow(), row);
+        if (result > 0) {
+          break;
+        } else if (result < 0) {
+          continue;
+        }
+      }
       // collect stats
       if (printStats) {
         fileStats.collect(kv);
