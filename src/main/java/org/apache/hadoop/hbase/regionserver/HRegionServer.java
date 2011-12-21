@@ -3285,8 +3285,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             if (code.getOperationStatusCode() == OperationStatusCode.SUCCESS) {
               result = new Result();
             } else if (code.getOperationStatusCode()
-                == OperationStatusCode.BAD_FAMILY) {
-              result = new NoSuchColumnFamilyException(code.getExceptionMsg());
+                == OperationStatusCode.SANITY_CHECK_FAILURE) {
+              result = new DoNotRetryIOException(code.getExceptionMsg());
             }
             // FAILURE && NOT_RUN becomes null, aka: need to run again.
 
