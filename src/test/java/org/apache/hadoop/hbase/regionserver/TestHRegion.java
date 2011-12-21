@@ -473,7 +473,7 @@ public class TestHRegion extends HBaseTestCase {
     boolean exception = false;
     try {
       this.region.put(p);
-    } catch (NoSuchColumnFamilyException e) {
+    } catch (DoNotRetryIOException e) {
       exception = true;
     }
     assertTrue(exception);
@@ -510,7 +510,7 @@ public class TestHRegion extends HBaseTestCase {
     codes = this.region.put(puts);
     assertEquals(10, codes.length);
     for (int i = 0; i < 10; i++) {
-      assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
+      assertEquals((i == 5) ? OperationStatusCode.SANITY_CHECK_FAILURE :
         OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
     }
     assertEquals(1, HLog.getSyncTime().count);
@@ -548,7 +548,7 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(1, HLog.getSyncTime().count);
     codes = retFromThread.get();
     for (int i = 0; i < 10; i++) {
-      assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
+      assertEquals((i == 5) ? OperationStatusCode.SANITY_CHECK_FAILURE :
         OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
     }
 
@@ -565,7 +565,7 @@ public class TestHRegion extends HBaseTestCase {
     codes = region.put(putsAndLocks.toArray(new Pair[0]));
     LOG.info("...performed put");
     for (int i = 0; i < 10; i++) {
-      assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
+      assertEquals((i == 5) ? OperationStatusCode.SANITY_CHECK_FAILURE :
         OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
     }
     // Make sure we didn't do an extra batch
@@ -1056,6 +1056,35 @@ public class TestHRegion extends HBaseTestCase {
 
   }
 
+  /**
+   * Tests that there is server-side filtering for invalid timestamp upper
+   * bound. Note that the timestamp lower bound is automatically handled for us
+   * by the TTL field.
+   */
+  public void testPutWithTsSlop() throws IOException {
+    byte[] tableName = Bytes.toBytes("testtable");
+    byte[] fam = Bytes.toBytes("info");
+    byte[][] families = { fam };
+    String method = this.getName();
+    HBaseConfiguration conf = new HBaseConfiguration();
+
+    // add data with a timestamp that is too recent for range. Ensure assert
+    conf.setInt("hbase.hregion.keyvalue.timestamp.slop.millisecs", 1000);
+    initHRegion(tableName, method, conf, families);
+    try {
+      // no TS specified == use latest. should not error
+      region.put(new Put(row).add(fam, Bytes.toBytes("qual"), Bytes
+          .toBytes("value")), false);
+      // TS out of range. should error
+      region.put(new Put(row).add(fam, Bytes.toBytes("qual"),
+                 System.currentTimeMillis() + 2000,
+                 Bytes.toBytes("value")), false);
+      fail("Expected IOE for TS out of configured timerange");
+    } catch (DoNotRetryIOException ioe) {
+      LOG.debug("Received expected exception", ioe);
+    }
+  }
+
   public void testScanner_DeleteOneFamilyNotAnother() throws IOException {
     byte [] tableName = Bytes.toBytes("test_table");
     byte [] fam1 = Bytes.toBytes("columnA");
@@ -1204,7 +1233,7 @@ public class TestHRegion extends HBaseTestCase {
     //Test
     try {
       region.get(get, null);
-    } catch (NoSuchColumnFamilyException e){
+    } catch (DoNotRetryIOException e) {
       assertFalse(false);
       return;
     }

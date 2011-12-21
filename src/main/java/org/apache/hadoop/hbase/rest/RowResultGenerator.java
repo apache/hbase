@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
@@ -74,7 +75,7 @@ public class RowResultGenerator extends ResultGenerator {
       if (result != null && !result.isEmpty()) {
         valuesI = result.list().iterator();
       }
-    } catch (NoSuchColumnFamilyException e) {
+    } catch (DoNotRetryIOException e) {
       // Warn here because Stargate will return 404 in the case if multiple
       // column families were specified but one did not exist -- currently
       // HBase will fail the whole Get.
