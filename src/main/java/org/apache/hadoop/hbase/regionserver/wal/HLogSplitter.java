@@ -490,12 +490,12 @@ public class HLogSplitter {
       }
       String msg = "Processed " + editsCount + " edits across " + n + " regions" +
         " threw away edits for " + (logWriters.size() - n) + " regions" +
-        "; log file=" + logPath +
-        ", corrupted=" + isCorrupted;
+        "; log file=" + logPath + " is corrupted = " + isCorrupted +
+        " progress failed = " + progress_failed);
       LOG.info(msg);
       status.markComplete(msg);
     }
-    return true;
+    return !progress_failed;
   }
 
   /**
