@@ -13,7 +13,8 @@
 
 
 #set -x
-ulimit -n 1024
+echo 'First ulimit'
+ulimit -a
 
 ### Setup some variables.  
 ### SVN_REVISION and BUILD_URL are set by Hudson if it is run by patch process
@@ -569,6 +570,11 @@ runTests () {
   ### Kill any rogue build processes from the last attempt
   $PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
   echo "$MVN clean test -D${PROJECT_NAME}PatchProcess"
+  echo 'Second ulimit'
+  ulimit -a
+  ulimit -n 60000
+  ulimit -u 10240
+  echo 'Third ulimit'
   ulimit -a
   $MVN clean test -P runAllTests -D${PROJECT_NAME}PatchProcess
   if [[ $? != 0 ]] ; then
