@@ -324,6 +324,7 @@ public class SplitLogManager extends ZooKeeperListener {
         LOG.warn("Error splitting " + path);
       }
     }
+    boolean safeToDeleteNodeAsync = true;
     Task task = tasks.get(path);
     if (task == null) {
       if (!ZKSplitLog.isRescanNode(watcher, path)) {
@@ -337,6 +338,13 @@ public class SplitLogManager extends ZooKeeperListener {
         // forgetting about them then we will have to handle the race when
         // accessing task.batch here.
         if (!task.isOrphan()) {
+          if (status != SUCCESS) {
+            // If the task is failed, deleting the node asynchronously
+            // will cause race issue against split log retry.
+            // In this case, we should delete it now.
+            safeToDeleteNodeAsync = false;
+            deleteNodeNow(path);
+          }
           synchronized (task.batch) {
             if (status == SUCCESS) {
               task.batch.done++;
@@ -351,9 +359,33 @@ public class SplitLogManager extends ZooKeeperListener {
     // delete the task node in zk. Keep trying indefinitely - its an async
     // call and no one is blocked waiting for this node to be deleted. All
     // task names are unique (log.<timestamp>) there is no risk of deleting
-    // a future task.
-    deleteNode(path, Long.MAX_VALUE);
+    // a future task.  This is true if the task status is SUCCESS, otherwise,
+    // it may race against split log retry.
+    if (safeToDeleteNodeAsync) {
+      deleteNode(path, Long.MAX_VALUE);
+    }
     return;
+  }
+
+  private void deleteNodeNow(String path) {
+    try {
+      tot_mgr_node_delete_queued.incrementAndGet();
+      this.watcher.getRecoverableZooKeeper().delete(path, -1);
+      tot_mgr_task_deleted.incrementAndGet();
+    } catch (KeeperException ke) {
+      if (ke.code() != KeeperException.Code.NONODE) {
+        tot_mgr_node_delete_err.incrementAndGet();
+        LOG.warn("Failed to delete failed task node: "
+          + path + " due to " + ke.getMessage());
+      } else {
+        LOG.info("Failed task node does not exist, "
+            + "either was never created or was already deleted: " + path);
+        tot_mgr_task_deleted.incrementAndGet();
+      }
+    } catch (InterruptedException ie) {
+      LOG.warn("Interrupted while waiting for failed task node to be deleted");
+      Thread.currentThread().interrupt();
+    }
   }
 
   private void createNode(String path, Long retry_count) {
