@@ -328,6 +328,28 @@ public class TestSplitLogManager {
     }
     waitForCounter(tot_mgr_task_deleted, 0, 1, 1000);
     assertTrue(ZKUtil.checkExists(zkw, tasknode) == -1);
+
+    conf.setInt("hbase.splitlog.max.resubmit", 0);
+    slm.stopTrackingTasks(batch);
+    batch = new TaskBatch();
+    resetCounters();
+
+    // inject a failed task node, and retry
+    ZKUtil.createAndWatch(zkw, tasknode, TaskState.TASK_ERR.get("worker"));
+
+    slm.enqueueSplitTask("foo/1", batch);
+    assertEquals(1, batch.installed);
+    assertTrue(slm.findOrCreateOrphanTask(tasknode).batch == batch);
+    waitForCounter(tot_mgr_node_already_exists, 0, 1, 1000);
+
+    synchronized (batch) {
+      while (batch.installed != batch.error) {
+        batch.wait();
+      }
+    }
+    waitForCounter(tot_mgr_task_deleted, 0, 1, 1000);
+    assertTrue(ZKUtil.checkExists(zkw, tasknode) == -1);
+
     conf.setInt("hbase.splitlog.max.resubmit", ZKSplitLog.DEFAULT_MAX_RESUBMIT);
   }
 
