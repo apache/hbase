@@ -29,6 +29,8 @@ Release 0.92.0 - Unreleased
    HBASE-3433  Remove the KV copy of every KV in Scan; introduced by HBASE-3232 (Lars H)
    HBASE-5006  Move hbase 0.92RC1 on to hadoop 1.0.0RC2
    HBASE-5017  Bump the default hfile.block.cache.size because of HFileV2
+   HBASE-5066  Upgrade to zk 3.4.1
+   HBASE-5087  Up the 0.92RC zk to 3.4.1RC0
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster
@@ -835,7 +837,6 @@ Release 0.92.0 - Unreleased
    HBASE-4856  Upgrade zookeeper to 3.4.0 release
    HBASE-4838  Port 2856 (TestAcidGuarantee is failing) to 0.92 (Lars H)
                (original patch by Amitanand Aiyer and Nicolas)
-   HBASE-5066  Upgrade to zk 3.4.1
 
   NEW FEATURES
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
