@@ -294,21 +294,17 @@
         <pre>
 /hbase/replication/rs/
                       1.1.1.1,60020,123456780/
-                        peers/
-                              2/
-                                1.1.1.1,60020.1234  (Contains a position)
-                                1.1.1.1,60020.1265
+                          2/
+                              1.1.1.1,60020.1234  (Contains a position)
+                              1.1.1.1,60020.1265
                       1.1.1.2,60020,123456790/
-                        peers/
-                              2/
-                                1.1.1.2,60020.1214  (Contains a position)
-                                1.1.1.2,60020.1248
-                                1.1.1.2,60020.1312
+                          2/
+                              1.1.1.2,60020.1214  (Contains a position)
+                              1.1.1.2,60020.1248
+                              1.1.1.2,60020.1312
                       1.1.1.3,60020,    123456630/
-                        peers/
-                              2/
-                                1.1.1.3,60020.1280  (Contains a position)
-
+                          2/
+                              1.1.1.3,60020.1280  (Contains a position)
         </pre>
         <p>
           Now let's say that 1.1.1.2 loses its ZK session. The survivors will race
@@ -320,26 +316,23 @@
         <pre>
 /hbase/replication/rs/
                       1.1.1.1,60020,123456780/
-                        peers/
-                              2/
-                                1.1.1.1,60020.1234  (Contains a position)
-                                1.1.1.1,60020.1265
+                          2/
+                              1.1.1.1,60020.1234  (Contains a position)
+                              1.1.1.1,60020.1265
                       1.1.1.2,60020,123456790/
-                        lock
-                        peers/
-                              2/
-                                1.1.1.2,60020.1214  (Contains a position)
-                                1.1.1.2,60020.1248
-                                1.1.1.2,60020.1312
+                          lock
+                          2/
+                              1.1.1.2,60020.1214  (Contains a position)
+                              1.1.1.2,60020.1248
+                              1.1.1.2,60020.1312
                       1.1.1.3,60020,123456630/
-                        peers/
-                              2/
-                                1.1.1.3,60020.1280  (Contains a position)
+                          2/
+                              1.1.1.3,60020.1280  (Contains a position)
 
-                              2-1.1.1.2,60020,123456790/
-                                1.1.1.2,60020.1214  (Contains a position)
-                                1.1.1.2,60020.1248
-                                1.1.1.2,60020.1312
+                          2-1.1.1.2,60020,123456790/
+                              1.1.1.2,60020.1214  (Contains a position)
+                              1.1.1.2,60020.1248
+                              1.1.1.2,60020.1312
         </pre>
         <p>
           Some time later, but before 1.1.1.3 is able to finish replicating the
@@ -351,25 +344,23 @@
         <pre>
 /hbase/replication/rs/
                       1.1.1.1,60020,123456780/
-                        peers/
-                              2/
-                                1.1.1.1,60020.1378  (Contains a position)
+                          2/
+                              1.1.1.1,60020.1378  (Contains a position)
 
-                              2-1.1.1.3,60020,123456630/
-                                1.1.1.3,60020.1325  (Contains a position)
-                                1.1.1.3,60020.1401
+                          2-1.1.1.3,60020,123456630/
+                              1.1.1.3,60020.1325  (Contains a position)
+                              1.1.1.3,60020.1401
 
-                              2-1.1.1.2,60020,123456790-1.1.1.3,60020,123456630/
-                                1.1.1.2,60020.1312  (Contains a position)
+                          2-1.1.1.2,60020,123456790-1.1.1.3,60020,123456630/
+                              1.1.1.2,60020.1312  (Contains a position)
                       1.1.1.3,60020,123456630/
-                        lock
-                        peers/
-                              2/
-                                1.1.1.3,60020.1325  (Contains a position)
-                                1.1.1.3,60020.1401
+                          lock
+                          2/
+                              1.1.1.3,60020.1325  (Contains a position)
+                              1.1.1.3,60020.1401
 
-                              2-1.1.1.2,60020,123456790/
-                                1.1.1.2,60020.1312  (Contains a position)
+                          2-1.1.1.2,60020,123456790/
+                              1.1.1.2,60020.1312  (Contains a position)
         </pre>
       </section>
     </section>
