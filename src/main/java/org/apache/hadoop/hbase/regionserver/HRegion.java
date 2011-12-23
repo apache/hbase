@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
@@ -3154,8 +3155,15 @@ public class HRegion implements HeapSize { // , Writable{
 
       // synchronize on scannerReadPoints so that nobody calculates
       // getSmallestReadPoint, before scannerReadPoints is updated.
+      IsolationLevel isolationLevel = scan.getIsolationLevel();
       synchronized(scannerReadPoints) {
-        this.readPt = MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
+        if (isolationLevel == IsolationLevel.READ_UNCOMMITTED) {
+          // This scan can read even uncommitted transactions
+          this.readPt = Long.MAX_VALUE;
+          MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
+        } else {
+          this.readPt = MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
+        }
         scannerReadPoints.put(this, this.readPt);
       }
 
