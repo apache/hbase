@@ -148,6 +148,8 @@ public interface HTableInterface {
   /**
    * Returns a scanner on the current table as specified by the {@link Scan}
    * object.
+   * Note that the passed {@link Scan}'s start row and caching properties
+   * maybe changed.
    *
    * @param scan A configured {@link Scan} object.
    * @return A scanner.
