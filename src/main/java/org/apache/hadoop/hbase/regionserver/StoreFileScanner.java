@@ -177,7 +177,7 @@ class StoreFileScanner implements KeyValueScanner {
         realSeekDone = true;
       }
     } catch (IOException ioe) {
-      throw new IOException("Could not seek " + this, ioe);
+      throw new IOException("Could not seek " + this + " " + key, ioe);
     }
   }
 

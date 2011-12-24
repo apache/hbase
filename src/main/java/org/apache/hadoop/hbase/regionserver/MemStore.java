@@ -870,6 +870,10 @@ public class MemStore implements HeapSize {
       ClassSize.COPYONWRITE_ARRAYSET + ClassSize.COPYONWRITE_ARRAYLIST +
       (2 * ClassSize.CONCURRENT_SKIPLISTMAP));
 
+  // Constants for whether to serialize memstore timestamp.
+  public static final boolean NO_PERSISTENT_TS = false;
+  public static final boolean PERSISTENT_TS = true;
+
   /*
    * Calculate how the MemStore size has changed.  Includes overhead of the
    * backing Map.

@@ -221,18 +221,33 @@ public abstract class HBaseTestCase extends TestCase {
       final int minVersions, final int versions, final int ttl, boolean keepDeleted) {
     HTableDescriptor htd = new HTableDescriptor(name);
     htd.addFamily(new HColumnDescriptor(fam1, minVersions, versions,
-        keepDeleted, HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE, ttl,
-        HColumnDescriptor.DEFAULT_BLOOMFILTER,
-        HConstants.REPLICATION_SCOPE_LOCAL));
+      keepDeleted,
+      HColumnDescriptor.DEFAULT_COMPRESSION, 
+      HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING_ON_DISK,
+      HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING_IN_CACHE,
+      HColumnDescriptor.DEFAULT_ENCODED_DATA_BLOCK_SEEK,
+      false, false,
+      HColumnDescriptor.DEFAULT_BLOCKSIZE, ttl,
+      HColumnDescriptor.DEFAULT_BLOOMFILTER,
+      HConstants.REPLICATION_SCOPE_LOCAL));
     htd.addFamily(new HColumnDescriptor(fam2, minVersions, versions,
-        keepDeleted, HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
+        keepDeleted,
+        HColumnDescriptor.DEFAULT_COMPRESSION,
+        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING_ON_DISK,
+        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING_IN_CACHE,
+        HColumnDescriptor.DEFAULT_ENCODED_DATA_BLOCK_SEEK,
+        false, false,
         HColumnDescriptor.DEFAULT_BLOCKSIZE, ttl,
         HColumnDescriptor.DEFAULT_BLOOMFILTER,
         HConstants.REPLICATION_SCOPE_LOCAL));
     htd.addFamily(new HColumnDescriptor(fam3, minVersions, versions,
-        keepDeleted, HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE, ttl,
+        keepDeleted,
+        HColumnDescriptor.DEFAULT_COMPRESSION,
+        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING_ON_DISK,
+        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING_IN_CACHE,
+        HColumnDescriptor.DEFAULT_ENCODED_DATA_BLOCK_SEEK,
+        false, false,
+        HColumnDescriptor.DEFAULT_BLOCKSIZE,  ttl,
         HColumnDescriptor.DEFAULT_BLOOMFILTER,
         HConstants.REPLICATION_SCOPE_LOCAL));
     return htd;

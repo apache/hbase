@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.TestHFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
@@ -194,7 +195,8 @@ public class TestCompoundBloomFilter {
 
   private void readStoreFile(int t, BloomType bt, List<KeyValue> kvs,
       Path sfPath) throws IOException {
-    StoreFile sf = new StoreFile(fs, sfPath, conf, cacheConf, bt);
+    StoreFile sf = new StoreFile(fs, sfPath, conf, cacheConf, bt,
+        new NoOpDataBlockEncoder());
     StoreFile.Reader r = sf.createReader();
     final boolean pread = true; // does not really matter
     StoreFileScanner scanner = r.getStoreFileScanner(true, pread);
@@ -294,7 +296,7 @@ public class TestCompoundBloomFilter {
     cacheConf = new CacheConfig(conf);
 
     StoreFile.Writer w = StoreFile.createWriter(fs,
-        TEST_UTIL.getDataTestDir(), BLOCK_SIZES[t], null, null, conf,
+        TEST_UTIL.getDataTestDir(), BLOCK_SIZES[t], null, null, null, conf,
         cacheConf, bt, 0);
 
     assertTrue(w.hasGeneralBloom());

@@ -722,4 +722,10 @@ public class LruBlockCache implements BlockCache, HeapSize {
   public void shutdown() {
     this.scheduleThreadPool.shutdown();
   }
+
+  /** Clears the cache. Used in tests. */
+  public void clearCache() {
+    map.clear();
+  }
+
 }

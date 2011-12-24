@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncodings;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -98,7 +99,7 @@ public class TestHalfStoreFileReader {
       CacheConfig cacheConf)
       throws IOException {
     final HalfStoreFileReader halfreader =
-        new HalfStoreFileReader(fs, p, cacheConf, bottom);
+        new HalfStoreFileReader(fs, p, cacheConf, bottom, null);
     halfreader.loadFileInfo();
     final HFileScanner scanner = halfreader.getScanner(false, false);
 
