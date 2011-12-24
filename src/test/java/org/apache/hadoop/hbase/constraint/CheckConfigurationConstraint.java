@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.client.Put;
  */
 public class CheckConfigurationConstraint extends BaseConstraint {
 
-
   private static String key = "testKey";
   private static String value = "testValue";
 
@@ -42,11 +41,13 @@ public class CheckConfigurationConstraint extends BaseConstraint {
 
   @Override
   public void setConf(Configuration conf) {
-    String val = conf.get(key);
-    if (val == null || !val.equals(value))
-      throw new IllegalArgumentException(
-          "Configuration was not passed correctly");
     super.setConf(conf);
+    if (conf != null) {
+      String val = conf.get(key);
+      if (val == null || !val.equals(value))
+        throw new IllegalArgumentException(
+            "Configuration was not passed correctly");
+    }
   }
 
 }

@@ -17,25 +17,12 @@
  */
 package org.apache.hadoop.hbase.constraint;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 
 /**
  * Base class to use when actually implementing a {@link Constraint}. It takes
  * care of getting and setting of configuration for the constraint.
  */
-public abstract class BaseConstraint implements
-    Constraint {
-
-  private Configuration conf;
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
-  }
-
-  @Override
-  public Configuration getConf() {
-    return this.conf;
-  }
+public abstract class BaseConstraint extends Configured implements Constraint {
 
 }

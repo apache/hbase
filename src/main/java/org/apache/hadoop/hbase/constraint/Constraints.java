@@ -83,8 +83,9 @@ public final class Constraints {
   public static void enable(HTableDescriptor desc) throws IOException {
     // if the CP has already been loaded, do nothing
     String clazz = ConstraintProcessor.class.getName();
-    if (desc.hasCoprocessor(clazz))
+    if (desc.hasCoprocessor(clazz)) {
       return;
+    }
 
     // add the constrain processor CP to the table
     desc.addCoprocessor(clazz);
@@ -164,9 +165,8 @@ public final class Constraints {
     // get the serialized version of the constraint
     String key = serializeConstraintClass(clazz);
     String value = desc.getValue(key);
-    if (value == null)
-      return null;
-    return new Pair<String, String>(key, value);
+
+    return value == null ? null : new Pair<String, String>(key, value);
   }
 
   /**
@@ -174,6 +174,12 @@ public final class Constraints {
    * <p>
    * This will overwrite any configuration associated with the previous
    * constraint of the same class.
+   * <p>
+   * Each constraint, when added to the table, will have a specific priority,
+   * dictating the order in which the {@link Constraint} will be run. A
+   * {@link Constraint} earlier in the list will be run before those later in
+   * the list. The same logic applies between two Constraints over time (earlier
+   * added is run first on the regionserver).
    * 
    * @param desc
    *          {@link HTableDescriptor} to add {@link Constraint Constraints}
@@ -201,6 +207,12 @@ public final class Constraints {
    * <p>
    * Adding the same constraint class twice will overwrite the first
    * constraint's configuration
+   * <p>
+   * Each constraint, when added to the table, will have a specific priority,
+   * dictating the order in which the {@link Constraint} will be run. A
+   * {@link Constraint} earlier in the list will be run before those later in
+   * the list. The same logic applies between two Constraints over time (earlier
+   * added is run first on the regionserver).
    * 
    * @param desc
    *          {@link HTableDescriptor} to add a {@link Constraint}
@@ -227,6 +239,11 @@ public final class Constraints {
 
   /**
    * Add a {@link Constraint} to the table with the given configuration
+   * <p>
+   * Each constraint, when added to the table, will have a specific priority,
+   * dictating the order in which the {@link Constraint} will be run. A
+   * {@link Constraint} added will run on the regionserver before those added to
+   * the {@link HTableDescriptor} later.
    * 
    * @param desc
    *          table descriptor to the constraint to
@@ -296,9 +313,11 @@ public final class Constraints {
   }
 
   /**
-   * Just write the class to the byte [] we are expecting
+   * Just write the class to a String representation of the class as a key for
+   * the {@link HTableDescriptor}
    * 
    * @param clazz
+   *          Constraint class to convert to a {@link HTableDescriptor} key
    * @return key to store in the {@link HTableDescriptor}
    */
   private static String serializeConstraintClass(
@@ -385,8 +404,8 @@ public final class Constraints {
   }
 
   /**
-   * Update the configuration for the {@link Constraint}. Does not change the
-   * order in which the constraint is run. If the
+   * Update the configuration for the {@link Constraint}; does not change the
+   * order in which the constraint is run.
    * 
    * @param desc
    *          {@link HTableDescriptor} to update
@@ -405,9 +424,10 @@ public final class Constraints {
     // get the entry for this class
     Pair<String, String> e = getKeyValueForClass(desc, clazz);
 
-    if (e == null)
+    if (e == null) {
       throw new IllegalArgumentException("Constraint: " + clazz.getName()
           + " is not associated with this table.");
+    }
 
     // clone over the configuration elements
     Configuration conf = new Configuration(configuration);
@@ -480,9 +500,10 @@ public final class Constraints {
       Class<? extends Constraint> clazz, boolean enabled) throws IOException {
     // get the original constraint
     Pair<String, String> entry = getKeyValueForClass(desc, clazz);
-    if (entry == null)
+    if (entry == null) {
       throw new IllegalArgumentException("Constraint: " + clazz.getName()
           + " is not associated with this table. You can't enable it!");
+    }
 
     // create a new configuration from that conf
     Configuration conf = readConfiguration(entry.getSecond());
@@ -511,8 +532,9 @@ public final class Constraints {
     // get the kv
     Pair<String, String> entry = getKeyValueForClass(desc, clazz);
     // its not enabled so just return false. In fact, its not even present!
-    if (entry == null)
+    if (entry == null) {
       return false;
+    }
 
     // get the info about the constraint
     Configuration conf = readConfiguration(entry.getSecond());
@@ -526,7 +548,10 @@ public final class Constraints {
    * @param desc
    *          To read from
    * @param classloader
-   *          To use when loading classes
+   *          To use when loading classes. If a special classloader is used on a
+   *          region, for instance, then that should be the classloader used to
+   *          load the constraints. This could also apply to unit-testing
+   *          situation, where want to ensure that class is reloaded or not.
    * @return List of configured {@link Constraint Constraints}
    * @throws IOException
    *           if any part of reading/arguments fails
