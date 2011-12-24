@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.client.Put;
  * {@link Constraints#disableConstraint(HTableDescriptor, Class)} for
  * enabling/disabling of a given {@link Constraint} after it has been added.
  * <p>
- * If a {@link Put} is not valid, the Constraint should throw some sort
- * {@link ConstraintException} indicating that the {@link Put} has failed. When
+ * If a {@link Put} is invalid, the Constraint should throw some sort of
+ * {@link ConstraintException}, indicating that the {@link Put} has failed. When
  * this exception is thrown, not further retries of the {@link Put} are
  * attempted nor are any other {@link Constraint Constraints} attempted (the
  * {@link Put} is clearly not valid). Therefore, there are performance
@@ -49,14 +49,17 @@ import org.apache.hadoop.hbase.client.Put;
  * {@link ConstraintException}, but instead throws a {@link RuntimeException},
  * the entire constraint processing mechanism ({@link ConstraintProcessor}) will
  * be unloaded from the table. This ensures that the region server is still
- * functional, but not more {@link Put Puts} will be checked via
+ * functional, but no more {@link Put Puts} will be checked via
  * {@link Constraint Constraints}.
  * <p>
- * Further, {@link Constraint Constraints} probably not be used to enforce
- * cross-table references as it will cause tremendous write slowdowns, but it is
- * possible.
+ * Further, {@link Constraint Constraints} should probably not be used to
+ * enforce cross-table references as it will cause tremendous write slowdowns,
+ * but it is possible.
  * <p>
  * NOTE: Implementing classes must have a nullary (no-args) constructor
+ *
+ * @see BaseConstraint
+ * @see Constraints
  */
 public interface Constraint extends Configurable {
 
