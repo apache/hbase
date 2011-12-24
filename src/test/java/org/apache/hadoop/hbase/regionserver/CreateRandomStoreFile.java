@@ -184,8 +184,8 @@ public class CreateRandomStoreFile {
     }
 
     StoreFile.Writer sfw = StoreFile.createWriter(fs, outputDir, blockSize,
-        compr, KeyValue.COMPARATOR, conf, new CacheConfig(conf), bloomType, 
-        numKV);
+        compr, null, KeyValue.COMPARATOR, conf, new CacheConfig(conf),
+        bloomType, numKV);
 
     rand = new Random();
     LOG.info("Writing " + numKV + " key/value pairs");

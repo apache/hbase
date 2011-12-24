@@ -102,7 +102,8 @@ public class TestCompactSelection extends TestCase {
     MockStoreFile(long length, boolean isRef) throws IOException {
       super(TEST_UTIL.getTestFileSystem(), TEST_FILE,
             TEST_UTIL.getConfiguration(),
-            new CacheConfig(TEST_UTIL.getConfiguration()), BloomType.NONE);
+            new CacheConfig(TEST_UTIL.getConfiguration()), BloomType.NONE,
+            null);
       this.length = length;
       this.isRef  = isRef;
     }

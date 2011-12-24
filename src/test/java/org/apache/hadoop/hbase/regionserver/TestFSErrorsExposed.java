@@ -76,7 +76,8 @@ public class TestFSErrorsExposed {
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
     StoreFile sf = new StoreFile(fs, writer.getPath(),
-        util.getConfiguration(), cacheConf, StoreFile.BloomType.NONE);
+        util.getConfiguration(), cacheConf, StoreFile.BloomType.NONE, null);
+
     StoreFile.Reader reader = sf.createReader();
     HFileScanner scanner = reader.getScanner(false, true);
 
@@ -119,7 +120,8 @@ public class TestFSErrorsExposed {
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
     StoreFile sf = new StoreFile(fs, writer.getPath(), util.getConfiguration(),
-        cacheConf, BloomType.NONE);
+        cacheConf, BloomType.NONE, null);
+
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
         Collections.singletonList(sf), false, true, false);
     KeyValueScanner scanner = scanners.get(0);

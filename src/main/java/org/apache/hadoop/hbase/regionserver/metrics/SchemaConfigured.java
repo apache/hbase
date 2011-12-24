@@ -83,6 +83,15 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
   }
 
   /**
+   * Creates an instance corresponding to an unknown table and column family.
+   * Used in unit tests. 
+   */
+  public static SchemaConfigured createUnknown() {
+    return new SchemaConfigured(null, SchemaMetrics.UNKNOWN,
+        SchemaMetrics.UNKNOWN);
+  }
+
+  /**
    * Default constructor. Only use when column/family name are not known at
    * construction (i.e. for HFile blocks).
    */

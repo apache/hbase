@@ -133,6 +133,9 @@ public class TestImportExport {
         5, /* versions */
         true /* keep deleted cells */,
         HColumnDescriptor.DEFAULT_COMPRESSION,
+        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING_ON_DISK,
+        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING_IN_CACHE,
+        HColumnDescriptor.DEFAULT_ENCODED_DATA_BLOCK_SEEK,
         HColumnDescriptor.DEFAULT_IN_MEMORY,
         HColumnDescriptor.DEFAULT_BLOCKCACHE,
         HColumnDescriptor.DEFAULT_BLOCKSIZE,
@@ -179,6 +182,9 @@ public class TestImportExport {
         5, /* versions */
         true /* keep deleted cells */,
         HColumnDescriptor.DEFAULT_COMPRESSION,
+        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING_ON_DISK,
+        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING_IN_CACHE,
+        HColumnDescriptor.DEFAULT_ENCODED_DATA_BLOCK_SEEK,
         HColumnDescriptor.DEFAULT_IN_MEMORY,
         HColumnDescriptor.DEFAULT_BLOCKCACHE,
         HColumnDescriptor.DEFAULT_BLOCKSIZE,
