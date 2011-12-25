@@ -56,8 +56,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -132,10 +130,6 @@ public class StoreFile extends SchemaConfigured {
   /** Key for timestamp of earliest-put in metadata*/
   public static final byte[] EARLIEST_PUT_TS = Bytes.toBytes("EARLIEST_PUT_TS");
 
-  /** Type of encoding used for data blocks in HFile. Stored in file info. */
-  public static final byte[] DATA_BLOCK_ENCODING =
-      Bytes.toBytes("DATA_BLOCK_ENCODING");
-
   // Make default block size for StoreFiles 8k while testing.  TODO: FIX!
   // Need to make it 8k for testing.
   public static final int DEFAULT_BLOCKSIZE_SMALL = 8 * 1024;
@@ -154,10 +148,7 @@ public class StoreFile extends SchemaConfigured {
   // Block cache configuration and reference.
   private final CacheConfig cacheConf;
 
-  // What kind of data block encoding will be used
-  private HFileDataBlockEncoder dataBlockEncoder;
-
-  // HDFS blocks distribution information
+  // HDFS blocks distribuion information
   private HDFSBlocksDistribution hdfsBlocksDistribution;
 
   // Keys for metadata stored in backing HFile.
@@ -216,23 +207,6 @@ public class StoreFile extends SchemaConfigured {
   private long modificationTimeStamp = 0L;
 
   /**
-   * Ignore bloom filters, don't use option inMemory
-   * and dataBlockEncoding in memory.
-   * @param fs The current file system to use
-   * @param p The path of the file.
-   * @param conf The current configuration.
-   * @throws IOException When opening the reader fails.
-   */
-  StoreFile(final FileSystem fs,
-            final Path p,
-            final Configuration conf,
-            final CacheConfig cacheConf)
-      throws IOException {
-    this(fs, p, conf, cacheConf, BloomType.NONE,
-        new NoOpDataBlockEncoder());
-  }
-
-  /**
    * Constructor, loads a reader and it's indices, etc. May allocate a
    * substantial amount of ram depending on the underlying files (10-20MB?).
    *
@@ -246,20 +220,17 @@ public class StoreFile extends SchemaConfigured {
    *          as the Bloom filter type actually present in the HFile, because
    *          column family configuration might change. If this is
    *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
-   * @param dataBlockEncoder data block encoding algorithm.
    * @throws IOException When opening the reader fails.
    */
   StoreFile(final FileSystem fs,
             final Path p,
             final Configuration conf,
             final CacheConfig cacheConf,
-            final BloomType cfBloomType,
-            final HFileDataBlockEncoder dataBlockEncoder)
+            final BloomType cfBloomType)
       throws IOException {
     this.fs = fs;
     this.path = p;
     this.cacheConf = cacheConf;
-    this.dataBlockEncoder = dataBlockEncoder;
     if (isReference(p)) {
       this.reference = Reference.read(fs, p);
       this.referencePath = getReferredToFile(this.path);
@@ -522,10 +493,9 @@ public class StoreFile extends SchemaConfigured {
     }
     if (isReference()) {
       this.reader = new HalfStoreFileReader(this.fs, this.referencePath,
-          this.cacheConf, this.reference, this.dataBlockEncoder);
+          this.cacheConf, this.reference);
     } else {
-      this.reader = new Reader(this.fs, this.path, this.cacheConf,
-          this.dataBlockEncoder);
+      this.reader = new Reader(this.fs, this.path, this.cacheConf);
     }
 
     if (isSchemaConfigured()) {
@@ -707,8 +677,8 @@ public class StoreFile extends SchemaConfigured {
   public static Writer createWriter(final FileSystem fs, final Path dir,
       final int blocksize, Configuration conf, CacheConfig cacheConf)
   throws IOException {
-    return createWriter(fs, dir, blocksize, null, new NoOpDataBlockEncoder(),
-        null, conf, cacheConf, BloomType.NONE, 0);
+    return createWriter(fs, dir, blocksize, null, null, conf, cacheConf,
+        BloomType.NONE, 0);
   }
 
   /**
@@ -719,7 +689,6 @@ public class StoreFile extends SchemaConfigured {
    * Creates a file with a unique name in this directory.
    * @param blocksize
    * @param algorithm Pass null to get default.
-   * @param dataBlockEncoder Pass null to disable data block encoding.
    * @param c Pass null to get default.
    * @param conf HBase system configuration. used with bloom filters
    * @param cacheConf Cache configuration and reference.
@@ -732,7 +701,6 @@ public class StoreFile extends SchemaConfigured {
                                               final Path dir,
                                               final int blocksize,
                                               final Compression.Algorithm algorithm,
-                                              final HFileDataBlockEncoder dataBlockEncoder,
                                               final KeyValue.KVComparator c,
                                               final Configuration conf,
                                               final CacheConfig cacheConf,
@@ -750,7 +718,7 @@ public class StoreFile extends SchemaConfigured {
 
     return new Writer(fs, path, blocksize,
         algorithm == null? HFile.DEFAULT_COMPRESSION_ALGORITHM: algorithm,
-        dataBlockEncoder, conf, cacheConf, c == null ? KeyValue.COMPARATOR : c, bloomType,
+        conf, cacheConf, c == null ? KeyValue.COMPARATOR: c, bloomType,
         maxKeyCount);
   }
 
@@ -846,8 +814,6 @@ public class StoreFile extends SchemaConfigured {
     private KeyValue lastDeleteFamilyKV = null;
     private long deleteFamilyCnt = 0;
 
-    protected HFileDataBlockEncoder dataBlockEncoder;
-
     TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
     /* isTimeRangeTrackerSet keeps track if the timeRange has already been set
      * When flushing a memstore, we set TimeRange and use this variable to
@@ -872,16 +838,13 @@ public class StoreFile extends SchemaConfigured {
      * @throws IOException problem writing to FS
      */
     public Writer(FileSystem fs, Path path, int blocksize,
-        Compression.Algorithm compress,
-        HFileDataBlockEncoder dataBlockEncoder, final Configuration conf,
+        Compression.Algorithm compress, final Configuration conf,
         CacheConfig cacheConf,
         final KVComparator comparator, BloomType bloomType, long maxKeys)
         throws IOException {
-      this.dataBlockEncoder = dataBlockEncoder != null ?
-          dataBlockEncoder : new NoOpDataBlockEncoder();
       writer = HFile.getWriterFactory(conf, cacheConf).createWriter(
           fs, path, blocksize,
-          compress, this.dataBlockEncoder, comparator.getRawComparator());
+          compress, comparator.getRawComparator());
 
       this.kvComparator = comparator;
 
@@ -1118,10 +1081,6 @@ public class StoreFile extends SchemaConfigured {
     }
 
     public void close() throws IOException {
-      // (optional) Add data block encoding used to save this file
-      // It is mostly for statistics and debugging purpose.
-      dataBlockEncoder.saveMetadata(this);
-
       boolean hasGeneralBloom = this.closeGeneralBloomFilter();
       boolean hasDeleteFamilyBloom = this.closeDeleteFamilyBloomFilter();
 
@@ -1160,12 +1119,10 @@ public class StoreFile extends SchemaConfigured {
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
 
-    public Reader(FileSystem fs, Path path, CacheConfig cacheConf,
-        HFileDataBlockEncoder dataBlockEncoder)
+    public Reader(FileSystem fs, Path path, CacheConfig cacheConf)
         throws IOException {
       super(path);
-      reader = HFile.createReader(fs, path, cacheConf,
-          dataBlockEncoder);
+      reader = HFile.createReader(fs, path, cacheConf);
       bloomFilterType = BloomType.NONE;
     }
 
@@ -1305,7 +1262,7 @@ public class StoreFile extends SchemaConfigured {
 
         default:
           return true;
-      }
+      }      
     }
 
     public boolean passesDeleteFamilyBloomFilter(byte[] row, int rowOffset,
@@ -1355,7 +1312,7 @@ public class StoreFile extends SchemaConfigured {
         return true;
 
       byte[] key;
-      switch (bloomFilterType) {
+      switch (bloomFilterType) { 
         case ROW:
           if (col != null) {
             throw new RuntimeException("Row-only Bloom filter called with " +

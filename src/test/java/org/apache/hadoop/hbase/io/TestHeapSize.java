@@ -295,14 +295,7 @@ public class TestHeapSize extends TestCase {
       assertEquals(expected, actual);
     }
 
-    // SchemaConfigured
-    LOG.debug("Heap size for: " + SchemaConfigured.class.getName());
-    SchemaConfigured sc = new SchemaConfigured(null, "myTable", "myCF");
-    assertEquals(ClassSize.estimateBase(SchemaConfigured.class, true),
-        sc.heapSize());
-
     // Store Overhead
-    LOG.debug("Heap size for: " + Store.class.getName());
     cl = Store.class;
     actual = Store.FIXED_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
@@ -326,6 +319,10 @@ public class TestHeapSize extends TestCase {
     // accounted for.  But we have satisfied our two core requirements.
     // Sizing is quite accurate now, and our tests will throw errors if
     // any of these classes are modified without updating overhead sizes.
+
+    SchemaConfigured sc = new SchemaConfigured(null, "myTable", "myCF");
+    assertEquals(ClassSize.estimateBase(SchemaConfigured.class, true),
+        sc.heapSize());
   }
 
   @org.junit.Rule

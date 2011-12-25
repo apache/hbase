@@ -243,7 +243,6 @@ public class HFile {
 
     public abstract Writer createWriter(FileSystem fs, Path path,
         int blockSize, Compression.Algorithm compress,
-        HFileDataBlockEncoder dataBlockEncoder,
         final KeyComparator comparator) throws IOException;
 
     public abstract Writer createWriter(FileSystem fs, Path path,
@@ -372,47 +371,32 @@ public class HFile {
   }
 
   private static Reader pickReaderVersion(Path path, FSDataInputStream fsdis,
-      long size, boolean closeIStream, CacheConfig cacheConf,
-      HFileDataBlockEncoder dataBlockEncoder)
+      long size, boolean closeIStream, CacheConfig cacheConf)
   throws IOException {
     FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis, size);
     switch (trailer.getVersion()) {
     case 1:
       return new HFileReaderV1(path, trailer, fsdis, size, closeIStream,
-          cacheConf, dataBlockEncoder);
+          cacheConf);
     case 2:
       return new HFileReaderV2(path, trailer, fsdis, size, closeIStream,
-          cacheConf, dataBlockEncoder);
+          cacheConf);
     default:
       throw new IOException("Cannot instantiate reader for HFile version " +
           trailer.getVersion());
     }
   }
 
-  public static Reader createReader(
-      FileSystem fs, Path path, CacheConfig cacheConf) throws IOException {
-    return createReader(fs, path, cacheConf,
-        new NoOpDataBlockEncoder());
-  }
-
-  public static Reader createReader(Path path, FSDataInputStream fsdis,
-      long size, CacheConfig cacheConf) throws IOException {
-    return createReader(path, fsdis, size, cacheConf,
-        new NoOpDataBlockEncoder());
-  }
-
   public static Reader createReader(FileSystem fs, Path path,
-      CacheConfig cacheConf, HFileDataBlockEncoder dataBlockEncoder)
-      throws IOException {
+      CacheConfig cacheConf) throws IOException {
     return pickReaderVersion(path, fs.open(path),
-        fs.getFileStatus(path).getLen(), true, cacheConf, dataBlockEncoder);
+        fs.getFileStatus(path).getLen(), true, cacheConf);
   }
 
   public static Reader createReader(Path path, FSDataInputStream fsdis,
-      long size, CacheConfig cacheConf,
-      HFileDataBlockEncoder dataBlockEncoder) throws IOException {
-    return pickReaderVersion(path, fsdis, size, false, cacheConf,
-        dataBlockEncoder);
+      long size, CacheConfig cacheConf)
+      throws IOException {
+    return pickReaderVersion(path, fsdis, size, false, cacheConf);
   }
 
   /*

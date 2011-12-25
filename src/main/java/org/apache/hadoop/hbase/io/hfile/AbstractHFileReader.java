@@ -1,4 +1,4 @@
-  /*
+/*
  * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.io.RawComparator;
 
@@ -58,12 +59,6 @@ public abstract class AbstractHFileReader extends SchemaConfigured
 
   /** Filled when we read in the trailer. */
   protected final Compression.Algorithm compressAlgo;
-
-  /**
-   * What kind of data block encoding should be used while reading, writing and
-   * handling cache.
-   */
-  protected final HFileDataBlockEncoder blockEncoder;
 
   /** Last key in the file. Filled in when we read in the file info */
   protected byte [] lastKey = null;
@@ -98,8 +93,7 @@ public abstract class AbstractHFileReader extends SchemaConfigured
   protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long fileSize,
       final boolean closeIStream,
-      final CacheConfig cacheConf,
-      final HFileDataBlockEncoder dataBlockEncoder) {
+      final CacheConfig cacheConf) {
     super(null, path);
     this.trailer = trailer;
     this.compressAlgo = trailer.getCompressionCodec();
@@ -107,8 +101,6 @@ public abstract class AbstractHFileReader extends SchemaConfigured
     this.fileSize = fileSize;
     this.istream = fsdis;
     this.closeIStream = closeIStream;
-    this.blockEncoder = dataBlockEncoder != null
-        ? dataBlockEncoder : new NoOpDataBlockEncoder();
     this.path = path;
     this.name = path.getName();
   }
@@ -283,11 +275,8 @@ public abstract class AbstractHFileReader extends SchemaConfigured
 
     protected int blockFetches;
 
-    protected final HFile.Reader reader;
-
-    public Scanner(final HFile.Reader reader, final boolean cacheBlocks,
+    public Scanner(final boolean cacheBlocks,
         final boolean pread, final boolean isCompaction) {
-      this.reader = reader;
       this.cacheBlocks = cacheBlocks;
       this.pread = pread;
       this.isCompaction = isCompaction;
@@ -307,26 +296,6 @@ public abstract class AbstractHFileReader extends SchemaConfigured
       if (!isSeeked())
         throw new NotSeekedException();
     }
-
-    @Override
-    public int seekTo(byte[] key) throws IOException {
-      return seekTo(key, 0, key.length);
-    }
-    
-    @Override
-    public boolean seekBefore(byte[] key) throws IOException {
-      return seekBefore(key, 0, key.length);
-    }
-    
-    @Override
-    public int reseekTo(byte[] key) throws IOException {
-      return reseekTo(key, 0, key.length);
-    }
-
-    @Override
-    public HFile.Reader getReader() {
-      return reader;
-    }
   }
 
   /** For testing */
@@ -337,4 +306,5 @@ public abstract class AbstractHFileReader extends SchemaConfigured
   public Path getPath() {
     return path;
   }
+
 }

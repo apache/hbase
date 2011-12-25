@@ -39,14 +39,6 @@ public enum BlockType {
   /** Data block, both versions */
   DATA("DATABLK*", BlockCategory.DATA),
 
-  /** An encoded data block (e.g. with prefix compression), version 2 */
-  ENCODED_DATA("DATABLKE", BlockCategory.DATA) {
-    @Override
-    public int getId() {
-      return DATA.ordinal();
-    }
-  },
-
   /** Version 2 leaf index block. Appears in the data block section */
   LEAF_INDEX("IDXLEAF2", BlockCategory.INDEX),
 
@@ -109,15 +101,6 @@ public enum BlockType {
     magic = Bytes.toBytes(magicStr);
     this.metricCat = metricCat;
     assert magic.length == MAGIC_LENGTH;
-  }
-  
-  /**
-   * Use it instead of oridinal(). It works exactly the same,
-   * except DATA and ENCODED_DATA got same id.
-   * @return id between 0 and N
-   */
-  public int getId() {
-    return ordinal();
   }
 
   public void writeToStream(OutputStream out) throws IOException {
