@@ -210,8 +210,7 @@ public class HFileBlockIndex {
         }
 
         // Found a data block, break the loop and check our level in the tree.
-        if (block.getBlockType().equals(BlockType.DATA) ||
-            block.getBlockType().equals(BlockType.ENCODED_DATA)) {
+        if (block.getBlockType().equals(BlockType.DATA)) {
           break;
         }
 
@@ -734,8 +733,8 @@ public class HFileBlockIndex {
       long rootLevelIndexPos = out.getPos();
 
       {
-        DataOutput blockStream =
-            blockWriter.startWriting(BlockType.ROOT_INDEX);
+        DataOutput blockStream = blockWriter.startWriting(BlockType.ROOT_INDEX,
+            false);
         rootChunk.writeRoot(blockStream);
         if (midKeyMetadata != null)
           blockStream.write(midKeyMetadata);
@@ -830,7 +829,7 @@ public class HFileBlockIndex {
         BlockIndexChunk parent, BlockIndexChunk curChunk) throws IOException {
       long beginOffset = out.getPos();
       DataOutputStream dos = blockWriter.startWriting(
-          BlockType.INTERMEDIATE_INDEX);
+          BlockType.INTERMEDIATE_INDEX, cacheOnWrite());
       curChunk.writeNonRoot(dos);
       byte[] curFirstKey = curChunk.getBlockKey(0);
       blockWriter.writeHeaderAndData(out);

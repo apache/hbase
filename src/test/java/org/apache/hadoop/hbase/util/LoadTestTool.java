@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncodings;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 
@@ -73,12 +72,6 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   private static final String OPT_BLOOM = "bloom";
   private static final String OPT_COMPRESSION = "compression";
-  private static final String OPT_DATA_BLOCK_ENCODING = "data_block_encoding";
-  private static final String OPT_DATA_BLOCK_ENCODING_CACHE_ONLY =
-      "data_block_encoding_cache_only";
-  private static final String OPT_ENCODED_DATA_BLOCK_SEEK =
-      "encoded_data_block_seek";
-
   private static final String OPT_KEY_WINDOW = "key_window";
   private static final String OPT_WRITE = "write";
   private static final String OPT_MAX_READ_ERRORS = "max_read_errors";
@@ -88,8 +81,6 @@ public class LoadTestTool extends AbstractHBaseTool {
   private static final String OPT_START_KEY = "start_key";
   private static final String OPT_TABLE_NAME = "tn";
   private static final String OPT_ZK_QUORUM = "zk";
-
-  private static final long DEFAULT_START_KEY = 0;
 
   /** This will be removed as we factor out the dependency on command line */
   private CommandLine cmd;
@@ -117,7 +108,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   public void createTables() throws IOException {
     HBaseTestingUtility.createPreSplitLoadTestTable(conf, tableName,
         COLUMN_FAMILY);
-    applyColumnFamilyOptions(tableName, COLUMN_FAMILIES);
+    applyBloomFilterAndCompression(tableName, COLUMN_FAMILIES);
   }
 
   private String[] splitColonSeparated(String option,
@@ -138,10 +129,9 @@ public class LoadTestTool extends AbstractHBaseTool {
   }
 
   /**
-   * Apply column family options such as Bloom filters, compression, and data
-   * block encoding.
+   * Apply the given Bloom filter type to all column families we care about.
    */
-  private void applyColumnFamilyOptions(byte[] tableName,
+  private void applyBloomFilterAndCompression(byte[] tableName,
       byte[][] columnFamilies) throws IOException {
     String bloomStr = cmd.getOptionValue(OPT_BLOOM);
     StoreFile.BloomType bloomType = bloomStr == null ? null :
@@ -151,16 +141,8 @@ public class LoadTestTool extends AbstractHBaseTool {
     Compression.Algorithm compressAlgo = compressStr == null ? null :
         Compression.Algorithm.valueOf(compressStr);
 
-    String dataBlockEncodingStr = cmd.getOptionValue(OPT_DATA_BLOCK_ENCODING);
-    DataBlockEncodings.Algorithm dataBlockEncodingAlgo =
-        dataBlockEncodingStr == null ? null :
-        DataBlockEncodings.Algorithm.valueOf(dataBlockEncodingStr);
-
-    if (bloomStr == null && compressStr == null
-        && dataBlockEncodingStr == null) {
-      // No reason to disable/enable the table.
+    if (bloomStr == null && compressStr == null)
       return;
-    }
 
     HBaseAdmin admin = new HBaseAdmin(conf);
     HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
@@ -168,21 +150,10 @@ public class LoadTestTool extends AbstractHBaseTool {
     admin.disableTable(tableName);
     for (byte[] cf : columnFamilies) {
       HColumnDescriptor columnDesc = tableDesc.getFamily(cf);
-      if (bloomStr != null) {
+      if (bloomStr != null)
         columnDesc.setBloomFilterType(bloomType);
-      }
-      if (compressStr != null) {
+      if (compressStr != null)
         columnDesc.setCompressionType(compressAlgo);
-      }
-      if (dataBlockEncodingAlgo != null) {
-        columnDesc.setDataBlockEncodingOnDisk(
-            cmd.hasOption(OPT_DATA_BLOCK_ENCODING_CACHE_ONLY) ?
-            DataBlockEncodings.Algorithm.NONE :
-            dataBlockEncodingAlgo);
-        columnDesc.setDataBlockEncodingInCache(dataBlockEncodingAlgo);
-        columnDesc.setEncodedDataBlockSeek(
-            cmd.hasOption(OPT_ENCODED_DATA_BLOCK_SEEK));
-      }
       admin.modifyColumn(tableName, columnDesc);
     }
     LOG.info("Enabling table " + Bytes.toString(tableName));
@@ -198,29 +169,17 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptWithArg(OPT_READ, OPT_USAGE_READ);
     addOptWithArg(OPT_BLOOM, OPT_USAGE_BLOOM);
     addOptWithArg(OPT_COMPRESSION, OPT_USAGE_COMPRESSION);
-    addOptWithArg(OPT_DATA_BLOCK_ENCODING, "Encoding algorithm (e.g. prefix "
-        + "compression) to use for data blocks in the test column family, "
-        + "one of " +
-        Arrays.toString(DataBlockEncodings.Algorithm.values()) + ".");
     addOptWithArg(OPT_MAX_READ_ERRORS, "The maximum number of read errors " +
         "to tolerate before terminating all reader threads. The default is " +
         MultiThreadedReader.DEFAULT_MAX_ERRORS + ".");
     addOptWithArg(OPT_KEY_WINDOW, "The 'key window' to maintain between " +
         "reads and writes for concurrent write/read workload. The default " +
         "is " + MultiThreadedReader.DEFAULT_KEY_WINDOW + ".");
-
     addOptNoArg(OPT_MULTIPUT, "Whether to use multi-puts as opposed to " +
         "separate puts for every column in a row");
-    addOptNoArg(OPT_DATA_BLOCK_ENCODING_CACHE_ONLY, "If using a data block " +
-        "encoding, this flag will only enable encoding in cache but not on " +
-        "disk.");
-    addOptNoArg(OPT_ENCODED_DATA_BLOCK_SEEK, "If using a data block " +
-        "encoding, this will enable doing seek operations on encoded blocks.");
 
     addRequiredOptWithArg(OPT_NUM_KEYS, "The number of keys to read/write");
-    addOptWithArg(OPT_START_KEY, "The first key to read/write " +
-        "(a 0-based index). The default value is " +
-        DEFAULT_START_KEY + ".");
+    addRequiredOptWithArg(OPT_START_KEY, "The first key to read/write");
   }
 
   @Override
@@ -229,8 +188,8 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     tableName = Bytes.toBytes(cmd.getOptionValue(OPT_TABLE_NAME,
         DEFAULT_TABLE_NAME));
-    startKey = parseLong(cmd.getOptionValue(OPT_START_KEY,
-        String.valueOf(DEFAULT_START_KEY)), 0, Long.MAX_VALUE);
+    startKey = parseLong(cmd.getOptionValue(OPT_START_KEY), 0,
+        Long.MAX_VALUE);
     long numKeys = parseLong(cmd.getOptionValue(OPT_NUM_KEYS), 1,
         Long.MAX_VALUE - startKey);
     endKey = startKey + numKeys;
@@ -289,7 +248,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       System.out.println("Reader threads: " + numReaderThreads);
     }
 
-    System.out.println("Key range: [" + startKey + ".." + (endKey - 1) + "]");
+    System.out.println("Key range: " + startKey + ".." + (endKey - 1));
   }
 
   @Override

@@ -30,12 +30,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncodings;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
-import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
@@ -59,16 +57,12 @@ public class HFileReaderV1 extends AbstractHFileReader {
    * stream.
    * @param size Length of the stream.
    * @param cacheConf cache references and configuration
-   * @param blockEncoder what kind of data block encoding will be used
-   * @throws IOException
    */
   public HFileReaderV1(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long size,
       final boolean closeIStream,
-      final CacheConfig cacheConf,
-      final HFileDataBlockEncoder blockEncoder) {
-    super(path, trailer, fsdis, size, closeIStream, cacheConf,
-        blockEncoder);
+      final CacheConfig cacheConf) {
+    super(path, trailer, fsdis, size, closeIStream, cacheConf);
 
     trailer.expectVersion(1);
     fsBlockReader = new HFileBlock.FSReaderV1(fsdis, compressAlgo, fileSize);
@@ -173,9 +167,6 @@ public class HFileReaderV1 extends AbstractHFileReader {
   @Override
   public HFileScanner getScanner(boolean cacheBlocks, final boolean pread,
                                 final boolean isCompaction) {
-    if (blockEncoder.useEncodedScanner(isCompaction)) {
-      return new EncodedScannerV1(this, cacheBlocks, pread, isCompaction);
-    }
     return new ScannerV1(this, cacheBlocks, pread, isCompaction);
   }
 
@@ -304,8 +295,6 @@ public class HFileReaderV1 extends AbstractHFileReader {
         HFileBlock cachedBlock =
           (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
               cacheConf.shouldCacheDataOnRead());
-        cachedBlock = blockEncoder.afterBlockCache(cachedBlock,
-            isCompaction, MemStore.NO_PERSISTENT_TS);
         if (cachedBlock != null) {
           cacheHits.incrementAndGet();
           getSchemaMetrics().updateOnCacheHit(cachedBlock.getBlockType().getCategory(),
@@ -333,7 +322,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
           - offset, dataBlockIndexReader.getRootBlockDataSize(block), pread);
       passSchemaMetricsTo(hfileBlock);
       hfileBlock.expectType(BlockType.DATA);
-      hfileBlock = blockEncoder.afterReadFromDisk(hfileBlock);
+      ByteBuffer buf = hfileBlock.getBufferWithoutHeader();
 
       long delta = System.nanoTime() - startTimeNs;
       if (pread) {
@@ -349,16 +338,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
       // Cache the block
       if (cacheBlock && cacheConf.shouldCacheBlockOnRead(
           hfileBlock.getBlockType().getCategory())) {
-        hfileBlock = blockEncoder.beforeBlockCache(hfileBlock,
-            MemStore.NO_PERSISTENT_TS);
         cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
             cacheConf.isInMemory());
       }
-
-      hfileBlock = blockEncoder.afterReadFromDiskAndPuttingInCache(
-          hfileBlock, isCompaction, MemStore.NO_PERSISTENT_TS);
-
-      ByteBuffer buf = hfileBlock.getBufferWithoutHeader();
 
       return buf;
     }
@@ -414,101 +396,16 @@ public class HFileReaderV1 extends AbstractHFileReader {
     }
   }
 
-  protected abstract static class AbstractScannerV1
-      extends AbstractHFileReader.Scanner {
-    protected final HFileReaderV1 readerV1;
-    protected int currBlock;
-
-    public AbstractScannerV1(HFileReaderV1 reader, boolean cacheBlocks,
-        final boolean pread, final boolean isCompaction) {
-      super(reader, cacheBlocks, pread, isCompaction);
-      readerV1 = reader;
-    }
-
-    /**
-     * Within a loaded block, seek looking for the first key
-     * that is smaller than (or equal to?) the key we are interested in.
-     *
-     * A note on the seekBefore - if you have seekBefore = true, AND the
-     * first key in the block = key, then you'll get thrown exceptions.
-     * @param key to find
-     * @param seekBefore find the key before the exact match.
-     * @return
-     */
-    protected abstract int blockSeek(byte[] key, int offset, int length,
-        boolean seekBefore);
-
-    protected abstract void loadBlock(int bloc, boolean rewind)
-        throws IOException;
-
-    @Override
-    public int seekTo(byte[] key, int offset, int length) throws IOException {
-      int b = readerV1.blockContainingKey(key, offset, length);
-      if (b < 0) return -1; // falls before the beginning of the file! :-(
-      // Avoid re-reading the same block (that'd be dumb).
-      loadBlock(b, true);
-      return blockSeek(key, offset, length, false);
-    }
-
-    @Override
-    public int reseekTo(byte[] key, int offset, int length)
-        throws IOException {
-      if (blockBuffer != null && currKeyLen != 0) {
-        ByteBuffer bb = getKey();
-        int compared = reader.getComparator().compare(key, offset,
-            length, bb.array(), bb.arrayOffset(), bb.limit());
-        if (compared < 1) {
-          // If the required key is less than or equal to current key, then
-          // don't do anything.
-          return compared;
-        }
-      }
-
-      int b = readerV1.blockContainingKey(key, offset, length);
-      if (b < 0) {
-        return -1;
-      }
-      loadBlock(b, false);
-      return blockSeek(key, offset, length, false);
-    }
-
-    @Override
-    public boolean seekBefore(byte[] key, int offset, int length)
-    throws IOException {
-      int b = readerV1.blockContainingKey(key, offset, length);
-      if (b < 0)
-        return false; // key is before the start of the file.
-
-      // Question: does this block begin with 'key'?
-      byte[] firstkKey = reader.getDataBlockIndexReader().getRootBlockKey(b);
-      if (reader.getComparator().compare(firstkKey, 0, firstkKey.length,
-          key, offset, length) == 0) {
-        // Ok the key we're interested in is the first of the block, so go back
-        // by one.
-        if (b == 0) {
-          // we have a 'problem', the key we want is the first of the file.
-          return false;
-        }
-        b--;
-        // TODO shortcut: seek forward in this block to the last key of the
-        // block.
-      }
-      loadBlock(b, true);
-      blockSeek(key, offset, length, true);
-      return true;
-    }
-  }
-
   /**
    * Implementation of {@link HFileScanner} interface.
    */
-
-  protected static class ScannerV1 extends AbstractScannerV1 {
-    private HFileReaderV1 reader;
+  protected static class ScannerV1 extends AbstractHFileReader.Scanner {
+    private final HFileReaderV1 reader;
+    private int currBlock;
 
     public ScannerV1(HFileReaderV1 reader, boolean cacheBlocks,
         final boolean pread, final boolean isCompaction) {
-      super(reader, cacheBlocks, pread, isCompaction);
+      super(cacheBlocks, pread, isCompaction);
       this.reader = reader;
     }
 
@@ -589,7 +486,57 @@ public class HFileReaderV1 extends AbstractHFileReader {
     }
 
     @Override
-    protected int blockSeek(byte[] key, int offset, int length,
+    public int seekTo(byte[] key) throws IOException {
+      return seekTo(key, 0, key.length);
+    }
+
+    @Override
+    public int seekTo(byte[] key, int offset, int length) throws IOException {
+      int b = reader.blockContainingKey(key, offset, length);
+      if (b < 0) return -1; // falls before the beginning of the file! :-(
+      // Avoid re-reading the same block (that'd be dumb).
+      loadBlock(b, true);
+      return blockSeek(key, offset, length, false);
+    }
+
+    @Override
+    public int reseekTo(byte[] key) throws IOException {
+      return reseekTo(key, 0, key.length);
+    }
+
+    @Override
+    public int reseekTo(byte[] key, int offset, int length)
+        throws IOException {
+      if (blockBuffer != null && currKeyLen != 0) {
+        ByteBuffer bb = getKey();
+        int compared = reader.getComparator().compare(key, offset,
+            length, bb.array(), bb.arrayOffset(), bb.limit());
+        if (compared <= 0) {
+          // If the required key is less than or equal to current key, then
+          // don't do anything.
+          return compared;
+        }
+      }
+
+      int b = reader.blockContainingKey(key, offset, length);
+      if (b < 0) {
+        return -1;
+      }
+      loadBlock(b, false);
+      return blockSeek(key, offset, length, false);
+    }
+
+    /**
+     * Within a loaded block, seek looking for the first key
+     * that is smaller than (or equal to?) the key we are interested in.
+     *
+     * A note on the seekBefore - if you have seekBefore = true, AND the
+     * first key in the block = key, then you'll get thrown exceptions.
+     * @param key to find
+     * @param seekBefore find the key before the exact match.
+     * @return
+     */
+    private int blockSeek(byte[] key, int offset, int length,
         boolean seekBefore) {
       int klen, vlen;
       int lastLen = 0;
@@ -631,6 +578,37 @@ public class HFileReaderV1 extends AbstractHFileReader {
     }
 
     @Override
+    public boolean seekBefore(byte[] key) throws IOException {
+      return seekBefore(key, 0, key.length);
+    }
+
+    @Override
+    public boolean seekBefore(byte[] key, int offset, int length)
+    throws IOException {
+      int b = reader.blockContainingKey(key, offset, length);
+      if (b < 0)
+        return false; // key is before the start of the file.
+
+      // Question: does this block begin with 'key'?
+      byte[] firstkKey = reader.getDataBlockIndexReader().getRootBlockKey(b);
+      if (reader.getComparator().compare(firstkKey, 0, firstkKey.length,
+          key, offset, length) == 0) {
+        // Ok the key we're interested in is the first of the block, so go back
+        // by one.
+        if (b == 0) {
+          // we have a 'problem', the key we want is the first of the file.
+          return false;
+        }
+        b--;
+        // TODO shortcut: seek forward in this block to the last key of the
+        // block.
+      }
+      loadBlock(b, true);
+      blockSeek(key, offset, length, true);
+      return true;
+    }
+
+    @Override
     public String getKeyString() {
       return Bytes.toStringBinary(blockBuffer.array(),
           blockBuffer.arrayOffset() + blockBuffer.position(), currKeyLen);
@@ -640,6 +618,11 @@ public class HFileReaderV1 extends AbstractHFileReader {
     public String getValueString() {
       return Bytes.toString(blockBuffer.array(), blockBuffer.arrayOffset() +
         blockBuffer.position() + currKeyLen, currValueLen);
+    }
+
+    @Override
+    public Reader getReader() {
+      return reader;
     }
 
     @Override
@@ -662,8 +645,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
       return true;
     }
 
-    @Override
-    protected void loadBlock(int bloc, boolean rewind) throws IOException {
+    private void loadBlock(int bloc, boolean rewind) throws IOException {
       if (blockBuffer == null) {
         blockBuffer = reader.readBlockBuffer(bloc, cacheBlocks, pread,
             isCompaction);
@@ -688,115 +670,6 @@ public class HFileReaderV1 extends AbstractHFileReader {
       }
     }
 
-  }
-
-  protected static class EncodedScannerV1 extends AbstractScannerV1 {
-    private DataBlockEncoder.EncodedSeeker seeker = null;
-    private DataBlockEncoder dataBlockEncoder = null;
-
-    public EncodedScannerV1(HFileReaderV1 reader, boolean cacheBlocks,
-        boolean pread, boolean isCompaction) {
-      super(reader, cacheBlocks, pread, isCompaction);
-    }
-
-    @Override
-    public boolean seekTo() throws IOException {
-      if (reader.getDataBlockIndexReader().isEmpty()) {
-        return false;
-      }
-
-      loadBlock(0, true);
-      return true;
-    }
-
-    @Override
-    public boolean next() throws IOException {
-      if (blockBuffer == null) {
-        throw new IOException("Next called on non-seeked scanner");
-      }
-
-      boolean ok = seeker.next();
-
-      if (!ok) {
-        if (currBlock + 1 >=
-            reader.getDataBlockIndexReader().getRootBlockCount()) {
-          // damn we are at the end
-          currBlock = 0;
-          blockBuffer = null;
-          return false;
-        }
-        loadBlock(currBlock + 1, false);
-        ok = true;
-      }
-
-      return ok;
-    }
-
-    @Override
-    public ByteBuffer getKey() {
-      return seeker.getKey();
-    }
-
-    @Override
-    public ByteBuffer getValue() {
-      return seeker.getValue();
-    }
-
-    @Override
-    public KeyValue getKeyValue() {
-      if (blockBuffer == null) {
-        return null;
-      }
-      return seeker.getKeyValueObject();
-    }
-
-    @Override
-    public String getKeyString() {
-      ByteBuffer keyBuffer = seeker.getKey();
-      return Bytes.toStringBinary(keyBuffer.array(),
-          keyBuffer.arrayOffset(), keyBuffer.limit());
-    }
-
-    @Override
-    public String getValueString() {
-      ByteBuffer valueBuffer = seeker.getValue();
-      return Bytes.toStringBinary(valueBuffer.array(),
-          valueBuffer.arrayOffset(), valueBuffer.limit());
-    }
-
-    @Override
-    protected int blockSeek(byte[] key, int offset, int length,
-        boolean seekBefore) {
-      return seeker.blockSeekTo(key, offset, length, seekBefore);
-    }
-
-    @Override
-    protected void loadBlock(int bloc, boolean rewind) throws IOException {
-      if (blockBuffer == null || bloc != currBlock) {
-        blockBuffer = readerV1.readBlockBuffer(bloc, cacheBlocks, pread,
-            isCompaction);
-        currBlock = bloc;
-        blockFetches++;
-        short dataBlockEncoderId = blockBuffer.getShort();
-        blockBuffer = blockBuffer.slice();
-
-        if (seeker == null ||
-            DataBlockEncodings.isCorrectEncoder(
-                dataBlockEncoder, dataBlockEncoderId)) {
-          dataBlockEncoder =
-              DataBlockEncodings.getDataBlockEncoderFromId(dataBlockEncoderId);
-          seeker = dataBlockEncoder.createSeeker(reader.getComparator(),
-              MemStore.NO_PERSISTENT_TS);
-        }
-        seeker.setCurrentBuffer(blockBuffer);
-
-      } else {
-        // we are already in the same block, just rewind to seek again.
-        if (rewind) {
-          seeker.rewind();
-        }
-      }
-    }
   }
 
   @Override

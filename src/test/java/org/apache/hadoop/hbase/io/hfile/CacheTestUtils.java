@@ -41,15 +41,9 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 
 public class CacheTestUtils {
 
-  private static final boolean includesMemstoreTS = true;
+  /*Just checks if heapsize grows when something is cached, and gets smaller when the same object is evicted*/
 
-  /**
-   * Just checks if heapsize grows when something is cached, and gets smaller
-   * when the same object is evicted
-   */
-
-  public static void testHeapSizeChanges(final BlockCache toBeTested,
-      final int blockSize) {
+  public static void testHeapSizeChanges(final BlockCache toBeTested, final int blockSize){
     HFileBlockPair[] blocks = generateHFileBlocks(blockSize, 1);
     long heapSize = ((HeapSize) toBeTested).heapSize();
     toBeTested.cacheBlock(blocks[0].blockName, blocks[0].block);
@@ -322,8 +316,7 @@ public class CacheTestUtils {
 
       HFileBlock generated = new HFileBlock(BlockType.DATA,
           onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
-          prevBlockOffset, cachedBuffer, HFileBlock.DONT_FILL_HEADER,
-          blockSize, includesMemstoreTS);
+          prevBlockOffset, cachedBuffer, false, blockSize);
 
       String strKey;
       /* No conflicting keys */

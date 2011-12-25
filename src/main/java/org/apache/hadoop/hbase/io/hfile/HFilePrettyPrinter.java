@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.ByteBloomFilter;
@@ -171,7 +170,6 @@ public class HFilePrettyPrinter {
         conf.get(org.apache.hadoop.hbase.HConstants.HBASE_DIR));
     conf.set("fs.default.name",
         conf.get(org.apache.hadoop.hbase.HConstants.HBASE_DIR));
-    SchemaMetrics.configureGlobally(conf);
     try {
       if (!parseOptions(args))
         return 1;

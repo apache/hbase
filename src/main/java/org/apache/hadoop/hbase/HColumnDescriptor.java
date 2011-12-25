@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncodings;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -54,18 +53,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   // Version 6 adds metadata as a map where keys and values are byte[].
   // Version 7 -- add new compression and hfile blocksize to HColumnDescriptor (HBASE-1217)
   // Version 8 -- reintroduction of bloom filters, changed from boolean to enum
-  // Version 9 -- add data block encoding
-  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte) 9;
+  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)8;
 
-  // These constants are used as FileInfo keys
   public static final String COMPRESSION = "COMPRESSION";
   public static final String COMPRESSION_COMPACT = "COMPRESSION_COMPACT";
-  public static final String DATA_BLOCK_ENCODING_ON_DISK =
-      "DATA_BLOCK_ENCODING_ON_DISK";
-  public static final String DATA_BLOCK_ENCODING_IN_CACHE =
-      "DATA_BLOCK_ENCODING_IN_CACHE";
-  public static final String ENCODED_DATA_BLOCK_SEEK =
-    "ENCODED_DATA_BLOCK_SEEK";
   public static final String BLOCKCACHE = "BLOCKCACHE";
   
   /**
@@ -88,23 +79,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public static final String DEFAULT_COMPRESSION =
     Compression.Algorithm.NONE.getName();
-  
-  /**
-   * Default data block encoding algorithm on disk.
-   */
-  public static final String DEFAULT_DATA_BLOCK_ENCODING_ON_DISK =
-      DataBlockEncodings.Algorithm.NONE.toString();
-
-  /**
-   * Default data block encoding algorithm in cache.
-   */
-  public static final String DEFAULT_DATA_BLOCK_ENCODING_IN_CACHE =
-      DataBlockEncodings.Algorithm.NONE.toString();
-
-  /**
-   * Do not use encoded seek by default.
-   */
-  public static final boolean DEFAULT_ENCODED_DATA_BLOCK_SEEK = false;
 
   /**
    * Default number of versions of a record to keep.
@@ -169,12 +143,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       DEFAULT_VALUES.put(HConstants.IN_MEMORY, String.valueOf(DEFAULT_IN_MEMORY));
       DEFAULT_VALUES.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
       DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
-      DEFAULT_VALUES.put(DATA_BLOCK_ENCODING_ON_DISK,
-          String.valueOf(DEFAULT_DATA_BLOCK_ENCODING_ON_DISK));
-      DEFAULT_VALUES.put(DATA_BLOCK_ENCODING_IN_CACHE,
-          String.valueOf(DEFAULT_DATA_BLOCK_ENCODING_IN_CACHE));
-      DEFAULT_VALUES.put(ENCODED_DATA_BLOCK_SEEK,
-          String.valueOf(DEFAULT_ENCODED_DATA_BLOCK_SEEK));
   }
 
   // Column family name
@@ -290,9 +258,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       final boolean blockCacheEnabled, final int blocksize,
       final int timeToLive, final String bloomFilter, final int scope) {
     this(familyName, DEFAULT_MIN_VERSIONS, maxVersions, DEFAULT_KEEP_DELETED,
-        compression, DEFAULT_DATA_BLOCK_ENCODING_ON_DISK,
-        DEFAULT_DATA_BLOCK_ENCODING_IN_CACHE, DEFAULT_ENCODED_DATA_BLOCK_SEEK,
-        inMemory, blockCacheEnabled, blocksize, timeToLive, bloomFilter, scope);
+        compression, inMemory, blockCacheEnabled, blocksize, timeToLive,
+        bloomFilter, scope);
   }
 
   /**
@@ -304,9 +271,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param keepDeletedCells Whether to retain deleted cells until they expire
    *        up to maxVersions versions.
    * @param compression Compression type
-   * @param dataBlockEncodingOnDisk data block encoding used on disk
-   * @param dataBlockEncodingInCache data block encoding used in block cache
-   * @param encodedDataBlockSeek whether to use data block encoding while seeking
    * @param inMemory If true, column data should be kept in an HRegionServer's
    * cache
    * @param blockCacheEnabled If true, MapFile blocks should be cached
@@ -323,12 +287,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
    */
-  public HColumnDescriptor(final byte [] familyName, final int minVersions,
+  public HColumnDescriptor(final byte[] familyName, final int minVersions,
       final int maxVersions, final boolean keepDeletedCells,
-      final String compression,
-      final String dataBlockEncodingOnDisk,
-      final String dataBlockEncodingInCache,
-      final boolean encodedDataBlockSeek, final boolean inMemory,
+      final String compression, final boolean inMemory,
       final boolean blockCacheEnabled, final int blocksize,
       final int timeToLive, final String bloomFilter, final int scope) {
     isLegalFamilyName(familyName);
@@ -358,11 +319,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     setTimeToLive(timeToLive);
     setCompressionType(Compression.Algorithm.
       valueOf(compression.toUpperCase()));
-    setDataBlockEncodingOnDisk(DataBlockEncodings.Algorithm.
-        valueOf(dataBlockEncodingOnDisk.toUpperCase()));
-    setDataBlockEncodingInCache(DataBlockEncodings.Algorithm.
-        valueOf(dataBlockEncodingInCache.toUpperCase()));
-    setEncodedDataBlockSeek(encodedDataBlockSeek);
     setBloomFilterType(StoreFile.BloomType.
       valueOf(bloomFilter.toUpperCase()));
     setBlocksize(blocksize);
@@ -538,71 +494,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       default: compressionType = "NONE"; break;
     }
     setValue(COMPRESSION, compressionType);
-  }
-
-  /** @return data block encoding algorithm used on disk */
-  public DataBlockEncodings.Algorithm getDataBlockEncodingOnDisk() {
-    String type = getValue(DATA_BLOCK_ENCODING_ON_DISK);
-    if (type == null) {
-      type = DEFAULT_DATA_BLOCK_ENCODING_ON_DISK;
-    }
-    return DataBlockEncodings.Algorithm.valueOf(type);
-  }
-
-  /**
-   * Set data block encoding algorithm.
-   * @param type What kind of data block encoding will be used.
-   */
-  public void setDataBlockEncodingOnDisk(
-      DataBlockEncodings.Algorithm type) {
-    String name;
-    if (type != null) {
-      name = type.toString();
-    } else {
-      name = DataBlockEncodings.Algorithm.NONE.toString();
-    }
-    setValue(DATA_BLOCK_ENCODING_ON_DISK, name);
-  }
-  
-  /** @return data block encoding in block cache algorithm */
-  public DataBlockEncodings.Algorithm getDataBlockEncodingInCache() {
-    String type = getValue(DATA_BLOCK_ENCODING_IN_CACHE);
-    if (type == null) {
-      type = DEFAULT_DATA_BLOCK_ENCODING_IN_CACHE;
-    }
-    return DataBlockEncodings.Algorithm.valueOf(type);
-  }
-
-  /**
-   * Set data block encoding algorithm used in block cache.
-   * @param type What kind of data block encoding will be used.
-   */
-  public void setDataBlockEncodingInCache(
-      DataBlockEncodings.Algorithm type) {
-    String name;
-    if (type != null) {
-      name = type.toString();
-    } else {
-      name = DataBlockEncodings.Algorithm.NONE.toString();
-    }
-    setValue(DATA_BLOCK_ENCODING_IN_CACHE, name);
-  }
-
-  /** @return whether we are doing seek operations over encoded data blocks */
-  public boolean useEncodedDataBlockSeek() {
-    String value = getValue(ENCODED_DATA_BLOCK_SEEK);
-    if (value != null) {
-      return Boolean.valueOf(value);
-    }
-    return DEFAULT_ENCODED_DATA_BLOCK_SEEK;
-  }
-
-  /**
-   * Set whether we should seek over encoded data blocks (true) or decode
-   * blocks first and use normal seek operations (false).
-   */
-  public void setEncodedDataBlockSeek(boolean useEncodedSeek) {
-    setValue(ENCODED_DATA_BLOCK_SEEK, Boolean.toString(useEncodedSeek));
   }
 
   /**
