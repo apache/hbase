@@ -71,13 +71,15 @@ public class ExplicitColumnTracker implements ColumnTracker {
    * @param columns columns specified user in query
    * @param minVersions minimum number of versions to keep
    * @param maxVersions maximum versions to return per column
+   * @param oldestUnexpiredTS the oldest timestamp we are interested in,
+   *  based on TTL 
    * @param ttl The timeToLive to enforce
    */
   public ExplicitColumnTracker(NavigableSet<byte[]> columns, int minVersions,
-      int maxVersions, long ttl) {
+      int maxVersions, long oldestUnexpiredTS) {
     this.maxVersions = maxVersions;
     this.minVersions = minVersions;
-    this.oldestStamp = System.currentTimeMillis() - ttl;
+    this.oldestStamp = oldestUnexpiredTS;
     this.columns = new ArrayList<ColumnCount>(columns.size());
     this.columnsToReuse = new ArrayList<ColumnCount>(columns.size());
     for(byte [] column : columns) {
@@ -259,6 +261,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
       }
     }
   }
+
   public MatchCode getNextRowOrNextColumn(byte[] bytes, int offset,
       int qualLength) {
     doneWithColumn(bytes, offset,qualLength);
@@ -271,6 +274,6 @@ public class ExplicitColumnTracker implements ColumnTracker {
   }
 
   public boolean isDone(long timestamp) {
-    return minVersions <=0 && isExpired(timestamp);
+    return minVersions <= 0 && isExpired(timestamp);
   }
 }

@@ -20,9 +20,11 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.SortedSet;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Scan;
 
 /**
  * A "non-lazy" scanner which always does a real seek operation. Most scanners
@@ -52,4 +54,16 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
     return forward ? scanner.reseek(kv) : scanner.seek(kv);
   }
 
+  @Override
+  public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns,
+      long oldestUnexpiredTS) {
+    // No optimizations implemented by default.
+    return true;
+  }
+
+  @Override
+  public boolean isFileScanner() {
+    // Not a file by default.
+    return false;
+  }
 }

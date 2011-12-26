@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Keeps track of the columns for a scan if they are not explicitly specified
@@ -49,12 +48,14 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * Return maxVersions of every row.
    * @param minVersion Minimum number of versions to keep
    * @param maxVersion Maximum number of versions to return
-   * @param ttl TimeToLive to enforce
+   * @param oldestUnexpiredTS oldest timestamp that has not expired according
+   *          to the TTL.
    */
-  public ScanWildcardColumnTracker(int minVersion, int maxVersion, long ttl) {
+  public ScanWildcardColumnTracker(int minVersion, int maxVersion,
+      long oldestUnexpiredTS) {
     this.maxVersions = maxVersion;
     this.minVersions = minVersion;
-    this.oldestStamp = EnvironmentEdgeManager.currentTimeMillis() - ttl;
+    this.oldestStamp = oldestUnexpiredTS;
   }
 
   /**
@@ -197,7 +198,6 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   }
 
   public boolean isDone(long timestamp) {
-    return minVersions <=0 && isExpired(timestamp);
+    return minVersions <= 0 && isExpired(timestamp);
   }
-
 }
