@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -52,7 +53,8 @@ public class TestMinVersions extends HBaseTestCase {
     HTableDescriptor htd = createTableDescriptor(getName(), 1, 1000, 1, false);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis() - 2000; // 2s in the past
+    // 2s in the past
+    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
 
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
@@ -95,7 +97,8 @@ public class TestMinVersions extends HBaseTestCase {
     HTableDescriptor htd = createTableDescriptor(getName(), 3, 1000, 1, false);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis() - 2000; // 2s in the past
+    // 2s in the past
+    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
 
     Put p = new Put(T1, ts-1);
     p.add(c0, c0, T2);
@@ -144,7 +147,8 @@ public class TestMinVersions extends HBaseTestCase {
     HTableDescriptor htd = createTableDescriptor(getName(), 3, 1000, 1, false);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis() - 2000; // 2s in the past
+    // 2s in the past
+    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
 
     Put p = new Put(T1, ts-2);
     p.add(c0, c0, T1);
@@ -196,7 +200,8 @@ public class TestMinVersions extends HBaseTestCase {
     HTableDescriptor htd = createTableDescriptor(getName(), 2, 1000, 1, false);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis() - 2000; // 2s in the past
+    // 2s in the past
+    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
 
     // 2nd version
     Put p = new Put(T1, ts-2);
@@ -265,7 +270,8 @@ public class TestMinVersions extends HBaseTestCase {
     HTableDescriptor htd = createTableDescriptor(getName(), 2, 1000, 1, false);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis() - 2000; // 2s in the past
+    // 2s in the past
+    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
 
      // 1st version
     Put p = new Put(T1, ts-3);
@@ -351,7 +357,8 @@ public class TestMinVersions extends HBaseTestCase {
     HRegion region = createNewHRegion(htd, null, null);
     final byte [] c1 = COLUMNS[1];
 
-    long ts = System.currentTimeMillis() - 2000; // 2s in the past
+    // 2s in the past
+    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
 
     Put p = new Put(T1, ts-3);
     p.add(c0, c0, T0);

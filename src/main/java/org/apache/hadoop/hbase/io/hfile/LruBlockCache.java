@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -722,4 +724,22 @@ public class LruBlockCache implements BlockCache, HeapSize {
   public void shutdown() {
     this.scheduleThreadPool.shutdown();
   }
+
+  /** Clears the cache. Used in tests. */
+  public void clearCache() {
+    map.clear();
+  }
+
+  /**
+   * Used in testing. May be very inefficient.
+   * @return the set of cached file names
+   */
+  SortedSet<String> getCachedFileNamesForTest() {
+    SortedSet<String> fileNames = new TreeSet<String>();
+    for (BlockCacheKey cacheKey : map.keySet()) {
+      fileNames.add(cacheKey.getHfileName());
+    }
+    return fileNames;
+  }
+
 }

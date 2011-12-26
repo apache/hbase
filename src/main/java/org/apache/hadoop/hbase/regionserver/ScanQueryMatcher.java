@@ -132,10 +132,12 @@ public class ScanQueryMatcher {
    * @param columns
    * @param scanType Type of the scan
    * @param earliestPutTs Earliest put seen in any of the store files.
+   * @param oldestUnexpiredTS the oldest timestamp we are interested in,
+   *  based on TTL
    */
   public ScanQueryMatcher(Scan scan, Store.ScanInfo scanInfo,
       NavigableSet<byte[]> columns, StoreScanner.ScanType scanType,
-      long readPointToUse, long earliestPutTs) {
+      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS) {
     this.tr = scan.getTimeRange();
     this.rowComparator = scanInfo.getComparator().getRawComparator();
     this.deletes =  new ScanDeleteTracker();
@@ -163,15 +165,16 @@ public class ScanQueryMatcher {
       hasNullColumn = true;
 
       // use a specialized scan for wildcard column tracker.
-      this.columns = new ScanWildcardColumnTracker(scanInfo.getMinVersions(), maxVersions, scanInfo.getTtl());
+      this.columns = new ScanWildcardColumnTracker(
+          scanInfo.getMinVersions(), maxVersions, oldestUnexpiredTS);
     } else {
       // whether there is null column in the explicit column query
       hasNullColumn = (columns.first().length == 0);
 
       // We can share the ExplicitColumnTracker, diff is we reset
       // between rows, not between storefiles.
-      this.columns = new ExplicitColumnTracker(columns, scanInfo.getMinVersions(), maxVersions,
-          scanInfo.getTtl());
+      this.columns = new ExplicitColumnTracker(columns,
+          scanInfo.getMinVersions(), maxVersions, oldestUnexpiredTS);
     }
   }
 
@@ -179,10 +182,10 @@ public class ScanQueryMatcher {
    * Constructor for tests
    */
   ScanQueryMatcher(Scan scan, Store.ScanInfo scanInfo,
-      NavigableSet<byte[]> columns) {
+      NavigableSet<byte[]> columns, long oldestUnexpiredTS) {
     this(scan, scanInfo, columns, StoreScanner.ScanType.USER_SCAN,
           Long.MAX_VALUE, /* max Readpoint to track versions */
-        HConstants.LATEST_TIMESTAMP);
+        HConstants.LATEST_TIMESTAMP, oldestUnexpiredTS);
   }
 
   /**

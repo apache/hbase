@@ -20,18 +20,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import junit.framework.TestCase;
-import org.apache.hadoop.hbase.*;
-
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.Store.ScanInfo;
-import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.experimental.categories.Category;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.
+    scanFixture;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,7 +29,21 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
-import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
+
+import junit.framework.TestCase;
+
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.Store.ScanInfo;
+import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.junit.experimental.categories.Category;
 
 // Can't be small as it plays with EnvironmentEdgeManager
 @Category(MediumTests.class)

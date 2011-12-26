@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Scanner scans both the memstore and the HStore. Coalesce KeyValue stream
@@ -55,6 +56,8 @@ class StoreScanner extends NonLazyKeyValueScanner
   private final boolean isGet;
   private final boolean explicitColumnQuery;
   private final boolean useRowColBloom;
+  private final long oldestUnexpiredTS;
+  private final int minVersions;
 
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
@@ -68,12 +71,14 @@ class StoreScanner extends NonLazyKeyValueScanner
 
   /** An internal constructor. */
   private StoreScanner(Store store, boolean cacheBlocks, Scan scan,
-      final NavigableSet<byte[]> columns){
+      final NavigableSet<byte[]> columns, long ttl, int minVersions) {
     this.store = store;
     this.cacheBlocks = cacheBlocks;
     isGet = scan.isGetScan();
     int numCol = columns == null ? 0 : columns.size();
     explicitColumnQuery = numCol > 0;
+    oldestUnexpiredTS = EnvironmentEdgeManager.currentTimeMillis() - ttl;
+    this.minVersions = minVersions;
 
     // We look up row-column Bloom filters for multi-column queries as part of
     // the seek operation. However, we also look the row-column Bloom filter
@@ -92,14 +97,16 @@ class StoreScanner extends NonLazyKeyValueScanner
    */
   StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns)
                               throws IOException {
-    this(store, scan.getCacheBlocks(), scan, columns);
+    this(store, scan.getCacheBlocks(), scan, columns, store.scanInfo.getTtl(),
+        store.scanInfo.getMinVersions());
     initializeMetricNames();
     if (columns != null && scan.isRaw()) {
       throw new DoNotRetryIOException(
           "Cannot specify any column for a raw scan");
     }
     matcher = new ScanQueryMatcher(scan, store.scanInfo, columns,
-        ScanType.USER_SCAN, Long.MAX_VALUE, HConstants.LATEST_TIMESTAMP);
+        ScanType.USER_SCAN, Long.MAX_VALUE, HConstants.LATEST_TIMESTAMP,
+        oldestUnexpiredTS);
 
     // Pass columns to try to filter out unnecessary StoreFiles.
     List<KeyValueScanner> scanners = getScanners(scan, columns);
@@ -130,17 +137,18 @@ class StoreScanner extends NonLazyKeyValueScanner
    * Opens a scanner across specified StoreFiles.
    * @param store who we scan
    * @param scan the spec
-   * @param scanners ancilliary scanners
+   * @param scanners ancillary scanners
    * @param smallestReadPoint the readPoint that we should use for tracking versions
    * @param retainDeletesInOutput should we retain deletes after compaction?
    */
   StoreScanner(Store store, Scan scan,
       List<? extends KeyValueScanner> scanners, ScanType scanType,
       long smallestReadPoint, long earliestPutTs) throws IOException {
-    this(store, false, scan, null);
+    this(store, false, scan, null, store.scanInfo.getTtl(),
+        store.scanInfo.getMinVersions());
     initializeMetricNames();
     matcher = new ScanQueryMatcher(scan, store.scanInfo, null, scanType,
-        smallestReadPoint, earliestPutTs);
+        smallestReadPoint, earliestPutTs, oldestUnexpiredTS);
 
     // Seek all scanners to the initial key
     for(KeyValueScanner scanner : scanners) {
@@ -164,10 +172,11 @@ class StoreScanner extends NonLazyKeyValueScanner
       StoreScanner.ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners, long earliestPutTs)
           throws IOException {
-    this(null, scan.getCacheBlocks(), scan, columns);
+    this(null, scan.getCacheBlocks(), scan, columns, scanInfo.getTtl(),
+        scanInfo.getMinVersions());
     this.initializeMetricNames();
     this.matcher = new ScanQueryMatcher(scan, scanInfo, columns, scanType,
-        Long.MAX_VALUE, earliestPutTs);
+        Long.MAX_VALUE, earliestPutTs, oldestUnexpiredTS);
 
     // Seek all scanners to the initial key
     for (KeyValueScanner scanner : scanners) {
@@ -221,18 +230,20 @@ class StoreScanner extends NonLazyKeyValueScanner
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(allStoreScanners.size());
 
+    // We can only exclude store files based on TTL if minVersions is set to 0.
+    // Otherwise, we might have to return KVs that have technically expired.
+    long expiredTimestampCutoff = minVersions == 0 ? oldestUnexpiredTS :
+        Long.MIN_VALUE;
+
     // include only those scan files which pass all filters
     for (KeyValueScanner kvs : allStoreScanners) {
-      if (kvs instanceof StoreFileScanner) {
-        if (memOnly == false && ((StoreFileScanner)kvs).shouldSeek(scan, columns)) {
-          scanners.add(kvs);
-        }
+      boolean isFile = kvs.isFileScanner();
+      if ((!isFile && filesOnly) || (isFile && memOnly)) {
+        continue;
       }
-      else {
-        // kvs is a MemStoreScanner
-        if (filesOnly == false && this.store.memstore.shouldSeek(scan)) {
-          scanners.add(kvs);
-        }
+
+      if (kvs.shouldUseScanner(scan, columns, expiredTimestampCutoff)) {
+        scanners.add(kvs);
       }
     }
 

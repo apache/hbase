@@ -2142,4 +2142,5 @@ public class Store extends SchemaConfigured implements HeapSize {
       return comparator;
     }
   }
+
 }

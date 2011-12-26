@@ -89,7 +89,7 @@ public class MemStore implements HeapSize {
 
   TimeRangeTracker timeRangeTracker;
   TimeRangeTracker snapshotTimeRangeTracker;
-  
+
   MemStoreLAB allocator;
 
 
@@ -216,11 +216,11 @@ public class MemStore implements HeapSize {
       this.lock.readLock().unlock();
     }
   }
-  
+
   /**
    * Internal version of add() that doesn't clone KVs with the
    * allocator, and doesn't take the lock.
-   * 
+   *
    * Callers should ensure they already have the read lock taken
    */
   private long internalAdd(final KeyValue toAdd) {
@@ -251,9 +251,9 @@ public class MemStore implements HeapSize {
 
   /**
    * Remove n key from the memstore. Only kvs that have the same key and the
-   * same memstoreTS are removed.  It is ok to not update timeRangeTracker 
-   * in this call. It is possible that we can optimize this method by using 
-   * tailMap/iterator, but since this method is called rarely (only for 
+   * same memstoreTS are removed.  It is ok to not update timeRangeTracker
+   * in this call. It is possible that we can optimize this method by using
+   * tailMap/iterator, but since this method is called rarely (only for
    * error recovery), we can leave those optimization for the future.
    * @param kv
    */
@@ -544,7 +544,7 @@ public class MemStore implements HeapSize {
    * family, and qualifier, they are removed.
    * <p>
    * Callers must hold the read lock.
-   * 
+   *
    * @param kv
    * @return change in size of MemStore
    */
@@ -649,9 +649,12 @@ public class MemStore implements HeapSize {
    * @param scan
    * @return False if the key definitely does not exist in this Memstore
    */
-  public boolean shouldSeek(Scan scan) {
-    return timeRangeTracker.includesTimeRange(scan.getTimeRange()) ||
-        snapshotTimeRangeTracker.includesTimeRange(scan.getTimeRange());
+  public boolean shouldSeek(Scan scan, long oldestUnexpiredTS) {
+    return (timeRangeTracker.includesTimeRange(scan.getTimeRange()) ||
+        snapshotTimeRangeTracker.includesTimeRange(scan.getTimeRange()))
+        && (Math.max(timeRangeTracker.getMaximumTimestamp(),
+                     snapshotTimeRangeTracker.getMaximumTimestamp()) >=
+            oldestUnexpiredTS);
   }
 
   public TimeRangeTracker getSnapshotTimeRangeTracker() {
@@ -859,6 +862,12 @@ public class MemStore implements HeapSize {
     @Override
     public long getSequenceID() {
       return Long.MAX_VALUE;
+    }
+
+    @Override
+    public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns,
+        long oldestUnexpiredTS) {
+      return shouldSeek(scan, oldestUnexpiredTS);
     }
   }
 

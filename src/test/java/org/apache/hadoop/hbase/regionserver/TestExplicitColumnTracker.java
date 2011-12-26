@@ -47,7 +47,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
                        List<byte[]> scannerColumns,
                        List<MatchCode> expected) throws IOException {
     ColumnTracker exp = new ExplicitColumnTracker(
-      trackColumns, 0, maxVersions, Long.MAX_VALUE);
+      trackColumns, 0, maxVersions, Long.MIN_VALUE);
 
 
     //Initialize result
@@ -166,7 +166,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     }
 
     ColumnTracker explicit = new ExplicitColumnTracker(columns, 0, maxVersions,
-        Long.MAX_VALUE);
+        Long.MIN_VALUE);
     for (int i = 0; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
       explicit.checkColumn(col, 0, col.length, 1, KeyValue.Type.Put.getCode(),

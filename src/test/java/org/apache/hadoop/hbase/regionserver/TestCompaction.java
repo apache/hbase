@@ -241,7 +241,7 @@ public class TestCompaction extends HBaseTestCase {
 
     r.compactStores(true);
     int count = count();
-    assertTrue("Should not see anything after TTL has expired", count == 0);
+    assertEquals("Should not see anything after TTL has expired", 0, count);
   }
 
   public void testMinorCompactionWithDeleteRow() throws Exception {
