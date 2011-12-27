@@ -461,6 +461,7 @@ Release 0.92.0 - Unreleased
    HBASE-5078  DistributedLogSplitter failing to split file because it has edits for
                lots of regions
    HBASE-5077  SplitLogWorker fails to let go of a task, kills the RS
+   HBASE-5096  Replication does not handle deletes correctly. (Lars H)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
