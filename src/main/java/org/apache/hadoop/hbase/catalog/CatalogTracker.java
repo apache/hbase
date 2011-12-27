@@ -75,6 +75,7 @@ public class CatalogTracker {
   private HServerAddress metaLocation;
   private final int defaultTimeout;
   private boolean stopped = false;
+  private boolean instantiatedzkw = false;
   private HConnection abortable;
 
   public static final byte [] ROOT_REGION =
@@ -133,7 +134,15 @@ public class CatalogTracker {
   throws IOException {
     this.conf = conf;
     this.connection = connection;
-    this.zookeeper = (zk == null) ? this.connection.getZooKeeperWatcher() : zk;
+    if (zk == null) {
+      // Create our own.  Set flag so we tear it down on stop.
+      this.zookeeper =
+        new ZooKeeperWatcher(conf, "catalogtracker-on-" + connection.toString(),
+          abortable);
+      instantiatedzkw = true;
+    } else {
+      this.zookeeper = zk;
+    }
     if (abortable == null) {
       this.abortable = this.connection;
     }
@@ -189,6 +198,9 @@ public class CatalogTracker {
         // Although the {@link Closeable} interface throws an {@link
         // IOException}, in reality, the implementation would never do that.
         LOG.error("Attempt to close catalog tracker's connection failed.", e);
+      }
+      if (this.instantiatedzkw) {
+        this.zookeeper.close();
       }
       // Call this and it will interrupt any ongoing waits on meta.
       synchronized (this.metaAvailable) {

@@ -8,6 +8,8 @@ Release 0.90.6 - Unreleased
    HBASE-4893  HConnectionImplementation is closed but not deleted (Mubarak)
    HBASE-4970  Add a parameter so that keepAliveTime of Htable thread pool can be changed (gaojinchao)
    HBASE-5060  HBase client is blocked forever (Jinchao)
+   HBASE-5073  Registered listeners not getting removed leading to memory leak in HBaseAdmin
+               (Ramkrishna)
 
 Release 0.90.5 - Dec 22, 2011
   BUG FIXES
