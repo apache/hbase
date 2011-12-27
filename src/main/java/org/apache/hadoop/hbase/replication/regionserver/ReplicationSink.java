@@ -22,9 +22,8 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
@@ -109,11 +108,21 @@ public class ReplicationSink {
               kvs.get(0).getTimestamp(), null);
           delete.setClusterId(entry.getKey().getClusterId());
           for (KeyValue kv : kvs) {
-            if (kv.isDeleteFamily()) {
-              delete.deleteFamily(kv.getFamily());
-            } else if (!kv.isEmptyColumn()) {
-              delete.deleteColumn(kv.getFamily(),
-                  kv.getQualifier());
+            switch (Type.codeToType(kv.getType())) {
+            case DeleteFamily:
+              // family marker
+              delete.deleteFamily(kv.getFamily(), kv.getTimestamp());
+              break;
+            case DeleteColumn:
+              // column marker
+              delete.deleteColumns(kv.getFamily(), kv.getQualifier(),
+                  kv.getTimestamp());
+              break;
+            case Delete:
+              // version marker
+              delete.deleteColumn(kv.getFamily(), kv.getQualifier(),
+                  kv.getTimestamp());
+              break;
             }
           }
           delete(entry.getKey().getTablename(), delete);
