@@ -255,6 +255,9 @@ public final class HConstants {
   /** The upper-half split region column qualifier */
   public static final byte [] SPLITB_QUALIFIER = Bytes.toBytes("splitB");
 
+  /** The favored nodes column qualifier*/
+  public static final byte [] FAVOREDNODES_QUALIFIER = Bytes.toBytes("favorednodes");
+
   // Other constants
 
   /**

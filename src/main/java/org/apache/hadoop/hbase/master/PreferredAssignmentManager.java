@@ -95,11 +95,33 @@ public class PreferredAssignmentManager {
     persistentAssignments.put(region, servers);
     if (servers != null && !servers.equals(oldServers)) {
       putTransientFromPersistent(region);
+      if (LOG.isDebugEnabled()) {
+        StringBuffer sb = new StringBuffer();
+        for (HServerAddress server : servers) {
+          sb.append(server.getHostname() + ":" + server.getPort() + ",");
+          if (master.getServerManager().getHServerInfo(server) == null) {
+            LOG.info("Found persistent assignment for region " +
+                region.getRegionNameAsString() + " to unknown server " +
+                server);
+          }
+        }
+        LOG.debug("Added persistent assignment for region " +
+            region.getRegionNameAsString() + " to " + sb.toString());
+      }
     }
   }
 
   public List<HServerAddress> removePersistentAssignment(HRegionInfo region) {
-    return persistentAssignments.remove(region);
+    List<HServerAddress> servers = persistentAssignments.remove(region);
+    if (LOG.isDebugEnabled() && servers != null) {
+      StringBuffer sb = new StringBuffer();
+      for (HServerAddress server : servers) {
+        sb.append(server.getHostname() + ":" + server.getPort() + ",");
+      }
+      LOG.debug("Removed persistent assignment for region " +
+          region.getRegionNameAsString() + " to " + sb.toString());
+    }
+    return servers;
   }
 
   public void addTransientAssignment(HServerAddress server,

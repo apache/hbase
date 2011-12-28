@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -197,6 +198,20 @@ abstract class BaseScanner extends Chore {
           splitParents.put(info, values);
         }
         rows += 1;
+
+        byte[] favoredNodes = values.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.FAVOREDNODES_QUALIFIER);
+        if (favoredNodes != null) {
+          List<HServerAddress> addresses = new ArrayList<HServerAddress>();
+          for (String address : new String(favoredNodes).split(",")) {
+            addresses.add(new HServerAddress(address));
+          }
+          this.master.getRegionManager().assignmentManager
+              .addPersistentAssignment(info, addresses);
+        } else {
+          this.master.getRegionManager().assignmentManager
+              .removePersistentAssignment(info);
+        }
       }
       if (rootRegion) {
         this.master.getRegionManager().setNumMetaRegions(rows);
