@@ -125,8 +125,7 @@ public class Reference implements Writable {
 
   public Path write(final FileSystem fs, final Path p)
   throws IOException {
-    FSUtils.create(fs, p);
-    FSDataOutputStream out = fs.create(p);
+    FSDataOutputStream out = fs.create(p, false);
     try {
       write(out);
     } finally {
