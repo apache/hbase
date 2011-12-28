@@ -514,7 +514,7 @@ public class SchemaMetrics {
    * @param cfName the column family name
    * @return schemaMetricsPrefix
    */
-  private static String generateSchemaMetricsPrefix(final String tableName,
+  public static String generateSchemaMetricsPrefix(final String tableName,
       final String cfName){
     String schemaMetricPrefix =
       tableName.equals(TOTAL_KEY) ? "" : TABLE_PREFIX + tableName + ".";

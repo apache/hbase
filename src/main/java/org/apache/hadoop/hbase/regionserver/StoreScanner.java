@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -183,13 +184,15 @@ class StoreScanner extends NonLazyKeyValueScanner
    * To be called after the store variable has been initialized!
    */
   private void initializeMetricNames() {
-    byte[] family;
-    if (null != this.store) {
-      family = this.store.getFamily().getName();
-    } else {
-      family = Bytes.toBytes("__unknown");
+    String tableName = SchemaMetrics.UNKNOWN;
+    String family = SchemaMetrics.UNKNOWN;
+    if (store != null) {
+      tableName = store.getTableName();
+      family = Bytes.toString(store.getFamily().getName());
     }
-    String mutationSignature = HRegion.createMutationSignature(family);
+
+    String mutationSignature = SchemaMetrics.generateSchemaMetricsPrefix(
+        tableName, family);
     this.metricNameGetsize = mutationSignature + ".getsize";
   }
 

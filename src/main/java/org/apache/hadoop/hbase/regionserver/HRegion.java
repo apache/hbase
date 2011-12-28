@@ -293,20 +293,6 @@ public class HRegion implements HeapSize {
       new ConcurrentHashMap<String,
                             Pair<AtomicLong, AtomicInteger>>();
 
-  /**
-   * Method to transform a single column family in byte[] format into a
-   * signature for printing out in metrics. Used as overloading so as to not
-   * create an extra Set. Could have gone further and imposed restriction on the
-   * Set version to be used for length > 1, but that puts strain on method user.
-   *
-   * @param family
-   *          the family to convert
-   * @return the string to print out in metrics
-   */
-  public static String createMutationSignature(byte[] family) {
-    return SchemaMetrics.CF_PREFIX + Bytes.toString(family);
-  }
-
   public static void incrNumericMetric(String key, long amount) {
     AtomicLong oldVal = numericMetrics.get(key);
     if (oldVal == null) {
@@ -3543,7 +3529,8 @@ public class HRegion implements HeapSize {
 
     // do after lock
     long after = EnvironmentEdgeManager.currentTimeMillis();
-    String signature = HRegion.createMutationSignature(family);
+    String signature = SchemaMetrics.generateSchemaMetricsPrefix(
+        this.getTableDesc().getNameAsString(), family.toString());
     HRegion.incrTimeVaryingMetric(signature + ".increment_", after - before);
 
     if (flush) {
