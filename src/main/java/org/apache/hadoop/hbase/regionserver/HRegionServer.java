@@ -28,6 +28,7 @@ import java.lang.reflect.Constructor;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -2619,23 +2620,36 @@ public class HRegionServer implements HRegionInterface,
    * Get the top N most loaded regions this server is serving so we can
    * tell the master which regions it can reallocate if we're overloaded.
    * TODO: actually calculate which regions are most loaded. (Right now, we're
-   * just grabbing the first N regions being served regardless of load.)
+   * just grabbing N random regions being served regardless of load. We want to
+   * avoid returning regions which are explicitly assigned to this server, or at
+   * least not always return the same regions.)
    */
   protected HRegionInfo[] getMostLoadedRegions() {
-    ArrayList<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+    HRegionInfo[] regions = new HRegionInfo[onlineRegions.size()];
+    int numOpenRegions = 0;
     synchronized (onlineRegions) {
       for (HRegion r : onlineRegions.values()) {
         if (r.isClosed() || r.isClosing()) {
           continue;
         }
-        if (regions.size() < numRegionsToReport) {
-          regions.add(r.getRegionInfo());
-        } else {
-          break;
-        }
+        regions[numOpenRegions++] = r.getRegionInfo();
       }
     }
-    return regions.toArray(new HRegionInfo[regions.size()]);
+    int resultSize = Math.min(numRegionsToReport, numOpenRegions);
+    if (numOpenRegions > numRegionsToReport) {
+      // There are more candidate regions than the number of regions we want to
+      // return. Shuffle them so that we are not always returning the same ones.
+      // This is based on the Fisher-Yates algorithm but stops after the first N
+      // regions because we only return the first N.
+      Random rand = new Random();
+      for (int i = 0; i < resultSize; i++) {
+        int r = rand.nextInt(numOpenRegions - i) + i;
+        HRegionInfo temp = regions[i];
+        regions[i] = regions[r];
+        regions[r] = temp;
+      }
+    }
+    return Arrays.copyOfRange(regions, 0, resultSize);
   }
 
   /**
