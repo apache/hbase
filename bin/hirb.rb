@@ -51,9 +51,14 @@ end
 # See if there are args for this shell. If any, read and then strip from ARGV
 # so they don't go through to irb.  Output shell 'usage' if user types '--help'
 cmdline_help = <<HERE # HERE document output as shell usage
-HBase Shell command-line options:
- format        Formatter for outputting results: console | html. Default: console
- -d | --debug  Set DEBUG log levels.
+Usage: shell [OPTIONS] [SCRIPTFILE [ARGUMENTS]]
+
+ --format=OPTION                Formatter for outputting results.
+                                Valid options are: console, html.
+                                (Default: console)
+
+ -d | --debug                   Set DEBUG log levels.
+ -h | --help                    This help.
 HERE
 found = []
 format = 'console'
