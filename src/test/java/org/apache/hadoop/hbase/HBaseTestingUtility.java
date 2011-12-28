@@ -836,24 +836,23 @@ public class HBaseTestingUtility {
     nodeZK.registerListener(EmptyWatcher.instance);
     String quorumServers = nodeZK.getQuorumServers();
     int sessionTimeout = nodeZK.getSessionTimeout();
-
     byte[] password = nodeZK.getSessionPassword();
     long sessionID = nodeZK.getSessionID();
 
     ZooKeeper zk = new ZooKeeper(quorumServers,
         sessionTimeout, EmptyWatcher.instance, sessionID, password);
     zk.close();
-    final long sleep = sessionTimeout * 10L;
-    final int maxRetryNum = 5;
+		LOG.debug("ZooKeeper is closed");
+
+    final long sleep = sessionTimeout * 3L;
+    final int maxRetryNum = 10;
     int retryNum = maxRetryNum;
     while (!nodeZK.isAborted() && retryNum != 0) {
       Thread.sleep(sleep);
-      LOG.info("ZK Closed; sleeping=" + sleep);
       retryNum--;
     }
-
     if (retryNum == 0) {
-      fail("ZooKeeper is not aborted after " + maxRetryNum + " attempt");
+      fail("ZooKeeper is not aborted after " + maxRetryNum + " attempts.");
     }
   }
 

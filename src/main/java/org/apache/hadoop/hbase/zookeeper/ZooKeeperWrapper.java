@@ -1784,7 +1784,7 @@ public class ZooKeeperWrapper implements Watcher {
    * @param e
    */
   private void abort(String why, Throwable e) {
-    LOG.error("<" + instanceName + "> is going to abort" +
+    LOG.error("<" + instanceName + "> is going to abort " +
 		"because " + why);
     this.abortable.abort(why, e);
   }
