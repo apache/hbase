@@ -529,7 +529,14 @@ public class SplitTransaction {
    */
   private static void createSplitDir(final FileSystem fs, final Path splitdir)
   throws IOException {
-    if (fs.exists(splitdir)) throw new IOException("Splitdir already exits? " + splitdir);
+    if (fs.exists(splitdir)) {
+      LOG.info("The " + splitdir
+          + " directory exists.  Hence deleting it to recreate it");
+      if (!fs.delete(splitdir, true)) {
+        throw new IOException("Failed deletion of " + splitdir
+            + " before creating them again.");
+      }
+    }
     if (!fs.mkdirs(splitdir)) throw new IOException("Failed create of " + splitdir);
   }
 
@@ -589,6 +596,10 @@ public class SplitTransaction {
           this.fileSplitTimeout, TimeUnit.MILLISECONDS);
       if (stillRunning) {
         threadPool.shutdownNow();
+        // wait for the thread to shutdown completely.
+        while (!threadPool.isTerminated()) {
+          Thread.sleep(50);
+        }
         throw new IOException("Took too long to split the" +
             " files and create the references, aborting split");
       }
