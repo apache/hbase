@@ -35,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.EmptyWatcher;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -1034,7 +1035,7 @@ public class ZKUtil {
     try {
       sb.append("HBase is rooted at ").append(zkw.baseZNode);
       sb.append("\nMaster address: ").append(
-          Bytes.toStringBinary(getData(zkw, zkw.masterAddressZNode)));
+          ServerName.parseVersionedServerName(getData(zkw, zkw.masterAddressZNode)));
       sb.append("\nRegion server holding ROOT: ").append(
           Bytes.toStringBinary(getData(zkw, zkw.rootServerZNode)));
       sb.append("\nRegion servers:");

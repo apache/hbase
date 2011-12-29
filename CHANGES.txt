@@ -462,6 +462,7 @@ Release 0.92.0 - Unreleased
                lots of regions
    HBASE-5077  SplitLogWorker fails to let go of a task, kills the RS
    HBASE-5096  Replication does not handle deletes correctly. (Lars H)
+   HBASE-5103  Fix improper master znode deserialization (Jonathan Hsieh)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected

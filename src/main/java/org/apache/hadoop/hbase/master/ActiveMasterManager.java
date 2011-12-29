@@ -204,7 +204,7 @@ class ActiveMasterManager extends ZooKeeperListener {
       byte [] bytes =
         ZKUtil.getDataAndWatch(watcher, watcher.masterAddressZNode);
       // TODO: redo this to make it atomic (only added for tests)
-      ServerName master = new ServerName(Bytes.toString(bytes));
+      ServerName master = ServerName.parseVersionedServerName(bytes);
       if (master != null &&  master.equals(this.sn)) {
         ZKUtil.deleteNode(watcher, watcher.masterAddressZNode);
       }
