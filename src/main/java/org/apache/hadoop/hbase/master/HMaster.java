@@ -27,8 +27,13 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,7 +61,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
@@ -72,7 +76,6 @@ import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
-import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -88,8 +91,8 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
-import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
+import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -1235,7 +1238,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   /**
-   * We do the following.
+   * We do the following in a different thread.  If it is not completed
+   * in time, we will time it out and assume it is not easy to recover.
+   *
    * 1. Create a new ZK session. (since our current one is expired)
    * 2. Try to become a primary master again
    * 3. Initialize all ZK based system trackers.
@@ -1246,29 +1251,53 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * @return True if we could successfully recover from ZK session expiry.
    * @throws InterruptedException
    * @throws IOException
+   * @throws KeeperException
+   * @throws ExecutionException
    */
   private boolean tryRecoveringExpiredZKSession() throws InterruptedException,
-      IOException, KeeperException {
-    this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":"
-        + this.serverName.getPort(), this, true);
+      IOException, KeeperException, ExecutionException {
 
-    MonitoredTask status = 
-      TaskMonitor.get().createStatus("Recovering expired ZK session");
-    try {
-      if (!becomeActiveMaster(status)) {
-        return false;
+    this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":"
+      + this.serverName.getPort(), this, true);
+
+    Callable<Boolean> callable = new Callable<Boolean> () {
+      public Boolean call() throws InterruptedException,
+          IOException, KeeperException {
+        MonitoredTask status =
+          TaskMonitor.get().createStatus("Recovering expired ZK session");
+        try {
+          if (!becomeActiveMaster(status)) {
+            return Boolean.FALSE;
+          }
+          initializeZKBasedSystemTrackers();
+          // Update in-memory structures to reflect our earlier Root/Meta assignment.
+          assignRootAndMeta(status);
+          // process RIT if any
+          // TODO: Why does this not call AssignmentManager.joinCluster?  Otherwise
+          // we are not processing dead servers if any.
+          assignmentManager.processDeadServersAndRegionsInTransition();
+          return Boolean.TRUE;
+        } finally {
+          status.cleanup();
+        }
       }
-      initializeZKBasedSystemTrackers();
-      // Update in-memory structures to reflect our earlier Root/Meta assignment.
-      assignRootAndMeta(status);
-      // process RIT if any
-      // TODO: Why does this not call AssignmentManager.joinCluster?  Otherwise
-      // we are not processing dead servers if any.
-      this.assignmentManager.processDeadServersAndRegionsInTransition();
-      return true;
-    } finally {
-      status.cleanup();
+    };
+
+    long timeout =
+      conf.getLong("hbase.master.zksession.recover.timeout", 300000);
+    java.util.concurrent.ExecutorService executor =
+      Executors.newSingleThreadExecutor();
+    Future<Boolean> result = executor.submit(callable);
+    executor.shutdown();
+    if (executor.awaitTermination(timeout, TimeUnit.MILLISECONDS)
+        && result.isDone()) {
+      Boolean recovered = result.get();
+      if (recovered != null) {
+        return recovered.booleanValue();
+      }
     }
+    executor.shutdownNow();
+    return false;
   }
 
   /**
