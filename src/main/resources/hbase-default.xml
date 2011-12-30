@@ -125,10 +125,10 @@
   </property>
   <property>
     <name>hbase.connection.per.config</name>
-    <value>true</value>
+    <value>false</value>
     <description>Disallows sharing of connections for configuration instances
     with equivalent settings.
-    Default: true (expected to be false in future releases).
+    Default: false 
     </description>
   </property>
   <property>
