@@ -99,10 +99,10 @@ public class HBaseAdmin implements Abortable, Closeable {
         this.connection.getMaster();
         break;
       } catch (MasterNotRunningException mnre) {
-        HConnectionManager.deleteConnection(this.conf, false);
+        HConnectionManager.deleteStaleConnection(this.connection);
         this.connection = HConnectionManager.getConnection(this.conf);
       } catch (UndeclaredThrowableException ute) {
-        HConnectionManager.deleteConnection(this.conf, false);
+        HConnectionManager.deleteStaleConnection(this.connection);
         this.connection = HConnectionManager.getConnection(this.conf);
       }
       try { // Sleep
@@ -110,13 +110,13 @@ public class HBaseAdmin implements Abortable, Closeable {
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         // we should delete connection between client and zookeeper
-        HConnectionManager.deleteConnection(this.conf, false);
+        HConnectionManager.deleteStaleConnection(this.connection);
         throw new MasterNotRunningException("Interrupted");
       }
     }
     if (tries >= numRetries) {
       // we should delete connection between client and zookeeper
-      HConnectionManager.deleteConnection(this.conf, false);
+      HConnectionManager.deleteStaleConnection(this.connection);
       throw new MasterNotRunningException("Retried " + numRetries + " times");
     }
   }

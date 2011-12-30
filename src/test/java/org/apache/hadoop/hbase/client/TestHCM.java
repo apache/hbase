@@ -109,8 +109,8 @@ public class TestHCM {
           + getHConnectionManagerCacheSize());
       Thread.sleep(100);
     }
-    Assert.assertEquals(startingHConnectionManagerCacheSize + 1,
-      getHConnectionManagerCacheSize());
+    int sz = getHConnectionManagerCacheSize();
+    Assert.assertTrue(sz <= startingHConnectionManagerCacheSize + 1);
   }
 
   private static int getHConnectionManagerCacheSize()
