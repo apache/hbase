@@ -189,8 +189,9 @@ public class TestImportTsv {
     HBaseTestingUtility htu1 = new HBaseTestingUtility();
 
     MiniHBaseCluster cluster = htu1.startMiniCluster();
+    htu1.startMiniMapReduceCluster();
 
-    GenericOptionsParser opts = new GenericOptionsParser(cluster.getConfiguration(), args);
+    GenericOptionsParser opts = new GenericOptionsParser(htu1.getConfiguration(), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
