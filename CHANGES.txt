@@ -504,6 +504,8 @@ Release 0.92.0 - Unreleased
    HBASE-5100  Rollback of split could cause closed region to be opened again (Chunhui)
    HBASE-5099  ZK event thread waiting for root region assignment may block server
                shutdown handler for the region sever the root region was on (Jimmy)
+   HBASE-5094  The META can hold an entry for a region with a different server name from 
+               the one actually in the AssignmentManager thus making the region inaccessible.(Ram)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

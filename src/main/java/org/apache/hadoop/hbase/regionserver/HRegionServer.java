@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Delete;
@@ -2422,9 +2423,19 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     checkIfRegionInTransition(region, OPEN);
     HRegion onlineRegion = this.getFromOnlineRegions(region.getEncodedName());
     if (null != onlineRegion) {
-      LOG.warn("Attempted open of " + region.getEncodedName()
-          + " but already online on this server");
-      return RegionOpeningState.ALREADY_OPENED;
+      // See HBASE-5094. Cross check with META if still this RS is owning the
+      // region.
+      Pair<HRegionInfo, ServerName> p = MetaReader.getRegion(
+          this.catalogTracker, region.getRegionName());
+      if (this.getServerName().equals(p.getSecond())) {
+        LOG.warn("Attempted open of " + region.getEncodedName()
+            + " but already online on this server");
+        return RegionOpeningState.ALREADY_OPENED;
+      } else {
+        LOG.warn("The region " + region.getEncodedName()
+            + " is online on this server but META does not have this server.");
+        this.removeFromOnlineRegions(region.getEncodedName());
+      }
     }
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
