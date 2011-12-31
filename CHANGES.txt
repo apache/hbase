@@ -465,6 +465,7 @@ Release 0.92.0 - Unreleased
    HBASE-5103  Fix improper master znode deserialization (Jonathan Hsieh)
    HBASE-5099  ZK event thread waiting for root region assignment may block server
                shutdown handler for the region sever the root region was on (Jimmy)
+   HBASE-5100  Rollback of split could cause closed region to be opened again (Chunhui)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
