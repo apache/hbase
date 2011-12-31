@@ -501,6 +501,7 @@ Release 0.92.0 - Unreleased
    HBASE-5077  SplitLogWorker fails to let go of a task, kills the RS
    HBASE-5096  Replication does not handle deletes correctly. (Lars H)
    HBASE-5103  Fix improper master znode deserialization (Jonathan Hsieh)
+   HBASE-5100  Rollback of split could cause closed region to be opened again (Chunhui)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

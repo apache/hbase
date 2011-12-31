@@ -200,6 +200,9 @@ public class SplitTransaction {
     return rid;
   }
 
+  private static IOException closedByOtherException = new IOException(
+      "Failed to close region: already closed by another thread");
+  
   /**
    * Prepare the regions and region files.
    * @param server Hosting server instance.  Can be null when testing (won't try
@@ -246,19 +249,26 @@ public class SplitTransaction {
     this.journal.add(JournalEntry.CREATE_SPLIT_DIR);
  
     List<StoreFile> hstoreFilesToSplit = null;
+    Exception exceptionToThrow = null;
     try{
       hstoreFilesToSplit = this.parent.close(false);
-      if (hstoreFilesToSplit == null) {
-        // The region was closed by a concurrent thread.  We can't continue
-        // with the split, instead we must just abandon the split.  If we
-        // reopen or split this could cause problems because the region has
-        // probably already been moved to a different server, or is in the
-        // process of moving to a different server.
-        throw new IOException("Failed to close region: already closed by " +
-          "another thread");
-      }
-    } finally {
+    } catch (Exception e) {
+      exceptionToThrow = e;
+    }
+    if (exceptionToThrow == null && hstoreFilesToSplit == null) {
+      // The region was closed by a concurrent thread.  We can't continue
+      // with the split, instead we must just abandon the split.  If we
+      // reopen or split this could cause problems because the region has
+      // probably already been moved to a different server, or is in the
+      // process of moving to a different server.
+      exceptionToThrow = closedByOtherException;
+    }
+    if (exceptionToThrow != closedByOtherException) {
       this.journal.add(JournalEntry.CLOSED_PARENT_REGION);
+    }
+    if (exceptionToThrow != null) {
+      if (exceptionToThrow instanceof IOException) throw (IOException)exceptionToThrow;
+      throw new IOException(exceptionToThrow);
     }
 
     if (!testing) {
