@@ -468,6 +468,8 @@ Release 0.92.0 - Unreleased
    HBASE-5100  Rollback of split could cause closed region to be opened again (Chunhui)
    HBASE-4397  -ROOT-, .META. tables stay offline for too long in recovery phase after all RSs
                are shutdown at the same time (Ming Ma)
+   HBASE-5094  The META can hold an entry for a region with a different server name from the one  
+               actually in the AssignmentManager thus making the region inaccessible. (Ram)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
