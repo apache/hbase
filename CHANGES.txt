@@ -482,6 +482,8 @@ Release 0.92.0 - Unreleased
    HBASE-4868  TestOfflineMetaRebuildBase#testMetaRebuild occasionally fails
                (Gao Jinchao)
    HBASE-4874  Run tests with non-secure random, some tests hang otherwise (Lars H)
+   HBASE-5112  TestReplication#queueFailover flaky due to potentially
+               uninitialized Scan (Jimmy Xiang)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
