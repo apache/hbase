@@ -58,6 +58,7 @@ public class TestDrainingServer {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(5);
+    TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
     htd.addFamily(new HColumnDescriptor(FAMILY));
     TEST_UTIL.createMultiRegionsInMeta(TEST_UTIL.getConfiguration(), htd,

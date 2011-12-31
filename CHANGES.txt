@@ -529,6 +529,8 @@ Release 0.92.0 - Unreleased
    HBASE-4987  wrong use of incarnation var in SplitLogManager (Prakash Khemani)
    HBASE-5112  TestReplication#queueFailover flaky due to potentially
                uninitialized Scan (Jimmy Xiang)
+   HBASE-5113  TestDrainingServer expects round robin region assignment but misses a
+               config parameter
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
