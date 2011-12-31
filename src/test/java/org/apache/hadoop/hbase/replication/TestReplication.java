@@ -656,14 +656,13 @@ public class TestReplication {
       initialCount = res.length;
     }
 
-    Scan scan2 = new Scan();
-
     int lastCount = 0;
 
     for (int i = 0; i < NB_RETRIES; i++) {
       if (i==NB_RETRIES-1) {
         fail("Waited too much time for queueFailover replication");
       }
+      Scan scan2 = new Scan();
       ResultScanner scanner2 = htable2.getScanner(scan2);
       Result[] res2 = scanner2.next(initialCount * 2);
       scanner2.close();
@@ -693,6 +692,7 @@ public class TestReplication {
         }
       }
     };
+    killer.setDaemon(true);
     killer.start();
     return killer;
   }
