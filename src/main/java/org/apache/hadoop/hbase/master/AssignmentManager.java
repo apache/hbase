@@ -193,7 +193,7 @@ public class AssignmentManager extends ZooKeeperListener {
     Configuration conf = master.getConfiguration();
     this.timeoutMonitor = new TimeoutMonitor(
       conf.getInt("hbase.master.assignment.timeoutmonitor.period", 10000),
-      master,
+      master, serverManager,
       conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 1800000));
     Threads.setDaemonThreadRunning(timeoutMonitor.getThread(),
       master.getServerName() + ".timeoutMonitor");
@@ -1500,6 +1500,7 @@ public class AssignmentManager extends ZooKeeperListener {
         state.update(RegionState.State.OFFLINE);
         // Force a new plan and reassign.  Will return null if no servers.
         if (getRegionPlan(state, plan.getDestination(), true) == null) {
+          this.timeoutMonitor.setAllRegionServersOffline(true);
           LOG.warn("Unable to find a viable location to assign region " +
             state.getRegion().getRegionNameAsString());
           return;
@@ -2496,6 +2497,8 @@ public class AssignmentManager extends ZooKeeperListener {
   public class TimeoutMonitor extends Chore {
     private final int timeout;
     private boolean bulkAssign = false;
+    private boolean allRegionServersOffline = false;
+    private ServerManager serverManager;
 
     /**
      * Creates a periodic monitor to check for time outs on region transition
@@ -2507,9 +2510,11 @@ public class AssignmentManager extends ZooKeeperListener {
      * @param timeout
      */
     public TimeoutMonitor(final int period, final Stoppable stopper,
+        ServerManager serverManager,
         final int timeout) {
       super("AssignmentTimeoutMonitor", period, stopper);
       this.timeout = timeout;
+      this.serverManager = serverManager;
     }
 
     /**
@@ -2523,10 +2528,18 @@ public class AssignmentManager extends ZooKeeperListener {
       return result;
     }
 
+    private synchronized void setAllRegionServersOffline(
+      boolean allRegionServersOffline) {
+      this.allRegionServersOffline = allRegionServersOffline;
+    }
+
     @Override
     protected void chore() {
       // If bulkAssign in progress, suspend checks
       if (this.bulkAssign) return;
+      boolean allRSsOffline = this.serverManager.getOnlineServersList().
+        isEmpty();
+
       synchronized (regionsInTransition) {
         // Iterate all regions in transition checking for time outs
         long now = System.currentTimeMillis();
@@ -2534,9 +2547,14 @@ public class AssignmentManager extends ZooKeeperListener {
           if (regionState.getStamp() + timeout <= now) {
            //decide on action upon timeout
             actOnTimeOut(regionState);
+          } else if (this.allRegionServersOffline && !allRSsOffline) {
+            // if some RSs just came back online, we can start the
+            // the assignment right away
+            actOnTimeOut(regionState);
           }
         }
       }
+      setAllRegionServersOffline(allRSsOffline);
     }
 
     private void actOnTimeOut(RegionState regionState) {
