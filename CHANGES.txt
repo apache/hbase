@@ -486,6 +486,7 @@ Release 0.92.0 - Unreleased
                uninitialized Scan (Jimmy Xiang)
    HBASE-5113  TestDrainingServer expects round robin region assignment but misses a
                config parameter
+   HBASE-5105  TestImportTsv failed with hadoop 0.22 (Ming Ma)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
