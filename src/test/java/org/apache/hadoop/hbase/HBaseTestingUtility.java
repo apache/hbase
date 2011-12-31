@@ -262,11 +262,6 @@ public class HBaseTestingUtility {
    * instances -- another instance could grab the temporary
    * value unintentionally -- but not anything can do about it at moment;
    * single instance only is how the minidfscluster works.
-   *
-   * We also create the underlying directory for
-   *  hadoop.log.dir, mapred.local.dir and hadoop.tmp.dir, and set the values
-   *  in the conf, and as a system property for hadoop.tmp.dir
-   *
    * @return The calculated data test build directory.
    */
   private void setupDataTestDir() {
@@ -277,62 +272,13 @@ public class HBaseTestingUtility {
     }
 
     String randomStr = UUID.randomUUID().toString();
-    Path testPath= new Path(getBaseTestDir(), randomStr);
+    Path testPath= new Path(
+      getBaseTestDir(),
+      randomStr
+    );
 
     dataTestDir = new File(testPath.toString()).getAbsoluteFile();
     dataTestDir.deleteOnExit();
-
-    createSubDirAndSystemProperty(
-      "hadoop.log.dir",
-      testPath, "hadoop-log-dir");
-
-    // This is defaulted in core-default.xml to /tmp/hadoop-${user.name}, but
-    //  we want our own value to ensure uniqueness on the same machine
-    createSubDirAndSystemProperty(
-      "hadoop.tmp.dir",
-      testPath, "hadoop-tmp-dir");
-
-    // Read and modified in org.apache.hadoop.mapred.MiniMRCluster
-    createSubDir(
-      "mapred.local.dir",
-      testPath, "mapred-local-dir");
-
-    createSubDirAndSystemProperty(
-      "mapred.working.dir",
-      testPath, "mapred-working-dir");
-  }
-
-  private void createSubDir(String propertyName, Path parent, String subDirName){
-    Path newPath= new Path(parent, subDirName);
-    File newDir = new File(newPath.toString()).getAbsoluteFile();
-    newDir.deleteOnExit();
-    conf.set(propertyName, newDir.getAbsolutePath());
-  }
-
-  private void createSubDirAndSystemProperty(
-    String propertyName, Path parent, String subDirName){
-
-    String sysValue = System.getProperty(propertyName);
-
-    if (sysValue != null) {
-      // There is already a value set. So we do nothing but hope
-      //  that there will be no conflicts
-      LOG.info("System.getProperty(\""+propertyName+"\") already set to: "+
-        sysValue + " so I do NOT create it in "+dataTestDir.getAbsolutePath());
-      String confValue = conf.get(propertyName);
-      if (confValue != null && !confValue.endsWith(sysValue)){
-       LOG.warn(
-         propertyName + " property value differs in configuration and system: "+
-         "Configuration="+confValue+" while System="+sysValue+
-         " Erasing configuration value by system value."
-       );
-      }
-      conf.set(propertyName, sysValue);
-    } else {
-      // Ok, it's not set, so we create it as a subdirectory
-      createSubDir(propertyName, parent, subDirName);
-      System.setProperty(propertyName, conf.get(propertyName));
-    }
   }
 
   /**
@@ -1269,11 +1215,13 @@ public class HBaseTestingUtility {
   public void startMiniMapReduceCluster(final int servers) throws IOException {
     LOG.info("Starting mini mapreduce cluster...");
     // These are needed for the new and improved Map/Reduce framework
-    conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));
+    Configuration c = getConfiguration();
+    System.setProperty("hadoop.log.dir", c.get("hadoop.log.dir"));
+    c.set("mapred.output.dir", c.get("hadoop.tmp.dir"));
     mrCluster = new MiniMRCluster(servers,
-      FileSystem.get(conf).getUri().toString(), 1);
+      FileSystem.get(c).getUri().toString(), 1);
     LOG.info("Mini mapreduce cluster started");
-    conf.set("mapred.job.tracker",
+    c.set("mapred.job.tracker",
         mrCluster.createJobConf().get("mapred.job.tracker"));
   }
 

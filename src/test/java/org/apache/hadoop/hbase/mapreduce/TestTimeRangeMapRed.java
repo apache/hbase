@@ -80,6 +80,10 @@ public class TestTimeRangeMapRed {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    System.setProperty("hadoop.log.dir",
+      UTIL.getConfiguration().get("hadoop.log.dir"));
+    UTIL.getConfiguration().set("mapred.output.dir",
+      UTIL.getConfiguration().get("hadoop.tmp.dir"));
     UTIL.startMiniCluster();
   }
 

@@ -627,7 +627,6 @@
                 <parallel>${surefire.firstPartParallel}</parallel>
                 <perCoreThreadCount>false</perCoreThreadCount>
                 <threadCount>${surefire.firstPartThreadCount}</threadCount>
-                <parallel>classes</parallel><!-- surefire hack, if not we're using method parallelisation class !-->
                 <groups>${surefire.firstPartGroups}</groups>
                 <testFailureIgnore>false</testFailureIgnore>
         </configuration>
@@ -639,10 +638,8 @@
             <configuration>
               <skip>${surefire.skipSecondPart}</skip>
               <testFailureIgnore>false</testFailureIgnore>
-              <forkMode>perThread</forkMode>
-              <perCoreThreadCount>false</perCoreThreadCount>
-              <threadCount>${surefire.secondPartThreadCount}</threadCount>
-              <parallel>classes</parallel><!-- surefire hack, if not we're using method parallelisation class !-->
+              <forkMode>always</forkMode>
+              <parallel>none</parallel>
               <groups>${surefire.secondPartGroups}</groups>
             </configuration>
           </execution>
@@ -904,17 +901,16 @@
     <unittest.include>**/Test*.java</unittest.include>
     <integrationtest.include>**/IntegrationTest*.java</integrationtest.include>
 
-    <surefire.version>2.12-TRUNK-HBASE-2</surefire.version>
+    <surefire.version>2.11-TRUNK-HBASE-2</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
 
-    <!-- default: run small & medium, medium with 2 threads -->
+    <!-- default: run small & medium -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
 
     <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-    <surefire.firstPartParallel>classes</surefire.firstPartParallel>
+    <surefire.firstPartParallel>none</surefire.firstPartParallel>
     <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
-    <surefire.secondPartThreadCount>2</surefire.secondPartThreadCount>
 
     <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
     <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
@@ -2004,7 +2000,6 @@
         <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
         <surefire.firstPartParallel>none</surefire.firstPartParallel>
         <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
-        <surefire.secondPartThreadCount>2</surefire.secondPartThreadCount>
 
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
