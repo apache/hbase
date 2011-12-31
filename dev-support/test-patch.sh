@@ -567,9 +567,9 @@ runTests () {
   failed_tests=""
   ### Kill any rogue build processes from the last attempt
   $PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
-  echo "$MVN clean test -P runAllTests -D${PROJECT_NAME}PatchProcess -Dsurefire.secondPartThreadCount=4"
+  echo "$MVN clean test -D${PROJECT_NAME}PatchProcess"
   ulimit -a
-  $MVN clean test -P runAllTests -D${PROJECT_NAME}PatchProcess -Dsurefire.secondPartThreadCount=4
+  $MVN clean test -P runAllTests -D${PROJECT_NAME}PatchProcess
   if [[ $? != 0 ]] ; then
      ### Find and format names of failed tests
      failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
