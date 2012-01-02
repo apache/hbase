@@ -2004,7 +2004,7 @@
         <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
         <surefire.firstPartParallel>none</surefire.firstPartParallel>
         <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
-        <surefire.secondPartThreadCount>2</surefire.secondPartThreadCount>
+        <surefire.secondPartThreadCount>4</surefire.secondPartThreadCount>
 
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
