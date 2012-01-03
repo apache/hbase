@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<preface version="5.0" xml:id="preface" xmlns="http://docbook.org/ns/docbook"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xi="http://www.w3.org/2001/XInclude"
+         xmlns:svg="http://www.w3.org/2000/svg"
+         xmlns:m="http://www.w3.org/1998/Math/MathML"
+         xmlns:html="http://www.w3.org/1999/xhtml"
+         xmlns:db="http://docbook.org/ns/docbook">
+  <title>Preface</title>
+
+  <para>This book aims to be the official guide for the <link
+  xlink:href="http://hbase.apache.org/">HBase</link> version it ships with.
+  This document describes HBase version <emphasis><?eval ${project.version}?></emphasis>.
+  Herein you will find either the definitive documentation on an HBase topic
+  as of its standing when the referenced HBase version shipped, or this book
+  will point to the location in <link
+  xlink:href="http://hbase.apache.org/docs/current/api/index.html">javadoc</link>,
+  <link xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>
+  or <link xlink:href="http://wiki.apache.org/hadoop/Hbase">wiki</link> where
+  the pertinent information can be found.</para>
+
+  <para>This book is a work in progress. It is lacking in many areas but we
+  hope to fill in the holes with time. Feel free to add to this book by adding
+  a patch to an issue up in the HBase <link
+  xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>
+
+  <note xml:id="headsup">
+      <title>Heads-up</title>
+      <para>
+          If this is your first foray into the wonderful world of
+          Distributed Computing, then you are in for
+          some interesting times.  First off, distributed systems are
+          hard; making a distributed system hum requires a disparate
+          skillset that needs span systems (hardware and software) and
+          networking.  Your cluster' operation can hiccup because of any
+          of a myriad set of reasons from bugs in HBase itself through misconfigurations
+          -- misconfiguration of HBase but also operating system misconfigurations --
+          through to hardware problems whether it be a bug in your network card
+          drivers or an underprovisioned RAM bus (to mention two recent
+          examples of hardware issues that manifested as "HBase is slow").
+          You will also need to do a recalibration if up to this your
+          computing has been bound to a single box.  Here is one good
+          starting point:
+          <link xlink:href="http://en.wikipedia.org/wiki/Fallacies_of_Distributed_Computing">Fallacies of Distributed Computing</link>.
+      </para>
+  </note>
+</preface>
