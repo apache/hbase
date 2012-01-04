@@ -58,11 +58,14 @@ public class RegionPlacement {
   private Configuration conf;
   private DNSToSwitchMapping switchMapping;
   private Map<HServerInfo, String> rackCache;
+  private final boolean enforceRackPolicy;
 
-  public RegionPlacement(Configuration conf) throws IOException {
+  public RegionPlacement(Configuration conf, boolean enforceRackPolicy)
+  throws IOException {
     this.conf = conf;
     this.switchMapping = new IPv4AddressTruncationMapping();
     this.rackCache = new HashMap<HServerInfo, String>();
+    this.enforceRackPolicy = enforceRackPolicy;
   }
 
   /**
@@ -306,14 +309,16 @@ public class RegionPlacement {
           + " (" + localityPerServer[i][tertiaryAssignment[i]] + ")");
 
       // Validate that the assignments satisfy the rack constraints.
-      if (getRack(assignment.get(0)).equals(getRack(assignment.get(1))) ||
-          getRack(assignment.get(0)).equals(getRack(assignment.get(2)))) {
-        throw new RuntimeException("Primary and secondary for " +
-            regions.get(i).getRegionNameAsString() + " on same rack");
-      }
-      if (!getRack(assignment.get(1)).equals(getRack(assignment.get(2)))) {
-        throw new RuntimeException("Secondaries for " +
-            regions.get(i).getRegionNameAsString() + " on different racks");
+      if (enforceRackPolicy) {
+        if (getRack(assignment.get(0)).equals(getRack(assignment.get(1))) ||
+            getRack(assignment.get(0)).equals(getRack(assignment.get(2)))) {
+          throw new RuntimeException("Primary and secondary for " +
+              regions.get(i).getRegionNameAsString() + " on same rack");
+        }
+        if (!getRack(assignment.get(1)).equals(getRack(assignment.get(2)))) {
+          throw new RuntimeException("Secondaries for " +
+              regions.get(i).getRegionNameAsString() + " on different racks");
+        }
       }
 
       assignments.put(regions.get(i), assignment);
@@ -469,8 +474,8 @@ public class RegionPlacement {
   }
 
   private static void printHelp(Options opt) {
-    new HelpFormatter().printHelp("RegionPlacement < -w | -n | -v | -t | -h >",
-        opt);
+    new HelpFormatter().printHelp(
+        "RegionPlacement < -w | -n | -v | -t | -h > [-r]", opt);
   }
 
   public static void main(String[] args) throws IOException,
@@ -481,24 +486,27 @@ public class RegionPlacement {
     opt.addOption("v", "verify", false, "check current placement against META");
     opt.addOption("t", "test", false, "test RandomizedMatrix");
     opt.addOption("h", "help", false, "print usage");
+    opt.addOption("r", "enforce-rack", false, "enforce 2-rack policy");
     try {
       CommandLine cmd = new GnuParser().parse(opt, args);
+      boolean enforceRackPolicy = cmd.hasOption("r") ||
+          cmd.hasOption("enforce-rack");
       if (cmd.hasOption("h") || cmd.hasOption("help")) {
         printHelp(opt);
       } else if (cmd.hasOption("t") || cmd.hasOption("test")) {
         RandomizedMatrix.test();
       } else if (cmd.hasOption("v") || cmd.hasOption("verify")) {
         Configuration conf = HBaseConfiguration.create();
-        RegionPlacement rp = new RegionPlacement(conf);
+        RegionPlacement rp = new RegionPlacement(conf, enforceRackPolicy);
         rp.verifyPlacement();
       } else if (cmd.hasOption("n") || cmd.hasOption("dry-run")) {
         Configuration conf = HBaseConfiguration.create();
-        RegionPlacement rp = new RegionPlacement(conf);
+        RegionPlacement rp = new RegionPlacement(conf, enforceRackPolicy);
         Map<HRegionInfo, List<HServerInfo>> assignments = rp.placeRegions();
         rp.verifyAssignments(assignments);
       } else if (cmd.hasOption("w") || cmd.hasOption("write")) {
         Configuration conf = HBaseConfiguration.create();
-        RegionPlacement rp = new RegionPlacement(conf);
+        RegionPlacement rp = new RegionPlacement(conf, enforceRackPolicy);
         Map<HRegionInfo, List<HServerInfo>> assignments = rp.placeRegions();
         rp.verifyAssignments(assignments);
         rp.putFavoredNodes(assignments);
