@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -184,10 +185,14 @@ public class RegionManager {
 
     LoadBalancer loadBalancerImpl;
     try {
-      loadBalancerImpl = (LoadBalancer) ReflectionUtils.newInstance(
-          conf.getClass(HConstants.LOAD_BALANCER_IMPL,
-              DefaultLoadBalancer.class, LoadBalancer.class), conf);
-    } catch (RuntimeException e) {
+      Class<? extends LoadBalancer> theClass = conf.getClass(
+          HConstants.LOAD_BALANCER_IMPL, DefaultLoadBalancer.class,
+          LoadBalancer.class);
+      Constructor<? extends LoadBalancer> meth =
+          theClass.getDeclaredConstructor(RegionManager.class);
+      meth.setAccessible(true);
+      loadBalancerImpl = meth.newInstance(this);
+    } catch (Exception e) {
       loadBalancerImpl = new DefaultLoadBalancer();
     }
     this.loadBalancer = loadBalancerImpl;
@@ -1603,7 +1608,7 @@ public class RegionManager {
    * servers. They operate by unassigning some regions from a server so that
    * those regions can be assigned to other servers.
    */
-  private abstract class LoadBalancer {
+  abstract class LoadBalancer {
 
     // The maximum number of regions to close on one server during one iteration
     // of load balancing.
@@ -1637,7 +1642,7 @@ public class RegionManager {
    * current host and assigned to their preferred host. This behavior will also
    * consider secondary and tertiary preferred hosts if the primary is dead.
    */
-  private class AssignmentLoadBalancer extends LoadBalancer {
+  class AssignmentLoadBalancer extends LoadBalancer {
     AssignmentLoadBalancer() {
       super();
     }
@@ -1883,7 +1888,7 @@ public class RegionManager {
    *  avgLoadPlusSlop = Math.ceil(avgLoad * (1 + this.slop)), and
    *  avgLoadMinusSlop = Math.floor(avgLoad * (1 - this.slop)) - 1.
    */
-  private class DefaultLoadBalancer extends LoadBalancer {
+  class DefaultLoadBalancer extends LoadBalancer {
     DefaultLoadBalancer() {
       super();
     }
