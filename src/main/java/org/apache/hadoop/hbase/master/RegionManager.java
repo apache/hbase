@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
@@ -180,7 +181,17 @@ public class RegionManager {
     this.zkWrapper =
         ZooKeeperWrapper.getInstance(conf, master.getZKWrapperName());
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
-    this.loadBalancer = new LoadBalancer(conf);
+
+    LoadBalancer loadBalancerImpl;
+    try {
+      loadBalancerImpl = (LoadBalancer) ReflectionUtils.newInstance(
+          conf.getClass(HConstants.LOAD_BALANCER_IMPL,
+              DefaultLoadBalancer.class, LoadBalancer.class), conf);
+    } catch (RuntimeException e) {
+      loadBalancerImpl = new DefaultLoadBalancer();
+    }
+    this.loadBalancer = loadBalancerImpl;
+
     this.assignmentManager = new PreferredAssignmentManager(master);
 
     // The root region
@@ -1587,7 +1598,280 @@ public class RegionManager {
     }
   }
 
+  /**
+   * Classes which implement LoadBalancer are used to balance regions across
+   * servers. They operate by unassigning some regions from a server so that
+   * those regions can be assigned to other servers.
+   */
+  private abstract class LoadBalancer {
 
+    // The maximum number of regions to close on one server during one iteration
+    // of load balancing.
+    // -1 or 0 to turn off
+    // TODO: change default in HBASE-862, need a suggestion
+    protected final int maxRegToClose;    // hbase.regions.close.max
+    protected final float slop;           // hbase.regions.slop
+
+    LoadBalancer() {
+      Configuration conf = master.getConfiguration();
+      float confSlop = conf.getFloat("hbase.regions.slop", (float)0.3);
+      this.slop = confSlop <= 0 ? 1 : confSlop;
+      this.maxRegToClose = conf.getInt("hbase.regions.close.max", -1);
+    }
+
+    /**
+     * Balance regions across servers by unassigning some regions from the
+     * specified server if they could be served elsewhere with better load
+     * distribution.
+     * @param info the server whose regions are being balanced
+     * @param mostLoadedRegions the regions to consider for balancing
+     * @param returnMsgs any regions to be unassigned will be added here
+     */
+    public abstract void loadBalancing(HServerInfo info,
+        HRegionInfo[] mostLoadedRegions, ArrayList<HMsg> returnMsgs);
+  }
+
+  /**
+   * Class to balance regions according to preferred assignments. Regions which
+   * are not on their preferred host but could be will be unassigned from their
+   * current host and assigned to their preferred host. This behavior will also
+   * consider secondary and tertiary preferred hosts if the primary is dead.
+   */
+  private class AssignmentLoadBalancer extends LoadBalancer {
+    AssignmentLoadBalancer() {
+      super();
+    }
+
+    /**
+     * Unassign some regions if there is a server with a higher preference, or
+     * if a server with equal preference has a lower load.
+     * @param info the server from which to unassign regions
+     * @param mostLoadedRegions the candidate regions for moving
+     * @param returnMsgs region close messages to be passed to the server
+     */
+    public void loadBalancing(HServerInfo info, HRegionInfo[] mostLoadedRegions,
+        ArrayList<HMsg> returnMsgs) {
+      int regionsUnassigned = balanceToPrimary(info, mostLoadedRegions,
+          returnMsgs);
+
+      if (regionsUnassigned <= 0) {
+        regionsUnassigned = balanceFromUnfavored(info, mostLoadedRegions,
+            returnMsgs);
+      }
+
+      if (regionsUnassigned <= 0) {
+        regionsUnassigned = balanceSecondaries(info, mostLoadedRegions,
+            returnMsgs);
+      }
+    }
+
+    /**
+     * If the primary assignment of any region hosted by the server {@code info}
+     * is not that server, but the primary assignment server is alive, move that
+     * region to the primary assignment server.
+     * @param info the server whose regions to balance
+     * @param mostLoadedRegions the regions to balance
+     * @param returnMsgs region close messages to be passed to the server
+     * @return the number of regions that were unassigned
+     */
+    private int balanceToPrimary(HServerInfo info,
+        HRegionInfo[] mostLoadedRegions, ArrayList<HMsg> returnMsgs) {
+      int regionsUnassigned = 0;
+      // If for any of these regions, this server is not the primary but the
+      // primary is alive, unassign that region and let it move to the primary.
+      for (HRegionInfo region : mostLoadedRegions) {
+        List<HServerAddress> preferences =
+            assignmentManager.getPreferredAssignments(region);
+        if (preferences == null || preferences.size() == 0) {
+          // No prefered assignment, do nothing.
+          continue;
+        } else if (info.getServerAddress().equals(preferences.get(0))) {
+          // This server is the primary, do nothing.
+          continue;
+        } else {
+          if (getLoadIfAlive(preferences.get(0)) == null) {
+            // Primary server is not alive, try next region.
+            continue;
+          }
+
+          // Primary server is alive, unassign this region.
+          if (unassignRegion(info, region, returnMsgs)) {
+            regionsUnassigned++;
+            if (regionsUnassigned >= maxRegToClose && maxRegToClose > 0) {
+              return regionsUnassigned;
+            }
+          }
+        }
+      }
+      return regionsUnassigned;
+    }
+
+    /**
+     * If for any of the regions hosted by server {@code info}, that server is
+     * not a favored node and one of the favored nodes for that region is alive,
+     * move that region to a favored node.
+     * @param info the server whose regions to balance
+     * @param mostLoadedRegions the regions to balance
+     * @param returnMsgs region close messages to be passed to the server
+     * @return the number of regions that were unassigned
+     */
+    private int balanceFromUnfavored(HServerInfo info,
+        HRegionInfo[] mostLoadedRegions, ArrayList<HMsg> returnMsgs) {
+      int regionsUnassigned = 0;
+      for (HRegionInfo region : mostLoadedRegions) {
+        List<HServerAddress> preferences =
+            assignmentManager.getPreferredAssignments(region);
+        if (preferences == null || preferences.size() == 0) {
+          // No preferredAssignment, do nothing.
+          continue;
+        } else if (preferences.contains(info.getServerAddress())) {
+          // This server already a favored node, do nothing.
+          continue;
+        }
+
+        int leastLoad = Integer.MAX_VALUE;
+        HServerAddress leastLoadedSecondary = null;
+
+        // This server is not a favored node for the current region. Check if
+        // one of the secondary servers is alive, and determine which of those
+        // has the least load.
+        for (int i = 1; i < preferences.size(); i++) {
+          HServerLoad secondaryLoad = getLoadIfAlive(preferences.get(i));
+          if (secondaryLoad != null &&
+              secondaryLoad.getNumberOfRegions() < leastLoad) {
+            leastLoad = secondaryLoad.getNumberOfRegions();
+            leastLoadedSecondary = preferences.get(i);
+          }
+        }
+
+        if (leastLoadedSecondary != null) {
+          // Move the region if the current server is not a preferred assignment
+          // for that region.
+          if (unassignRegion(info, region, returnMsgs)) {
+            regionsUnassigned++;
+            if (regionsUnassigned >= maxRegToClose && maxRegToClose > 0) {
+              return regionsUnassigned;
+            }
+          }
+        }
+      }
+      return regionsUnassigned;
+    }
+
+    /**
+     * For any of the regions hosted by server {@code info}, if that server is
+     * currently hosted by an overloaded secondary node and another secondary
+     * node is underloaded, move the region from the overloaded node to the
+     * underloaded one.
+     * @param info the server whose regions to balance
+     * @param mostLoadedRegions the regions to balance
+     * @param returnMsgs region close messages to be passed to the server
+     * @return the number of regions that were unassigned
+     */
+    private int balanceSecondaries(HServerInfo info,
+        HRegionInfo[] mostLoadedRegions, ArrayList<HMsg> returnMsgs) {
+      int regionsUnassigned = 0;
+      double avgLoad = master.getAverageLoad();
+      int avgLoadMinusSlop = (int)Math.floor(avgLoad * (1 - this.slop)) - 1;
+      int avgLoadPlusSlop = (int)Math.ceil(avgLoad * (1 + this.slop));
+      int serverLoad = master.getServerManager().getServersToLoad().get(
+          info.getServerName()).getNumberOfRegions();
+
+      for (HRegionInfo region : mostLoadedRegions) {
+        List<HServerAddress> preferences =
+            assignmentManager.getPreferredAssignments(region);
+        if (preferences == null || preferences.size() == 0) {
+          // No preferredAssignment, do nothing.
+          continue;
+        } else if (info.getServerAddress().equals(preferences.get(0))) {
+          // This server is the primary, do nothing.
+          continue;
+        }
+
+        // This server is not the primary for the current region. Check if
+        // another favored node has lower load and move the region there if so.
+        for (int i = 1; i < preferences.size(); i++) {
+          if (preferences.get(i).equals(info.getServerAddress())) {
+            // Same server as currently hosting region, try next one.
+            continue;
+          }
+          HServerLoad otherLoad = getLoadIfAlive(preferences.get(i));
+          if (otherLoad == null) {
+            // Other server is not alive, try next one.
+            continue;
+          }
+
+          // Only move the region if the other server is under-loaded and the
+          // current server is overloaded.
+          if (serverLoad - regionsUnassigned > avgLoadPlusSlop &&
+              otherLoad.getNumberOfRegions() < avgLoadMinusSlop) {
+            if (unassignRegion(info, region, returnMsgs)) {
+              // Need to override transient assignment that may have been added
+              // for the region to its current server when unassigning.
+              assignmentManager.removeTransientAssignment(
+                  info.getServerAddress(), region);
+              assignmentManager.addTransientAssignment(
+                  preferences.get(i), region);
+              regionsUnassigned++;
+              if (regionsUnassigned >= maxRegToClose && maxRegToClose > 0) {
+                return regionsUnassigned;
+              }
+            }
+          }
+        }
+      }
+      return regionsUnassigned;
+    }
+
+    /**
+     * Get the load for the region server at the address {@code server} unless
+     * that server does not exist, is dead, or is shutting down. In cases where
+     * the load cannot be retrieved, return null.
+     * @param server the address of the server whose load to get
+     * @return the load for the server or null
+     */
+    private HServerLoad getLoadIfAlive(HServerAddress server) {
+      HServerInfo other =
+          master.getServerManager().getHServerInfo(server);
+      if (other == null ||
+          master.getServerManager().isDead(other.getServerName())) {
+        return null;
+      }
+      return master.getServerManager().getServersToLoad()
+          .get(other.getServerName());
+    }
+
+    /**
+     * Unassign a certain region from a certain server, unless that region is
+     * already in transition. A region close message will be added tot he list
+     * of return messages.
+     * @param info the server on which to close the region
+     * @param region the region to be unassigned
+     * @param returnMsgs a region close message will be added here
+     * @return true if the region was unassigned
+     */
+    private boolean unassignRegion(HServerInfo info, HRegionInfo region,
+        ArrayList<HMsg> returnMsgs) {
+      if (region.isRootRegion() || region.isMetaTable()) {
+        return false;
+      }
+      final String regionName = region.getRegionNameAsString();
+      if (regionIsInTransition(regionName)) {
+        // Region may have already been unassigned, abort this operation.
+        return false;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("AssignmentLoadBalancer going to close region " + regionName);
+      }
+      // Make a message to close the region
+      returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, region,
+        OVERLOADED));
+      // Mark the region as closing
+      setClosing(info.getServerName(), region, false);
+      setPendingClose(regionName);
+      return true;
+    }
+  }
 
   /**
    * Class to balance region servers load.
@@ -1599,17 +1883,9 @@ public class RegionManager {
    *  avgLoadPlusSlop = Math.ceil(avgLoad * (1 + this.slop)), and
    *  avgLoadMinusSlop = Math.floor(avgLoad * (1 - this.slop)) - 1.
    */
-  private class LoadBalancer {
-    private float slop;                 // hbase.regions.slop
-    private final int maxRegToClose;    // hbase.regions.close.max
-
-    LoadBalancer(Configuration conf) {
-      this.slop = conf.getFloat("hbase.regions.slop", (float)0.3);
-      if (this.slop <= 0) this.slop = 1;
-      //maxRegToClose to constrain balance closing per one iteration
-      // -1 to turn off
-      // TODO: change default in HBASE-862, need a suggestion
-      this.maxRegToClose = conf.getInt("hbase.regions.close.max", -1);
+  private class DefaultLoadBalancer extends LoadBalancer {
+    DefaultLoadBalancer() {
+      super();
     }
 
     /**
@@ -1619,7 +1895,7 @@ public class RegionManager {
      * @param mostLoadedRegions - array of most loaded regions
      * @param returnMsgs - array of return massages
      */
-    void loadBalancing(HServerInfo info, HRegionInfo[] mostLoadedRegions,
+    public void loadBalancing(HServerInfo info, HRegionInfo[] mostLoadedRegions,
         ArrayList<HMsg> returnMsgs) {
       HServerLoad servLoad = info.getLoad();
       double avg = master.getAverageLoad();

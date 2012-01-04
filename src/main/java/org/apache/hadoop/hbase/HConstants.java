@@ -175,6 +175,9 @@ public final class HConstants {
   /** Parameter name for HBase instance root directory */
   public static final String HBASE_DIR = "hbase.rootdir";
 
+  /** Parameter name for explicit region placement */
+  public static final String LOAD_BALANCER_IMPL = "hbase.loadbalancer.impl";
+
   /** Used to construct the name of the log directory for a region server
    * Use '.' as a special character to seperate the log files from table data */
   public static final String HREGION_LOGDIR_NAME = ".logs";
