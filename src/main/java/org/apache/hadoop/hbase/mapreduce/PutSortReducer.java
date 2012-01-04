@@ -61,7 +61,7 @@ public class PutSortReducer extends
         for (List<KeyValue> kvs : p.getFamilyMap().values()) {
           for (KeyValue kv : kvs) {
             map.add(kv);
-            curSize += kv.getValueLength();
+            curSize += kv.getLength();
           }
         }
       }
