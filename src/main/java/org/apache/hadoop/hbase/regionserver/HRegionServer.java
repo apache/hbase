@@ -1566,7 +1566,11 @@ public class HRegionServer implements HRegionInterface,
                   break;
                 }
               }
-              openRegion(info);
+              if (e.msg.getMessage() != null && e.msg.getMessage().length > 0) {
+                openRegion(info, new String(e.msg.getMessage()).split(","));
+              } else {
+                openRegion(info, null);
+              }
               break;
 
             case MSG_REGION_CLOSE:
@@ -1666,7 +1670,7 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
-  void openRegion(final HRegionInfo regionInfo) {
+  void openRegion(final HRegionInfo regionInfo, String[] favoredNodes) {
     Integer mapKey = Bytes.mapKey(regionInfo.getRegionName());
     HRegion region = this.onlineRegions.get(mapKey);
     RSZookeeperUpdater zkUpdater = new RSZookeeperUpdater(
@@ -1676,6 +1680,7 @@ public class HRegionServer implements HRegionInterface,
       try {
         zkUpdater.startRegionOpenEvent(null, true);
         region = instantiateRegion(regionInfo, this.hlog);
+        setFavoredNodes(region, favoredNodes);
         // Startup a compaction early if one is needed, if store has references
         // or has too many store files
         for (Store s : region.getStores().values()) {
@@ -1722,6 +1727,19 @@ public class HRegionServer implements HRegionInterface,
           regionInfo.getRegionNameAsString(), e1);
       }
       LOG.error("Failed to mark region " + regionInfo.getRegionNameAsString() + " as opened", e);
+    }
+  }
+
+  private void setFavoredNodes(HRegion region, String[] favoredNodes) {
+    if (favoredNodes != null && favoredNodes.length > 0) {
+      InetSocketAddress[] nodes = new InetSocketAddress[favoredNodes.length];
+      for (int i = 0; i < favoredNodes.length; i++) {
+        int colon = favoredNodes[i].indexOf(':');
+        String hostname = colon >= 0 ? favoredNodes[i].substring(0, colon) :
+          favoredNodes[i];
+        nodes[i] = new InetSocketAddress(hostname, 0);
+      }
+      region.setFavoredNodes(nodes);
     }
   }
 

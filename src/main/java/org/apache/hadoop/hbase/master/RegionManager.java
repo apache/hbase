@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -446,7 +447,14 @@ public class RegionManager {
       this.regionsInTransition.put(regionName, rs);
     }
 
-    returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo()));
+    if (assignmentManager.hasPersistentAssignment(rs.getRegionInfo())) {
+      String nodes = StringUtils.join(assignmentManager
+          .getPreferredAssignments(rs.getRegionInfo()), ',');
+      returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo(),
+          nodes.getBytes()));
+    } else {
+      returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo()));
+    }
   }
 
   /*

@@ -46,7 +46,20 @@ public class ThrottledRegionReopener {
 
   public synchronized void addRegionsToReopen(Set<HRegionInfo> regions) {
     regionsToBeReopend.addAll(regions);
-    totalNoOfRegionsToReopen = regions.size();
+    if (regionsToBeReopend.size() + regionsBeingReopened.size() == 0) {
+      totalNoOfRegionsToReopen = regions.size();
+    } else {
+      totalNoOfRegionsToReopen += regions.size();
+    }
+  }
+
+  public synchronized void addRegionToReopen(HRegionInfo region) {
+    regionsToBeReopend.add(region);
+    if (regionsToBeReopend.size() + regionsBeingReopened.size() == 0) {
+      totalNoOfRegionsToReopen = 1;
+    } else {
+      totalNoOfRegionsToReopen += 1;
+    }
   }
 
   /**

@@ -1,5 +1,6 @@
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -92,9 +93,8 @@ public class PreferredAssignmentManager {
   public void addPersistentAssignment(HRegionInfo region,
       List<HServerAddress> servers) {
     List<HServerAddress> oldServers = persistentAssignments.get(region);
-    persistentAssignments.put(region, servers);
     if (servers != null && !servers.equals(oldServers)) {
-      putTransientFromPersistent(region);
+      persistentAssignments.put(region, servers);
       if (LOG.isDebugEnabled()) {
         StringBuffer sb = new StringBuffer();
         for (HServerAddress server : servers) {
@@ -107,6 +107,18 @@ public class PreferredAssignmentManager {
         }
         LOG.debug("Added persistent assignment for region " +
             region.getRegionNameAsString() + " to " + sb.toString());
+
+        // Reopen the region so that the server hosting it can pick up the
+        // new list of favored nodes.
+        ThrottledRegionReopener reopener = master.getRegionManager()
+            .createThrottledReopener(region.getTableDesc().getNameAsString());
+        reopener.addRegionToReopen(region);
+        try {
+          reopener.reOpenRegionsThrottle();
+        } catch (IOException e) {
+          LOG.info("Exception reopening region " +
+              region.getRegionNameAsString() + " to pick up favored nodes");
+        }
       }
     }
   }
