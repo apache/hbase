@@ -839,15 +839,16 @@ public class HBaseTestingUtility {
     int sessionTimeout = nodeZK.getSessionTimeout();
     byte[] password = nodeZK.getSessionPassword();
     long sessionID = nodeZK.getSessionID();
+    final long sleep = sessionTimeout * 10L;
+    final int maxRetryNum = 10;
+    int retryNum = maxRetryNum;
 
     ZooKeeper zk = new ZooKeeper(quorumServers,
         sessionTimeout, EmptyWatcher.instance, sessionID, password);
     zk.close();
+    Thread.sleep(sleep);
 		LOG.debug("ZooKeeper is closed");
 
-    final long sleep = sessionTimeout * 10L;
-    final int maxRetryNum = 10;
-    int retryNum = maxRetryNum;
     while (!nodeZK.isAborted() && retryNum != 0) {
       Thread.sleep(sleep);
       retryNum--;
