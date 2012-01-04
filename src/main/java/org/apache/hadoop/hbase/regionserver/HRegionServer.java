@@ -3234,10 +3234,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
         try {
           if (action instanceof Delete) {
-            delete(regionName, (Delete) action);
+            delete(regionName, (Delete)action);
             response.add(regionName, originalIndex, new Result());
           } else if (action instanceof Get) {
-            response.add(regionName, originalIndex, get(regionName, (Get) action));
+            response.add(regionName, originalIndex,
+                get(regionName, (Get)action));
           } else if (action instanceof Put) {
             puts.add(a);  // wont throw.
           } else if (action instanceof Exec) {
@@ -3245,11 +3246,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             response.add(regionName, new Pair<Integer, Object>(
                 a.getOriginalIndex(), result.getValue()
             ));
+          } else if (action instanceof Increment) {
+            response.add(regionName, originalIndex,
+                increment(regionName, (Increment)action));
+          } else if (action instanceof Append) {
+            response.add(regionName, originalIndex,
+                append(regionName, (Append)action));
           } else {
             LOG.debug("Error: invalid Action, row must be a Get, Delete, " +
-                "Put or Exec.");
+                "Put, Exec, Increment, or Append.");
             throw new DoNotRetryIOException("Invalid Action, row must be a " +
-                "Get, Delete or Put.");
+                "Get, Delete, Put, Exec, Increment, or Append.");
           }
         } catch (IOException ex) {
           response.add(regionName, originalIndex, ex);

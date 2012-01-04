@@ -43,7 +43,7 @@ import org.apache.hadoop.io.Writable;
  * to increment.  At least one column to increment must be specified using the
  * {@link #addColumn(byte[], byte[], long)} method.
  */
-public class Increment implements Writable {
+public class Increment implements Row {
   private static final byte INCREMENT_VERSION = (byte)2;
 
   private byte [] row = null;
@@ -327,5 +327,10 @@ public class Increment implements Writable {
       }
     }
     out.writeBoolean(writeToWAL);
+  }
+
+  @Override
+  public int compareTo(Row i) {
+    return Bytes.compareTo(this.getRow(), i.getRow());
   }
 }

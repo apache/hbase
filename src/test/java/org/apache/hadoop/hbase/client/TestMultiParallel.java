@@ -386,6 +386,39 @@ public class TestMultiParallel {
   }
 
   @Test(timeout=300000)
+  public void testBatchWithIncrementAndAppend() throws Exception {
+    LOG.info("test=testBatchWithIncrementAndAppend");
+    final byte[] QUAL1 = Bytes.toBytes("qual1");
+    final byte[] QUAL2 = Bytes.toBytes("qual2");
+    final byte[] QUAL3 = Bytes.toBytes("qual3");
+    final byte[] QUAL4 = Bytes.toBytes("qual4");
+    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Delete d = new Delete(ONE_ROW);
+    table.delete(d);
+    Put put = new Put(ONE_ROW);
+    put.add(BYTES_FAMILY, QUAL1, Bytes.toBytes("abc"));
+    put.add(BYTES_FAMILY, QUAL2, Bytes.toBytes(1L));
+    table.put(put);
+
+    Increment inc = new Increment(ONE_ROW);
+    inc.addColumn(BYTES_FAMILY, QUAL2, 1);
+    inc.addColumn(BYTES_FAMILY, QUAL3, 1);
+
+    Append a = new Append(ONE_ROW);
+    a.add(BYTES_FAMILY, QUAL1, Bytes.toBytes("def"));
+    a.add(BYTES_FAMILY, QUAL4, Bytes.toBytes("xyz"));
+    List<Row> actions = new ArrayList<Row>();
+    actions.add(inc);
+    actions.add(a);
+
+    Object[] multiRes = table.batch(actions);
+    validateResult(multiRes[1], QUAL1, Bytes.toBytes("abcdef"));
+    validateResult(multiRes[1], QUAL4, Bytes.toBytes("xyz"));
+    validateResult(multiRes[0], QUAL2, Bytes.toBytes(2L));
+    validateResult(multiRes[0], QUAL3, Bytes.toBytes(1L));
+  }
+
+  @Test(timeout=300000)
   public void testBatchWithMixedActions() throws Exception {
     LOG.info("test=testBatchWithMixedActions");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
