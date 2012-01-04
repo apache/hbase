@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.net.ServerSocket;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1234,4 +1235,31 @@ public class HBaseTestingUtility {
 
     return table;
   }
+
+  private static final int MIN_RANDOM_PORT = 0xc000;
+  private static final int MAX_RANDOM_PORT = 0xfffe;
+
+  /**
+   * Returns a random port. These ports cannot be registered with IANA and are
+   * intended for dynamic allocation (see http://bit.ly/dynports).
+   */
+  public static int randomPort() {
+    return MIN_RANDOM_PORT
+        + new Random().nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
+  }
+
+  public static int randomFreePort() {
+    int port = 0;
+    do {
+      port = randomPort();
+      try {
+        ServerSocket sock = new ServerSocket(port);
+        sock.close();
+      } catch (IOException ex) {
+        port = 0;
+      }
+    } while (port == 0);
+    return port;
+  }
+
 }

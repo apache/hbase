@@ -28,6 +28,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 /**
  * Test of a long-lived scanner validating as we go.
  */
+@SuppressWarnings("deprecation")
 public class TestScanner extends HBaseTestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
 
@@ -263,7 +265,8 @@ public class TestScanner extends HBaseTestCase {
 
       // Store some new information
 
-      HServerAddress address = new HServerAddress("foo.bar.com:1234");
+      HServerAddress address = new HServerAddress("127.0.0.1:" +
+          HBaseTestingUtility.randomFreePort());
 
       put = new Put(ROW_KEY, System.currentTimeMillis(), null);
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
