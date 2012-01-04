@@ -813,20 +813,17 @@ public class ServerManager {
       for (Map.Entry<String, HServerLoad> entry : serversToLoad.entrySet()) {
         HServerInfo hsi = serversToServerInfo.get(entry.getKey());
         if (null != hsi) {
-          if (!this.master.getRegionManager().assignmentManager
-              .hasPreferredAssignment(hsi.getServerAddress())) {
-            totalLoad += entry.getValue().getNumberOfRegions();
-          } else {
-            // Master has held some regions for this server, ignore this server
-            // for loadbalancing purposes
-          }
+          totalLoad += entry.getValue().getNumberOfRegions();
         } else {
           // this server has already been removed from the serversToServerInfo
           // map, but not from the serversToLoad one yet, thus ignore it for
           // loadbalancing purposes
+          numServers--;
         }
       }
-      averageLoad = (double)totalLoad / (double)numServers;
+      if (numServers > 0) {
+        averageLoad = (double)totalLoad / (double)numServers;
+      }
     }
     return averageLoad;
   }
