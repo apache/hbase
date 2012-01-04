@@ -120,6 +120,7 @@ abstract class BaseScanner extends Chore {
     }
   }
   private final boolean rootRegion;
+  private final boolean readFavoredNodes;
   protected final HMaster master;
 
   protected boolean initialScanComplete;
@@ -139,6 +140,11 @@ abstract class BaseScanner extends Chore {
     this.rootRegion = rootRegion;
     this.master = master;
     this.initialScanComplete = false;
+
+    // Only read favored nodes if using the assignment-based load balancer.
+    this.readFavoredNodes = master.getConfiguration().getClass(
+        HConstants.LOAD_BALANCER_IMPL, Object.class).equals(
+        RegionManager.AssignmentLoadBalancer.class);
   }
 
   /** @return true if initial scan completed successfully */
@@ -199,18 +205,20 @@ abstract class BaseScanner extends Chore {
         }
         rows += 1;
 
-        byte[] favoredNodes = values.getValue(HConstants.CATALOG_FAMILY,
-            HConstants.FAVOREDNODES_QUALIFIER);
-        if (favoredNodes != null) {
-          List<HServerAddress> addresses = new ArrayList<HServerAddress>();
-          for (String address : new String(favoredNodes).split(",")) {
-            addresses.add(new HServerAddress(address));
+        if (this.readFavoredNodes) {
+          byte[] favoredNodes = values.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.FAVOREDNODES_QUALIFIER);
+          if (favoredNodes != null) {
+            List<HServerAddress> addresses = new ArrayList<HServerAddress>();
+            for (String address : new String(favoredNodes).split(",")) {
+              addresses.add(new HServerAddress(address));
+            }
+            this.master.getRegionManager().assignmentManager
+                .addPersistentAssignment(info, addresses);
+          } else {
+            this.master.getRegionManager().assignmentManager
+                .removePersistentAssignment(info);
           }
-          this.master.getRegionManager().assignmentManager
-              .addPersistentAssignment(info, addresses);
-        } else {
-          this.master.getRegionManager().assignmentManager
-              .removePersistentAssignment(info);
         }
       }
       if (rootRegion) {
