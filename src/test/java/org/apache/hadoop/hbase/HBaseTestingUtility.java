@@ -845,7 +845,7 @@ public class HBaseTestingUtility {
     zk.close();
 		LOG.debug("ZooKeeper is closed");
 
-    final long sleep = sessionTimeout * 3L;
+    final long sleep = sessionTimeout * 10L;
     final int maxRetryNum = 10;
     int retryNum = maxRetryNum;
     while (!nodeZK.isAborted() && retryNum != 0) {
