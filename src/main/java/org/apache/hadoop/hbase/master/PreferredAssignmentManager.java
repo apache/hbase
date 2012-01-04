@@ -124,9 +124,21 @@ public class PreferredAssignmentManager {
     return servers;
   }
 
+  /**
+   * Add a transient assignment for a region to a server. If the region already
+   * has a transient assignment, then this method will do nothing.
+   * @param server
+   * @param region
+   */
   public void addTransientAssignment(HServerAddress server,
       HRegionInfo region) {
     synchronized (transientAssignments) {
+      if (regionsWithTransientAssignment.contains(region)) {
+        LOG.info("Attempted to add transient assignment for " +
+            region.getRegionNameAsString() + " to " + server +
+            " but already had assignment, new assignment ignored");
+        return;
+      }
       Set<HRegionInfo> regions = transientAssignments.get(server);
       if (regions == null) {
         regions = new ConcurrentSkipListSet<HRegionInfo>();
