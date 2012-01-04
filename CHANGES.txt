@@ -799,6 +799,7 @@ Release 0.92.0 - Unreleased
    HBASE-4288  "Server not running" exception during meta verification causes RS abort
    HBASE-4856  Upgrade zookeeper to 3.4.0 release
    HBASE-5111  Upgrade zookeeper to 3.4.2 release
+   HBASE-5125  Upgrade hadoop to 1.0.0
 
   NEW FEATURES
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
