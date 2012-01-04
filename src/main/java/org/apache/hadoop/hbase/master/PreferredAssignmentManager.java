@@ -154,8 +154,15 @@ public class PreferredAssignmentManager {
     if (servers != null) {
       for (HServerAddress server : servers) {
         HServerInfo info = master.getServerManager().getHServerInfo(server);
+        // A preferred server is only eligible for assignment if the master
+        // knows about the server's info, the server is not in the collection of
+        // dead servers, and the server has load information. Absence of load
+        // information may indicate that the server is in the process of
+        // shutting down.
         if (info != null &&
-            !master.getServerManager().isDead(info.getServerName())) {
+            !master.getServerManager().isDead(info.getServerName()) &&
+            master.getServerManager().getServersToLoad()
+            .get(info.getServerName()) != null) {
           addTransientAssignment(server, region);
           return;
         }
