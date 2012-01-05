@@ -231,6 +231,7 @@ public class SchemaMetrics {
 
   private final String[] bloomMetricNames = new String[2];
   private final String[] storeMetricNames = new String[NUM_STORE_METRIC_TYPES];
+  private final String[] storeMetricNamesMax = new String[NUM_STORE_METRIC_TYPES];
 
   private SchemaMetrics(final String tableName, final String cfName) {
     String metricPrefix =
@@ -276,8 +277,9 @@ public class SchemaMetrics {
     }
 
     for (StoreMetricType storeMetric : StoreMetricType.values()) {
-      storeMetricNames[storeMetric.ordinal()] = metricPrefix +
-        storeMetric.toString();
+      String coreName = metricPrefix + storeMetric.toString();
+      storeMetricNames[storeMetric.ordinal()] = coreName;
+      storeMetricNamesMax[storeMetric.ordinal()] = coreName + ".max";
     }
   }
 
@@ -376,19 +378,32 @@ public class SchemaMetrics {
   public void accumulateStoreMetric(final Map<String, MutableDouble> tmpMap,
       StoreMetricType storeMetricType, double val) {
     final String key = getStoreMetricName(storeMetricType);
-    if (tmpMap.get(key) != null) {
-      tmpMap.get(key).add(val);
-    } else {
+    if (tmpMap.get(key) == null) {
       tmpMap.put(key, new MutableDouble(val));
+    } else {
+      tmpMap.get(key).add(val);
     }
 
-    if (this != ALL_SCHEMA_METRICS) {
+    if (this == ALL_SCHEMA_METRICS) {
+      // also compute the max value across all Stores on this server
+      final String maxKey = getStoreMetricNameMax(storeMetricType);
+      MutableDouble cur = tmpMap.get(maxKey);
+      if (cur == null) {
+        tmpMap.put(maxKey, new MutableDouble(val));
+      } else if (cur.doubleValue() < val) {
+        cur.setValue(val);
+      }
+    } else {
       ALL_SCHEMA_METRICS.accumulateStoreMetric(tmpMap, storeMetricType, val);
     }
   }
 
   public String getStoreMetricName(StoreMetricType storeMetricType) {
     return storeMetricNames[storeMetricType.ordinal()];
+  }
+
+  public String getStoreMetricNameMax(StoreMetricType storeMetricType) {
+    return storeMetricNamesMax[storeMetricType.ordinal()];
   }
 
   /**

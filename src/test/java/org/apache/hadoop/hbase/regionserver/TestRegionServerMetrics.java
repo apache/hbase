@@ -112,9 +112,15 @@ public class TestRegionServerMetrics {
 
     for (String cf : FAMILIES) {
       SchemaMetrics schemaMetrics = SchemaMetrics.getInstance(TABLE_NAME, cf);
-      assertStoreMetricEquals(NUM_FLUSHES * NUM_REGIONS,
-          schemaMetrics, StoreMetricType.STORE_FILE_COUNT);
+      assertStoreMetricEquals(NUM_FLUSHES * NUM_REGIONS, schemaMetrics,
+          StoreMetricType.STORE_FILE_COUNT);
     }
+
+    // ensure that the max value is also maintained
+    final String storeMetricName = ALL_METRICS
+        .getStoreMetricNameMax(StoreMetricType.STORE_FILE_COUNT);
+    assertEquals("Invalid value for store metric " + storeMetricName,
+        NUM_FLUSHES, HRegion.getNumericMetric(storeMetricName));
   }
 
 }
