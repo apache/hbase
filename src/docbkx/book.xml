@@ -1607,15 +1607,83 @@ scan.setFilter(filter);
 
      <section xml:id="block.cache">
        <title>Block Cache</title>
-       <para>The Block Cache contains three levels of block priority to allow for scan-resistance and in-memory ColumnFamilies.  A block is added with an in-memory
-       flag if the containing ColumnFamily is defined in-memory, otherwise a block becomes a single access priority.  Once a block is accessed again, it changes to multiple access. 
-       This is used to prevent scans from thrashing the cache, adding a least-frequently-used element to the eviction algorithm.  Blocks from in-memory ColumnFamilies
-       are the last to be evicted.
-       </para>
-       <para>
+       <section xml:id="block.cache.design">
+        <title>Design</title>
+        <para>The Block Cache is an LRU cache that contains three levels of block priority to allow for scan-resistance and in-memory ColumnFamilies:
+        </para>
+        <itemizedlist>
+            <listitem>Single access priority: The first time a block is loaded from HDFS it normally has this priority and it will be part of the first group to be considered
+            during evictions. The advantage is that scanned blocks are more likely to get evicted than blocks that are getting more usage.
+            </listitem>
+            <listitem>Mutli access priority: If a block in the previous priority group is accessed again, it upgrades to this priority. It is thus part of the second group
+            considered during evictions.
+            </listitem>
+            <listitem>In-memory access priority: If the block's family was configured to be "in-memory", it will be part of this priority disregarding the number of times it
+            was accessed. Catalog tables are configured like this. This group is the last one considered during evictions.
+            </listitem>
+        </itemizedlist>
+        <para>
         For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/LruBlockCache.html">LruBlockCache source</link>
         </para>
-     </section>
+       </section>
+     <section xml:id="block.cache.usage">
+        <title>Usage</title>
+        <para>Block caching is enabled by default for all the user tables which means that any read operation will load the LRU cache. This might be good for a large number of use cases,
+        but further tunings are usually required in order to achieve better performance. An important concept is the
+        <link xlink:href="http://en.wikipedia.org/wiki/Working_set_size">working set size</link>, or WSS, which is: "the amount of memory needed to compute the answer to a problem".
+        For a website, this would be the data that's needed to answer the queries over a short amount of time.
+        </para>
+        <para>The way to calculate how much memory is available in HBase for caching is:
+        </para>
+        <programlisting>
+            number of region servers * heap size * hfile.block.cache.size * 0.85
+        </programlisting>
+        <para>The default value for the block cache is 0.25 which represents 25% of the available heap. The last value (85%) is the default acceptable loading factor in the LRU cache after
+        which eviction is started. The reason it is included in this equation is that it would be unrealistic to say that it is possible to use 100% of the available memory since this would
+        make the process blocking from the point where it loads new blocks. Here are some examples:
+        </para>
+        <itemizedlist>
+            <listitem>One region server with the default heap size (1GB) and the default block cache size will have 217MB of block cache available.
+            </listitem>
+            <listitem>20 region servers with the heap size set to 8GB and a default block cache size will have 34GB of block cache.
+            </listitem>
+            <listitem>100 region servers with the heap size set to 24GB and a block cache size of 0.5 will have about 1TB of block cache.
+            </listitem>
+        </itemizedlist>
+        <para>Your data isn't the only resident of the block cache, here are others that you may have to take into account:
+        </para>
+        <itemizedlist>
+            <listitem>Catalog tables: The -ROOT- and .META. tables are forced into the block cache and have the in-memory priority which means that they are harder to evict. The former never uses
+            more than a few hundreds of bytes while the latter can occupy a few MBs (depending on the number of regions).
+            </listitem>
+            <listitem>HFiles indexes: HFile is the file format that HBase uses to store data in HDFS and it contains a multi-layered index in order seek to the data without having to read the whole file.
+            The size of those indexes is a factor of the block size (64KB by default), the size of your keys and the amount of data you are storing. For big data sets it's not unusual to see numbers around
+            1GB per region server, although not all of it will be in cache because the LRU will evict indexes that aren't used.
+            </listitem>
+            <listitem>Keys: Taking into account only the values that are being stored is missing half the picture since every value is stored along with its keys
+            (row key, family, qualifier, and timestamp). See <xref linkend="keysize"/>.
+            </listitem>
+            <listitem>Bloom filters: Just like the HFile indexes, those data structures (when enabled) are stored in the LRU.
+            </listitem>
+            </itemizedlist>
+        <para>Currently the recommended way to measure HFile indexes and bloom filters sizes is to look at the region server web UI and checkout the relevant metrics. For keys,
+        sampling can be done by using the HFile command line tool and look for the average key size metric.
+        </para>
+        <para>It's generally bad to use block caching when the WSS doesn't fit in memory. This is the case when you have for example 40GB available across all your region servers' block caches
+        but you need to process 1TB of data. One of the reasons is that the churn generated by the evictions will trigger more garbage collections unnecessarily. Here are two use cases:
+        </para>
+        <itemizedlist>
+            <listitem>Fully random reading pattern: This is a case where you almost never access the same row twice within a short amount of time such that the chance of hitting a cached block is close
+            to 0. Setting block caching on such a table is a waste of memory and CPU cycles, more so that it will generate more garbage to pick up by the JVM. For more information on monitoring GC,
+            see <xref linkend="trouble.log.gc"/>.
+            </listitem>
+            <listitem>Mapping a table: In a typical MapReduce job that takes a table in input, every row will be read only once so there's no need to put them into the block cache. The Scan object has
+            the option of turning this off via the setCaching method (set it to false). You can still keep block caching turned on on this table if you need fast random read access. An example would be
+            counting the number of rows in a table that serves live traffic, caching every block of that table would create massive churn and would surely evict data that's currently in use.
+            </listitem>
+        </itemizedlist>
+      </section>
+      </section>
 
       <section xml:id="wal">
        <title >Write Ahead Log (WAL)</title>
