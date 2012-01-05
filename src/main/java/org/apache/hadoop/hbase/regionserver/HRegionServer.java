@@ -1733,13 +1733,17 @@ public class HRegionServer implements HRegionInterface,
   private void setFavoredNodes(HRegion region, String[] favoredNodes) {
     if (favoredNodes != null && favoredNodes.length > 0) {
       InetSocketAddress[] nodes = new InetSocketAddress[favoredNodes.length];
+      StringBuilder favoratedNodesList = new StringBuilder();
       for (int i = 0; i < favoredNodes.length; i++) {
         int colon = favoredNodes[i].indexOf(':');
         String hostname = colon >= 0 ? favoredNodes[i].substring(0, colon) :
           favoredNodes[i];
+        favoratedNodesList.append(hostname + ",");
         nodes[i] = new InetSocketAddress(hostname, 0);
       }
       region.setFavoredNodes(nodes);
+      LOG.debug("Set the region " + region.getRegionNameAsString() +
+          " with the favored nodes: " + favoratedNodesList);
     }
   }
 

@@ -32,13 +32,8 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.DelayQueue;
-import java.util.concurrent.Delayed;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -66,7 +61,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
@@ -196,6 +190,7 @@ public class RegionManager {
       loadBalancerImpl = new DefaultLoadBalancer();
     }
     this.loadBalancer = loadBalancerImpl;
+    LOG.info("The load balancer is " + this.loadBalancer.getClass().getName());
 
     this.assignmentManager = new PreferredAssignmentManager(master);
 
@@ -1703,6 +1698,10 @@ public class RegionManager {
           if (unassignRegion(info, region, returnMsgs)) {
             regionsUnassigned++;
             if (regionsUnassigned >= maxRegToClose && maxRegToClose > 0) {
+              LOG.debug("Unassigned " + region.getRegionNameAsString()
+                  + " from the server " + info.getHostnamePort()
+                  + " because the primary server: " + preferences.get(0)
+                  + " is a live");
               return regionsUnassigned;
             }
           }
@@ -1755,6 +1754,10 @@ public class RegionManager {
           if (unassignRegion(info, region, returnMsgs)) {
             regionsUnassigned++;
             if (regionsUnassigned >= maxRegToClose && maxRegToClose > 0) {
+              LOG.debug("Unassigned " + region.getRegionNameAsString()
+                  + " from the unfavoraed server " + info.getHostnamePort()
+                  + " because one least loaded secondary server: "
+                  + leastLoadedSecondary + " is a live");
               return regionsUnassigned;
             }
           }
@@ -1815,10 +1818,15 @@ public class RegionManager {
               // for the region to its current server when unassigning.
               assignmentManager.removeTransientAssignment(
                   info.getServerAddress(), region);
-              assignmentManager.addTransientAssignment(
-                  preferences.get(i), region);
+              assignmentManager.addTransientAssignment(preferences.get(i),
+                  region);
               regionsUnassigned++;
               if (regionsUnassigned >= maxRegToClose && maxRegToClose > 0) {
+                LOG.debug("Unassigned " + region.getRegionNameAsString()
+                    + " from the overloaded secondary server: "
+                    + info.getHostnamePort()
+                    + " because another low loaded secondary server: "
+                    + preferences.get(i) + " is a live");
                 return regionsUnassigned;
               }
             }

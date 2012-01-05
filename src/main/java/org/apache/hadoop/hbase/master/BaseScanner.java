@@ -19,6 +19,13 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
@@ -45,13 +52,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.ipc.RemoteException;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
@@ -145,6 +145,8 @@ abstract class BaseScanner extends Chore {
     this.readFavoredNodes = master.getConfiguration().getClass(
         HConstants.LOAD_BALANCER_IMPL, Object.class).equals(
         RegionManager.AssignmentLoadBalancer.class);
+    LOG.debug("Whether to read the favoredNodes from meta: " +
+        (readFavoredNodes ? "Yes" : "No"));
   }
 
   /** @return true if initial scan completed successfully */
