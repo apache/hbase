@@ -1531,7 +1531,7 @@ public class HRegion implements HeapSize {
 
   /**
    * @return the nodes on which to place replicas of all store files, or null if
-   * there are no favored nodes.=
+   * there are no favored nodes.
    */
   public InetSocketAddress[] getFavoredNodes() {
     return this.favoredNodes;
@@ -3591,8 +3591,8 @@ public class HRegion implements HeapSize {
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      (4 * Bytes.SIZEOF_LONG) + ClassSize.ARRAY +
-      (24 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
+      (4 * Bytes.SIZEOF_LONG) + 2 * ClassSize.ARRAY +
+      (25 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) +
