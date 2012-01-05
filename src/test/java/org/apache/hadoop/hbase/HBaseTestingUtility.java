@@ -840,7 +840,7 @@ public class HBaseTestingUtility {
     byte[] password = nodeZK.getSessionPassword();
     long sessionID = nodeZK.getSessionID();
     final long sleep = sessionTimeout * 10L;
-    final int maxRetryNum = 10;
+    final int maxRetryNum = 50;
     int retryNum = maxRetryNum;
 
     ZooKeeper zk = new ZooKeeper(quorumServers,
