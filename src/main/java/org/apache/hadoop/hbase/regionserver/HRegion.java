@@ -248,6 +248,7 @@ public class HRegion implements HeapSize {
 
   final WriteState writestate = new WriteState();
 
+  final long timestampTooNew;
   final long memstoreFlushSize;
   private volatile long lastFlushTime;
   private List<Pair<Long,Long>> recentFlushes
@@ -386,6 +387,7 @@ public class HRegion implements HeapSize {
     this.conf = null;
     this.flushListener = null;
     this.fs = null;
+    this.timestampTooNew = HConstants.LATEST_TIMESTAMP;
     this.memstoreFlushSize = 0L;
     this.log = null;
     this.regiondir = null;
@@ -437,6 +439,17 @@ public class HRegion implements HeapSize {
       // Write out region name as string and its encoded name.
       LOG.debug("Creating region " + this);
     }
+
+    /*
+     * timestamp.slop provides a server-side constraint on the timestamp. This
+     * assumes that you base your TS around currentTimeMillis(). In this case,
+     * throw an error to the user if the user-specified TS is newer than now +
+     * slop. LATEST_TIMESTAMP == don't use this functionality
+     */
+    this.timestampTooNew = conf.getLong(
+        "hbase.hregion.keyvalue.timestamp.slop.millisecs",
+        HConstants.LATEST_TIMESTAMP);
+
     long flushSize = regionInfo.getTableDesc().getMemStoreFlushSize();
     if (flushSize == HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE) {
       flushSize = conf.getLong("hbase.hregion.memstore.flush.size",
@@ -1825,9 +1838,10 @@ public class HRegion implements HeapSize {
         // Check the families in the put. If bad, skip this one.
         try {
           checkFamilies(put.getFamilyMap().keySet());
-        } catch (NoSuchColumnFamilyException nscf) {
-          LOG.warn("No such column family in batch put", nscf);
-          batchOp.retCodes[lastIndexExclusive] = OperationStatusCode.BAD_FAMILY;
+          checkTimestamps(put, now);
+        } catch (DoNotRetryIOException dnrioe) {
+          LOG.warn("Sanity check error in batch put", dnrioe);
+          batchOp.retCodes[lastIndexExclusive] = OperationStatusCode.SANITY_CHECK_FAILURE;
           lastIndexExclusive++;
           continue;
         }
@@ -2122,6 +2136,7 @@ public class HRegion implements HeapSize {
     this.updatesLock.readLock().lock();
     try {
       checkFamilies(familyMap.keySet());
+      checkTimestamps(familyMap, now);
       updateKVTimestamps(familyMap.values(), byteNow);
       // write/sync to WAL should happen before we touch memstore.
       //
@@ -2199,6 +2214,26 @@ public class HRegion implements HeapSize {
   throws NoSuchColumnFamilyException {
     for (byte[] family : families) {
       checkFamily(family);
+    }
+  }
+  private void checkTimestamps(Put p, long now) throws DoNotRetryIOException {
+    checkTimestamps(p.getFamilyMap(), now);
+  }
+
+  private void checkTimestamps(final Map<byte[], List<KeyValue>> familyMap,
+      long now) throws DoNotRetryIOException {
+    if (timestampTooNew == HConstants.LATEST_TIMESTAMP) {
+      return;
+    }
+    long maxTs = now + timestampTooNew;
+    for (List<KeyValue> kvs : familyMap.values()) {
+      for (KeyValue kv : kvs) {
+        // see if the user-side TS is out of range. latest = server-side
+        if (!kv.isLatestTimestamp() && kv.getTimestamp() > maxTs) {
+          throw new DoNotRetryIOException("Timestamp for KV out of range "
+              + kv + " (too.new=" + timestampTooNew + ")");
+        }
+      }
     }
   }
 
