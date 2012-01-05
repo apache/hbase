@@ -260,7 +260,8 @@ public class Scan extends OperationWithAttributes implements Writable {
 
   /**
    * Set the start row of the scan.
-   * @param startRow row to start scan on, inclusive
+   * @param startRow row to start scan on (inclusive)
+   * Note: In order to make startRow exclusive add a trailing 0 byte
    * @return this
    */
   public Scan setStartRow(byte [] startRow) {
@@ -271,6 +272,7 @@ public class Scan extends OperationWithAttributes implements Writable {
   /**
    * Set the stop row.
    * @param stopRow row to end at (exclusive)
+   * Note: In order to make stopRow inclusive add a trailing 0 byte
    * @return this
    */
   public Scan setStopRow(byte [] stopRow) {
