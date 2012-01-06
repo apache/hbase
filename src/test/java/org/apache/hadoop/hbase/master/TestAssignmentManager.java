@@ -101,7 +101,8 @@ public class TestAssignmentManager {
     // First amend the servermanager mock so that when we do send close of the
     // first meta region on RANDOM_SERVERNAME, it will return true rather than
     // default null.
-    Mockito.when(this.serverManager.sendRegionClose(RANDOM_SERVERNAME, hri)).thenReturn(true);
+    Mockito.when(this.serverManager.sendRegionClose(RANDOM_SERVERNAME, hri, -1))
+    .thenReturn(true);
     // Create an AM.
     AssignmentManager am =
       new AssignmentManager(this.server, this.serverManager, this.ct, this.executor);
