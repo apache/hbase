@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.*;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
@@ -31,6 +32,7 @@ import static org.junit.Assert.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Stoppable;
@@ -112,19 +114,34 @@ public class TestSplitLogManager {
     TEST_UTIL.shutdownMiniZKCluster();
   }
 
-  private void waitForCounter(AtomicLong ctr, long oldval, long newval,
+  private interface Expr {
+    public long eval();
+  }
+
+  private void waitForCounter(final AtomicLong ctr, long oldval, long newval,
+      long timems) {
+    Expr e = new Expr() {
+      public long eval() {
+        return ctr.get();
+      }
+    };
+    waitForCounter(e, oldval, newval, timems);
+    return;
+  }
+
+  private void waitForCounter(Expr e, long oldval, long newval,
       long timems) {
     long curt = System.currentTimeMillis();
     long endt = curt + timems;
     while (curt < endt) {
-      if (ctr.get() == oldval) {
+      if (e.eval() == oldval) {
         try {
           Thread.sleep(10);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException eintr) {
         }
         curt = System.currentTimeMillis();
       } else {
-        assertEquals(newval, ctr.get());
+        assertEquals(newval, e.eval());
         return;
       }
     }
@@ -267,10 +284,8 @@ public class TestSplitLogManager {
   public void testRescanCleanup() throws Exception {
     LOG.info("TestRescanCleanup - ensure RESCAN nodes are cleaned up");
 
-    int to = 1000;
-    conf.setInt("hbase.splitlog.manager.timeout", to);
+    conf.setInt("hbase.splitlog.manager.timeout", 1000);
     conf.setInt("hbase.splitlog.manager.timeoutmonitor.period", 100);
-    to = to + 2 * 100;
     slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
@@ -280,14 +295,23 @@ public class TestSplitLogManager {
 
     ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker1"));
     waitForCounter(tot_mgr_heartbeat, 0, 1, 1000);
-    waitForCounter(tot_mgr_resubmit, 0, 1, to + 100);
-    int version1 = ZKUtil.checkExists(zkw, tasknode);
-    assertTrue(version1 > version);
-    byte[] taskstate = ZKUtil.getData(zkw, tasknode);
-    assertTrue(Arrays.equals(TaskState.TASK_UNASSIGNED.get("dummy-master"),
-        taskstate));
-
-    waitForCounter(tot_mgr_rescan_deleted, 0, 1, 1000);
+    waitForCounter(new Expr() {
+      @Override
+      public long eval() {
+        return (tot_mgr_resubmit.get() + tot_mgr_resubmit_failed.get());
+      }
+    }, 0, 1, 5*60000); // wait long enough
+    if (tot_mgr_resubmit_failed.get() == 0) {
+      int version1 = ZKUtil.checkExists(zkw, tasknode);
+      assertTrue(version1 > version);
+      byte[] taskstate = ZKUtil.getData(zkw, tasknode);
+      assertTrue(Arrays.equals(TaskState.TASK_UNASSIGNED.get("dummy-master"),
+          taskstate));
+      
+      waitForCounter(tot_mgr_rescan_deleted, 0, 1, 1000);
+    } else {
+      LOG.warn("Could not run test. Lost ZK connection?");
+    }
 
     return;
   }
@@ -417,5 +441,51 @@ public class TestSplitLogManager {
     assertTrue(Arrays.equals(TaskState.TASK_UNASSIGNED.get("dummy-master"),
         taskstate));
     return;
+  }
+
+  @Test
+  public void testEmptyLogDir() throws Exception {
+    LOG.info("testEmptyLogDir");
+    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm.finishInitialization();
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Path emptyLogDirPath = new Path(fs.getWorkingDirectory(),
+        UUID.randomUUID().toString());
+    fs.mkdirs(emptyLogDirPath);
+    slm.splitLogDistributed(emptyLogDirPath);
+    assertFalse(fs.exists(emptyLogDirPath));
+  }
+
+  @Test
+  public void testVanishingTaskZNode() throws Exception {
+    LOG.info("testVanishingTaskZNode");
+    conf.setInt("hbase.splitlog.manager.unassigned.timeout", 0);
+    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm.finishInitialization();
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    final Path logDir = new Path(fs.getWorkingDirectory(),
+        UUID.randomUUID().toString());
+    fs.mkdirs(logDir);
+    Path logFile = new Path(logDir, UUID.randomUUID().toString());
+    fs.createNewFile(logFile);
+    new Thread() {
+      public void run() {
+        try {
+          // this call will block because there are no SplitLogWorkers
+          slm.splitLogDistributed(logDir);
+        } catch (Exception e) {
+          LOG.warn("splitLogDistributed failed", e);
+          fail();
+        }
+      }
+    }.start();
+    waitForCounter(tot_mgr_node_create_result, 0, 1, 10000);
+    String znode = ZKSplitLog.getEncodedNodeName(zkw, logFile.toString());
+    // remove the task znode
+    ZKUtil.deleteNode(zkw, znode);
+    waitForCounter(tot_mgr_get_data_nonode, 0, 1, 30000);
+    waitForCounter(tot_mgr_log_split_batch_success, 0, 1, 1000);
+    assertTrue(fs.exists(logFile));
+    fs.delete(logDir, true);
   }
 }

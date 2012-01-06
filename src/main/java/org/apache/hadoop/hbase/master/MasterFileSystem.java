@@ -272,12 +272,7 @@ public class MasterFileSystem {
         splitLogManager.handleDeadWorker(serverName.toString());
       }
       splitTime = EnvironmentEdgeManager.currentTimeMillis();
-      try {
-        splitLogSize = splitLogManager.splitLogDistributed(logDirs);
-      } catch (OrphanHLogAfterSplitException e) {
-        LOG.warn("Retrying distributed splitting for " + serverNames, e);
-        splitLogManager.splitLogDistributed(logDirs);
-      }
+      splitLogSize = splitLogManager.splitLogDistributed(logDirs);
       splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
     } else {
       for(Path logDir: logDirs){

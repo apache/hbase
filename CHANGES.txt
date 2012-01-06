@@ -506,6 +506,7 @@ Release 0.92.0 - Unreleased
                shutdown handler for the region sever the root region was on (Jimmy)
    HBASE-5094  The META can hold an entry for a region with a different server name from 
                the one actually in the AssignmentManager thus making the region inaccessible.(Ram)
+   HBASE-5081  Distributed log splitting deleteNode races against splitLog retry (Prakash)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
