@@ -470,6 +470,7 @@ Release 0.92.0 - Unreleased
                are shutdown at the same time (Ming Ma)
    HBASE-5094  The META can hold an entry for a region with a different server name from the one  
                actually in the AssignmentManager thus making the region inaccessible. (Ram)
+   HBASE-5081  Distributed log splitting deleteNode races against splitLog retry (Prakash)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
