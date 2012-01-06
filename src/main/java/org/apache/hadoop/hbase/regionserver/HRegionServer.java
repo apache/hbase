@@ -2482,15 +2482,31 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @QosPriority(priority=HIGH_QOS)
   public boolean closeRegion(HRegionInfo region)
   throws IOException {
-    return closeRegion(region, true);
+    return closeRegion(region, true, -1);
+  }
+
+  @Override
+  @QosPriority(priority=HIGH_QOS)
+  public boolean closeRegion(final HRegionInfo region,
+    final int versionOfClosingNode)
+  throws IOException {
+    return closeRegion(region, true, versionOfClosingNode);
   }
 
   @Override
   @QosPriority(priority=HIGH_QOS)
   public boolean closeRegion(HRegionInfo region, final boolean zk)
   throws IOException {
+    return closeRegion(region, zk, -1);
+  }
+
+  @QosPriority(priority=HIGH_QOS)
+  protected boolean closeRegion(HRegionInfo region, final boolean zk,
+    final int versionOfClosingNode)
+  throws IOException {
     checkOpen();
-    LOG.info("Received close region: " + region.getRegionNameAsString());
+    LOG.info("Received close region: " + region.getRegionNameAsString() +
+      ". Version of ZK closing node:" + versionOfClosingNode);
     boolean hasit = this.onlineRegions.containsKey(region.getEncodedName());
     if (!hasit) {
       LOG.warn("Received close for region we are not serving; " +
@@ -2499,12 +2515,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         + region.getRegionNameAsString() + " but we are not serving it");
     }
     checkIfRegionInTransition(region, CLOSE);
-    return closeRegion(region, false, zk);
+    return closeRegion(region, false, zk, versionOfClosingNode);
   }
 
   @Override
   @QosPriority(priority=HIGH_QOS)
-  public boolean closeRegion(byte[] encodedRegionName, boolean zk) throws IOException {
+  public boolean closeRegion(byte[] encodedRegionName, boolean zk)
+    throws IOException {
     return closeRegion(encodedRegionName, false, zk);
   }
 
@@ -2518,6 +2535,23 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   protected boolean closeRegion(HRegionInfo region, final boolean abort,
       final boolean zk) {
+    return closeRegion(region, abort, zk, -1);
+  }
+
+
+    /**
+   * @param region Region to close
+   * @param abort True if we are aborting
+   * @param zk True if we are to update zk about the region close; if the close
+   * was orchestrated by master, then update zk.  If the close is being run by
+   * the regionserver because its going down, don't update zk.
+   * @param versionOfClosingNode
+   *   the version of znode to compare when RS transitions the znode from
+   *   CLOSING state.
+   * @return True if closed a region.
+   */
+  protected boolean closeRegion(HRegionInfo region, final boolean abort,
+      final boolean zk, final int versionOfClosingNode) {
     if (this.regionsInTransitionInRS.containsKey(region.getEncodedNameAsBytes())) {
       LOG.warn("Received close for region we are already opening or closing; " +
           region.getEncodedName());
@@ -2526,11 +2560,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(), false);
     CloseRegionHandler crh = null;
     if (region.isRootRegion()) {
-      crh = new CloseRootHandler(this, this, region, abort, zk);
+      crh = new CloseRootHandler(this, this, region, abort, zk,
+        versionOfClosingNode);
     } else if (region.isMetaRegion()) {
-      crh = new CloseMetaHandler(this, this, region, abort, zk);
+      crh = new CloseMetaHandler(this, this, region, abort, zk,
+        versionOfClosingNode);
     } else {
-      crh = new CloseRegionHandler(this, this, region, abort, zk);
+      crh = new CloseRegionHandler(this, this, region, abort, zk,
+        versionOfClosingNode);
     }
     this.service.submit(crh);
     return true;

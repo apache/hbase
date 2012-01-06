@@ -1754,13 +1754,20 @@ public class AssignmentManager extends ZooKeeperListener {
     String encodedName = region.getEncodedName();
     // Grab the state of this region and synchronize on it
     RegionState state;
+    int versionOfClosingNode = -1;
     synchronized (regionsInTransition) {
       state = regionsInTransition.get(encodedName);
       if (state == null) {
          // Create the znode in CLOSING state
         try {
-          ZKAssign.createNodeClosing(
+          versionOfClosingNode = ZKAssign.createNodeClosing(
             master.getZooKeeper(), region, master.getServerName());
+          if (versionOfClosingNode == -1) {
+            LOG.debug("Attempting to unassign region " +
+                region.getRegionNameAsString() + " but ZK closing node "
+                + "can't be created.");
+            return;
+          }
         } catch (KeeperException e) {
           if (e instanceof NodeExistsException) {
             // Handle race between master initiated close and regionserver
@@ -1811,17 +1818,18 @@ public class AssignmentManager extends ZooKeeperListener {
     try {
       // TODO: We should consider making this look more like it does for the
       // region open where we catch all throwables and never abort
-      if (serverManager.sendRegionClose(server, state.getRegion())) {
+      if (serverManager.sendRegionClose(server, state.getRegion(),
+        versionOfClosingNode)) {
         LOG.debug("Sent CLOSE to " + server + " for region " +
           region.getRegionNameAsString());
         return;
       }
       // This never happens. Currently regionserver close always return true.
       LOG.warn("Server " + server + " region CLOSE RPC returned false for " +
-        region.getEncodedName());
+        region.getRegionNameAsString());
     } catch (NotServingRegionException nsre) {
       LOG.info("Server " + server + " returned " + nsre + " for " +
-        region.getEncodedName());
+        region.getRegionNameAsString());
       // Presume that master has stale data.  Presume remote side just split.
       // Presume that the split message when it comes in will fix up the master's
       // in memory cluster state.

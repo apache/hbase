@@ -30,14 +30,15 @@ public class CloseRootHandler extends CloseRegionHandler {
   // This is executed after receiving an CLOSE RPC from the master for root.
   public CloseRootHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo) {
-    this(server, rsServices, regionInfo, false, true);
+    this(server, rsServices, regionInfo, false, true, -1);
   }
 
   // This is called directly by the regionserver when its determined its
   // shutting down.
   public CloseRootHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
-      final boolean abort, final boolean zk) {
-    super(server, rsServices, regionInfo, abort, zk, EventType.M_RS_CLOSE_ROOT);
+      final boolean abort, final boolean zk, final int versionOfClosingNode) {
+    super(server, rsServices, regionInfo, abort, zk, versionOfClosingNode,
+      EventType.M_RS_CLOSE_ROOT);
   }
 }

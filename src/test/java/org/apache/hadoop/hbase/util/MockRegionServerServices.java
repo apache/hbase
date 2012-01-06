@@ -63,6 +63,7 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public void postOpenDeployTasks(HRegion r, CatalogTracker ct, boolean daughter)
       throws KeeperException, IOException {
+    addToOnlineRegions(r);
   }
 
   @Override

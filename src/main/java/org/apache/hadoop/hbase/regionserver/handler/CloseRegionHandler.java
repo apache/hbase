@@ -43,6 +43,7 @@ public class CloseRegionHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(CloseRegionHandler.class);
 
   private final int FAILED = -1;
+  int expectedVersion = FAILED;
 
   private final RegionServerServices rsServices;
 
@@ -61,7 +62,7 @@ public class CloseRegionHandler extends EventHandler {
   // This is executed after receiving an CLOSE RPC from the master.
   public CloseRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo) {
-    this(server, rsServices, regionInfo, false, true);
+    this(server, rsServices, regionInfo, false, true, -1);
   }
 
   /**
@@ -74,19 +75,23 @@ public class CloseRegionHandler extends EventHandler {
    */
   public CloseRegionHandler(final Server server,
       final RegionServerServices rsServices,
-      final HRegionInfo regionInfo, final boolean abort, final boolean zk) {
-    this(server, rsServices,  regionInfo, abort, zk, EventType.M_RS_CLOSE_REGION);
+      final HRegionInfo regionInfo, final boolean abort, final boolean zk,
+      final int versionOfClosingNode) {
+    this(server, rsServices,  regionInfo, abort, zk, versionOfClosingNode,
+      EventType.M_RS_CLOSE_REGION);
   }
 
   protected CloseRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
-      boolean abort, final boolean zk, EventType eventType) {
+      boolean abort, final boolean zk, final int versionOfClosingNode,
+      EventType eventType) {
     super(server, eventType);
     this.server = server;
     this.rsServices = rsServices;
     this.regionInfo = regionInfo;
     this.abort = abort;
     this.zk = zk;
+    this.expectedVersion = versionOfClosingNode;
   }
 
   public HRegionInfo getRegionInfo() {
@@ -105,12 +110,6 @@ public class CloseRegionHandler extends EventHandler {
         LOG.warn("Received CLOSE for region " + name +
             " but currently not serving");
         return;
-      }
-
-      int expectedVersion = FAILED;
-      if (this.zk) {
-        expectedVersion = getCurrentVersion();
-        if (expectedVersion == FAILED) return;
       }
 
       // Close the region
@@ -137,7 +136,7 @@ public class CloseRegionHandler extends EventHandler {
       this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
 
       if (this.zk) {
-        if (setClosedState(expectedVersion, region)) {
+        if (setClosedState(this.expectedVersion, region)) {
           LOG.debug("set region closed state in zk successfully for region " +
             name + " sn name: " + this.server.getServerName());
         } else {
@@ -183,22 +182,4 @@ public class CloseRegionHandler extends EventHandler {
     return true;
   }
 
-  /**
-   * Get the node's current version
-   * @return The expectedVersion.  If -1, we failed getting the node
-   */
-  private int getCurrentVersion() {
-    int expectedVersion = FAILED;
-    try {
-      if ((expectedVersion = ZKAssign.getVersion(
-          server.getZooKeeper(), regionInfo)) == FAILED) {
-        LOG.warn("Error getting node's version in CLOSING state," +
-          " aborting close of " + regionInfo.getRegionNameAsString());
-      }
-    } catch (KeeperException e) {
-      LOG.warn("Error creating node in CLOSING state, aborting close of " +
-        regionInfo.getRegionNameAsString(), e);
-    }
-    return expectedVersion;
-  }
 }

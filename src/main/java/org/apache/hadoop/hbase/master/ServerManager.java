@@ -462,11 +462,14 @@ public class ServerManager {
    * have the specified region or the region is being split.
    * @param server server to open a region
    * @param region region to open
+   * @param versionOfClosingNode
+   *   the version of znode to compare when RS transitions the znode from
+   *   CLOSING state.
    * @return true if server acknowledged close, false if not
    * @throws IOException
    */
-  public boolean sendRegionClose(ServerName server, HRegionInfo region)
-  throws IOException {
+  public boolean sendRegionClose(ServerName server, HRegionInfo region,
+    int versionOfClosingNode) throws IOException {
     if (server == null) throw new NullPointerException("Passed server is null");
     HRegionInterface hri = getServerConnection(server);
     if (hri == null) {
@@ -475,7 +478,7 @@ public class ServerManager {
         region.getRegionNameAsString() +
         " failed because no RPC connection found to this server");
     }
-    return hri.closeRegion(region);
+    return hri.closeRegion(region, versionOfClosingNode);
   }
 
   /**

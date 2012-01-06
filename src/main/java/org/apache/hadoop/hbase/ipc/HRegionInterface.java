@@ -375,6 +375,19 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
   throws IOException;
 
   /**
+   * Closes the specified region.
+   * @param region region to close
+   * @param versionOfClosingNode
+   *          the version of znode to compare when RS transitions the znode
+   *          from CLOSING state.
+   * @return true if closing region, false if not
+   * @throws IOException
+   */
+  public boolean closeRegion(final HRegionInfo region,
+    final int versionOfClosingNode)
+  throws IOException;
+
+  /**
    * Closes the specified region and will use or not use ZK during the close
    * according to the specified flag.
    * @param region region to close
