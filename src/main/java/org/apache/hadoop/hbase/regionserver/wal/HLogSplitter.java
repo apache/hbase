@@ -541,16 +541,21 @@ public class HLogSplitter {
       if (ZKSplitLog.isCorruptFlagFile(dst)) {
         continue;
       }
-      if (fs.exists(dst)) {
-        fs.delete(dst, false);
-      } else {
-        Path dstdir = dst.getParent();
-        if (!fs.exists(dstdir)) {
-          if (!fs.mkdirs(dstdir)) LOG.warn("mkdir failed on " + dstdir);
+      if (fs.exists(src)) {
+        if (fs.exists(dst)) {
+          fs.delete(dst, false);
+        } else {
+          Path dstdir = dst.getParent();
+          if (!fs.exists(dstdir)) {
+            if (!fs.mkdirs(dstdir)) LOG.warn("mkdir failed on " + dstdir);
+          }
         }
+        fs.rename(src, dst);
+        LOG.debug(" moved " + src + " => " + dst);
+      } else {
+        LOG.debug("Could not move recovered edits from " + src +
+            " as it doesn't exist");
       }
-      fs.rename(src, dst);
-      LOG.debug(" moved " + src + " => " + dst);
     }
     archiveLogs(null, corruptedLogs, processedLogs,
         oldLogDir, fs, conf);
@@ -600,24 +605,32 @@ public class HLogSplitter {
     }
     fs.mkdirs(oldLogDir);
 
+    // this method can get restarted or called multiple times for archiving
+    // the same log files.
     for (Path corrupted : corruptedLogs) {
       Path p = new Path(corruptDir, corrupted.getName());
-      if (!fs.rename(corrupted, p)) {
-        LOG.info("Unable to move corrupted log " + corrupted + " to " + p);
-      } else {
-        LOG.info("Moving corrupted log " + corrupted + " to " + p);
+      if (fs.exists(corrupted)) {
+        if (!fs.rename(corrupted, p)) {
+          LOG.warn("Unable to move corrupted log " + corrupted + " to " + p);
+        } else {
+          LOG.warn("Moving corrupted log " + corrupted + " to " + p);
+        }
       }
     }
 
     for (Path p : processedLogs) {
       Path newPath = HLog.getHLogArchivePath(oldLogDir, p);
-      if (!fs.rename(p, newPath)) {
-        LOG.info("Unable to move  " + p + " to " + newPath);
-      } else {
-        LOG.info("Archived processed log " + p + " to " + newPath);
+      if (fs.exists(p)) {
+        if (!fs.rename(p, newPath)) {
+          LOG.warn("Unable to move  " + p + " to " + newPath);
+        } else {
+          LOG.debug("Archived processed log " + p + " to " + newPath);
+        }
       }
     }
 
+    // distributed log splitting removes the srcDir (region's log dir) later
+    // when all the log files in that srcDir have been successfully processed
     if (srcDir != null && !fs.delete(srcDir, true)) {
       throw new IOException("Unable to delete src dir: " + srcDir);
     }
