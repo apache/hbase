@@ -30,14 +30,15 @@ public class CloseMetaHandler extends CloseRegionHandler {
   // Called when master tells us shutdown a region via close rpc
   public CloseMetaHandler(final Server server,
       final RegionServerServices rsServices, final HRegionInfo regionInfo) {
-    this(server, rsServices, regionInfo, false, true);
+    this(server, rsServices, regionInfo, false, true, -1);
   }
 
   // Called when regionserver determines its to go down; not master orchestrated
   public CloseMetaHandler(final Server server,
       final RegionServerServices rsServices,
       final HRegionInfo regionInfo,
-      final boolean abort, final boolean zk) {
-    super(server, rsServices, regionInfo, abort, zk, EventType.M_RS_CLOSE_META);
+      final boolean abort, final boolean zk, final int versionOfClosingNode) {
+    super(server, rsServices, regionInfo, abort, zk, versionOfClosingNode,
+      EventType.M_RS_CLOSE_META);
   }
 }

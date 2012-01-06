@@ -263,8 +263,8 @@ public class OpenRegionHandler extends EventHandler {
 
   /**
    * @param r Region we're working on.
-   * @return Transition znode to OPENED state.
-   * @throws IOException 
+   * @return whether znode is successfully transitioned to OPENED state.
+   * @throws IOException
    */
   private boolean transitionToOpened(final HRegion r) throws IOException {
     boolean result = false;
@@ -290,11 +290,11 @@ public class OpenRegionHandler extends EventHandler {
     }
     return result;
   }
-  
+
   /**
    * @param  Region we're working on.
    * This is not guaranteed to succeed, we just do our best.
-   * @return Transition znode to CLOSED state.
+   * @return whether znode is successfully transitioned to FAILED_OPEN state.
    */
   private boolean tryTransitionToFailedOpen(final HRegionInfo hri) {
     boolean result = false;
