@@ -217,6 +217,13 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
     this.remotePort = remotePort;
   }
 
+  @Override
+  public void markComplete(String status) {
+    super.markComplete(status);
+    this.params = null;
+    this.packet = null;
+  }
+
   public synchronized Map<String, Object> toMap() {
     // only include RPC info if the Handler is actively servicing an RPC call
     Map<String, Object> map = super.toMap();
