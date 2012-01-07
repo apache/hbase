@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1062,7 +1063,7 @@ public class HConnectionManager {
 
       // Cut the cache so that we only get the part that could contain
       // regions that match our key
-      SoftValueSortedMap<byte[], HRegionLocation> matchingRegions =
+      SortedMap<byte[], HRegionLocation> matchingRegions =
         tableLocations.headMap(row);
 
       // if that portion of the map is empty, then we're done. otherwise,
@@ -1105,7 +1106,7 @@ public class HConnectionManager {
      */
     void deleteCachedLocation(final byte [] tableName, final byte [] row) {
       synchronized (this.cachedRegionLocations) {
-        SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
+        Map<byte[], HRegionLocation> tableLocations =
             getTableLocations(tableName);
         // start to examine the cache. we can only do cache actions
         // if there's something in the cache for this table.
@@ -1137,8 +1138,8 @@ public class HConnectionManager {
         if (!cachedServers.contains(server)) {
           return;
         }
-        for (SoftValueSortedMap<byte[], HRegionLocation> tableLocations :
-            cachedRegionLocations.values()) {
+        for (Map<byte[], HRegionLocation> tableLocations :
+          cachedRegionLocations.values()) {
           for (Entry<byte[], HRegionLocation> e : tableLocations.entrySet()) {
             if (e.getValue().getServerAddress().toString().equals(server)) {
               tableLocations.remove(e.getKey());
@@ -1195,7 +1196,7 @@ public class HConnectionManager {
     private void cacheLocation(final byte [] tableName,
         final HRegionLocation location) {
       byte [] startKey = location.getRegionInfo().getStartKey();
-      SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
+      Map<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
       boolean hasNewCache = false;
       synchronized (this.cachedRegionLocations) {
@@ -1663,7 +1664,7 @@ public class HConnectionManager {
     int getNumberOfCachedRegionLocations(final byte[] tableName) {
       Integer key = Bytes.mapKey(tableName);
       synchronized (this.cachedRegionLocations) {
-        SoftValueSortedMap<byte[], HRegionLocation> tableLocs =
+        Map<byte[], HRegionLocation> tableLocs =
           this.cachedRegionLocations.get(key);
 
         if (tableLocs == null) {
