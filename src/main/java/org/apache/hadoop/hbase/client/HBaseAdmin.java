@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
@@ -918,8 +919,8 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void flush(final byte [] tableNameOrRegionName)
   throws IOException, InterruptedException {
-    boolean isRegionName = isRegionName(tableNameOrRegionName);
     CatalogTracker ct = getCatalogTracker();
+    boolean isRegionName = isRegionName(tableNameOrRegionName, ct);
     try {
       if (isRegionName) {
         Pair<HRegionInfo, HServerAddress> pair =
@@ -931,9 +932,10 @@ public class HBaseAdmin implements Abortable, Closeable {
           flush(pair.getSecond(), pair.getFirst());
         }
       } else {
+        final String tableName = tableNameString(tableNameOrRegionName, ct);
         List<Pair<HRegionInfo, HServerAddress>> pairs =
           MetaReader.getTableRegionsAndLocations(ct,
-              Bytes.toString(tableNameOrRegionName));
+              tableName);
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
           if (pair.getFirst().isOffline()) continue;
           if (pair.getSecond() == null) continue;
@@ -1023,7 +1025,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException, InterruptedException {
     CatalogTracker ct = getCatalogTracker();
     try {
-      if (isRegionName(tableNameOrRegionName)) {
+      if (isRegionName(tableNameOrRegionName, ct)) {
         Pair<HRegionInfo, HServerAddress> pair =
           MetaReader.getRegion(ct, tableNameOrRegionName);
         if (pair == null || pair.getSecond() == null) {
@@ -1033,9 +1035,10 @@ public class HBaseAdmin implements Abortable, Closeable {
           compact(pair.getSecond(), pair.getFirst(), major);
         }
       } else {
+        final String tableName = tableNameString(tableNameOrRegionName, ct);
         List<Pair<HRegionInfo, HServerAddress>> pairs =
           MetaReader.getTableRegionsAndLocations(ct,
-              Bytes.toString(tableNameOrRegionName));
+              tableName);
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
           if (pair.getFirst().isOffline()) continue;
           if (pair.getSecond() == null) continue;
@@ -1173,7 +1176,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       final byte [] splitPoint) throws IOException, InterruptedException {
     CatalogTracker ct = getCatalogTracker();
     try {
-      if (isRegionName(tableNameOrRegionName)) {
+      if (isRegionName(tableNameOrRegionName, ct)) {
         // Its a possible region name.
         Pair<HRegionInfo, HServerAddress> pair =
           MetaReader.getRegion(ct, tableNameOrRegionName);
@@ -1184,9 +1187,10 @@ public class HBaseAdmin implements Abortable, Closeable {
           split(pair.getSecond(), pair.getFirst(), splitPoint);
         }
       } else {
+        final String tableName = tableNameString(tableNameOrRegionName, ct);
         List<Pair<HRegionInfo, HServerAddress>> pairs =
           MetaReader.getTableRegionsAndLocations(ct,
-              Bytes.toString(tableNameOrRegionName));
+              tableName);
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
           // May not be a server for a particular row
           if (pair.getSecond() == null) continue;
@@ -1234,17 +1238,38 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   /**
    * @param tableNameOrRegionName Name of a table or name of a region.
-   * @return True if <code>tableNameOrRegionName</code> is *possibly* a region
-   * name else false if a verified tablename (we call {@link #tableExists(byte[])};
-   * else we throw an exception.
-   * @throws IOException 
+   * @param ct A {@link #CatalogTracker} instance (caller of this method usually has one).
+   * @return True if <code>tableNameOrRegionName</code> is a verified region
+   * name (we call {@link #MetaReader.getRegion(CatalogTracker catalogTracker,
+   * byte [] regionName)};) else false.
+   * Throw an exception if <code>tableNameOrRegionName</code> is null.
+   * @throws IOException
    */
-  private boolean isRegionName(final byte [] tableNameOrRegionName)
+  private boolean isRegionName(final byte[] tableNameOrRegionName,
+      CatalogTracker ct)
   throws IOException {
     if (tableNameOrRegionName == null) {
       throw new IllegalArgumentException("Pass a table name or region name");
     }
-    return !tableExists(tableNameOrRegionName);
+    return (MetaReader.getRegion(ct, tableNameOrRegionName) != null);
+  }
+
+  /**
+   * Convert the table name byte array into a table name string and check if table
+   * exists or not.
+   * @param tableNameBytes Name of a table.
+   * @param ct A {@link #CatalogTracker} instance (caller of this method usually has one).
+   * @return tableName in string form.
+   * @throws IOException if a remote or network exception occurs.
+   * @throws TableNotFoundException if table does not exist.
+   */
+  private String tableNameString(final byte[] tableNameBytes, CatalogTracker ct)
+      throws IOException {
+    String tableNameString = Bytes.toString(tableNameBytes);
+    if (!MetaReader.tableExists(ct, tableNameString)) {
+      throw new TableNotFoundException(tableNameString);
+    }
+    return tableNameString;
   }
 
   /**

@@ -95,6 +95,34 @@ public class TestAdmin {
   }
 
   @Test
+  public void testSplitFlushCompactUnknownTable() throws InterruptedException {
+    final String unknowntable = "fubar";
+    Exception exception = null;
+    try {
+      this.admin.compact(unknowntable);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+
+    exception = null;
+    try {
+      this.admin.flush(unknowntable);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+
+    exception = null;
+    try {
+      this.admin.split(unknowntable);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+  }
+
+  @Test
   public void testDisableAndEnableTable() throws IOException {
     final byte [] row = Bytes.toBytes("row");
     final byte [] qualifier = Bytes.toBytes("qualifier");
