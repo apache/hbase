@@ -106,6 +106,34 @@ public class TestAdmin {
   }
 
   @Test
+  public void testSplitFlushCompactUnknownTable() throws InterruptedException {
+    final String unknowntable = "fubar";
+    Exception exception = null;
+    try {
+      this.admin.compact(unknowntable);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+
+    exception = null;
+    try {
+      this.admin.flush(unknowntable);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+
+    exception = null;
+    try {
+      this.admin.split(unknowntable);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+  }
+
+  @Test
   public void testDeleteEditUnknownColumnFamilyAndOrTable() throws IOException {
     // Test we get exception if we try to 
     final String nonexistent = "nonexistent";
