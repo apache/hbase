@@ -53,8 +53,6 @@ public class TestAssignmentManager {
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final ServerName RANDOM_SERVERNAME =
     new ServerName("example.org", 1234, 5678);
-  private static final ServerName SRC_SERVERNAME =
-    new ServerName("example.org", 5678, 5678);
   private Server server;
   private ServerManager serverManager;
   private CatalogTracker ct;
@@ -94,25 +92,6 @@ public class TestAssignmentManager {
   @After
   public void after() {
     if (this.watcher != null) this.watcher.close();
-  }
-
-  @Test
-  public void testBalanceAndShutdownServerAtSameTime()
-  throws IOException, KeeperException {
-    // Region to use in test.
-    final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
-    // Amend ServerManager mock so that when we do send close of our region on
-    // RANDOM_SERVERNAME, it will return true rather than default null.
-    Mockito.when(this.serverManager.sendRegionClose(RANDOM_SERVERNAME, hri)).
-      thenReturn(true);
-    // Create an AM.
-    AssignmentManager am =
-      new AssignmentManager(this.server, this.serverManager, this.ct, this.executor);
-    // Call the balance function
-    RegionPlan plan = new RegionPlan(hri, SRC_SERVERNAME, RANDOM_SERVERNAME);
-    am.balance(plan);
-    // This delete will fail if the previous unassign did wrong thing.
-    ZKAssign.deleteClosingNode(this.watcher, hri);
   }
 
   @Test

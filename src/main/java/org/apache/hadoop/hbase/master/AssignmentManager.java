@@ -711,13 +711,13 @@ public class AssignmentManager extends ZooKeeperListener {
           // Handle CLOSED by assigning elsewhere or stopping if a disable
           // If we got here all is good.  Need to update RegionState -- else
           // what follows will fail because not in expected state.
-          regionState.update(RegionState.State.CLOSED, data.getStamp(),
-            data.getOrigin());
-          removeClosedRegion(regionState.getRegion());
-          this.executorService.submit(new ClosedRegionHandler(master, this,
-            regionState.getRegion()));
+          regionState.update(RegionState.State.CLOSED,
+              data.getStamp(), data.getOrigin());
+        removeClosedRegion(regionState.getRegion());
+          this.executorService.submit(new ClosedRegionHandler(master,
+            this, regionState.getRegion()));
           break;
-
+          
         case RS_ZK_REGION_FAILED_OPEN:
           if (regionState == null ||
               (!regionState.isPendingOpen() && !regionState.isOpening())) {
@@ -1193,7 +1193,8 @@ public class AssignmentManager extends ZooKeeperListener {
         region.getRegionNameAsString());
       return;
     }
-    RegionState state = addToRegionsInTransition(region, hijack);
+    RegionState state = addToRegionsInTransition(region,
+        hijack);
     synchronized (state) {
       assign(region, state, setOfflineInZK, forceNewPlan, hijack);
     }
@@ -1392,8 +1393,9 @@ public class AssignmentManager extends ZooKeeperListener {
       this.regionsInTransition.put(encodedName, state);
     } else {
       // If we are reassigning the node do not force in-memory state to OFFLINE.
-      // Based on the znode state we will decide if to change in-memory state to
-      // OFFLINE or not. It will be done before setting znode to OFFLINE state.
+      // Based on the znode state we will decide if to change
+      // in-memory state to OFFLINE or not. It will
+      // be done before setting the znode to OFFLINE state.
       if (!hijack) {
         LOG.debug("Forcing OFFLINE; was=" + state);
         state.update(RegionState.State.OFFLINE);
@@ -1417,7 +1419,8 @@ public class AssignmentManager extends ZooKeeperListener {
       if (setOfflineInZK) {
         // get the version of the znode after setting it to OFFLINE.
         // versionOfOfflineNode will be -1 if the znode was not set to OFFLINE
-        versionOfOfflineNode = setOfflineInZooKeeper(state, hijack);
+        versionOfOfflineNode = setOfflineInZooKeeper(state,
+            hijack);
         if(versionOfOfflineNode != -1){
           if (isDisabledorDisablingRegionInRIT(region)) {
             return;
@@ -1526,7 +1529,8 @@ public class AssignmentManager extends ZooKeeperListener {
    * @return the version of the offline node if setting of the OFFLINE node was
    *         successful, -1 otherwise.
    */
-  int setOfflineInZooKeeper(final RegionState state, boolean hijack) {
+  int setOfflineInZooKeeper(final RegionState state,
+      boolean hijack) {
     // In case of reassignment the current state in memory need not be
     // OFFLINE. 
     if (!hijack && !state.isClosed() && !state.isOffline()) {
@@ -1739,7 +1743,7 @@ public class AssignmentManager extends ZooKeeperListener {
       region.getRegionNameAsString() + " (offlining)");
     synchronized (this.regions) {
       // Check if this region is currently assigned
-      if (!this.regions.containsKey(region)) {
+      if (!regions.containsKey(region)) {
         LOG.debug("Attempted to unassign region " +
           region.getRegionNameAsString() + " but it is not " +
           "currently assigned anywhere");
@@ -2714,7 +2718,6 @@ public class AssignmentManager extends ZooKeeperListener {
 
     return matchAM;
   }
-
   /**
    * Process shutdown server removing any assignments.
    * @param sn Server that went down.
