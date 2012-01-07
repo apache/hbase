@@ -53,7 +53,6 @@ public class ServerShutdownHandler extends EventHandler {
   private final ServerName serverName;
   private final MasterServices services;
   private final DeadServer deadServers;
-  private final boolean shouldSplitHlog; // whether to split HLog or not
 
   public ServerShutdownHandler(final Server server, final MasterServices services,
       final DeadServer deadServers, final ServerName serverName,
@@ -73,7 +72,6 @@ public class ServerShutdownHandler extends EventHandler {
     if (!this.deadServers.contains(this.serverName)) {
       LOG.warn(this.serverName + " is NOT in deadservers; it should be!");
     }
-    this.shouldSplitHlog = shouldSplitHlog;
   }
 
   @Override
@@ -186,7 +184,7 @@ public class ServerShutdownHandler extends EventHandler {
         LOG.info("Server " + serverName +
             " was carrying ROOT. Trying to assign.");
         this.services.getAssignmentManager().
-        regionOffline(HRegionInfo.ROOT_REGIONINFO);
+          regionOffline(HRegionInfo.ROOT_REGIONINFO);
         verifyAndAssignRootWithRetries();
       }
 
@@ -195,7 +193,7 @@ public class ServerShutdownHandler extends EventHandler {
         LOG.info("Server " + serverName +
           " was carrying META. Trying to assign.");
         this.services.getAssignmentManager().
-        regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
+          regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
         this.services.getAssignmentManager().assignMeta();
       }
 
@@ -228,9 +226,8 @@ public class ServerShutdownHandler extends EventHandler {
       // OFFLINE? -- and then others after like CLOSING that depend on log
       // splitting.
       List<RegionState> regionsInTransition =
-        this.services.getAssignmentManager()
-        .processServerShutdown(this.serverName);
-
+        this.services.getAssignmentManager().
+          processServerShutdown(this.serverName);
 
       // Wait on meta to come online; we need it to progress.
       // TODO: Best way to hold strictly here?  We should build this retry logic
@@ -267,8 +264,8 @@ public class ServerShutdownHandler extends EventHandler {
       for (RegionState rit : regionsInTransition) {
         if (!rit.isClosing() && !rit.isPendingClose()) {
           LOG.debug("Removed " + rit.getRegion().getRegionNameAsString() +
-          " from list of regions to assign because in RIT" + " region state: "
-          + rit.getState());
+          " from list of regions to assign because in RIT; region state: " +
+          rit.getState());
           if (hris != null) hris.remove(rit.getRegion());
         }
       }
