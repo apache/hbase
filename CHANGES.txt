@@ -510,6 +510,9 @@ Release 0.92.0 - Unreleased
    HBASE-4357  Region stayed in transition - in closing state (Ming Ma)
    HBASE-5088  A concurrency issue on SoftValueSortedMap (Jieshan Bean and Lars H)
    HBASE-5141  Memory leak in MonitoredRPCHandlerImpl
+   HBASE-5052  The path where a dynamically loaded coprocessor jar is copied on the
+               local file system depends on the region name (and implicitly, the
+               start key) Andrei Dragomir
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

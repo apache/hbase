@@ -111,7 +111,7 @@ public class RegionCoprocessorHost
       final RegionServerServices rsServices, final Configuration conf) {
     this.rsServices = rsServices;
     this.region = region;
-    this.pathPrefix = this.region.getRegionNameAsString().replace(',', '_');
+    this.pathPrefix = Integer.toString(this.region.getRegionInfo().hashCode());
 
     // load system default cp's from configuration.
     loadSystemCoprocessors(conf, REGION_COPROCESSOR_CONF_KEY);
