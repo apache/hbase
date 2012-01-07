@@ -861,6 +861,7 @@ Release 0.90.6 - Unreleased
    HBASE-4970  Add a parameter so that keepAliveTime of Htable thread pool can be changed (gaojinchao)
    HBASE-5060  HBase client is blocked forever (Jinchao)
    HBASE-5009  Failure of creating split dir if it already exists prevents splits from happening further
+   HBASE-5041  Major compaction on non existing table does not throw error (Shrijeet)
 
 Release 0.90.5 - Released
 
