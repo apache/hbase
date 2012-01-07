@@ -509,6 +509,7 @@ Release 0.92.0 - Unreleased
    HBASE-5081  Distributed log splitting deleteNode races against splitLog retry (Prakash)
    HBASE-4357  Region stayed in transition - in closing state (Ming Ma)
    HBASE-5088  A concurrency issue on SoftValueSortedMap (Jieshan Bean and Lars H)
+   HBASE-5141  Memory leak in MonitoredRPCHandlerImpl
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
