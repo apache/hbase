@@ -1343,7 +1343,6 @@ public abstract class HBaseServer implements RpcServer {
                 errorClass, error);
           }
           call.sendResponseIfReady();
-          status.markComplete("Sent response");
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
             LOG.info(getName() + " caught: " +
