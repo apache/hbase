@@ -106,9 +106,9 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   }
 
   public V get(Object key) {
-    synchronized (sync) {
+    synchronized(sync) {
       checkReferences();
-      SoftValue<K, V> value = this.internalMap.get(key);
+      SoftValue<K,V> value = this.internalMap.get(key);
       if (value == null) {
         return null;
       }
@@ -121,9 +121,9 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   }
 
   public V remove(Object key) {
-    synchronized (sync) {
+    synchronized(sync) {
       checkReferences();
-      SoftValue<K, V> value = this.internalMap.remove(key);
+      SoftValue<K,V> value = this.internalMap.remove(key);
       return value == null ? null : value.get();
     }
   }
@@ -225,10 +225,10 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   }
 
   public Collection<V> values() {
-    synchronized (sync) {
+    synchronized(sync) {
       checkReferences();
       ArrayList<V> hardValues = new ArrayList<V>();
-      for (SoftValue<K, V> softValue : this.internalMap.values()) {
+      for (SoftValue<K,V> softValue : this.internalMap.values()) {
         hardValues.add(softValue.get());
       }
       return hardValues;
