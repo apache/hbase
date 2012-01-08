@@ -19,16 +19,17 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 /**
  * A SortedMap implementation that uses Soft Reference values
@@ -40,7 +41,8 @@ import java.util.TreeSet;
  */
 public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   private final SortedMap<K, SoftValue<K,V>> internalMap;
-  private final ReferenceQueue rq = new ReferenceQueue();
+  private final ReferenceQueue<V> rq = new ReferenceQueue<V>();
+  private Object sync;
 
   /** Constructor */
   public SoftValueSortedMap() {
@@ -55,11 +57,21 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
     this(new TreeMap<K, SoftValue<K,V>>(c));
   }
 
-  /** For headMap and tailMap support
-   * @param original object to wrap
+  /** Internal constructor
+   * @param original object to wrap and synchronize on
    */
   private SoftValueSortedMap(SortedMap<K,SoftValue<K,V>> original) {
+    this(original, original);
+  }
+
+  /** Internal constructor
+   * For headMap, tailMap, and subMap support
+   * @param original object to wrap
+   * @param sync object to synchronize on
+   */
+  private SoftValueSortedMap(SortedMap<K,SoftValue<K,V>> original, Object sync) {
     this.internalMap = original;
+    this.sync = sync;
   }
 
   /**
@@ -68,127 +80,155 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
    * Internally these call checkReferences on each access.
    * @return How many references cleared.
    */
+  @SuppressWarnings("unchecked")
   private int checkReferences() {
     int i = 0;
-    for (Object obj; (obj = this.rq.poll()) != null;) {
+    for (Reference<? extends V> ref; (ref = this.rq.poll()) != null;) {
       i++;
-      //noinspection unchecked
-      this.internalMap.remove(((SoftValue<K,V>)obj).key);
+      this.internalMap.remove(((SoftValue<K,V>)ref).key);
     }
     return i;
   }
 
-  public synchronized V put(K key, V value) {
-    checkReferences();
-    SoftValue<K,V> oldValue = this.internalMap.put(key,
-      new SoftValue<K,V>(key, value, this.rq));
-    return oldValue == null ? null : oldValue.get();
+  public V put(K key, V value) {
+    synchronized(sync) {
+      checkReferences();
+      SoftValue<K,V> oldValue = this.internalMap.put(key,
+        new SoftValue<K,V>(key, value, this.rq));
+      return oldValue == null ? null : oldValue.get();
+    }
   }
 
-  @SuppressWarnings("unchecked")
-  public synchronized void putAll(Map map) {
+  @Override
+  public void putAll(Map<? extends K, ? extends V> m) {
     throw new RuntimeException("Not implemented");
   }
 
-  @SuppressWarnings({"SuspiciousMethodCalls"})
-  public synchronized V get(Object key) {
-    checkReferences();
-    SoftValue<K,V> value = this.internalMap.get(key);
-    if (value == null) {
-      return null;
+  public V get(Object key) {
+    synchronized(sync) {
+      checkReferences();
+      SoftValue<K,V> value = this.internalMap.get(key);
+      if (value == null) {
+        return null;
+      }
+      if (value.get() == null) {
+        this.internalMap.remove(key);
+        return null;
+      }
+      return value.get();
     }
-    if (value.get() == null) {
-      this.internalMap.remove(key);
-      return null;
+  }
+
+  public V remove(Object key) {
+    synchronized(sync) {
+      checkReferences();
+      SoftValue<K,V> value = this.internalMap.remove(key);
+      return value == null ? null : value.get();
     }
-    return value.get();
   }
 
-  public synchronized V remove(Object key) {
-    checkReferences();
-    SoftValue<K,V> value = this.internalMap.remove(key);
-    return value == null ? null : value.get();
+  public boolean containsKey(Object key) {
+    synchronized(sync) {
+      checkReferences();
+      return this.internalMap.containsKey(key);
+    }
   }
 
-  public synchronized boolean containsKey(Object key) {
-    checkReferences();
-    return this.internalMap.containsKey(key);
-  }
-
-  public synchronized boolean containsValue(Object value) {
-/*    checkReferences();
-    return internalMap.containsValue(value);*/
+  public boolean containsValue(Object value) {
     throw new UnsupportedOperationException("Don't support containsValue!");
   }
 
-  public synchronized K firstKey() {
-    checkReferences();
-    return internalMap.firstKey();
+  public K firstKey() {
+    synchronized(sync) {
+      checkReferences();
+      return internalMap.firstKey();
+    }
   }
 
-  public synchronized K lastKey() {
-    checkReferences();
-    return internalMap.lastKey();
+  public K lastKey() {
+    synchronized(sync) {
+      checkReferences();
+      return internalMap.lastKey();
+    }
   }
 
-  public synchronized SoftValueSortedMap<K,V> headMap(K key) {
-    checkReferences();
-    return new SoftValueSortedMap<K,V>(this.internalMap.headMap(key));
+  public SoftValueSortedMap<K,V> headMap(K key) {
+    synchronized(sync) {
+      checkReferences();
+      return new SoftValueSortedMap<K,V>(this.internalMap.headMap(key), sync);
+    }
   }
 
-  public synchronized SoftValueSortedMap<K,V> tailMap(K key) {
-    checkReferences();
-    return new SoftValueSortedMap<K,V>(this.internalMap.tailMap(key));
+  public SoftValueSortedMap<K,V> tailMap(K key) {
+    synchronized(sync) {
+      checkReferences();
+      return new SoftValueSortedMap<K,V>(this.internalMap.tailMap(key), sync);
+    }
   }
 
-  public synchronized SoftValueSortedMap<K,V> subMap(K fromKey, K toKey) {
-    checkReferences();
-    return new SoftValueSortedMap<K,V>(this.internalMap.subMap(fromKey, toKey));
+  public SoftValueSortedMap<K,V> subMap(K fromKey, K toKey) {
+    synchronized(sync) {
+      checkReferences();
+      return new SoftValueSortedMap<K,V>(this.internalMap.subMap(fromKey,
+          toKey), sync);
+    }
   }
 
-  public synchronized boolean isEmpty() {
-    checkReferences();
-    return this.internalMap.isEmpty();
+  public boolean isEmpty() {
+    synchronized(sync) {
+      checkReferences();
+      return this.internalMap.isEmpty();
+    }
   }
 
-  public synchronized int size() {
-    checkReferences();
-    return this.internalMap.size();
+  public int size() {
+    synchronized(sync) {
+      checkReferences();
+      return this.internalMap.size();
+    }
   }
 
-  public synchronized void clear() {
-    checkReferences();
-    this.internalMap.clear();
+  public void clear() {
+    synchronized(sync) {
+      checkReferences();
+      this.internalMap.clear();
+    }
   }
 
-  public synchronized Set<K> keySet() {
-    checkReferences();
-    return this.internalMap.keySet();
+  public Set<K> keySet() {
+    synchronized(sync) {
+      checkReferences();
+      // this is not correct as per SortedMap contract (keySet should be
+      // modifiable)
+      // needed here so that another thread cannot modify the keyset
+      // without locking
+      return Collections.unmodifiableSet(this.internalMap.keySet());
+    }
   }
 
-  @SuppressWarnings("unchecked")
-  public synchronized Comparator comparator() {
+  public Comparator<? super K> comparator() {
     return this.internalMap.comparator();
   }
 
-  public synchronized Set<Map.Entry<K,V>> entrySet() {
+  public Set<Map.Entry<K,V>> entrySet() {
     throw new RuntimeException("Not implemented");
   }
 
-  public synchronized Collection<V> values() {
-    checkReferences();
-    Collection<SoftValue<K,V>> softValues = this.internalMap.values();
-    ArrayList<V> hardValues = new ArrayList<V>();
-    for(SoftValue<K,V> softValue : softValues) {
-      hardValues.add(softValue.get());
+  public Collection<V> values() {
+    synchronized(sync) {
+      checkReferences();
+      ArrayList<V> hardValues = new ArrayList<V>();
+      for(SoftValue<K,V> softValue : this.internalMap.values()) {
+        hardValues.add(softValue.get());
+      }
+      return hardValues;
     }
-    return hardValues;
   }
 
   private static class SoftValue<K,V> extends SoftReference<V> {
     final K key;
 
-    SoftValue(K key, V value, ReferenceQueue q) {
+    SoftValue(K key, V value, ReferenceQueue<V> q) {
       super(value, q);
       this.key = key;
     }

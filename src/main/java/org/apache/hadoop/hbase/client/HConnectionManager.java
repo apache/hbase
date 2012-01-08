@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -464,9 +465,9 @@ public class HConnectionManager {
      * Map of table to table {@link HRegionLocation}s.  The table key is made
      * by doing a {@link Bytes#mapKey(byte[])} of the table's name.
      */
-    private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>>
+    private final Map<Integer, SortedMap<byte [], HRegionLocation>>
       cachedRegionLocations =
-        new HashMap<Integer, SoftValueSortedMap<byte [], HRegionLocation>>();
+        new HashMap<Integer, SortedMap<byte [], HRegionLocation>>();
 
     // region cache prefetch is enabled by default. this set contains all
     // tables whose region cache prefetch are disabled.
@@ -1036,7 +1037,7 @@ public class HConnectionManager {
      */
     HRegionLocation getCachedLocation(final byte [] tableName,
         final byte [] row) {
-      SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
+      SortedMap<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
 
       // start to examine the cache. we can only do cache actions
@@ -1052,7 +1053,7 @@ public class HConnectionManager {
 
       // Cut the cache so that we only get the part that could contain
       // regions that match our key
-      SoftValueSortedMap<byte[], HRegionLocation> matchingRegions =
+      SortedMap<byte[], HRegionLocation> matchingRegions =
         tableLocations.headMap(row);
 
       // if that portion of the map is empty, then we're done. otherwise,
@@ -1095,7 +1096,7 @@ public class HConnectionManager {
      */
     void deleteCachedLocation(final byte [] tableName, final byte [] row) {
       synchronized (this.cachedRegionLocations) {
-        SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
+        Map<byte [], HRegionLocation> tableLocations =
             getTableLocations(tableName);
         // start to examine the cache. we can only do cache actions
         // if there's something in the cache for this table.
@@ -1118,11 +1119,11 @@ public class HConnectionManager {
      * @param tableName
      * @return Map of cached locations for passed <code>tableName</code>
      */
-    private SoftValueSortedMap<byte [], HRegionLocation> getTableLocations(
+    private SortedMap<byte [], HRegionLocation> getTableLocations(
         final byte [] tableName) {
       // find the map of cached locations for this table
       Integer key = Bytes.mapKey(tableName);
-      SoftValueSortedMap<byte [], HRegionLocation> result;
+      SortedMap<byte [], HRegionLocation> result;
       synchronized (this.cachedRegionLocations) {
         result = this.cachedRegionLocations.get(key);
         // if tableLocations for this table isn't built yet, make one
@@ -1155,7 +1156,7 @@ public class HConnectionManager {
     private void cacheLocation(final byte [] tableName,
         final HRegionLocation location) {
       byte [] startKey = location.getRegionInfo().getStartKey();
-      SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
+      Map<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
       if (tableLocations.put(startKey, location) == null) {
         LOG.debug("Cached location for " +
@@ -1483,7 +1484,7 @@ public class HConnectionManager {
     int getNumberOfCachedRegionLocations(final byte[] tableName) {
       Integer key = Bytes.mapKey(tableName);
       synchronized (this.cachedRegionLocations) {
-        SoftValueSortedMap<byte[], HRegionLocation> tableLocs =
+        Map<byte[], HRegionLocation> tableLocs =
           this.cachedRegionLocations.get(key);
 
         if (tableLocs == null) {
