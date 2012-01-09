@@ -207,6 +207,14 @@ to ensure well-formedness of your document after an edit session.
             <primary>Hadoop</primary>
           </indexterm></title>
 
+          <note>
+          <title>On Hadoop Versions?</title>
+          <para>The Cloudera blog post <link xlink:href="http://www.cloudera.com/blog/2012/01/an-update-on-apache-hadoop-1-0/">An update on Apache Hadoop 1.0</link>
+          by Charles Zedlweski has a nice exposition on how all the Hadoop versions relate.
+          Its worth checking out if you are having trouble making sense of the
+          Hadoop version morass.
+          </para>
+          </note>
           <para>
               This version of HBase will only run on <link
         xlink:href="http://hadoop.apache.org/common/releases.html">Hadoop
