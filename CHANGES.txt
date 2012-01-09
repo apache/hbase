@@ -513,6 +513,8 @@ Release 0.92.0 - Unreleased
    HBASE-5052  The path where a dynamically loaded coprocessor jar is copied on the
                local file system depends on the region name (and implicitly, the
                start key) Andrei Dragomir
+   HBASE-5152  Region is on service before completing initialization when doing rollback of split,
+               it will affect read correctness (Chunhui)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
