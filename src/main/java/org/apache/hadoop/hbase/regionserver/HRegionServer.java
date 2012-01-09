@@ -1433,6 +1433,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return this.metrics;
   }
 
+  /**
+   * @return Master address tracker instance.
+   */
+  public MasterAddressTracker getMasterAddressManager() {
+    return this.masterAddressManager;
+  }
+
   /*
    * Start maintanence Threads, Server, Worker and lease checker threads.
    * Install an UncaughtExceptionHandler that calls abort of RegionServer if we
