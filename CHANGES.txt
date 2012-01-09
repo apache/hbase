@@ -473,6 +473,8 @@ Release 0.92.0 - Unreleased
    HBASE-5081  Distributed log splitting deleteNode races against splitLog retry (Prakash)
    HBASE-4357  Region stayed in transition - in closing state (Ming Ma)
    HBASE-5088  A concurrency issue on SoftValueSortedMap (Jieshan Bean and Lars H)
+   HBASE-5152  Region is on service before completing initialization when doing rollback of split,
+               it will affect read correctness (Chunhui)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected

@@ -50,7 +50,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -116,6 +115,7 @@ import org.cliffc.high_scale_lib.Counter;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ClassToInstanceMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.MutableClassToInstanceMap;
 
 /**
@@ -513,9 +513,6 @@ public class HRegion implements HeapSize { // , Writable{
       status.setStatus("Running coprocessor pre-open hook");
       coprocessorHost.preOpen();
     }
-    // A region can be reopened if failed a split; reset flags
-    this.closing.set(false);
-    this.closed.set(false);
 
     // Write HRI to a file in case we need to recover .META.
     status.setStatus("Writing region info on filesystem");
@@ -587,11 +584,15 @@ public class HRegion implements HeapSize { // , Writable{
     long nextSeqid = maxSeqId + 1;
     LOG.info("Onlined " + this.toString() + "; next sequenceid=" + nextSeqid);
 
+    // A region can be reopened if failed a split; reset flags
+    this.closing.set(false);
+    this.closed.set(false);
 
     if (coprocessorHost != null) {
       status.setStatus("Running coprocessor post-open hooks");
       coprocessorHost.postOpen();
     }
+
     status.markComplete("Region opened successfully");
     return nextSeqid;
   }
