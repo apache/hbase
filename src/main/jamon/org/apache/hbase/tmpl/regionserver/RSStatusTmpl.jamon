@@ -53,6 +53,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
   RegionServerMetrics metrics = regionServer.getMetrics();
   List<HRegionInfo> onlineRegions = regionServer.getOnlineRegions();
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;
+  int masterInfoPort = regionServer.getConfiguration().getInt("hbase.master.info.port", 60010);
 </%java>
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- Commenting out DOCTYPE so our blue outline shows on hadoop 0.20.205.0, etc.
@@ -95,9 +96,20 @@ org.apache.hadoop.hbase.HBaseConfiguration;
   <td>
     <% java.util.Arrays.toString(regionServer.getCoprocessors()) %>
   </td>
-  <td>Coprocessors currently loaded by this regionserver</td>
+  <td>Coprocessors currently loaded by this regionserver</td></tr>
 <tr><td>RS Start Time</td><td><% new Date(regionServer.getStartcode()) %></td><td>Date stamp of when this region server was started</td></tr>
 </tr>
+<tr><td>HBase Master</td><td>
+<%if (masterInfoPort < 0) %>
+No hbase.master.info.port found
+<%else>
+<%java>
+String host = regionServer.getMasterAddressManager().getMasterAddress().getHostname() + ":" + masterInfoPort;
+String url = "http://" + host + "/";
+</%java>
+<a href="<% url %>"><% host %></a>
+</%if>
+</td><td>Address of HBase Master</td></tr>
 </table>
 
 <& ../common/TaskMonitorTmpl; filter = filter &>

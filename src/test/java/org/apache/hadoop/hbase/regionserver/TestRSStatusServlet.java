@@ -55,6 +55,8 @@ public class TestRSStatusServlet {
     new HServerInfo(fakeAddress, FAKE_WEB_PORT);
   private RegionServerMetrics metrics =
     new RegionServerMetrics();
+  private ServerName fakeMasterAddress =
+    new ServerName("localhost", 60010, 1212121212);
   
   @SuppressWarnings("deprecation")
   @Before
@@ -69,6 +71,11 @@ public class TestRSStatusServlet {
     ZooKeeperWatcher zkw = Mockito.mock(ZooKeeperWatcher.class);
     Mockito.doReturn("fakequorum").when(zkw).getQuorum();
     Mockito.doReturn(zkw).when(rs).getZooKeeper();
+
+    // Fake MasterAddressTracker
+    MasterAddressTracker mat = Mockito.mock(MasterAddressTracker.class);
+    Mockito.doReturn(fakeMasterAddress).when(mat).getMasterAddress();
+    Mockito.doReturn(mat).when(rs).getMasterAddressManager();
   }
   
   @Test
@@ -85,7 +92,7 @@ public class TestRSStatusServlet {
         );
     Mockito.doReturn(regions).when(rs).getOnlineRegions();
     
-    new RSStatusTmpl().render(new StringWriter(), rs);    
+    new RSStatusTmpl().render(new StringWriter(), rs);
   }
   
   
