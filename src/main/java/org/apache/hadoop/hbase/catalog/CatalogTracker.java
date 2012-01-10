@@ -98,6 +98,10 @@ public class CatalogTracker {
   // the other end). I made https://issues.apache.org/jira/browse/HBASE-4495 for
   // doing CT fixup. St.Ack 09/30/2011.
   //
+
+  // TODO: Timeouts have never been as advertised in here and its worse now
+  // with retries; i.e. the HConnection retries and pause goes ahead whatever
+  // the passed timeout is.  Fix.
   private static final Log LOG = LogFactory.getLog(CatalogTracker.class);
   private final HConnection connection;
   private final ZooKeeperWatcher zookeeper;
@@ -620,6 +624,8 @@ public class CatalogTracker {
       return hostingServer.getRegionInfo(regionName) != null;
     } catch (ConnectException e) {
       t = e;
+    } catch (RetriesExhaustedException e) {
+      t = e;
     } catch (RemoteException e) {
       IOException ioe = e.unwrapRemoteException();
       t = ioe;
@@ -679,6 +685,9 @@ public class CatalogTracker {
       // Pass
     } catch (ServerNotRunningYetException e) {
       // Pass -- remote server is not up so can't be carrying .META.
+    } catch (RetriesExhaustedException e) {
+      // Pass -- failed after bunch of retries.
+      LOG.debug("Failed verify meta region location after retries", e);
     }
     return connection != null;
   }

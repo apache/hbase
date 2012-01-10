@@ -20,9 +20,6 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,16 +32,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerCallable;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,9 +56,10 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import com.google.common.collect.Multimap;
-import org.junit.experimental.categories.Category;
 
 /**
  * Test cases for the atomic load error handling of the bulk load functionality.
@@ -226,13 +231,13 @@ public class TestLoadIncrementalHFilesSplitRecovery {
         util.getConfiguration()) {
 
       protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
-          byte[] tableName, final byte[] first, Collection<LoadQueueItem> lqis) throws IOException {
+          byte[] tableName, final byte[] first, Collection<LoadQueueItem> lqis)
+      throws IOException {
         int i = attmptedCalls.incrementAndGet();
         if (i == 1) {
-          HConnection errConn = mock(HConnection.class);
+          HConnection errConn = null;
           try {
-            doThrow(new IOException("injecting bulk load error")).when(errConn)
-                .getRegionServerWithRetries((ServerCallable) anyObject());
+            errConn = getMockedConnection(util.getConfiguration());
           } catch (Exception e) {
             LOG.fatal("mocking cruft, should never happen", e);
             throw new RuntimeException("mocking cruft, should never happen");
@@ -251,6 +256,27 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     lih.doBulkLoad(dir, t);
 
     fail("doBulkLoad should have thrown an exception");
+  }
+
+  private HConnection getMockedConnection(final Configuration conf)
+  throws IOException {
+    HConnection c = Mockito.mock(HConnection.class);
+    Mockito.when(c.getConfiguration()).thenReturn(conf);
+    Mockito.doNothing().when(c).close();
+    // Make it so we return a particular location when asked.
+    final HRegionLocation loc = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO,
+        "example.org", 1234);
+    Mockito.when(c.getRegionLocation((byte[]) Mockito.any(),
+        (byte[]) Mockito.any(), Mockito.anyBoolean())).
+      thenReturn(loc);
+    Mockito.when(c.locateRegion((byte[]) Mockito.any(), (byte[]) Mockito.any())).
+      thenReturn(loc);
+    HRegionInterface hri = Mockito.mock(HRegionInterface.class);
+    Mockito.when(hri.bulkLoadHFiles(Mockito.anyList(), (byte [])Mockito.any())).
+      thenThrow(new IOException("injecting bulk load error"));
+    Mockito.when(c.getHRegionConnection(Mockito.anyString(), Mockito.anyInt())).
+      thenReturn(hri);
+    return c;
   }
 
   /**

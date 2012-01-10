@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -135,7 +134,7 @@ public class TestHRegionServerBulkLoad {
       // bulk load HFiles
       HConnection conn = UTIL.getHBaseAdmin().getConnection();
       byte[] tbl = Bytes.toBytes(tableName);
-      conn.getRegionServerWithRetries(new ServerCallable<Void>(conn, tbl, Bytes
+      new ServerCallable<Void>(conn, tbl, Bytes
           .toBytes("aaa")) {
         @Override
         public Void call() throws Exception {
@@ -145,12 +144,12 @@ public class TestHRegionServerBulkLoad {
           server.bulkLoadHFiles(famPaths, regionName);
           return null;
         }
-      });
+      }.withRetries();
 
       // Periodically do compaction to reduce the number of open file handles.
       if (numBulkLoads.get() % 10 == 0) {
         // 10 * 50 = 500 open file handles!
-        conn.getRegionServerWithRetries(new ServerCallable<Void>(conn, tbl,
+        new ServerCallable<Void>(conn, tbl,
             Bytes.toBytes("aaa")) {
           @Override
           public Void call() throws Exception {
@@ -160,7 +159,7 @@ public class TestHRegionServerBulkLoad {
             numCompactions.incrementAndGet();
             return null;
           }
-        });
+        }.withRetries();
       }
     }
   }

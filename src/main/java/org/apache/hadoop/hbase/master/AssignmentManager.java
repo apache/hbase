@@ -1393,9 +1393,11 @@ public class AssignmentManager extends ZooKeeperListener {
       this.regionsInTransition.put(encodedName, state);
     } else {
       // If we are reassigning the node do not force in-memory state to OFFLINE.
-      // Based on the znode state we will decide if to change
-      // in-memory state to OFFLINE or not. It will
-      // be done before setting the znode to OFFLINE state.
+      // Based on the znode state we will decide if to change in-memory state to
+      // OFFLINE or not. It will be done before setting znode to OFFLINE state.
+
+      // We often get here with state == CLOSED because ClosedRegionHandler will
+      // assign on its tail as part of the handling of a region close.
       if (!hijack) {
         LOG.debug("Forcing OFFLINE; was=" + state);
         state.update(RegionState.State.OFFLINE);

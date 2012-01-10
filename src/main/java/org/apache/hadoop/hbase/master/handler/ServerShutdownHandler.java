@@ -168,12 +168,14 @@ public class ServerShutdownHandler extends EventHandler {
   @Override
   public void process() throws IOException {
     final ServerName serverName = this.serverName;
-
     try {
-
       try {
-        LOG.info("Splitting logs for " + serverName);
-        this.services.getMasterFileSystem().splitLog(serverName);
+        if (this.shouldSplitHlog) {
+          LOG.info("Splitting logs for " + serverName);
+          this.services.getMasterFileSystem().splitLog(serverName);
+        } else {
+          LOG.info("Skipping log splitting for " + serverName);
+        }
       } catch (IOException ioe) {
         this.services.getExecutorService().submit(this);
         this.deadServers.add(serverName);
@@ -186,7 +188,7 @@ public class ServerShutdownHandler extends EventHandler {
         LOG.info("Server " + serverName +
             " was carrying ROOT. Trying to assign.");
         this.services.getAssignmentManager().
-        regionOffline(HRegionInfo.ROOT_REGIONINFO);
+          regionOffline(HRegionInfo.ROOT_REGIONINFO);
         verifyAndAssignRootWithRetries();
       }
 
@@ -195,7 +197,7 @@ public class ServerShutdownHandler extends EventHandler {
         LOG.info("Server " + serverName +
           " was carrying META. Trying to assign.");
         this.services.getAssignmentManager().
-        regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
+          regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
         this.services.getAssignmentManager().assignMeta();
       }
 
@@ -228,9 +230,8 @@ public class ServerShutdownHandler extends EventHandler {
       // OFFLINE? -- and then others after like CLOSING that depend on log
       // splitting.
       List<RegionState> regionsInTransition =
-        this.services.getAssignmentManager()
-        .processServerShutdown(this.serverName);
-
+        this.services.getAssignmentManager().
+          processServerShutdown(this.serverName);
 
       // Wait on meta to come online; we need it to progress.
       // TODO: Best way to hold strictly here?  We should build this retry logic
@@ -252,7 +253,7 @@ public class ServerShutdownHandler extends EventHandler {
         try {
           this.server.getCatalogTracker().waitForMeta();
           hris = MetaReader.getServerUserRegions(this.server.getCatalogTracker(),
-              this.serverName);
+            this.serverName);
           break;
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
@@ -267,8 +268,8 @@ public class ServerShutdownHandler extends EventHandler {
       for (RegionState rit : regionsInTransition) {
         if (!rit.isClosing() && !rit.isPendingClose()) {
           LOG.debug("Removed " + rit.getRegion().getRegionNameAsString() +
-          " from list of regions to assign because in RIT" + " region state: "
-          + rit.getState());
+          " from list of regions to assign because in RIT; region state: " +
+          rit.getState());
           if (hris != null) hris.remove(rit.getRegion());
         }
       }

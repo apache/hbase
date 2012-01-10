@@ -72,7 +72,11 @@ public class TestCatalogJanitor {
       // Mock an HConnection and a HRegionInterface implementation.  Have the
       // HConnection return the HRI.  Have the HRI return a few mocked up responses
       // to make our test work.
-      this.connection = HConnectionTestingUtility.getMockedConnection(this.c);
+      this.connection =
+        HConnectionTestingUtility.getMockedConnectionAndDecorate(this.c,
+          Mockito.mock(HRegionInterface.class),
+          new ServerName("example.org,12345,6789"),
+          HRegionInfo.FIRST_META_REGIONINFO);
       // Set hbase.rootdir into test dir.
       FileSystem fs = FileSystem.get(this.c);
       Path rootdir = fs.makeQualified(new Path(this.c.get(HConstants.HBASE_DIR)));
