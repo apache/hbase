@@ -476,6 +476,7 @@ Release 0.92.0 - Unreleased
    HBASE-5152  Region is on service before completing initialization when doing rollback of split,
                it will affect read correctness (Chunhui)
    HBASE-5137  MasterFileSystem.splitLog() should abort even if waitOnSafeMode() throws IOException(Ted)
+   HBASE-5121  MajorCompaction may affect scan's correctness (chunhui shen and Lars H)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
