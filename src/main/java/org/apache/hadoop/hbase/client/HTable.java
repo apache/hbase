@@ -395,7 +395,6 @@ public class HTable implements HTableInterface, Closeable {
    * @return Pair of arrays of region starting and ending row keys
    * @throws IOException if a remote or network exception occurs
    */
-  @SuppressWarnings("unchecked")
   public Pair<byte[][],byte[][]> getStartEndKeys() throws IOException {
     final List<byte[]> startKeyList = new ArrayList<byte[]>();
     final List<byte[]> endKeyList = new ArrayList<byte[]>();
@@ -569,13 +568,12 @@ public class HTable implements HTableInterface, Closeable {
    @Override
    public Result getRowOrBefore(final byte[] row, final byte[] family)
    throws IOException {
-     return connection.getRegionServerWithRetries(
-         new ServerCallable<Result>(connection, tableName, row, operationTimeout) {
+     return new ServerCallable<Result>(connection, tableName, row, operationTimeout) {
        public Result call() throws IOException {
          return server.getClosestRowBefore(location.getRegionInfo().getRegionName(),
            row, family);
        }
-     });
+     }.withRetries();
    }
 
    /**
@@ -616,13 +614,11 @@ public class HTable implements HTableInterface, Closeable {
    */
   @Override
   public Result get(final Get get) throws IOException {
-    return connection.getRegionServerWithRetries(
-        new ServerCallable<Result>(connection, tableName, get.getRow(), operationTimeout) {
+    return new ServerCallable<Result>(connection, tableName, get.getRow(), operationTimeout) {
           public Result call() throws IOException {
             return server.get(location.getRegionInfo().getRegionName(), get);
           }
-        }
-    );
+        }.withRetries();
   }
 
   /**
@@ -672,14 +668,12 @@ public class HTable implements HTableInterface, Closeable {
   @Override
   public void delete(final Delete delete)
   throws IOException {
-    connection.getRegionServerWithRetries(
-        new ServerCallable<Boolean>(connection, tableName, delete.getRow(), operationTimeout) {
+    new ServerCallable<Boolean>(connection, tableName, delete.getRow(), operationTimeout) {
           public Boolean call() throws IOException {
             server.delete(location.getRegionInfo().getRegionName(), delete);
             return null; // FindBugs NP_BOOLEAN_RETURN_NULL
           }
-        }
-    );
+        }.withRetries();
   }
 
   /**
@@ -749,14 +743,12 @@ public class HTable implements HTableInterface, Closeable {
       throw new IOException(
           "Invalid arguments to append, no columns specified");
     }
-    return connection.getRegionServerWithRetries(
-        new ServerCallable<Result>(connection, tableName, append.getRow(), operationTimeout) {
+    return new ServerCallable<Result>(connection, tableName, append.getRow(), operationTimeout) {
           public Result call() throws IOException {
             return server.append(
                 location.getRegionInfo().getRegionName(), append);
           }
-        }
-    );    
+        }.withRetries();
   }
 
   /**
@@ -768,14 +760,12 @@ public class HTable implements HTableInterface, Closeable {
       throw new IOException(
           "Invalid arguments to increment, no columns specified");
     }
-    return connection.getRegionServerWithRetries(
-        new ServerCallable<Result>(connection, tableName, increment.getRow(), operationTimeout) {
+    return new ServerCallable<Result>(connection, tableName, increment.getRow(), operationTimeout) {
           public Result call() throws IOException {
             return server.increment(
                 location.getRegionInfo().getRegionName(), increment);
           }
-        }
-    );
+        }.withRetries();
   }
 
   /**
@@ -805,15 +795,13 @@ public class HTable implements HTableInterface, Closeable {
       throw new IOException(
           "Invalid arguments to incrementColumnValue", npe);
     }
-    return connection.getRegionServerWithRetries(
-        new ServerCallable<Long>(connection, tableName, row, operationTimeout) {
+    return new ServerCallable<Long>(connection, tableName, row, operationTimeout) {
           public Long call() throws IOException {
             return server.incrementColumnValue(
                 location.getRegionInfo().getRegionName(), row, family,
                 qualifier, amount, writeToWAL);
           }
-        }
-    );
+        }.withRetries();
   }
 
   /**
@@ -824,14 +812,12 @@ public class HTable implements HTableInterface, Closeable {
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Put put)
   throws IOException {
-    return connection.getRegionServerWithRetries(
-        new ServerCallable<Boolean>(connection, tableName, row, operationTimeout) {
+    return new ServerCallable<Boolean>(connection, tableName, row, operationTimeout) {
           public Boolean call() throws IOException {
             return server.checkAndPut(location.getRegionInfo().getRegionName(),
                 row, family, qualifier, value, put) ? Boolean.TRUE : Boolean.FALSE;
           }
-        }
-    );
+        }.withRetries();
   }
 
 
@@ -843,16 +829,14 @@ public class HTable implements HTableInterface, Closeable {
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Delete delete)
   throws IOException {
-    return connection.getRegionServerWithRetries(
-        new ServerCallable<Boolean>(connection, tableName, row, operationTimeout) {
+    return new ServerCallable<Boolean>(connection, tableName, row, operationTimeout) {
           public Boolean call() throws IOException {
             return server.checkAndDelete(
                 location.getRegionInfo().getRegionName(),
                 row, family, qualifier, value, delete)
             ? Boolean.TRUE : Boolean.FALSE;
           }
-        }
-    );
+        }.withRetries();
   }
 
   /**
@@ -860,14 +844,12 @@ public class HTable implements HTableInterface, Closeable {
    */
   @Override
   public boolean exists(final Get get) throws IOException {
-    return connection.getRegionServerWithRetries(
-        new ServerCallable<Boolean>(connection, tableName, get.getRow(), operationTimeout) {
+    return new ServerCallable<Boolean>(connection, tableName, get.getRow(), operationTimeout) {
           public Boolean call() throws IOException {
             return server.
                 exists(location.getRegionInfo().getRegionName(), get);
           }
-        }
-    );
+        }.withRetries();
   }
 
   /**
@@ -947,15 +929,13 @@ public class HTable implements HTableInterface, Closeable {
   @Override
   public RowLock lockRow(final byte [] row)
   throws IOException {
-    return connection.getRegionServerWithRetries(
-      new ServerCallable<RowLock>(connection, tableName, row, operationTimeout) {
+    return new ServerCallable<RowLock>(connection, tableName, row, operationTimeout) {
         public RowLock call() throws IOException {
           long lockId =
               server.lockRow(location.getRegionInfo().getRegionName(), row);
           return new RowLock(row,lockId);
         }
-      }
-    );
+      }.withRetries();
   }
 
   /**
@@ -964,15 +944,13 @@ public class HTable implements HTableInterface, Closeable {
   @Override
   public void unlockRow(final RowLock rl)
   throws IOException {
-    connection.getRegionServerWithRetries(
-      new ServerCallable<Boolean>(connection, tableName, rl.getRow(), operationTimeout) {
+    new ServerCallable<Boolean>(connection, tableName, rl.getRow(), operationTimeout) {
         public Boolean call() throws IOException {
           server.unlockRow(location.getRegionInfo().getRegionName(),
               rl.getLockId());
           return null; // FindBugs NP_BOOLEAN_RETURN_NULL
         }
-      }
-    );
+      }.withRetries();
   }
 
   /**

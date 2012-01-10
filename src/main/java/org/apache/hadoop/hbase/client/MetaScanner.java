@@ -23,21 +23,17 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
-import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
@@ -191,7 +187,7 @@ public class MetaScanner {
       }
       callable = new ScannerCallable(connection, metaTableName, scan, null);
       // Open scanner
-      connection.getRegionServerWithRetries(callable);
+      callable.withRetries();
 
       int processedRows = 0;
       try {
@@ -201,7 +197,7 @@ public class MetaScanner {
             break;
           }
           //we have all the rows here
-          Result [] rrs = connection.getRegionServerWithRetries(callable);
+          Result [] rrs = callable.withRetries();
           if (rrs == null || rrs.length == 0 || rrs[0].size() == 0) {
             break; //exit completely
           }
@@ -220,7 +216,7 @@ public class MetaScanner {
       } finally {
         // Close scanner
         callable.setClose();
-        connection.getRegionServerWithRetries(callable);
+        callable.withRetries();
       }
     } while (Bytes.compareTo(startRow, HConstants.LAST_ROW) != 0);
   }

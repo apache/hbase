@@ -253,6 +253,7 @@ public interface HConnection extends Abortable, Closeable {
    * @return an object of type T
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
+   * @deprecated Use {@link HConnectionManager#withoutRetries(ServerCallable)}
    */
   public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
@@ -265,6 +266,7 @@ public interface HConnection extends Abortable, Closeable {
    * @return an object of type T
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
+   * @deprecated Use {@link HConnectionManager#withoutRetries(ServerCallable)}
    */
   public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
@@ -373,4 +375,10 @@ public interface HConnection extends Abortable, Closeable {
    * @return true if this connection is closed
    */
   public boolean isClosed();
+
+  /**
+   * Clear any caches that pertain to server name <code>sn</code>
+   * @param sn A server name as hostname:port
+   */
+  public void clearCaches(final String sn);
 }

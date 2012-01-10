@@ -23,9 +23,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -562,7 +560,6 @@ public class HConnectionManager {
         throw new UnsupportedOperationException(
             "Unable to find region server interface " + serverClassName, e);
       }
-
       this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
           HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
       this.numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
@@ -612,16 +609,9 @@ public class HConnectionManager {
       return this.conf;
     }
 
-    private long getPauseTime(int tries) {
-      int ntries = tries;
-      if (ntries >= HConstants.RETRY_BACKOFF.length) {
-        ntries = HConstants.RETRY_BACKOFF.length - 1;
-      }
-      return this.pause * HConstants.RETRY_BACKOFF[ntries];
-    }
-
     public HMasterInterface getMaster()
     throws MasterNotRunningException, ZooKeeperConnectionException {
+      // TODO: REMOVE.  MOVE TO HBaseAdmin and redo as a Callable!!!
 
       // Check if we already have a good master connection
       try {
@@ -669,18 +659,18 @@ public class HConnectionManager {
           } catch (IOException e) {
             if (tries == numRetries - 1) {
               // This was our last chance - don't bother sleeping
-              LOG.info("getMaster attempt " + tries + " of " + this.numRetries +
+              LOG.info("getMaster attempt " + tries + " of " + numRetries +
                 " failed; no more retrying.", e);
               break;
             }
-            LOG.info("getMaster attempt " + tries + " of " + this.numRetries +
+            LOG.info("getMaster attempt " + tries + " of " + numRetries +
               " failed; retrying after sleep of " +
-              getPauseTime(tries), e);
+              ConnectionUtils.getPauseTime(this.pause, tries), e);
           }
 
           // Cannot connect to master or it is not running. Sleep & retry
           try {
-            this.masterLock.wait(getPauseTime(tries));
+            this.masterLock.wait(ConnectionUtils.getPauseTime(this.pause, tries));
           } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Thread was interrupted while trying to connect to master.");
@@ -1025,8 +1015,7 @@ public class HConnectionManager {
           throw e;
         } catch (IOException e) {
           if (e instanceof RemoteException) {
-            e = RemoteExceptionHandler.decodeRemoteException(
-                (RemoteException) e);
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
           }
           if (tries < numRetries - 1) {
             if (LOG.isDebugEnabled()) {
@@ -1035,7 +1024,7 @@ public class HConnectionManager {
                 ((metaLocation == null)? "null": "{" + metaLocation + "}") +
                 ", attempt=" + tries + " of " +
                 this.numRetries + " failed; retrying after sleep of " +
-                getPauseTime(tries) + " because: " + e.getMessage());
+                ConnectionUtils.getPauseTime(this.pause, tries) + " because: " + e.getMessage());
             }
           } else {
             throw e;
@@ -1047,7 +1036,7 @@ public class HConnectionManager {
           }
         }
         try{
-          Thread.sleep(getPauseTime(tries));
+          Thread.sleep(ConnectionUtils.getPauseTime(this.pause, tries));
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           throw new IOException("Giving up trying to location region in " +
@@ -1147,14 +1136,18 @@ public class HConnectionManager {
       }
     }
 
+    @Override
+    public void clearCaches(String sn) {
+      clearCachedLocationForServer(sn);
+    }
+
     /*
      * Delete all cached entries of a table that maps to a specific location.
      *
      * @param tablename
      * @param server
      */
-    private void clearCachedLocationForServer(
-        final String server) {
+    private void clearCachedLocationForServer(final String server) {
       boolean deletedSomething = false;
       synchronized (this.cachedRegionLocations) {
         if (!cachedServers.contains(server)) {
@@ -1338,82 +1331,33 @@ public class HConnectionManager {
 
     public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
     throws IOException, RuntimeException {
-      List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions =
-        new ArrayList<RetriesExhaustedException.ThrowableWithExtraContext>();
-      for(int tries = 0; tries < numRetries; tries++) {
-        try {
-          callable.beforeCall();
-          callable.connect(tries != 0);
-          return callable.call();
-        } catch (Throwable t) {
-          callable.shouldRetry(t);
-          t = translateException(t);
-          if (t instanceof SocketTimeoutException ||
-              t instanceof ConnectException ||
-              t instanceof RetriesExhaustedException) {
-            // if thrown these exceptions, we clear all the cache entries that
-            // map to that slow/dead server; otherwise, let cache miss and ask
-            // .META. again to find the new location
-            HRegionLocation hrl = callable.location;
-            if (hrl != null) {
-              clearCachedLocationForServer(hrl.getServerAddress().toString());
-            }
-          }
-          RetriesExhaustedException.ThrowableWithExtraContext qt =
-            new RetriesExhaustedException.ThrowableWithExtraContext(t,
-              System.currentTimeMillis(), callable.toString());
-          exceptions.add(qt);
-          if (tries == numRetries - 1) {
-            throw new RetriesExhaustedException(tries, exceptions);
-          }
-        } finally {
-          callable.afterCall();
-        }
-        try {
-          Thread.sleep(getPauseTime(tries));
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new IOException("Giving up after tries=" + tries, e);
-        }
-      }
-      return null;
+      return callable.withRetries();
     }
 
     public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
-        throws IOException, RuntimeException {
-      try {
-        callable.beforeCall();
-        callable.connect(false);
-        return callable.call();
-      } catch (Throwable t) {
-        Throwable t2 = translateException(t);
-        if (t2 instanceof IOException) {
-          throw (IOException)t2;
-        } else {
-          throw new RuntimeException(t2);
-        }
-      } finally {
-        callable.afterCall();
-      }
+    throws IOException, RuntimeException {
+      return callable.withoutRetries();
     }
 
     private <R> Callable<MultiResponse> createCallable(final HRegionLocation loc,
         final MultiAction<R> multi, final byte [] tableName) {
+      // TODO: This does not belong in here!!! St.Ack  HConnections should
+      // not be dealing in Callables; Callables have HConnections, not other
+      // way around.
       final HConnection connection = this;
       return new Callable<MultiResponse>() {
        public MultiResponse call() throws IOException {
-         return getRegionServerWithoutRetries(
-             new ServerCallable<MultiResponse>(connection, tableName, null) {
-               public MultiResponse call() throws IOException {
-                 return server.multi(multi);
-               }
-               @Override
-               public void connect(boolean reload) throws IOException {
-                 server =
-                   connection.getHRegionConnection(loc.getHostname(), loc.getPort());
-               }
+         ServerCallable<MultiResponse> callable =
+           new ServerCallable<MultiResponse>(connection, tableName, null) {
+             public MultiResponse call() throws IOException {
+               return server.multi(multi);
              }
-         );
+             @Override
+             public void connect(boolean reload) throws IOException {
+               server = connection.getHRegionConnection(loc.getHostname(), loc.getPort());
+             }
+           };
+         return callable.withoutRetries();
        }
      };
    }
@@ -1422,6 +1366,7 @@ public class HConnectionManager {
         final byte[] tableName,
         ExecutorService pool,
         Object[] results) throws IOException, InterruptedException {
+      // This belongs in HTable!!! Not in here.  St.Ack
 
       // results must be the same size as list
       if (results.length != list.size()) {
@@ -1508,6 +1453,7 @@ public class HConnectionManager {
         Object[] results,
         Batch.Callback<R> callback)
     throws IOException, InterruptedException {
+      // This belongs in HTable!!! Not in here.  St.Ack
 
       // results must be the same size as list
       if (results.length != list.size()) {
@@ -1527,13 +1473,12 @@ public class HConnectionManager {
       boolean retry = true;
       // count that helps presize actions array
       int actionCount = 0;
-      Throwable singleRowCause = null;
 
       for (int tries = 0; tries < numRetries && retry; ++tries) {
 
         // sleep first, if this is a retry
         if (tries >= 1) {
-          long sleepTime = getPauseTime(tries);
+          long sleepTime = ConnectionUtils.getPauseTime(this.pause, tries);
           LOG.debug("Retry " +tries+ ", sleep for " +sleepTime+ "ms!");
           Thread.sleep(sleepTime);
         }
@@ -1639,14 +1584,6 @@ public class HConnectionManager {
         }
       }
 
-      if (retry) {
-        // Simple little check for 1 item failures.
-        if (singleRowCause != null) {
-          throw new IOException(singleRowCause);
-        }
-      }
-
-
       List<Throwable> exceptions = new ArrayList<Throwable>(actionCount);
       List<Row> actions = new ArrayList<Row>(actionCount);
       List<String> addresses = new ArrayList<String>(actionCount);
@@ -1664,19 +1601,6 @@ public class HConnectionManager {
             actions,
             addresses);
       }
-    }
-
-    private Throwable translateException(Throwable t) throws IOException {
-      if (t instanceof UndeclaredThrowableException) {
-        t = t.getCause();
-      }
-      if (t instanceof RemoteException) {
-        t = RemoteExceptionHandler.decodeRemoteException((RemoteException)t);
-      }
-      if (t instanceof DoNotRetryIOException) {
-        throw (DoNotRetryIOException)t;
-      }
-      return t;
     }
 
     /*

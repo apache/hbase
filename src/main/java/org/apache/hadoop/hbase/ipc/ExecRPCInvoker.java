@@ -76,7 +76,7 @@ public class ExecRPCInvoker implements InvocationHandler {
                   exec);
             }
           };
-      ExecResult result = connection.getRegionServerWithRetries(callable);
+      ExecResult result = callable.withRetries();
       this.regionName = result.getRegionName();
       LOG.debug("Result is region="+ Bytes.toStringBinary(regionName) +
           ", value="+result.getValue());

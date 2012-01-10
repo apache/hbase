@@ -166,7 +166,7 @@ public class ClientScanner extends AbstractClientScanner {
       // Close the previous scanner if it's open
       if (this.callable != null) {
         this.callable.setClose();
-        getConnection().getRegionServerWithRetries(callable);
+        callable.withRetries();
         this.callable = null;
       }
 
@@ -202,7 +202,7 @@ public class ClientScanner extends AbstractClientScanner {
         callable = getScannerCallable(localStartKey, nbRows);
         // Open a scanner on the region server starting at the
         // beginning of the region
-        getConnection().getRegionServerWithRetries(callable);
+        callable.withRetries();
         this.currentRegion = callable.getHRegionInfo();
         if (this.scanMetrics != null) {
           this.scanMetrics.countOfRegions.inc();
@@ -269,14 +269,14 @@ public class ClientScanner extends AbstractClientScanner {
               // Skip only the first row (which was the last row of the last
               // already-processed batch).
               callable.setCaching(1);
-              values = getConnection().getRegionServerWithRetries(callable);
+              values = callable.withRetries();
               callable.setCaching(this.caching);
               skipFirst = false;
             }
             // Server returns a null values if scanning is to stop.  Else,
             // returns an empty array if scanning is to go on and we've just
             // exhausted current region.
-            values = getConnection().getRegionServerWithRetries(callable);
+            values = callable.withRetries();
           } catch (DoNotRetryIOException e) {
             if (e instanceof UnknownScannerException) {
               long timeout = lastNext + scannerTimeout;
@@ -364,7 +364,7 @@ public class ClientScanner extends AbstractClientScanner {
       if (callable != null) {
         callable.setClose();
         try {
-          getConnection().getRegionServerWithRetries(callable);
+          callable.withRetries();
         } catch (IOException e) {
           // We used to catch this error, interpret, and rethrow. However, we
           // have since decided that it's not nice for a scanner's close to
