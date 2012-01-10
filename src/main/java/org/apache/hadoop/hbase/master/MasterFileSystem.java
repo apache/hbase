@@ -191,29 +191,40 @@ public class MasterFileSystem {
     this.splitLogLock.lock();
     long splitTime = 0, splitLogSize = 0;
     Path logDir = new Path(this.rootdir, HLog.getHLogDirectoryName(serverName));
-    try {
-      HLogSplitter splitter = HLogSplitter.createLogSplitter(
-        conf, rootdir, logDir, oldLogDir, this.fs);
+    boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
+        true);
+    do {
       try {
-        // If FS is in safe mode, just wait till out of it.
-        FSUtils.waitOnSafeMode(conf,
-          conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 1000));  
-        splitter.splitLog();
-      } catch (OrphanHLogAfterSplitException e) {
-        LOG.warn("Retrying splitting because of:", e);
-        // An HLogSplitter instance can only be used once.  Get new instance.
-        splitter = HLogSplitter.createLogSplitter(conf, rootdir, logDir,
-          oldLogDir, this.fs);
-        splitter.splitLog();
+        HLogSplitter splitter = HLogSplitter.createLogSplitter(conf, rootdir,
+            logDir, oldLogDir, this.fs);
+        try {
+          // If FS is in safe mode, just wait till out of it.
+          FSUtils.waitOnSafeMode(conf, conf.getInt(
+              HConstants.THREAD_WAKE_FREQUENCY, 1000));
+          splitter.splitLog();
+        } catch (OrphanHLogAfterSplitException e) {
+          LOG.warn("Retrying splitting because of:", e);
+          // An HLogSplitter instance can only be used once. Get new instance.
+          splitter = HLogSplitter.createLogSplitter(conf, rootdir, logDir,
+              oldLogDir, this.fs);
+          splitter.splitLog();
+        }
+        splitTime = splitter.getTime();
+        splitLogSize = splitter.getSize();
+        retrySplitting = false;
+      } catch (IOException e) {
+        if (checkFileSystem() && retrySplitting) {
+          LOG.info("Retrying failed log splitting " + logDir.toString());
+        }
+        else {
+          LOG.fatal("Failed splitting " + logDir.toString(), e);
+          master.abort(
+              "Shutting down HBase cluster: file system not available", e);
+        }
+      } finally {
+        this.splitLogLock.unlock();
       }
-      splitTime = splitter.getTime();
-      splitLogSize = splitter.getSize();
-    } catch (IOException e) {
-      checkFileSystem();
-      LOG.error("Failed splitting " + logDir.toString(), e);
-    } finally {
-      this.splitLogLock.unlock();
-    }
+    } while (retrySplitting);
     if (this.metrics != null) {
       this.metrics.addSplit(splitTime, splitLogSize);
     }

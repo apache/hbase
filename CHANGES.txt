@@ -120,6 +120,7 @@ Release 0.90.5 - Dec 22, 2011
                (Chunhui Shen)
    HBASE-4773  HBaseAdmin may leak ZooKeeper connections (Xufeng)
    HBASE-4900  Fix javadoc warnings out on 0.90 branch
+   HBASE-5137  MasterFileSystem.splitLog() should abort even if waitOnSafeMode() throws IOException (Ram)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
