@@ -228,7 +228,9 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   public synchronized boolean next(List<KeyValue> outResult, int limit) throws IOException {
     //DebugPrint.println("SS.next");
 
-    checkReseek();
+    if (checkReseek()) {
+      return true;
+    }
 
     // if the heap was left null, then the scanners had previously run out anyways, close and
     // return.
@@ -376,12 +378,25 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     // Let the next() call handle re-creating and seeking
   }
 
-  private void checkReseek() throws IOException {
+  /**
+   * @return true if top of heap has changed (and KeyValueHeap has to try the
+   *         next KV)
+   * @throws IOException
+   */
+  private boolean checkReseek() throws IOException {
     if (this.heap == null && this.lastTop != null) {
       resetScannerStack(this.lastTop);
+      if (this.heap.peek() == null
+          || store.comparator.compare(this.lastTop, this.heap.peek()) != 0) {
+        LOG.debug("Storescanner.peek() is changed where before = "
+            + this.lastTop.toString() + ",and after = " + this.heap.peek());
+        this.lastTop = null;
+        return true;
+      }
       this.lastTop = null; // gone!
     }
     // else dont need to reseek
+    return false;
   }
 
   private void resetScannerStack(KeyValue lastTopKey) throws IOException {

@@ -20,13 +20,13 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
-
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
+
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
 /**
  * Implements a heap merge across any number of KeyValueScanners.
@@ -135,7 +135,7 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
       return false;
     }
     InternalScanner currentAsInternal = (InternalScanner)this.current;
-    boolean mayContainsMoreRows = currentAsInternal.next(result, limit);
+    boolean mayContainMoreRows = currentAsInternal.next(result, limit);
     KeyValue pee = this.current.peek();
     /*
      * By definition, any InternalScanner must return false only when it has no
@@ -144,7 +144,7 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
      * more efficient to close scanners which are not needed than keep them in
      * the heap. This is also required for certain optimizations.
      */
-    if (pee == null || !mayContainsMoreRows) {
+    if (pee == null || !mayContainMoreRows) {
       this.current.close();
     } else {
       this.heap.add(this.current);

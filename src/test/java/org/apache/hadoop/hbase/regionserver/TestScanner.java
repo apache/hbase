@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -45,7 +46,6 @@ import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /**
  * Test of a long-lived scanner validating as we go.
@@ -81,6 +81,23 @@ public class TestScanner extends HBaseTestCase {
 
   private HRegion r;
   private HRegionIncommon region;
+  
+  private byte[] firstRowBytes, secondRowBytes, thirdRowBytes;
+  final private byte[] col1, col2;
+
+  public TestScanner() throws Exception {
+    super();
+
+    firstRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
+    secondRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
+    // Increment the least significant character so we get to next row.
+    secondRowBytes[START_KEY_BYTES.length - 1]++;
+    thirdRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
+    thirdRowBytes[START_KEY_BYTES.length - 1]++;
+    thirdRowBytes[START_KEY_BYTES.length - 1]++;
+    col1 = "column1".getBytes(HConstants.UTF8_ENCODING);
+    col2 = "column2".getBytes(HConstants.UTF8_ENCODING);
+  }
 
   /**
    * Test basic stop row filter works.
@@ -464,6 +481,68 @@ public class TestScanner extends HBaseTestCase {
     } catch (Exception e) {
       LOG.error("Failed", e);
       throw e;
+    } finally {
+      this.r.close();
+      this.r.getLog().closeAndDelete();
+    }
+  }
+
+  /**
+   * Make sure scanner returns correct result when we run a major compaction
+   * with deletes.
+   * 
+   * @throws Exception
+   */
+  @SuppressWarnings("deprecation")
+  public void testScanAndConcurrentMajorCompact() throws Exception {
+    HTableDescriptor htd = createTableDescriptor(getName());
+    this.r = createNewHRegion(htd, null, null);
+    HRegionIncommon hri = new HRegionIncommon(r);
+
+    try {
+      addContent(hri, Bytes.toString(fam1), Bytes.toString(col1),
+          firstRowBytes, secondRowBytes);
+      addContent(hri, Bytes.toString(fam2), Bytes.toString(col1),
+          firstRowBytes, secondRowBytes);
+
+      Delete dc = new Delete(firstRowBytes);
+      /* delete column1 of firstRow */
+      dc.deleteColumns(fam1, col1);
+      r.delete(dc, null, true);
+      r.flushcache();
+
+      addContent(hri, Bytes.toString(fam1), Bytes.toString(col1),
+          secondRowBytes, thirdRowBytes);
+      addContent(hri, Bytes.toString(fam2), Bytes.toString(col1),
+          secondRowBytes, thirdRowBytes);
+      r.flushcache();
+
+      InternalScanner s = r.getScanner(new Scan());
+      // run a major compact, column1 of firstRow will be cleaned.
+      r.compactStores(true);
+
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      s.next(results);
+
+      // make sure returns column2 of firstRow
+      assertTrue("result is not correct, keyValues : " + results,
+          results.size() == 1);
+      assertTrue(Bytes.BYTES_COMPARATOR.compare(firstRowBytes, results.get(0)
+          .getRow()) == 0);
+      assertTrue(Bytes.BYTES_COMPARATOR.compare(fam2, results.get(0)
+          .getFamily()) == 0);
+
+      results = new ArrayList<KeyValue>();
+      s.next(results);
+
+      // get secondRow
+      assertTrue(results.size() == 2);
+      assertTrue(Bytes.BYTES_COMPARATOR.compare(secondRowBytes, results.get(0)
+          .getRow()) == 0);
+      assertTrue(Bytes.BYTES_COMPARATOR.compare(fam1, results.get(0)
+          .getFamily()) == 0);
+      assertTrue(Bytes.BYTES_COMPARATOR.compare(fam2, results.get(1)
+          .getFamily()) == 0);
     } finally {
       this.r.close();
       this.r.getLog().closeAndDelete();
