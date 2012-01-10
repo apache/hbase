@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
@@ -35,7 +36,7 @@ import java.util.Map;
  *
  * @since 0.21.0
  */
-public interface HTableInterface {
+public interface HTableInterface extends Closeable {
 
   /**
    * Gets the name of this table.

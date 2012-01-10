@@ -99,7 +99,7 @@ import org.apache.hadoop.hbase.util.Writables;
  * @see HConnection
  * @see HConnectionManager
  */
-public class HTable implements HTableInterface, Closeable {
+public class HTable implements HTableInterface {
   private static final Log LOG = LogFactory.getLog(HTable.class);
   private HConnection connection;
   private final byte [] tableName;
