@@ -227,9 +227,10 @@ public class MasterFileSystem {
               "hbase.hlog.split.failure.retry.interval", 30 * 1000));
           }
         } catch (InterruptedException e) {
-          LOG.warn("Interrupted, returning w/o splitting at startup");
+          LOG.warn("Interrupted, aborting since cannot return w/o splitting");
           Thread.currentThread().interrupt();
           retrySplitting = false;
+          Runtime.getRuntime().halt(1);
         }
       }
     } while (retrySplitting);
