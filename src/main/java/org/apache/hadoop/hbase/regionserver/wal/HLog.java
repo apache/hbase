@@ -296,6 +296,9 @@ public class HLog implements Syncable {
   // For measuring latency of syncs
   private static Metric syncTime = new Metric();
   private static AtomicLong syncBatchSize = new AtomicLong();
+  //For measuring slow HLog appends
+  private static AtomicLong slowHLogAppendCount = new AtomicLong();
+  private static Metric slowHLogAppendTime = new Metric();
   
   public static Metric getWriteTime() {
     return writeTime.get();
@@ -311,6 +314,14 @@ public class HLog implements Syncable {
 
   public static long getSyncBatchSize() {
     return syncBatchSize.getAndSet(0);
+  }
+  
+  public static long getSlowAppendCount() {
+    return slowHLogAppendCount.get();
+  }
+  
+  public static Metric getSlowAppendTime() {
+    return slowHLogAppendTime.get();
   }
 
   /**
@@ -1407,6 +1418,8 @@ public class HLog implements Syncable {
           "%s took %d ms appending an edit to hlog; editcount=%d, len~=%s",
           Thread.currentThread().getName(), took, this.numEntries.get(),
           StringUtils.humanReadableInt(len)));
+        slowHLogAppendCount.incrementAndGet();
+        slowHLogAppendTime.inc(took);
       }
     } catch (IOException e) {
       LOG.fatal("Could not append. Requesting close of hlog", e);
