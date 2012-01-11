@@ -232,6 +232,12 @@ public class RegionServerMetrics implements Updater {
 
   protected final PersistentMetricsTimeVaryingRate flushSize =
     new PersistentMetricsTimeVaryingRate("flushSize", registry);
+  
+  public final MetricsLongValue slowHLogAppendCount =
+      new MetricsLongValue("slowHLogAppendCount", registry);
+  
+  public final MetricsTimeVaryingRate slowHLogAppendTime =
+      new MetricsTimeVaryingRate("slowHLogAppendTime", registry);
 
   public RegionServerMetrics() {
     MetricsContext context = MetricsUtil.getContext("hbase");
@@ -323,6 +329,8 @@ public class RegionServerMetrics implements Updater {
       addHLogMetric(HLog.getWriteTime(), this.fsWriteLatency);
       addHLogMetric(HLog.getWriteSize(), this.fsWriteSize);
       addHLogMetric(HLog.getSyncTime(), this.fsSyncLatency);
+      addHLogMetric(HLog.getSlowAppendTime(), this.slowHLogAppendTime);
+      this.slowHLogAppendCount.set(HLog.getSlowAppendCount());
       // HFile metrics, sequential reads
       int ops = HFile.getReadOps(); 
       if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTimeMs());
@@ -345,6 +353,7 @@ public class RegionServerMetrics implements Updater {
       this.compactionSize.pushMetric(this.metricsRecord);
       this.flushTime.pushMetric(this.metricsRecord);
       this.flushSize.pushMetric(this.metricsRecord);
+      this.slowHLogAppendCount.pushMetric(this.metricsRecord);
     }
     this.metricsRecord.update();
   }
@@ -367,6 +376,7 @@ public class RegionServerMetrics implements Updater {
     this.fsWriteLatency.resetMinMax();
     this.fsWriteSize.resetMinMax();
     this.fsSyncLatency.resetMinMax();
+    this.slowHLogAppendTime.resetMinMax();
   }
 
   /**
@@ -457,6 +467,8 @@ public class RegionServerMetrics implements Updater {
         Long.valueOf(this.blockCacheHitCachingRatio.get())+"%");
     sb = Strings.appendKeyValue(sb, this.hdfsBlocksLocalityIndex.getName(),
         Long.valueOf(this.hdfsBlocksLocalityIndex.get()));
+    sb = Strings.appendKeyValue(sb, "slowHLogAppendCount",
+        Long.valueOf(this.slowHLogAppendCount.get()));
     return sb.toString();
   }
 }
