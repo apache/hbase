@@ -160,7 +160,7 @@ case $startStop in
       # kill -0 == see if the PID exists 
       if kill -0 `cat $pid` > /dev/null 2>&1; then
         echo -n stopping $command
-        echo "`date` Killing $command" >> $loglog
+        echo "`date` Terminating $command" >> $loglog
         kill `cat $pid` > /dev/null 2>&1
         while kill -0 `cat $pid` > /dev/null 2>&1; do
           echo -n "."
