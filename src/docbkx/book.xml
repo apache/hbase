@@ -263,8 +263,12 @@ Scan scan = new Scan();
 scan.addColumn(Bytes.toBytes("cf"),Bytes.toBytes("attr"));
 scan.setStartRow( Bytes.toBytes("row"));                   // start key is inclusive
 scan.setStopRow( Bytes.toBytes("row" +  (char)0));  // stop key is exclusive
-for(Result result : htable.getScanner(scan)) {
-  // process Result instance
+ResultScanner rs = htable.getScanner(scan);
+try {
+  for (Result r = rs.next(); r != null; r = rs.next()) {
+  // process result...
+} finally {
+  rs.close();  // always close the ResultScanner!
 }
 </programlisting>
          </para>        
