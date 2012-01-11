@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -232,4 +233,45 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
     return p;
   }
 
+  @Override
+  public <T, S> List<S> getMedian(ColumnInterpreter<T, S> ci, Scan scan)
+  throws IOException {
+    S sumVal = null, sumWeights = null, tempVal = null, tempWeight = null;
+
+    InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
+    .getRegion().getScanner(scan);
+    byte[] colFamily = scan.getFamilies()[0];
+    NavigableSet<byte[]> quals = scan.getFamilyMap().get(colFamily);
+    byte[] valQualifier = quals.pollFirst();
+    // if weighted median is requested, get qualifier for the weight column
+    byte[] weightQualifier = quals.size() > 1 ? quals.pollLast() : null;
+    List<KeyValue> results = new ArrayList<KeyValue>();
+
+    boolean hasMoreRows = false;
+    try {
+      do {
+        tempVal = null;
+        tempWeight = null;
+        hasMoreRows = scanner.next(results);
+        for (KeyValue kv : results) {
+          tempVal = ci.add(tempVal, ci.castToReturnType(ci.getValue(colFamily,
+              valQualifier, kv)));
+          if (weightQualifier != null) {
+            tempWeight = ci.add(tempWeight,
+                ci.castToReturnType(ci.getValue(colFamily, weightQualifier, kv)));
+          }
+        }
+        results.clear();
+        sumVal = ci.add(sumVal, tempVal);
+        sumWeights = ci.add(sumWeights, tempWeight);
+      } while (hasMoreRows);
+    } finally {
+      scanner.close();
+    }
+    List<S> l = new ArrayList<S>();
+    l.add(sumVal);
+    l.add(sumWeights == null ? ci.castToReturnType(ci.getMinValue()) : sumWeights);
+    return l;
+  }
+  
 }
