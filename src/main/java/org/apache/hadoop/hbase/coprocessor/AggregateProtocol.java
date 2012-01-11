@@ -126,4 +126,19 @@ public interface AggregateProtocol extends CoprocessorProtocol {
   <T, S> Pair<List<S>, Long> getStd(ColumnInterpreter<T, S> ci, Scan scan)
       throws IOException;
 
+  /**
+   * Gives a List containing sum of values and sum of weights.
+   * It is computed for the combination of column
+   * family and column qualifier(s) in the given row range as defined in the
+   * Scan object. In its current implementation, it takes one column family and
+   * two column qualifiers. The first qualifier is for values column and 
+   * the second qualifier (optional) is for weight column.
+   * @param ci
+   * @param scan
+   * @return Pair
+   * @throws IOException
+   */
+  <T, S> List<S> getMedian(ColumnInterpreter<T, S> ci, Scan scan)
+      throws IOException;
+
 }

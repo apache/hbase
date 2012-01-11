@@ -23,13 +23,20 @@ package org.apache.hadoop.hbase.client.coprocessor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.AggregateProtocol;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
@@ -362,4 +369,133 @@ public class AggregationClient {
     return res;
   }
 
+  /**
+   * It helps locate the region with median for a given column whose weight 
+   * is specified in an optional column.
+   * From individual regions, it obtains sum of values and sum of weights.
+   * @param tableName
+   * @param ci
+   * @param scan
+   * @return pair whose first element is a map between start row of the region
+   *  and (sum of values, sum of weights) for the region, the second element is
+   *  (sum of values, sum of weights) for all the regions chosen
+   * @throws Throwable
+   */
+  private <R, S> Pair<NavigableMap<byte[], List<S>>, List<S>>
+  getMedianArgs(final byte[] tableName,
+      final ColumnInterpreter<R, S> ci, final Scan scan) throws Throwable {
+    validateParameters(scan);
+    final NavigableMap<byte[], List<S>> map =
+      new TreeMap<byte[], List<S>>(Bytes.BYTES_COMPARATOR);
+    class StdCallback implements Batch.Callback<List<S>> {
+      S sumVal = null, sumWeights = null;
+
+      public Pair<NavigableMap<byte[], List<S>>, List<S>> getMedianParams() {
+        List<S> l = new ArrayList<S>();
+        l.add(sumVal);
+        l.add(sumWeights);
+        Pair<NavigableMap<byte[], List<S>>, List<S>> p =
+          new Pair<NavigableMap<byte[], List<S>>, List<S>>(map, l);
+        return p;
+      }
+
+      @Override
+      public synchronized void update(byte[] region, byte[] row, List<S> result) {
+        map.put(row, result);
+        sumVal = ci.add(sumVal, result.get(0));
+        sumWeights = ci.add(sumWeights, result.get(1));
+      }
+    }
+    StdCallback stdCallback = new StdCallback();
+    HTable table = new HTable(conf, tableName);
+    table.coprocessorExec(AggregateProtocol.class, scan.getStartRow(), scan
+        .getStopRow(),
+        new Batch.Call<AggregateProtocol, List<S>>() {
+          @Override
+          public List<S> call(AggregateProtocol instance)
+              throws IOException {
+            return instance.getMedian(ci, scan);
+          }
+
+        }, stdCallback);
+    return stdCallback.getMedianParams();
+  }
+
+  /**
+   * This is the client side interface/handler for calling the median method for a
+   * given cf-cq combination. This method collects the necessary parameters
+   * to compute the median and returns the median.
+   * @param tableName
+   * @param ci
+   * @param scan
+   * @return R the median
+   * @throws Throwable
+   */
+  public <R, S> R median(final byte[] tableName, ColumnInterpreter<R, S> ci,
+      Scan scan) throws Throwable {
+    Pair<NavigableMap<byte[], List<S>>, List<S>> p = getMedianArgs(tableName, ci, scan);
+    byte[] startRow = null;
+    byte[] colFamily = scan.getFamilies()[0];
+    NavigableSet<byte[]> quals = scan.getFamilyMap().get(colFamily);
+    NavigableMap<byte[], List<S>> map = p.getFirst();
+    S sumVal = p.getSecond().get(0);
+    S sumWeights = p.getSecond().get(1);
+    double halfSumVal = ci.divideForAvg(sumVal, 2L);
+    double movingSumVal = 0;
+    boolean weighted = false;
+    if (quals.size() > 1) {
+      weighted = true;
+      halfSumVal = ci.divideForAvg(sumWeights, 2L);
+    }
+    
+    for (Map.Entry<byte[], List<S>> entry : map.entrySet()) {
+      S s = weighted ? entry.getValue().get(1) : entry.getValue().get(0);
+      double newSumVal = movingSumVal + ci.divideForAvg(s, 1L);
+      if (newSumVal > halfSumVal) break;  // we found the region with the median
+      movingSumVal = newSumVal;
+      startRow = entry.getKey();
+    }
+    // scan the region with median and find it
+    Scan scan2 = new Scan(scan);
+    // inherit stop row from method parameter
+    scan2.setStartRow(startRow);
+    HTable table = new HTable(conf, tableName);
+    int cacheSize = scan2.getCaching();
+    if (!scan2.getCacheBlocks() || scan2.getCaching() < 2) {
+      scan2.setCacheBlocks(true);
+      cacheSize = 5;
+      scan2.setCaching(cacheSize);
+    }
+    ResultScanner scanner = table.getScanner(scan2);
+    Result[] results = null;
+    byte[] qualifier = quals.pollFirst();
+    // qualifier for the weight column
+    byte[] weightQualifier = weighted ? quals.pollLast() : qualifier;
+    R value = null;
+    try {
+      do {
+        results = scanner.next(cacheSize);
+        if (results != null && results.length > 0) {
+          for (int i = 0; i < results.length; i++) {
+            Result r = results[i];
+            // retrieve weight
+            KeyValue kv = r.getColumnLatest(colFamily, weightQualifier);
+            R newValue = ci.getValue(colFamily, weightQualifier, kv);
+            S s = ci.castToReturnType(newValue);
+            double newSumVal = movingSumVal + ci.divideForAvg(s, 1L);
+            // see if we have moved past the median
+            if (newSumVal > halfSumVal) {
+              return value;
+            }
+            movingSumVal = newSumVal;
+            kv = r.getColumnLatest(colFamily, qualifier);
+            value = ci.getValue(colFamily, qualifier, kv);
+          }
+        }
+      } while (results != null && results.length > 0);
+    } finally {
+      scanner.close();
+    }
+    return null;
+  }
 }

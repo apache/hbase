@@ -124,6 +124,23 @@ public class TestAggregateProtocol {
   }
 
   /**
+   * ****************** Test cases for Median **********************
+   */
+  /**
+   * @throws Throwable
+   */
+  @Test
+  public void testMedianWithValidRange() throws Throwable {
+    AggregationClient aClient = new AggregationClient(conf);
+    Scan scan = new Scan();
+    scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
+    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    long median = aClient.median(TEST_TABLE, ci,
+        scan);
+    assertEquals(8L, median);
+  }
+
+  /**
    * **************************** ROW COUNT Test cases *******************
    */
 
