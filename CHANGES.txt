@@ -159,6 +159,7 @@ Release 0.90.5 - Dec 22, 2011
                completes, may cause data loss (Ram)
    HBASE-5158  Backport HBASE-4878 - Master crash when splitting hlog may cause data loss (Ram)
    HBASE-5168  Backport HBASE-5100 - Rollback of split could cause closed region to be opened again(Ram)
+   HBASE-5178  Backport HBASE-4101 - Regionserver Deadlock (Ram)
  
   NEW FEATURE
    HBASE-4377  [hbck] Offline rebuild .META. from fs data only
@@ -238,7 +239,6 @@ Release 0.90.4 - August 10, 2011
    HBASE-4112  Creating table may throw NullPointerException (Jinchao via Ted Yu)
    HBASE-4093  When verifyAndAssignRoot throws exception, the deadServers state cannot
                be changed (fulin wang via Ted Yu)
-   HBASE-4101  Regionserver Deadlock (ramkrishna.s.vasudevan)
    HBASE-3872  Hole in split transaction rollback; edits to .META. need to be rolled
                back even if it seems like they didn't make it
    HBASE-4115  HBase shell assign and unassign unusable if region name includes

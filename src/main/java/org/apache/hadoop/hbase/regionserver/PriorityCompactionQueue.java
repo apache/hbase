@@ -47,24 +47,24 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
   private class CompactionRequest implements Comparable<CompactionRequest> {
     private final HRegion r;
     private final int p;
-    private final Date date;
+    private final Long timeInNanos;
 
     public CompactionRequest(HRegion r, int p) {
       this(r, p, null);
     }
 
-    public CompactionRequest(HRegion r, int p, Date d) {
+    public CompactionRequest(HRegion r, int p, Long time) {
       if (r == null) {
         throw new NullPointerException("HRegion cannot be null");
       }
 
-      if (d == null) {
-        d = new Date();
+      if (time == null) {
+        time = System.nanoTime();
       }
 
       this.r = r;
       this.p = p;
-      this.date = d;
+      this.timeInNanos = time;
     }
 
     /**
@@ -90,8 +90,8 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
       if (compareVal != 0) {
         return compareVal;
       }
-
-      compareVal = date.compareTo(request.date);
+     
+      compareVal = timeInNanos.compareTo(request.timeInNanos);
       if (compareVal != 0) {
         return compareVal;
       }
@@ -112,7 +112,7 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
 
     public String toString() {
       return "regionName=" + r.getRegionNameAsString() +
-        ", priority=" + p + ", date=" + date;
+        ", priority=" + p + ", time=" + timeInNanos;
     }
   }
 
