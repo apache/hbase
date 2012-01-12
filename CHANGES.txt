@@ -160,6 +160,7 @@ Release 0.90.5 - Dec 22, 2011
    HBASE-5158  Backport HBASE-4878 - Master crash when splitting hlog may cause data loss (Ram)
    HBASE-5168  Backport HBASE-5100 - Rollback of split could cause closed region to be opened again(Ram)
    HBASE-5178  Backport HBASE-4101 - Regionserver Deadlock (Ram)
+   HBASE-5159  Backport HBASE-4079 - HTableUtil - helper class for loading data  (Ram)
  
   NEW FEATURE
    HBASE-4377  [hbck] Offline rebuild .META. from fs data only
