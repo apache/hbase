@@ -651,12 +651,17 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
       <title>Network</title>
       <section xml:id="trouble.network.spikes">
         <title>Network Spikes</title>
-        <para>If you are seeing periodic network spikes you might want to check the compactionQueues to see if major 
+        <para>If you are seeing periodic network spikes you might want to check the <code>compactionQueues</code> to see if major 
         compactions are happening.
         </para>
         <para>See <xref linkend="managed.compactions"/> for more information on managing compactions.
         </para>
-        </section>
+      </section>
+      <section xml:id="trouble.network.loopback">
+        <title>Loopback IP</title>
+        <para>HBase expects the loopback IP Address to be 127.0.0.1.  See the Getting Started section on <link linkend="loopback.ip" />.
+        </para>
+       </section>
     </section>
         
     <section xml:id="trouble.rs">

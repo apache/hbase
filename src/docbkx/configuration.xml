@@ -95,6 +95,12 @@ to ensure well-formedness of your document after an edit session.
         <varname>hbase.regionserver.dns.nameserver</varname> to choose a
         different nameserver than the system wide default.</para>
       </section>
+      <section xml:id="loopback.ip">
+        <title>Loopback IP</title>
+        <para>HBase expects the loopback IP address to be 127.0.0.1.  Ubuntu and some other distributions,
+        for example, will default to 127.0.1.1 and this will cause problems for you.
+        </para>
+       </section>
 
       <section xml:id="ntp">
         <title>NTP</title>
