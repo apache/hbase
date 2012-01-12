@@ -295,10 +295,11 @@ public class HLogSplitter {
             "Discovered orphan hlog after split. Maybe the "
             + "HRegionServer was not dead when we started");
       }
-      archiveLogs(srcDir, corruptedLogs, processedLogs, oldLogDir, fs, conf);      
+           
     } finally {
       splits = outputSink.finishWritingAndClose();
     }
+    archiveLogs(srcDir, corruptedLogs, processedLogs, oldLogDir, fs, conf); 
     return splits;
   }
 
