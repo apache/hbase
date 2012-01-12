@@ -40,10 +40,17 @@ import java.util.NavigableSet;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -106,6 +113,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.Writable;
@@ -114,6 +122,7 @@ import org.cliffc.high_scale_lib.Counter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ClassToInstanceMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MutableClassToInstanceMap;
@@ -433,7 +442,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @see HRegion#newHRegion(Path, HLog, FileSystem, Configuration, HRegionInfo, HTableDescriptor, RegionServerServices)
    */
   public HRegion(Path tableDir, HLog log, FileSystem fs, Configuration conf,
-      HRegionInfo regionInfo, final HTableDescriptor htd,
+    final HRegionInfo regionInfo, final HTableDescriptor htd,
       RegionServerServices rsServices) {
     this.tableDir = tableDir;
     this.comparator = regionInfo.getComparator();
@@ -542,20 +551,49 @@ public class HRegion implements HeapSize { // , Writable{
     long maxSeqId = -1;
     // initialized to -1 so that we pick up MemstoreTS from column families
     long maxMemstoreTS = -1;
-    for (HColumnDescriptor c : this.htableDescriptor.getFamilies()) {
-      status.setStatus("Instantiating store for column family " + c);
-      Store store = instantiateHStore(this.tableDir, c);
-      this.stores.put(c.getName(), store);
-      long storeSeqId = store.getMaxSequenceId();
-      if (minSeqId == -1 || storeSeqId < minSeqId) {
-        minSeqId = storeSeqId;
+
+    if (this.htableDescriptor != null &&
+        !htableDescriptor.getFamilies().isEmpty()) {
+      // initialize the thread pool for opening stores in parallel.
+      ThreadPoolExecutor storeOpenerThreadPool =
+        getStoreOpenAndCloseThreadPool(
+          "StoreOpenerThread-" + this.regionInfo.getRegionNameAsString());
+      CompletionService<Store> completionService =
+        new ExecutorCompletionService<Store>(storeOpenerThreadPool);
+
+      // initialize each store in parallel
+      for (final HColumnDescriptor family : htableDescriptor.getFamilies()) {
+        status.setStatus("Instantiating store for column family " + family);
+        completionService.submit(new Callable<Store>() {
+          public Store call() throws IOException {
+            return instantiateHStore(tableDir, family);
+          }
+        });
       }
-      if (maxSeqId == -1 || storeSeqId > maxSeqId) {
-        maxSeqId = storeSeqId;
-      }
-      long maxStoreMemstoreTS = store.getMaxMemstoreTS();
-      if (maxStoreMemstoreTS > maxMemstoreTS) {
-        maxMemstoreTS = maxStoreMemstoreTS;
+      try {
+        for (int i = 0; i < htableDescriptor.getFamilies().size(); i++) {
+          Future<Store> future = completionService.take();
+          Store store = future.get();
+
+          this.stores.put(store.getColumnFamilyName().getBytes(), store);
+          long storeSeqId = store.getMaxSequenceId();
+          if (minSeqId == -1 || storeSeqId < minSeqId) {
+            minSeqId = storeSeqId;
+          }
+          if (maxSeqId == -1 || storeSeqId > maxSeqId) {
+            maxSeqId = storeSeqId;
+          }
+          long maxStoreMemstoreTS = store.getMaxMemstoreTS();
+          if (maxStoreMemstoreTS > maxMemstoreTS) {
+            maxMemstoreTS = maxStoreMemstoreTS;
+          }
+        }
+      } catch (InterruptedException e) {
+        throw new IOException(e);
+      } catch (ExecutionException e) {
+        throw new IOException(e.getCause());
+      } finally {
+        storeOpenerThreadPool.shutdownNow();
       }
     }
     mvcc.initialize(maxMemstoreTS + 1);
@@ -883,8 +921,38 @@ public class HRegion implements HeapSize { // , Writable{
       }
 
       List<StoreFile> result = new ArrayList<StoreFile>();
-      for (Store store : stores.values()) {
-        result.addAll(store.close());
+      if (!stores.isEmpty()) {
+        // initialize the thread pool for closing stores in parallel.
+        ThreadPoolExecutor storeCloserThreadPool =
+          getStoreOpenAndCloseThreadPool("StoreCloserThread-"
+            + this.regionInfo.getRegionNameAsString());
+        CompletionService<ImmutableList<StoreFile>> completionService =
+          new ExecutorCompletionService<ImmutableList<StoreFile>>(
+            storeCloserThreadPool);
+      
+        // close each store in parallel
+        for (final Store store : stores.values()) {
+          completionService
+              .submit(new Callable<ImmutableList<StoreFile>>() {
+                public ImmutableList<StoreFile> call() throws IOException {
+                  return store.close();
+                }
+              });
+        }
+        try {
+          for (int i = 0; i < stores.size(); i++) {
+            Future<ImmutableList<StoreFile>> future = completionService
+                .take();
+            ImmutableList<StoreFile> storeFileList = future.get();
+            result.addAll(storeFileList);
+          }
+        } catch (InterruptedException e) {
+          throw new IOException(e);
+        } catch (ExecutionException e) {
+          throw new IOException(e.getCause());
+        } finally {
+          storeCloserThreadPool.shutdownNow();
+        }
       }
       this.closed.set(true);
 
@@ -898,6 +966,40 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       lock.writeLock().unlock();
     }
+  }
+
+  protected ThreadPoolExecutor getStoreOpenAndCloseThreadPool(
+      final String threadNamePrefix) {
+    int numStores = Math.max(1, this.htableDescriptor.getFamilies().size());
+    int maxThreads = Math.min(numStores,
+        conf.getInt(HConstants.HSTORE_OPEN_AND_CLOSE_THREADS_MAX,
+            HConstants.DEFAULT_HSTORE_OPEN_AND_CLOSE_THREADS_MAX));
+    return getOpenAndCloseThreadPool(maxThreads, threadNamePrefix);
+  }
+
+  protected ThreadPoolExecutor getStoreFileOpenAndCloseThreadPool(
+      final String threadNamePrefix) {
+    int numStores = Math.max(1, this.htableDescriptor.getFamilies().size());
+    int maxThreads = Math.max(1,
+        conf.getInt(HConstants.HSTORE_OPEN_AND_CLOSE_THREADS_MAX,
+            HConstants.DEFAULT_HSTORE_OPEN_AND_CLOSE_THREADS_MAX)
+            / numStores);
+    return getOpenAndCloseThreadPool(maxThreads, threadNamePrefix);
+  }
+
+  private ThreadPoolExecutor getOpenAndCloseThreadPool(int maxThreads,
+      final String threadNamePrefix) {
+    ThreadPoolExecutor openAndCloseThreadPool = Threads
+        .getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
+            new ThreadFactory() {
+              private int count = 1;
+
+              public Thread newThread(Runnable r) {
+                Thread t = new Thread(r, threadNamePrefix + "-" + count++);
+                return t;
+              }
+            });
+    return openAndCloseThreadPool;
   }
 
    /**
