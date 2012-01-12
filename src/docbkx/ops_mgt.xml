@@ -70,7 +70,7 @@
         wholesomeness of file by redirecting <varname>STDOUT</varname> to
         <code>/dev/null</code> and testing the program return.</para>
 
-        <para>Similarily you can force a split of a log file directory by
+        <para>Similarly you can force a split of a log file directory by
         doing:<programlisting> $ ./<code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --split hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/</code></programlisting></para>
       </section>
     </section>
@@ -109,6 +109,8 @@
 --starttime=1265875194289 --endtime=1265878794289
 --peer.adr=server1,server2,server3:2181:/hbase TestTable</programlisting>
         </para>
+        <para>Note:  caching for the input Scan is configured via <code>hbase.client.scanner.caching</code> in the job configuration.
+        </para>
     </section>
     <section xml:id="export">
        <title>Export</title>
@@ -116,6 +118,8 @@
 <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.Export &lt;tablename&gt; &lt;outputdir&gt; [&lt;versions&gt; [&lt;starttime&gt; [&lt;endtime&gt;]]]
 </programlisting>
        </para>
+        <para>Note:  caching for the input Scan is configured via <code>hbase.client.scanner.caching</code> in the job configuration.
+        </para>
     </section>
     <section xml:id="import">
        <title>Import</title>
@@ -130,6 +134,8 @@
        as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
 <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter &lt;tablename&gt; [&lt;column1&gt; &lt;column2&gt;...]
 </programlisting>
+       </para>
+       <para>Note:  caching for the input Scan is configured via <code>hbase.client.scanner.caching</code> in the job configuration.
        </para>
     </section>
            
