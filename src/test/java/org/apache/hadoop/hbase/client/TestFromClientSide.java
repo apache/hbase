@@ -19,9 +19,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -50,9 +51,20 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.HTable.DaemonThreadFactory;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
@@ -62,15 +74,13 @@ import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.hbase.client.HTable.DaemonThreadFactory;
-import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -92,6 +102,7 @@ public class TestFromClientSide {
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte [] VALUE = Bytes.toBytes("testValue");
+  private static int SLAVES = 3;
 
   /**
    * @throws java.lang.Exception
@@ -99,7 +110,7 @@ public class TestFromClientSide {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // We need more than one region server in this test
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster(SLAVES);
   }
 
   /**
@@ -4476,6 +4487,57 @@ public class TestFromClientSide {
     assertEquals(count, store.getNumberOfstorefiles());
   }
 
+  @Test
+  /**
+   * Tests the non cached version of getRegionLocation by moving a region.
+   */
+  public void testNonCachedGetRegionLocation() throws Exception {
+    // Test Initialization.
+    String tableName = "testNonCachedGetRegionLocation";
+    byte [] TABLE = Bytes.toBytes(tableName);
+    byte [] family1 = Bytes.toBytes("f1");
+    byte [] family2 = Bytes.toBytes("f2");
+    HTable table = TEST_UTIL.createTable(TABLE, new byte[][] {family1, family2}, 10);
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Map <HRegionInfo, ServerName> regionsMap = table.getRegionLocations();
+    assertEquals(1, regionsMap.size());
+    HRegionInfo regionInfo = regionsMap.keySet().iterator().next();
+    ServerName addrBefore = regionsMap.get(regionInfo);
+    // Verify region location before move.
+    HServerAddress addrCache =
+      table.getRegionLocation(regionInfo.getStartKey(), false).getServerAddress();
+    HServerAddress addrNoCache =
+      table.getRegionLocation(regionInfo.getStartKey(),
+          true).getServerAddress();
+
+    assertEquals(addrBefore.getPort(), addrCache.getPort());
+    assertEquals(addrBefore.getPort(), addrNoCache.getPort());
+
+    ServerName addrAfter = null;
+    // Now move the region to a different server.
+    for (int i = 0; i < SLAVES; i++) {
+      HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(i);
+      ServerName addr = regionServer.getServerName();
+      if (addr.getPort() != addrBefore.getPort()) {
+        admin.move(regionInfo.getEncodedNameAsBytes(),
+            Bytes.toBytes(addr.toString()));
+        // Wait for the region to move.
+        Thread.sleep(5000);
+        addrAfter = addr;
+        break;
+      }
+    }
+
+    // Verify the region was moved.
+    addrCache =
+      table.getRegionLocation(regionInfo.getStartKey(), false).getServerAddress();
+    addrNoCache =
+      table.getRegionLocation(regionInfo.getStartKey(),
+          true).getServerAddress();
+    assertNotNull(addrAfter);
+    assertTrue(addrAfter.getPort() != addrCache.getPort());
+    assertEquals(addrAfter.getPort(), addrNoCache.getPort());
+  }  
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
