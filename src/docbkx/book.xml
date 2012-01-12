@@ -1403,7 +1403,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
 		</section>
 	</section>
 	
-    <section xml:id="client.filter"><title>Client Filters</title>
+    <section xml:id="client.filter"><title>Client Request Filters</title>
       <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link> and <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link> instances can be
        optionally configured with <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html">filters</link> which are applied on the RegionServer. 
       </para>
