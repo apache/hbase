@@ -19,14 +19,14 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
+
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * HConstants holds a bunch of HBase-related constants
@@ -217,6 +217,19 @@ public final class HConstants {
   /** Conf key for the max file size after which we split the region */
   public static final String HREGION_MAX_FILESIZE =
       "hbase.hregion.max.filesize";
+
+  /**
+   * The max number of threads used for opening and closing stores or store
+   * files in parallel
+   */
+  public static final String HSTORE_OPEN_AND_CLOSE_THREADS_MAX =
+    "hbase.hstore.open.and.close.threads.max";
+
+  /**
+   * The default number for the max number of threads used for opening and
+   * closing stores or store files in parallel
+   */
+  public static final int DEFAULT_HSTORE_OPEN_AND_CLOSE_THREADS_MAX = 1;
 
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;

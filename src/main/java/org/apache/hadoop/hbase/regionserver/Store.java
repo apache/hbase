@@ -27,7 +27,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.SortedSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -271,38 +277,73 @@ public class Store extends SchemaConfigured implements HeapSize {
     return homedir;
   }
 
-  /*
-   * Creates an unsorted list of StoreFile loaded from the given directory.
+  /**
+   * Creates an unsorted list of StoreFile loaded in parallel
+   * from the given directory.
    * @throws IOException
    */
-  private List<StoreFile> loadStoreFiles()
-  throws IOException {
+  private List<StoreFile> loadStoreFiles() throws IOException {
     ArrayList<StoreFile> results = new ArrayList<StoreFile>();
     FileStatus files[] = FSUtils.listStatus(this.fs, this.homedir, null);
-    for (int i = 0; files != null && i < files.length; i++) {
+
+    if (files == null || files.length == 0) {
+      return results;
+    }
+    // initialize the thread pool for opening store files in parallel..
+    ThreadPoolExecutor storeFileOpenerThreadPool =
+      this.region.getStoreFileOpenAndCloseThreadPool("StoreFileOpenerThread-" +
+          this.family.getNameAsString());
+    CompletionService<StoreFile> completionService =
+      new ExecutorCompletionService<StoreFile>(storeFileOpenerThreadPool);
+
+    int totalValidStoreFile = 0;
+    for (int i = 0; i < files.length; i++) {
       // Skip directories.
       if (files[i].isDir()) {
         continue;
       }
-      Path p = files[i].getPath();
-      // Check for empty file.  Should never be the case but can happen
+      final Path p = files[i].getPath();
+      // Check for empty file. Should never be the case but can happen
       // after data loss in hdfs for whatever reason (upgrade, etc.): HBASE-646
       if (this.fs.getFileStatus(p).getLen() <= 0) {
         LOG.warn("Skipping " + p + " because its empty. HBASE-646 DATA LOSS?");
         continue;
       }
-      StoreFile curfile = new StoreFile(fs, p, this.conf, this.cacheConf,
-          this.family.getBloomFilterType());
-      passSchemaMetricsTo(curfile);
-      curfile.createReader();
-      long length = curfile.getReader().length();
-      this.storeSize += length;
-      this.totalUncompressedBytes += curfile.getReader().getTotalUncompressedBytes();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("loaded " + curfile.toStringDetailed());
-      }
-      results.add(curfile);
+
+      // open each store file in parallel
+      completionService.submit(new Callable<StoreFile>() {
+        public StoreFile call() throws IOException {
+          StoreFile storeFile = new StoreFile(fs, p, conf, cacheConf,
+              family.getBloomFilterType());
+          passSchemaMetricsTo(storeFile);
+          storeFile.createReader();
+          return storeFile;
+        }
+      });
+      totalValidStoreFile++;
     }
+
+    try {
+      for (int i = 0; i < totalValidStoreFile; i++) {
+        Future<StoreFile> future = completionService.take();
+        StoreFile storeFile = future.get();
+        long length = storeFile.getReader().length();
+        this.storeSize += length;
+        this.totalUncompressedBytes +=
+          storeFile.getReader().getTotalUncompressedBytes();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("loaded " + storeFile.toStringDetailed());
+        }
+        results.add(storeFile);
+      }
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    } catch (ExecutionException e) {
+      throw new IOException(e.getCause());
+    } finally {
+      storeFileOpenerThreadPool.shutdownNow();
+    }
+
     return results;
   }
 
@@ -499,8 +540,36 @@ public class Store extends SchemaConfigured implements HeapSize {
       // Clear so metrics doesn't find them.
       storefiles = ImmutableList.of();
 
-      for (StoreFile f: result) {
-        f.closeReader(true);
+      if (!result.isEmpty()) {
+        // initialize the thread pool for closing store files in parallel.
+        ThreadPoolExecutor storeFileCloserThreadPool = this.region
+            .getStoreFileOpenAndCloseThreadPool("StoreFileCloserThread-"
+                + this.family.getNameAsString());
+  
+        // close each store file in parallel
+        CompletionService<Void> completionService =
+          new ExecutorCompletionService<Void>(storeFileCloserThreadPool);
+        for (final StoreFile f : result) {
+          completionService.submit(new Callable<Void>() {
+            public Void call() throws IOException {
+              f.closeReader(true);
+              return null;
+            }
+          });
+        }
+  
+        try {
+          for (int i = 0; i < result.size(); i++) {
+            Future<Void> future = completionService.take();
+            future.get();
+          }
+        } catch (InterruptedException e) {
+          throw new IOException(e);
+        } catch (ExecutionException e) {
+          throw new IOException(e.getCause());
+        } finally {
+          storeFileCloserThreadPool.shutdownNow();
+        }
       }
       LOG.debug("closed " + this.storeNameStr);
       return result;
