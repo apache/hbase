@@ -2107,7 +2107,8 @@ public class AssignmentManager extends ZooKeeperListener {
    * @return Null or a {@link Pair} instance that holds the full {@link HRegionInfo}
    * and the hosting servers {@link HServerInfo}.
    */
-  Pair<HRegionInfo, HServerInfo> getAssignment(final byte [] encodedRegionName) {
+  public Pair<HRegionInfo, HServerInfo> getAssignment(
+      final byte[] encodedRegionName) {
     String name = Bytes.toString(encodedRegionName);
     synchronized(this.regions) {
       for (Map.Entry<HRegionInfo, HServerInfo> e: this.regions.entrySet()) {

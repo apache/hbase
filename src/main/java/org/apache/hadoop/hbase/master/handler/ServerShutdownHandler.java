@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.zookeeper.KeeperException;
 
@@ -205,11 +206,30 @@ public class ServerShutdownHandler extends EventHandler {
         " regions(s) that are already in transition)");
     
       // Iterate regions that were on this server and assign them
-      for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
+      for (Map.Entry<HRegionInfo, Result> e : hris.entrySet()) {
         if (processDeadRegion(e.getKey(), e.getValue(),
             this.services.getAssignmentManager(),
             this.server.getCatalogTracker())) {
-          this.services.getAssignmentManager().assign(e.getKey(), true);
+          RegionState rit = this.services.getAssignmentManager()
+              .isRegionInTransition(e.getKey());
+          Pair<HRegionInfo, HServerInfo> p =
+            this.services
+              .getAssignmentManager().getAssignment(
+                  e.getKey().getEncodedNameAsBytes());
+          
+          if (rit != null && !rit.isClosing() && !rit.isPendingClose()) {
+            // Skip regions that were in transition unless CLOSING or
+            // PENDING_CLOSE
+            LOG.info("Skip assigning region " + rit.toString());
+          } else if ((p != null) && (p.getSecond() != null)
+              && (p.getSecond().equals(this.hsi))) {
+            LOG.debug("Skip assigning region "
+                + e.getKey().getRegionNameAsString()
+                + " because it has been opened in "
+                + p.getSecond());
+          } else {
+            this.services.getAssignmentManager().assign(e.getKey(), true);
+          }
         }
       }
     } finally {

@@ -153,6 +153,8 @@ Release 0.90.5 - Dec 22, 2011
    HBASE-4944  Optionally verify bulk loaded HFiles
    HBASE-4982  graceful_stop.sh does not pass on the --config its passed to its
                internal invocations of other hbase scripts
+   HBASE-5156  Backport HBASE-4899 - Region would be assigned twice easily with 
+               continually killing server and moving region in testing environment(Ram)
 
   NEW FEATURE
    HBASE-4377  [hbck] Offline rebuild .META. from fs data only
