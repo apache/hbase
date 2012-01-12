@@ -294,6 +294,7 @@ public class TestLogRolling  {
     return (DatanodeInfo[]) repl;
   }
 
+
   /**
    * Tests that logs are rolled upon detecting datanode death
    * Requires an HDFS jar with HDFS-826 & syncFs() support (HDFS-200)
@@ -304,14 +305,10 @@ public class TestLogRolling  {
    * @throws IllegalArgumentException 
     */
   @Test
-  public void testLogRollOnDatanodeDeath() throws IOException,
-      InterruptedException, IllegalArgumentException, IllegalAccessException,
-      InvocationTargetException {
-    assertTrue("This test requires HLog file replication.",
-      fs.getDefaultReplication() > 1);
+  public void testLogRollOnDatanodeDeath() throws Exception {
+    assertTrue("This test requires HLog file replication set to 2.",
+      fs.getDefaultReplication() == 2);
     LOG.info("Replication=" + fs.getDefaultReplication());
-    // When the META table can be opened, the region servers are running
-    new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
 
     this.server = cluster.getRegionServer(0);
     this.log = server.getWAL();
@@ -323,6 +320,7 @@ public class TestLogRolling  {
 
     admin.createTable(desc);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    assertTrue(table.isAutoFlush());
 
     server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
     this.log = server.getWAL();
@@ -333,27 +331,35 @@ public class TestLogRolling  {
         .isAppendSupported(TEST_UTIL.getConfiguration()));
 
     // add up the datanode count, to ensure proper replication when we kill 1
+    // This function is synchronous; when it returns, the dfs cluster is active
+    // We start 3 servers and then stop 2 to avoid a directory naming conflict
+    //  when we stop/start a namenode later, as mentioned in HBASE-5163
+    List<DataNode> existingNodes = dfsCluster.getDataNodes();
     dfsCluster
-        .startDataNodes(TEST_UTIL.getConfiguration(), 1, true, null, null);
-    dfsCluster.waitActive();
-    assertTrue(dfsCluster.getDataNodes().size() >= fs.getDefaultReplication() + 1);
+        .startDataNodes(TEST_UTIL.getConfiguration(), 3, true, null, null);
+    for (DataNode dn: existingNodes){
+      dfsCluster.stopDataNode( dn.dnRegistration.getName() );
+    }
+
+    assertTrue(
+      dfsCluster.getDataNodes().size() >= fs.getDefaultReplication() + 1);
 
     writeData(table, 2);
-
-    table.setAutoFlush(true);
 
     long curTime = System.currentTimeMillis();
     long oldFilenum = log.getFilenum();
     assertTrue("Log should have a timestamp older than now",
         curTime > oldFilenum && oldFilenum != -1);
 
-    assertTrue("The log shouldn't have rolled yet", oldFilenum == log.getFilenum());
-    DatanodeInfo[] pipeline = getPipeline(log);
+    assertTrue("The log shouldn't have rolled yet",
+      oldFilenum == log.getFilenum());
+    final DatanodeInfo[] pipeline = getPipeline(log);
     assertTrue(pipeline.length == fs.getDefaultReplication());
 
     // kill a datanode in the pipeline to force a log roll on the next sync()
+    // This function is synchronous, when it returns the node is killed.
     assertTrue(dfsCluster.stopDataNode(pipeline[0].getName()) != null);
-    Thread.sleep(10000);
+
     // this write should succeed, but trigger a log roll
     writeData(table, 2);
     long newFilenum = log.getFilenum();
@@ -363,23 +369,26 @@ public class TestLogRolling  {
 
     // write some more log data (this should use a new hdfs_out)
     writeData(table, 3);
-    assertTrue("The log should not roll again.", log.getFilenum() == newFilenum);
+    assertTrue("The log should not roll again.",
+      log.getFilenum() == newFilenum);
     // kill another datanode in the pipeline, so the replicas will be lower than
     // the configured value 2.
     assertTrue(dfsCluster.stopDataNode(pipeline[1].getName()) != null);
-    Thread.sleep(10000);
+
     batchWriteAndWait(table, 3, false, 10000);
     assertTrue("LowReplication Roller should've been disabled",
         !log.isLowReplicationRollEnabled());
+
     dfsCluster
         .startDataNodes(TEST_UTIL.getConfiguration(), 1, true, null, null);
-    dfsCluster.waitActive();
+
     // Force roll writer. The new log file will have the default replications,
     // and the LowReplication Roller will be enabled.
     log.rollWriter(true);
     batchWriteAndWait(table, 13, true, 10000);
-    assertTrue("New log file should have the default replication",
-        log.getLogReplication() == fs.getDefaultReplication());
+    assertTrue("New log file should have the default replication instead of " +
+      log.getLogReplication(),
+      log.getLogReplication() == fs.getDefaultReplication());
     assertTrue("LowReplication Roller should've been enabled",
         log.isLowReplicationRollEnabled());
   }
