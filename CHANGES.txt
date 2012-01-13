@@ -519,6 +519,7 @@ Release 0.92.0 - Unreleased
    HBASE-5121  MajorCompaction may affect scan's correctness (chunhui shen and Lars H)
    HBASE-5163  TestLogRolling#testLogRollOnDatanodeDeath fails sometimes on Jenkins or hadoop QA
                ("The directory is already locked.") (N Keywal)
+   HBASE-5143  Fix config typo in pluggable load balancer factory (Harsh J)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
