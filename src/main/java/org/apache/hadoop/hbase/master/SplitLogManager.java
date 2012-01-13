@@ -485,7 +485,6 @@ public class SplitLogManager extends ZooKeeperListener {
           new_version, workerName);
       tot_mgr_heartbeat.incrementAndGet();
     } else {
-      assert false;
       LOG.warn("got dup heartbeat for " + path + " ver = " + new_version);
     }
     return;

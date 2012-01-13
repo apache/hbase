@@ -456,7 +456,7 @@ public class TestSplitLogManager {
     assertFalse(fs.exists(emptyLogDirPath));
   }
 
-  @Test
+  @Test(timeout=45000)
   public void testVanishingTaskZNode() throws Exception {
     LOG.info("testVanishingTaskZNode");
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 0);
@@ -466,27 +466,38 @@ public class TestSplitLogManager {
     final Path logDir = new Path(fs.getWorkingDirectory(),
         UUID.randomUUID().toString());
     fs.mkdirs(logDir);
-    Path logFile = new Path(logDir, UUID.randomUUID().toString());
-    fs.createNewFile(logFile);
-    new Thread() {
-      public void run() {
-        try {
-          // this call will block because there are no SplitLogWorkers
-          slm.splitLogDistributed(logDir);
-        } catch (Exception e) {
-          LOG.warn("splitLogDistributed failed", e);
-          fail();
+    Thread thread = null;
+    try {
+      Path logFile = new Path(logDir, UUID.randomUUID().toString());
+      fs.createNewFile(logFile);
+      thread = new Thread() {
+        public void run() {
+          try {
+            // this call will block because there are no SplitLogWorkers,
+            // until the task znode is deleted below. Then the call will
+            // complete successfully, assuming the log is split.
+            slm.splitLogDistributed(logDir);
+          } catch (Exception e) {
+            LOG.warn("splitLogDistributed failed", e);
+          }
         }
+      };
+      thread.start();
+      waitForCounter(tot_mgr_node_create_result, 0, 1, 10000);
+      String znode = ZKSplitLog.getEncodedNodeName(zkw, logFile.toString());
+      // remove the task znode, to finish the distributed log splitting
+      ZKUtil.deleteNode(zkw, znode);
+      waitForCounter(tot_mgr_get_data_nonode, 0, 1, 30000);
+      waitForCounter(tot_mgr_log_split_batch_success, 0, 1, 1000);
+      assertTrue(fs.exists(logFile));
+    } finally {
+      if (thread != null) {
+        // interrupt the thread in case the test fails in the middle.
+        // it has no effect if the thread is already terminated.
+        thread.interrupt();
       }
-    }.start();
-    waitForCounter(tot_mgr_node_create_result, 0, 1, 10000);
-    String znode = ZKSplitLog.getEncodedNodeName(zkw, logFile.toString());
-    // remove the task znode
-    ZKUtil.deleteNode(zkw, znode);
-    waitForCounter(tot_mgr_get_data_nonode, 0, 1, 30000);
-    waitForCounter(tot_mgr_log_split_batch_success, 0, 1, 1000);
-    assertTrue(fs.exists(logFile));
-    fs.delete(logDir, true);
+      fs.delete(logDir, true);
+    }
   }
 
   @org.junit.Rule

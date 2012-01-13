@@ -30,6 +30,11 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,7 +50,6 @@ import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -59,9 +63,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
@@ -265,7 +267,7 @@ public class TestDistributedLogSplitting {
         "tot_wkr_preempt_task");
   }
 
-  @Test
+  @Test(timeout=25000)
   public void testDelayedDeleteOnFailure() throws Exception {
     LOG.info("testDelayedDeleteOnFailure");
     startCluster(1);
@@ -273,35 +275,60 @@ public class TestDistributedLogSplitting {
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
     final Path logDir = new Path(FSUtils.getRootDir(conf), "x");
     fs.mkdirs(logDir);
-    final Path corruptedLogFile = new Path(logDir, "x");
-    FSDataOutputStream out;
-    out = fs.create(corruptedLogFile);
-    out.write(0);
-    out.write(Bytes.toBytes("corrupted bytes"));
-    out.close();
-    slm.ignoreZKDeleteForTesting = true;
-    Thread t = new Thread() {
-      @Override
-      public void run() {
-        try {
-          slm.splitLogDistributed(logDir);
-        } catch (IOException ioe) {
+    ExecutorService executor = null;
+    try {
+      final Path corruptedLogFile = new Path(logDir, "x");
+      FSDataOutputStream out;
+      out = fs.create(corruptedLogFile);
+      out.write(0);
+      out.write(Bytes.toBytes("corrupted bytes"));
+      out.close();
+      slm.ignoreZKDeleteForTesting = true;
+      executor = Executors.newSingleThreadExecutor();
+      Runnable runnable = new Runnable() {
+       @Override
+       public void run() {
           try {
-            assertTrue(fs.exists(corruptedLogFile));
+            // since the logDir is a fake, corrupted one, so the split log worker
+            // will finish it quickly with error, and this call will fail and throw
+            // an IOException.
             slm.splitLogDistributed(logDir);
-          } catch (IOException e) {
-            assertTrue(Thread.currentThread().isInterrupted());
-            return;
+          } catch (IOException ioe) {
+            try {
+              assertTrue(fs.exists(corruptedLogFile));
+              // this call will block waiting for the task to be removed from the
+              // tasks map which is not going to happen since ignoreZKDeleteForTesting
+              // is set to true, until it is interrupted.
+              slm.splitLogDistributed(logDir);
+            } catch (IOException e) {
+              assertTrue(Thread.currentThread().isInterrupted());
+              return;
+            }
+            fail("did not get the expected IOException from the 2nd call");
           }
-          fail("did not get the expected IOException from the 2nd call");
+          fail("did not get the expected IOException from the 1st call");
         }
-        fail("did not get the expected IOException from the 1st call");
+      };
+      Future<?> result = executor.submit(runnable);
+      try {
+        result.get(2000, TimeUnit.MILLISECONDS);
+      } catch (TimeoutException te) {
+        // it is ok, expected.
       }
-    };
-    t.start();
-    waitForCounter(tot_mgr_wait_for_zk_delete, 0, 1, 10000);
-    t.interrupt();
-    t.join();
+      waitForCounter(tot_mgr_wait_for_zk_delete, 0, 1, 10000);
+      executor.shutdownNow();
+      executor = null;
+
+      // make sure the runnable is finished with no exception thrown.
+      result.get();
+    } finally {
+      if (executor != null) {
+        // interrupt the thread in case the test fails in the middle.
+        // it has no effect if the thread is already terminated.
+        executor.shutdownNow();
+      }
+      fs.delete(logDir, true);
+    }
   }
 
   HTable installTable(ZooKeeperWatcher zkw, String tname, String fname,
