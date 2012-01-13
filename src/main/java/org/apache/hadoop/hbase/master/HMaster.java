@@ -25,6 +25,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,11 +68,13 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
+import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
@@ -499,7 +502,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     this.balancer.setClusterStatus(getClusterStatus());
     this.balancer.setMasterServices(this);
-    
+
+    // Fixing up missing daughters if any
+    status.setStatus("Fixing up missing daughters");
+    fixupDaughters(status);
+
     // Start balancer and meta catalog janitor after meta and regions have
     // been assigned.
     status.setStatus("Starting balancer and catalog janitor");
@@ -589,6 +596,39 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       ", location=" + catalogTracker.getMetaLocation());
     status.setStatus("META and ROOT assigned.");
     return assigned;
+  }
+
+  void fixupDaughters(final MonitoredTask status) throws IOException {
+    final Map<HRegionInfo, Result> offlineSplitParents =
+      new HashMap<HRegionInfo, Result>();
+    // This visitor collects offline split parents in the .META. table
+    MetaReader.Visitor visitor = new MetaReader.Visitor() {
+      @Override
+      public boolean visit(Result r) throws IOException {
+        if (r == null || r.isEmpty()) return true;
+        HRegionInfo info =
+          MetaReader.parseHRegionInfoFromCatalogResult(
+            r, HConstants.REGIONINFO_QUALIFIER);
+        if (info == null) return true; // Keep scanning
+        if (info.isOffline() && info.isSplit()) {
+          offlineSplitParents.put(info, r);
+        }
+        // Returning true means "keep scanning"
+        return true;
+      }
+    };
+    // Run full scan of .META. catalog table passing in our custom visitor
+    MetaReader.fullScan(this.catalogTracker, visitor);
+    // Now work on our list of found parents. See if any we can clean up.
+    int fixups = 0;
+    for (Map.Entry<HRegionInfo, Result> e : offlineSplitParents.entrySet()) {
+      fixups += ServerShutdownHandler.fixupDaughters(
+          e.getValue(), assignmentManager, catalogTracker);
+    }
+    if (fixups != 0) {
+      LOG.info("Scanned the catalog and fixed up " + fixups +
+        " missing daughter region(s)");
+    }
   }
 
   /**

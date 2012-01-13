@@ -68,7 +68,7 @@ class SplitRequest implements Runnable {
       } catch (Exception e) {
         try {
           LOG.info("Running rollback/cleanup of failed split of " +
-            parent.getRegionNameAsString() + "; " + e.getMessage());
+            parent.getRegionNameAsString() + "; " + e.getMessage(), e);
           if (st.rollback(this.server, this.server)) {
             LOG.info("Successful rollback of failed split of " +
               parent.getRegionNameAsString());
