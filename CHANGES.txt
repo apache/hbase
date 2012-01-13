@@ -155,8 +155,6 @@ Release 0.90.5 - Dec 22, 2011
                internal invocations of other hbase scripts
    HBASE-5156  Backport HBASE-4899 - Region would be assigned twice easily with 
                continually killing server and moving region in testing environment(Ram)
-   HBASE-5157  Backport HBASE-4880- Region is on service before openRegionHandler 
-               completes, may cause data loss (Ram)
    HBASE-5158  Backport HBASE-4878 - Master crash when splitting hlog may cause data loss (Ram)
    HBASE-5168  Backport HBASE-5100 - Rollback of split could cause closed region to be opened again(Ram)
    HBASE-5178  Backport HBASE-4101 - Regionserver Deadlock (Ram)

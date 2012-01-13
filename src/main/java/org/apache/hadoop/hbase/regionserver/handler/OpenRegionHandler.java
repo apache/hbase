@@ -117,9 +117,6 @@ public class OpenRegionHandler extends EventHandler {
         cleanupFailedOpen(region);
         return;
       }
-      
-      // Add to online regions if all above was successful.
-      this.rsServices.addToOnlineRegions(region);
 
       // Done!  Successful region open
       LOG.debug("Opened " + name);
@@ -299,6 +296,7 @@ public class OpenRegionHandler extends EventHandler {
 
   private void cleanupFailedOpen(final HRegion region) throws IOException {
     if (region != null) region.close();
+    this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
   }
 
   /**

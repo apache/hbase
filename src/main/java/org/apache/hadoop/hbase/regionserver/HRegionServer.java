@@ -1365,6 +1365,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           "Region has too many store files");
     }
 
+    // Add to online regions if all above was successful.
+    addToOnlineRegions(r);
+
     // Update ZK, ROOT or META
     if (r.getRegionInfo().isRootRegion()) {
       RootLocationEditor.setRootLocation(getZooKeeper(),

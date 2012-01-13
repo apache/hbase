@@ -311,8 +311,6 @@ class SplitTransaction {
       throw new IOException("Failed " +
         bOpener.getName(), bOpener.getException());
     }
-    services.addToOnlineRegions(a);
-    services.addToOnlineRegions(b);
 
     // Leaving here, the splitdir with its dross will be in place but since the
     // split was successful, just leave it; it'll be cleaned when parent is
