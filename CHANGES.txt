@@ -23,6 +23,7 @@ Release 0.90.6 - Unreleased
                initialization when doing rollback of split, it will affect read correctness (Ram)
    HBASE-5160  Backport HBASE-4397 - -ROOT-, .META. tables stay offline for too long in 
                recovery phase after all RSs are shutdown at the same time (Ram)
+   HBASE-5160  Addendum adding the removed method in AssignmentManager (Ram)
 
   IMPROVEMENT
    HBASE-5102  Change the default value of the property "hbase.connection.per.config" to false in
