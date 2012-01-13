@@ -13,6 +13,16 @@ Release 0.90.6 - Unreleased
    HBASE-5009  Failure of creating split dir if it already exists prevents splits from happening further
    HBASE-5041  Major compaction on non existing table does not throw error (Shrijeet)
    HBASE-5088  A concurrency issue on SoftValueSortedMap (Jieshan Bean and Lars H)
+   HBASE-5156  Backport HBASE-4899 - Region would be assigned twice easily with 
+               continually killing server and moving region in testing environment(Ram)
+   HBASE-5158  Backport HBASE-4878 - Master crash when splitting hlog may cause data loss (Ram)
+   HBASE-5168  Backport HBASE-5100 - Rollback of split could cause closed region to be opened again(Ram)
+   HBASE-5178  Backport HBASE-4101 - Regionserver Deadlock (Ram)
+   HBASE-5159  Backport HBASE-4079 - HTableUtil - helper class for loading data  (Ram)
+   HBASE-5184  Backport HBASE-5152 - Region is on service before completing 
+               initialization when doing rollback of split, it will affect read correctness (Ram)
+   HBASE-5160  Backport HBASE-4397 - -ROOT-, .META. tables stay offline for too long in 
+               recovery phase after all RSs are shutdown at the same time (Ram)
 
   IMPROVEMENT
    HBASE-5102  Change the default value of the property "hbase.connection.per.config" to false in
@@ -153,16 +163,6 @@ Release 0.90.5 - Dec 22, 2011
    HBASE-4944  Optionally verify bulk loaded HFiles
    HBASE-4982  graceful_stop.sh does not pass on the --config its passed to its
                internal invocations of other hbase scripts
-   HBASE-5156  Backport HBASE-4899 - Region would be assigned twice easily with 
-               continually killing server and moving region in testing environment(Ram)
-   HBASE-5158  Backport HBASE-4878 - Master crash when splitting hlog may cause data loss (Ram)
-   HBASE-5168  Backport HBASE-5100 - Rollback of split could cause closed region to be opened again(Ram)
-   HBASE-5178  Backport HBASE-4101 - Regionserver Deadlock (Ram)
-   HBASE-5159  Backport HBASE-4079 - HTableUtil - helper class for loading data  (Ram)
-   HBASE-5184  Backport HBASE-5152 - Region is on service before completing 
-               initialization when doing rollback of split, it will affect read correctness (Ram)
-   HBASE-5160  Backport HBASE-4397 - -ROOT-, .META. tables stay offline for too long in 
-               recovery phase after all RSs are shutdown at the same time (Ram)
  
   NEW FEATURE
    HBASE-4377  [hbck] Offline rebuild .META. from fs data only
