@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -36,7 +37,9 @@ public class LoadBalancerFactory {
   public static LoadBalancer getLoadBalancer(Configuration conf) {
 
     // Create the balancer
-    Class<? extends LoadBalancer> balancerKlass = conf.getClass("hbase.maser.loadBalancer.class",DefaultLoadBalancer.class, LoadBalancer.class);
+    Class<? extends LoadBalancer> balancerKlass = conf.getClass(
+        HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        DefaultLoadBalancer.class, LoadBalancer.class);
     return ReflectionUtils.newInstance(balancerKlass, conf);
 
   }
