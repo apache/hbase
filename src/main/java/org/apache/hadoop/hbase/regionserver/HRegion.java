@@ -335,9 +335,6 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public long initialize(final CancelableProgressable reporter)
   throws IOException {
-    // A region can be reopened if failed a split; reset flags
-    this.closing.set(false);
-    this.closed.set(false);
 
     // Write HRI to a file in case we need to recover .META.
     checkRegioninfoOnFilesystem();
@@ -373,6 +370,9 @@ public class HRegion implements HeapSize { // , Writable{
     // (particularly if no recovered edits, seqid will be -1).
     long nextSeqid = maxSeqId + 1;
     LOG.info("Onlined " + this.toString() + "; next sequenceid=" + nextSeqid);
+    // A region can be reopened if failed a split; reset flags
+    this.closing.set(false);
+    this.closed.set(false);
     return nextSeqid;
   }
 
