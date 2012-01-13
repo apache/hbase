@@ -478,6 +478,7 @@ Release 0.92.0 - Unreleased
    HBASE-5137  MasterFileSystem.splitLog() should abort even if waitOnSafeMode() throws IOException(Ted)
    HBASE-5121  MajorCompaction may affect scan's correctness (chunhui shen and Lars H)
    HBASE-5143  Fix config typo in pluggable load balancer factory (Harsh J)
+   HBASE-5196  Failure in region split after PONR could cause region hole (Jimmy Xiang)
 
   TESTS
    HBASE-4450  test for number of blocks read: to serve as baseline for expected
