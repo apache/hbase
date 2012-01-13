@@ -34,17 +34,18 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.thrift.ThriftServer;
-import org.apache.hadoop.hbase.thrift.ThriftUtilities;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
+import org.apache.hadoop.hbase.thrift.TBoundedThreadPoolServer;
+import org.apache.hadoop.hbase.thrift.TBoundedThreadPoolServer.Args;
+import org.apache.hadoop.hbase.thrift.ThriftServer;
+import org.apache.hadoop.hbase.thrift.ThriftUtilities;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.server.TNonblockingServer;
 import org.apache.thrift.server.TServer;
-import org.apache.thrift.server.TThreadPoolServer;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
@@ -225,13 +226,14 @@ public class HRegionThriftServer extends Thread {
           transportFactory = new TTransportFactory();
         }
 
-        TThreadPoolServer.Args serverArgs = new TThreadPoolServer.Args(serverTransport);
+        TBoundedThreadPoolServer.Args serverArgs =
+            new TBoundedThreadPoolServer.Args(serverTransport, conf);
         serverArgs.processor(processor);
         serverArgs.protocolFactory(protocolFactory);
         serverArgs.transportFactory(transportFactory);
         LOG.info("starting HRegionServer ThreadPool Thrift server on " +
                  listenAddress + ":" + this.port);
-        tserver = new TThreadPoolServer(serverArgs);
+        tserver = new TBoundedThreadPoolServer(serverArgs);
       }
       tserver.serve();
     } catch (Exception e) {
