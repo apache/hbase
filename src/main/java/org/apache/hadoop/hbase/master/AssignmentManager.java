@@ -193,11 +193,13 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Handle failover.  Restore state from META and ZK.  Handle any regions in
    * transition.  Presumes <code>.META.</code> and <code>-ROOT-</code> deployed.
+   * @param onlineServers onlined servers when master start
    * @throws KeeperException
    * @throws IOException
    * @throws InterruptedException 
    */
-  void processFailover() throws KeeperException, IOException, InterruptedException {
+  void processFailover(final Set<String> onlineServers)
+  throws KeeperException, IOException, InterruptedException {
     // Concurrency note: In the below the accesses on regionsInTransition are
     // outside of a synchronization block where usually all accesses to RIT are
     // synchronized.  The presumption is that in this case it is safe since this
@@ -218,7 +220,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // Scan META to build list of existing regions, servers, and assignment
     // Returns servers who have not checked in (assumed dead) and their regions
     Map<String, List<Pair<HRegionInfo, Result>>> deadServers =
-      rebuildUserRegions();
+      rebuildUserRegions(onlineServers);
     // Process list of dead servers; note this will add regions to the RIT.
     // processRegionsInTransition will read them and assign them out.
     processDeadServers(deadServers);
@@ -1561,12 +1563,15 @@ public class AssignmentManager extends ZooKeeperListener {
    * <p>
    * Returns a map of servers that are not found to be online and the regions
    * they were hosting.
+   * @param onlineServers if one region's location belongs to onlineServers, it
+   *          doesn't need to be assigned
    * @return map of servers not online to their assigned regions, as stored
    *         in META
    * @throws IOException
  * @throws KeeperException 
    */
-  private Map<String, List<Pair<HRegionInfo,Result>>> rebuildUserRegions()
+  private Map<String, List<Pair<HRegionInfo,Result>>> rebuildUserRegions(
+      final Set<String> onlineServers)
   throws IOException, KeeperException {
     // Region assignment from META
     List<Result> results = MetaReader.fullScanOfResults(catalogTracker);
@@ -1593,7 +1598,7 @@ public class AssignmentManager extends ZooKeeperListener {
         if (checkIfRegionBelongsToDisabling(regionInfo)) {
           disablingTables.add(disablingTableName);
         }
-      } else if (!serverManager.isServerOnline(regionLocation.getServerName())) {
+      } else if (!onlineServers.contains(regionLocation.getServerName())) {
         // Region is located on a server that isn't online
         List<Pair<HRegionInfo,Result>> offlineRegions =
           offlineServers.get(regionLocation.getServerName());

@@ -22,15 +22,14 @@ package org.apache.hadoop.hbase.master;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.hbase.HServerInfo;
 
 /**
- * Class to hold dead servers list and utility querying dead server list.
+ * Class to hold dead servers list, utility querying dead server list and the
+ * dead servers being processed by the ServerShutdownHandler.
  */
 public class DeadServer implements Set<String> {
   /**
@@ -41,7 +40,11 @@ public class DeadServer implements Set<String> {
    * because by then, its regions have probably been reassigned.
    */
   private final Set<String> deadServers = new HashSet<String>();
-
+  /**
+   * Set of dead servers under processing by the ServerShutdownHander.
+   */
+  private final Set<String> deadServersUnderProcessing = new HashSet<String>();
+  
   /** Maximum number of dead servers to keep track of */
   private final int maxDeadServers;
 
@@ -111,13 +114,22 @@ public class DeadServer implements Set<String> {
     return clone;
   }
 
+  synchronized Set<String> getDeadServersBeingProcessed() {
+    Set<String> clone = new HashSet<String>(
+        this.deadServersUnderProcessing.size());
+    clone.addAll(this.deadServersUnderProcessing);
+    return clone;
+  }
+  
   public synchronized boolean add(String e) {
     this.numProcessing++;
+    deadServersUnderProcessing.add(e);
     return deadServers.add(e);
   }
 
   public synchronized void finish(String e) {
     this.numProcessing--;
+    deadServersUnderProcessing.remove(e);
   }
 
   public synchronized int size() {
