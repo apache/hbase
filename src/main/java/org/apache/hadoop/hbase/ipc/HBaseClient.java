@@ -499,28 +499,28 @@ public class HBaseClient {
 
       DataOutputBuffer d=null;
       try {
-        //noinspection SynchronizeOnNonFinalField
-        synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
-          if (LOG.isDebugEnabled())
-            LOG.debug(getName() + " sending #" + call.id);
+        // noinspection SynchronizeOnNonFinalField
+        if (LOG.isDebugEnabled())
+          LOG.debug(getName() + " sending #" + call.id);
 
-          //for serializing the
-          //data to be written
-          d = new DataOutputBuffer();
-          d.writeInt(0xdeadbeef); // placeholder for data length
-          d.writeInt(call.id);
-          call.param.write(d);
-          byte[] data = d.getData();
-          int dataLength = d.getLength();
-          // fill in the placeholder
-          Bytes.putInt(data, 0, dataLength - 4);
+        // for serializing the
+        // data to be written
+        d = new DataOutputBuffer();
+        d.writeInt(0xdeadbeef); // placeholder for data length
+        d.writeInt(call.id);
+        call.param.write(d);
+        byte[] data = d.getData();
+        int dataLength = d.getLength();
+        // fill in the placeholder
+        Bytes.putInt(data, 0, dataLength - 4);
+        synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
           out.write(data, 0, dataLength);
           out.flush();
         }
-      } catch(IOException e) {
+      } catch (IOException e) {
         markClosed(e);
       } finally {
-        //the buffer is just an in-memory buffer, but it is still polite to
+        // the buffer is just an in-memory buffer, but it is still polite to
         // close early
         IOUtils.closeStream(d);
       }
