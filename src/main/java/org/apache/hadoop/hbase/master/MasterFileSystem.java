@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -155,7 +155,7 @@ public class MasterFileSystem {
    * @param onlineServers Map of online servers keyed by
    * {@link HServerInfo#getServerName()}
    */
-  void splitLogAfterStartup(final Set<String> onlineServers) {
+  void splitLogAfterStartup(final Map<String, HServerInfo> onlineServers) {
     Path logsDirPath = new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
     try {
       if (!this.fs.exists(logsDirPath)) {
@@ -176,7 +176,7 @@ public class MasterFileSystem {
     }
     for (FileStatus status : logFolders) {
       String serverName = status.getPath().getName();
-      if (!onlineServers.contains(serverName)) {
+      if (onlineServers.get(serverName) == null) {
         LOG.info("Log folder " + status.getPath() + " doesn't belong " +
           "to a known region server, splitting");
         splitLog(serverName);

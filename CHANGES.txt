@@ -24,8 +24,6 @@ Release 0.90.6 - Unreleased
    HBASE-5160  Backport HBASE-4397 - -ROOT-, .META. tables stay offline for too long in 
                recovery phase after all RSs are shutdown at the same time (Ram)
    HBASE-5160  Addendum adding the removed method in AssignmentManager (Ram)
-   HBASE-5179  Concurrent processing of processFaileOver and ServerShutdownHandler may cause region to
-               be assigned before log splitting is completed, causing data loss (Chunhui)
 
   IMPROVEMENT
    HBASE-5102  Change the default value of the property "hbase.connection.per.config" to false in

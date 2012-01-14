@@ -25,10 +25,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
@@ -53,6 +51,7 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
@@ -375,16 +374,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     // Wait for region servers to report in.  Returns count of regions.
     int regionCount = this.serverManager.waitForRegionServers();
-    
-    Set<String> knownServers = new HashSet<String>();
-    knownServers.addAll(serverManager.getOnlineServers().keySet());
-    if (this.serverManager.areDeadServersInProgress()) {
-      // Dead servers are processing, their logs would be split by
-      // ServerShutdownHandler
-      knownServers.addAll(serverManager.getDeadServersBeingProcessed());
-    }
+
     // TODO: Should do this in background rather than block master startup
-    this.fileSystemManager.splitLogAfterStartup(knownServers);
+    this.fileSystemManager.
+      splitLogAfterStartup(this.serverManager.getOnlineServers());
 
     // Make sure root and meta assigned before proceeding.
     assignRootAndMeta();
@@ -400,7 +393,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.assignmentManager.assignAllUserRegions();
     } else {
       LOG.info("Master startup proceeding: master failover");
-      this.assignmentManager.processFailover(knownServers);
+      this.assignmentManager.processFailover();
     }
 
     // Start balancer and meta catalog janitor after meta and regions have

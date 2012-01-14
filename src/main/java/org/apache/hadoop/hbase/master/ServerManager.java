@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
+import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo,
@@ -419,19 +420,8 @@ public class ServerManager {
     }
   }
 
-  /**
-   * @return Set of known dead servers.
-   */
   public Set<String> getDeadServers() {
     return this.deadservers.clone();
-  }
-
-  /**
-   * @return Set of dead servers which are being processed by the
-   *         ServerShutdownHander.
-   */
-  public Set<String> getDeadServersBeingProcessed() {
-    return this.deadservers.getDeadServersBeingProcessed();
   }
 
   /**
