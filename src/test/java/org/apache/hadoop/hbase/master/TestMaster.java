@@ -72,6 +72,8 @@ public class TestMaster {
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
     TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
+    assertTrue(m.assignmentManager.getZKTable().isEnabledTable
+        (Bytes.toString(TABLENAME)));
     TEST_UTIL.loadTable(new HTable(TEST_UTIL.getConfiguration(), TABLENAME),
       FAMILYNAME);
 

@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
@@ -252,13 +253,29 @@ public class ServerShutdownHandler extends EventHandler {
   public static boolean processDeadRegion(HRegionInfo hri, Result result,
       AssignmentManager assignmentManager, CatalogTracker catalogTracker)
   throws IOException {
+	  // check if table is present in cache
+    String tableName = hri.getTableDesc().getNameAsString();
+    boolean tablePresent = assignmentManager.getZKTable().isTablePresent(
+        tableName);
+    if (!tablePresent) {
+      LOG.info("The table " + tableName
+          + " was deleted.  Hence not proceeding.");
+      return false;
+    }
     // If table is not disabled but the region is offlined,
-    boolean disabled = assignmentManager.getZKTable().isDisabledTable(
-        hri.getTableDesc().getNameAsString());
-    if (disabled) return false;
+    boolean disabled = assignmentManager.getZKTable()
+        .isDisabledTable(tableName);
+    if (disabled) {
+      LOG.info("The table " + tableName
+          + " was disabled.  Hence not proceeding.");
+      return false;
+    }
     if (hri.isOffline() && hri.isSplit()) {
-      LOG.debug("Offlined and split region " + hri.getRegionNameAsString() +
-        "; checking daughter presence");
+      LOG.debug("Offlined and split region " + hri.getRegionNameAsString()
+          + "; checking daughter presence");
+      if (MetaReader.getRegion(catalogTracker, hri.getRegionName()) == null) {
+        return false;
+      }
       fixupDaughters(result, assignmentManager, catalogTracker);
       return false;
     }

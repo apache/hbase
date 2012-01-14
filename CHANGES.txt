@@ -25,7 +25,8 @@ Release 0.90.6 - Unreleased
                recovery phase after all RSs are shutdown at the same time (Ram)
    HBASE-5160  Addendum adding the removed method in AssignmentManager (Ram)
    HBASE-5192  Backport HBASE-4236 Don't lock the stream while serializing the response (Ram)
-
+   HBASE-5155  ServerShutDownHandler And Disable/Delete should not happen parallely 
+               leading to recreation of regions that were deleted (Ram)
   IMPROVEMENT
    HBASE-5102  Change the default value of the property "hbase.connection.per.config" to false in
                 hbase-default.xml

@@ -429,6 +429,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.assignmentManager.waitForAssignment(HRegionInfo.ROOT_REGIONINFO);
       assigned++;
     }
+    // Enable the ROOT table if on process fail over the RS containing ROOT
+    // was active.
+    enableCatalogTables(Bytes.toString(HConstants.ROOT_TABLE_NAME));
     LOG.info("-ROOT- assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getRootLocation());
 
@@ -443,9 +446,18 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
       assigned++;
     }
+    // Enable the META table if on process fail over the RS containing META
+    // was active.
+    enableCatalogTables(Bytes.toString(HConstants.META_TABLE_NAME));
     LOG.info(".META. assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getMetaLocation());
     return assigned;
+  }
+
+  private void enableCatalogTables(String catalogTableName) {
+    if (!this.assignmentManager.getZKTable().isEnabledTable(catalogTableName)) {
+      this.assignmentManager.setEnabledTable(catalogTableName);
+    }
   }
 
   /*
@@ -781,27 +793,19 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       throw new TableExistsException(tableName);
     }
     for (HRegionInfo newRegion : newRegions) {
-      // 1. Set table enabling flag up in zk.
-      try {
-        assignmentManager.getZKTable().setEnabledTable(tableName);
-      } catch (KeeperException e) {
-        throw new IOException("Unable to ensure that the table will be" +
-          " enabled because of a ZooKeeper issue", e);
-      }
-
-      // 2. Create HRegion
+      // 1. Create HRegion
       HRegion region = HRegion.createHRegion(newRegion,
         fileSystemManager.getRootDir(), conf);
 
-      // 3. Insert into META
+      // 2. Insert into META
       MetaEditor.addRegionToMeta(catalogTracker, region.getRegionInfo());
 
-      // 4. Close the new region to flush to disk.  Close log file too.
+      // 3. Close the new region to flush to disk.  Close log file too.
       region.close();
       region.getLog().closeAndDelete();
     }
 
-    // 5. Trigger immediate assignment of the regions in round-robin fashion
+    // 4. Trigger immediate assignment of the regions in round-robin fashion
     if (newRegions.length == 1) {
       this.assignmentManager.assign(newRegions[0], true);
     } else {
@@ -809,7 +813,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.assignmentManager.bulkAssignUserRegions(newRegions, servers, sync);
     }
 
-    // 6. If sync, wait for assignment of regions
+    // 5. If sync, wait for assignment of regions
     if (sync) {
       LOG.debug("Waiting for " + newRegions.length + " region(s) to be assigned");
       for (HRegionInfo regionInfo : newRegions) {
