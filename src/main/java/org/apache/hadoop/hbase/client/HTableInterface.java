@@ -265,6 +265,16 @@ public interface HTableInterface extends Closeable {
       byte[] value, Delete delete) throws IOException;
 
   /**
+   * Performs multiple mutations atomically on a single row. Currently
+   * {@link Put} and {@link Delete} are supported.
+   *
+   * @param arm object that specifies the set of mutations to perform
+   * atomically
+   * @throws IOException
+   */
+  public void mutateRow(final RowMutation rm) throws IOException;
+
+  /**
    * Appends values to one or more columns within a single row.
    * <p>
    * This operation does not appear atomic to readers.  Appends are done

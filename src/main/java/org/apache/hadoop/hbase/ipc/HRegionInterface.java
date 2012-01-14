@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -261,6 +262,9 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
   public long incrementColumnValue(byte [] regionName, byte [] row,
       byte [] family, byte [] qualifier, long amount, boolean writeToWAL)
   throws IOException;
+
+  public void mutateRow(byte[] regionName, RowMutation rm)
+      throws IOException;
 
   /**
    * Appends values to one or more columns values in a row. Optionally

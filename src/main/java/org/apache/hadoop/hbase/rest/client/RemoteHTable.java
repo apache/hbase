@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTableInterface;
@@ -646,5 +647,10 @@ public class RemoteHTable implements HTableInterface {
       Batch.Call<T, R> callable, Batch.Callback<R> callback)
       throws IOException, Throwable {
     throw new UnsupportedOperationException("coprocessorExec not implemented");
+  }
+
+  @Override
+  public void mutateRow(RowMutation rm) throws IOException {
+    throw new IOException("atomicMutation not supported");
   }
 }

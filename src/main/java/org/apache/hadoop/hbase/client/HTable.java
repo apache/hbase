@@ -752,6 +752,20 @@ public class HTable implements HTableInterface {
    * {@inheritDoc}
    */
   @Override
+  public void mutateRow(final RowMutation rm) throws IOException {
+    new ServerCallable<Void>(connection, tableName, rm.getRow(),
+        operationTimeout) {
+      public Void call() throws IOException {
+        server.mutateRow(location.getRegionInfo().getRegionName(), rm);
+        return null;
+      }
+    }.withRetries();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
   public Result append(final Append append) throws IOException {
     if (append.numFamilies() == 0) {
       throw new IOException(
