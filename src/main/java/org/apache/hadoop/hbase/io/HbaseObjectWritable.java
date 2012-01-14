@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -232,10 +233,12 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(ColumnRangeFilter.class, code++);
 
     addToMap(HServerLoad.class, code++);
-    
+
     addToMap(RegionOpeningState.class, code++);
 
     addToMap(Append.class, code++);
+
+    addToMap(RowMutation.class, code++);
   }
 
   private Class<?> declaredClass;

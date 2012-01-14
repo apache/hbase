@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -3152,6 +3153,27 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
+  public void mutateRow(byte[] regionName, RowMutation rm)
+      throws IOException {
+    checkOpen();
+    if (regionName == null) {
+      throw new IOException("Invalid arguments to atomicMutation " +
+      "regionName is null");
+    }
+    requestCount.incrementAndGet();
+    try {
+      HRegion region = getRegion(regionName);
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
+      region.mutateRow(rm, null);
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
+  }
+
+  @Override
   public Result append(byte[] regionName, Append append)
   throws IOException {
     checkOpen();
@@ -3296,6 +3318,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           } else if (action instanceof Append) {
             response.add(regionName, originalIndex,
                 append(regionName, (Append)action));
+          } else if (action instanceof RowMutation) {
+            mutateRow(regionName, (RowMutation)action);
+            response.add(regionName, originalIndex, new Result());
           } else {
             LOG.debug("Error: invalid Action, row must be a Get, Delete, " +
                 "Put, Exec, Increment, or Append.");

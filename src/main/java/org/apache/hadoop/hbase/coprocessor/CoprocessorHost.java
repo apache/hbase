@@ -501,6 +501,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
           byte[] row) {
         return table.coprocessorProxy(protocol, row);
       }
+
+      @Override
+      public void mutateRow(RowMutation rm) throws IOException {
+        table.mutateRow(rm);
+      }
     }
 
     /** The coprocessor */

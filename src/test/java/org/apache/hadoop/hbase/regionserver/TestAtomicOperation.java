@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 
 import java.io.IOException;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,10 +29,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.RowMutation;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.experimental.categories.Category;
 
@@ -239,7 +245,98 @@ public class TestAtomicOperation extends HBaseTestCase {
     }
   }
 
+  /**
+   * Test multi-threaded increments.
+   */
+  public void testRowMutationMultiThreads() throws IOException {
 
+    LOG.info("Starting test testMutationMultiThreads");
+    initHRegion(tableName, getName(), fam1);
+
+    // create 100 threads, each will alternate between adding and
+    // removing a column
+    int numThreads = 100;
+    int opsPerThread = 1000;
+    AtomicOperation[] all = new AtomicOperation[numThreads];
+
+    AtomicLong timeStamps = new AtomicLong(0);
+    AtomicInteger failures = new AtomicInteger(0);
+    // create all threads
+    for (int i = 0; i < numThreads; i++) {
+      all[i] = new AtomicOperation(region, opsPerThread, timeStamps, failures);
+    }
+
+    // run all threads
+    for (int i = 0; i < numThreads; i++) {
+      all[i].start();
+    }
+
+    // wait for all threads to finish
+    for (int i = 0; i < numThreads; i++) {
+      try {
+        all[i].join();
+      } catch (InterruptedException e) {
+      }
+    }
+    assertEquals(0, failures.get());
+  }
+
+
+  public static class AtomicOperation extends Thread {
+    private final HRegion region;
+    private final int numOps;
+    private final AtomicLong timeStamps;
+    private final AtomicInteger failures;
+    private final Random r = new Random();
+    public AtomicOperation(HRegion region, int numOps, AtomicLong timeStamps, AtomicInteger failures) {
+      this.region = region;
+      this.numOps = numOps;
+      this.timeStamps = timeStamps;
+      this.failures = failures;
+    }
+    @Override
+    public void run() {
+      boolean op = true;
+      for (int i=0; i<numOps; i++) {
+        try {
+          // throw in some flushes
+          if (r.nextFloat() < 0.001) {
+            LOG.debug("flushing");
+            region.flushcache();
+          }
+          long ts = timeStamps.incrementAndGet();
+          RowMutation arm = new RowMutation(row);
+          if (op) {
+            Put p = new Put(row, ts);
+            p.add(fam1, qual1, value1);
+            arm.add(p);
+            Delete d = new Delete(row);
+            d.deleteColumns(fam1, qual2, ts);
+            arm.add(d);
+          } else {
+            Delete d = new Delete(row);
+            d.deleteColumns(fam1, qual1, ts);
+            arm.add(d);
+            Put p = new Put(row, ts);
+            p.add(fam1, qual2, value2);
+            arm.add(p);
+          }
+          region.mutateRow(arm, null);
+          op ^= true;
+          // check: should always see exactly one column
+          Get g = new Get(row);
+          Result r = region.get(g, null);
+          if (r.size() != 1) {
+            LOG.debug(r);
+            failures.incrementAndGet();
+            fail();
+          }
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+  }
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =

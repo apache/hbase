@@ -77,10 +77,12 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.IsolationLevel;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
@@ -1684,7 +1686,7 @@ public class HRegion implements HeapSize { // , Writable{
       try {
         // All edits for the given row (across all column families) must happen atomically.
         prepareDelete(delete);
-        internalDelete(delete, delete.getClusterId(), writeToWAL);
+        internalDelete(delete, delete.getClusterId(), writeToWAL, null, null);
       } finally {
         if(lockid == null) releaseRowLock(lid);
       }
@@ -1705,21 +1707,26 @@ public class HRegion implements HeapSize { // , Writable{
     delete.setFamilyMap(familyMap);
     delete.setClusterId(clusterId);
     delete.setWriteToWAL(writeToWAL);
-    internalDelete(delete, clusterId, writeToWAL);
+    internalDelete(delete, clusterId, writeToWAL, null, null);
   }
 
   /**
+   * @param delete The Delete command
    * @param familyMap map of family to edits for the given family.
    * @param writeToWAL
+   * @param writeEntry Optional mvcc write point to use
+   * @param walEdit Optional walEdit to use. A non-null walEdit indicates
+   * that the coprocessor hooks are run by the caller
    * @throws IOException
    */
   private void internalDelete(Delete delete, UUID clusterId,
-      boolean writeToWAL) throws IOException {
+      boolean writeToWAL, MultiVersionConsistencyControl.WriteEntry writeEntry,
+      WALEdit walEdit) throws IOException {
     Map<byte[], List<KeyValue>> familyMap = delete.getFamilyMap();
-    WALEdit walEdit = new WALEdit();
+    WALEdit localWalEdit = walEdit == null ? new WALEdit() : walEdit;
     /* Run coprocessor pre hook outside of locks to avoid deadlock */
-    if (coprocessorHost != null) {
-      if (coprocessorHost.preDelete(delete, walEdit, writeToWAL)) {
+    if (coprocessorHost != null && walEdit == null) {
+      if (coprocessorHost.preDelete(delete, localWalEdit, writeToWAL)) {
         return;
       }
     }
@@ -1783,23 +1790,22 @@ public class HRegion implements HeapSize { // , Writable{
         //
         // bunch up all edits across all column families into a
         // single WALEdit.
-        addFamilyMapToWALEdit(familyMap, walEdit);
+        addFamilyMapToWALEdit(familyMap, localWalEdit);
         this.log.append(regionInfo, this.htableDescriptor.getName(),
-            walEdit, clusterId, now, this.htableDescriptor);
+            localWalEdit, clusterId, now, this.htableDescriptor);
       }
 
       // Now make changes to the memstore.
-      long addedSize = applyFamilyMapToMemstore(familyMap, null);
+      long addedSize = applyFamilyMapToMemstore(familyMap, writeEntry);
       flush = isFlushSize(this.addAndGetGlobalMemstoreSize(addedSize));
 
-      if (coprocessorHost != null) {
-        coprocessorHost.postDelete(delete, walEdit, writeToWAL);
-      }
     } finally {
       this.updatesLock.readLock().unlock();
     }
-
     // do after lock
+    if (coprocessorHost != null && walEdit == null) {
+      coprocessorHost.postDelete(delete, localWalEdit, writeToWAL);
+    }
     final long after = EnvironmentEdgeManager.currentTimeMillis();
     final String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
         getTableDesc().getNameAsString(), familyMap.keySet());
@@ -1870,7 +1876,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       try {
         // All edits for the given row (across all column families) must happen atomically.
-        internalPut(put, put.getClusterId(), writeToWAL);
+        internalPut(put, put.getClusterId(), writeToWAL, null, null);
       } finally {
         if(lockid == null) releaseRowLock(lid);
       }
@@ -2299,11 +2305,13 @@ public class HRegion implements HeapSize { // , Writable{
           // originating cluster. A slave cluster receives the result as a Put
           // or Delete
           if (isPut) {
-            internalPut(((Put)w), HConstants.DEFAULT_CLUSTER_ID, writeToWAL);
+            internalPut(((Put) w), HConstants.DEFAULT_CLUSTER_ID, writeToWAL,
+                null, null);
           } else {
             Delete d = (Delete)w;
             prepareDelete(d);
-            internalDelete(d, HConstants.DEFAULT_CLUSTER_ID, writeToWAL);
+            internalDelete(d, HConstants.DEFAULT_CLUSTER_ID, writeToWAL, null,
+                null);
           }
           return true;
         }
@@ -2398,7 +2406,7 @@ public class HRegion implements HeapSize { // , Writable{
     p.setFamilyMap(familyMap);
     p.setClusterId(HConstants.DEFAULT_CLUSTER_ID);
     p.setWriteToWAL(true);
-    this.internalPut(p, HConstants.DEFAULT_CLUSTER_ID, true);
+    this.internalPut(p, HConstants.DEFAULT_CLUSTER_ID, true, null, null);
   }
 
   /**
@@ -2406,15 +2414,18 @@ public class HRegion implements HeapSize { // , Writable{
    * Warning: Assumption is caller has lock on passed in row.
    * @param put The Put command
    * @param writeToWAL if true, then we should write to the log
+   * @param writeEntry Optional mvcc write point to use
+   * @param walEdit Optional walEdit to use. A non-null walEdit indicates
+   * that the coprocessor hooks are run by the caller
    * @throws IOException
    */
-  private void internalPut(Put put, UUID clusterId,
-      boolean writeToWAL) throws IOException {
+  private void internalPut(Put put, UUID clusterId, boolean writeToWAL,
+      MultiVersionConsistencyControl.WriteEntry writeEntry, WALEdit walEdit) throws IOException {
     Map<byte[], List<KeyValue>> familyMap = put.getFamilyMap();
-    WALEdit walEdit = new WALEdit();
+    WALEdit localWalEdit = walEdit == null ? new WALEdit() : walEdit;
     /* run pre put hook outside of lock to avoid deadlock */
-    if (coprocessorHost != null) {
-      if (coprocessorHost.prePut(put, walEdit, writeToWAL)) {
+    if (coprocessorHost != null && walEdit == null) {
+      if (coprocessorHost.prePut(put, localWalEdit, writeToWAL)) {
         return;
       }
     }
@@ -2434,19 +2445,19 @@ public class HRegion implements HeapSize { // , Writable{
       // for some reason fail to write/sync to commit log, the memstore
       // will contain uncommitted transactions.
       if (writeToWAL) {
-        addFamilyMapToWALEdit(familyMap, walEdit);
+        addFamilyMapToWALEdit(familyMap, localWalEdit);
         this.log.append(regionInfo, this.htableDescriptor.getName(),
-            walEdit, clusterId, now, this.htableDescriptor);
+            localWalEdit, clusterId, now, this.htableDescriptor);
       }
 
-      long addedSize = applyFamilyMapToMemstore(familyMap, null);
+      long addedSize = applyFamilyMapToMemstore(familyMap, writeEntry);
       flush = isFlushSize(this.addAndGetGlobalMemstoreSize(addedSize));
     } finally {
       this.updatesLock.readLock().unlock();
     }
 
-    if (coprocessorHost != null) {
-      coprocessorHost.postPut(put, walEdit, writeToWAL);
+    if (coprocessorHost != null && walEdit == null) {
+      coprocessorHost.postPut(put, localWalEdit, writeToWAL);
     }
 
     // do after lock
@@ -4127,6 +4138,95 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     return results;
+  }
+
+  public int mutateRow(RowMutation rm,
+      Integer lockid) throws IOException {
+
+    startRegionOperation();
+    List<WALEdit> walEdits = new ArrayList<WALEdit>(rm.getMutations().size());
+
+    // 1. run all pre-hooks before the atomic operation
+    // if any pre hook indicates "bypass", bypass the entire operation
+    // Note that this requires creating the WALEdits here and passing
+    // them to the actual Put/Delete operations.
+    for (Mutation m : rm.getMutations()) {
+      WALEdit walEdit = new WALEdit();
+      walEdits.add(walEdit);
+      if (coprocessorHost == null) {
+        continue;
+      }
+      if (m instanceof Put) {
+        if (coprocessorHost.prePut((Put) m, walEdit, m.getWriteToWAL())) {
+          // by pass everything
+          return 0;
+        }
+      } else if (m instanceof Delete) {
+        Delete d = (Delete) m;
+        prepareDelete(d);
+        if (coprocessorHost.preDelete(d, walEdit, d.getWriteToWAL())) {
+          // by pass everything
+          return 0;
+        }
+      }
+    }
+
+    // 2. acquire the row lock
+    Integer lid = getLock(lockid, rm.getRow(), true);
+
+    // 3. acquire the region lock
+    this.updatesLock.readLock().lock();
+
+    // 4. Get a mvcc write number
+    MultiVersionConsistencyControl.WriteEntry w = mvcc.beginMemstoreInsert();
+    try {
+      int i = 0;
+      // 5. Perform the actual mutations
+      for (Mutation m : rm.getMutations()) {
+        if (m instanceof Put) {
+          internalPut((Put) m, HConstants.DEFAULT_CLUSTER_ID,
+              m.getWriteToWAL(), w, walEdits.get(i));
+        } else if (m instanceof Delete) {
+          Delete d = (Delete) m;
+          prepareDelete(d);
+          internalDelete(d, HConstants.DEFAULT_CLUSTER_ID, d.getWriteToWAL(),
+              w, walEdits.get(i));
+        } else {
+          throw new DoNotRetryIOException(
+              "Action must be Put or Delete. But was: "
+                  + m.getClass().getName());
+        }
+        i++;
+      }
+      return i;
+    } finally {
+      // 6. roll mvcc forward
+      mvcc.completeMemstoreInsert(w);
+      // 7. release region lock
+      this.updatesLock.readLock().unlock();
+      try {
+        // 8. run all coprocessor post hooks
+        if (coprocessorHost != null) {
+          int i = 0;
+          for (Mutation m : rm.getMutations()) {
+            if (m instanceof Put) {
+              coprocessorHost.postPut((Put) m, walEdits.get(i),
+                  m.getWriteToWAL());
+            } else if (m instanceof Delete) {
+              coprocessorHost.postDelete((Delete) m, walEdits.get(i),
+                  m.getWriteToWAL());
+            }
+            i++;
+          }
+        }
+      } finally {
+        if (lid != null) {
+          // 9. release the row lock
+          releaseRowLock(lid);
+        }
+        closeRegionOperation();
+      }
+    }
   }
 
   // TODO: There's a lot of boiler plate code identical

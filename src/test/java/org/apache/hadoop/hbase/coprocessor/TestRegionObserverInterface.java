@@ -132,6 +132,41 @@ public class TestRegionObserverInterface {
   }
 
   @Test
+  public void testRowMutation() throws IOException {
+    byte[] tableName = TEST_TABLE;
+    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+            "hadDeleted"},
+        TEST_TABLE,
+        new Boolean[] {false, false, false, false, false});
+
+    Put put = new Put(ROW);
+    put.add(A, A, A);
+    put.add(B, B, B);
+    put.add(C, C, C);
+
+    Delete delete = new Delete(ROW);
+    delete.deleteColumn(A, A);
+    delete.deleteColumn(B, B);
+    delete.deleteColumn(C, C);
+
+    RowMutation arm = new RowMutation(ROW);
+    arm.add(put);
+    arm.add(delete);
+    table.mutateRow(arm);
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+            "hadDeleted"},
+        TEST_TABLE,
+        new Boolean[] {false, false, true, true, true}
+    );
+    util.deleteTable(tableName);
+    table.close();
+  }
+
+  @Test
   public void testIncrementHook() throws IOException {
     byte[] tableName = TEST_TABLE;
 

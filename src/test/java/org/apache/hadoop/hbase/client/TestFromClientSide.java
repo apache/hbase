@@ -34,6 +34,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -4033,6 +4035,34 @@ public class TestFromClientSide {
 
     assertTrue(scan.getFamilyMap().get(FAMILY) == null);
     assertTrue(scan.getFamilyMap().containsKey(FAMILY));
+  }
+
+  @Test
+  public void testRowMutation() throws Exception {
+    LOG.info("Starting testRowMutation");
+    final byte [] TABLENAME = Bytes.toBytes("testRowMutation");
+    HTable t = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    byte [][] QUALIFIERS = new byte [][] {
+        Bytes.toBytes("a"), Bytes.toBytes("b")
+    };
+    RowMutation arm = new RowMutation(ROW);
+    arm.add(new Delete(ROW));
+    Put p = new Put(ROW);
+    p.add(FAMILY, QUALIFIERS[0], VALUE);
+    arm.add(p);
+    t.mutateRow(arm);
+
+    Get g = new Get(ROW);
+    Result r = t.get(g);
+    // delete was first, row should exist
+    assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[0])));
+
+    arm = new RowMutation(ROW);
+    arm.add(p);
+    arm.add(new Delete(ROW));
+    t.batch(Arrays.asList((Row)arm));
+    r = t.get(g);
+    assertTrue(r.isEmpty());
   }
 
   @Test
