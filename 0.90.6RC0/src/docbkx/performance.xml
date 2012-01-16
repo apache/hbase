@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<chapter version="5.0" xml:id="performance"
+         xmlns="http://docbook.org/ns/docbook"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xi="http://www.w3.org/2001/XInclude"
+         xmlns:svg="http://www.w3.org/2000/svg"
+         xmlns:m="http://www.w3.org/1998/Math/MathML"
+         xmlns:html="http://www.w3.org/1999/xhtml"
+         xmlns:db="http://docbook.org/ns/docbook">
+  <title>Performance Tuning</title>
+
+  <para>Start with the <link
+  xlink:href="http://wiki.apache.org/hadoop/PerformanceTuning">wiki
+  Performance Tuning</link> page. It has a general discussion of the main
+  factors involved; RAM, compression, JVM settings, etc. Afterward, come back
+  here for more pointers.</para>
+
+  <note xml:id="rpc.logging"><title>Enabling RPC-level logging</title>
+  <para>Enabling the RPC-level logging on a RegionServer can often given
+      insight on timings at the server.  Once enabled, the amount of log
+      spewed is voluminous.  It is not recommended that you leave this
+      logging on for more than short bursts of time.  To enable RPC-level
+      logging, browse to the RegionServer UI and click on 
+      <emphasis>Log Level</emphasis>.  Set the log level to <varname>DEBUG</varname> for the package
+      <classname>org.apache.hadoop.ipc</classname> (Thats right, for
+      hadoop.ipc, NOT, hbase.ipc).  Then tail the RegionServers log.
+      Analyze.</para>
+  <para>To disable, set the logging level back to <varname>INFO</varname> level.
+  </para>
+  </note>
+
+  <section xml:id="jvm">
+    <title>Java</title>
+
+    <section xml:id="gc">
+      <title>The Garbage Collector and HBase</title>
+
+      <section xml:id="gcpause">
+        <title>Long GC pauses</title>
+
+        <para>In his presentation, <link
+        xlink:href="http://www.slideshare.net/cloudera/hbase-hug-presentation">Avoiding
+        Full GCs with MemStore-Local Allocation Buffers</link>, Todd Lipcon
+        describes two cases of stop-the-world garbage collections common in
+        HBase, especially during loading; CMS failure modes and old generation
+        heap fragmentation brought. To address the first, start the CMS
+        earlier than default by adding
+        <code>-XX:CMSInitiatingOccupancyFraction</code> and setting it down
+        from defaults. Start at 60 or 70 percent (The lower you bring down the
+        threshold, the more GCing is done, the more CPU used). To address the
+        second fragmentation issue, Todd added an experimental facility that
+        must be explicitly enabled in HBase 0.90.x (Its defaulted to be on in
+        0.92.x HBase). See <code>hbase.hregion.memstore.mslab.enabled</code>
+        to true in your <classname>Configuration</classname>. See the cited
+        slides for background and detail.</para>
+      </section>
+    </section>
+  </section>
+
+  <section xml:id="perf.configurations">
+    <title>Configurations</title>
+
+    <para>See <xref linkend="recommended_configurations" />.</para>
+
+    <section xml:id="perf.number.of.regions">
+      <title>Number of Regions</title>
+
+      <para>The number of regions for an HBase table is driven by the <xref
+              linkend="bigger.regions" />. Also, see the architecture
+          section on <xref linkend="arch.regions.size" /></para>
+    </section>
+
+    <section xml:id="perf.compactions.and.splits">
+      <title>Managing Compactions</title>
+
+      <para>For larger systems, managing <link
+      linkend="disable.splitting">compactions and splits</link> may be
+      something you want to consider.</para>
+    </section>
+
+    <section xml:id="perf.compression">
+      <title>Compression</title>
+      <para>Production systems should use compression such as <xref linkend="lzo" /> compression with their column family
+      definitions.</para>
+    </section>
+
+    <section xml:id="perf.handlers">
+        <title><varname>hbase.regionserver.handler.count</varname></title>
+        <para>See <xref linkend="hbase.regionserver.handler.count"/>. 
+            This setting in essence sets how many requests are
+            concurrently being processed inside the RegionServer at any
+            one time.  If set too high, then throughput may suffer as
+            the concurrent requests contend; if set too low, requests will
+            be stuck waiting to get into the machine.  You can get a
+            sense of whether you have too little or too many handlers by
+            <xref linkend="rpc.logging" />
+            on an individual RegionServer then tailing its logs (Queued requests
+            consume memory).</para>
+    </section>
+    <section xml:id="perf.hfile.block.cache.size">
+        <title><varname>hfile.block.cache.size</varname></title>
+        <para>See <xref linkend="hfile.block.cache.size"/>. 
+        A memory setting for the RegionServer process.
+        </para>
+    </section>    
+    <section xml:id="perf.rs.memstore.upperlimit">
+        <title><varname>hbase.regionserver.global.memstore.upperLimit</varname></title>
+        <para>See <xref linkend="hbase.regionserver.global.memstore.upperLimit"/>.  
+        This memory setting is often adjusted for the RegionServer process depending on needs.
+        </para>
+    </section>    
+    <section xml:id="perf.rs.memstore.lowerlimit">
+        <title><varname>hbase.regionserver.global.memstore.lowerLimit</varname></title>
+        <para>See <xref linkend="hbase.regionserver.global.memstore.lowerLimit"/>.  
+        This memory setting is often adjusted for the RegionServer process depending on needs.
+        </para>
+    </section>
+    <section xml:id="perf.hstore.blockingstorefiles">
+        <title><varname>hbase.hstore.blockingStoreFiles</varname></title>
+        <para>See <xref linkend="hbase.hstore.blockingStoreFiles"/>.  
+        If there is blocking in the RegionServer logs, increasing this can help.
+        </para>
+    </section>
+    <section xml:id="perf.hregion.memstore.block.multiplier">
+        <title><varname>hbase.hregion.memstore.block.multiplier</varname></title>
+        <para>See <xref linkend="hbase.hregion.memstore.block.multiplier"/>.  
+        If there is enough RAM, increasing this can help.  
+        </para>
+    </section>
+
+  </section>
+
+  <section xml:id="perf.number.of.cfs">
+    <title>Number of Column Families</title>
+
+    <para>See <xref linkend="number.of.cfs" />.</para>
+  </section>
+
+  <section xml:id="perf.one.region">
+    <title>Data Clumping</title>
+
+    <para>If all your data is being written to one region, then re-read the
+    section on processing <link linkend="timeseries">timeseries</link>
+    data.</para>
+  </section>
+
+  <section xml:id="perf.batch.loading">
+    <title>Batch Loading</title>
+    <para>Use the bulk load tool if you can.  See
+        <link xlink:href="http://hbase.apache.org/bulk-loads.html">Bulk Loads</link>.
+        Otherwise, pay attention to the below.
+    </para>
+
+  <section xml:id="precreate.regions">
+  <title>
+  Table Creation: Pre-Creating Regions
+  </title>
+<para>
+Tables in HBase are initially created with one region by default.  For bulk imports, this means that all clients will write to the same region until it is large enough to split and become distributed across the cluster.  A useful pattern to speed up the bulk import process is to pre-create empty regions.  Be somewhat conservative in this, because too-many regions can actually degrade performance.  An example of pre-creation using hex-keys is as follows (note:  this example may need to be tweaked to the individual applications keys):
+</para>
+<para>
+<programlisting>public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
+throws IOException {
+  try {
+    admin.createTable( table, splits );
+    return true;
+  } catch (TableExistsException e) {
+    logger.info("table " + table.getNameAsString() + " already exists");
+    // the table already exists...
+    return false;  
+  }
+}
+
+public static byte[][] getHexSplits(String startKey, String endKey, int numRegions) {
+  byte[][] splits = new byte[numRegions-1][];
+  BigInteger lowestKey = new BigInteger(startKey, 16);
+  BigInteger highestKey = new BigInteger(endKey, 16);
+  BigInteger range = highestKey.subtract(lowestKey);
+  BigInteger regionIncrement = range.divide(BigInteger.valueOf(numRegions));
+  lowestKey = lowestKey.add(regionIncrement);
+  for(int i=0; i &lt; numRegions-1;i++) {
+    BigInteger key = lowestKey.add(regionIncrement.multiply(BigInteger.valueOf(i)));
+    byte[] b = String.format("%016x", key).getBytes();
+    splits[i] = b;
+  }
+  return splits;
+}</programlisting>
+  </para>
+  </section>
+  </section>
+
+  <section>
+    <title>HBase Client</title>
+
+    <section xml:id="perf.hbase.client.autoflush">
+      <title>AutoFlush</title>
+
+      <para>When performing a lot of Puts, make sure that setAutoFlush is set
+      to false on your <link
+      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
+      instance. Otherwise, the Puts will be sent one at a time to the
+      RegionServer. Puts added via <code> htable.add(Put)</code> and <code> htable.add( &lt;List&gt; Put)</code>
+      wind up in the same write buffer. If <code>autoFlush = false</code>,
+      these messages are not sent until the write-buffer is filled. To
+      explicitly flush the messages, call <methodname>flushCommits</methodname>.
+      Calling <methodname>close</methodname> on the <classname>HTable</classname>
+      instance will invoke <methodname>flushCommits</methodname>.</para>
+    </section>
+
+    <section xml:id="perf.hbase.client.caching">
+      <title>Scan Caching</title>
+
+      <para>If HBase is used as an input source for a MapReduce job, for
+      example, make sure that the input <link
+      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link>
+      instance to the MapReduce job has <methodname>setCaching</methodname> set to something greater
+      than the default (which is 1). Using the default value means that the
+      map-task will make call back to the region-server for every record
+      processed. Setting this value to 500, for example, will transfer 500
+      rows at a time to the client to be processed. There is a cost/benefit to
+      have the cache value be large because it costs more in memory for both
+      client and RegionServer, so bigger isn't always better.</para>
+    </section>
+    <section xml:id="perf.hbase.client.selection">
+      <title>Scan Attribute Selection</title>
+
+      <para>Whenever a Scan is used to process large numbers of rows (and especially when used
+      as a MapReduce source), be aware of which attributes are selected.   If <code>scan.addFamily</code> is called
+      then <emphasis>all</emphasis> of the attributes in the specified ColumnFamily will be returned to the client.
+      If only a small number of the available attributes are to be processed, then only those attributes should be specified
+      in the input scan because attribute over-selection is a non-trivial performance penalty over large datasets.
+      </para>
+    </section>
+
+    <section xml:id="perf.hbase.client.scannerclose">
+      <title>Close ResultScanners</title>
+
+      <para>This isn't so much about improving performance but rather
+      <emphasis>avoiding</emphasis> performance problems. If you forget to
+      close <link
+      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/ResultScanner.html">ResultScanners</link>
+      you can cause problems on the RegionServers. Always have ResultScanner
+      processing enclosed in try/catch blocks... <programlisting>
+Scan scan = new Scan();
+// set attrs...
+ResultScanner rs = htable.getScanner(scan);
+try {
+  for (Result r = rs.next(); r != null; r = rs.next()) {
+  // process result...
+} finally {
+  rs.close();  // always close the ResultScanner!
+}
+htable.close();</programlisting></para>
+    </section>
+
+    <section xml:id="perf.hbase.client.blockcache">
+      <title>Block Cache</title>
+
+      <para><link
+      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link>
+      instances can be set to use the block cache in the RegionServer via the
+      <methodname>setCacheBlocks</methodname> method. For input Scans to MapReduce jobs, this should be
+      <varname>false</varname>. For frequently accessed rows, it is advisable to use the block
+      cache.</para>
+    </section>
+    <section xml:id="perf.hbase.client.rowkeyonly">
+      <title>Optimal Loading of Row Keys</title>
+      <para>When performing a table <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">scan</link>
+            where only the row keys are needed (no families, qualifiers, values or timestamps), add a FilterList with a
+            <varname>MUST_PASS_ALL</varname> operator to the scanner using <methodname>setFilter</methodname>. The filter list
+            should include both a <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html">FirstKeyOnlyFilter</link>
+            and a <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/KeyOnlyFilter.html">KeyOnlyFilter</link>.
+            Using this filter combination will result in a worst case scenario of a RegionServer reading a single value from disk
+            and minimal network traffic to the client for a single row.
+      </para>
+    </section>
+  </section>
+</chapter>
