@@ -521,6 +521,7 @@ Release 0.92.0 - Unreleased
                ("The directory is already locked.") (N Keywal)
    HBASE-5143  Fix config typo in pluggable load balancer factory (Harsh J)
    HBASE-5196  Failure in region split after PONR could cause region hole (Jimmy Xiang)
+   HBASE-5204  Backward compatibility fixes for 0.92 (Benoît Sigoure)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
