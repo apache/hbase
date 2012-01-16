@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.io.VersionMismatchException;
 import org.apache.hadoop.io.VersionedWritable;
 
 import java.io.DataInput;
@@ -94,10 +95,29 @@ public class Invocation extends VersionedWritable implements Configurable {
   }
 
   public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    methodName = in.readUTF();
-    clientVersion = in.readLong();
-    clientMethodsHash = in.readInt();
+    try {
+      super.readFields(in);
+      methodName = in.readUTF();
+      clientVersion = in.readLong();
+      clientMethodsHash = in.readInt();
+    } catch (VersionMismatchException e) {
+      // VersionMismatchException doesn't provide an API to access
+      // expectedVersion and foundVersion.  This is really sad.
+      if (e.toString().endsWith("found v0")) {
+        // Try to be a bit backwards compatible.  In previous versions of
+        // HBase (before HBASE-3939 in 0.92) Invocation wasn't a
+        // VersionedWritable and thus the first thing on the wire was always
+        // the 2-byte length of the method name.  Because no method name is
+        // longer than 255 characters, and all method names are in ASCII,
+        // The following code is equivalent to `in.readUTF()', which we can't
+        // call again here, because `super.readFields(in)' already consumed
+        // the first byte of input, which can't be "unread" back into `in'.
+        final short len = (short) (in.readByte() & 0xFF);  // Unsigned byte.
+        final byte[] buf = new byte[len];
+        in.readFully(buf, 0, len);
+        methodName = new String(buf);
+      }
+    }
     parameters = new Object[in.readInt()];
     parameterClasses = new Class[parameters.length];
     HbaseObjectWritable objectWritable = new HbaseObjectWritable();
