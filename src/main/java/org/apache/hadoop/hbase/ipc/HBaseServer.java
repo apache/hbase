@@ -1213,9 +1213,10 @@ public abstract class HBaseServer implements RpcServer {
       header.readFields(in);
       try {
         String protocolClassName = header.getProtocol();
-        if (protocolClassName != null) {
-          protocol = getProtocolClass(header.getProtocol(), conf);
+        if (protocolClassName == null) {
+          protocolClassName = "org.apache.hadoop.hbase.ipc.HRegionInterface";
         }
+        protocol = getProtocolClass(protocolClassName, conf);
       } catch (ClassNotFoundException cnfe) {
         throw new IOException("Unknown protocol: " + header.getProtocol());
       }

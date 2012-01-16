@@ -123,6 +123,14 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
   // sending of the class name using reflection, etc.
   private static final byte NOT_ENCODED = 0;
   static {
+    ////////////////////////////////////////////////////////////////////////////
+    // WARNING: Please do not insert, remove or swap any line in this static  //
+    // block.  Doing so would change or shift all the codes used to serialize //
+    // objects, which makes backwards compatibility very hard for clients.    //
+    // New codes should always be added at the end. Code removal is           //
+    // discouraged because code is a short now.                               //
+    ////////////////////////////////////////////////////////////////////////////
+
     int code = NOT_ENCODED + 1;
     // Primitive types.
     addToMap(Boolean.TYPE, code++);
@@ -165,7 +173,6 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(HServerAddress.class, code++);
     addToMap(HServerInfo.class, code++);
     addToMap(HTableDescriptor.class, code++);
-    addToMap(HTableDescriptor[].class, code++);
     addToMap(MapWritable.class, code++);
 
     //
@@ -222,7 +229,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(Increment.class, code++);
 
     addToMap(KeyOnlyFilter.class, code++);
-    
+
     // serializable
     addToMap(Serializable.class, code++);
 
@@ -236,6 +243,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
 
     addToMap(RegionOpeningState.class, code++);
 
+    addToMap(HTableDescriptor[].class, code++);
+    
     addToMap(Append.class, code++);
 
     addToMap(RowMutation.class, code++);
@@ -593,7 +602,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
         in.readFully(objectBytes);
         ByteArrayInputStream bis = null;
         ObjectInputStream ois = null;
-        try { 
+        try {
           bis = new ByteArrayInputStream(objectBytes);
           ois = new ObjectInputStream(bis);
           instance = ois.readObject();
