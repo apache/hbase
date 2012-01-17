@@ -40,7 +40,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Unit testing for ThriftServer.HBaseHandler, a part of the
+ * Unit testing for ThriftServerRunner.HBaseHandler, a part of the
  * org.apache.hadoop.hbase.thrift package.
  */
 @Category(MediumTests.class)
@@ -100,8 +100,8 @@ public class TestThriftServer {
    */
   @Test
   public void doTestTableCreateDrop() throws Exception {
-    ThriftServer.HBaseHandler handler =
-      new ThriftServer.HBaseHandler(UTIL.getConfiguration());
+    ThriftServerRunner.HBaseHandler handler =
+      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
     createTestTables(handler);
     dropTestTables(handler);
   }
@@ -140,8 +140,8 @@ public class TestThriftServer {
    */
   public void doTestTableMutations() throws Exception {
     // Setup
-    ThriftServer.HBaseHandler handler =
-      new ThriftServer.HBaseHandler(UTIL.getConfiguration());
+    ThriftServerRunner.HBaseHandler handler =
+      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply a few Mutations to rowA
@@ -213,8 +213,8 @@ public class TestThriftServer {
    */
   public void doTestTableTimestampsAndColumns() throws Exception {
     // Setup
-    ThriftServer.HBaseHandler handler =
-      new ThriftServer.HBaseHandler(UTIL.getConfiguration());
+    ThriftServerRunner.HBaseHandler handler =
+      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
@@ -292,8 +292,8 @@ public class TestThriftServer {
    */
   public void doTestTableScanners() throws Exception {
     // Setup
-    ThriftServer.HBaseHandler handler =
-      new ThriftServer.HBaseHandler(UTIL.getConfiguration());
+    ThriftServerRunner.HBaseHandler handler =
+      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
@@ -360,8 +360,8 @@ public class TestThriftServer {
    * @throws Exception
    */
   public void doTestGetTableRegions() throws Exception {
-    ThriftServer.HBaseHandler handler =
-      new ThriftServer.HBaseHandler(UTIL.getConfiguration());
+    ThriftServerRunner.HBaseHandler handler =
+      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
     handler.createTable(tableAname, getColumnDescriptors());
     int regionCount = handler.getTableRegions(tableAname).size();
     assertEquals("empty table should have only 1 region, " +
@@ -456,7 +456,8 @@ public class TestThriftServer {
    * @param handler the HBaseHandler interfacing to HBase
    * @throws Exception
    */
-  private void closeScanner(int scannerId, ThriftServer.HBaseHandler handler) throws Exception {
+  private void closeScanner(
+      int scannerId, ThriftServerRunner.HBaseHandler handler) throws Exception {
     handler.scannerGet(scannerId);
     handler.scannerClose(scannerId);
   }
