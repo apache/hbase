@@ -72,7 +72,7 @@ public class TestZooKeeperNodeTracker {
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       "testInterruptible", abortable);
     final TestTracker tracker = new TestTracker(zk, "/xyz", abortable);
-    tracker.start(true);
+    tracker.start();
     Thread t = new Thread() {
       @Override
       public void run() {
@@ -105,7 +105,7 @@ public class TestZooKeeperNodeTracker {
 
     // Start a ZKNT with no node currently available
     TestTracker localTracker = new TestTracker(zk, node, abortable);
-    localTracker.start(true);
+    localTracker.start();
     zk.registerListener(localTracker);
 
     // Make sure we don't have a node
@@ -120,7 +120,7 @@ public class TestZooKeeperNodeTracker {
 
     // Now, start a new ZKNT with the node already available
     TestTracker secondTracker = new TestTracker(zk, node, null);
-    secondTracker.start(true);
+    secondTracker.start();
     zk.registerListener(secondTracker);
 
     // Put up an additional zk listener so we know when zk event is done
@@ -213,7 +213,7 @@ public class TestZooKeeperNodeTracker {
 
     public WaitToGetDataThread(ZooKeeperWatcher zk, String node) {
       tracker = new TestTracker(zk, node, null);
-      tracker.start(true);
+      tracker.start();
       zk.registerListener(tracker);
       hasData = false;
     }

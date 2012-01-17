@@ -183,7 +183,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
           }
         });
 
-    masterTracker.start(true);
+    masterTracker.start();
     zkw.registerListener(masterTracker);
 
     // Test (part of the) output that should have be printed by master when it aborts:

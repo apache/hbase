@@ -69,12 +69,8 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
    *
    * <p>Use {@link #blockUntilAvailable()} to block until the node is available
    * or {@link #getData(boolean)} to get the data of the node if it is available.
-   * 
-   * @param allowAbort If allowAbort is false, the abortable should not abort when a
-   *          KeeperException occur. 
-   * @return start result. true if start successfully.
    */
-  public synchronized boolean start(boolean allowAbort) {
+  public synchronized void start() {
     this.watcher.registerListener(this);
     try {
       if(ZKUtil.watchAndCheckExists(watcher, node)) {
@@ -84,21 +80,15 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
         } else {
           // It existed but now does not, try again to ensure a watch is set
           LOG.debug("Try starting again because there is no data from " + node);
-          return start(allowAbort);
+          start();
         }
       }
-      return true;
     } catch (KeeperException e) {
-      if (allowAbort && (abortable != null)) {
-        abortable.abort("Unexpected exception during initialization, aborting",
-            e);
-      }
-      return false;
+      abortable.abort("Unexpected exception during initialization, aborting", e);
     }
   }
 
   public synchronized void stop() {
-    this.watcher.unregisterListener(this);
     this.stopped = true;
     notifyAll();
   }
@@ -183,9 +173,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
         nodeDeleted(path);
       }
     } catch(KeeperException e) {
-      if (abortable != null) {
-        abortable.abort("Unexpected exception handling nodeCreated event", e);
-      }
+      abortable.abort("Unexpected exception handling nodeCreated event", e);
     }
   }
 
@@ -199,9 +187,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
           this.data = null;
         }
       } catch(KeeperException e) {
-        if (abortable != null) {
-          abortable.abort("Unexpected exception handling nodeDeleted event", e);
-        }
+        abortable.abort("Unexpected exception handling nodeDeleted event", e);
       }
     }
   }
