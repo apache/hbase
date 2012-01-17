@@ -865,7 +865,7 @@ Release 0.92.0 - Unreleased
 Release 0.90.7 - Unreleased
 
   BUG FIXES
-   HBASE-5153  Add retry logic in HConnectionImplementation#resetZooKeeperTrackers (Jieshan)
+
 Release 0.90.6 - Unreleased
 
   BUG FIXES
