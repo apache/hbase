@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.92.0 - Unreleased
+Release 0.92.1 - Unreleased
   BUG FIXES
    HBASE-5176  AssignmentManager#getRegion: logging nit  adds a redundant '+' (Karthik K)
 
