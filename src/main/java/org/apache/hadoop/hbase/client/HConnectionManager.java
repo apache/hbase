@@ -574,35 +574,70 @@ public class HConnectionManager {
           HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
 
-      setupZookeeperTrackers();
+      setupZookeeperTrackers(true);
 
       this.master = null;
       this.masterChecked = false;
     }
 
-    private synchronized void setupZookeeperTrackers()
+    private synchronized boolean setupZookeeperTrackers(boolean allowAbort)
         throws ZooKeeperConnectionException{
       // initialize zookeeper and master address manager
       this.zooKeeper = getZooKeeperWatcher();
-      masterAddressTracker = new MasterAddressTracker(this.zooKeeper, this);
-      masterAddressTracker.start();
+      this.masterAddressTracker = new MasterAddressTracker(this.zooKeeper, this);
 
       this.rootRegionTracker = new RootRegionTracker(this.zooKeeper, this);
-      this.rootRegionTracker.start();
-
+      if (!this.masterAddressTracker.start(allowAbort)) {
+        this.masterAddressTracker.stop();
+        this.masterAddressTracker = null;
+        this.zooKeeper = null;
+        return false;
+      }
+      if (!this.rootRegionTracker.start(allowAbort)) {
+        this.masterAddressTracker.stop();
+        this.rootRegionTracker.stop();
+        this.masterAddressTracker = null;
+        this.rootRegionTracker = null;
+        this.zooKeeper = null;
+        return false;
+      }
       this.clusterId = new ClusterId(this.zooKeeper, this);
+      return true;
     }
 
-    private synchronized void resetZooKeeperTrackers()
+    @Override
+    public synchronized void resetZooKeeperTrackersWithRetries()
         throws ZooKeeperConnectionException {
       LOG.info("Trying to reconnect to zookeeper");
-      masterAddressTracker.stop();
-      masterAddressTracker = null;
-      rootRegionTracker.stop();
-      rootRegionTracker = null;
-      clusterId = null;
+      if (this.masterAddressTracker != null) {
+        this.masterAddressTracker.stop();
+        this.masterAddressTracker = null;
+      }
+      if (this.rootRegionTracker != null) {
+        this.rootRegionTracker.stop();
+        this.rootRegionTracker = null;
+      }
       this.zooKeeper = null;
-      setupZookeeperTrackers();
+      this.clusterId = null;
+      for (int tries = 0; tries < this.numRetries; tries++) {
+        boolean isLastTime = (tries == (this.numRetries - 1));
+        try {
+          if (setupZookeeperTrackers(isLastTime)) {
+            break;
+          }
+        } catch (ZooKeeperConnectionException zkce) {
+          if (isLastTime) {
+            throw zkce;
+          }
+        }
+        LOG.info("Tried to reconnect to zookeeper but failed,  already tried "
+            + tries + " times.");
+        try {
+          Thread.sleep(ConnectionUtils.getPauseTime(this.pause, tries));
+        } catch (InterruptedException e1) {
+          Thread.currentThread().interrupt();
+        }
+      }
     }
 
     public Configuration getConfiguration() {
@@ -802,7 +837,9 @@ public class HConnectionManager {
     private HRegionLocation locateRegion(final byte [] tableName,
       final byte [] row, boolean useCache)
     throws IOException {
-      if (this.closed) throw new IOException(toString() + " closed");
+      if (this.closed) {
+        throw new ClosedConnectionException(toString() + " closed");
+      }
       if (tableName == null || tableName.length == 0) {
         throw new IllegalArgumentException(
             "table name cannot be null or zero length");
@@ -1024,7 +1061,8 @@ public class HConnectionManager {
                 ((metaLocation == null)? "null": "{" + metaLocation + "}") +
                 ", attempt=" + tries + " of " +
                 this.numRetries + " failed; retrying after sleep of " +
-                ConnectionUtils.getPauseTime(this.pause, tries) + " because: " + e.getMessage());
+                ConnectionUtils.getPauseTime(this.pause, tries) + " because: "
+                + e.getMessage());
             }
           } else {
             throw e;
@@ -1331,11 +1369,17 @@ public class HConnectionManager {
 
     public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
     throws IOException, RuntimeException {
+      if (this.closed) {
+        throw new ClosedConnectionException(toString() + " closed");
+      }
       return callable.withRetries();
     }
 
     public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
     throws IOException, RuntimeException {
+      if (this.closed) {
+        throw new ClosedConnectionException(toString() + " closed");
+      }
       return callable.withoutRetries();
     }
 
@@ -1659,11 +1703,12 @@ public class HConnectionManager {
 
     @Override
     public void abort(final String msg, Throwable t) {
-      if (t instanceof KeeperException.SessionExpiredException) {
+      if (t instanceof KeeperException.SessionExpiredException
+          || t instanceof KeeperException.ConnectionLossException) {
         try {
           LOG.info("This client just lost it's session with ZooKeeper, trying" +
               " to reconnect.");
-          resetZooKeeperTrackers();
+          resetZooKeeperTrackersWithRetries();
           LOG.info("Reconnected successfully. This disconnect could have been" +
               " caused by a network partition or a long-running GC pause," +
               " either way it's recommended that you verify your environment.");

@@ -626,7 +626,7 @@ public class HBaseFsck {
         }
         
       });
-    rootRegionTracker.start();
+    rootRegionTracker.start(true);
     ServerName sn = null;
     try {
       sn = rootRegionTracker.getRootRegionLocation();
