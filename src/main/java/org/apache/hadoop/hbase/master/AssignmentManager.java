@@ -1651,7 +1651,7 @@ public class AssignmentManager extends ZooKeeperListener {
       if (existingPlan != null && existingPlan.getDestination() != null) {
         LOG.debug("Found an existing plan for " +
             state.getRegion().getRegionNameAsString() +
-       " destination server is + " + existingPlan.getDestination().toString());
+       " destination server is " + existingPlan.getDestination().toString());
       }
 
       if (forceNewPlan
