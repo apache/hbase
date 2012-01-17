@@ -60,15 +60,20 @@ public class MasterSchemaChangeTracker extends ZooKeeperNodeTracker {
   }
 
   @Override
-  public void start() {
+  public boolean start(boolean allowAbort) {
     try {
       watcher.registerListener(this);
       List<String> tables =
           ZKUtil.listChildrenNoWatch(watcher, watcher.schemaZNode);
       processCompletedSchemaChanges(tables);
+      return true;
     } catch (KeeperException e) {
-      LOG.error("MasterSchemaChangeTracker startup failed.", e);
-      abortable.abort("MasterSchemaChangeTracker startup failed", e);
+      if (allowAbort && abortable != null) {
+        abortable.abort("MasterSchemaChangeTracker startup failed", e);        
+      } else {
+        LOG.error("MasterSchemaChangeTracker startup failed.", e);
+      }
+      return false;
     }
   }
 

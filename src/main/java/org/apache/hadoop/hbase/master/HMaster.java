@@ -416,7 +416,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // Set the cluster as up.  If new RSs, they'll be waiting on this before
     // going ahead with their startup.
     this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
-    this.clusterStatusTracker.start();
+    this.clusterStatusTracker.start(true);
     boolean wasUp = this.clusterStatusTracker.isClusterUp();
     if (!wasUp) this.clusterStatusTracker.setClusterUp();
 
@@ -424,7 +424,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.schemaChangeTracker = new MasterSchemaChangeTracker(getZooKeeper(),
         this, this,
         conf.getInt("hbase.instant.schema.alter.timeout", 60000));
-    this.schemaChangeTracker.start();
+    this.schemaChangeTracker.start(true);
 
     LOG.info("Server active/primary master; " + this.serverName +
         ", sessionid=0x" +

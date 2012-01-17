@@ -568,13 +568,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // block until a master is available.  No point in starting up if no master
     // running.
     this.masterAddressManager = new MasterAddressTracker(this.zooKeeper, this);
-    this.masterAddressManager.start();
+    this.masterAddressManager.start(true);
     blockAndCheckIfStopped(this.masterAddressManager);
 
     // Wait on cluster being up.  Master will set this flag up in zookeeper
     // when ready.
     this.clusterStatusTracker = new ClusterStatusTracker(this.zooKeeper, this);
-    this.clusterStatusTracker.start();
+    this.clusterStatusTracker.start(true);
     blockAndCheckIfStopped(this.clusterStatusTracker);
 
     // Create the catalog tracker and start it;
@@ -585,7 +585,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Schema change tracker
     this.schemaChangeTracker = new SchemaChangeTracker(this.zooKeeper,
         this, this);
-    this.schemaChangeTracker.start();
+    this.schemaChangeTracker.start(true);
   }
 
   /**
