@@ -31,8 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.thrift.ThriftServer.ImplType;
+import org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -82,7 +81,7 @@ public class TestThriftServerCmdLine {
   @Parameters
   public static Collection<Object[]> getParameters() {
     Collection<Object[]> parameters = new ArrayList<Object[]>();
-    for (ThriftServer.ImplType implType : ThriftServer.ImplType.values()) {
+    for (ImplType implType : ImplType.values()) {
       for (boolean specifyFramed : new boolean[] {false, true}) {
         for (boolean specifyBindIP : new boolean[] {false, true}) {
           if (specifyBindIP && !implType.canSpecifyBindIP) {
@@ -167,6 +166,11 @@ public class TestThriftServerCmdLine {
     startCmdLineThread(args.toArray(new String[0]));
     Threads.sleepWithoutInterrupt(2000);
 
+    Class<? extends TServer> expectedClass = implType != null ?
+        implType.serverClass : TBoundedThreadPoolServer.class;
+    assertEquals(expectedClass,
+                 thriftServer.serverRunner.tserver.getClass());
+
     try {
       talkToThriftServer();
     } catch (Exception ex) {
@@ -174,14 +178,6 @@ public class TestThriftServerCmdLine {
     } finally {
       stopCmdLineThread();
     }
-
-    Class<? extends TServer> expectedClass;
-    if (implType != null) {
-      expectedClass = implType.serverClass;
-    } else {
-      expectedClass = TBoundedThreadPoolServer.class;
-    }
-    assertEquals(expectedClass, thriftServer.server.getClass());
 
     if (clientSideException != null) {
       LOG.error("Thrift client threw an exception", clientSideException);
