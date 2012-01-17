@@ -244,6 +244,37 @@ export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above
               <para>See <xref linkend="hbase_metrics"/> for more information in metric definitions.
             </para>
           </section>
+          <section xml:id="trouble.tools.builtin.zkcli">
+             <title>zkcli</title>
+              <para><code>zkcli</code> is a very useful tool for investigating ZooKeeper-related issues.  To invoke:
+<programlisting>
+./hbase zkcli -server host:port &lt;cmd&gt; &lt;args&gt;
+</programlisting>
+              The commands (and arguments) are:
+<programlisting>
+	connect host:port
+	get path [watch]
+	ls path [watch]
+	set path data [version]
+	delquota [-n|-b] path
+	quit 
+	printwatches on|off
+	create [-s] [-e] path data acl
+	stat path [watch]
+	close 
+	ls2 path [watch]
+	history 
+	listquota path
+	setAcl path acl
+	getAcl path
+	sync path
+	redo cmdno
+	addauth scheme auth
+	delete path [version]
+	setquota -n|-b val path
+</programlisting>
+            </para>
+        </section>
        </section>
        <section xml:id="trouble.tools.external">
           <title>External Tools</title>
@@ -541,7 +572,8 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
 </programlisting>
             ... are either due to ZooKeeper being down, or unreachable due to network issues.            
             </para>
-            
+            <para>The utility <xref linkend="trouble.tools.builtin.zkcli"/> may help investigate ZooKeeper issues.
+            </para>
        </section>    
        <section xml:id="trouble.client.oome.directmemory.leak">
             <title>Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing)</title>
@@ -900,6 +932,8 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
           <para>
           See the <link xlink:href="http://wiki.apache.org/hadoop/ZooKeeper/Troubleshooting">ZooKeeper Operating Environment Troubleshooting</link> page. It has suggestions and tools for checking disk and networking performance; i.e. the operating environment your ZooKeeper and HBase are running in.
           </para>
+         <para>Additionally, the utility <xref linkend="trouble.tools.builtin.zkcli"/> may help investigate ZooKeeper issues.
+         </para>
       </section>  
 
     </section>    
