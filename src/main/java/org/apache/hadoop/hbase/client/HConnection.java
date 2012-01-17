@@ -141,6 +141,12 @@ public interface HConnection extends Abortable, Closeable {
    * Allows flushing the region cache.
    */
   public void clearRegionCache();
+  
+  /**
+   * Closes the original connection and creates a new one.
+   * @throws ZooKeeperConnectionException  if unable to connect to zookeeper
+   */
+  public void resetZooKeeperTrackersWithRetries() throws ZooKeeperConnectionException;
 
   /**
    * Allows flushing the region cache of all locations that pertain to

@@ -62,11 +62,16 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
 
   /**
    * Starts the tracking of the node in ZooKeeper.
-   *
-   * <p>Use {@link #blockUntilAvailable()} to block until the node is available
-   * or {@link #getData()} to get the data of the node if it is available.
+   * 
+   * <p>
+   * Use {@link #blockUntilAvailable()} to block until the node is available or
+   * {@link #getData()} to get the data of the node if it is available.
+   * 
+   * @param allowAbort If allowAbort is false, the abortable should not abort when a
+   *          KeeperException occur. 
+   * @return start result. true if start successfully.
    */
-  public synchronized void start() {
+  public synchronized boolean start(boolean allowAbort) {
     this.watcher.registerListener(this);
     try {
       if(ZKUtil.watchAndCheckExists(watcher, node)) {
@@ -75,15 +80,21 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
           this.data = data;
         } else {
           // It existed but now does not, try again to ensure a watch is set
-          start();
+          return start(allowAbort);
         }
       }
+      return true;
     } catch (KeeperException e) {
-      abortable.abort("Unexpected exception during initialization, aborting", e);
+      if (allowAbort && (abortable != null)) {
+        abortable.abort("Unexpected exception during initialization, aborting",
+            e);
+      }
+      return false;
     }
   }
 
   public synchronized void stop() {
+    this.watcher.unregisterListener(this);
     this.stopped = true;
     notifyAll();
   }
@@ -154,7 +165,9 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
         nodeDeleted(path);
       }
     } catch(KeeperException e) {
-      abortable.abort("Unexpected exception handling nodeCreated event", e);
+      if (abortable != null) {
+        abortable.abort("Unexpected exception handling nodeCreated event", e);
+      }
     }
   }
 
@@ -168,7 +181,9 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
           this.data = null;
         }
       } catch(KeeperException e) {
-        abortable.abort("Unexpected exception handling nodeDeleted event", e);
+        if (abortable != null) {
+          abortable.abort("Unexpected exception handling nodeDeleted event", e);
+        }
       }
     }
   }

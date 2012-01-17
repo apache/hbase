@@ -170,8 +170,8 @@ public class CatalogTracker {
   public void start() throws IOException, InterruptedException {
     
     try {
-      this.rootRegionTracker.start();
-      this.metaNodeTracker.start();
+      this.rootRegionTracker.start(true);
+      this.metaNodeTracker.start(true);
       LOG.debug("Starting catalog tracker " + this);
     }catch (RuntimeException e){
       Throwable t = e.getCause();

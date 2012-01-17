@@ -107,7 +107,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         this.connection = HConnectionManager.getConnection(this.conf);
       }
       try { // Sleep
-        Thread.sleep(getPauseTime(tries));
+        Thread.sleep(ConnectionUtils.getPauseTime(this.pause, tries));
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         // we should delete connection between client and zookeeper
@@ -230,14 +230,6 @@ public class HBaseAdmin implements Abortable, Closeable {
     return this.connection.getHTableDescriptor(tableName);
   }
 
-  private long getPauseTime(int tries) {
-    int triesCount = tries;
-    if (triesCount >= HConstants.RETRY_BACKOFF.length) {
-      triesCount = HConstants.RETRY_BACKOFF.length - 1;
-    }
-    return this.pause * HConstants.RETRY_BACKOFF[triesCount];
-  }
-
   /**
    * Creates a new table.
    * Synchronous operation.
@@ -357,7 +349,7 @@ public class HBaseAdmin implements Abortable, Closeable {
               " of " + numRegs + " regions are online; retries exhausted.");
         }
         try { // Sleep
-          Thread.sleep(getPauseTime(tries));
+          Thread.sleep(ConnectionUtils.getPauseTime(this.pause, tries));
         } catch (InterruptedException e) {
           throw new InterruptedIOException("Interrupted when opening" +
               " regions; " + actualRegCount.get() + " of " + numRegs + 
@@ -470,7 +462,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         }
       }
       try {
-        Thread.sleep(getPauseTime(tries));
+        Thread.sleep(ConnectionUtils.getPauseTime(this.pause, tries));
       } catch (InterruptedException e) {
         // continue
       }
@@ -505,7 +497,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       if (enabled) {
         break;
       }
-      long sleep = getPauseTime(tries);
+      long sleep = ConnectionUtils.getPauseTime(this.pause, tries);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleeping= " + sleep + "ms, waiting for all regions to be " +
           "enabled in " + Bytes.toString(tableName));
@@ -601,7 +593,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       if (disabled) {
         break;
       }
-      long sleep = getPauseTime(tries);
+      long sleep = ConnectionUtils.getPauseTime(this.pause, tries);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleeping= " + sleep + "ms, waiting for all regions to be " +
           "disabled in " + Bytes.toString(tableName));

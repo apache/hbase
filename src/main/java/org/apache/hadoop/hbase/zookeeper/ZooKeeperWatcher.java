@@ -216,6 +216,14 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   public void registerListener(ZooKeeperListener listener) {
     listeners.add(listener);
   }
+  
+  /**
+   * Unregister the specified listener.
+   * @param listener
+   */
+  public void unregisterListener(ZooKeeperListener listener) {
+    listeners.remove(listener);
+  }
 
   /**
    * Register the specified listener to receive ZooKeeper events and add it as
