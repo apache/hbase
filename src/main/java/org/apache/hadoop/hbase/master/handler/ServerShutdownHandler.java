@@ -286,30 +286,33 @@ public class ServerShutdownHandler extends EventHandler {
    * Check that daughter regions are up in .META. and if not, add them.
    * @param hris All regions for this server in meta.
    * @param result The contents of the parent row in .META.
+   * @return the number of daughters missing and fixed
    * @throws IOException
    */
-  static void fixupDaughters(final Result result,
+  public static int fixupDaughters(final Result result,
       final AssignmentManager assignmentManager,
       final CatalogTracker catalogTracker)
   throws IOException {
-    fixupDaughter(result, HConstants.SPLITA_QUALIFIER, assignmentManager,
-      catalogTracker);
-    fixupDaughter(result, HConstants.SPLITB_QUALIFIER, assignmentManager,
-      catalogTracker);
+    int fixedA = fixupDaughter(result, HConstants.SPLITA_QUALIFIER,
+      assignmentManager, catalogTracker);
+    int fixedB = fixupDaughter(result, HConstants.SPLITB_QUALIFIER,
+      assignmentManager, catalogTracker);
+    return fixedA + fixedB;
   }
 
   /**
    * Check individual daughter is up in .META.; fixup if its not.
    * @param result The contents of the parent row in .META.
    * @param qualifier Which daughter to check for.
+   * @return 1 if the daughter is missing and fixed. Otherwise 0
    * @throws IOException
    */
-  static void fixupDaughter(final Result result, final byte [] qualifier,
+  static int fixupDaughter(final Result result, final byte [] qualifier,
       final AssignmentManager assignmentManager,
       final CatalogTracker catalogTracker)
   throws IOException {
     HRegionInfo daughter = getHRegionInfo(result, qualifier);
-    if (daughter == null) return;
+    if (daughter == null) return 0;
     if (isDaughterMissing(catalogTracker, daughter)) {
       LOG.info("Fixup; missing daughter " + daughter.getRegionNameAsString());
       MetaEditor.addDaughter(catalogTracker, daughter, null);
@@ -320,9 +323,11 @@ public class ServerShutdownHandler extends EventHandler {
 
       // And assign it.
       assignmentManager.assign(daughter, true);
+      return 1;
     } else {
       LOG.debug("Daughter " + daughter.getRegionNameAsString() + " present");
     }
+    return 0;
   }
 
   /**

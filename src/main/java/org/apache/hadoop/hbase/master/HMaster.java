@@ -25,6 +25,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -67,6 +68,7 @@ import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
+import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
@@ -396,6 +398,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.assignmentManager.processFailover();
     }
 
+    // Fixing up missing daughters if any
+    fixupDaughters();
+
     // Start balancer and meta catalog janitor after meta and regions have
     // been assigned.
     this.balancerChore = getAndStartBalancerChore(this);
@@ -457,6 +462,37 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private void enableCatalogTables(String catalogTableName) {
     if (!this.assignmentManager.getZKTable().isEnabledTable(catalogTableName)) {
       this.assignmentManager.setEnabledTable(catalogTableName);
+    }
+  }
+
+  void fixupDaughters() throws IOException {
+    final Map<HRegionInfo, Result> offlineSplitParents =
+      new HashMap<HRegionInfo, Result>();
+    // This visitor collects offline split parents in the .META. table
+    MetaReader.Visitor visitor = new MetaReader.Visitor() {
+      @Override
+      public boolean visit(Result r) throws IOException {
+        if (r == null || r.isEmpty()) return true;
+        HRegionInfo info = CatalogJanitor.getHRegionInfo(r);
+        if (info == null) return true; // Keep scanning
+        if (info.isOffline() && info.isSplit()) {
+          offlineSplitParents.put(info, r);
+        }
+        // Returning true means "keep scanning"
+        return true;
+      }
+    };
+    // Run full scan of .META. catalog table passing in our custom visitor
+    MetaReader.fullScan(this.catalogTracker, visitor);
+    // Now work on our list of found parents. See if any we can clean up.
+    int fixups = 0;
+    for (Map.Entry<HRegionInfo, Result> e : offlineSplitParents.entrySet()) {
+      fixups += ServerShutdownHandler.fixupDaughters(
+          e.getValue(), assignmentManager, catalogTracker);
+    }
+    if (fixups != 0) {
+      LOG.info("Scanned the catalog and fixed up " + fixups +
+        " missing daughter region(s)");
     }
   }
 

@@ -1,7 +1,6 @@
 HBase Change Log
 Release 0.90.7 - Unreleased
   BUG FIXES
-   HBASE-5153  Add retry logic in HConnectionImplementation#resetZooKeeperTrackers (Jieshan)
 
 Release 0.90.6 - Unreleased
   BUG FIXES
@@ -31,6 +30,9 @@ Release 0.90.6 - Unreleased
    HBASE-5192  Backport HBASE-4236 Don't lock the stream while serializing the response (Ram)
    HBASE-5155  ServerShutDownHandler And Disable/Delete should not happen parallely 
                leading to recreation of regions that were deleted (Ram)
+   HBASE-5153  Add retry logic in HConnectionImplementation#resetZooKeeperTrackers (Jieshan)
+   HBASE-5196  Failure in region split after PONR could cause region hole (Jimmy Xiang)
+
   IMPROVEMENT
    HBASE-5102  Change the default value of the property "hbase.connection.per.config" to false in
                 hbase-default.xml
