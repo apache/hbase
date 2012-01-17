@@ -333,6 +333,8 @@ public class TestAtomicOperation extends HBaseTestCase {
           }
         } catch (IOException e) {
           e.printStackTrace();
+          failures.incrementAndGet();
+          fail();
         }
       }
     }

@@ -23,11 +23,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -94,62 +94,39 @@ public class ReplicationSink {
     // to the same table.
     try {
       long totalReplicated = 0;
-      // Map of table => list of puts, we only want to flushCommits once per
+      // Map of table => list of Rows, we only want to flushCommits once per
       // invocation of this method per table.
-      Map<byte[], List<Put>> puts = new TreeMap<byte[], List<Put>>(Bytes.BYTES_COMPARATOR);
+      Map<byte[], List<Row>> rows = new TreeMap<byte[], List<Row>>(Bytes.BYTES_COMPARATOR);
       for (HLog.Entry entry : entries) {
         WALEdit edit = entry.getEdit();
+        byte[] table = entry.getKey().getTablename();
+        Put put = null;
+        Delete del = null;
+        KeyValue lastKV = null;
         List<KeyValue> kvs = edit.getKeyValues();
-        if (kvs.get(0).isDelete()) {
-          Delete delete = new Delete(kvs.get(0).getRow(),
-              kvs.get(0).getTimestamp(), null);
-          delete.setClusterId(entry.getKey().getClusterId());
-          for (KeyValue kv : kvs) {
-            switch (Type.codeToType(kv.getType())) {
-            case DeleteFamily:
-              // family marker
-              delete.deleteFamily(kv.getFamily(), kv.getTimestamp());
-              break;
-            case DeleteColumn:
-              // column marker
-              delete.deleteColumns(kv.getFamily(), kv.getQualifier(),
-                  kv.getTimestamp());
-              break;
-            case Delete:
-              // version marker
-              delete.deleteColumn(kv.getFamily(), kv.getQualifier(),
-                  kv.getTimestamp());
-              break;
-            }
-          }
-          delete(entry.getKey().getTablename(), delete);
-        } else {
-          byte[] table = entry.getKey().getTablename();
-          List<Put> tableList = puts.get(table);
-          if (tableList == null) {
-            tableList = new ArrayList<Put>();
-            puts.put(table, tableList);
-          }
-          // With mini-batching, we need to expect multiple rows per edit
-          byte[] lastKey = kvs.get(0).getRow();
-          Put put = new Put(lastKey, kvs.get(0).getTimestamp());
-          put.setClusterId(entry.getKey().getClusterId());
-          for (KeyValue kv : kvs) {
-            byte[] key = kv.getRow();            
-            if (!Bytes.equals(lastKey, key)) {
-              tableList.add(put);
-              put = new Put(key, kv.getTimestamp());
+        for (KeyValue kv : kvs) {
+          if (lastKV == null || lastKV.getType() != kv.getType() || !lastKV.matchingRow(kv)) {
+            if (kv.isDelete()) {
+              del = new Delete(kv.getRow());
+              del.setClusterId(entry.getKey().getClusterId());
+              addToMultiMap(rows, table, del);
+            } else {
+              put = new Put(kv.getRow());
               put.setClusterId(entry.getKey().getClusterId());
+              addToMultiMap(rows, table, put);
             }
-            put.add(kv);
-            lastKey = key;
           }
-          tableList.add(put);
+          if (kv.isDelete()) {
+            del.addDeleteMarker(kv);
+          } else {
+            put.add(kv);
+          }
+          lastKV = kv;
         }
         totalReplicated++;
       }
-      for(byte [] table : puts.keySet()) {
-        put(table, puts.get(table));
+      for(byte [] table : rows.keySet()) {
+        batch(table, rows.get(table));
       }
       this.metrics.setAgeOfLastAppliedOp(
           entries[entries.length-1].getKey().getWriteTime());
@@ -162,39 +139,40 @@ public class ReplicationSink {
   }
 
   /**
-   * Do the puts and handle the pool
+   * Simple helper to a map from key to (a list of) values
+   * TODO: Make a general utility method
+   * @param map
+   * @param key
+   * @param value
+   * @return
+   */
+  private <K, V> List<V> addToMultiMap(Map<K, List<V>> map, K key, V value) {
+    List<V> values = map.get(key);
+    if (values == null) {
+      values = new ArrayList<V>();
+      map.put(key, values);
+    }
+    values.add(value);
+    return values;
+  }
+
+  /**
+   * Do the changes and handle the pool
    * @param tableName table to insert into
-   * @param puts list of puts
+   * @param rows list of actions
    * @throws IOException
    */
-  private void put(byte[] tableName, List<Put> puts) throws IOException {
-    if (puts.isEmpty()) {
+  private void batch(byte[] tableName, List<Row> rows) throws IOException {
+    if (rows.isEmpty()) {
       return;
     }
     HTableInterface table = null;
     try {
       table = this.pool.getTable(tableName);
-      table.put(puts);
-      this.metrics.appliedOpsRate.inc(puts.size());
-    } finally {
-      if (table != null) {
-        table.close();
-      }
-    }
-  }
-
-  /**
-   * Do the delete and handle the pool
-   * @param tableName table to delete in
-   * @param delete the delete to use
-   * @throws IOException
-   */
-  private void delete(byte[] tableName, Delete delete) throws IOException {
-    HTableInterface table = null;
-    try {
-      table = this.pool.getTable(tableName);
-      table.delete(delete);
-      this.metrics.appliedOpsRate.inc(1);
+      table.batch(rows);
+      this.metrics.appliedOpsRate.inc(rows.size());
+    } catch (InterruptedException ix) {
+      throw new IOException(ix);
     } finally {
       if (table != null) {
         table.close();
