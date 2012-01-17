@@ -64,7 +64,7 @@ public class TestMasterAddressManager {
 
     // Should not have a master yet
     MasterAddressTracker addressManager = new MasterAddressTracker(zk, null);
-    addressManager.start();
+    addressManager.start(true);
     assertFalse(addressManager.hasMaster());
     zk.registerListener(addressManager);
 

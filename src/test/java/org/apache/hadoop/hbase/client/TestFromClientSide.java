@@ -43,6 +43,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
@@ -65,13 +67,12 @@ import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -4308,4 +4309,34 @@ public class TestFromClientSide {
         System.currentTimeMillis() + ", cur=" + store.getNumberOfstorefiles());
     assertEquals(count, store.getNumberOfstorefiles());
   }
+  
+  /**
+   * Test HConnection can be recovered after this connection has been
+   * aborted.
+   * @throws IOException
+   */
+  @Test
+  public void testConnectionResetAfterAbort() throws IOException {
+    final byte[] COLUMN_FAMILY = Bytes.toBytes("columnfam");
+    final byte[] COLUMN = Bytes.toBytes("col");
+    HTable table = TEST_UTIL.createTable(
+        Bytes.toBytes("testConnectionRecover"), new byte[][] { COLUMN_FAMILY });
+    Put put01 = new Put(Bytes.toBytes("testrow1"));
+    put01.add(COLUMN_FAMILY, COLUMN, Bytes.toBytes("testValue"));
+    table.put(put01);
+
+    // At this time, abort the connection.
+    HConnection conn = table.getConnection();
+    conn.abort("Test Connection Abort", new KeeperException.ConnectionLossException());
+    boolean putSuccess = true;
+    // This put will success, for the connection has been recovered.
+    try {
+      Put put02 = new Put(Bytes.toBytes("testrow1"));
+      put02.add(COLUMN_FAMILY, COLUMN, Bytes.toBytes("testValue"));
+      table.put(put02);
+    } catch (IOException ioe) {
+      putSuccess = false;
+    }
+    assertTrue(putSuccess);
+  }  
 }
