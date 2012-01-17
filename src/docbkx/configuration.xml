@@ -212,35 +212,44 @@ to ensure well-formedness of your document after an edit session.
         xlink:href="http://hadoop.apache.org">Hadoop</link><indexterm>
             <primary>Hadoop</primary>
           </indexterm></title>
+         <note><title>Please read all of this section</title>
+         <para>Please read this section to the end.  Up front we
+         wade through the weeds of Hadoop versions.  Later we talk of what you must do in HBase
+         to make it work w/ a particular Hadoop version.</para>
+         </note>
 
-          <note>
-          <title>On Hadoop Versions?</title>
+          <para>
+        HBase will lose data unless it is running on an HDFS that has a durable
+        <code>sync</code> implementation. Hadoop 0.20.2, Hadoop 0.20.203.0, and Hadoop 0.20.204.0
+	DO NOT have this attribute.
+        Currently only Hadoop versions 0.20.205.x or any release in excess of this
+        version -- this includes hadoop 1.0.0 -- have a working, durable sync
+          <footnote>
+          <title>On Hadoop Versions</title>
           <para>The Cloudera blog post <link xlink:href="http://www.cloudera.com/blog/2012/01/an-update-on-apache-hadoop-1-0/">An update on Apache Hadoop 1.0</link>
           by Charles Zedlweski has a nice exposition on how all the Hadoop versions relate.
           Its worth checking out if you are having trouble making sense of the
           Hadoop version morass.
           </para>
-          </note>
-          <para>
-              This version of HBase will only run on <link
-        xlink:href="http://hadoop.apache.org/common/releases.html">Hadoop
-        0.20.x</link>. It will not run on hadoop 0.21.x (but may run on 0.22.x/0.23.x).
-        HBase will lose data unless it is running on an HDFS that has a durable
-        <code>sync</code>. Hadoop 0.20.2, Hadoop 0.20.203.0, and Hadoop 0.20.204.0
-	DO NOT have this attribute.
-        Currently only Hadoop versions 0.20.205.x or any release in excess of this
-        version has a durable sync.  You have to explicitly enable it though by
-        setting <varname>dfs.support.append</varname> equal to true on both
-        the client side -- in <filename>hbase-site.xml</filename> though it should
-        be on in your <filename>base-default.xml</filename> file -- and on the
-        serverside in <filename>hdfs-site.xml</filename> (You will have to restart
-        your cluster after setting this configuration).  Ignore the chicken-little
-        comment you'll find in the <filename>hdfs-site.xml</filename> in the
-        description for this configuration; it says it is not enabled because there
+          </footnote>.  Sync has to be explicitly enabled by setting
+        <varname>dfs.support.append</varname> equal
+        to true on both the client side -- in <filename>hbase-site.xml</filename>
+        -- and on the serverside in <filename>hdfs-site.xml</filename> (The sync
+        facility HBase needs is a subset of the append code path).
+        <programlisting>
+  &lt;property>
+    &lt;name>dfs.support.append&lt;/name>
+    &lt;value>true&lt;/value>
+  &lt;/property>
+        </programlisting>
+        You will have to restart your cluster after making this edit.  Ignore the chicken-little
+        comment you'll find in the <filename>hdfs-default.xml</filename> in the
+        description for the <varname>dfs.support.append</varname> configuration; it says it is not enabled because there
         are <quote>... bugs in the 'append code' and is not supported in any production
-        cluster.</quote> because it is not true (I'm sure there are bugs but the
-        append code has been running in production at large scale deploys and is on
-        by default in the offerings of hadoop by commercial vendors)
+        cluster.</quote>. This comment is stale, from another era, and while I'm sure there
+        are bugs, the sync/append code has been running
+        in production at large scale deploys and is on
+        by default in the offerings of hadoop by commercial vendors
         <footnote><para>Until recently only the
         <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
         branch had a working sync but no official release was ever made from this branch.
