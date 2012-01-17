@@ -122,7 +122,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
 
     RSTracker rsTracker = new RSTracker(zkw,
         "/hbase/rs/"+regionServer.getServerName(), Thread.currentThread());
-    rsTracker.start(true);
+    rsTracker.start();
     zkw.registerListener(rsTracker);
 
     boolean caughtInterruption = false;

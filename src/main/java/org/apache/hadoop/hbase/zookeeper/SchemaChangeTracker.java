@@ -63,21 +63,14 @@ public class SchemaChangeTracker extends ZooKeeperNodeTracker {
   }
 
   @Override
-  public boolean start(boolean allowAbort) {
+  public void start() {
     try {
       watcher.registerListener(this);
       ZKUtil.listChildrenAndWatchThem(watcher, node);
       // Clean-up old in-process schema changes for this RS now?
-      return true;
     } catch (KeeperException e) {
-      if (allowAbort && (abortable != null)) {
-        abortable.abort("RegionServer SchemaChangeTracker startup failed",
-            e);
-      } else {
-        LOG.error("RegionServer SchemaChangeTracker startup failed with " +
-            "KeeperException.", e);        
-      }
-      return false;
+      LOG.error("RegionServer SchemaChangeTracker startup failed with " +
+          "KeeperException.", e);
     }
   }
 

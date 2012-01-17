@@ -35,6 +35,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -82,7 +83,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -4567,38 +4567,7 @@ public class TestFromClientSide {
     assertNotNull(addrAfter);
     assertTrue(addrAfter.getPort() != addrCache.getPort());
     assertEquals(addrAfter.getPort(), addrNoCache.getPort());
-  }
-  
-  /**
-   * Test HConnection can be recovered after this connection has been
-   * aborted.
-   * @throws IOException
-   */
-  @Test
-  public void testConnectionResetAfterAbort() throws IOException {
-    final byte[] COLUMN_FAMILY = Bytes.toBytes("columnfam");
-    final byte[] COLUMN = Bytes.toBytes("col");
-    HTable table = TEST_UTIL.createTable(
-        Bytes.toBytes("testConnectionRecover"), new byte[][] { COLUMN_FAMILY });
-    Put put01 = new Put(Bytes.toBytes("testrow1"));
-    put01.add(COLUMN_FAMILY, COLUMN, Bytes.toBytes("testValue"));
-    table.put(put01);
-
-    // At this time, abort the connection.
-    HConnection conn = table.getConnection();
-    conn.abort("Test Connection Abort", new KeeperException.ConnectionLossException());
-    boolean putSuccess = true;
-    // This put will success, for the connection has been recovered.
-    try {
-      Put put02 = new Put(Bytes.toBytes("testrow1"));
-      put02.add(COLUMN_FAMILY, COLUMN, Bytes.toBytes("testValue"));
-      table.put(put02);
-    } catch (IOException ioe) {
-      putSuccess = false;
-    }
-    assertTrue(putSuccess);
-  }
-  
+  }  
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
