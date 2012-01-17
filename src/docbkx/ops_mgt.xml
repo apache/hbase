@@ -161,7 +161,9 @@
       See the <link xlink:href="http://ofps.oreilly.com/titles/9781449396107/performance.html">O'Reilly HBase Book</link> for
       an example of usage.
       </para>
-      
+      <para>Additionally, there is a Ruby script attached to <link xlink:href="https://issues.apache.org/jira/browse/HBASE-1621">HBASE-1621</link> 
+      for region merging.
+      </para>
     </section>
   </section>
     
