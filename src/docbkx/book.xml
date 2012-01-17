@@ -1909,6 +1909,7 @@ scan.setFilter(filter);
               helpful description, <link xlink:href="http://th30z.blogspot.com/2011/02/hbase-io-hfile.html?spref=tw">HBase I/O: HFile</link>.
           </para>
           <para>For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFile.html">HFile source code</link>.
+          Also see <xref linkend="hfilev2"/> for information about the HFile v2 format that was included in 0.92.
           </para>
       </section>
       <section xml:id="hfile_tool">
