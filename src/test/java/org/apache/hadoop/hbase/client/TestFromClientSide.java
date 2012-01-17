@@ -23,6 +23,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -4046,7 +4047,6 @@ public class TestFromClientSide {
         Bytes.toBytes("a"), Bytes.toBytes("b")
     };
     RowMutation arm = new RowMutation(ROW);
-    arm.add(new Delete(ROW));
     Put p = new Put(ROW);
     p.add(FAMILY, QUALIFIERS[0], VALUE);
     arm.add(p);
@@ -4054,15 +4054,19 @@ public class TestFromClientSide {
 
     Get g = new Get(ROW);
     Result r = t.get(g);
-    // delete was first, row should exist
     assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[0])));
 
     arm = new RowMutation(ROW);
+    p = new Put(ROW);
+    p.add(FAMILY, QUALIFIERS[1], VALUE);
     arm.add(p);
-    arm.add(new Delete(ROW));
+    Delete d = new Delete(ROW);
+    d.deleteColumns(FAMILY, QUALIFIERS[0]);
+    arm.add(d);
     t.batch(Arrays.asList((Row)arm));
     r = t.get(g);
-    assertTrue(r.isEmpty());
+    assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[1])));
+    assertNull(r.getValue(FAMILY, QUALIFIERS[0]));
   }
 
   @Test

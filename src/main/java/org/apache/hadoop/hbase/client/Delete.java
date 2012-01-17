@@ -138,6 +138,35 @@ public class Delete extends Mutation
   }
 
   /**
+   * Advanced use only.
+   * Add an existing delete marker to this Delete object.
+   * @param kv An existing KeyValue of type "delete".
+   * @return this for invocation chaining
+   * @throws IOException
+   */
+  public Delete addDeleteMarker(KeyValue kv) throws IOException {
+    if (!kv.isDelete()) {
+      throw new IOException("The recently added KeyValue is not of type "
+          + "delete. Rowkey: " + Bytes.toStringBinary(this.row));
+    }
+    if (Bytes.compareTo(this.row, 0, row.length, kv.getBuffer(),
+        kv.getRowOffset(), kv.getRowLength()) != 0) {
+      throw new IOException("The row in the recently added KeyValue "
+          + Bytes.toStringBinary(kv.getBuffer(), kv.getRowOffset(),
+              kv.getRowLength()) + " doesn't match the original one "
+          + Bytes.toStringBinary(this.row));
+    }
+    byte [] family = kv.getFamily();
+    List<KeyValue> list = familyMap.get(family);
+    if (list == null) {
+      list = new ArrayList<KeyValue>();
+    }
+    list.add(kv);
+    familyMap.put(family, list);
+    return this;
+  }
+
+  /**
    * Delete all versions of all columns of the specified family.
    * <p>
    * Overrides previous calls to deleteColumn and deleteColumns for the
