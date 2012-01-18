@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.util.ProgramDriver;
+import org.apache.hadoop.hbase.mapreduce.loadtest.LoadTest;
 
 /**
  * Driver for hbase mapreduce jobs. Select which to run by passing
@@ -41,6 +42,7 @@ public class Driver {
                  "Complete a bulk data load.");
     pgd.addClass(CopyTable.NAME, CopyTable.class,
         "Export a table from local cluster to peer cluster");
+    pgd.addClass(LoadTest.NAME, LoadTest.class, "Load tester");
     pgd.driver(args);
   }
 }
