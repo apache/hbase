@@ -37,7 +37,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -107,6 +106,7 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
@@ -300,16 +300,12 @@ public class HMaster extends Thread implements HMasterInterface,
     }
 
     // initilize the thread pool for log splitting.
-    int maxSplitLogThread = conf
-        .getInt("hbase.master.splitLogThread.max", 1000);
-    // Unfortunately Executors.newCachedThreadPool does not allow us to
-    // set the maximum size of the pool, so we have to do it ourselves.
-    logSplitThreadPool = new ThreadPoolExecutor(maxSplitLogThread,
+    int maxSplitLogThread =
+      conf.getInt("hbase.master.splitLogThread.max", 1000);
+    logSplitThreadPool = Threads.getBoundedCachedThreadPool(
         maxSplitLogThread, 30L, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<Runnable>(),
         new ThreadFactory() {
           private int count = 1;
-
           public Thread newThread(Runnable r) {
             Thread t = new Thread(r, "LogSplittingThread" + "-" + count++);
             if (!t.isDaemon())
@@ -317,8 +313,6 @@ public class HMaster extends Thread implements HMasterInterface,
             return t;
           }
         });
-    // allow the core pool threads timeout and terminate
-    logSplitThreadPool.allowCoreThreadTimeOut(true);
   }
 
   /**

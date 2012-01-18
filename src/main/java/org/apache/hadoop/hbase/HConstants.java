@@ -191,6 +191,19 @@ public final class HConstants {
   /** File Extension used while splitting an HLog into regions (HBASE-2312) */
   public static final String HLOG_SPLITTING_EXT = "-splitting";
 
+  /**
+   * The max number of threads used for opening and closing stores or store
+   * files in parallel
+   */
+  public static final String HSTORE_OPEN_AND_CLOSE_THREADS_MAX =
+    "hbase.hstore.open.and.close.threads.max";
+
+  /**
+   * The default number for the max number of threads used for opening and
+   * closing stores or store files in parallel
+   */
+  public static final int DEFAULT_HSTORE_OPEN_AND_CLOSE_THREADS_MAX = 8;
+
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
 

@@ -19,13 +19,16 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.PrintWriter;
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import java.io.PrintWriter;
 import org.apache.hadoop.util.ReflectionUtils;
-
-import java.lang.Thread.UncaughtExceptionHandler;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Thread Utility
@@ -144,4 +147,25 @@ public class Threads {
     }
   }
 
+  /**
+   * Create a new CachedThreadPool with a bounded number as the maximum
+   * thread size in the pool.
+   *
+   * @param maxCachedThread the maximum thread could be created in the pool
+   * @param timeout the maximum time to wait
+   * @param unit the time unit of the timeout argument
+   * @param threadFactory the factory to use when creating new threads
+   * @return threadPoolExecutor the cachedThreadPool with a bounded number
+   * as the maximum thread size in the pool.
+   */
+  public static ThreadPoolExecutor getBoundedCachedThreadPool(
+      int maxCachedThread, long timeout, TimeUnit unit,
+      ThreadFactory threadFactory) {
+    ThreadPoolExecutor boundedCachedThreadPool =
+      new ThreadPoolExecutor(maxCachedThread, maxCachedThread, timeout,
+        TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), threadFactory);
+    // allow the core pool threads timeout and terminate
+    boundedCachedThreadPool.allowCoreThreadTimeOut(true);
+    return boundedCachedThreadPool;
+  }
 }
