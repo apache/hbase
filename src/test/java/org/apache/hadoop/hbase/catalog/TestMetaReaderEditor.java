@@ -53,7 +53,7 @@ public class TestMetaReaderEditor {
   private static final Log LOG = LogFactory.getLog(TestMetaReaderEditor.class);
   private static final  HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private ZooKeeperWatcher zkw;
-  private CatalogTracker ct;
+  private static CatalogTracker ct;
   private final static Abortable ABORTABLE = new Abortable() {
     private final AtomicBoolean abort = new AtomicBoolean(false);
 
