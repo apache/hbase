@@ -83,6 +83,7 @@ public class TestMetaReaderEditor {
 
   @AfterClass public static void afterClass() throws Exception {
     ABORTABLE.abort("test ending", null);
+    ct.stop();
     UTIL.shutdownMiniCluster();
   }
 
