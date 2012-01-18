@@ -285,7 +285,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     ArrayList<StoreFile> results = new ArrayList<StoreFile>();
     FileStatus files[] = this.fs.listStatus(this.homedir);
 
-    if (files.length == 0) {
+    if (files == null || files.length == 0) {
       return results;
     }
     // initialize the thread pool for opening store files in parallel..
