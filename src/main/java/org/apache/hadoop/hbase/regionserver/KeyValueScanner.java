@@ -20,8 +20,10 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.SortedSet;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Scan;
 
 /**
  * Scanner that returns the next KeyValue.
@@ -68,6 +70,19 @@ public interface KeyValueScanner {
    * Close the KeyValue scanner.
    */
   public void close();
+
+  /**
+   * Allows to filter out scanners (both StoreFile and memstore) that we don't
+   * want to use based on criteria such as Bloom filters and timestamp ranges.
+   * @param scan the scan that we are selecting scanners for
+   * @param columns the set of columns in the current column family, or null if
+   *          not specified by the scan
+   * @param oldestUnexpiredTS the oldest timestamp we are interested in for
+   *          this query, based on TTL
+   * @return true if the scanner should be included in the query
+   */
+  public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns,
+      long oldestUnexpiredTS);
 
   // "Lazy scanner" optimizations
 

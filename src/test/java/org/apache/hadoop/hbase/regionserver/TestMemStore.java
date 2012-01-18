@@ -774,16 +774,16 @@ public class TestMemStore extends TestCase {
       addRows(memstore,timestamp);
 
     scan.setTimeRange(0, 2);
-    assertTrue(memstore.shouldSeek(scan));
+    assertTrue(memstore.shouldSeek(scan, Long.MIN_VALUE));
 
     scan.setTimeRange(20, 82);
-    assertTrue(memstore.shouldSeek(scan));
+    assertTrue(memstore.shouldSeek(scan, Long.MIN_VALUE));
 
     scan.setTimeRange(10, 20);
-    assertTrue(memstore.shouldSeek(scan));
+    assertTrue(memstore.shouldSeek(scan, Long.MIN_VALUE));
 
     scan.setTimeRange(8, 12);
-    assertTrue(memstore.shouldSeek(scan));
+    assertTrue(memstore.shouldSeek(scan, Long.MIN_VALUE));
 
     /*This test is not required for correctness but it should pass when
      * timestamp range optimization is on*/

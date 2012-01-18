@@ -156,8 +156,7 @@ public class TestCompoundBloomFilter {
    * it to the provided threshold.
    *
    * @param falsePosRate experimental positive rate
-   * @param nTrials the number of calls to
-   *          {@link StoreFile.Reader#shouldSeek(Scan, java.util.SortedSet)}.
+   * @param nTrials the number of Bloom filter checks
    * @param zValueBoundary z-value boundary, positive for an upper bound and
    *          negative for a lower bound
    * @param cbf the compound Bloom filter we are using
@@ -276,7 +275,7 @@ public class TestCompoundBloomFilter {
     Scan scan = new Scan(row, row);
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     columns.add(qualifier);
-    return scanner.shouldSeek(scan, columns);
+    return scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE);
   }
 
   private Path writeStoreFile(int t, BloomType bt, List<KeyValue> kvs)

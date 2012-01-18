@@ -30,11 +30,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
 /**
- * Stores the minimum and maximum timestamp values.
+ * Stores the minimum and maximum timestamp values (both are inclusive).
  * Can be used to find if any given time range overlaps with its time range
  * MemStores use this class to track its minimum and maximum timestamps.
  * When writing StoreFiles, this information is stored in meta blocks and used
- * at read time to match against the required TimeRange
+ * at read time to match against the required TimeRange.
  */
 public class TimeRangeTracker implements Writable {
 
@@ -143,4 +143,10 @@ public class TimeRangeTracker implements Writable {
     this.maximumTimestamp = in.readLong();
   }
 
+  @Override
+  public String toString() {
+    return "[" + minimumTimestamp + "," + maximumTimestamp + "]";
+  }
+
 }
+

@@ -23,19 +23,15 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
 
 public class TestQueryMatcher extends HBaseTestCase {
   private static final boolean PRINT = false;
@@ -99,8 +95,9 @@ public class TestQueryMatcher extends HBaseTestCase {
     expected.add(ScanQueryMatcher.MatchCode.DONE);
 
     // 2,4,5
-    ScanQueryMatcher qm = new ScanQueryMatcher(scan, fam2,
-        get.getFamilyMap().get(fam2), ttl, rowComparator, 1);
+    ScanQueryMatcher qm =
+        new ScanQueryMatcher(scan, fam2, get.getFamilyMap().get(fam2),
+            rowComparator, 1, EnvironmentEdgeManager.currentTimeMillis() - ttl);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, 1, data));
@@ -143,7 +140,8 @@ public class TestQueryMatcher extends HBaseTestCase {
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.DONE);
 
-    ScanQueryMatcher qm = new ScanQueryMatcher(scan, fam2, null, ttl, rowComparator, 1);
+    ScanQueryMatcher qm = new ScanQueryMatcher(scan, fam2, null, rowComparator,
+        1, EnvironmentEdgeManager.currentTimeMillis() - ttl);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, 1, data));
@@ -193,8 +191,10 @@ public class TestQueryMatcher extends HBaseTestCase {
         ScanQueryMatcher.MatchCode.DONE
     };
 
-    ScanQueryMatcher qm = new ScanQueryMatcher(scan, fam2,
-        get.getFamilyMap().get(fam2), testTTL, rowComparator, 1);
+    ScanQueryMatcher qm =
+        new ScanQueryMatcher(scan, fam2, get.getFamilyMap().get(fam2),
+            rowComparator, 1, EnvironmentEdgeManager.currentTimeMillis()
+                - testTTL);
 
     long now = System.currentTimeMillis();
     KeyValue [] kvs = new KeyValue[] {
@@ -245,8 +245,9 @@ public class TestQueryMatcher extends HBaseTestCase {
         ScanQueryMatcher.MatchCode.DONE
     };
 
-    ScanQueryMatcher qm = new ScanQueryMatcher(scan, fam2,
-        null, testTTL, rowComparator, 1);
+    ScanQueryMatcher qm =
+        new ScanQueryMatcher(scan, fam2, null, rowComparator, 1,
+            EnvironmentEdgeManager.currentTimeMillis() - testTTL);
 
     long now = System.currentTimeMillis();
     KeyValue [] kvs = new KeyValue[] {

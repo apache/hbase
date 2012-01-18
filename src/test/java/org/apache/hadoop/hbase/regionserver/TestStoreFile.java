@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
@@ -366,7 +365,7 @@ public class TestStoreFile extends HBaseTestCase {
 
       Scan scan = new Scan(row.getBytes(),row.getBytes());
       scan.addColumn("family".getBytes(), "family:col".getBytes());
-      boolean exists = scanner.shouldSeek(scan, columns);
+      boolean exists = scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE);
       if (i % 2 == 0) {
         if (!exists) falseNeg++;
       } else {
@@ -511,7 +510,8 @@ public class TestStoreFile extends HBaseTestCase {
 
           Scan scan = new Scan(row.getBytes(),row.getBytes());
           scan.addColumn("family".getBytes(), ("col"+col).getBytes());
-          boolean exists = scanner.shouldSeek(scan, columns);
+          boolean exists =
+              scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE);
           boolean shouldRowExist = i % 2 == 0;
           boolean shouldColExist = j % 2 == 0;
           shouldColExist = shouldColExist || bt[x] == StoreFile.BloomType.ROW;
@@ -680,21 +680,20 @@ public class TestStoreFile extends HBaseTestCase {
     columns.add(qualifier);
 
     scan.setTimeRange(20, 100);
-    assertTrue(scanner.shouldSeek(scan, columns));
+    assertTrue(scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
 
     scan.setTimeRange(1, 2);
-    assertTrue(scanner.shouldSeek(scan, columns));
+    assertTrue(scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
 
     scan.setTimeRange(8, 10);
-    assertTrue(scanner.shouldSeek(scan, columns));
+    assertTrue(scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
 
     scan.setTimeRange(7, 50);
-    assertTrue(scanner.shouldSeek(scan, columns));
+    assertTrue(scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
 
-    /*This test is not required for correctness but it should pass when
-     * timestamp range optimization is on*/
-    //scan.setTimeRange(27, 50);
-    //assertTrue(!scanner.shouldSeek(scan, columns));
+    // This test relies on the timestamp range optimization
+    scan.setTimeRange(27, 50);
+    assertTrue(!scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
   }
 
   public void testCacheOnWriteEvictOnClose() throws Exception {

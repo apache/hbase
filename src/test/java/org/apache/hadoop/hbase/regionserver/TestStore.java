@@ -64,7 +64,7 @@ import com.google.common.base.Joiner;
 import org.mockito.Mockito;
 
 /**
- * Test class fosr the Store
+ * Test class for the Store
  */
 public class TestStore extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestStore.class);

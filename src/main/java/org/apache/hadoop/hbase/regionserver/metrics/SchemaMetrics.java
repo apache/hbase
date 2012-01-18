@@ -704,7 +704,7 @@ public class SchemaMetrics {
     return metricsSnapshot;
   }
 
-  private static long getLong(Map<String, Long> m, String k) {
+  public static long getLong(Map<String, Long> m, String k) {
     Long l = m.get(k);
     return l != null ? l : 0;
   }
@@ -716,7 +716,8 @@ public class SchemaMetrics {
       m.remove(k);
     }
   }
-  private static Map<String, Long> diffMetrics(Map<String, Long> a,
+
+  public static Map<String, Long> diffMetrics(Map<String, Long> a,
       Map<String, Long> b) {
     Set<String> allKeys = new TreeSet<String>(a.keySet());
     allKeys.addAll(b.keySet());

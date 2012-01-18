@@ -80,16 +80,15 @@ public class ScanQueryMatcher {
    * @param scan
    * @param family
    * @param columnSet
-   * @param ttl
    * @param rowComparator
    */
   public ScanQueryMatcher(Scan scan, byte [] family,
-      NavigableSet<byte[]> columnSet, long ttl,
-      KeyValue.KeyComparator rowComparator, int maxVersions,
-      long readPointToUse,
-      boolean retainDeletesInOutput) {
+      NavigableSet<byte[]> columnSet, KeyValue.KeyComparator rowComparator,
+      int maxVersions, long readPointToUse,
+      boolean retainDeletesInOutput,
+      long oldestUnexpiredTS) {
     this.tr = scan.getTimeRange();
-    this.oldestStamp = System.currentTimeMillis() - ttl;
+    this.oldestStamp = oldestUnexpiredTS;
     this.rowComparator = rowComparator;
     this.deletes =  new ScanDeleteTracker();
     this.stopRow = scan.getStopRow();
@@ -125,13 +124,13 @@ public class ScanQueryMatcher {
   }
 
   public ScanQueryMatcher(Scan scan, byte [] family,
-      NavigableSet<byte[]> columns, long ttl,
-      KeyValue.KeyComparator rowComparator, int maxVersions) {
-      /* By default we will not include deletes */
-      /* deletes are included explicitly (for minor compaction) */
-      this(scan, family, columns, ttl, rowComparator, maxVersions,
-           Long.MAX_VALUE /* max Readpoint to Track versions */,
-           false);
+      NavigableSet<byte[]> columns, KeyValue.KeyComparator rowComparator,
+      int maxVersions, long oldestUnexpiredTS) {
+      // By default we will not include deletes.
+      // Deletes are included explicitly (for minor compaction).
+      this(scan, family, columns, rowComparator, maxVersions,
+          Long.MAX_VALUE, // max Readpoint to Track versions
+          false, oldestUnexpiredTS);
   }
 
   /**

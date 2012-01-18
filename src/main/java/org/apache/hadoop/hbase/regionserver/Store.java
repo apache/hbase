@@ -703,6 +703,11 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
   }
 
+  /**
+   * Get all scanners with no filtering based on TTL (that happens further down
+   * the line).
+   * @return all scanners for this store
+   */
   protected List<KeyValueScanner> getScanners(boolean cacheBlocks,
       boolean isGet,
       boolean isCompaction,
@@ -722,8 +727,9 @@ public class Store extends SchemaConfigured implements HeapSize {
     // TODO this used to get the store files in descending order,
     // but now we get them in ascending order, which I think is
     // actually more correct, since memstore get put at the end.
-    List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(storeFiles, cacheBlocks, isGet, isCompaction, matcher);
+    List<StoreFileScanner> sfScanners =
+        StoreFileScanner.getScannersForStoreFiles(storeFiles, cacheBlocks,
+            isGet, isCompaction, matcher);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
     scanners.addAll(sfScanners);
@@ -824,10 +830,10 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
   }
 
-  /*
-   * Compact the most recent N files. Essentially a hook for testing.
+  /**
+   * Compact the most recent N files.
    */
-  protected void compactRecent(int N) throws IOException {
+  public void compactRecentForTesting(int N) throws IOException {
     List<StoreFile> filesToCompact;
     long maxId;
     boolean isMajor;
@@ -1263,7 +1269,8 @@ public class Store extends SchemaConfigured implements HeapSize {
         Scan scan = new Scan();
         scan.setMaxVersions(family.getMaxVersions());
         /* include deletes, unless we are doing a major compaction */
-        scanner = new StoreScanner(this, scan, scanners, smallestReadPoint, !majorCompaction);
+        scanner = new StoreScanner(this, scan, scanners, smallestReadPoint,
+            !majorCompaction);
         int bytesWritten = 0;
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.
@@ -1713,7 +1720,8 @@ public class Store extends SchemaConfigured implements HeapSize {
   //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Return a scanner for both the memstore and the HStore files
+   * Return a scanner for both the memstore and the HStore files. Assumes we
+   * are not in a compaction.
    * @throws IOException
    */
   public StoreScanner getScanner(Scan scan,

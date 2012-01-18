@@ -329,7 +329,7 @@ public class TestCompaction extends HBaseTestCase {
     Store store2 = this.r.stores.get(fam2);
     int numFiles1 = store2.getStorefiles().size();
     assertTrue("Was expecting to see 4 store files", numFiles1 > compactionThreshold); // > 3
-    store2.compactRecent(compactionThreshold);   // = 3
+    store2.compactRecentForTesting(compactionThreshold);   // = 3
     int numFiles2 = store2.getStorefiles().size();
     // Check that we did compact
     assertTrue("Number of store files should go down", numFiles1 > numFiles2);

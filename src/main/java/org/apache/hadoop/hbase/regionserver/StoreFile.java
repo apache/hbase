@@ -1190,20 +1190,19 @@ public class StoreFile {
       reader.close();
     }
 
-    public boolean shouldSeek(Scan scan, final SortedSet<byte[]> columns) {
-      return (passesTimerangeFilter(scan) && passesBloomFilter(scan, columns));
-    }
-
     /**
-     * Check if this storeFile may contain keys within the TimeRange
-     * @param scan
-     * @return False if it definitely does not exist in this StoreFile
+     * Check if this storeFile may contain keys within the TimeRange.
+     * @param scan the current scan
+     * @param oldestUnexpiredTS the oldest timestamp that is not expired, as
+     *          determined by the column family's TTL
+     * @return false if queried keys definitely don't exist in this StoreFile
      */
-    private boolean passesTimerangeFilter(Scan scan) {
+    boolean passesTimerangeFilter(Scan scan, long oldestUnexpiredTS) {
       if (timeRangeTracker == null) {
         return true;
       } else {
-        return timeRangeTracker.includesTimeRange(scan.getTimeRange());
+        return timeRangeTracker.includesTimeRange(scan.getTimeRange()) &&
+            timeRangeTracker.getMaximumTimestamp() >= oldestUnexpiredTS;
       }
     }
 
@@ -1223,8 +1222,7 @@ public class StoreFile {
      *         filter, or if the Bloom filter is not applicable for the scan.
      *         False if the Bloom filter is applicable and the scan fails it.
      */
-    private boolean passesBloomFilter(Scan scan,
-        final SortedSet<byte[]> columns) {
+    boolean passesBloomFilter(Scan scan, final SortedSet<byte[]> columns) {
       if (!scan.isGetScan())
         return true;
 

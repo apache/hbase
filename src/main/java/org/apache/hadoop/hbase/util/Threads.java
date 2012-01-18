@@ -129,19 +129,19 @@ public class Threads {
    * the interrupt status.
    * @param msToWait the amount of time to sleep in milliseconds
    */
-  public static void sleepWithoutInterrupt(long msToWait) {
+  public static void sleepWithoutInterrupt(final long msToWait) {
     long timeMillis = System.currentTimeMillis();
+    long endTime = timeMillis + msToWait;
     boolean interrupted = false;
-    while (msToWait > 0) {
+    while (timeMillis < endTime) {
       try {
-        Thread.sleep(msToWait);
+        Thread.sleep(endTime - timeMillis);
       } catch (InterruptedException ex) {
-        long timePassed = System.currentTimeMillis() - timeMillis;
-        msToWait -= timePassed;
-        timeMillis += timePassed;
         interrupted = true;
       }
+      timeMillis = System.currentTimeMillis();
     }
+
     if (interrupted) {
       Thread.currentThread().interrupt();
     }

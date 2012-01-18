@@ -480,9 +480,12 @@ public class MemStore implements HeapSize {
    * @param scan
    * @return False if the key definitely does not exist in this Memstore
    */
-  public boolean shouldSeek(Scan scan) {
-    return timeRangeTracker.includesTimeRange(scan.getTimeRange()) ||
-        snapshotTimeRangeTracker.includesTimeRange(scan.getTimeRange());
+  public boolean shouldSeek(Scan scan, long oldestUnexpiredTS) {
+    return (timeRangeTracker.includesTimeRange(scan.getTimeRange()) ||
+        snapshotTimeRangeTracker.includesTimeRange(scan.getTimeRange()))
+        && (Math.max(timeRangeTracker.getMaximumTimestamp(),
+                     snapshotTimeRangeTracker.getMaximumTimestamp()) >=
+            oldestUnexpiredTS);
   }
 
   public TimeRangeTracker getSnapshotTimeRangeTracker() {
@@ -657,6 +660,12 @@ public class MemStore implements HeapSize {
     @Override
     public long getSequenceID() {
       return Long.MAX_VALUE;
+    }
+
+    @Override
+    public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns,
+        long oldestUnexpiredTS) {
+      return shouldSeek(scan, oldestUnexpiredTS);
     }
   }
 

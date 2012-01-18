@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.lang.ref.WeakReference;
 import java.util.PriorityQueue;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.ConcurrentHashMap;
@@ -817,4 +819,25 @@ public class LruBlockCache implements BlockCache, HeapSize {
   public void shutdown() {
     this.scheduleThreadPool.shutdown();
   }
+
+  /** Clears the cache. Used in tests. */
+  public void clearCache() {
+    map.clear();
+  }
+
+  /**
+   * Used in testing. May be very inefficient.
+   * @return the set of cached file names
+   */
+  SortedSet<String> getCachedFileNamesForTest() {
+    SortedSet<String> fileNames = new TreeSet<String>();
+    for (String cacheKey : map.keySet()) {
+      int sepIndex = cacheKey.indexOf(HFile.CACHE_KEY_SEPARATOR);
+      if (sepIndex != -1) {
+        fileNames.add(cacheKey.substring(0, sepIndex));
+      }
+    }
+    return fileNames;
+  }
+
 }

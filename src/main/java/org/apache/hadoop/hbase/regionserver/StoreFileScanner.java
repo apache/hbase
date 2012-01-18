@@ -20,21 +20,19 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 
 /**
  * KeyValueScanner adaptor over the Reader.  It also provides hooks into
@@ -252,11 +250,6 @@ class StoreFileScanner implements KeyValueScanner {
     }
   }
 
-  // StoreFile filter hook.
-  public boolean shouldSeek(Scan scan, final SortedSet<byte[]> columns) {
-    return reader.shouldSeek(scan, columns);
-  }
-
   @Override
   public long getSequenceID() {
     return reader.getSequenceID();
@@ -368,5 +361,12 @@ class StoreFileScanner implements KeyValueScanner {
 
   static final long getSeekCount() {
     return seekCount.get();
+  }
+
+  @Override
+  public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns,
+      long oldestUnexpiredTS) {
+    return reader.passesTimerangeFilter(scan, oldestUnexpiredTS) &&
+        reader.passesBloomFilter(scan, columns);
   }
 }

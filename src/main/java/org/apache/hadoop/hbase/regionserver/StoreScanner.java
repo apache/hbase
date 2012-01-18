@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Scanner scans both the memstore and the HStore. Coalesce KeyValue stream
@@ -54,6 +55,7 @@ class StoreScanner extends NonLazyKeyValueScanner
   private final boolean useRowColBloom;
   private final Scan scan;
   private final NavigableSet<byte[]> columns;
+  private final long oldestUnexpiredTS;
 
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
@@ -67,7 +69,7 @@ class StoreScanner extends NonLazyKeyValueScanner
 
   /** An internal constructor. */
   private StoreScanner(Store store, boolean cacheBlocks, Scan scan,
-      final NavigableSet<byte[]> columns){
+      final NavigableSet<byte[]> columns, long ttl) {
     this.store = store;
     initializeMetricNames();
     this.cacheBlocks = cacheBlocks;
@@ -76,6 +78,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     explicitColumnQuery = numCol > 0;
     this.scan = scan;
     this.columns = columns;
+    oldestUnexpiredTS = EnvironmentEdgeManager.currentTimeMillis() - ttl;
 
     // We look up row-column Bloom filters for multi-column queries as part of
     // the seek operation. However, we also look the row-column Bloom filter
@@ -85,7 +88,8 @@ class StoreScanner extends NonLazyKeyValueScanner
   }
 
   /**
-   * Opens a scanner across memstore, snapshot, and all StoreFiles.
+   * Opens a scanner across memstore, snapshot, and all StoreFiles. Assumes we
+   * are not in a compaction.
    *
    * @param store who we scan
    * @param scan the spec
@@ -93,16 +97,16 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @throws IOException
    */
   StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns)
-                              throws IOException {
-    this(store, scan.getCacheBlocks(), scan, columns);
-    matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
-        columns, store.ttl, store.comparator.getRawComparator(),
-        store.versionsToReturn(scan.getMaxVersions()),
-        Long.MAX_VALUE,
-        false);
+      throws IOException {
+    this(store, scan.getCacheBlocks(), scan, columns, store.ttl);
+    matcher =
+        new ScanQueryMatcher(scan, store.getFamily().getName(), columns,
+            store.comparator.getRawComparator(),
+            store.versionsToReturn(scan.getMaxVersions()), Long.MAX_VALUE,
+            false, oldestUnexpiredTS);
 
     // Pass columns to try to filter out unnecessary StoreFiles.
-    List<KeyValueScanner> scanners = getScanners(scan, columns);
+    List<KeyValueScanner> scanners = getScannersNoCompaction();
 
     // Seek all scanners to the start of the Row (or if the exact matching row
     // key does not exist, then to the start of the next matching Row).
@@ -128,29 +132,30 @@ class StoreScanner extends NonLazyKeyValueScanner
   }
 
   /**
-   * Used for major compactions.<p>
-   *
-   * Opens a scanner across specified StoreFiles.
+   * Opens a scanner across specified StoreFiles. Can be used in compactions.
    * @param store who we scan
    * @param scan the spec
-   * @param scanners ancilliary scanners
-   * @param smallestReadPoint the readPoint that we should use for tracking versions
+   * @param scanners ancillary scanners
+   * @param smallestReadPoint the readPoint that we should use for tracking
+   *          versions
    * @param retainDeletesInOutput should we retain deletes after compaction?
    */
-  StoreScanner(Store store, Scan scan, List<? extends KeyValueScanner> scanners,
-                            long smallestReadPoint,
-                            boolean retainDeletesInOutput)
-      throws IOException {
-    this(store, false, scan, null);
+  StoreScanner(Store store, Scan scan,
+      List<? extends KeyValueScanner> scanners, long smallestReadPoint,
+      boolean retainDeletesInOutput) throws IOException {
+    this(store, false, scan, null, store.ttl);
 
-    matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
-        null, store.ttl, store.comparator.getRawComparator(),
-        store.versionsToReturn(scan.getMaxVersions()),
-        smallestReadPoint,
-        retainDeletesInOutput);
+    matcher =
+        new ScanQueryMatcher(scan, store.getFamily().getName(), null,
+            store.comparator.getRawComparator(),
+            store.versionsToReturn(scan.getMaxVersions()), smallestReadPoint,
+            retainDeletesInOutput, oldestUnexpiredTS);
+
+    // Filter the list of scanners using Bloom filters, time range, TTL, etc.
+    scanners = selectScannersFrom(scanners);
 
     // Seek all scanners to the initial key
-    for(KeyValueScanner scanner : scanners) {
+    for (KeyValueScanner scanner : scanners) {
       scanner.seek(matcher.getStartKey());
     }
 
@@ -158,17 +163,17 @@ class StoreScanner extends NonLazyKeyValueScanner
     heap = new KeyValueHeap(scanners, store.comparator);
   }
 
-  // Constructor for testing.
+  /** Constructor for testing. */
   StoreScanner(final Scan scan, final byte [] colFamily, final long ttl,
       final KeyValue.KVComparator comparator,
       final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners)
         throws IOException {
-    this(null, scan.getCacheBlocks(), scan, columns);
-    this.matcher = new ScanQueryMatcher(scan, colFamily, columns, ttl,
-        comparator.getRawComparator(), scan.getMaxVersions(),
-        Long.MAX_VALUE,
-        false);
+    this(null, scan.getCacheBlocks(), scan, columns, ttl);
+    this.matcher =
+        new ScanQueryMatcher(scan, colFamily, columns,
+            comparator.getRawComparator(), scan.getMaxVersions(),
+            Long.MAX_VALUE, false, oldestUnexpiredTS);
 
     // Seek all scanners to the initial key
     for(KeyValueScanner scanner : scanners) {
@@ -196,27 +201,29 @@ class StoreScanner extends NonLazyKeyValueScanner
     this.metricNameGetsize = mutationSignature + ".getsize";
   }
 
-  /*
-   * @return List of scanners to seek, possibly filtered by StoreFile.
+  /**
+   * Get a filtered list of scanners. Assumes we are not in a compaction.
+   * @return list of scanners to seek
    */
-  private List<KeyValueScanner> getScanners(Scan scan,
-      final NavigableSet<byte[]> columns) throws IOException {
-    List<KeyValueScanner> allStoreScanners =
-      this.store.getScanners(cacheBlocks, isGet, false, this.matcher);
+  private List<KeyValueScanner> getScannersNoCompaction() throws IOException {
+    final boolean isCompaction = false;
+    return selectScannersFrom(store.getScanners(cacheBlocks, isGet,
+        isCompaction, matcher));
+  }
 
+  /**
+   * Filters the given list of scanners using Bloom filter, time range, and
+   * TTL.
+   */
+  private List<KeyValueScanner> selectScannersFrom(
+      final List<? extends KeyValueScanner> allScanners) {
     List<KeyValueScanner> scanners =
-      new ArrayList<KeyValueScanner>(allStoreScanners.size());
+      new ArrayList<KeyValueScanner>(allScanners.size());
 
     // include only those scan files which pass all filters
-    for (KeyValueScanner kvs : allStoreScanners) {
-      if (kvs instanceof StoreFileScanner) {
-        if (((StoreFileScanner)kvs).shouldSeek(scan, columns))
-          scanners.add(kvs);
-      }
-      else {
-        // kvs is a MemStoreScanner
-        if (this.store.memstore.shouldSeek(scan))
-          scanners.add(kvs);
+    for (KeyValueScanner kvs : allScanners) {
+      if (kvs.shouldUseScanner(scan, columns, oldestUnexpiredTS)) {
+        scanners.add(kvs);
       }
     }
     return scanners;
@@ -253,7 +260,7 @@ class StoreScanner extends NonLazyKeyValueScanner
   public synchronized boolean seek(KeyValue key) throws IOException {
     if (this.heap == null) {
 
-      List<KeyValueScanner> scanners = getScanners(scan, columns);
+      List<KeyValueScanner> scanners = getScannersNoCompaction();
 
       heap = new KeyValueHeap(scanners, store.comparator);
     }
@@ -443,7 +450,7 @@ class StoreScanner extends NonLazyKeyValueScanner
       throw new RuntimeException("StoreScanner.reseek run on an existing heap!");
     }
 
-    List<KeyValueScanner> scanners = getScanners(scan, columns);
+    List<KeyValueScanner> scanners = getScannersNoCompaction();
 
     for(KeyValueScanner scanner : scanners) {
       scanner.seek(lastTopKey);
