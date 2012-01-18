@@ -590,6 +590,15 @@ server-side off-heap cache since this feature depends on being able to use big d
 separate client-side and server-side config dirs).
             </para>
        </section>    
+       <section xml:id="trouble.client.slowdown.admin">
+            <title>Client Slowdown When Calling Admin Methods (flush, compact, etc.)</title>
+            <para>
+This is a client issue fixed by <link xlink:href="https://issues.apache.org/jira/browse/HBASE-5073">HBASE-5073</link> in 0.90.6.
+There was a ZooKeeper leak in the client and the client was getting pummeled by ZooKeeper events with each additional 
+invocation of the admin API. 
+            </para>
+       </section>    
+
     </section>
     
     <section xml:id="trouble.mapreduce">
