@@ -319,8 +319,9 @@ class ProcessServerShutdown extends RegionServerOperation {
       break;
 
     case FAILED:
-      LOG.warn("Failed splitting log for dead server " + deadServer);
-      return RegionServerOperationResult.OPERATION_FAILED;
+      logSplitResult = LogSplitResult.NOT_RUNNING;
+      throw new IOException("Failed splitting log for dead server " +
+				deadServer);
 
     default:
       throw new RuntimeException("Invalid split log result: "
