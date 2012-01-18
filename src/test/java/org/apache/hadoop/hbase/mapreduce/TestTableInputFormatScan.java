@@ -308,6 +308,49 @@ public class TestTableInputFormatScan {
     testScan("yzy", null, "zzz");
   }
 
+  @Test
+  public void testScanFromConfiguration()
+  throws IOException, InterruptedException, ClassNotFoundException {
+    testScanFromConfiguration("bba", "bbd", "bbc");
+  }
+
+  /**
+   * Tests an MR Scan initialized from properties set in the Configuration.
+   * 
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  private void testScanFromConfiguration(String start, String stop, String last)
+  throws IOException, InterruptedException, ClassNotFoundException {
+    String jobName = "ScanFromConfig" + (start != null ? start.toUpperCase() : "Empty") +
+      "To" + (stop != null ? stop.toUpperCase() : "Empty");
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+    c.set(TableInputFormat.INPUT_TABLE, Bytes.toString(TABLE_NAME));
+    c.set(TableInputFormat.SCAN_COLUMN_FAMILY, Bytes.toString(INPUT_FAMILY));
+    c.set(KEY_STARTROW, start != null ? start : "");
+    c.set(KEY_LASTROW, last != null ? last : "");
+
+    if (start != null) {
+      c.set(TableInputFormat.SCAN_ROW_START, start);
+    }
+
+    if (stop != null) {
+      c.set(TableInputFormat.SCAN_ROW_STOP, stop);
+    }
+
+    Job job = new Job(c, jobName);
+    job.setMapperClass(ScanMapper.class);
+    job.setReducerClass(ScanReducer.class);
+    job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+    job.setMapOutputValueClass(ImmutableBytesWritable.class);
+    job.setInputFormatClass(TableInputFormat.class);
+    job.setNumReduceTasks(1);
+    FileOutputFormat.setOutputPath(job, new Path(job.getJobName()));
+    job.waitForCompletion(true);
+    assertTrue(job.isComplete());
+  }
+
   /**
    * Tests a MR scan using specific start and stop rows.
    *
@@ -318,7 +361,7 @@ public class TestTableInputFormatScan {
   private void testScan(String start, String stop, String last)
   throws IOException, InterruptedException, ClassNotFoundException {
     String jobName = "Scan" + (start != null ? start.toUpperCase() : "Empty") +
-    "To" + (stop != null ? stop.toUpperCase() : "Empty");
+      "To" + (stop != null ? stop.toUpperCase() : "Empty");
     LOG.info("Before map/reduce startup - job " + jobName);
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     Scan scan = new Scan();

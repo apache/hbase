@@ -45,6 +45,10 @@ implements Configurable {
    * See {@link TableMapReduceUtil#convertScanToString(Scan)} for more details.
    */
   public static final String SCAN = "hbase.mapreduce.scan";
+  /** Scan start row */
+  public static final String SCAN_ROW_START = "hbase.mapreduce.scan.row.start";
+  /** Scan stop row */
+  public static final String SCAN_ROW_STOP = "hbase.mapreduce.scan.row.stop";
   /** Column Family to Scan */
   public static final String SCAN_COLUMN_FAMILY = "hbase.mapreduce.scan.column.family";
   /** Space delimited list of columns to scan. */
@@ -105,6 +109,14 @@ implements Configurable {
     } else {
       try {
         scan = new Scan();
+
+        if (conf.get(SCAN_ROW_START) != null) {
+          scan.setStartRow(Bytes.toBytes(conf.get(SCAN_ROW_START)));
+        }
+
+        if (conf.get(SCAN_ROW_STOP) != null) {
+          scan.setStopRow(Bytes.toBytes(conf.get(SCAN_ROW_STOP)));
+        }
 
         if (conf.get(SCAN_COLUMNS) != null) {
           addColumns(scan, conf.get(SCAN_COLUMNS));
