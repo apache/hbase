@@ -100,6 +100,12 @@ to ensure well-formedness of your document after an edit session.
         <para>HBase expects the loopback IP address to be 127.0.0.1.  Ubuntu and some other distributions,
         for example, will default to 127.0.1.1 and this will cause problems for you.
         </para>
+        <para><filename>/etc/hosts</filename> should look something like this:
+<programlisting>
+            127.0.0.1 localhost
+            127.0.0.1 ubuntu.ubuntu-domain ubuntu
+</programlisting>
+        </para>
        </section>
 
       <section xml:id="ntp">
