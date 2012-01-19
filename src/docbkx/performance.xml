@@ -358,7 +358,13 @@ Deferred log flush can be configured on tables via <link
     <title>Anti-Pattern:  One Hot Region</title>
     <para>If all your data is being written to one region at a time, then re-read the
     section on processing <link linkend="timeseries">timeseries</link> data.</para>
-    <para>Also, see <xref linkend="precreate.regions"/>, as well as <xref linkend="perf.configurations"/> </para>   
+    <para>Also, if you are pre-splitting regions and all your data is <emphasis>still</emphasis> winding up in a single region even though
+    your keys aren't monotonically increasing, confirm that your keyspace actually works with the split strategy.  There are a 
+    variety of reasons that regions may appear "well split" but won't work with your data.   As
+    the HBase client communicates directly with the RegionServers, this can be obtained via 
+    <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#getRegionLocation%28byte[]%29">HTable.getRegionLocation</link>.
+    </para>
+    <para>See <xref linkend="precreate.regions"/>, as well as <xref linkend="perf.configurations"/> </para>   
   </section>
 
   </section>  <!--  writing -->
