@@ -531,6 +531,9 @@ public class Scan extends Operation implements Writable {
       }
     }
     map.put("totalColumns", colCount);
+    if (this.filter != null) {
+      map.put("filter", this.filter.getClass().getName());
+    }
     return map;
   }
 
