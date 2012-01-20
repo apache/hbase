@@ -1,5 +1,8 @@
 HBase Change Log
 Release 0.90.7 - Unreleased
+  INCOMPATIBLE CHANGES
+   HBASE-5228  [REST] Rip out "transform" feature
+  
   BUG FIXES
 
 Release 0.90.6 - Unreleased
