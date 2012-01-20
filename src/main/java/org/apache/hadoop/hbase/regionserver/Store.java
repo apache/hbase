@@ -590,7 +590,7 @@ public class Store extends SchemaConfigured implements HeapSize {
           final List<KeyValue> kvs = new ArrayList<KeyValue>();
           boolean hasMore;
           do {
-            hasMore = scanner.next(kvs, 1);
+            hasMore = scanner.next(kvs);
             if (!kvs.isEmpty()) {
               for (KeyValue kv : kvs) {
                 // If we know that this KV is going to be included always, then let us
@@ -1276,7 +1276,7 @@ public class Store extends SchemaConfigured implements HeapSize {
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.
         ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
-        while (scanner.next(kvs)) {
+        while (scanner.next(kvs, 1)) {
           if (writer == null && !kvs.isEmpty()) {
             writer = createWriterInTmp(maxKeyCount, false);
           }
