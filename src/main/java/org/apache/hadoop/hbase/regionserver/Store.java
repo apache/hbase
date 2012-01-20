@@ -1276,11 +1276,13 @@ public class Store extends SchemaConfigured implements HeapSize {
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.
         ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
-        while (scanner.next(kvs, 1) || (!kvs.isEmpty())) {
-          if (writer == null && !kvs.isEmpty()) {
-            writer = createWriterInTmp(maxKeyCount, false);
-          }
-          if (writer != null) {
+        boolean hasMore;
+        do {
+          hasMore = scanner.next(kvs, 1);
+          if (!kvs.isEmpty()) {
+            if (writer == null) {
+              writer = createWriterInTmp(maxKeyCount, false);
+            }
             // output to writer:
             for (KeyValue kv : kvs) {
               if (kv.getMemstoreTS() <= smallestReadPoint) {
@@ -1299,14 +1301,14 @@ public class Store extends SchemaConfigured implements HeapSize {
                     throw new InterruptedIOException(
                         "Aborting compaction of store " + this +
                         " in region " + this.region +
-                        " because user requested stop.");
+                    " because user requested stop.");
                   }
                 }
               }
             }
           }
           kvs.clear();
-        }
+        } while (hasMore);
       } finally {
         if (scanner != null) {
           scanner.close();
