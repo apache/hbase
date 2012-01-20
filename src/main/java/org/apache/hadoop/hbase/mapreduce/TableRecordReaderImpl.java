@@ -136,8 +136,12 @@ public class TableRecordReaderImpl {
       value = this.scanner.next();
     } catch (IOException e) {
       LOG.info("recovered from " + StringUtils.stringifyException(e));
-      restart(lastRow);
-      scanner.next();    // skip presumed already mapped row
+      if (lastRow == null) {
+        restart(scan.getStartRow());
+      } else {
+        restart(lastRow);
+        this.scanner.next(); // skip presumed already mapped row
+      }
       value = scanner.next();
     }
     if (value != null && value.size() > 0) {
