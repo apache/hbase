@@ -257,6 +257,19 @@ public class HTable implements HTableInterface {
     return connection.getRegionLocation(tableName, row, false);
   }
 
+  /**
+   * Finds the region on which the given row is being served.
+   * @param row Row to find.
+   * @param reload whether or not to reload information or just use cached
+   * information
+   * @return Location of the row.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HRegionLocation getRegionLocation(final byte [] row, boolean reload)
+  throws IOException {
+    return connection.getRegionLocation(tableName, row, reload);
+  }
+
   public byte [] getTableName() {
     return this.tableName;
   }
