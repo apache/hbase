@@ -3668,8 +3668,8 @@ public class HRegion implements HeapSize {
     // do after lock
     long after = EnvironmentEdgeManager.currentTimeMillis();
     String signature = SchemaMetrics.generateSchemaMetricsPrefix(
-        this.getTableDesc().getNameAsString(), family.toString());
-    HRegion.incrTimeVaryingMetric(signature + ".increment_", after - before);
+        this.getTableDesc().getNameAsString(), Bytes.toString(family));
+		HRegion.incrTimeVaryingMetric(signature + ".increment_", after - before);
 
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
