@@ -1276,7 +1276,7 @@ public class Store extends SchemaConfigured implements HeapSize {
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.
         ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
-        while (scanner.next(kvs, 1)) {
+        while (scanner.next(kvs, 1) || (!kvs.isEmpty())) {
           if (writer == null && !kvs.isEmpty()) {
             writer = createWriterInTmp(maxKeyCount, false);
           }
