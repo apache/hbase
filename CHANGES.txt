@@ -1,6 +1,9 @@
 HBase Change Log
 
 Release 0.92.1 - Unreleased
+  INCOMPATIBLE CHANGES
+   HBASE-5228  [REST] Rip out "transform" feature
+
   BUG FIXES
    HBASE-5176  AssignmentManager#getRegion: logging nit  adds a redundant '+' (Karthik K)
 
