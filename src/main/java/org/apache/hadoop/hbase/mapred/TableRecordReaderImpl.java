@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-
 import org.apache.hadoop.util.StringUtils;
 
 
@@ -44,7 +43,7 @@ public class TableRecordReaderImpl {
 
   private byte [] startRow;
   private byte [] endRow;
-  private byte [] lastRow;
+  private byte [] lastRow = null;
   private Filter trrRowFilter;
   private ResultScanner scanner;
   private HTable htable;
@@ -172,13 +171,17 @@ public class TableRecordReaderImpl {
    */
   public boolean next(ImmutableBytesWritable key, Result value)
   throws IOException {
-    Result result;
+    Result result = null;
     try {
       result = this.scanner.next();
     } catch (UnknownScannerException e) {
       LOG.debug("recovered from " + StringUtils.stringifyException(e));
-      restart(lastRow);
-      this.scanner.next();    // skip presumed already mapped row
+      if (lastRow == null) {
+        restart(startRow);
+      } else {
+        restart(lastRow);
+        this.scanner.next(); // skip presumed already mapped row
+      }
       result = this.scanner.next();
     }
 
