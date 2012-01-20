@@ -713,7 +713,7 @@ public class TestStoreFile extends HBaseTestCase {
     long startEvicted = cs.getEvictedCount();
 
     // Let's write a StoreFile with three blocks, with cache on write off
-    conf.setBoolean(HFile.CACHE_BLOCKS_ON_WRITE_KEY, false);
+    conf.setBoolean(HFile.CACHE_DATA_BLOCKS_ON_WRITE_KEY, false);
     Path pathCowOff = new Path(baseDir, "123456789");
     StoreFile.Writer writer = writeStoreFile(conf, pathCowOff, 3);
     StoreFile hsf = new StoreFile(this.fs, writer.getPath(), true, conf,
@@ -734,7 +734,7 @@ public class TestStoreFile extends HBaseTestCase {
     reader.close();
 
     // Now write a StoreFile with three blocks, with cache on write on
-    conf.setBoolean(HFile.CACHE_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(HFile.CACHE_DATA_BLOCKS_ON_WRITE_KEY, true);
     Path pathCowOn = new Path(baseDir, "123456788");
     writer = writeStoreFile(conf, pathCowOn, 3);
     hsf = new StoreFile(this.fs, writer.getPath(), true, conf,

@@ -115,9 +115,12 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
    */
   protected final String name;
 
+  protected final boolean allowCacheOnWrite;
+
   public AbstractHFileWriter(Configuration conf,
       FSDataOutputStream outputStream, Path path, int blockSize,
-      Compression.Algorithm compressAlgo, KeyComparator comparator) {
+      Compression.Algorithm compressAlgo, KeyComparator comparator,
+      boolean allowCacheOnWrite) {
     super(conf, path);
     this.outputStream = outputStream;
     this.path = path;
@@ -130,9 +133,11 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
 
     closeOutputStream = path != null;
 
-    cacheDataBlocksOnWrite = conf.getBoolean(HFile.CACHE_BLOCKS_ON_WRITE_KEY,
-        false);
-    cacheIndexBlocksOnWrite = HFileBlockIndex.shouldCacheOnWrite(conf);
+    this.allowCacheOnWrite = allowCacheOnWrite;
+    cacheDataBlocksOnWrite = allowCacheOnWrite &&
+      conf.getBoolean(HFile.CACHE_DATA_BLOCKS_ON_WRITE_KEY, false);
+    cacheIndexBlocksOnWrite = allowCacheOnWrite &&
+      HFileBlockIndex.shouldCacheOnWrite(conf);
 
     this.conf = conf;
 

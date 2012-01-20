@@ -582,7 +582,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       synchronized (flushLock) {
         status.setStatus("Flushing " + this + ": creating writer");
         // A. Write the map out to the disk
-        writer = createWriterInTmp(snapshot.size());
+        writer = createWriterInTmp(snapshot.size(), true);
         writer.setTimeRangeTracker(snapshotTimeRangeTracker);
         fileName = writer.getPath().getName();
         int entries = 0;
@@ -653,12 +653,13 @@ public class Store extends SchemaConfigured implements HeapSize {
   /*
    * @return Writer for a new StoreFile in the tmp dir.
    */
-  private StoreFile.Writer createWriterInTmp(long maxKeyCount)
+  private StoreFile.Writer createWriterInTmp(long maxKeyCount,
+      boolean allowCacheOnWrite)
   throws IOException {
     return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
         this.compression, this.comparator, this.conf,
         this.family.getBloomFilterType(), this.family.getBloomFilterErrorRate(),
-        maxKeyCount, region.getFavoredNodes());
+        maxKeyCount, region.getFavoredNodes(), allowCacheOnWrite);
   }
 
   /*
@@ -1277,7 +1278,7 @@ public class Store extends SchemaConfigured implements HeapSize {
         ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
         while (scanner.next(kvs)) {
           if (writer == null && !kvs.isEmpty()) {
-            writer = createWriterInTmp(maxKeyCount);
+            writer = createWriterInTmp(maxKeyCount, false);
           }
           if (writer != null) {
             // output to writer:

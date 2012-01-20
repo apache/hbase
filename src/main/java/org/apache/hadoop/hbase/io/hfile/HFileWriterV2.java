@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
-import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -97,10 +96,10 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     @Override
     public Writer createWriter(FileSystem fs, Path path, int blockSize,
         int bytesPerChecksum, Compression.Algorithm compress,
-        final KeyComparator comparator, InetSocketAddress[] favoredNodes)
-        throws IOException {
+        final KeyComparator comparator, InetSocketAddress[] favoredNodes,
+        boolean allowCacheOnWrite) throws IOException {
       return new HFileWriterV2(conf, fs, path, blockSize, bytesPerChecksum,
-          compress, comparator, favoredNodes);
+          compress, comparator, favoredNodes, allowCacheOnWrite);
     }
 
     @Override
@@ -150,17 +149,18 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       int blockSize, int bytesPerChecksum, Compression.Algorithm compressAlgo,
       final KeyComparator comparator) throws IOException {
     super(conf, createOutputStream(conf, fs, path, bytesPerChecksum), path,
-        blockSize, compressAlgo, comparator);
+        blockSize, compressAlgo, comparator, true);
     finishInit(conf);
   }
 
   /** Constructor that takes a path, creates and closes the output stream. */
   public HFileWriterV2(Configuration conf, FileSystem fs, Path path,
       int blockSize, int bytesPerChecksum, Compression.Algorithm compressAlgo,
-      final KeyComparator comparator, InetSocketAddress[] favoredNodes)
-      throws IOException {
+      final KeyComparator comparator, InetSocketAddress[] favoredNodes,
+      boolean allowCacheOnWrite) throws IOException {
     super(conf, createOutputStream(conf, fs, path, bytesPerChecksum,
-        favoredNodes), path, blockSize, compressAlgo, comparator);
+        favoredNodes), path, blockSize, compressAlgo, comparator,
+        allowCacheOnWrite);
     finishInit(conf);
   }
 
@@ -179,7 +179,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       final FSDataOutputStream outputStream, final int blockSize,
       final Compression.Algorithm compress, final KeyComparator comparator)
       throws IOException {
-    super(conf, outputStream, null, blockSize, compress, comparator);
+    super(conf, outputStream, null, blockSize, compress, comparator, true);
     finishInit(conf);
   }
 
@@ -251,7 +251,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     for (InlineBlockWriter ibw : inlineBlockWriters) {
       while (ibw.shouldWriteBlock(closing)) {
         long offset = outputStream.getPos();
-        boolean cacheThisBlock = ibw.cacheOnWrite();
+        boolean cacheThisBlock = ibw.cacheOnWrite() && this.allowCacheOnWrite;
         ibw.writeInlineBlock(fsBlockWriter.startWriting(
             ibw.getInlineBlockType(), cacheThisBlock));
         fsBlockWriter.writeHeaderAndData(outputStream);
@@ -472,7 +472,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   @Override
   public void addInlineBlockWriter(InlineBlockWriter ibw) {
     inlineBlockWriters.add(ibw);
-    if (blockCache == null && ibw.cacheOnWrite())
+    if (blockCache == null && ibw.cacheOnWrite() && this.allowCacheOnWrite)
       initBlockCache();
   }
 

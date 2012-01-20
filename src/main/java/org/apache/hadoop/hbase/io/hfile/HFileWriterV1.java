@@ -90,8 +90,7 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     @Override
     public Writer createWriter(FileSystem fs, Path path, int blockSize,
         int bytesPerChecksum, Compression.Algorithm compressAlgo,
-        final KeyComparator comparator)
-        throws IOException {
+        final KeyComparator comparator) throws IOException {
       return new HFileWriterV1(conf, fs, path, blockSize, bytesPerChecksum,
           compressAlgo, comparator);
     }
@@ -99,10 +98,10 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     @Override
     public Writer createWriter(FileSystem fs, Path path, int blockSize,
         int bytesPerChecksum, Compression.Algorithm compressAlgo,
-        final KeyComparator comparator, InetSocketAddress[] favoredNodes)
-        throws IOException {
+        final KeyComparator comparator, InetSocketAddress[] favoredNodes,
+        boolean allowCacheOnWrite) throws IOException {
       return new HFileWriterV1(conf, fs, path, blockSize, bytesPerChecksum,
-          compressAlgo, comparator, favoredNodes);
+          compressAlgo, comparator, favoredNodes, allowCacheOnWrite);
     }
 
     @Override
@@ -152,16 +151,16 @@ public class HFileWriterV1 extends AbstractHFileWriter {
       int blockSize, int bytesPerChecksum, Compression.Algorithm compress,
       final KeyComparator comparator) throws IOException {
     super(conf, createOutputStream(conf, fs, path, bytesPerChecksum), path,
-        blockSize, compress, comparator);
+        blockSize, compress, comparator, true);
   }
 
   /** Constructor that takes a path, creates and closes the output stream. */
   public HFileWriterV1(Configuration conf, FileSystem fs, Path path,
       int blockSize, int bytesPerChecksum, Compression.Algorithm compress,
-      final KeyComparator comparator, InetSocketAddress[] favoredNodes)
-      throws IOException {
+      final KeyComparator comparator, InetSocketAddress[] favoredNodes,
+      boolean allowCacheOnWrite) throws IOException {
     super(conf, createOutputStream(conf, fs, path, bytesPerChecksum,
-        favoredNodes), path, blockSize, compress, comparator);
+        favoredNodes), path, blockSize, compress, comparator, allowCacheOnWrite);
   }
 
   /** Constructor that takes a stream. */
@@ -179,7 +178,7 @@ public class HFileWriterV1 extends AbstractHFileWriter {
       final FSDataOutputStream outputStream, final int blockSize,
       final Compression.Algorithm compress, final KeyComparator comparator)
       throws IOException {
-    super(conf, outputStream, null, blockSize, compress, comparator);
+    super(conf, outputStream, null, blockSize, compress, comparator, true);
   }
 
   /**

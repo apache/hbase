@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -256,7 +255,8 @@ public class HFile {
 
     public abstract Writer createWriter(FileSystem fs, Path path,
         int blockSize, int bytesPerChecksum, Compression.Algorithm compress,
-        final KeyComparator comparator, InetSocketAddress[] favoredNodes)
+        final KeyComparator comparator, InetSocketAddress[] favoredNodes,
+        boolean allowCacheOnWrite)
         throws IOException;
 
     public abstract Writer createWriter(FileSystem fs, Path path,
@@ -311,7 +311,7 @@ public class HFile {
    * Configuration key to cache data blocks on write. There are separate
    * switches for Bloom blocks and non-root index blocks.
    */
-  public static final String CACHE_BLOCKS_ON_WRITE_KEY =
+  public static final String CACHE_DATA_BLOCKS_ON_WRITE_KEY =
       "hbase.rs.cacheblocksonwrite";
 
   /** An abstraction used by the block index */

@@ -282,7 +282,7 @@ public class TestCompoundBloomFilter {
       throws IOException {
     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
         BLOOM_BLOCK_SIZES[t]);
-    conf.setBoolean(HFile.CACHE_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(HFile.CACHE_DATA_BLOCKS_ON_WRITE_KEY, true);
 
     StoreFile.Writer w = StoreFile.createWriter(fs,
         HBaseTestingUtility.getTestDir(), BLOCK_SIZES[t], null, null, conf,

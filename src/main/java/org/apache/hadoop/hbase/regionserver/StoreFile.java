@@ -56,9 +56,8 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -632,7 +631,7 @@ public class StoreFile {
           long maxKeyCount)
   throws IOException {
       return createWriter(fs, dir, blocksize, algorithm, c, conf, bloomType,
-        BloomFilterFactory.getErrorRate(conf), maxKeyCount, null);
+        BloomFilterFactory.getErrorRate(conf), maxKeyCount, null, true);
   }
 
   /**
@@ -661,7 +660,8 @@ public class StoreFile {
                                               BloomType bloomType,
                                               float bloomErrorRate,
                                               long maxKeyCount,
-                                              InetSocketAddress[] favoredNodes)
+                                              InetSocketAddress[] favoredNodes,
+                                              boolean allowCacheOnWrite)
       throws IOException {
 
     if (!fs.exists(dir)) {
@@ -675,7 +675,7 @@ public class StoreFile {
     return new Writer(fs, path, blocksize,
         algorithm == null? HFile.DEFAULT_COMPRESSION_ALGORITHM: algorithm,
         conf, c == null ? KeyValue.COMPARATOR: c, bloomType, bloomErrorRate,
-        maxKeyCount, favoredNodes);
+        maxKeyCount, favoredNodes, allowCacheOnWrite);
   }
 
   /**
@@ -785,7 +785,7 @@ public class StoreFile {
             final KVComparator comparator, BloomType bloomType,  long maxKeys)
             throws IOException {
      this(fs, path, blocksize, compress, conf, comparator, bloomType,
-          BloomFilterFactory.getErrorRate(conf), maxKeys, null);
+          BloomFilterFactory.getErrorRate(conf), maxKeys, null, true);
     }
 
     public Writer(FileSystem fs, Path path, int blocksize,
@@ -793,7 +793,7 @@ public class StoreFile {
         final KVComparator comparator, BloomType bloomType,
         float bloomErrorRate, long maxKeys) throws IOException {
       this(fs, path, blocksize, compress, conf, comparator, bloomType,
-          bloomErrorRate, maxKeys, null);
+          bloomErrorRate, maxKeys, null, true);
     }
 
     /**
@@ -814,12 +814,13 @@ public class StoreFile {
     public Writer(FileSystem fs, Path path, int blocksize,
         Compression.Algorithm compress, final Configuration conf,
         final KVComparator comparator, BloomType bloomType,
-        float bloomErrorRate, long maxKeys, InetSocketAddress[] favoredNodes)
-        throws IOException {
+        float bloomErrorRate, long maxKeys, InetSocketAddress[] favoredNodes,
+        boolean allowCacheOnWrite) throws IOException {
 
       writer = HFile.getWriterFactory(conf).createWriter(
           fs, path, blocksize, HFile.getBytesPerChecksum(conf, fs.getConf()),
-          compress, comparator.getRawComparator(), favoredNodes);
+          compress, comparator.getRawComparator(), favoredNodes,
+          allowCacheOnWrite);
 
       this.kvComparator = comparator;
 
