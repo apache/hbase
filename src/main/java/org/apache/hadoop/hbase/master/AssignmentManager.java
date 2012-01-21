@@ -1070,6 +1070,7 @@ public class AssignmentManager extends ZooKeeperListener {
       if (plan == null) {
         debugLog(state.getRegion(),
             "Unable to determine a plan to assign " + state);
+        this.timeoutMonitor.setAllRegionServersOffline(true);
         return; // Should get reassigned later when RIT times out.
       }
       try {
