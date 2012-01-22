@@ -39,6 +39,7 @@ Release 0.90.6 - Unreleased
    HBASE-5237  Addendum for HBASE-5160 and HBASE-4397 (Ram)
    HBASE-5235  HLogSplitter writer thread's streams not getting closed when any of the writer 
                threads has exceptions. (Ram)
+   HBASE-5243  LogSyncerThread not getting shutdown waiting for the interrupted flag (Ram)
 
   IMPROVEMENT
    HBASE-5102  Change the default value of the property "hbase.connection.per.config" to false in
