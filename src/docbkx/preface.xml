@@ -49,7 +49,7 @@
           Distributed Computing, then you are in for
           some interesting times.  First off, distributed systems are
           hard; making a distributed system hum requires a disparate
-          skillset that needs span systems (hardware and software) and
+          skillset that spans systems (hardware and software) and
           networking.  Your cluster' operation can hiccup because of any
           of a myriad set of reasons from bugs in HBase itself through misconfigurations
           -- misconfiguration of HBase but also operating system misconfigurations --
