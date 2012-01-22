@@ -7,6 +7,8 @@ Release 0.92.1 - Unreleased
   BUG FIXES
    HBASE-5176  AssignmentManager#getRegion: logging nit  adds a redundant '+' (Karthik K)
    HBASE-5237  Addendum for HBASE-5160 and HBASE-4397 (Ram)
+   HBASE-5235  HLogSplitter writer thread's streams not getting closed when any 
+               of the writer threads has exceptions. (Ram)
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()
