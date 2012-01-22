@@ -37,6 +37,8 @@ Release 0.90.6 - Unreleased
    HBASE-5196  Failure in region split after PONR could cause region hole (Jimmy Xiang)
    HBASE-5225  Backport HBASE-3845 -data loss because lastSeqWritten can miss memstore edits (Ram)
    HBASE-5237  Addendum for HBASE-5160 and HBASE-4397 (Ram)
+   HBASE-5235  HLogSplitter writer thread's streams not getting closed when any of the writer 
+               threads has exceptions. (Ram)
 
   IMPROVEMENT
    HBASE-5102  Change the default value of the property "hbase.connection.per.config" to false in

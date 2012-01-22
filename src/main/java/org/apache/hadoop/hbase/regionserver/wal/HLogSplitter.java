@@ -735,8 +735,10 @@ public class HLogSplitter {
     private final Set<byte[]> blacklistedRegions = Collections.synchronizedSet(
         new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR));
     
-    private boolean hasClosed = false;    
     
+    private boolean closeAndCleanCompleted = false;    
+    
+    private boolean logWritersClosed = false;
     /**
      * Start the threads that will pump data from the entryBuffers
      * to the output files.
@@ -760,20 +762,27 @@ public class HLogSplitter {
     
     List<Path> finishWritingAndClose() throws IOException {
       LOG.info("Waiting for split writer threads to finish");
-      for (WriterThread t : writerThreads) {
-        t.finish();
-      }
-      for (WriterThread t: writerThreads) {
-        try {
-          t.join();
-        } catch (InterruptedException ie) {
-          throw new IOException(ie);
+      try {
+        for (WriterThread t : writerThreads) {
+          t.finish();
         }
-        checkForErrors();
+        for (WriterThread t : writerThreads) {
+          try {
+            t.join();
+          } catch (InterruptedException ie) {
+            throw new IOException(ie);
+          }
+          checkForErrors();
+        }
+        LOG.info("Split writers finished");
+
+        return closeStreams();
+      } finally {
+        List<IOException> thrown = closeLogWriters(null);
+        if (thrown != null && !thrown.isEmpty()) {
+          throw MultipleIOException.createIOException(thrown);
+        }
       }
-      LOG.info("Split writers finished");
-      
-      return closeStreams();
     }
 
     /**
@@ -781,21 +790,13 @@ public class HLogSplitter {
      * @return the list of paths written.
      */
     private List<Path> closeStreams() throws IOException {
-      Preconditions.checkState(!hasClosed);
+      Preconditions.checkState(!closeAndCleanCompleted);
       
       List<Path> paths = new ArrayList<Path>();
       List<IOException> thrown = Lists.newArrayList();
       
+      closeLogWriters(thrown);
       for (WriterAndPath wap : logWriters.values()) {
-        try {
-          wap.w.close();
-        } catch (IOException ioe) {
-          LOG.error("Couldn't close log at " + wap.p, ioe);
-          thrown.add(ioe);
-          continue;
-        }
-        LOG.info("Closed path " + wap.p +" (wrote " + wap.editsWritten + " edits in "
-            + (wap.nanosSpent / 1000/ 1000) + "ms)");
         Path dst = getCompletedRecoveredEditsFilePath(wap.p);
         try {
           if (!dst.equals(wap.p) && fs.exists(dst)) {
@@ -822,12 +823,35 @@ public class HLogSplitter {
         }
         paths.add(dst);
       }
+      
       if (!thrown.isEmpty()) {
         throw MultipleIOException.createIOException(thrown);
       }
       
-      hasClosed = true;
+      closeAndCleanCompleted = true;
       return paths;
+    }
+    
+    private List<IOException> closeLogWriters(List<IOException> thrown)
+        throws IOException {
+      if (!logWritersClosed) {
+        if (thrown == null) {
+          thrown = Lists.newArrayList();
+        }
+        for (WriterAndPath wap : logWriters.values()) {
+          try {
+            wap.w.close();
+          } catch (IOException ioe) {
+            LOG.error("Couldn't close log at " + wap.p, ioe);
+            thrown.add(ioe);
+            continue;
+          }
+          LOG.info("Closed path " + wap.p + " (wrote " + wap.editsWritten
+              + " edits in " + (wap.nanosSpent / 1000 / 1000) + "ms)");
+        }
+        logWritersClosed = true;
+      }
+      return thrown;
     }
 
     /**
