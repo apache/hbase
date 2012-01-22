@@ -45,6 +45,12 @@
 #
 #   MAVEN_HOME       Where mvn is installed.
 #
+#   JRUBY_HOME       JRuby path: $JRUBY_HOME/lib/jruby.jar should exist.
+#                    Defaults to the jar packaged with HBase.
+#
+#   JRUBY_OPTS       Extra options (eg '--1.9') passed to the hbase shell.
+#                    Empty by default.
+#
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
 
@@ -262,7 +268,12 @@ unset IFS
 
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
-  CLASS="org.jruby.Main -X+O ${HBASE_HOME}/bin/hirb.rb"
+  # eg export JRUBY_HOME=/usr/local/share/jruby
+  if [ "$JRUBY_HOME" != "" ] ; then
+    CLASSPATH="$JRUBY_HOME/lib/jruby.jar:$CLASSPATH"
+    HBASE_OPTS="$HBASE_OPTS -Djruby.home=$JRUBY_HOME -Djruby.lib=$JRUBY_HOME/lib"
+  fi
+  CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/bin/hirb.rb"
 elif [ "$COMMAND" = "hbck" ] ; then
   CLASS='org.apache.hadoop.hbase.util.HBaseFsck'
 elif [ "$COMMAND" = "hlog" ] ; then
