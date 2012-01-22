@@ -198,17 +198,23 @@ export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above
     </section>
     <section xml:id="trouble.resources">
       <title>Resources</title>
-      <section xml:id="trouble.resources.lists">
-        <title>Dist-Lists</title>
-        <para>Sign up for the <link xlink:href="http://hbase.apache.org/mail-lists.html">HBase Dist-Lists</link> and post a question.  'Dev' is aimed at the
-        community of developers actually building HBase and for features currently under development, and 'User' for generally used for questions on released
-        versions of HBase.
-        </para>
-      </section>
       <section xml:id="trouble.resources.searchhadoop">
         <title>search-hadoop.com</title>
         <para>
         <link xlink:href="http://search-hadoop.com">search-hadoop.com</link> indexes all the mailing lists and is great for historical searches.  
+        Search here first when you have an issue as its more than likely someone has already had your problem.
+        </para>
+      </section>
+      <section xml:id="trouble.resources.lists">
+        <title>Mailing Lists</title>
+        <para>Ask a question on the <link xlink:href="http://hbase.apache.org/mail-lists.html">HBase mailing lists</link>.
+        The 'dev' mailing list is aimed at the community of developers actually building HBase and for features currently under development, and 'user'
+        is generally used for questions on released versions of HBase.  Before going to the mailing list, make sure your
+        question has not already been answered by searching the mailing list archives first.  Use
+        <xref linkend="trouble.resources.searchhadoop" />.
+        Take some time crafting your question<footnote><para>See <link xlink="http://www.mikeash.com/getting_answers.html">Getting Answers</link></para></footnote>; a quality question that includes all context and 
+        exhibits evidence the author has tried to find answers in the manual and out on lists
+        is more likely to get a prompt response.
         </para>
       </section>
       <section xml:id="trouble.resources.irc">
