@@ -1800,6 +1800,7 @@ scan.setFilter(filter);
               <filename>StoreFile</filename>          (StoreFiles for each Store for each Region for the table)
                     <filename>Block</filename>             (Blocks within a StoreFile within a Store for each Region for the table)
  </programlisting>
+     For a description of what HBase files look like when written to HDFS, see <xref linkend="trouble.namenode.hbase.objects"/>.
             </para>
     
     <section xml:id="arch.regions.size">
