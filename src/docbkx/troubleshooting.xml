@@ -706,7 +706,7 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
       </section>
       <section xml:id="trouble.network.loopback">
         <title>Loopback IP</title>
-        <para>HBase expects the loopback IP Address to be 127.0.0.1.  See the Getting Started section on <link linkend="loopback.ip" />.
+        <para>HBase expects the loopback IP Address to be 127.0.0.1.  See the Getting Started section on <xref linkend="loopback.ip" />.
         </para>
        </section>
     </section>
