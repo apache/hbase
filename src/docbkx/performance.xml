@@ -105,7 +105,7 @@
       <section xml:id="gcpause">
         <title>Long GC pauses</title>
 
-        <para>In his presentation, <link
+        <para xml:id="mslab">In his presentation, <link
         xlink:href="http://www.slideshare.net/cloudera/hbase-hug-presentation">Avoiding
         Full GCs with MemStore-Local Allocation Buffers</link>, Todd Lipcon
         describes two cases of stop-the-world garbage collections common in
@@ -115,7 +115,8 @@
         <code>-XX:CMSInitiatingOccupancyFraction</code> and setting it down
         from defaults. Start at 60 or 70 percent (The lower you bring down the
         threshold, the more GCing is done, the more CPU used). To address the
-        second fragmentation issue, Todd added an experimental facility that
+        second fragmentation issue, Todd added an experimental facility,
+        <indexterm><primary>MSLAB</primary></indexterm>, that
         must be explicitly enabled in HBase 0.90.x (Its defaulted to be on in
         0.92.x HBase). See <code>hbase.hregion.memstore.mslab.enabled</code>
         to true in your <classname>Configuration</classname>. See the cited
