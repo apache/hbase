@@ -1069,6 +1069,10 @@ public class HLog implements Syncable {
         LOG.info(getName() + " exiting");
       }
     }
+    
+    void close(){
+      closeLogSyncer = true;
+    }
   }
 
   private void syncer() throws IOException {
@@ -1203,11 +1207,7 @@ public class HLog implements Syncable {
       for (WALActionsListener i: this.listeners) {
         i.logRollRequested();
       }
-    }
-    
-    void close(){
-      closeLogSyncer = true;
-    }
+    }    
   }
 
   protected void doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit,
