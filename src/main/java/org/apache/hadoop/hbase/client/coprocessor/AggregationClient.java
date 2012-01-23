@@ -458,7 +458,7 @@ public class AggregationClient {
     // scan the region with median and find it
     Scan scan2 = new Scan(scan);
     // inherit stop row from method parameter
-    scan2.setStartRow(startRow);
+    if (startRow != null) scan2.setStartRow(startRow);
     HTable table = new HTable(conf, tableName);
     int cacheSize = scan2.getCaching();
     if (!scan2.getCacheBlocks() || scan2.getCaching() < 2) {
