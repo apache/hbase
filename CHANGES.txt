@@ -10,11 +10,12 @@ Release 0.92.1 - Unreleased
    HBASE-5235  HLogSplitter writer thread's streams not getting closed when any 
                of the writer threads has exceptions. (Ram)
    HBASE-5243  LogSyncerThread not getting shutdown waiting for the interrupted flag (Ram)
+   HBASE-5255  Use singletons for OperationStatus to save memory (Benoit)
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()
 
-Release 0.92.0 - Unreleased
+Release 0.92.0 - 01/23/2012
   INCOMPATIBLE CHANGES
    HBASE-2002  Coprocessors: Client side support; Support RPC interface
                changes at runtime (Gary Helmling via Andrew Purtell)
