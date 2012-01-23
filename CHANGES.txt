@@ -6,8 +6,6 @@ Release 0.92.1 - Unreleased
 
   BUG FIXES
    HBASE-5176  AssignmentManager#getRegion: logging nit  adds a redundant '+' (Karthik K)
-   HBASE-5237  Addendum for HBASE-5160 and HBASE-4397 (Ram)
-   HBASE-5235  HLogSplitter writer thread's streams not getting closed when any of the writer threads has exceptions.(Ram)
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()
@@ -534,6 +532,9 @@ Release 0.92.0 - 01/23/2012
    HBASE-5143  Fix config typo in pluggable load balancer factory (Harsh J)
    HBASE-5196  Failure in region split after PONR could cause region hole (Jimmy Xiang)
    HBASE-5204  Backward compatibility fixes for 0.92 (Benoît Sigoure)
+   HBASE-5237  Addendum for HBASE-5160 and HBASE-4397 (Ram)
+   HBASE-5235  HLogSplitter writer thread's streams not getting closed when any of the writer threads has exceptions.(Ram)
+   HBASE-5243  LogSyncerThread not getting shutdown waiting for the interrupted flag (Ram)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

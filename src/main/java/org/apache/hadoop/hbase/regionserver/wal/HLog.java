@@ -879,6 +879,7 @@ public class HLog implements Syncable {
   public void close() throws IOException {
     try {
       logSyncerThread.interrupt();
+      logSyncerThread.close();
       // Make sure we synced everything
       logSyncerThread.join(this.optionalFlushInterval*2);
     } catch (InterruptedException e) {
@@ -1040,6 +1041,8 @@ public class HLog implements Syncable {
    class LogSyncer extends HasThread {
 
     private final long optionalFlushInterval;
+    
+    private boolean closeLogSyncer = false;
 
     LogSyncer(long optionalFlushInterval) {
       this.optionalFlushInterval = optionalFlushInterval;
@@ -1050,7 +1053,7 @@ public class HLog implements Syncable {
       try {
         // awaiting with a timeout doesn't always
         // throw exceptions on interrupt
-        while(!this.isInterrupted()) {
+        while(!this.isInterrupted() && !closeLogSyncer) {
 
           try {
             Thread.sleep(this.optionalFlushInterval);
@@ -1200,6 +1203,10 @@ public class HLog implements Syncable {
       for (WALActionsListener i: this.listeners) {
         i.logRollRequested();
       }
+    }
+    
+    void close(){
+      closeLogSyncer = true;
     }
   }
 
