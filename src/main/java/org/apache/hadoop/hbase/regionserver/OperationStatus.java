@@ -30,9 +30,21 @@ import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
  */
 public class OperationStatus {
 
-  private OperationStatusCode code;
+  /** Singleton for successful operations.  */
+  static final OperationStatus SUCCESS =
+    new OperationStatus(OperationStatusCode.SUCCESS);
 
-  private String exceptionMsg;
+  /** Singleton for failed operations.  */
+  static final OperationStatus FAILURE =
+    new OperationStatus(OperationStatusCode.FAILURE);
+
+  /** Singleton for operations not yet run.  */
+  static final OperationStatus NOT_RUN =
+    new OperationStatus(OperationStatusCode.NOT_RUN);
+
+  private final OperationStatusCode code;
+
+  private final String exceptionMsg;
 
   public OperationStatus(OperationStatusCode code) {
     this(code, "");

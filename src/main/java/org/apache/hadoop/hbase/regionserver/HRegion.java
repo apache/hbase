@@ -1675,8 +1675,7 @@ public class HRegion implements HeapSize { // , Writable{
     public BatchOperationInProgress(T[] operations) {
       this.operations = operations;
       this.retCodeDetails = new OperationStatus[operations.length];
-      Arrays.fill(this.retCodeDetails, new OperationStatus(
-          OperationStatusCode.NOT_RUN));
+      Arrays.fill(this.retCodeDetails, OperationStatus.NOT_RUN);
     }
 
     public boolean isDone() {
@@ -1745,8 +1744,7 @@ public class HRegion implements HeapSize { // , Writable{
         if (coprocessorHost.prePut(put, walEdit, put.getWriteToWAL())) {
           // pre hook says skip this Put
           // mark as success and skip below
-          batchOp.retCodeDetails[i] = new OperationStatus(
-              OperationStatusCode.SUCCESS);
+          batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
         }
       }
     }
@@ -1894,8 +1892,7 @@ public class HRegion implements HeapSize { // , Writable{
       if (!success) {
         for (int i = firstIndex; i < lastIndexExclusive; i++) {
           if (batchOp.retCodeDetails[i].getOperationStatusCode() == OperationStatusCode.NOT_RUN) {
-            batchOp.retCodeDetails[i] = new OperationStatus(
-                OperationStatusCode.FAILURE);
+            batchOp.retCodeDetails[i] = OperationStatus.FAILURE;
           }
         }
       }
