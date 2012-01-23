@@ -1790,9 +1790,18 @@ scan.setFilter(filter);
     <section xml:id="regions.arch">
     <title>Regions</title>
     <para>Regions are the basic element of availability and
-     distribution for tables, and are comprised of a Store per Column Family.
-    </para>
-
+     distribution for tables, and are comprised of a Store per Column Family. The heirarchy of objects 
+     is as follows:
+<programlisting>
+<filename>Table</filename>       (HBase table)      
+    <filename>Region</filename>       (Regions for the table)
+         <filename>Store</filename>          (Store per ColumnFamily for each Region for the table)
+              <filename>MemStore</filename>           (MemStore for each Store for each Region for the table)
+              <filename>StoreFile</filename>          (StoreFiles for each Store for each Region for the table)
+                    <filename>Block</filename>             (Blocks within a StoreFile within a Store for each Region for the table)
+ </programlisting>
+            </para>
+    
     <section xml:id="arch.regions.size">
       <title>Region Size</title>
 
@@ -1926,6 +1935,8 @@ scan.setFilter(filter);
       </section>
     <section xml:id="hfile">
       <title>StoreFile (HFile)</title>
+      <para>StoreFiles are where your data lives.
+      </para>
       <section><title>HFile Format</title>
           <para>The <emphasis>hfile</emphasis> file format is based on
               the SSTable file described in the <link xlink:href="http://research.google.com/archive/bigtable.html">BigTable [2006]</link> paper and on
@@ -1962,7 +1973,9 @@ scan.setFilter(filter);
         <title>Blocks</title>
         <para>StoreFiles are composed of blocks.  The blocksize is configured on a per-ColumnFamily basis.
         </para>
-        <para>For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFileBlock.html">HFileBlock source code</link>.
+        <para>Compression happens at the block level within StoreFiles.  For more information on compression, see <xref linkend="compression"/>.
+        </para>
+        <para>For more information on blocks, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFileBlock.html">HFileBlock source code</link>.
         </para>
       </section>
       <section xml:id="keyvalue">
