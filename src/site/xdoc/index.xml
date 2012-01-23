@@ -25,7 +25,6 @@
     <section name="Welcome to Apache HBase!">
     <p>HBase is the <a href="http://hadoop.apache.org">Hadoop</a> database.  Think of it as a distributed scalable Big Data store.
     </p>
-    </section>
     <section name="When Would I Use HBase?">
     <p>
     Use HBase when you need random, realtime read/write access to your Big Data.
@@ -33,6 +32,7 @@
 HBase is an open-source, distributed, versioned, column-oriented store modeled after Google's <a href="http://research.google.com/archive/bigtable.html">Bigtable: A Distributed Storage System for Structured</a> by Chang et al.
  Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of Hadoop and HDFS.
     </p>
+    </section>
     </section>
     <section name="Features">
     <p>
@@ -62,13 +62,14 @@ HBase provides:
 </li>
 </ul>
 </p>
-     </section>
      <section name="Where Can I Get More Information?">
    <p>See the <a href="http://hbase.apache.org/book/architecture.html#arch.overview">Architecture Overview</a>, the <a href="http://hbase.apache.org/book/faq.html">Apache HBase Book FAQ</a>,
     and the other documentation links on the left!
    </p>
     </section>
+     </section>
      <section name="News">
+            <p>May 22nd, <a href="http://www.hbasecon.com">HBaseCon2012</a> in San Francisco</p>
             <p>January 19th, <a href="http://www.meetup.com/hbaseusergroup/events/46702842/">Meetup @ EBay</a></p>
             <p>November 29th, <a href="http://www.meetup.com/hackathon/events/41025972/">Developer Pow-Wow in SF</a> at Salesforce HQ</p>
             <p>November 7th, <a href="http://www.meetup.com/hbaseusergroup/events/35682812/">HBase Meetup in NYC (6PM)</a> at the AppNexus office</p>
