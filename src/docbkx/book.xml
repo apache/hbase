@@ -522,6 +522,19 @@ htable.put(put);
         </section>
       </section>
     </section>
+    <section xml:id="joins"><title>Joins</title>
+      <para>Whether HBase supports joins is a common question on the dist-list, and there is a simple answer:  it doesn't,
+      at not least in the way that RDBMS' support them (e.g., with equi-joins or outer-joins in SQL).  As has been illustrated
+      in this chapter, the read data model operations in HBase are Get and Scan.       
+      </para>
+      <para>However, that doesn't mean that equivalent join functionality can't be supported in your application, but
+      you have to do it yourself.  The two primary strategies are either denormalizing the data upon writing to HBase,
+      or to have lookup tables and do the join between HBase tables in your application or MapReduce code (and as RDBMS' 
+      demonstrate, there are several strategies for this depending on the size of the tables, e.g., nested loops vs.
+      hash-joins).  So which is the best approach?  It depends on what you are trying to do, and as such there isn't a single
+      answer that works for every use case.
+      </para>
+    </section>
   </chapter>  <!-- data model -->
 
  <chapter xml:id="schema">
@@ -755,6 +768,10 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
       <para>Synchronization on counters are done on the RegionServer, not in the client.
       </para>
     </section> 
+  </section>
+  <section xml:id="schema.joins"><title>Joins</title>
+    <para>If you have multiple tables, don't forget to factor in the potential for <xref linkend="joins"/> into the schema design. 
+    </para>
   </section>
   <section xml:id="ttl">
   <title>Time To Live (TTL)</title>
