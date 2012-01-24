@@ -585,82 +585,12 @@ public class RemoteHTable implements HTableInterface {
 
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Put put) throws IOException {
-    // column to check-the-value
-    put.add(new KeyValue(row, family, qualifier, value));
-
-    CellSetModel model = buildModelFromPut(put);
-    StringBuilder sb = new StringBuilder();
-    sb.append('/');
-    if (accessToken != null) {
-      sb.append(accessToken);
-      sb.append('/');
-    }
-    sb.append("checkandput");
-    sb.append('/');
-    sb.append(Bytes.toStringBinary(name));
-    sb.append('/');
-    sb.append(Bytes.toStringBinary(put.getRow()));
-
-    for (int i = 0; i < maxRetries; i++) {
-      Response response = client.put(sb.toString(),
-          Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-      int code = response.getCode();
-      switch (code) {
-      case 200:
-        return true;
-      case 304: // NOT-MODIFIED
-        return false;
-      case 509:
-        try {
-          Thread.sleep(sleepTime);
-        } catch (final InterruptedException e) {
-        }
-        break;
-      default:
-        throw new IOException("checkAndPut request failed with " + code);
-      }
-    }
-    throw new IOException("checkAndPut request timed out");
+    throw new IOException("checkAndPut not supported");
   }
 
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Delete delete) throws IOException {
-    Put put = new Put(row);
-    // column to check-the-value
-    put.add(new KeyValue(row, family, qualifier, value));
-    CellSetModel model = buildModelFromPut(put);
-    StringBuilder sb = new StringBuilder();
-    sb.append('/');
-    if (accessToken != null) {
-      sb.append(accessToken);
-      sb.append('/');
-    }
-    sb.append("checkanddelete");
-    sb.append('/');
-    sb.append(Bytes.toStringBinary(name));
-    sb.append('/');
-    sb.append(Bytes.toStringBinary(row));
-
-    for (int i = 0; i < maxRetries; i++) {
-      Response response = client.put(sb.toString(),
-          Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-      int code = response.getCode();
-      switch (code) {
-      case 200:
-        return true;
-      case 304: // NOT-MODIFIED
-        return false;
-      case 509:
-        try {
-          Thread.sleep(sleepTime);
-        } catch (final InterruptedException e) {
-        }
-        break;
-      default:
-        throw new IOException("checkAndDelete request failed with " + code);
-      }
-    }
-    throw new IOException("checkAndDelete request timed out");
+    throw new IOException("checkAndDelete not supported");
   }
 
   public Result increment(Increment increment) throws IOException {
