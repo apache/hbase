@@ -103,4 +103,16 @@ public class RootResource extends ResourceBase {
       final @PathParam("table") String table) throws IOException {
     return new TableResource(table);
   }
+  
+  @Path("checkandput/{table}")
+  public CheckAndPutTableResource getCheckAndPutTableResource(
+      final @PathParam("table") String table) throws IOException {
+    return new CheckAndPutTableResource(table);
+  }
+  
+  @Path("checkanddelete/{table}")
+  public CheckAndDeleteTableResource getCheckAndDeleteTableResource(
+      final @PathParam("table") String table) throws IOException {
+    return new CheckAndDeleteTableResource(table);
+  }
 }
