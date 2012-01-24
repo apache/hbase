@@ -19,22 +19,21 @@
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
     <title>HBase Home</title>
+    <link rel="shortcut icon" href="/images/favicon.ico" />
   </properties>
   
   <body>
     <section name="Welcome to Apache HBase!">
     <p>HBase is the <a href="http://hadoop.apache.org">Hadoop</a> database.  Think of it as a distributed scalable Big Data store.
     </p>
-    <section name="When Would I Use HBase?">
+    <h4>When Would I Use HBase?</h4>
     <p>
     Use HBase when you need random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware.
 HBase is an open-source, distributed, versioned, column-oriented store modeled after Google's <a href="http://research.google.com/archive/bigtable.html">Bigtable: A Distributed Storage System for Structured</a> by Chang et al.
  Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of Hadoop and HDFS.
     </p>
-    </section>
-    </section>
-    <section name="Features">
+    <h4>Features</h4>
     <p>
 HBase provides:
 <ul>
@@ -62,12 +61,11 @@ HBase provides:
 </li>
 </ul>
 </p>
-     <section name="Where Can I Get More Information?">
+     <h4>Where Can I Get More Information?</h4>
    <p>See the <a href="http://hbase.apache.org/book/architecture.html#arch.overview">Architecture Overview</a>, the <a href="http://hbase.apache.org/book/faq.html">Apache HBase Book FAQ</a>,
     and the other documentation links on the left!
    </p>
-    </section>
-     </section>
+ </section>
      <section name="News">
             <p>May 22nd, <a href="http://www.hbasecon.com">HBaseCon2012</a> in San Francisco</p>
             <p>January 19th, <a href="http://www.meetup.com/hbaseusergroup/events/46702842/">Meetup @ EBay</a></p>

@@ -453,6 +453,7 @@
       @import url("$relativePath/css/site.css");
     </style>
     <link rel="stylesheet" href="$relativePath/css/print.css" type="text/css" media="print" />
+    <link rel="shortcut icon" href="/images/favicon.ico" />
 #foreach( $author in $authors )
       <meta name="author" content="$author" />
 #end
