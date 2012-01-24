@@ -49,7 +49,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -2775,55 +2774,6 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
 
-  /**
-   * This is an EXPENSIVE clone.  Cloning though is the safest thing to do.
-   * Can't let out original since it can change and at least the loadbalancer
-   * wants to iterate this exported list.  We need to synchronize on regions
-   * since all access to this.servers is under a lock on this.regions.
-   * 
-   * @return A clone of current assignments by table.
-   */
-  Map<String, Map<ServerName, List<HRegionInfo>>> getAssignmentsByTable() {
-    Map<String, Map<ServerName, List<HRegionInfo>>> result = null;
-    synchronized (this.regions) {
-      result = new HashMap<String, Map<ServerName,List<HRegionInfo>>>();
-      if (!this.master.getConfiguration().
-          getBoolean("hbase.master.loadbalance.bytable", true)) {
-        result.put("ensemble", getAssignments());
-      } else {
-        for (Map.Entry<ServerName, Set<HRegionInfo>> e: this.servers.entrySet()) {
-          for (HRegionInfo hri : e.getValue()) {
-            if (hri.isMetaRegion() || hri.isRootRegion()) continue;
-            String tablename = hri.getTableNameAsString();
-            Map<ServerName, List<HRegionInfo>> svrToRegions = result.get(tablename);
-            if (svrToRegions == null) {
-              svrToRegions = new HashMap<ServerName, List<HRegionInfo>>(this.servers.size());
-              result.put(tablename, svrToRegions);
-            }
-            List<HRegionInfo> regions = null;
-            if (!svrToRegions.containsKey(e.getKey())) {
-              regions = new ArrayList<HRegionInfo>();
-              svrToRegions.put(e.getKey(), regions);
-            } else {
-              regions = svrToRegions.get(e.getKey());
-            }
-            regions.add(hri);
-          }
-        }
-      }
-    }
-    Map<ServerName, HServerLoad> onlineSvrs = this.serverManager.getOnlineServers();
-    // Take care of servers w/o assignments.
-    for (Map<ServerName,List<HRegionInfo>> map : result.values()) {
-      for (Map.Entry<ServerName, HServerLoad> svrEntry: onlineSvrs.entrySet()) {
-        if (!map.containsKey(svrEntry.getKey())) {
-          map.put(svrEntry.getKey(), new ArrayList<HRegionInfo>());
-        }
-      }
-    }
-    return result;
-  }
-  
   /**
    * @return A clone of current assignments. Note, this is assignments only.
    * If a new server has come in and it has no regions, it will not be included

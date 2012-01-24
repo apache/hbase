@@ -3,7 +3,6 @@ HBase Change Log
 Release 0.92.1 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-5228  [REST] Rip out "transform" feature
-   HBASE-5231  Backport HBASE-3373 (per-table load balancing) to 0.92
    HBASE-5255  Use singletons for OperationStatus to save memory (Benoit)
 
   BUG FIXES

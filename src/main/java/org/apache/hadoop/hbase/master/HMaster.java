@@ -901,14 +901,16 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         }
       }
 
-      Map<String, Map<ServerName, List<HRegionInfo>>> assignmentsByTable =
-        this.assignmentManager.getAssignmentsByTable();
-
-      List<RegionPlan> plans = new ArrayList<RegionPlan>();
-      for (Map<ServerName, List<HRegionInfo>> assignments : assignmentsByTable.values()) {
-        List<RegionPlan> partialPlans = this.balancer.balanceCluster(assignments);
-        if (partialPlans != null) plans.addAll(partialPlans);
+      Map<ServerName, List<HRegionInfo>> assignments =
+        this.assignmentManager.getAssignments();
+      // Returned Map from AM does not include mention of servers w/o assignments.
+      for (Map.Entry<ServerName, HServerLoad> e:
+          this.serverManager.getOnlineServers().entrySet()) {
+        if (!assignments.containsKey(e.getKey())) {
+          assignments.put(e.getKey(), new ArrayList<HRegionInfo>());
+        }
       }
+      List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
       int rpCount = 0;	// number of RegionPlans balanced so far
       long totalRegPlanExecTime = 0;
       balancerRan = plans != null;

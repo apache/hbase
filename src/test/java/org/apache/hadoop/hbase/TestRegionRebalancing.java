@@ -166,16 +166,9 @@ public class TestRegionRebalancing {
         LOG.debug(server.getServerName() + " Avg: " + avg + " actual: " + serverLoad);
         if (!(avg > 2.0 && serverLoad <= avgLoadPlusSlop
             && serverLoad >= avgLoadMinusSlop)) {
-          for (HRegionInfo hri : server.getOnlineRegions()) {
-            if (hri.isMetaRegion() || hri.isRootRegion()) serverLoad--;
-            // LOG.debug(hri.getRegionNameAsString());
-          }
-          if (!(serverLoad <= avgLoadPlusSlop && serverLoad >= avgLoadMinusSlop)) {
-            LOG.debug(server.getServerName() + " Isn't balanced!!! Avg: " + avg +
-                " actual: " + serverLoad + " slop: " + slop);
-            success = false;            
-            break;
-          }
+          LOG.debug(server.getServerName() + " Isn't balanced!!! Avg: " + avg +
+              " actual: " + serverLoad + " slop: " + slop);
+          success = false;
         }
       }
 

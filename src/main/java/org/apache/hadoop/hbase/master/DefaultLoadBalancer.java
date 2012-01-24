@@ -245,7 +245,7 @@ public class DefaultLoadBalancer implements LoadBalancer {
     if (serversByLoad.lastKey().getLoad() <= ceiling &&
        serversByLoad.firstKey().getLoad() >= floor) {
       // Skipped because no server outside (min,max) range
-      LOG.debug("Skipping load balancing because balanced cluster; " +
+      LOG.info("Skipping load balancing because balanced cluster; " +
         "servers=" + numServers + " " +
         "regions=" + numRegions + " average=" + average + " " +
         "mostloaded=" + serversByLoad.lastKey().getLoad() +
