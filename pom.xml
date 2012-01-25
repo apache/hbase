@@ -189,6 +189,14 @@
       <organizationUrl>http://www.salesforce.com/</organizationUrl>
     </developer>
     <developer>
+      <id>mbautin</id>
+      <name>Mikhail Bautin</name>
+      <email>mbautin@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
       <id>nspiegelberg</id>
       <name>Nicolas Spiegelberg</name>
       <email>nspiegelberg@fb.com</email>
