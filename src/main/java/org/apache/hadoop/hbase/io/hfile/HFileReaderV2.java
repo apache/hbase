@@ -289,7 +289,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
       getSchemaMetrics().updateOnCacheMiss(blockCategory, isCompaction, delta);
 
-      // Cache the block
+      // Cache the block if necessary
       if (cacheBlock && cacheConf.shouldCacheBlockOnRead(
               hfileBlock.getBlockType().getCategory())) {
         cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,

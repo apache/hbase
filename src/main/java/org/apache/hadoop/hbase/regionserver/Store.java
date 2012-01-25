@@ -747,19 +747,28 @@ public class Store extends SchemaConfigured implements HeapSize {
    */
   private StoreFile.Writer createWriterInTmp(int maxKeyCount)
   throws IOException {
-    return createWriterInTmp(maxKeyCount, this.compression);
+    return createWriterInTmp(maxKeyCount, this.compression, false);
   }
 
   /*
    * @param maxKeyCount
    * @param compression Compression algorithm to use
+   * @param isCompaction whether we are creating a new file in a compaction
    * @return Writer for a new StoreFile in the tmp dir.
    */
   private StoreFile.Writer createWriterInTmp(int maxKeyCount,
-    Compression.Algorithm compression)
+    Compression.Algorithm compression, boolean isCompaction)
   throws IOException {
+    final CacheConfig writerCacheConf;
+    if (isCompaction) {
+      // Don't cache data on write on compactions.
+      writerCacheConf = new CacheConfig(cacheConf);
+      writerCacheConf.setCacheDataOnWrite(false);
+    } else {
+      writerCacheConf = cacheConf;
+    }
     StoreFile.Writer w = StoreFile.createWriter(fs, region.getTmpDir(),
-        blocksize, compression, comparator, conf, cacheConf,
+        blocksize, compression, comparator, conf, writerCacheConf,
         family.getBloomFilterType(), maxKeyCount);
     // The store file writer's path does not include the CF name, so we need
     // to configure the HFile writer directly.
@@ -1428,8 +1437,8 @@ public class Store extends SchemaConfigured implements HeapSize {
         do {
           hasMore = scanner.next(kvs, this.compactionKVMax);
           if (writer == null && !kvs.isEmpty()) {
-            writer = createWriterInTmp(maxKeyCount,
-              this.compactionCompression);
+            writer = createWriterInTmp(maxKeyCount, this.compactionCompression,
+                true);
           }
           if (writer != null) {
             // output to writer:

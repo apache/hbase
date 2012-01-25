@@ -4487,26 +4487,27 @@ public class TestFromClientSide {
     assertEquals(++expectedBlockCount, cache.getBlockCount());
     assertEquals(expectedBlockHits, cache.getStats().getHitCount());
     assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
-    // compact, net minus on block, two hits, no misses
+    // compact, net minus two blocks, two hits, no misses
     System.out.println("Compacting");
     assertEquals(2, store.getNumberOfstorefiles());
     store.triggerMajorCompaction();
     region.compactStores();
     waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
     assertEquals(1, store.getNumberOfstorefiles());
-    assertEquals(--expectedBlockCount, cache.getBlockCount());
+    expectedBlockCount -= 2; // evicted two blocks, cached none
+    assertEquals(expectedBlockCount, cache.getBlockCount());
     expectedBlockHits += 2;
     assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
     assertEquals(expectedBlockHits, cache.getStats().getHitCount());
-    // read the row, same blocks, one hit no miss
+    // read the row, this should be a cache miss because we don't cache data
+    // blocks on compaction
     r = table.get(new Get(ROW));
     assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
     assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER2), data2));
+    expectedBlockCount += 1; // cached one data block
     assertEquals(expectedBlockCount, cache.getBlockCount());
-    assertEquals(++expectedBlockHits, cache.getStats().getHitCount());
-    assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
-    // no cache misses!
-    assertEquals(startBlockMiss, cache.getStats().getMissCount());
+    assertEquals(expectedBlockHits, cache.getStats().getHitCount());
+    assertEquals(++expectedBlockMiss, cache.getStats().getMissCount());
   }
 
   private void waitForStoreFileCount(Store store, int count, int timeout)

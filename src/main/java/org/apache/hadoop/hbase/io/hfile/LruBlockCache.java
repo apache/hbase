@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -742,4 +743,14 @@ public class LruBlockCache implements BlockCache, HeapSize {
     return fileNames;
   }
 
+  Map<BlockType, Integer> getBlockTypeCountsForTest() {
+    Map<BlockType, Integer> counts =
+        new EnumMap<BlockType, Integer>(BlockType.class);
+    for (CachedBlock cb : map.values()) {
+      BlockType blockType = ((HFileBlock) cb.getBuffer()).getBlockType();
+      Integer count = counts.get(blockType);
+      counts.put(blockType, (count == null ? 0 : count) + 1);
+    }
+    return counts;
+  }
 }
