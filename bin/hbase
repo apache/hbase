@@ -78,7 +78,6 @@ if [ $# = 0 ]; then
   echo "  hbck             run the hbase 'fsck' tool"
   echo "  hlog             write-ahead-log analyzer"
   echo "  hfile            store file analyzer"
-  echo "  migrate          upgrade an hbase.rootdir"
   echo "  zkcli            run the ZooKeeper shell"
   echo ""
   echo "PROCESS MANAGEMENT"
@@ -280,8 +279,6 @@ elif [ "$COMMAND" = "hlog" ] ; then
   CLASS='org.apache.hadoop.hbase.regionserver.wal.HLogPrettyPrinter'
 elif [ "$COMMAND" = "hfile" ] ; then
   CLASS='org.apache.hadoop.hbase.io.hfile.HFile'
-elif [ "$COMMAND" = "migrate" ] ; then
-  CLASS='org.apache.hadoop.hbase.util.Migrate'
 elif [ "$COMMAND" = "zkcli" ] ; then
   # ZooKeeperMainServerArg returns '-server HOST:PORT' or empty string.
   SERVER_ARG=`"$bin"/hbase org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServerArg`
