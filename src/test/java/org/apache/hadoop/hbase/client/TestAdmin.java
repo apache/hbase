@@ -1407,7 +1407,7 @@ public class TestAdmin {
         "hbase.hregion.memstore.optionalflushcount", 2);
 
     // We flush the cache after every 8192 bytes
-    TEST_UTIL.getConfiguration().setInt("hbase.hregion.memstore.flush.size",
+    TEST_UTIL.getConfiguration().setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
         8192);
 
     // Increase the amount of time between client retries

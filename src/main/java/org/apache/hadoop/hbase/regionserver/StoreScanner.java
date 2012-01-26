@@ -138,8 +138,8 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @param store who we scan
    * @param scan the spec
    * @param scanners ancillary scanners
-   * @param smallestReadPoint the readPoint that we should use for tracking versions
-   * @param retainDeletesInOutput should we retain deletes after compaction?
+   * @param smallestReadPoint the readPoint that we should use for tracking
+   *          versions
    */
   StoreScanner(Store store, Scan scan,
       List<? extends KeyValueScanner> scanners, ScanType scanType,

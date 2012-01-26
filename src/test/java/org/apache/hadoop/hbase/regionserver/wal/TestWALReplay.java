@@ -481,7 +481,7 @@ public class TestWALReplay {
         runWALSplit(newConf);
         FileSystem newFS = FileSystem.get(newConf);
         // 100k seems to make for about 4 flushes during HRegion#initialize.
-        newConf.setInt("hbase.hregion.memstore.flush.size", 1024 * 100);
+        newConf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 100);
         // Make a new wal for new region.
         HLog newWal = createWAL(newConf);
         final AtomicInteger flushcount = new AtomicInteger(0);

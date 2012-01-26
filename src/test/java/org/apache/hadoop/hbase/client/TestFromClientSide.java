@@ -157,6 +157,8 @@ public class TestFromClientSide {
          HColumnDescriptor.DEFAULT_VERSIONS,
          true,
          HColumnDescriptor.DEFAULT_COMPRESSION,
+         HColumnDescriptor.DEFAULT_ENCODE_ON_DISK,
+         HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING,
          HColumnDescriptor.DEFAULT_IN_MEMORY,
          HColumnDescriptor.DEFAULT_BLOCKCACHE,
          HColumnDescriptor.DEFAULT_BLOCKSIZE,

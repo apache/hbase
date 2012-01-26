@@ -111,7 +111,8 @@ public class TestLogRolling  {
     TEST_UTIL.getConfiguration().setInt("hbase.hregion.memstore.optionalflushcount", 2);
 
     // We flush the cache after every 8192 bytes
-    TEST_UTIL.getConfiguration().setInt("hbase.hregion.memstore.flush.size", 8192);
+    TEST_UTIL.getConfiguration().setInt(
+        HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 8192);
 
     // Increase the amount of time between client retries
     TEST_UTIL.getConfiguration().setLong("hbase.client.pause", 10 * 1000);

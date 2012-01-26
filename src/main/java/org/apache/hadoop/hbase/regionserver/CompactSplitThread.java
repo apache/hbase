@@ -79,7 +79,7 @@ public class CompactSplitThread implements CompactionRequestor {
           "hbase.regionserver.thread.compaction.throttle", 0);
     } else {
       // we have a complicated default. see HBASE-3877
-      long flushSize = conf.getLong("hbase.hregion.memstore.flush.size",
+      long flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
           HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
       long splitSize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
           HConstants.DEFAULT_MAX_FILE_SIZE);

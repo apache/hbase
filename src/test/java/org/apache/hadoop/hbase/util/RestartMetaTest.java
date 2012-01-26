@@ -28,6 +28,8 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 
 /**
  * A command-line tool that spins up a local process-based cluster, loads
@@ -96,7 +98,8 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     // create tables if needed
     HBaseTestingUtility.createPreSplitLoadTestTable(conf, TABLE_NAME,
-        LoadTestTool.COLUMN_FAMILY);
+        LoadTestTool.COLUMN_FAMILY, Compression.Algorithm.NONE,
+        DataBlockEncoding.NONE);
 
     LOG.debug("Loading data....\n\n");
     loadData();
@@ -133,6 +136,8 @@ public class RestartMetaTest extends AbstractHBaseTool {
   protected void addOptions() {
     addRequiredOptWithArg(OPT_HBASE_HOME, "HBase home directory");
     addOptWithArg(OPT_NUM_RS, "Number of Region Servers");
+    addOptWithArg(LoadTestTool.OPT_DATA_BLOCK_ENCODING,
+        LoadTestTool.OPT_DATA_BLOCK_ENCODING_USAGE);
   }
 
   @Override

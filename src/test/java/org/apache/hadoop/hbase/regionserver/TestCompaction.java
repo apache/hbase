@@ -24,8 +24,10 @@ import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,20 +35,24 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -61,6 +67,7 @@ public class TestCompaction extends HBaseTestCase {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private HRegion r = null;
+  private HTableDescriptor htd = null;
   private Path compactionDir = null;
   private Path regionCompactionDir = null;
   private static final byte [] COLUMN_FAMILY = fam1;
@@ -70,13 +77,12 @@ public class TestCompaction extends HBaseTestCase {
   private byte[] firstRowBytes, secondRowBytes, thirdRowBytes;
   final private byte[] col1, col2;
 
-
   /** constructor */
   public TestCompaction() throws Exception {
     super();
 
     // Set cache flush size to 1MB
-    conf.setInt("hbase.hregion.memstore.flush.size", 1024*1024);
+    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024*1024);
     conf.setInt("hbase.hregion.memstore.block.multiplier", 100);
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
 
@@ -94,7 +100,7 @@ public class TestCompaction extends HBaseTestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    HTableDescriptor htd = createTableDescriptor(getName());
+    this.htd = createTableDescriptor(getName());
     this.r = createNewHRegion(htd, null, null);
   }
 
@@ -146,6 +152,42 @@ public class TestCompaction extends HBaseTestCase {
    * @throws Exception
    */
   public void testMajorCompaction() throws Exception {
+    majorCompaction();
+  }
+
+  public void testDataBlockEncodingInCacheOnly() throws Exception {
+    majorCompactionWithDataBlockEncoding(true);
+  }
+
+  public void testDataBlockEncodingEverywhere() throws Exception {
+    majorCompactionWithDataBlockEncoding(false);
+  }
+
+  public void majorCompactionWithDataBlockEncoding(boolean inCacheOnly)
+      throws Exception {
+    Map<Store, HFileDataBlockEncoder> replaceBlockCache =
+        new HashMap<Store, HFileDataBlockEncoder>();
+    for (Entry<byte[], Store> pair : r.getStores().entrySet()) {
+      Store store = pair.getValue();
+      HFileDataBlockEncoder blockEncoder = store.getDataBlockEncoder();
+      replaceBlockCache.put(pair.getValue(), blockEncoder);
+      final DataBlockEncoding inCache = DataBlockEncoding.PREFIX;
+      final DataBlockEncoding onDisk = inCacheOnly ? DataBlockEncoding.NONE :
+          inCache;
+      store.setDataBlockEncoderInTest(new HFileDataBlockEncoderImpl(
+          onDisk, inCache));
+    }
+
+    majorCompaction();
+
+    // restore settings
+    for (Entry<Store, HFileDataBlockEncoder> entry :
+        replaceBlockCache.entrySet()) {
+      entry.getKey().setDataBlockEncoderInTest(entry.getValue());
+    }
+  }
+
+  private void majorCompaction() throws Exception {
     createStoreFile(r);
     for (int i = 0; i < compactionThreshold; i++) {
       createStoreFile(r);
@@ -174,10 +216,10 @@ public class TestCompaction extends HBaseTestCase {
       CompactionProgress progress = store.getCompactionProgress();
       if( progress != null ) {
         ++storeCount;
-        assert(progress.currentCompactedKVs > 0);
-        assert(progress.totalCompactingKVs > 0);
+        assertTrue(progress.currentCompactedKVs > 0);
+        assertTrue(progress.totalCompactingKVs > 0);
       }
-      assert(storeCount > 0);
+      assertTrue(storeCount > 0);
     }
 
     // look at the second row
@@ -186,14 +228,20 @@ public class TestCompaction extends HBaseTestCase {
     secondRowBytes[START_KEY_BYTES.length - 1]++;
 
     // Always 3 versions if that is what max versions is.
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null);
-    assertEquals(compactionThreshold, result.size());
+    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).
+        setMaxVersions(100), null);
+    LOG.debug("Row " + Bytes.toStringBinary(secondRowBytes) + " after " +
+        "initial compaction: " + result);
+    assertEquals("Invalid number of versions of row "
+        + Bytes.toStringBinary(secondRowBytes) + ".", compactionThreshold,
+        result.size());
 
     // Now add deletes to memstore and then flush it.
     // That will put us over
     // the compaction threshold of 3 store files.  Compacting these store files
     // should result in a compacted store file that has no references to the
     // deleted row.
+    LOG.debug("Adding deletes to memstore and flushing");
     Delete delete = new Delete(secondRowBytes, System.currentTimeMillis(), null);
     byte [][] famAndQf = {COLUMN_FAMILY, null};
     delete.deleteFamily(famAndQf[0]);

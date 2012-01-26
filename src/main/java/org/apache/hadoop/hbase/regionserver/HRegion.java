@@ -490,7 +490,7 @@ public class HRegion implements HeapSize { // , Writable{
     long flushSize = this.htableDescriptor.getMemStoreFlushSize();
 
     if (flushSize == HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE) {
-      flushSize = conf.getLong("hbase.hregion.memstore.flush.size",
+      flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
          HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
     }
     this.memstoreFlushSize = flushSize;

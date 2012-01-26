@@ -39,6 +39,14 @@ public enum BlockType {
   /** Data block, both versions */
   DATA("DATABLK*", BlockCategory.DATA),
 
+  /** An encoded data block (e.g. with prefix compression), version 2 */
+  ENCODED_DATA("DATABLKE", BlockCategory.DATA) {
+    @Override
+    public int getId() {
+      return DATA.ordinal();
+    }
+  },
+
   /** Version 2 leaf index block. Appears in the data block section */
   LEAF_INDEX("IDXLEAF2", BlockCategory.INDEX),
 
@@ -101,6 +109,17 @@ public enum BlockType {
     magic = Bytes.toBytes(magicStr);
     this.metricCat = metricCat;
     assert magic.length == MAGIC_LENGTH;
+  }
+
+  /**
+   * Use this instead of {@link #ordinal()}. They work exactly the same, except
+   * DATA and ENCODED_DATA get the same id using this method (overridden for
+   * {@link #ENCODED_DATA}).
+   * @return block type id from 0 to the number of block types - 1
+   */
+  public int getId() {
+    // Default implementation, can be overridden for individual enum members.
+    return ordinal();
   }
 
   public void writeToStream(OutputStream out) throws IOException {
@@ -187,6 +206,13 @@ public enum BlockType {
       throw new IOException("Invalid magic: expected "
           + Bytes.toStringBinary(magic) + ", got " + Bytes.toStringBinary(buf));
     }
+  }
+
+  /**
+   * @return whether this block type is encoded or unencoded data block
+   */
+  public final boolean isData() {
+    return this == DATA || this == ENCODED_DATA;
   }
 
 }
