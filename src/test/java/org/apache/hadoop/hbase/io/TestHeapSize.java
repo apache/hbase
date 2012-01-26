@@ -40,6 +40,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -295,6 +296,12 @@ public class TestHeapSize extends TestCase {
       assertEquals(expected, actual);
     }
 
+    // SchemaConfigured
+    LOG.debug("Heap size for: " + SchemaConfigured.class.getName());
+    SchemaConfigured sc = new SchemaConfigured(null, "myTable", "myCF");
+    assertEquals(ClassSize.estimateBase(SchemaConfigured.class, true),
+        sc.heapSize());
+
     // Store Overhead
     cl = Store.class;
     actual = Store.FIXED_OVERHEAD;
@@ -313,16 +320,23 @@ public class TestHeapSize extends TestCase {
       assertEquals(expected, actual);
     }
 
+    // Block cache key overhead
+    cl = BlockCacheKey.class;
+    // Passing zero length file name, because estimateBase does not handle
+    // deep overhead.
+    actual = new BlockCacheKey("", 0).heapSize();
+    expected  = ClassSize.estimateBase(cl, false);
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      assertEquals(expected, actual);
+    }
+
     // Currently NOT testing Deep Overheads of many of these classes.
     // Deep overheads cover a vast majority of stuff, but will not be 100%
     // accurate because it's unclear when we're referencing stuff that's already
     // accounted for.  But we have satisfied our two core requirements.
     // Sizing is quite accurate now, and our tests will throw errors if
     // any of these classes are modified without updating overhead sizes.
-
-    SchemaConfigured sc = new SchemaConfigured(null, "myTable", "myCF");
-    assertEquals(ClassSize.estimateBase(SchemaConfigured.class, true),
-        sc.heapSize());
   }
 
   @org.junit.Rule

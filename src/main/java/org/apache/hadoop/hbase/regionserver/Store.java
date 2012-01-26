@@ -54,9 +54,12 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
+import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
@@ -150,6 +153,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   private final Compression.Algorithm compression;
   /** Compression algorithm for major compaction */
   private final Compression.Algorithm compactionCompression;
+  private HFileDataBlockEncoder dataBlockEncoder;
 
   // Comparing KeyValues
   final KeyValue.KVComparator comparator;
@@ -187,6 +191,11 @@ public class Store extends SchemaConfigured implements HeapSize {
     this.compactionCompression =
       (family.getCompactionCompression() != Compression.Algorithm.NONE) ?
         family.getCompactionCompression() : this.compression;
+
+    this.dataBlockEncoder =
+        new HFileDataBlockEncoderImpl(family.getDataBlockEncodingOnDisk(),
+            family.getDataBlockEncoding());
+
     this.comparator = info.getComparator();
     // getTimeToLive returns ttl in seconds.  Convert to milliseconds.
     this.ttl = family.getTimeToLive();
@@ -276,6 +285,21 @@ public class Store extends SchemaConfigured implements HeapSize {
   public Path getHomedir() {
     return homedir;
   }
+  
+  /**
+   * @return the data block encoder
+   */
+  public HFileDataBlockEncoder getDataBlockEncoder() {
+    return dataBlockEncoder;
+  }
+
+  /**
+   * Should be used only in tests.
+   * @param blockEncoder the block delta encoder to use
+   */
+  void setDataBlockEncoderInTest(HFileDataBlockEncoder blockEncoder) {
+    this.dataBlockEncoder = blockEncoder;
+  }
 
   /**
    * Creates an unsorted list of StoreFile loaded in parallel
@@ -314,7 +338,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       completionService.submit(new Callable<StoreFile>() {
         public StoreFile call() throws IOException {
           StoreFile storeFile = new StoreFile(fs, p, conf, cacheConf,
-              family.getBloomFilterType());
+              family.getBloomFilterType(), dataBlockEncoder);
           passSchemaMetricsTo(storeFile);
           storeFile.createReader();
           return storeFile;
@@ -488,8 +512,9 @@ public class Store extends SchemaConfigured implements HeapSize {
     StoreFile.rename(fs, srcPath, dstPath);
 
     StoreFile sf = new StoreFile(fs, dstPath, this.conf, this.cacheConf,
-        this.family.getBloomFilterType());
+        this.family.getBloomFilterType(), this.dataBlockEncoder);
     passSchemaMetricsTo(sf);
+
     sf.createReader();
 
     LOG.info("Moved hfile " + srcPath + " into store directory " +
@@ -624,7 +649,6 @@ public class Store extends SchemaConfigured implements HeapSize {
       MonitoredTask status)
       throws IOException {
     StoreFile.Writer writer;
-    String fileName;
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = region.getSmallestReadPoint();
     long flushed = 0;
@@ -720,8 +744,9 @@ public class Store extends SchemaConfigured implements HeapSize {
 
     status.setStatus("Flushing " + this + ": reopening flushed file");
     StoreFile sf = new StoreFile(this.fs, dstPath, this.conf, this.cacheConf,
-        this.family.getBloomFilterType());
+        this.family.getBloomFilterType(), this.dataBlockEncoder);
     passSchemaMetricsTo(sf);
+
     StoreFile.Reader r = sf.createReader();
     this.storeSize += r.length();
     this.totalUncompressedBytes += r.getTotalUncompressedBytes();
@@ -768,8 +793,8 @@ public class Store extends SchemaConfigured implements HeapSize {
       writerCacheConf = cacheConf;
     }
     StoreFile.Writer w = StoreFile.createWriter(fs, region.getTmpDir(),
-        blocksize, compression, comparator, conf, writerCacheConf,
-        family.getBloomFilterType(), maxKeyCount);
+        blocksize, compression, dataBlockEncoder, comparator, conf,
+        writerCacheConf, family.getBloomFilterType(), maxKeyCount);
     // The store file writer's path does not include the CF name, so we need
     // to configure the HFile writer directly.
     SchemaConfigured sc = (SchemaConfigured) w.writer;
@@ -1377,7 +1402,8 @@ public class Store extends SchemaConfigured implements HeapSize {
           LOG.debug("Compacting " + file +
             ", keycount=" + keyCount +
             ", bloomtype=" + r.getBloomFilterType().toString() +
-            ", size=" + StringUtils.humanReadableInt(r.length()) );
+            ", size=" + StringUtils.humanReadableInt(r.length()) +
+            ", encoding=" + r.getHFileReader().getEncodingOnDisk());
         }
       }
       // For major compactions calculate the earliest put timestamp
@@ -1494,7 +1520,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     StoreFile storeFile = null;
     try {
       storeFile = new StoreFile(this.fs, path, this.conf,
-          this.cacheConf, this.family.getBloomFilterType());
+          this.cacheConf, this.family.getBloomFilterType(),
+          NoOpDataBlockEncoder.INSTANCE);
       passSchemaMetricsTo(storeFile);
       storeFile.createReader();
     } catch (IOException e) {
@@ -1546,7 +1573,7 @@ public class Store extends SchemaConfigured implements HeapSize {
             " to " + destPath);
       }
       result = new StoreFile(this.fs, destPath, this.conf, this.cacheConf,
-          this.family.getBloomFilterType());
+          this.family.getBloomFilterType(), this.dataBlockEncoder);
       passSchemaMetricsTo(result);
       result.createReader();
     }
@@ -1641,7 +1668,7 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   /**
    * Find the key that matches <i>row</i> exactly, or the one that immediately
-   * preceeds it. WARNING: Only use this method on a table where writes occur
+   * precedes it. WARNING: Only use this method on a table where writes occur
    * with strictly increasing timestamps. This method assumes this pattern of
    * writes in order to make it reasonably performant.  Also our search is
    * dependent on the axiom that deletes are for cells that are in the container
@@ -2134,8 +2161,8 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   public static final long FIXED_OVERHEAD = 
-      ClassSize.align(new SchemaConfigured().heapSize()
-          + (18 * ClassSize.REFERENCE) + (7 * Bytes.SIZEOF_LONG)
+      ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
+          + (19 * ClassSize.REFERENCE) + (7 * Bytes.SIZEOF_LONG)
           + (5 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD

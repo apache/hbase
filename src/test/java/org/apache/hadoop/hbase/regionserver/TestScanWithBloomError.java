@@ -35,12 +35,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
@@ -102,10 +102,10 @@ public class TestScanWithBloomError {
 
   @Test
   public void testThreeStoreFiles() throws IOException {
-    region = TEST_UTIL.createTestRegion(TABLE_NAME,
-        FAMILY, Compression.Algorithm.GZ, bloomType,
-        TestMultiColumnScanner.MAX_VERSIONS,
-        HColumnDescriptor.DEFAULT_BLOCKCACHE, HFile.DEFAULT_BLOCKSIZE);
+    region = TEST_UTIL.createTestRegion(TABLE_NAME, FAMILY,
+        Compression.Algorithm.GZ, bloomType,
+        TestMultiColumnScanner.MAX_VERSIONS, HFile.DEFAULT_BLOCKSIZE,
+        DataBlockEncoding.NONE, true);
     createStoreFile(new int[] {1, 2, 6});
     createStoreFile(new int[] {1, 2, 3, 7});
     createStoreFile(new int[] {1, 9});

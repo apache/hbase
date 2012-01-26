@@ -35,16 +35,17 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
@@ -107,8 +108,9 @@ public class TestMultiColumnScanner {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private Compression.Algorithm comprAlgo;
-  private StoreFile.BloomType bloomType;
+  private final Compression.Algorithm comprAlgo;
+  private final StoreFile.BloomType bloomType;
+  private final DataBlockEncoding dataBlockEncoding;
 
   // Some static sanity-checking.
   static {
@@ -127,20 +129,30 @@ public class TestMultiColumnScanner {
 
   @Parameters
   public static final Collection<Object[]> parameters() {
-    return HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS;
+    List<Object[]> parameters = new ArrayList<Object[]>();
+    for (Object[] bloomAndCompressionParams : 
+        HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS) {
+      for (boolean useDataBlockEncoding : new boolean[]{false, true}) {
+        parameters.add(ArrayUtils.add(bloomAndCompressionParams,
+            useDataBlockEncoding));
+      }
+    }
+    return parameters;
   }
 
   public TestMultiColumnScanner(Compression.Algorithm comprAlgo,
-      StoreFile.BloomType bloomType) {
+      StoreFile.BloomType bloomType, boolean useDataBlockEncoding) {
     this.comprAlgo = comprAlgo;
     this.bloomType = bloomType;
+    this.dataBlockEncoding = useDataBlockEncoding ? DataBlockEncoding.PREFIX :
+        DataBlockEncoding.NONE;
   }
 
   @Test
   public void testMultiColumnScanner() throws IOException {
     HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME, FAMILY, comprAlgo,
-        bloomType, MAX_VERSIONS, HColumnDescriptor.DEFAULT_BLOCKCACHE,
-        HFile.DEFAULT_BLOCKSIZE);
+        bloomType, MAX_VERSIONS, HFile.DEFAULT_BLOCKSIZE,
+        dataBlockEncoding, true);
     List<String> rows = sequentialStrings("row", NUM_ROWS);
     List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
     List<KeyValue> kvs = new ArrayList<KeyValue>();

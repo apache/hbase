@@ -130,16 +130,27 @@ public class KeyValue implements Writable, HeapSize {
     return COMPARATOR.getRawComparator();
   }
 
+  /** Size of the key length field in bytes*/
+  public static final int KEY_LENGTH_SIZE = Bytes.SIZEOF_INT;
+
+  /** Size of the key type field in bytes */
+  public static final int TYPE_SIZE = Bytes.SIZEOF_BYTE;
+
+  /** Size of the row length field in bytes */
+  public static final int ROW_LENGTH_SIZE = Bytes.SIZEOF_SHORT;
+
+  /** Size of the family length field in bytes */
+  public static final int FAMILY_LENGTH_SIZE = Bytes.SIZEOF_BYTE;
+
+  /** Size of the timestamp field in bytes */
+  public static final int TIMESTAMP_SIZE = Bytes.SIZEOF_LONG;
+
   // Size of the timestamp and type byte on end of a key -- a long + a byte.
-  public static final int TIMESTAMP_TYPE_SIZE =
-    Bytes.SIZEOF_LONG /* timestamp */ +
-    Bytes.SIZEOF_BYTE /*keytype*/;
+  public static final int TIMESTAMP_TYPE_SIZE = TIMESTAMP_SIZE + TYPE_SIZE;
 
   // Size of the length shorts and bytes in key.
-  public static final int KEY_INFRASTRUCTURE_SIZE =
-    Bytes.SIZEOF_SHORT /*rowlength*/ +
-    Bytes.SIZEOF_BYTE /*columnfamilylength*/ +
-    TIMESTAMP_TYPE_SIZE;
+  public static final int KEY_INFRASTRUCTURE_SIZE = ROW_LENGTH_SIZE
+      + FAMILY_LENGTH_SIZE + TIMESTAMP_TYPE_SIZE;
 
   // How far into the key the row starts at. First thing to read is the short
   // that says how long the row is.
@@ -701,10 +712,10 @@ public class KeyValue implements Writable, HeapSize {
    */
   /**
    * Produces a string map for this key/value pair. Useful for programmatic use
-   * and manipulation of the data stored in an HLogKey, for example, printing 
-   * as JSON. Values are left out due to their tendency to be large. If needed, 
+   * and manipulation of the data stored in an HLogKey, for example, printing
+   * as JSON. Values are left out due to their tendency to be large. If needed,
    * they can be added manually.
-   * 
+   *
    * @return the Map<String,?> containing data from this key
    */
   public Map<String, Object> toStringMap() {
@@ -730,13 +741,21 @@ public class KeyValue implements Writable, HeapSize {
       Bytes.toStringBinary(b, columnoffset + familylength,
       columnlength - familylength);
     long timestamp = Bytes.toLong(b, o + (l - TIMESTAMP_TYPE_SIZE));
+    String timestampStr = humanReadableTimestamp(timestamp);
     byte type = b[o + l - 1];
-//    return row + "/" + family +
-//      (family != null && family.length() > 0? COLUMN_FAMILY_DELIMITER: "") +
-//      qualifier + "/" + timestamp + "/" + Type.codeToType(type);
     return row + "/" + family +
       (family != null && family.length() > 0? ":" :"") +
-      qualifier + "/" + timestamp + "/" + Type.codeToType(type);
+      qualifier + "/" + timestampStr + "/" + Type.codeToType(type);
+  }
+
+  public static String humanReadableTimestamp(final long timestamp) {
+    if (timestamp == HConstants.LATEST_TIMESTAMP) {
+      return "LATEST_TIMESTAMP";
+    }
+    if (timestamp == HConstants.OLDEST_TIMESTAMP) {
+      return "OLDEST_TIMESTAMP";
+    }
+    return String.valueOf(timestamp);
   }
 
   //---------------------------------------------------------------------------
@@ -780,7 +799,7 @@ public class KeyValue implements Writable, HeapSize {
    * @return length of entire KeyValue, in bytes
    */
   private static int getLength(byte [] bytes, int offset) {
-    return (2 * Bytes.SIZEOF_INT) +
+    return ROW_OFFSET +
         Bytes.toInt(bytes, offset) +
         Bytes.toInt(bytes, offset + Bytes.SIZEOF_INT);
   }
@@ -1321,8 +1340,8 @@ public class KeyValue implements Writable, HeapSize {
     // KV format:  <keylen:4><valuelen:4><key:keylen><value:valuelen>
     // Rebuild as: <keylen:4><0:4><key:keylen>
     int dataLen = lenAsVal? Bytes.SIZEOF_INT : 0;
-    byte [] newBuffer = new byte[getKeyLength() + (2 * Bytes.SIZEOF_INT) + dataLen];
-    System.arraycopy(this.bytes, this.offset, newBuffer, 0, 
+    byte [] newBuffer = new byte[getKeyLength() + ROW_OFFSET + dataLen];
+    System.arraycopy(this.bytes, this.offset, newBuffer, 0,
         Math.min(newBuffer.length,this.length));
     Bytes.putInt(newBuffer, Bytes.SIZEOF_INT, dataLen);
     if (lenAsVal) {
@@ -1393,7 +1412,7 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * This function is only used in Meta key comparisons so its error message 
+   * This function is only used in Meta key comparisons so its error message
    * is specific for meta key errors.
    */
   static int getRequiredDelimiterInReverse(final byte [] b,
@@ -1561,7 +1580,7 @@ public class KeyValue implements Writable, HeapSize {
       return getRawComparator().compareRows(left, loffset, llength,
         right, roffset, rlength);
     }
-    
+
     public int compareColumns(final KeyValue left, final byte [] right,
         final int roffset, final int rlength, final int rfamilyoffset) {
       int offset = left.getFamilyOffset();
@@ -1595,7 +1614,7 @@ public class KeyValue implements Writable, HeapSize {
       short lrowlength = left.getRowLength();
       short rrowlength = right.getRowLength();
       // TsOffset = end of column data. just comparing Row+CF length of each
-      return ((left.getTimestampOffset() - left.getOffset()) == 
+      return ((left.getTimestampOffset() - left.getOffset()) ==
               (right.getTimestampOffset() - right.getOffset())) &&
         matchingRows(left, lrowlength, right, rrowlength) &&
         compareColumns(left, lrowlength, right, rrowlength) == 0;
@@ -1879,9 +1898,9 @@ public class KeyValue implements Writable, HeapSize {
    */
   public static KeyValue createKeyValueFromKey(final byte [] b, final int o,
       final int l) {
-    byte [] newb = new byte[b.length + ROW_OFFSET];
+    byte [] newb = new byte[l + ROW_OFFSET];
     System.arraycopy(b, o, newb, ROW_OFFSET, l);
-    Bytes.putInt(newb, 0, b.length);
+    Bytes.putInt(newb, 0, l);
     Bytes.putInt(newb, Bytes.SIZEOF_INT, 0);
     return new KeyValue(newb);
   }
@@ -2004,9 +2023,23 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * Avoids redundant comparisons for better performance.
+   */
+  public static interface SamePrefixComparator<T> {
+    /**
+     * Compare two keys assuming that the first n bytes are the same.
+     * @param commonPrefix How many bytes are the same.
+     */
+    public int compareIgnoringPrefix(int commonPrefix,
+        T left, int loffset, int llength,
+        T right, int roffset, int rlength);
+  }
+
+  /**
    * Compare key portion of a {@link KeyValue}.
    */
-  public static class KeyComparator implements RawComparator<byte []> {
+  public static class KeyComparator
+      implements RawComparator<byte []>, SamePrefixComparator<byte[]> {
     volatile boolean ignoreTimestamp = false;
     volatile boolean ignoreType = false;
 
@@ -2016,45 +2049,123 @@ public class KeyValue implements Writable, HeapSize {
       short lrowlength = Bytes.toShort(left, loffset);
       short rrowlength = Bytes.toShort(right, roffset);
       int compare = compareRows(left, loffset + Bytes.SIZEOF_SHORT,
-          lrowlength,
-          right, roffset + Bytes.SIZEOF_SHORT, rrowlength);
+          lrowlength, right, roffset + Bytes.SIZEOF_SHORT, rrowlength);
       if (compare != 0) {
         return compare;
       }
 
-      // Compare column family.  Start compare past row and family length.
-      int lcolumnoffset = Bytes.SIZEOF_SHORT + lrowlength + 1 + loffset;
-      int rcolumnoffset = Bytes.SIZEOF_SHORT + rrowlength + 1 + roffset;
-      int lcolumnlength = llength - TIMESTAMP_TYPE_SIZE -
-        (lcolumnoffset - loffset);
-      int rcolumnlength = rlength - TIMESTAMP_TYPE_SIZE -
-        (rcolumnoffset - roffset);
+      // Compare the rest of the two KVs without making any assumptions about
+      // the common prefix. This function will not compare rows anyway, so we
+      // don't need to tell it that the common prefix includes the row.
+      return compareWithoutRow(0, left, loffset, llength, right, roffset,
+          rlength, rrowlength);
+    }
 
-      // if row matches, and no column in the 'left' AND put type is 'minimum',
+    /**
+     * Compare the two key-values, ignoring the prefix of the given length
+     * that is known to be the same between the two.
+     * @param commonPrefix the prefix length to ignore
+     */
+    @Override
+    public int compareIgnoringPrefix(int commonPrefix, byte[] left,
+        int loffset, int llength, byte[] right, int roffset, int rlength) {
+      // Compare row
+      short lrowlength = Bytes.toShort(left, loffset);
+      short rrowlength;
+
+      int comparisonResult = 0;
+      if (commonPrefix < ROW_LENGTH_SIZE) {
+        // almost nothing in common
+        rrowlength = Bytes.toShort(right, roffset);
+        comparisonResult = compareRows(left, loffset + ROW_LENGTH_SIZE,
+            lrowlength, right, roffset + ROW_LENGTH_SIZE, rrowlength);
+      } else { // the row length is the same
+        rrowlength = lrowlength;
+        if (commonPrefix < ROW_LENGTH_SIZE + rrowlength) {
+          // The rows are not the same. Exclude the common prefix and compare
+          // the rest of the two rows.
+          int common = commonPrefix - ROW_LENGTH_SIZE;
+          comparisonResult = compareRows(
+              left, loffset + common + ROW_LENGTH_SIZE, lrowlength - common,
+              right, roffset + common + ROW_LENGTH_SIZE, rrowlength - common);
+        }
+      }
+      if (comparisonResult != 0) {
+        return comparisonResult;
+      }
+
+      assert lrowlength == rrowlength;
+
+      return compareWithoutRow(commonPrefix, left, loffset, llength, right,
+          roffset, rlength, lrowlength);
+    }
+
+    /**
+     * Compare column, timestamp, and key type (everything except the row).
+     * This method is used both in the normal comparator and the "same-prefix"
+     * comparator. Note that we are assuming that row portions of both KVs have
+     * already been parsed and found identical, and we don't validate that
+     * assumption here.
+     * @param commonPrefix the length of the common prefix of the two
+     *          key-values being compared, including row length and row
+     */
+    private int compareWithoutRow(int commonPrefix, byte[] left, int loffset,
+        int llength, byte[] right, int roffset, int rlength, short rowlength) {
+      // Compare column family. Start comparing past row and family length.
+      int lcolumnoffset = ROW_LENGTH_SIZE + FAMILY_LENGTH_SIZE +
+          rowlength + loffset;
+      int rcolumnoffset = ROW_LENGTH_SIZE + FAMILY_LENGTH_SIZE +
+          rowlength + roffset;
+      int lcolumnlength = llength - TIMESTAMP_TYPE_SIZE -
+          (lcolumnoffset - loffset);
+      int rcolumnlength = rlength - TIMESTAMP_TYPE_SIZE -
+          (rcolumnoffset - roffset);
+
+      // If row matches, and no column in the 'left' AND put type is 'minimum',
       // then return that left is larger than right.
 
-      // This supports 'last key on a row' - the magic is if there is no column in the
-      // left operand, and the left operand has a type of '0' - magical value,
-      // then we say the left is bigger.  This will let us seek to the last key in
-      // a row.
+      // This supports 'last key on a row' - the magic is if there is no column
+      // in the left operand, and the left operand has a type of '0' - magical
+      // value, then we say the left is bigger.  This will let us seek to the
+      // last key in a row.
 
       byte ltype = left[loffset + (llength - 1)];
       byte rtype = right[roffset + (rlength - 1)];
 
+      // If the column is not specified, the "minimum" key type appears the
+      // latest in the sorted order, regardless of the timestamp. This is used
+      // for specifying the last key/value in a given row, because there is no
+      // "lexicographically last column" (it would be infinitely long).  The
+      // "maximum" key type does not need this behavior.
       if (lcolumnlength == 0 && ltype == Type.Minimum.getCode()) {
-        return 1; // left is bigger.
+        // left is "bigger", i.e. it appears later in the sorted order
+        return 1;
       }
       if (rcolumnlength == 0 && rtype == Type.Minimum.getCode()) {
         return -1;
       }
 
-      // TODO the family and qualifier should be compared separately
-      compare = Bytes.compareTo(left, lcolumnoffset, lcolumnlength, right,
-          rcolumnoffset, rcolumnlength);
-      if (compare != 0) {
-        return compare;
+      int common = 0;
+      if (commonPrefix > 0) {
+        common = Math.max(0, commonPrefix -
+            rowlength - ROW_LENGTH_SIZE - FAMILY_LENGTH_SIZE);
+        common = Math.min(common, Math.min(lcolumnlength, rcolumnlength));
       }
 
+      final int comparisonResult = Bytes.compareTo(
+          left, lcolumnoffset + common, lcolumnlength - common,
+          right, rcolumnoffset + common, rcolumnlength - common);
+      if (comparisonResult != 0) {
+        return comparisonResult;
+      }
+
+      return compareTimestampAndType(left, loffset, llength, right, roffset,
+          rlength, ltype, rtype);
+    }
+
+    private int compareTimestampAndType(byte[] left, int loffset, int llength,
+        byte[] right, int roffset, int rlength, byte ltype, byte rtype) {
+      int compare;
       if (!this.ignoreTimestamp) {
         // Get timestamps.
         long ltimestamp = Bytes.toLong(left,
@@ -2069,7 +2180,9 @@ public class KeyValue implements Writable, HeapSize {
 
       if (!this.ignoreType) {
         // Compare types. Let the delete types sort ahead of puts; i.e. types
-        // of higher numbers sort before those of lesser numbers
+        // of higher numbers sort before those of lesser numbers. Maximum (255)
+        // appears ahead of everything, and minimum (0) appears after
+        // everything.
         return (0xff & rtype) - (0xff & ltype);
       }
       return 0;

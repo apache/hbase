@@ -123,7 +123,6 @@ public class MultiThreadedWriter extends MultiThreadedAction {
 
   private class HBaseWriterThread extends Thread {
     private final HTable table;
-    private final int writerId;
 
     private final Random random = new Random();
     private final LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(
@@ -132,7 +131,6 @@ public class MultiThreadedWriter extends MultiThreadedAction {
     public HBaseWriterThread(int writerId) throws IOException {
       setName(getClass().getSimpleName() + "_" + writerId);
       table = new HTable(conf, tableName);
-      this.writerId = writerId;
     }
 
     public void run() {
@@ -166,7 +164,7 @@ public class MultiThreadedWriter extends MultiThreadedAction {
     public void insert(long rowKey, long col) {
       Put put = new Put(longToByteArrayKey(rowKey));
       String colAsStr = String.valueOf(col);
-      put.add(columnFamily, colAsStr.getBytes(),
+      put.add(columnFamily, Bytes.toBytes(colAsStr),
           dataGenerator.generateRandomSizeValue(rowKey, colAsStr));
       try {
         long start = System.currentTimeMillis();

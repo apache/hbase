@@ -68,7 +68,7 @@ public class LoadTestKVGenerator {
     String md5hash = MD5Hash.getMD5AsHex(Bytes.toBytes(stringKey));
 
     // flip the key to randomize
-    return md5hash + ":" + stringKey;
+    return md5hash + "-" + stringKey;
   }
 
   /**

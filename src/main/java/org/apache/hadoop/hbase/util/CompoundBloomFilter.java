@@ -24,6 +24,7 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
@@ -95,7 +96,8 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
       try {
         // We cache the block and use a positional read.
         bloomBlock = reader.readBlock(index.getRootBlockOffset(block),
-            index.getRootBlockDataSize(block), true, true, false);
+            index.getRootBlockDataSize(block), true, true, false,
+            BlockType.BLOOM_CHUNK);
       } catch (IOException ex) {
         // The Bloom filter is broken, turn it off.
         throw new IllegalArgumentException(

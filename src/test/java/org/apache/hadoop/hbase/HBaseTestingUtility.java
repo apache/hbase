@@ -56,7 +56,9 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -1879,9 +1881,13 @@ public class HBaseTestingUtility {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf,
-      byte[] tableName, byte[] columnFamily) throws IOException {
+      byte[] tableName, byte[] columnFamily, Algorithm compression,
+      DataBlockEncoding dataBlockEncoding) throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(columnFamily));
+    HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
+    hcd.setDataBlockEncoding(dataBlockEncoding);
+    hcd.setCompressionType(compression);
+    desc.addFamily(hcd);
 
     int totalNumberOfRegions = 0;
     try {
@@ -1924,15 +1930,18 @@ public class HBaseTestingUtility {
 
   public HRegion createTestRegion(String tableName, String cfName,
       Compression.Algorithm comprAlgo, BloomType bloomType, int maxVersions,
-      boolean blockCacheEnabled, int blockSize) throws IOException {
+      int blockSize, DataBlockEncoding encoding, boolean encodeOnDisk)
+      throws IOException {
     HColumnDescriptor hcd =
       new HColumnDescriptor(Bytes.toBytes(cfName), maxVersions,
           comprAlgo.getName(),
           HColumnDescriptor.DEFAULT_IN_MEMORY,
-          blockCacheEnabled,
+          HColumnDescriptor.DEFAULT_BLOCKCACHE,
           HColumnDescriptor.DEFAULT_TTL,
           bloomType.toString());
     hcd.setBlocksize(HFile.DEFAULT_BLOCKSIZE);
+    hcd.setDataBlockEncoding(encoding);
+    hcd.setEncodeOnDisk(encodeOnDisk);
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(hcd);
     HRegionInfo info =

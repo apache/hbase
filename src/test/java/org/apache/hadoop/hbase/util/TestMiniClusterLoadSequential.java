@@ -19,14 +19,21 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,25 +55,39 @@ public class TestMiniClusterLoadSequential {
 
   protected static final byte[] TABLE = Bytes.toBytes("load_test_tbl");
   protected static final byte[] CF = Bytes.toBytes("load_test_cf");
-  protected static final long NUM_KEYS = 10000;
   protected static final int NUM_THREADS = 8;
   protected static final int NUM_RS = 2;
+  protected static final int TIMEOUT_MS = 120000;
   protected static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
 
   protected final Configuration conf = TEST_UTIL.getConfiguration();
   protected final boolean isMultiPut;
+  protected final DataBlockEncoding dataBlockEncoding;
 
   protected MultiThreadedWriter writerThreads;
   protected MultiThreadedReader readerThreads;
+  protected int numKeys;
 
-  public TestMiniClusterLoadSequential(boolean isMultiPut) {
+  protected Compression.Algorithm compression = Compression.Algorithm.NONE;
+
+  public TestMiniClusterLoadSequential(boolean isMultiPut,
+      DataBlockEncoding dataBlockEncoding) {
     this.isMultiPut = isMultiPut;
+    this.dataBlockEncoding = dataBlockEncoding;
+    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
   }
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    return HBaseTestingUtility.BOOLEAN_PARAMETERIZED;
+    List<Object[]> parameters = new ArrayList<Object[]>();
+    for (boolean multiPut : new boolean[]{false, true}) {
+      for (DataBlockEncoding dataBlockEncoding : new DataBlockEncoding[] {
+          DataBlockEncoding.NONE, DataBlockEncoding.PREFIX }) {
+        parameters.add(new Object[]{multiPut, dataBlockEncoding});
+      }
+    }
+    return parameters;
   }
 
   @Before
@@ -81,22 +102,28 @@ public class TestMiniClusterLoadSequential {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=120000)
+  @Test(timeout=TIMEOUT_MS)
   public void loadTest() throws Exception {
     prepareForLoadTest();
+    runLoadTestOnExistingTable();
+  }
 
-    writerThreads.start(0, NUM_KEYS, NUM_THREADS);
+  protected void runLoadTestOnExistingTable() throws IOException {
+    writerThreads.start(0, numKeys, NUM_THREADS);
     writerThreads.waitForFinish();
     assertEquals(0, writerThreads.getNumWriteFailures());
 
-    readerThreads.start(0, NUM_KEYS, NUM_THREADS);
+    readerThreads.start(0, numKeys, NUM_THREADS);
     readerThreads.waitForFinish();
     assertEquals(0, readerThreads.getNumReadFailures());
     assertEquals(0, readerThreads.getNumReadErrors());
-    assertEquals(NUM_KEYS, readerThreads.getNumKeysVerified());
+    assertEquals(numKeys, readerThreads.getNumKeysVerified());
   }
 
   protected void prepareForLoadTest() throws IOException {
+    LOG.info("Starting load test: dataBlockEncoding=" + dataBlockEncoding +
+        ", isMultiPut=" + isMultiPut);
+    numKeys = numKeys();
     HBaseAdmin admin = new HBaseAdmin(conf);
     while (admin.getClusterStatus().getServers().size() < NUM_RS) {
       LOG.info("Sleeping until " + NUM_RS + " RSs are online");
@@ -104,13 +131,23 @@ public class TestMiniClusterLoadSequential {
     }
     admin.close();
 
-    int numRegions =
-        HBaseTestingUtility.createPreSplitLoadTestTable(conf, TABLE, CF);
+    int numRegions = HBaseTestingUtility.createPreSplitLoadTestTable(conf,
+        TABLE, CF, compression, dataBlockEncoding);
+
     TEST_UTIL.waitUntilAllRegionsAssigned(numRegions);
 
     writerThreads = new MultiThreadedWriter(conf, TABLE, CF);
     writerThreads.setMultiPut(isMultiPut);
     readerThreads = new MultiThreadedReader(conf, TABLE, CF, 100);
+  }
+
+  protected int numKeys() {
+    return 10000;
+  }
+
+  protected HColumnDescriptor getColumnDesc(HBaseAdmin admin)
+      throws TableNotFoundException, IOException {
+    return admin.getTableDescriptor(TABLE).getFamily(CF);
   }
 
 }

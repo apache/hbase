@@ -242,7 +242,7 @@ public class MultiThreadedReader extends MultiThreadedAction
     }
 
     public void queryKey(Get get, boolean verify) throws IOException {
-      String rowKey = new String(get.getRow());
+      String rowKey = Bytes.toString(get.getRow());
 
       // read the data
       long start = System.currentTimeMillis();

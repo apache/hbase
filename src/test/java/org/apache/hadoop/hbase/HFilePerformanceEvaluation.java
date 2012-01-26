@@ -191,7 +191,8 @@ public class HFilePerformanceEvaluation {
     void setUp() throws Exception {
       writer =
         HFile.getWriterFactoryNoCache(conf).createWriter(this.fs,
-            this.mf, RFILE_BLOCKSIZE, (Compression.Algorithm) null, null);
+            this.mf, RFILE_BLOCKSIZE, (Compression.Algorithm) null, null,
+            null);
     }
 
     @Override

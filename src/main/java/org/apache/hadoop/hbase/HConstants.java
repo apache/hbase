@@ -237,6 +237,10 @@ public final class HConstants {
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
 
+  /** Conf key for the memstore size at which we flush the memstore */
+  public static final String HREGION_MEMSTORE_FLUSH_SIZE =
+      "hbase.hregion.memstore.flush.size";
+
   /** Default size of a reservation block   */
   public static final int DEFAULT_SIZE_RESERVATION_BLOCK = 1024 * 1024 * 5;
 

@@ -63,8 +63,11 @@ import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.Reference.Range;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -528,9 +531,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     CacheConfig cacheConf = new CacheConfig(conf);
     HalfStoreFileReader halfReader = null;
     StoreFile.Writer halfWriter = null;
+    HFileDataBlockEncoder dataBlockEncoder = new HFileDataBlockEncoderImpl(
+        familyDescriptor.getDataBlockEncodingOnDisk(),
+        familyDescriptor.getDataBlockEncoding());
     try {
       halfReader = new HalfStoreFileReader(fs, inFile, cacheConf,
-          reference);
+          reference, DataBlockEncoding.NONE);
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
       int blocksize = familyDescriptor.getBlocksize();
@@ -538,7 +544,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
 
       halfWriter = new StoreFile.Writer(
-          fs, outFile, blocksize, compression, conf, cacheConf,
+          fs, outFile, blocksize, compression, dataBlockEncoder,
+          conf, cacheConf,
           KeyValue.COMPARATOR, bloomFilterType, 0);
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();
@@ -638,7 +645,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       Path[] hfiles = FileUtil.stat2Paths(fs.listStatus(familyDir));
       for (Path hfile : hfiles) {
         if (hfile.getName().startsWith("_")) continue;
-        
         HFile.Reader reader = HFile.createReader(fs, hfile,
             new CacheConfig(getConf()));
         final byte[] first, last;

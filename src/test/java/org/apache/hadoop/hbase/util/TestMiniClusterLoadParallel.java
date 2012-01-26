@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -33,18 +34,19 @@ import org.junit.runners.Parameterized;
 public class TestMiniClusterLoadParallel
     extends TestMiniClusterLoadSequential {
 
-  public TestMiniClusterLoadParallel(boolean isMultiPut) {
-    super(isMultiPut);
+  public TestMiniClusterLoadParallel(boolean isMultiPut,
+      DataBlockEncoding encoding) {
+    super(isMultiPut, encoding);
   }
 
-  @Test(timeout=120000)
+  @Test(timeout=TIMEOUT_MS)
   public void loadTest() throws Exception {
     prepareForLoadTest();
 
     readerThreads.linkToWriter(writerThreads);
 
-    writerThreads.start(0, NUM_KEYS, NUM_THREADS);
-    readerThreads.start(0, NUM_KEYS, NUM_THREADS);
+    writerThreads.start(0, numKeys, NUM_THREADS);
+    readerThreads.start(0, numKeys, NUM_THREADS);
 
     writerThreads.waitForFinish();
     readerThreads.waitForFinish();
@@ -52,7 +54,7 @@ public class TestMiniClusterLoadParallel
     assertEquals(0, writerThreads.getNumWriteFailures());
     assertEquals(0, readerThreads.getNumReadFailures());
     assertEquals(0, readerThreads.getNumReadErrors());
-    assertEquals(NUM_KEYS, readerThreads.getNumUniqueKeysVerified());
+    assertEquals(numKeys, readerThreads.getNumUniqueKeysVerified());
   }
 
 }
