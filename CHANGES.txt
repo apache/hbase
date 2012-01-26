@@ -877,6 +877,7 @@ Release 0.92.0 - 01/23/2012
 Release 0.90.7 - Unreleased
 
   BUG FIXES
+   HBASE-5271  Result.getValue and Result.getColumnLatest return the wrong column (Ghais Issa)
 
 Release 0.90.6 - Unreleased
 
