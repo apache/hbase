@@ -1155,7 +1155,7 @@ public class KeyValue implements Writable, HeapSize {
     int o = getFamilyOffset(rl);
     int fl = getFamilyLength(o);
     int ql = getQualifierLength(rl,fl);
-    if (Bytes.compareTo(family, 0, family.length, this.bytes, o, family.length)
+    if (Bytes.compareTo(family, 0, family.length, this.bytes, o, fl)
         != 0) {
       return false;
     }

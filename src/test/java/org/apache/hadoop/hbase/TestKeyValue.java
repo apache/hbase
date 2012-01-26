@@ -54,6 +54,21 @@ public class TestKeyValue extends TestCase {
     assertFalse(aaa.matchingColumn(family2,qualifier2));
   }
 
+  /** 
+   * Test a corner case when the family qualifier is a prefix of the 
+   * column qualifier.
+   */
+  public void testColumnCompare_prefix() throws Exception {
+    final byte [] a = Bytes.toBytes("aaa");
+    byte [] family1 = Bytes.toBytes("abc");
+    byte [] qualifier1 = Bytes.toBytes("def");
+    byte [] family2 = Bytes.toBytes("ab");
+    byte [] qualifier2 = Bytes.toBytes("def");
+
+    KeyValue aaa = new KeyValue(a, family1, qualifier1, 0L, Type.Put, a);
+    assertFalse(aaa.matchingColumn(family2, qualifier2));
+  }
+
   public void testBasics() throws Exception {
     LOG.info("LOWKEY: " + KeyValue.LOWESTKEY.toString());
     check(Bytes.toBytes(getName()),
