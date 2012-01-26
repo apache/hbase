@@ -41,6 +41,7 @@ Release 0.90.6 - Unreleased
                threads has exceptions. (Ram)
    HBASE-5243  LogSyncerThread not getting shutdown waiting for the interrupted flag (Ram)
    HBASE-5269  IllegalMonitorStateException while retryin HLog split in 0.90 branch. (Ram)
+   HBASE-5137  MasterFileSystem.splitLog() should abort even if waitOnSafeMode() throws IOException (Ram)
 
   IMPROVEMENT
    HBASE-5102  Change the default value of the property "hbase.connection.per.config" to false in
@@ -148,7 +149,7 @@ Release 0.90.5 - Dec 22, 2011
                (Chunhui Shen)
    HBASE-4773  HBaseAdmin may leak ZooKeeper connections (Xufeng)
    HBASE-4900  Fix javadoc warnings out on 0.90 branch
-   HBASE-5137  MasterFileSystem.splitLog() should abort even if waitOnSafeMode() throws IOException (Ram)
+
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
