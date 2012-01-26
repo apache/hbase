@@ -9,6 +9,7 @@ Release 0.92.1 - Unreleased
    HBASE-5176  AssignmentManager#getRegion: logging nit  adds a redundant '+' (Karthik K)
    HBASE-5278  HBase shell script refers to removed "migrate" functionality
                (Shaneal Manek)
+   HBASE-5282  Possible file handle leak with truncated HLog file
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()

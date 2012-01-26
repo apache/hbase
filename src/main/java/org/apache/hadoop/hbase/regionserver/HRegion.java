@@ -2337,8 +2337,9 @@ public class HRegion implements HeapSize { // , Writable{
     MonitoredTask status = TaskMonitor.get().createStatus(msg);
 
     status.setStatus("Opening logs");
-    HLog.Reader reader = HLog.getReader(this.fs, edits, conf);
+    HLog.Reader reader = null;
     try {
+      reader = HLog.getReader(this.fs, edits, conf);
       long currentEditSeqId = minSeqId;
       long firstSeqIdInLog = -1;
       long skippedEdits = 0;
@@ -2469,8 +2470,10 @@ public class HRegion implements HeapSize { // , Writable{
       LOG.debug(msg);
       return currentEditSeqId;
     } finally {
-      reader.close();
       status.cleanup();
+      if (reader != null) {  
+         reader.close();
+      }
     }
   }
 
