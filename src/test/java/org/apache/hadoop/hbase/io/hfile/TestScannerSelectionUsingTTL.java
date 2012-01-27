@@ -20,9 +20,9 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -35,9 +35,12 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Test;
@@ -70,19 +73,27 @@ public class TestScannerSelectionUsingTTL {
   private static final int NUM_ROWS = 8;
   private static final int NUM_COLS_PER_ROW = 5;
 
-  public final int numFreshFiles;
+  public final int numFreshFiles, totalNumFiles;
+
+  /** Whether we are specifying the exact files to compact */
+  private final boolean explicitCompaction;
 
   @Parameters
-  public static Collection<Object[]> parametersNumFreshFiles() {
-    return Arrays.asList(new Object[][]{
-        new Object[] { new Integer(1) },
-        new Object[] { new Integer(2) },
-        new Object[] { new Integer(3) }
-    });
+  public static Collection<Object[]> parameters() {
+    List<Object[]> params = new ArrayList<Object[]>();
+    for (int numFreshFiles = 1; numFreshFiles <= 3; ++numFreshFiles) {
+      for (boolean explicitCompaction : new boolean[] { false, true }) {
+        params.add(new Object[] { numFreshFiles, explicitCompaction });
+      }
+    }
+    return params;
   }
 
-  public TestScannerSelectionUsingTTL(int numFreshFiles) {
+  public TestScannerSelectionUsingTTL(int numFreshFiles,
+      boolean explicitCompaction) {
     this.numFreshFiles = numFreshFiles;
+    this.totalNumFiles = numFreshFiles + NUM_EXPIRED_FILES;
+    this.explicitCompaction = explicitCompaction;
   }
 
   @Test
@@ -101,7 +112,7 @@ public class TestScannerSelectionUsingTTL {
         HRegion.createHRegion(info, TEST_UTIL.getClusterTestDir(),
             TEST_UTIL.getConfiguration(), htd);
 
-    for (int iFile = 0; iFile < NUM_EXPIRED_FILES + numFreshFiles; ++iFile) {
+    for (int iFile = 0; iFile < totalNumFiles; ++iFile) {
       if (iFile == NUM_EXPIRED_FILES) {
         Threads.sleepWithoutInterrupt(TTL_MS);
       }
@@ -135,11 +146,28 @@ public class TestScannerSelectionUsingTTL {
     assertEquals(NUM_ROWS, numReturnedRows);
     Set<String> accessedFiles = cache.getCachedFileNamesForTest();
     LOG.debug("Files accessed during scan: " + accessedFiles);
-    assertEquals("If " + (NUM_EXPIRED_FILES + numFreshFiles) + " files are "
-        + "accessed instead of " + numFreshFiles + ", we are "
-        + "not filtering expired files out.", numFreshFiles,
-        accessedFiles.size());
 
+    Map<String, Long> metricsBeforeCompaction =
+      SchemaMetrics.getMetricsSnapshot();
+
+    // Exercise both compaction codepaths.
+    if (explicitCompaction) {
+      region.getStore(FAMILY_BYTES).compactRecentForTesting(totalNumFiles);
+    } else {
+      region.compactStores();
+    }
+
+    SchemaMetrics.validateMetricChanges(metricsBeforeCompaction);
+    Map<String, Long> compactionMetrics =
+        SchemaMetrics.diffMetrics(metricsBeforeCompaction,
+            SchemaMetrics.getMetricsSnapshot());
+    long compactionDataBlocksRead = SchemaMetrics.getLong(
+        compactionMetrics,
+        SchemaMetrics.getInstance(TABLE, FAMILY).getBlockMetricName(
+            BlockCategory.DATA, true, BlockMetricType.READ_COUNT));
+    assertEquals("Invalid number of blocks accessed during compaction. " +
+        "We only expect non-expired files to be accessed.",
+        numFreshFiles, compactionDataBlocksRead);
     region.close();
   }
 

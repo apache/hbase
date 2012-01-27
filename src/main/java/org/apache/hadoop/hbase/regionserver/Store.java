@@ -845,6 +845,11 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
   }
 
+  /**
+   * Get all scanners with no filtering based on TTL (that happens further down
+   * the line).
+   * @return all scanners for this store
+   */
   protected List<KeyValueScanner> getScanners(boolean cacheBlocks,
       boolean isGet,
       boolean isCompaction,
@@ -964,10 +969,10 @@ public class Store extends SchemaConfigured implements HeapSize {
         + StringUtils.humanReadableInt(storeSize));
   }
 
-  /*
-   * Compact the most recent N files. Essentially a hook for testing.
+  /**
+   * Compact the most recent N files. Used in testing.
    */
-  protected void compactRecent(int N) throws IOException {
+  public void compactRecentForTesting(int N) throws IOException {
     List<StoreFile> filesToCompact;
     long maxId;
     boolean isMajor;
@@ -1926,7 +1931,8 @@ public class Store extends SchemaConfigured implements HeapSize {
   //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Return a scanner for both the memstore and the HStore files
+   * Return a scanner for both the memstore and the HStore files. Assumes we
+   * are not in a compaction.
    * @throws IOException
    */
   public StoreScanner getScanner(Scan scan,
