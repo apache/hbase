@@ -742,7 +742,7 @@ public class SchemaMetrics {
     return metricsSnapshot;
   }
 
-  private static long getLong(Map<String, Long> m, String k) {
+  public static long getLong(Map<String, Long> m, String k) {
     Long l = m.get(k);
     return l != null ? l : 0;
   }
