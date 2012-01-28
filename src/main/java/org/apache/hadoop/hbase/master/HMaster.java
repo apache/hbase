@@ -362,7 +362,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // Set the cluster as up.  If new RSs, they'll be waiting on this before
     // going ahead with their startup.
     this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
-    this.clusterStatusTracker.start(true);
+    this.clusterStatusTracker.start();
     boolean wasUp = this.clusterStatusTracker.isClusterUp();
     if (!wasUp) this.clusterStatusTracker.setClusterUp();
 

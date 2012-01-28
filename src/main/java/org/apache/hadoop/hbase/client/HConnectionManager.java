@@ -444,6 +444,8 @@ public class HConnectionManager {
     private volatile boolean closed;
     private volatile HMasterInterface master;
     private volatile boolean masterChecked;
+    private volatile boolean isResettingZKTrackers;
+
     // ZooKeeper reference
     private ZooKeeperWatcher zooKeeper;
     // ZooKeeper-based master address tracker
@@ -511,25 +513,28 @@ public class HConnectionManager {
           HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
 
-      setupZookeeperTrackers(true);
+      setupZookeeperTrackers();
 
       this.master = null;
       this.masterChecked = false;
+      this.isResettingZKTrackers = false;
     }
 
-    private boolean setupZookeeperTrackers(boolean allowAbort)
+    private boolean setupZookeeperTrackers()
         throws ZooKeeperConnectionException{
       // initialize zookeeper and master address manager
       this.zooKeeper = getZooKeeperWatcher();
       this.masterAddressTracker = new MasterAddressTracker(this.zooKeeper, this);
       this.rootRegionTracker = new RootRegionTracker(this.zooKeeper, this);
-      if (!this.masterAddressTracker.start(allowAbort)) {
+      if (!this.masterAddressTracker.start()) {
+        this.zooKeeper.close();
         this.masterAddressTracker.stop();
         this.masterAddressTracker = null;
         this.zooKeeper = null;
         return false;
       }
-      if (!this.rootRegionTracker.start(allowAbort)) {
+      if (!this.rootRegionTracker.start()) {
+        this.zooKeeper.close();
         this.masterAddressTracker.stop();
         this.rootRegionTracker.stop();
         this.masterAddressTracker = null;
@@ -544,33 +549,40 @@ public class HConnectionManager {
     public synchronized void resetZooKeeperTrackersWithRetries()
         throws ZooKeeperConnectionException {
       LOG.info("Trying to reconnect to zookeeper.");
-      if (this.masterAddressTracker != null) {
-        this.masterAddressTracker.stop();
-        this.masterAddressTracker = null;
-      }
-      if (this.rootRegionTracker != null) {
-        this.rootRegionTracker.stop();
-        this.rootRegionTracker = null;
-      }
-      this.zooKeeper = null;
-      for (int tries = 0; tries < this.numRetries; tries++) {
-        boolean isLastTime = (tries == (this.numRetries - 1));
-        try {
-          if (setupZookeeperTrackers(isLastTime)) {
-            break;
+      this.isResettingZKTrackers = true;
+      try {
+        if (this.masterAddressTracker != null) {
+          this.masterAddressTracker.stop();
+          this.masterAddressTracker = null;
+        }
+        if (this.rootRegionTracker != null) {
+          this.rootRegionTracker.stop();
+          this.rootRegionTracker = null;
+        }
+        if (this.zooKeeper != null) {
+          this.zooKeeper.close();
+          this.zooKeeper = null;
+        }
+        for (int tries = 0; tries < this.numRetries; tries++) {
+          try {
+            if (setupZookeeperTrackers()) {
+              break;
+            }
+          } catch (ZooKeeperConnectionException zkce) {
+            if (tries + 1 >= this.numRetries) {
+              throw zkce;
+            }
           }
-        } catch (ZooKeeperConnectionException zkce) {
-          if (isLastTime) {
-            throw zkce;
+          LOG.info("Tried to reconnect to zookeeper but failed,  already tried "
+              + tries + " times.");
+          try {
+            Thread.sleep(ConnectionUtils.getPauseTime(this.pause, tries));
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
           }
         }
-        LOG.info("Tried to reconnect to zookeeper but failed,  already tried "
-            + tries + " times.");
-        try {
-          Thread.sleep(ConnectionUtils.getPauseTime(this.pause, tries));
-        } catch (InterruptedException e1) {
-          Thread.currentThread().interrupt();
-        }
+      } finally {
+        this.isResettingZKTrackers = false;
       }
     }
 
@@ -1569,6 +1581,9 @@ public class HConnectionManager {
     public void abort(final String msg, Throwable t) {
       if ((t instanceof KeeperException.SessionExpiredException)
           || (t instanceof KeeperException.ConnectionLossException)) {
+        if (this.isResettingZKTrackers) {
+          return;
+        }
         try {
           LOG.info("This client just lost it's session with ZooKeeper, trying" +
               " to reconnect.");

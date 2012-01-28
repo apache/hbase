@@ -171,7 +171,7 @@ public class ReplicationZookeeper {
     // Set a tracker on replicationStateNodeNode
     this.statusTracker =
         new ReplicationStatusTracker(this.zookeeper, abortable);
-    statusTracker.start(true);
+    statusTracker.start();
     readReplicationStateZnode();
   }
 

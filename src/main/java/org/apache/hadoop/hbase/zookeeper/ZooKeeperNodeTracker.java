@@ -71,7 +71,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
    *          KeeperException occur. 
    * @return start result. true if start successfully.
    */
-  public synchronized boolean start(boolean allowAbort) {
+  public synchronized boolean start() {
     this.watcher.registerListener(this);
     try {
       if(ZKUtil.watchAndCheckExists(watcher, node)) {
@@ -80,12 +80,12 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
           this.data = data;
         } else {
           // It existed but now does not, try again to ensure a watch is set
-          return start(allowAbort);
+          return start();
         }
       }
       return true;
     } catch (KeeperException e) {
-      if (allowAbort && (abortable != null)) {
+      if (abortable != null) {
         abortable.abort("Unexpected exception during initialization, aborting",
             e);
       }
