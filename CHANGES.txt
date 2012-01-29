@@ -1,12 +1,9 @@
 HBase Change Log
-Release 0.90.7 - Unreleased
-  INCOMPATIBLE CHANGES
-   HBASE-5228  [REST] Rip out "transform" feature
-  
-  BUG FIXES
-   HBASE-5271  Result.getValue and Result.getColumnLatest return the wrong column (Ghais Issa)
 
 Release 0.90.6 - Unreleased
+  INCOMPATIBLE CHANGES
+   HBASE-5228  [REST] Rip out "transform" feature
+
   BUG FIXES
    HBASE-5008  The clusters can't provide services because Region can't flush
                (Gaojinchao)
@@ -43,6 +40,7 @@ Release 0.90.6 - Unreleased
    HBASE-5243  LogSyncerThread not getting shutdown waiting for the interrupted flag (Ram)
    HBASE-5269  IllegalMonitorStateException while retryin HLog split in 0.90 branch. (Ram)
    HBASE-5137  MasterFileSystem.splitLog() should abort even if waitOnSafeMode() throws IOException (Ram)
+   HBASE-5271  Result.getValue and Result.getColumnLatest return the wrong column (Ghais Issa)
    HBASE-5153  Addendum for 0.90 branch (Jieshan)
 
   IMPROVEMENT
