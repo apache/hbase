@@ -312,11 +312,24 @@ false
           <section xml:id="hbase.regionserver.blockCacheCount"><title><varname>hbase.regionserver.blockCacheCount</varname></title>
           <para>Block cache item count in memory.  This is the number of blocks of StoreFiles (HFiles) in the cache.</para>
 		  </section>
+         <section xml:id="hbase.regionserver.blockCacheEvictedCount"><title><varname>hbase.regionserver.blockCacheEvictedCount</varname></title>
+          <para>Number of blocks that had to be evicted from the block cache due to heap size constraints.</para>
+		  </section>
          <section xml:id="hbase.regionserver.blockCacheFree"><title><varname>hbase.regionserver.blockCacheFree</varname></title>
           <para>Block cache memory available (bytes).</para>
 		  </section>
-         <section xml:id="hbase.regionserver.blockCacheHitRatio"><title><varname>hbase.regionserver.blockCacheHitRatio</varname></title>
-          <para>Block cache hit ratio (0 to 100).  TODO:  describe impact to ratio where read requests that have cacheBlocks=false</para>
+          <section xml:id="hbase.regionserver.blockCacheHitCachingRatio"><title><varname>hbase.regionserver.blockCacheHitCachingRatio</varname></title>
+          <para>Block cache hit caching ratio (0 to 100).  The cache-hit ratio for reads configured to look in the cache (i.e., cacheBlocks=true). </para>
+		  </section>
+          <section xml:id="hbase.regionserver.blockCacheHitCount"><title><varname>hbase.regionserver.blockCacheHitCount</varname></title>
+          <para>Number of blocks of StoreFiles (HFiles) read from the cache.</para>
+		  </section>
+          <section xml:id="hbase.regionserver.blockCacheHitRatio"><title><varname>hbase.regionserver.blockCacheHitRatio</varname></title>
+          <para>Block cache hit ratio (0 to 100).  Includes all read requests, although those with cacheBlocks=false
+           will always read from disk and be counted as a "cache miss".</para>
+		  </section>
+          <section xml:id="hbase.regionserver.blockCacheMissCount"><title><varname>hbase.regionserver.blockCacheMissCount</varname></title>
+          <para>Number of blocks of StoreFiles (HFiles) requested but not read from the cache.</para>
 		  </section>
           <section xml:id="hbase.regionserver.blockCacheSize"><title><varname>hbase.regionserver.blockCacheSize</varname></title>
           <para>Block cache size in memory (bytes).  i.e., memory in use by the BlockCache</para>
@@ -324,23 +337,26 @@ false
           <section xml:id="hbase.regionserver.compactionQueueSize"><title><varname>hbase.regionserver.compactionQueueSize</varname></title>
           <para>Size of the compaction queue.  This is the number of Stores in the RegionServer that have been targeted for compaction.</para>
 		  </section>
+          <section xml:id="hbase.regionserver.flushQueueSize"><title><varname>hbase.regionserver.flushQueueSize</varname></title>
+          <para>Number of enqueued regions in the MemStore awaiting flush.</para>
+		  </section>
           <section xml:id="hbase.regionserver.fsReadLatency_avg_time"><title><varname>hbase.regionserver.fsReadLatency_avg_time</varname></title>
           <para>Filesystem read latency (ms).  This is the average time to read from HDFS.</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsReadLatency_num_ops"><title><varname>hbase.regionserver.fsReadLatency_num_ops</varname></title>
-          <para>TODO</para>
+          <para>Filesystem read operations.</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsSyncLatency_avg_time"><title><varname>hbase.regionserver.fsSyncLatency_avg_time</varname></title>
-          <para>Filesystem sync latency (ms)</para>
+          <para>Filesystem sync latency (ms).  Latency to sync the write-ahead log records to the filesystem.</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsSyncLatency_num_ops"><title><varname>hbase.regionserver.fsSyncLatency_num_ops</varname></title>
-          <para>TODO</para>
+          <para>Number of operations to sync the write-ahead log records to the filesystem.</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsWriteLatency_avg_time"><title><varname>hbase.regionserver.fsWriteLatency_avg_time</varname></title>
-          <para>Filesystem write latency (ms)</para>
+          <para>Filesystem write latency (ms).  Total latency for all writers, including StoreFiles and write-head log.</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsWriteLatency_num_ops"><title><varname>hbase.regionserver.fsWriteLatency_num_ops</varname></title>
-          <para>TODO</para>
+          <para>Number of filesystem write operations, including StoreFiles and write-ahead log.</para>
 		  </section>
           <section xml:id="hbase.regionserver.memstoreSizeMB"><title><varname>hbase.regionserver.memstoreSizeMB</varname></title>
           <para>Sum of all the memstore sizes in this RegionServer (MB)</para>
