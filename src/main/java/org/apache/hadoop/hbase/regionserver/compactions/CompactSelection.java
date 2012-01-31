@@ -36,9 +36,18 @@ public class CompactSelection {
   // the actual list - this is needed to handle methods like "sublist"
   // correctly
   List<StoreFile> filesToCompact = new ArrayList<StoreFile>();
-  // number of off peak compactions either in the compaction queue or
-  // happening now
-  public static Integer numOutstandingOffPeakCompactions = 0;
+
+  /**
+   * Number of off peak compactions either in the compaction queue or
+   * happening now. Please lock compactionCountLock before modifying.
+   */
+  static long numOutstandingOffPeakCompactions = 0;
+
+  /**
+   * Lock object for numOutstandingOffPeakCompactions
+   */
+  private final static Object compactionCountLock = new Object();
+
   // HBase conf object
   Configuration conf;
   // was this compaction promoted to an off-peak
@@ -83,7 +92,7 @@ public class CompactSelection {
    */
   public double getCompactSelectionRatio() {
     double r = this.compactRatio;
-    synchronized(numOutstandingOffPeakCompactions) {
+    synchronized(compactionCountLock) {
       if (isOffPeakHour() && numOutstandingOffPeakCompactions == 0) {
         r = this.compactRatioOffPeak;
         numOutstandingOffPeakCompactions++;
@@ -104,7 +113,7 @@ public class CompactSelection {
    */
   public void finishRequest() {
     if (isOffPeakCompaction) {
-      synchronized(numOutstandingOffPeakCompactions) {
+      synchronized(compactionCountLock) {
         numOutstandingOffPeakCompactions--;
         isOffPeakCompaction = false;
       }
@@ -124,7 +133,7 @@ public class CompactSelection {
   public void emptyFileList() {
     filesToCompact.clear();
     if (isOffPeakCompaction) {
-      synchronized(numOutstandingOffPeakCompactions) {
+      synchronized(compactionCountLock) {
         // reset the off peak count
         numOutstandingOffPeakCompactions--;
         isOffPeakCompaction = false;
