@@ -689,6 +689,7 @@ public abstract class HBaseServer implements RpcServer {
           reader.finishAdd();
         }
       }
+      rpcMetrics.numOpenConnections.set(numConnections);
     }
 
     void doRead(SelectionKey key) throws InterruptedException {
@@ -1252,8 +1253,10 @@ public abstract class HBaseServer implements RpcServer {
 
       if (priorityCallQueue != null && getQosLevel(param) > highPriorityLevel) {
         priorityCallQueue.put(call);
+        updateCallQueueLenMetrics(priorityCallQueue);
       } else {
         callQueue.put(call);              // queue the call; maybe blocked here
+        updateCallQueueLenMetrics(callQueue);
       }
     }
 
@@ -1267,6 +1270,20 @@ public abstract class HBaseServer implements RpcServer {
         try {channel.close();} catch(Exception ignored) {}
       }
       try {socket.close();} catch(Exception ignored) {}
+    }
+  }
+
+  /**
+   * Reports length of the call queue to HBaseRpcMetrics.
+   * @param queue Which queue to report
+   */
+  private void updateCallQueueLenMetrics(BlockingQueue<Call> queue) {
+    if (queue == callQueue) {
+      rpcMetrics.callQueueLen.set(callQueue.size());
+    } else if (queue == priorityCallQueue) {
+      rpcMetrics.priorityCallQueueLen.set(priorityCallQueue.size());
+    } else {
+      LOG.warn("Unknown call queue");
     }
   }
 
@@ -1297,6 +1314,7 @@ public abstract class HBaseServer implements RpcServer {
         try {
           status.pause("Waiting for a call");
           Call call = myCallQueue.take(); // pop the queue; maybe blocked here
+          updateCallQueueLenMetrics(myCallQueue);
           status.setStatus("Setting up call");
           status.setConnection(call.connection.getHostAddress(), 
               call.connection.getRemotePort());
@@ -1433,8 +1451,8 @@ public abstract class HBaseServer implements RpcServer {
     // Start the listener here and let it bind to the port
     listener = new Listener();
     this.port = listener.getAddress().getPort();
-    this.rpcMetrics = new HBaseRpcMetrics(serverName,
-                          Integer.toString(this.port), this);
+    this.rpcMetrics = new HBaseRpcMetrics(
+        serverName, Integer.toString(this.port));
     this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
     this.tcpKeepAlive = conf.getBoolean("ipc.server.tcpkeepalive", true);
 
@@ -1492,10 +1510,12 @@ public abstract class HBaseServer implements RpcServer {
 
   protected void closeConnection(Connection connection) {
     synchronized (connectionList) {
-      if (connectionList.remove(connection))
+      if (connectionList.remove(connection)) {
         numConnections--;
+      }
     }
     connection.close();
+    rpcMetrics.numOpenConnections.set(numConnections);
   }
 
   /** Sets the socket buffer size used for responding to RPCs.
@@ -1590,24 +1610,6 @@ public abstract class HBaseServer implements RpcServer {
   @Override
   public synchronized InetSocketAddress getListenerAddress() {
     return listener.getAddress();
-  }
-
-  /**
-   * The number of open RPC conections
-   * @return the number of open rpc connections
-   */
-  @Override
-  public int getNumOpenConnections() {
-    return numConnections;
-  }
-
-  /**
-   * The number of rpc calls in the queue.
-   * @return The number of rpc calls in the queue.
-   */
-  @Override
-  public int getCallQueueLen() {
-    return callQueue.size();
   }
 
   /**

@@ -52,10 +52,6 @@ public interface RpcServer {
       Writable param, long receiveTime, MonitoredRPCHandler status)
       throws IOException;
 
-  int getNumOpenConnections();
-
-  int getCallQueueLen();
-
   void setErrorHandler(HBaseRPCErrorHandler handler);
 
   void setQosFunction(Function<Writable, Integer> newFunc);

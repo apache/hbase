@@ -47,13 +47,10 @@ public class HBaseRpcMetrics implements Updater {
   public static final String NAME_DELIM = "$";
   private final MetricsRegistry registry = new MetricsRegistry();
   private final MetricsRecord metricsRecord;
-  private final RpcServer myServer;
   private static Log LOG = LogFactory.getLog(HBaseRpcMetrics.class);
   private final HBaseRPCStatistics rpcStatistics;
 
-  public HBaseRpcMetrics(String hostName, String port,
-      final RpcServer server) {
-    myServer = server;
+  public HBaseRpcMetrics(String hostName, String port) {
     MetricsContext context = MetricsUtil.getContext("rpc");
     metricsRecord = MetricsUtil.createRecord(context, "metrics");
 
@@ -89,6 +86,8 @@ public class HBaseRpcMetrics implements Updater {
           new MetricsIntValue("NumOpenConnections", registry);
   public final MetricsIntValue callQueueLen =
           new MetricsIntValue("callQueueLen", registry);
+  public final MetricsIntValue priorityCallQueueLen =
+          new MetricsIntValue("priorityCallQueueLen", registry);
   public final MetricsTimeVaryingInt authenticationFailures = 
           new MetricsTimeVaryingInt("rpcAuthenticationFailures", registry);
   public final MetricsTimeVaryingInt authenticationSuccesses =
@@ -203,14 +202,9 @@ public class HBaseRpcMetrics implements Updater {
    * Push the metrics to the monitoring subsystem on doUpdate() call.
    */
   public void doUpdates(final MetricsContext context) {
-    synchronized (this) {
-      // ToFix - fix server to use the following two metrics directly so
-      // the metrics do not have be copied here.
-      numOpenConnections.set(myServer.getNumOpenConnections());
-      callQueueLen.set(myServer.getCallQueueLen());
-      for (MetricsBase m : registry.getMetricsList()) {
-        m.pushMetric(metricsRecord);
-      }
+    // Both getMetricsList() and pushMetric() are thread-safe
+    for (MetricsBase m : registry.getMetricsList()) {
+      m.pushMetric(metricsRecord);
     }
     metricsRecord.update();
   }
