@@ -446,7 +446,9 @@ htable.put(put);
         <section xml:id="version.delete">
           <title>Delete</title>
 
-          <para>There are three different types of internal delete markers: 
+          <para>There are three different types of internal delete markers
+            <footnote><para>See Lars Hofhansl's blog for discussion of his attempt
+            adding another, <link xlink:href="http://hadoop-hbase.blogspot.com/2012/01/scanning-in-hbase.html">Scanning in HBase: Prefix Delete Marker</link></para></footnote>: 
             <itemizedlist>
             <listitem><para>Delete:  for a specific version of a column.</para>
             </listitem>
