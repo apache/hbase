@@ -759,7 +759,7 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
                 struct.columns = new ArrayList<TColumn>(_list40.size);
                 for (int _i41 = 0; _i41 < _list40.size; ++_i41)
                 {
-                  TColumn _elem42; // required
+                  TColumn _elem42; // optional
                   _elem42 = new TColumn();
                   _elem42.read(iprot);
                   struct.columns.add(_elem42);
@@ -937,7 +937,7 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
           struct.columns = new ArrayList<TColumn>(_list45.size);
           for (int _i46 = 0; _i46 < _list45.size; ++_i46)
           {
-            TColumn _elem47; // required
+            TColumn _elem47; // optional
             _elem47 = new TColumn();
             _elem47.read(iprot);
             struct.columns.add(_elem47);

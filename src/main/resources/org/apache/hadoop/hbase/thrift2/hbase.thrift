@@ -147,7 +147,8 @@ struct TDelete {
   1: required binary row,
   2: optional list<TColumn> columns,
   3: optional i64 timestamp,
-  4: optional TDeleteType deleteType = 1
+  4: optional TDeleteType deleteType = 1,
+  5: optional bool writeToWal = 1
 }
 
 /**

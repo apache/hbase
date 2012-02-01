@@ -2207,8 +2207,6 @@ public class THBaseService {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -3706,7 +3704,7 @@ public class THBaseService {
                   struct.gets = new ArrayList<TGet>(_list48.size);
                   for (int _i49 = 0; _i49 < _list48.size; ++_i49)
                   {
-                    TGet _elem50; // required
+                    TGet _elem50; // optional
                     _elem50 = new TGet();
                     _elem50.read(iprot);
                     struct.gets.add(_elem50);
@@ -3787,7 +3785,7 @@ public class THBaseService {
           struct.gets = new ArrayList<TGet>(_list53.size);
           for (int _i54 = 0; _i54 < _list53.size; ++_i54)
           {
-            TGet _elem55; // required
+            TGet _elem55; // optional
             _elem55 = new TGet();
             _elem55.read(iprot);
             struct.gets.add(_elem55);
@@ -4188,7 +4186,7 @@ public class THBaseService {
                   struct.success = new ArrayList<TResult>(_list56.size);
                   for (int _i57 = 0; _i57 < _list56.size; ++_i57)
                   {
-                    TResult _elem58; // required
+                    TResult _elem58; // optional
                     _elem58 = new TResult();
                     _elem58.read(iprot);
                     struct.success.add(_elem58);
@@ -4290,7 +4288,7 @@ public class THBaseService {
             struct.success = new ArrayList<TResult>(_list61.size);
             for (int _i62 = 0; _i62 < _list61.size; ++_i62)
             {
-              TResult _elem63; // required
+              TResult _elem63; // optional
               _elem63 = new TResult();
               _elem63.read(iprot);
               struct.success.add(_elem63);
@@ -6449,8 +6447,6 @@ public class THBaseService {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -7004,7 +7000,7 @@ public class THBaseService {
                   struct.puts = new ArrayList<TPut>(_list64.size);
                   for (int _i65 = 0; _i65 < _list64.size; ++_i65)
                   {
-                    TPut _elem66; // required
+                    TPut _elem66; // optional
                     _elem66 = new TPut();
                     _elem66.read(iprot);
                     struct.puts.add(_elem66);
@@ -7085,7 +7081,7 @@ public class THBaseService {
           struct.puts = new ArrayList<TPut>(_list69.size);
           for (int _i70 = 0; _i70 < _list69.size; ++_i70)
           {
-            TPut _elem71; // required
+            TPut _elem71; // optional
             _elem71 = new TPut();
             _elem71.read(iprot);
             struct.puts.add(_elem71);
@@ -8724,7 +8720,7 @@ public class THBaseService {
                   struct.deletes = new ArrayList<TDelete>(_list72.size);
                   for (int _i73 = 0; _i73 < _list72.size; ++_i73)
                   {
-                    TDelete _elem74; // required
+                    TDelete _elem74; // optional
                     _elem74 = new TDelete();
                     _elem74.read(iprot);
                     struct.deletes.add(_elem74);
@@ -8805,7 +8801,7 @@ public class THBaseService {
           struct.deletes = new ArrayList<TDelete>(_list77.size);
           for (int _i78 = 0; _i78 < _list77.size; ++_i78)
           {
-            TDelete _elem79; // required
+            TDelete _elem79; // optional
             _elem79 = new TDelete();
             _elem79.read(iprot);
             struct.deletes.add(_elem79);
@@ -9206,7 +9202,7 @@ public class THBaseService {
                   struct.success = new ArrayList<TDelete>(_list80.size);
                   for (int _i81 = 0; _i81 < _list80.size; ++_i81)
                   {
-                    TDelete _elem82; // required
+                    TDelete _elem82; // optional
                     _elem82 = new TDelete();
                     _elem82.read(iprot);
                     struct.success.add(_elem82);
@@ -9308,7 +9304,7 @@ public class THBaseService {
             struct.success = new ArrayList<TDelete>(_list85.size);
             for (int _i86 = 0; _i86 < _list85.size; ++_i86)
             {
-              TDelete _elem87; // required
+              TDelete _elem87; // optional
               _elem87 = new TDelete();
               _elem87.read(iprot);
               struct.success.add(_elem87);
@@ -10633,8 +10629,6 @@ public class THBaseService {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -12502,8 +12496,6 @@ public class THBaseService {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -13566,7 +13558,7 @@ public class THBaseService {
                   struct.success = new ArrayList<TResult>(_list88.size);
                   for (int _i89 = 0; _i89 < _list88.size; ++_i89)
                   {
-                    TResult _elem90; // required
+                    TResult _elem90; // optional
                     _elem90 = new TResult();
                     _elem90.read(iprot);
                     struct.success.add(_elem90);
@@ -13688,7 +13680,7 @@ public class THBaseService {
             struct.success = new ArrayList<TResult>(_list93.size);
             for (int _i94 = 0; _i94 < _list93.size; ++_i94)
             {
-              TResult _elem95; // required
+              TResult _elem95; // optional
               _elem95 = new TResult();
               _elem95.read(iprot);
               struct.success.add(_elem95);

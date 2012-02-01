@@ -856,6 +856,7 @@ public class ThriftServerRunner implements Runnable {
             } else {
               delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
             }
+            delete.setWriteToWAL(m.writeToWAL);
           } else {
             if(famAndQf.length == 1) {
               put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY,
@@ -866,6 +867,7 @@ public class ThriftServerRunner implements Runnable {
                   m.value != null ? m.value.array()
                       : HConstants.EMPTY_BYTE_ARRAY);
             }
+            put.setWriteToWAL(m.writeToWAL);
           }
         }
         if (!delete.isEmpty())
@@ -906,6 +908,7 @@ public class ThriftServerRunner implements Runnable {
             } else {
               delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
             }
+            delete.setWriteToWAL(m.writeToWAL);
           } else {
             if(famAndQf.length == 1) {
               put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY,
@@ -916,6 +919,7 @@ public class ThriftServerRunner implements Runnable {
                   m.value != null ? m.value.array()
                       : HConstants.EMPTY_BYTE_ARRAY);
             }
+            put.setWriteToWAL(m.writeToWAL);
           }
         }
         if (!delete.isEmpty())
