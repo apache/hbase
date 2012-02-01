@@ -10,6 +10,8 @@ Release 0.92.1 - Unreleased
    HBASE-5278  HBase shell script refers to removed "migrate" functionality
                (Shaneal Manek)
    HBASE-5282  Possible file handle leak with truncated HLog file
+   HBASE-5307  Unable to gracefully decommission a node because of script error
+               (YiFeng Jiang)
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()
