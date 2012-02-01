@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.VersionedWritable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * This class is used exporting current state of load on a RegionServer.
@@ -98,7 +99,7 @@ implements WritableComparable<HServerLoad> {
    * Encapsulates per-region loading metrics.
    */
   public static class RegionLoad extends VersionedWritable {
-    private static final byte VERSION = 1;
+    private static final byte VERSION = 2;
 
     /** @return the object version number */
     public byte getVersion() {
@@ -356,23 +357,23 @@ implements WritableComparable<HServerLoad> {
       super.readFields(in);
       int version = in.readByte();
       if (version > VERSION) throw new IOException("Version mismatch; " + version);
-      int namelen = in.readInt();
+      int namelen = WritableUtils.readVInt(in);
       this.name = new byte[namelen];
       in.readFully(this.name);
-      this.stores = in.readInt();
-      this.storefiles = in.readInt();
-      this.storeUncompressedSizeMB = in.readInt();
-      this.storefileSizeMB = in.readInt();
-      this.memstoreSizeMB = in.readInt();
-      this.storefileIndexSizeMB = in.readInt();
-      this.readRequestsCount = in.readInt();
-      this.writeRequestsCount = in.readInt();
-      this.rootIndexSizeKB = in.readInt();
-      this.totalStaticIndexSizeKB = in.readInt();
-      this.totalStaticBloomSizeKB = in.readInt();
-      this.totalCompactingKVs = in.readLong();
-      this.currentCompactedKVs = in.readLong();
-      int coprocessorsSize = in.readInt();
+      this.stores = WritableUtils.readVInt(in);
+      this.storefiles = WritableUtils.readVInt(in);
+      this.storeUncompressedSizeMB = WritableUtils.readVInt(in);
+      this.storefileSizeMB = WritableUtils.readVInt(in);
+      this.memstoreSizeMB = WritableUtils.readVInt(in);
+      this.storefileIndexSizeMB = WritableUtils.readVInt(in);
+      this.readRequestsCount = WritableUtils.readVInt(in);
+      this.writeRequestsCount = WritableUtils.readVInt(in);
+      this.rootIndexSizeKB = WritableUtils.readVInt(in);
+      this.totalStaticIndexSizeKB = WritableUtils.readVInt(in);
+      this.totalStaticBloomSizeKB = WritableUtils.readVInt(in);
+      this.totalCompactingKVs = WritableUtils.readVLong(in);
+      this.currentCompactedKVs = WritableUtils.readVLong(in);
+      int coprocessorsSize = WritableUtils.readVInt(in);
       coprocessors = new TreeSet<String>();
       for (int i = 0; i < coprocessorsSize; i++) {
         coprocessors.add(in.readUTF());
@@ -382,22 +383,22 @@ implements WritableComparable<HServerLoad> {
     public void write(DataOutput out) throws IOException {
       super.write(out);
       out.writeByte(VERSION);
-      out.writeInt(name.length);
+      WritableUtils.writeVInt(out, name.length);
       out.write(name);
-      out.writeInt(stores);
-      out.writeInt(storefiles);
-      out.writeInt(storeUncompressedSizeMB);
-      out.writeInt(storefileSizeMB);
-      out.writeInt(memstoreSizeMB);
-      out.writeInt(storefileIndexSizeMB);
-      out.writeInt(readRequestsCount);
-      out.writeInt(writeRequestsCount);
-      out.writeInt(rootIndexSizeKB);
-      out.writeInt(totalStaticIndexSizeKB);
-      out.writeInt(totalStaticBloomSizeKB);
-      out.writeLong(totalCompactingKVs);
-      out.writeLong(currentCompactedKVs);
-      out.writeInt(coprocessors.size());
+      WritableUtils.writeVInt(out, stores);
+      WritableUtils.writeVInt(out, storefiles);
+      WritableUtils.writeVInt(out, storeUncompressedSizeMB);
+      WritableUtils.writeVInt(out, storefileSizeMB);
+      WritableUtils.writeVInt(out, memstoreSizeMB);
+      WritableUtils.writeVInt(out, storefileIndexSizeMB);
+      WritableUtils.writeVInt(out, readRequestsCount);
+      WritableUtils.writeVInt(out, writeRequestsCount);
+      WritableUtils.writeVInt(out, rootIndexSizeKB);
+      WritableUtils.writeVInt(out, totalStaticIndexSizeKB);
+      WritableUtils.writeVInt(out, totalStaticBloomSizeKB);
+      WritableUtils.writeVLong(out, totalCompactingKVs);
+      WritableUtils.writeVLong(out, currentCompactedKVs);
+      WritableUtils.writeVInt(out, coprocessors.size());
       for (String coprocessor: coprocessors) {
         out.writeUTF(coprocessor);
       }
