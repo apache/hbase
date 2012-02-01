@@ -125,9 +125,9 @@ implements WritableComparable<HServerLoad> {
      */
     private int storefileIndexSizeMB;
     /** the current total read requests made to region */
-    private int readRequestsCount;
+    private long readRequestsCount;
     /** the current total write requests made to region */
-    private int writeRequestsCount;
+    private long writeRequestsCount;
     /** the total compacting key values in currently running compaction */
     private long totalCompactingKVs;
     /** the completed count of key values in currently running compaction */
@@ -176,7 +176,7 @@ implements WritableComparable<HServerLoad> {
         final int memstoreSizeMB, final int storefileIndexSizeMB,
         final int rootIndexSizeKB, final int totalStaticIndexSizeKB,
         final int totalStaticBloomSizeKB,
-        final int readRequestsCount, final int writeRequestsCount,
+        final long readRequestsCount, final long writeRequestsCount,
         final long totalCompactingKVs, final long currentCompactedKVs,
         final Set<String> coprocessors) {
       this.name = name;
@@ -366,8 +366,8 @@ implements WritableComparable<HServerLoad> {
       this.storefileSizeMB = WritableUtils.readVInt(in);
       this.memstoreSizeMB = WritableUtils.readVInt(in);
       this.storefileIndexSizeMB = WritableUtils.readVInt(in);
-      this.readRequestsCount = WritableUtils.readVInt(in);
-      this.writeRequestsCount = WritableUtils.readVInt(in);
+      this.readRequestsCount = WritableUtils.readVLong(in);
+      this.writeRequestsCount = WritableUtils.readVLong(in);
       this.rootIndexSizeKB = WritableUtils.readVInt(in);
       this.totalStaticIndexSizeKB = WritableUtils.readVInt(in);
       this.totalStaticBloomSizeKB = WritableUtils.readVInt(in);
@@ -391,8 +391,8 @@ implements WritableComparable<HServerLoad> {
       WritableUtils.writeVInt(out, storefileSizeMB);
       WritableUtils.writeVInt(out, memstoreSizeMB);
       WritableUtils.writeVInt(out, storefileIndexSizeMB);
-      WritableUtils.writeVInt(out, readRequestsCount);
-      WritableUtils.writeVInt(out, writeRequestsCount);
+      WritableUtils.writeVLong(out, readRequestsCount);
+      WritableUtils.writeVLong(out, writeRequestsCount);
       WritableUtils.writeVInt(out, rootIndexSizeKB);
       WritableUtils.writeVInt(out, totalStaticIndexSizeKB);
       WritableUtils.writeVInt(out, totalStaticBloomSizeKB);
