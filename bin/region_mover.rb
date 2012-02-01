@@ -251,8 +251,8 @@ end
 # Now get list of regions on targetServer
 def getRegions(config, servername)
   connection = HConnectionManager::getConnection(config)
-  hsa = HServerAddress.new(getHostnamePortFromServerName(servername))
-  rs = connection.getHRegionConnection(hsa)
+  parts = servername.split(',')
+  rs = connection.getHRegionConnection(parts[0], parts[1].to_i)
   return rs.getOnlineRegions()
 end
 
