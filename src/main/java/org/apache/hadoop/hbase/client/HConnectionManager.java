@@ -1156,7 +1156,7 @@ public class HConnectionManager {
         for (Map<byte[], HRegionLocation> tableLocations :
           cachedRegionLocations.values()) {
           for (Entry<byte[], HRegionLocation> e : tableLocations.entrySet()) {
-            if (e.getValue().getServerAddress().toString().equals(server)) {
+            if (e.getValue().getHostnamePort().equals(server)) {
               tableLocations.remove(e.getKey());
               deletedSomething = true;
             }
@@ -1215,7 +1215,7 @@ public class HConnectionManager {
         getTableLocations(tableName);
       boolean hasNewCache = false;
       synchronized (this.cachedRegionLocations) {
-        cachedServers.add(location.getServerAddress().toString());
+        cachedServers.add(location.getHostnamePort());
         hasNewCache = (tableLocations.put(startKey, location) == null);
       }
       if (hasNewCache) {

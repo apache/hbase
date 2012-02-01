@@ -172,7 +172,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
           // .META. again to find the new location
           HRegionLocation hrl = location;
           if (hrl != null) {
-            getConnection().clearCaches(hrl.getServerAddress().toString());
+            getConnection().clearCaches(hrl.getHostnamePort());
           }
         }
         RetriesExhaustedException.ThrowableWithExtraContext qt =
