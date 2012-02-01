@@ -456,7 +456,7 @@ public class HLog implements Syncable {
     if (os != null) {
       try {
         m = os.getWrappedStream().getClass().
-          getMethod("getNumCurrentReplicas", new Class<?> []{});
+          getDeclaredMethod("getNumCurrentReplicas", new Class<?> []{});
         m.setAccessible(true);
       } catch (NoSuchMethodException e) {
         // Thrown if getNumCurrentReplicas() function isn't available
@@ -471,7 +471,7 @@ public class HLog implements Syncable {
       LOG.info("Using getNumCurrentReplicas--HDFS-826");
     } else {
       LOG.info("getNumCurrentReplicas--HDFS-826 not available; hdfs_out=" +
-        os + ", exception=" + exception.getMessage());
+        os, exception);
     }
     return m;
   }
