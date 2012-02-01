@@ -772,7 +772,7 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
                 struct.columns = new ArrayList<ByteBuffer>(_list18.size);
                 for (int _i19 = 0; _i19 < _list18.size; ++_i19)
                 {
-                  ByteBuffer _elem20; // required
+                  ByteBuffer _elem20; // optional
                   _elem20 = iprot.readBinary();
                   struct.columns.add(_elem20);
                 }
@@ -944,7 +944,7 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
           struct.columns = new ArrayList<ByteBuffer>(_list23.size);
           for (int _i24 = 0; _i24 < _list23.size; ++_i24)
           {
-            ByteBuffer _elem25; // required
+            ByteBuffer _elem25; // optional
             _elem25 = iprot.readBinary();
             struct.columns.add(_elem25);
           }

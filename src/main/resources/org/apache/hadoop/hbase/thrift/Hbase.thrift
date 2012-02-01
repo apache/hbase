@@ -97,7 +97,8 @@ struct TRegionInfo {
 struct Mutation {
   1:bool isDelete = 0,
   2:Text column,
-  3:Text value
+  3:Text value,
+  4:bool writeToWAL = 1
 }
 
 

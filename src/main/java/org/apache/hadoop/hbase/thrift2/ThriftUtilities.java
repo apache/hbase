@@ -226,7 +226,7 @@ public class ThriftUtilities {
         out = new Delete(in.getRow());
       }
     }
-
+    out.setWriteToWAL(in.isWriteToWal());
     return out;
   }
 

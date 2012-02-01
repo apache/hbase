@@ -680,7 +680,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
                 struct.columns = new ArrayList<TColumn>(_list8.size);
                 for (int _i9 = 0; _i9 < _list8.size; ++_i9)
                 {
-                  TColumn _elem10; // required
+                  TColumn _elem10; // optional
                   _elem10 = new TColumn();
                   _elem10.read(iprot);
                   struct.columns.add(_elem10);
@@ -832,7 +832,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
           struct.columns = new ArrayList<TColumn>(_list13.size);
           for (int _i14 = 0; _i14 < _list13.size; ++_i14)
           {
-            TColumn _elem15; // required
+            TColumn _elem15; // optional
             _elem15 = new TColumn();
             _elem15.read(iprot);
             struct.columns.add(_elem15);

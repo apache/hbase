@@ -6372,8 +6372,6 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -8559,7 +8557,7 @@ public class Hbase {
                   struct.success = new ArrayList<ByteBuffer>(_list26.size);
                   for (int _i27 = 0; _i27 < _list26.size; ++_i27)
                   {
-                    ByteBuffer _elem28; // required
+                    ByteBuffer _elem28; // optional
                     _elem28 = iprot.readBinary();
                     struct.success.add(_elem28);
                   }
@@ -8660,7 +8658,7 @@ public class Hbase {
             struct.success = new ArrayList<ByteBuffer>(_list31.size);
             for (int _i32 = 0; _i32 < _list31.size; ++_i32)
             {
-              ByteBuffer _elem33; // required
+              ByteBuffer _elem33; // optional
               _elem33 = iprot.readBinary();
               struct.success.add(_elem33);
             }
@@ -9447,7 +9445,7 @@ public class Hbase {
                   for (int _i35 = 0; _i35 < _map34.size; ++_i35)
                   {
                     ByteBuffer _key36; // required
-                    ColumnDescriptor _val37; // optional
+                    ColumnDescriptor _val37; // required
                     _key36 = iprot.readBinary();
                     _val37 = new ColumnDescriptor();
                     _val37.read(iprot);
@@ -9553,7 +9551,7 @@ public class Hbase {
             for (int _i41 = 0; _i41 < _map40.size; ++_i41)
             {
               ByteBuffer _key42; // required
-              ColumnDescriptor _val43; // optional
+              ColumnDescriptor _val43; // required
               _key42 = iprot.readBinary();
               _val43 = new ColumnDescriptor();
               _val43.read(iprot);
@@ -10336,7 +10334,7 @@ public class Hbase {
                   struct.success = new ArrayList<TRegionInfo>(_list44.size);
                   for (int _i45 = 0; _i45 < _list44.size; ++_i45)
                   {
-                    TRegionInfo _elem46; // required
+                    TRegionInfo _elem46; // optional
                     _elem46 = new TRegionInfo();
                     _elem46.read(iprot);
                     struct.success.add(_elem46);
@@ -10438,7 +10436,7 @@ public class Hbase {
             struct.success = new ArrayList<TRegionInfo>(_list49.size);
             for (int _i50 = 0; _i50 < _list49.size; ++_i50)
             {
-              TRegionInfo _elem51; // required
+              TRegionInfo _elem51; // optional
               _elem51 = new TRegionInfo();
               _elem51.read(iprot);
               struct.success.add(_elem51);
@@ -10887,7 +10885,7 @@ public class Hbase {
                   struct.columnFamilies = new ArrayList<ColumnDescriptor>(_list52.size);
                   for (int _i53 = 0; _i53 < _list52.size; ++_i53)
                   {
-                    ColumnDescriptor _elem54; // required
+                    ColumnDescriptor _elem54; // optional
                     _elem54 = new ColumnDescriptor();
                     _elem54.read(iprot);
                     struct.columnFamilies.add(_elem54);
@@ -10984,7 +10982,7 @@ public class Hbase {
             struct.columnFamilies = new ArrayList<ColumnDescriptor>(_list57.size);
             for (int _i58 = 0; _i58 < _list57.size; ++_i58)
             {
-              ColumnDescriptor _elem59; // required
+              ColumnDescriptor _elem59; // optional
               _elem59 = new ColumnDescriptor();
               _elem59.read(iprot);
               struct.columnFamilies.add(_elem59);
@@ -13294,7 +13292,7 @@ public class Hbase {
                   struct.success = new ArrayList<TCell>(_list60.size);
                   for (int _i61 = 0; _i61 < _list60.size; ++_i61)
                   {
-                    TCell _elem62; // required
+                    TCell _elem62; // optional
                     _elem62 = new TCell();
                     _elem62.read(iprot);
                     struct.success.add(_elem62);
@@ -13396,7 +13394,7 @@ public class Hbase {
             struct.success = new ArrayList<TCell>(_list65.size);
             for (int _i66 = 0; _i66 < _list65.size; ++_i66)
             {
-              TCell _elem67; // required
+              TCell _elem67; // optional
               _elem67 = new TCell();
               _elem67.read(iprot);
               struct.success.add(_elem67);
@@ -14533,7 +14531,7 @@ public class Hbase {
                   struct.success = new ArrayList<TCell>(_list68.size);
                   for (int _i69 = 0; _i69 < _list68.size; ++_i69)
                   {
-                    TCell _elem70; // required
+                    TCell _elem70; // optional
                     _elem70 = new TCell();
                     _elem70.read(iprot);
                     struct.success.add(_elem70);
@@ -14635,7 +14633,7 @@ public class Hbase {
             struct.success = new ArrayList<TCell>(_list73.size);
             for (int _i74 = 0; _i74 < _list73.size; ++_i74)
             {
-              TCell _elem75; // required
+              TCell _elem75; // optional
               _elem75 = new TCell();
               _elem75.read(iprot);
               struct.success.add(_elem75);
@@ -15876,7 +15874,7 @@ public class Hbase {
                   struct.success = new ArrayList<TCell>(_list76.size);
                   for (int _i77 = 0; _i77 < _list76.size; ++_i77)
                   {
-                    TCell _elem78; // required
+                    TCell _elem78; // optional
                     _elem78 = new TCell();
                     _elem78.read(iprot);
                     struct.success.add(_elem78);
@@ -15978,7 +15976,7 @@ public class Hbase {
             struct.success = new ArrayList<TCell>(_list81.size);
             for (int _i82 = 0; _i82 < _list81.size; ++_i82)
             {
-              TCell _elem83; // required
+              TCell _elem83; // optional
               _elem83 = new TCell();
               _elem83.read(iprot);
               struct.success.add(_elem83);
@@ -16882,7 +16880,7 @@ public class Hbase {
                   struct.success = new ArrayList<TRowResult>(_list84.size);
                   for (int _i85 = 0; _i85 < _list84.size; ++_i85)
                   {
-                    TRowResult _elem86; // required
+                    TRowResult _elem86; // optional
                     _elem86 = new TRowResult();
                     _elem86.read(iprot);
                     struct.success.add(_elem86);
@@ -16984,7 +16982,7 @@ public class Hbase {
             struct.success = new ArrayList<TRowResult>(_list89.size);
             for (int _i90 = 0; _i90 < _list89.size; ++_i90)
             {
-              TRowResult _elem91; // required
+              TRowResult _elem91; // optional
               _elem91 = new TRowResult();
               _elem91.read(iprot);
               struct.success.add(_elem91);
@@ -17540,7 +17538,7 @@ public class Hbase {
                   struct.columns = new ArrayList<ByteBuffer>(_list92.size);
                   for (int _i93 = 0; _i93 < _list92.size; ++_i93)
                   {
-                    ByteBuffer _elem94; // required
+                    ByteBuffer _elem94; // optional
                     _elem94 = iprot.readBinary();
                     struct.columns.add(_elem94);
                   }
@@ -17651,7 +17649,7 @@ public class Hbase {
             struct.columns = new ArrayList<ByteBuffer>(_list97.size);
             for (int _i98 = 0; _i98 < _list97.size; ++_i98)
             {
-              ByteBuffer _elem99; // required
+              ByteBuffer _elem99; // optional
               _elem99 = iprot.readBinary();
               struct.columns.add(_elem99);
             }
@@ -18052,7 +18050,7 @@ public class Hbase {
                   struct.success = new ArrayList<TRowResult>(_list100.size);
                   for (int _i101 = 0; _i101 < _list100.size; ++_i101)
                   {
-                    TRowResult _elem102; // required
+                    TRowResult _elem102; // optional
                     _elem102 = new TRowResult();
                     _elem102.read(iprot);
                     struct.success.add(_elem102);
@@ -18154,7 +18152,7 @@ public class Hbase {
             struct.success = new ArrayList<TRowResult>(_list105.size);
             for (int _i106 = 0; _i106 < _list105.size; ++_i106)
             {
-              TRowResult _elem107; // required
+              TRowResult _elem107; // optional
               _elem107 = new TRowResult();
               _elem107.read(iprot);
               struct.success.add(_elem107);
@@ -19169,7 +19167,7 @@ public class Hbase {
                   struct.success = new ArrayList<TRowResult>(_list108.size);
                   for (int _i109 = 0; _i109 < _list108.size; ++_i109)
                   {
-                    TRowResult _elem110; // required
+                    TRowResult _elem110; // optional
                     _elem110 = new TRowResult();
                     _elem110.read(iprot);
                     struct.success.add(_elem110);
@@ -19271,7 +19269,7 @@ public class Hbase {
             struct.success = new ArrayList<TRowResult>(_list113.size);
             for (int _i114 = 0; _i114 < _list113.size; ++_i114)
             {
-              TRowResult _elem115; // required
+              TRowResult _elem115; // optional
               _elem115 = new TRowResult();
               _elem115.read(iprot);
               struct.success.add(_elem115);
@@ -19905,7 +19903,7 @@ public class Hbase {
                   struct.columns = new ArrayList<ByteBuffer>(_list116.size);
                   for (int _i117 = 0; _i117 < _list116.size; ++_i117)
                   {
-                    ByteBuffer _elem118; // required
+                    ByteBuffer _elem118; // optional
                     _elem118 = iprot.readBinary();
                     struct.columns.add(_elem118);
                   }
@@ -20033,7 +20031,7 @@ public class Hbase {
             struct.columns = new ArrayList<ByteBuffer>(_list121.size);
             for (int _i122 = 0; _i122 < _list121.size; ++_i122)
             {
-              ByteBuffer _elem123; // required
+              ByteBuffer _elem123; // optional
               _elem123 = iprot.readBinary();
               struct.columns.add(_elem123);
             }
@@ -20438,7 +20436,7 @@ public class Hbase {
                   struct.success = new ArrayList<TRowResult>(_list124.size);
                   for (int _i125 = 0; _i125 < _list124.size; ++_i125)
                   {
-                    TRowResult _elem126; // required
+                    TRowResult _elem126; // optional
                     _elem126 = new TRowResult();
                     _elem126.read(iprot);
                     struct.success.add(_elem126);
@@ -20540,7 +20538,7 @@ public class Hbase {
             struct.success = new ArrayList<TRowResult>(_list129.size);
             for (int _i130 = 0; _i130 < _list129.size; ++_i130)
             {
-              TRowResult _elem131; // required
+              TRowResult _elem131; // optional
               _elem131 = new TRowResult();
               _elem131.read(iprot);
               struct.success.add(_elem131);
@@ -20989,7 +20987,7 @@ public class Hbase {
                   struct.rows = new ArrayList<ByteBuffer>(_list132.size);
                   for (int _i133 = 0; _i133 < _list132.size; ++_i133)
                   {
-                    ByteBuffer _elem134; // required
+                    ByteBuffer _elem134; // optional
                     _elem134 = iprot.readBinary();
                     struct.rows.add(_elem134);
                   }
@@ -21085,7 +21083,7 @@ public class Hbase {
             struct.rows = new ArrayList<ByteBuffer>(_list137.size);
             for (int _i138 = 0; _i138 < _list137.size; ++_i138)
             {
-              ByteBuffer _elem139; // required
+              ByteBuffer _elem139; // optional
               _elem139 = iprot.readBinary();
               struct.rows.add(_elem139);
             }
@@ -21486,7 +21484,7 @@ public class Hbase {
                   struct.success = new ArrayList<TRowResult>(_list140.size);
                   for (int _i141 = 0; _i141 < _list140.size; ++_i141)
                   {
-                    TRowResult _elem142; // required
+                    TRowResult _elem142; // optional
                     _elem142 = new TRowResult();
                     _elem142.read(iprot);
                     struct.success.add(_elem142);
@@ -21588,7 +21586,7 @@ public class Hbase {
             struct.success = new ArrayList<TRowResult>(_list145.size);
             for (int _i146 = 0; _i146 < _list145.size; ++_i146)
             {
-              TRowResult _elem147; // required
+              TRowResult _elem147; // optional
               _elem147 = new TRowResult();
               _elem147.read(iprot);
               struct.success.add(_elem147);
@@ -22146,7 +22144,7 @@ public class Hbase {
                   struct.rows = new ArrayList<ByteBuffer>(_list148.size);
                   for (int _i149 = 0; _i149 < _list148.size; ++_i149)
                   {
-                    ByteBuffer _elem150; // required
+                    ByteBuffer _elem150; // optional
                     _elem150 = iprot.readBinary();
                     struct.rows.add(_elem150);
                   }
@@ -22164,7 +22162,7 @@ public class Hbase {
                   struct.columns = new ArrayList<ByteBuffer>(_list151.size);
                   for (int _i152 = 0; _i152 < _list151.size; ++_i152)
                   {
-                    ByteBuffer _elem153; // required
+                    ByteBuffer _elem153; // optional
                     _elem153 = iprot.readBinary();
                     struct.columns.add(_elem153);
                   }
@@ -22284,7 +22282,7 @@ public class Hbase {
             struct.rows = new ArrayList<ByteBuffer>(_list158.size);
             for (int _i159 = 0; _i159 < _list158.size; ++_i159)
             {
-              ByteBuffer _elem160; // required
+              ByteBuffer _elem160; // optional
               _elem160 = iprot.readBinary();
               struct.rows.add(_elem160);
             }
@@ -22297,7 +22295,7 @@ public class Hbase {
             struct.columns = new ArrayList<ByteBuffer>(_list161.size);
             for (int _i162 = 0; _i162 < _list161.size; ++_i162)
             {
-              ByteBuffer _elem163; // required
+              ByteBuffer _elem163; // optional
               _elem163 = iprot.readBinary();
               struct.columns.add(_elem163);
             }
@@ -22698,7 +22696,7 @@ public class Hbase {
                   struct.success = new ArrayList<TRowResult>(_list164.size);
                   for (int _i165 = 0; _i165 < _list164.size; ++_i165)
                   {
-                    TRowResult _elem166; // required
+                    TRowResult _elem166; // optional
                     _elem166 = new TRowResult();
                     _elem166.read(iprot);
                     struct.success.add(_elem166);
@@ -22800,7 +22798,7 @@ public class Hbase {
             struct.success = new ArrayList<TRowResult>(_list169.size);
             for (int _i170 = 0; _i170 < _list169.size; ++_i170)
             {
-              TRowResult _elem171; // required
+              TRowResult _elem171; // optional
               _elem171 = new TRowResult();
               _elem171.read(iprot);
               struct.success.add(_elem171);
@@ -23339,7 +23337,7 @@ public class Hbase {
                   struct.rows = new ArrayList<ByteBuffer>(_list172.size);
                   for (int _i173 = 0; _i173 < _list172.size; ++_i173)
                   {
-                    ByteBuffer _elem174; // required
+                    ByteBuffer _elem174; // optional
                     _elem174 = iprot.readBinary();
                     struct.rows.add(_elem174);
                   }
@@ -23452,7 +23450,7 @@ public class Hbase {
             struct.rows = new ArrayList<ByteBuffer>(_list177.size);
             for (int _i178 = 0; _i178 < _list177.size; ++_i178)
             {
-              ByteBuffer _elem179; // required
+              ByteBuffer _elem179; // optional
               _elem179 = iprot.readBinary();
               struct.rows.add(_elem179);
             }
@@ -23857,7 +23855,7 @@ public class Hbase {
                   struct.success = new ArrayList<TRowResult>(_list180.size);
                   for (int _i181 = 0; _i181 < _list180.size; ++_i181)
                   {
-                    TRowResult _elem182; // required
+                    TRowResult _elem182; // optional
                     _elem182 = new TRowResult();
                     _elem182.read(iprot);
                     struct.success.add(_elem182);
@@ -23959,7 +23957,7 @@ public class Hbase {
             struct.success = new ArrayList<TRowResult>(_list185.size);
             for (int _i186 = 0; _i186 < _list185.size; ++_i186)
             {
-              TRowResult _elem187; // required
+              TRowResult _elem187; // optional
               _elem187 = new TRowResult();
               _elem187.read(iprot);
               struct.success.add(_elem187);
@@ -24595,7 +24593,7 @@ public class Hbase {
                   struct.rows = new ArrayList<ByteBuffer>(_list188.size);
                   for (int _i189 = 0; _i189 < _list188.size; ++_i189)
                   {
-                    ByteBuffer _elem190; // required
+                    ByteBuffer _elem190; // optional
                     _elem190 = iprot.readBinary();
                     struct.rows.add(_elem190);
                   }
@@ -24613,7 +24611,7 @@ public class Hbase {
                   struct.columns = new ArrayList<ByteBuffer>(_list191.size);
                   for (int _i192 = 0; _i192 < _list191.size; ++_i192)
                   {
-                    ByteBuffer _elem193; // required
+                    ByteBuffer _elem193; // optional
                     _elem193 = iprot.readBinary();
                     struct.columns.add(_elem193);
                   }
@@ -24750,7 +24748,7 @@ public class Hbase {
             struct.rows = new ArrayList<ByteBuffer>(_list198.size);
             for (int _i199 = 0; _i199 < _list198.size; ++_i199)
             {
-              ByteBuffer _elem200; // required
+              ByteBuffer _elem200; // optional
               _elem200 = iprot.readBinary();
               struct.rows.add(_elem200);
             }
@@ -24763,7 +24761,7 @@ public class Hbase {
             struct.columns = new ArrayList<ByteBuffer>(_list201.size);
             for (int _i202 = 0; _i202 < _list201.size; ++_i202)
             {
-              ByteBuffer _elem203; // required
+              ByteBuffer _elem203; // optional
               _elem203 = iprot.readBinary();
               struct.columns.add(_elem203);
             }
@@ -25168,7 +25166,7 @@ public class Hbase {
                   struct.success = new ArrayList<TRowResult>(_list204.size);
                   for (int _i205 = 0; _i205 < _list204.size; ++_i205)
                   {
-                    TRowResult _elem206; // required
+                    TRowResult _elem206; // optional
                     _elem206 = new TRowResult();
                     _elem206.read(iprot);
                     struct.success.add(_elem206);
@@ -25270,7 +25268,7 @@ public class Hbase {
             struct.success = new ArrayList<TRowResult>(_list209.size);
             for (int _i210 = 0; _i210 < _list209.size; ++_i210)
             {
-              TRowResult _elem211; // required
+              TRowResult _elem211; // optional
               _elem211 = new TRowResult();
               _elem211.read(iprot);
               struct.success.add(_elem211);
@@ -25826,7 +25824,7 @@ public class Hbase {
                   struct.mutations = new ArrayList<Mutation>(_list212.size);
                   for (int _i213 = 0; _i213 < _list212.size; ++_i213)
                   {
-                    Mutation _elem214; // required
+                    Mutation _elem214; // optional
                     _elem214 = new Mutation();
                     _elem214.read(iprot);
                     struct.mutations.add(_elem214);
@@ -25938,7 +25936,7 @@ public class Hbase {
             struct.mutations = new ArrayList<Mutation>(_list217.size);
             for (int _i218 = 0; _i218 < _list217.size; ++_i218)
             {
-              Mutation _elem219; // required
+              Mutation _elem219; // optional
               _elem219 = new Mutation();
               _elem219.read(iprot);
               struct.mutations.add(_elem219);
@@ -27036,7 +27034,7 @@ public class Hbase {
                   struct.mutations = new ArrayList<Mutation>(_list220.size);
                   for (int _i221 = 0; _i221 < _list220.size; ++_i221)
                   {
-                    Mutation _elem222; // required
+                    Mutation _elem222; // optional
                     _elem222 = new Mutation();
                     _elem222.read(iprot);
                     struct.mutations.add(_elem222);
@@ -27165,7 +27163,7 @@ public class Hbase {
             struct.mutations = new ArrayList<Mutation>(_list225.size);
             for (int _i226 = 0; _i226 < _list225.size; ++_i226)
             {
-              Mutation _elem227; // required
+              Mutation _elem227; // optional
               _elem227 = new Mutation();
               _elem227.read(iprot);
               struct.mutations.add(_elem227);
@@ -28070,7 +28068,7 @@ public class Hbase {
                   struct.rowBatches = new ArrayList<BatchMutation>(_list228.size);
                   for (int _i229 = 0; _i229 < _list228.size; ++_i229)
                   {
-                    BatchMutation _elem230; // required
+                    BatchMutation _elem230; // optional
                     _elem230 = new BatchMutation();
                     _elem230.read(iprot);
                     struct.rowBatches.add(_elem230);
@@ -28167,7 +28165,7 @@ public class Hbase {
             struct.rowBatches = new ArrayList<BatchMutation>(_list233.size);
             for (int _i234 = 0; _i234 < _list233.size; ++_i234)
             {
-              BatchMutation _elem235; // required
+              BatchMutation _elem235; // optional
               _elem235 = new BatchMutation();
               _elem235.read(iprot);
               struct.rowBatches.add(_elem235);
@@ -29156,7 +29154,7 @@ public class Hbase {
                   struct.rowBatches = new ArrayList<BatchMutation>(_list236.size);
                   for (int _i237 = 0; _i237 < _list236.size; ++_i237)
                   {
-                    BatchMutation _elem238; // required
+                    BatchMutation _elem238; // optional
                     _elem238 = new BatchMutation();
                     _elem238.read(iprot);
                     struct.rowBatches.add(_elem238);
@@ -29270,7 +29268,7 @@ public class Hbase {
             struct.rowBatches = new ArrayList<BatchMutation>(_list241.size);
             for (int _i242 = 0; _i242 < _list241.size; ++_i242)
             {
-              BatchMutation _elem243; // required
+              BatchMutation _elem243; // optional
               _elem243 = new BatchMutation();
               _elem243.read(iprot);
               struct.rowBatches.add(_elem243);
@@ -30888,8 +30886,6 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -35730,8 +35726,6 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -36397,7 +36391,7 @@ public class Hbase {
                   struct.columns = new ArrayList<ByteBuffer>(_list244.size);
                   for (int _i245 = 0; _i245 < _list244.size; ++_i245)
                   {
-                    ByteBuffer _elem246; // required
+                    ByteBuffer _elem246; // optional
                     _elem246 = iprot.readBinary();
                     struct.columns.add(_elem246);
                   }
@@ -36508,7 +36502,7 @@ public class Hbase {
             struct.columns = new ArrayList<ByteBuffer>(_list249.size);
             for (int _i250 = 0; _i250 < _list249.size; ++_i250)
             {
-              ByteBuffer _elem251; // required
+              ByteBuffer _elem251; // optional
               _elem251 = iprot.readBinary();
               struct.columns.add(_elem251);
             }
@@ -36857,8 +36851,6 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -37635,7 +37627,7 @@ public class Hbase {
                   struct.columns = new ArrayList<ByteBuffer>(_list252.size);
                   for (int _i253 = 0; _i253 < _list252.size; ++_i253)
                   {
-                    ByteBuffer _elem254; // required
+                    ByteBuffer _elem254; // optional
                     _elem254 = iprot.readBinary();
                     struct.columns.add(_elem254);
                   }
@@ -37761,7 +37753,7 @@ public class Hbase {
             struct.columns = new ArrayList<ByteBuffer>(_list257.size);
             for (int _i258 = 0; _i258 < _list257.size; ++_i258)
             {
-              ByteBuffer _elem259; // required
+              ByteBuffer _elem259; // optional
               _elem259 = iprot.readBinary();
               struct.columns.add(_elem259);
             }
@@ -38110,8 +38102,6 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -38765,7 +38755,7 @@ public class Hbase {
                   struct.columns = new ArrayList<ByteBuffer>(_list260.size);
                   for (int _i261 = 0; _i261 < _list260.size; ++_i261)
                   {
-                    ByteBuffer _elem262; // required
+                    ByteBuffer _elem262; // optional
                     _elem262 = iprot.readBinary();
                     struct.columns.add(_elem262);
                   }
@@ -38876,7 +38866,7 @@ public class Hbase {
             struct.columns = new ArrayList<ByteBuffer>(_list265.size);
             for (int _i266 = 0; _i266 < _list265.size; ++_i266)
             {
-              ByteBuffer _elem267; // required
+              ByteBuffer _elem267; // optional
               _elem267 = iprot.readBinary();
               struct.columns.add(_elem267);
             }
@@ -39225,8 +39215,6 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -39980,7 +39968,7 @@ public class Hbase {
                   struct.columns = new ArrayList<ByteBuffer>(_list268.size);
                   for (int _i269 = 0; _i269 < _list268.size; ++_i269)
                   {
-                    ByteBuffer _elem270; // required
+                    ByteBuffer _elem270; // optional
                     _elem270 = iprot.readBinary();
                     struct.columns.add(_elem270);
                   }
@@ -40108,7 +40096,7 @@ public class Hbase {
             struct.columns = new ArrayList<ByteBuffer>(_list273.size);
             for (int _i274 = 0; _i274 < _list273.size; ++_i274)
             {
-              ByteBuffer _elem275; // required
+              ByteBuffer _elem275; // optional
               _elem275 = iprot.readBinary();
               struct.columns.add(_elem275);
             }
@@ -40461,8 +40449,6 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -41327,7 +41313,7 @@ public class Hbase {
                   struct.columns = new ArrayList<ByteBuffer>(_list276.size);
                   for (int _i277 = 0; _i277 < _list276.size; ++_i277)
                   {
-                    ByteBuffer _elem278; // required
+                    ByteBuffer _elem278; // optional
                     _elem278 = iprot.readBinary();
                     struct.columns.add(_elem278);
                   }
@@ -41470,7 +41456,7 @@ public class Hbase {
             struct.columns = new ArrayList<ByteBuffer>(_list281.size);
             for (int _i282 = 0; _i282 < _list281.size; ++_i282)
             {
-              ByteBuffer _elem283; // required
+              ByteBuffer _elem283; // optional
               _elem283 = iprot.readBinary();
               struct.columns.add(_elem283);
             }
@@ -41823,8 +41809,6 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -42770,7 +42754,7 @@ public class Hbase {
                   struct.success = new ArrayList<TRowResult>(_list284.size);
                   for (int _i285 = 0; _i285 < _list284.size; ++_i285)
                   {
-                    TRowResult _elem286; // required
+                    TRowResult _elem286; // optional
                     _elem286 = new TRowResult();
                     _elem286.read(iprot);
                     struct.success.add(_elem286);
@@ -42892,7 +42876,7 @@ public class Hbase {
             struct.success = new ArrayList<TRowResult>(_list289.size);
             for (int _i290 = 0; _i290 < _list289.size; ++_i290)
             {
-              TRowResult _elem291; // required
+              TRowResult _elem291; // optional
               _elem291 = new TRowResult();
               _elem291.read(iprot);
               struct.success.add(_elem291);
@@ -43849,7 +43833,7 @@ public class Hbase {
                   struct.success = new ArrayList<TRowResult>(_list292.size);
                   for (int _i293 = 0; _i293 < _list292.size; ++_i293)
                   {
-                    TRowResult _elem294; // required
+                    TRowResult _elem294; // optional
                     _elem294 = new TRowResult();
                     _elem294.read(iprot);
                     struct.success.add(_elem294);
@@ -43971,7 +43955,7 @@ public class Hbase {
             struct.success = new ArrayList<TRowResult>(_list297.size);
             for (int _i298 = 0; _i298 < _list297.size; ++_i298)
             {
-              TRowResult _elem299; // required
+              TRowResult _elem299; // optional
               _elem299 = new TRowResult();
               _elem299.read(iprot);
               struct.success.add(_elem299);
@@ -45823,7 +45807,7 @@ public class Hbase {
                   struct.success = new ArrayList<TCell>(_list300.size);
                   for (int _i301 = 0; _i301 < _list300.size; ++_i301)
                   {
-                    TCell _elem302; // required
+                    TCell _elem302; // optional
                     _elem302 = new TCell();
                     _elem302.read(iprot);
                     struct.success.add(_elem302);
@@ -45925,7 +45909,7 @@ public class Hbase {
             struct.success = new ArrayList<TCell>(_list305.size);
             for (int _i306 = 0; _i306 < _list305.size; ++_i306)
             {
-              TCell _elem307; // required
+              TCell _elem307; // optional
               _elem307 = new TCell();
               _elem307.read(iprot);
               struct.success.add(_elem307);

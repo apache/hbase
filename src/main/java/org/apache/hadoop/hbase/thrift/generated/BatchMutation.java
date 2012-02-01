@@ -437,7 +437,7 @@ public class BatchMutation implements org.apache.thrift.TBase<BatchMutation, Bat
                 struct.mutations = new ArrayList<Mutation>(_list0.size);
                 for (int _i1 = 0; _i1 < _list0.size; ++_i1)
                 {
-                  Mutation _elem2; // required
+                  Mutation _elem2; // optional
                   _elem2 = new Mutation();
                   _elem2.read(iprot);
                   struct.mutations.add(_elem2);
@@ -534,7 +534,7 @@ public class BatchMutation implements org.apache.thrift.TBase<BatchMutation, Bat
           struct.mutations = new ArrayList<Mutation>(_list5.size);
           for (int _i6 = 0; _i6 < _list5.size; ++_i6)
           {
-            Mutation _elem7; // required
+            Mutation _elem7; // optional
             _elem7 = new Mutation();
             _elem7.read(iprot);
             struct.mutations.add(_elem7);
