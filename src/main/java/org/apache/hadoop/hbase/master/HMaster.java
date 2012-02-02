@@ -1013,31 +1013,26 @@ public class HMaster extends Thread implements HMasterInterface,
 
   public void splitLog(final List<String> serverNames) throws IOException {
     long splitTime = 0, splitLogSize = 0, splitCount = 0;
-    List<String> realServerNames = new ArrayList<String>();
     List<Path> logDirs = new ArrayList<Path>();
     for (String serverName : serverNames) {
       Path logDir = new Path(this.rootdir,
           HLog.getHLogDirectoryName(serverName));
-      if (! fs.exists(logDir)) {
-        LOG.info("Log dir for server " + serverName + " does not exist");
-        continue;
-      }
       // rename the directory so a rogue RS doesn't create more HLogs
       if (!serverName.endsWith(HConstants.HLOG_SPLITTING_EXT)) {
-        realServerNames.add(serverName);
-        Path splitDir = new Path(logDir.getParent(), logDir.getName()
-            + HConstants.HLOG_SPLITTING_EXT);
-        if (!this.fs.rename(logDir, splitDir)) {
-          throw new IOException("Failed log splitting because " +
-              " failed fs.rename of " + logDir);
+        Path splitDir = logDir.suffix(HConstants.HLOG_SPLITTING_EXT);
+        if (fs.exists(logDir)) {
+          if (!this.fs.rename(logDir, splitDir)) {
+            throw new IOException("Failed fs.rename for log split: " + logDir);
+          }
+          LOG.debug("Renamed region directory: " + splitDir);
+        } else if (!fs.exists(splitDir)) {
+          LOG.info("Log dir for server " + serverName + " does not exist");
+          continue;
         }
         logDir = splitDir;
-        LOG.debug("Renamed region directory: " + splitDir);
-      } else {
-        realServerNames.add(serverName.substring(0, serverName.length()
-            - HConstants.HLOG_SPLITTING_EXT.length()));
       }
       logDirs.add(logDir);
+
       ContentSummary contentSummary;
       contentSummary = fs.getContentSummary(logDir);
       splitCount += contentSummary.getFileCount();
@@ -1051,8 +1046,10 @@ public class HMaster extends Thread implements HMasterInterface,
     splitTime = EnvironmentEdgeManager.currentTimeMillis();
     if (distributedLogSplitting) {
       // handleDeadWorker() is also called in serverManager
-      for (String realServerName : realServerNames) {
-        splitLogManager.handleDeadWorker(realServerName);
+      // it is ok to call handleDeadWorkers with "rsname.splitting". These
+      // altered names will just get ignored
+      for (String serverName : serverNames) {
+        splitLogManager.handleDeadWorker(serverName);
       }
       splitLogManager.splitLogDistributed(logDirs);
     } else {
