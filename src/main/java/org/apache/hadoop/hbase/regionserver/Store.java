@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -1116,8 +1117,8 @@ public class Store extends SchemaConfigured implements HeapSize {
       if (conf.getBoolean("hbase.store.delete.expired.storefile", false)
           && (ttl != Long.MAX_VALUE)) {
         CompactSelection expiredSelection = compactSelection
-            .selectExpiredStoreFilesToCompact(System.currentTimeMillis()
-                - this.ttl);
+            .selectExpiredStoreFilesToCompact(
+                EnvironmentEdgeManager.currentTimeMillis() - this.ttl);
 
         // If there is any expired store files, delete them  by compaction.
         if (expiredSelection != null) {
