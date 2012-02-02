@@ -31,6 +31,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -57,12 +62,13 @@ import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
-import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
+import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
@@ -89,6 +95,7 @@ import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportFactory;
 
 import com.google.common.base.Joiner;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * ThriftServerRunner - this class starts up a Thrift server which implements
@@ -107,11 +114,14 @@ public class ThriftServerRunner implements Runnable {
   static final String PORT_CONF_KEY = "hbase.regionserver.thrift.port";
 
   private static final String DEFAULT_BIND_ADDR = "0.0.0.0";
-  private static final int DEFAULT_LISTEN_PORT = 9090;
+  public static final int DEFAULT_LISTEN_PORT = 9090;
+  private final int listenPort;
 
   private Configuration conf;
   volatile TServer tserver;
-  private final HBaseHandler handler;
+  private final Hbase.Iface handler;
+  private final ThriftMetrics metrics;
+  private CallQueue callQueue;
 
   /** An enum of server implementation selections */
   enum ImplType {
@@ -214,7 +224,10 @@ public class ThriftServerRunner implements Runnable {
 
   public ThriftServerRunner(Configuration conf, HBaseHandler handler) {
     this.conf = HBaseConfiguration.create(conf);
-    this.handler = handler;
+    this.listenPort = conf.getInt(PORT_CONF_KEY, DEFAULT_LISTEN_PORT);
+    this.metrics = new ThriftMetrics(listenPort, conf);
+    this.handler = HbaseHandlerMetricsProxy.newInstance(handler, metrics, conf);
+
   }
 
   /*
@@ -243,9 +256,6 @@ public class ThriftServerRunner implements Runnable {
    * Setting up the thrift TServer
    */
   private void setupServer() throws Exception {
-    // Get port to bind to
-    int listenPort = conf.getInt(PORT_CONF_KEY, DEFAULT_LISTEN_PORT);
-
     // Construct correct ProtocolFactory
     TProtocolFactory protocolFactory;
     if (conf.getBoolean(COMPACT_CONF_KEY, false)) {
@@ -293,14 +303,22 @@ public class ThriftServerRunner implements Runnable {
         tserver = new TNonblockingServer(serverArgs);
       } else if (implType == ImplType.HS_HA) {
         THsHaServer.Args serverArgs = new THsHaServer.Args(serverTransport);
-        serverArgs.processor(processor)
+        this.callQueue = new CallQueue(new LinkedBlockingQueue<Call>(), metrics);
+        ExecutorService executorService = createExecutor(
+            this.callQueue, serverArgs.getWorkerThreads());
+        serverArgs.executorService(executorService)
+                  .processor(processor)
                   .transportFactory(transportFactory)
                   .protocolFactory(protocolFactory);
         tserver = new THsHaServer(serverArgs);
       } else { // THREADED_SELECTOR
         TThreadedSelectorServer.Args serverArgs =
             new HThreadedSelectorServerArgs(serverTransport, conf);
-        serverArgs.processor(processor)
+        this.callQueue = new CallQueue(new LinkedBlockingQueue<Call>(), metrics);
+        ExecutorService executorService = createExecutor(
+            this.callQueue, serverArgs.getWorkerThreads());
+        serverArgs.executorService(executorService)
+                  .processor(processor)
                   .transportFactory(transportFactory)
                   .protocolFactory(protocolFactory);
         tserver = new TThreadedSelectorServer(serverArgs);
@@ -322,7 +340,10 @@ public class ThriftServerRunner implements Runnable {
       LOG.info("starting " + ImplType.THREAD_POOL.simpleClassName() + " on "
           + listenAddress + ":" + Integer.toString(listenPort)
           + "; " + serverArgs);
-      tserver = new TBoundedThreadPoolServer(serverArgs);
+      TBoundedThreadPoolServer tserver =
+          new TBoundedThreadPoolServer(serverArgs, metrics);
+      this.callQueue = tserver.getCallQueue();
+      this.tserver = tserver;
     } else {
       throw new AssertionError("Unsupported Thrift server implementation: " +
           implType.simpleClassName());
@@ -336,7 +357,6 @@ public class ThriftServerRunner implements Runnable {
     }
 
     // login the server principal (if using secure Hadoop)   
-    Configuration conf = handler.conf;
     if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
       String machineName = Strings.domainNamePointerToHostName(
         DNS.getDefaultHost(conf.get("hbase.thrift.dns.interface", "default"),
@@ -346,12 +366,21 @@ public class ThriftServerRunner implements Runnable {
     }
   }
 
+  ExecutorService createExecutor(BlockingQueue<Runnable> callQueue,
+                                 int workerThreads) {
+    ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
+    tfb.setDaemon(true);
+    tfb.setNameFormat("thrift-worker-%d");
+    return new ThreadPoolExecutor(workerThreads, workerThreads,
+            Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build());
+  }
+
   private InetAddress getBindAddress(Configuration conf)
       throws UnknownHostException {
     String bindAddressStr = conf.get(BIND_CONF_KEY, DEFAULT_BIND_ADDR);
     return InetAddress.getByName(bindAddressStr);
   }
-
+  
   /**
    * The HBaseHandler is a glue object that connects Thrift RPC calls to the
    * HBase client API primarily defined in the HBaseAdmin and HTable objects.
@@ -456,8 +485,7 @@ public class ThriftServerRunner implements Runnable {
       this(HBaseConfiguration.create());
     }
 
-    protected HBaseHandler(final Configuration c)
-    throws IOException {
+    protected HBaseHandler(final Configuration c) throws IOException {
       this.conf = c;
       admin = new HBaseAdmin(conf);
       scannerMap = new HashMap<Integer, ResultScanner>();

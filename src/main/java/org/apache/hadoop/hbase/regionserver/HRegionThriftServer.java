@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 public class HRegionThriftServer extends Thread {
 
   public static final Log LOG = LogFactory.getLog(HRegionThriftServer.class);
-  public static final int DEFAULT_LISTEN_PORT = 9090;
 
   private final HRegionServer rs;
   private final ThriftServerRunner serverRunner;

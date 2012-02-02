@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.thrift;
 
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -29,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.thrift.TException;
 import org.apache.thrift.TProcessor;
@@ -103,6 +103,8 @@ public class TBoundedThreadPoolServer extends TServer {
   private static final Log LOG = LogFactory.getLog(
       TBoundedThreadPoolServer.class.getName());
 
+  private final CallQueue callQueue;
+
   public static class Args extends TThreadPoolServer.Args {
     int maxQueuedRequests;
     int threadKeepAliveTimeSec;
@@ -135,15 +137,14 @@ public class TBoundedThreadPoolServer extends TServer {
 
   private Args serverOptions;
 
-  public TBoundedThreadPoolServer(Args options) {
+  public TBoundedThreadPoolServer(Args options, ThriftMetrics metrics) {
     super(options);
 
-    BlockingQueue<Runnable> executorQueue;
     if (options.maxQueuedRequests > 0) {
-      executorQueue = new LinkedBlockingQueue<Runnable>(
-          options.maxQueuedRequests);
+      this.callQueue = new CallQueue(
+          new LinkedBlockingQueue<Call>(options.maxQueuedRequests), metrics);
     } else {
-      executorQueue = new SynchronousQueue<Runnable>();
+      this.callQueue = new CallQueue(new SynchronousQueue<Call>(), metrics);
     }
 
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
@@ -151,9 +152,16 @@ public class TBoundedThreadPoolServer extends TServer {
     tfb.setNameFormat("thrift-worker-%d");
     executorService =
         new ThreadPoolExecutor(options.minWorkerThreads,
-            options.maxWorkerThreads, options.threadKeepAliveTimeSec, TimeUnit.SECONDS,
-            executorQueue, tfb.build());
+            options.maxWorkerThreads, options.threadKeepAliveTimeSec,
+            TimeUnit.SECONDS, this.callQueue, tfb.build());
     serverOptions = options;
+  }
+
+  /**
+   * Return the server working queue
+   */
+  public CallQueue getCallQueue() {
+    return this.callQueue;
   }
 
   public void serve() {
