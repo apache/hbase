@@ -198,7 +198,7 @@ class StoreScanner extends NonLazyKeyValueScanner
 
     String mutationSignature = SchemaMetrics.generateSchemaMetricsPrefix(
         tableName, family);
-    this.metricNameGetsize = mutationSignature + ".getsize";
+    this.metricNameGetsize = mutationSignature + "getsize";
   }
 
   /**

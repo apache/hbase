@@ -529,13 +529,13 @@ public class SchemaMetrics {
    * @param cfName the column family name
    * @return schemaMetricsPrefix
    */
-  public static String generateSchemaMetricsPrefix(final String tableName,
+  public static String generateSchemaMetricsPrefix(String tableName,
       final String cfName){
+    tableName = getEffectiveTableName(tableName);
     String schemaMetricPrefix =
       tableName.equals(TOTAL_KEY) ? "" : TABLE_PREFIX + tableName + ".";
     schemaMetricPrefix +=
       cfName.equals(TOTAL_KEY) ? "" : CF_PREFIX + cfName + ".";
-
     return schemaMetricPrefix;
   }
 
