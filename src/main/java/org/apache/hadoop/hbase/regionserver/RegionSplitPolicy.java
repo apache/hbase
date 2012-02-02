@@ -32,7 +32,7 @@ import com.google.common.base.Preconditions;
  * A split policy determines when a region should be split.
  * {@see ConstantSizeRegionSplitPolicy}
  */
-abstract class RegionSplitPolicy extends Configured {
+public abstract class RegionSplitPolicy extends Configured {
   private static final Class<ConstantSizeRegionSplitPolicy>
     DEFAULT_SPLIT_POLICY_CLASS = ConstantSizeRegionSplitPolicy.class;
 
@@ -45,7 +45,7 @@ abstract class RegionSplitPolicy extends Configured {
    * Upon construction, this method will be called with the region
    * to be governed. It will be called once and only once.
    */
-  void configureForRegion(HRegion region) {
+  protected void configureForRegion(HRegion region) {
     Preconditions.checkState(
         this.region == null,
         "Policy already configured for region {}",
@@ -57,14 +57,18 @@ abstract class RegionSplitPolicy extends Configured {
   /**
    * @return true if the specified region should be split.
    */
-  abstract boolean shouldSplit();
+  protected abstract boolean shouldSplit();
 
   /**
    * @return the key at which the region should be split, or null
    * if it cannot be split. This will only be called if shouldSplit
    * previously returned true.
    */
-  byte[] getSplitPoint() {
+  protected byte[] getSplitPoint() {
+    byte[] explicitSplitPoint = this.region.getExplicitSplitPoint();
+    if (explicitSplitPoint != null) {
+      return explicitSplitPoint;
+    }
     Map<byte[], Store> stores = region.getStores();
 
     byte[] splitPointFromLargestStore = null;
