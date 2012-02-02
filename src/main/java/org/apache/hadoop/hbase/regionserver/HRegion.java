@@ -4863,10 +4863,6 @@ public class HRegion implements HeapSize { // , Writable{
       return null;
     }
 
-    if (this.explicitSplitPoint != null) {
-      return this.explicitSplitPoint;
-    }
-
     if (!splitPolicy.shouldSplit()) {
       return null;
     }

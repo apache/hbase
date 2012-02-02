@@ -23,12 +23,13 @@ import org.apache.hadoop.hbase.HConstants;
  * A {@link RegionSplitPolicy} implementation which splits a region
  * as soon as any of its store files exceeds a maximum configurable
  * size.
+ * <p>This is the default split policy.</p>
  */
-class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
+public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   private long desiredMaxFileSize;
 
   @Override
-  void configureForRegion(HRegion region) {
+  protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
     long maxFileSize = region.getTableDesc().getMaxFileSize();
 
@@ -41,7 +42,7 @@ class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   }
 
   @Override
-  boolean shouldSplit() {
+  protected boolean shouldSplit() {
     boolean force = region.shouldForceSplit();
     boolean foundABigStore = false;
 

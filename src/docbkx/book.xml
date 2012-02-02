@@ -2002,6 +2002,18 @@ rs.close();
         the parent's hosting RegionServer and then reports the split to the
         Master. See <xref linkend="disable.splitting" /> for how to manually manage
         splits (and for why you might do this)</para>
+        <section>
+          <title>Custom Split Policies</title>
+          <para>The default split policy can be overwritten using a custom <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html">RegionSplitPolicy</link> (HBase 0.94+).
+          Typically a custom split policy should extend HBase's default split policy: <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/ConstantSizeRegionSplitPolicy.html">ConstantSizeRegionSplitPolicy</link>.
+          </para>
+          <para>The policy can set globally through the HBaseConfiguration used or on a per table basis: 
+<programlisting>
+HTableDescriptor myHtd = ...;
+myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName());
+</programlisting>
+          </para>
+        </section>
       </section>
 
       <section xml:id="store">

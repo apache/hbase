@@ -69,7 +69,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   private static final String FAMILIES = "FAMILIES";
 
-  private static final String SPLIT_POLICY = "SPLIT_POLICY";
+  public static final String SPLIT_POLICY = "SPLIT_POLICY";
   
   /**
    * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata 

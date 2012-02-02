@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -69,6 +70,41 @@ public class TestRegionSplitPolicy {
     policy = (ConstantSizeRegionSplitPolicy)RegionSplitPolicy.create(
         mockRegion, conf);
     assertEquals(9999L, policy.getDesiredMaxFileSize());
+  }
+
+  /**
+   * Test setting up a customized split policy
+   */
+  @Test
+  public void testCustomPolicy() throws IOException {
+    HTableDescriptor myHtd = new HTableDescriptor();
+    myHtd.setValue(HTableDescriptor.SPLIT_POLICY,
+        PrefixSplitKeyPolicy.class.getName());
+    myHtd.setValue(PrefixSplitKeyPolicy.PREFIX_LENGTH_KEY, String.valueOf(2));
+
+    HRegion myMockRegion = Mockito.mock(HRegion.class);
+    Mockito.doReturn(myHtd).when(myMockRegion).getTableDesc();
+    Mockito.doReturn(stores).when(myMockRegion).getStores();
+
+    Store mockStore = Mockito.mock(Store.class);
+    Mockito.doReturn(2000L).when(mockStore).getSize();
+    Mockito.doReturn(true).when(mockStore).canSplit();
+    Mockito.doReturn(Bytes.toBytes("abcd")).when(mockStore).getSplitPoint();
+    stores.put(new byte[] { 1 }, mockStore);
+
+    PrefixSplitKeyPolicy policy = (PrefixSplitKeyPolicy) RegionSplitPolicy
+        .create(myMockRegion, conf);
+
+    assertEquals("ab", Bytes.toString(policy.getSplitPoint()));
+
+    Mockito.doReturn(true).when(myMockRegion).shouldForceSplit();
+    Mockito.doReturn(Bytes.toBytes("efgh")).when(myMockRegion)
+        .getExplicitSplitPoint();
+
+    policy = (PrefixSplitKeyPolicy) RegionSplitPolicy
+        .create(myMockRegion, conf);
+
+    assertEquals("ef", Bytes.toString(policy.getSplitPoint()));
   }
 
   @Test
