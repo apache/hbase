@@ -50,18 +50,16 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.Progressable;
+import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;
-import org.mockito.Mockito;
 
 /**
  * Test class for the Store
@@ -138,14 +136,57 @@ public class TestStore extends TestCase {
     store = new Store(basedir, region, hcd, fs, conf);
   }
 
+  public void testDeleteExpiredStoreFiles() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    // Enable the expired store file deletion
+    conf.setBoolean("hbase.store.delete.expired.storefile", true);
+    init(getName(), conf);
+
+    this.store.ttl = 1000;
+    int storeFileNum = 4;
+    long sleepTime = this.store.ttl / storeFileNum;
+    long timeStamp;
+
+    // There are 4 store files and the max time stamp difference among these
+    // store files will be (this.store.ttl / storeFileNum)
+    for (int i = 1; i <= storeFileNum; i++) {
+      LOG.info("Adding some data for the store file #" + i);
+      timeStamp = System.currentTimeMillis();
+      this.store.add(new KeyValue(row, family, qf1, timeStamp, (byte[]) null));
+      this.store.add(new KeyValue(row, family, qf2, timeStamp, (byte[]) null));
+      this.store.add(new KeyValue(row, family, qf3, timeStamp, (byte[]) null));
+      flush(i);
+      Thread.sleep(sleepTime);
+    }
+
+    // Verify the total number of store files
+    assertEquals(storeFileNum, this.store.getStorefiles().size());
+
+    // Each compaction request will find one expired store file and delete it
+    // by the compaction.
+    for (int i = 1; i <= storeFileNum; i++) {
+      // verify the expired store file.
+      CompactionRequest cr = this.store.requestCompaction();
+      assertEquals(1, cr.getFiles().size());
+      assertTrue(cr.getFiles().get(0).getReader().getMaxTimestamp() <
+          (System.currentTimeMillis() - store.ttl));
+      // Verify that the expired the store has been deleted.
+      this.store.compact(cr);
+      assertEquals(storeFileNum - i, this.store.getStorefiles().size());
+
+      // Let the next store file expired.
+      Thread.sleep(sleepTime);
+    }
+  }
+
   public void testLowestModificationTime() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(conf);
     // Initialize region
     init(getName(), conf);
 
-    int stroeFileNum = 4;
-    for (int i = 1; i <= stroeFileNum; i++) {
+    int storeFileNum = 4;
+    for (int i = 1; i <= storeFileNum; i++) {
       LOG.info("Adding some data for the store file #"+i);
       this.store.add(new KeyValue(row, family, qf1, i, (byte[])null));
       this.store.add(new KeyValue(row, family, qf2, i, (byte[])null));
