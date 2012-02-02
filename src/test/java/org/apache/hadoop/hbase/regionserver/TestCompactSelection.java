@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -98,8 +98,9 @@ public class TestCompactSelection extends TestCase {
     boolean isRef = false;
 
     MockStoreFile(long length, boolean isRef) throws IOException {
-      super(TEST_UTIL.getTestFileSystem(), TEST_FILE, false,
-            TEST_UTIL.getConfiguration(), BloomType.NONE, false);
+      super(TEST_UTIL.getTestFileSystem(), TEST_FILE,
+            TEST_UTIL.getConfiguration(),
+            new CacheConfig(TEST_UTIL.getConfiguration()), BloomType.NONE);
       this.length = length;
       this.isRef  = isRef;
     }

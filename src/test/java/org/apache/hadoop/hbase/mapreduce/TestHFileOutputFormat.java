@@ -30,8 +30,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,11 +56,12 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -284,8 +285,8 @@ public class TestHFileOutputFormat  {
           if (Bytes.toString(TestHFileOutputFormat.FAMILIES[0]).equals(cf)
               || Bytes.toString(TestHFileOutputFormat.FAMILIES[1]).equals(cf)) {
             for (FileStatus stat : fs.listStatus(status.getPath())) {
-              Reader r = HFile.createReader(fs, stat.getPath(), null, false,
-                  true);
+              Reader r = HFile.createReader(fs, stat.getPath(),
+                  new CacheConfig(conf));
               HFileScanner scanner = r.getScanner(false, false);
               scanner.seekTo();
 
@@ -739,8 +740,8 @@ public class TestHFileOutputFormat  {
             // verify that the compression on this file matches the configured
             // compression
             Path dataFilePath = fileSystem.listStatus(f.getPath())[0].getPath();
-            Reader reader = HFile.createReader(fileSystem, dataFilePath, null,
-                false, true);
+            Reader reader = HFile.createReader(fileSystem, dataFilePath,
+                new CacheConfig(conf));
             reader.loadFileInfo();
             assertEquals("Incorrect compression used for column family " + familyStr
                          + "(reader: " + reader + ")",
@@ -856,7 +857,7 @@ public class TestHFileOutputFormat  {
             // configured bloom type.
             Path dataFilePath = fileSystem.listStatus(f.getPath())[0].getPath();
             StoreFile.Reader reader = new StoreFile.Reader(fileSystem,
-                dataFilePath, null, false, true);
+                dataFilePath, new CacheConfig(conf));
             Map<byte[], byte[]> metadataMap = reader.loadFileInfo();
 
             assertTrue("timeRange is not set",

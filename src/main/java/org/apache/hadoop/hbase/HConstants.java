@@ -430,6 +430,14 @@ public final class HConstants {
   public static final String
       REPLICATION_ENABLE_KEY = "hbase.replication";
 
+  /**
+   * Configuration key for the size of the block cache
+   */
+  public static final String HFILE_BLOCK_CACHE_SIZE_KEY =
+      "hfile.block.cache.size";
+
+  public static final float HFILE_BLOCK_CACHE_SIZE_DEFAULT = 0.25f;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

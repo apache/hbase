@@ -34,9 +34,12 @@ import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
+
+import com.google.common.base.Preconditions;
 
 /**
  * {@link HFile} reader for version 1.
@@ -53,18 +56,15 @@ public class HFileReaderV1 extends AbstractHFileReader {
    * @param fsdis input stream.  Caller is responsible for closing the passed
    * stream.
    * @param size Length of the stream.
-   * @param blockCache block cache. Pass null if none.
-   * @param inMemory whether blocks should be marked as in-memory in cache
-   * @param evictOnClose whether blocks in cache should be evicted on close
-   * @throws IOException
+   * @param cacheConf cache references and configuration
+
    */
   public HFileReaderV1(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long size,
       final boolean closeIStream,
-      final BlockCache blockCache, final boolean inMemory,
-      final boolean evictOnClose) {
-    super(path, trailer, fsdis, size, closeIStream, blockCache, inMemory,
-        evictOnClose);
+      final CacheConfig cacheConf) {
+    super(path, trailer, fsdis, size, closeIStream, cacheConf);
+
 
     trailer.expectVersion(1);
     fsBlockReader = new HFileBlock.FSReaderV1(fsdis, compressAlgo, fileSize);
@@ -178,9 +178,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
    * file.
    */
   protected int blockContainingKey(final byte[] key, int offset, int length) {
-    if (dataBlockIndexReader.isEmpty()) {
-      throw new RuntimeException("Block index not loaded");
-    }
+    Preconditions.checkState(!dataBlockIndexReader.isEmpty(),
+        "Block index not loaded");
+
     return dataBlockIndexReader.rootBlockContainingKey(key, offset, length);
   }
 
@@ -217,17 +217,22 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
     String cacheKey = HFile.getBlockCacheKey(name, offset);
 
+    BlockCategory effectiveCategory = BlockCategory.META;
+    if (metaBlockName.equals(HFileWriterV1.BLOOM_FILTER_META_KEY) ||
+        metaBlockName.equals(HFileWriterV1.BLOOM_FILTER_DATA_KEY)) {
+      effectiveCategory = BlockCategory.BLOOM;
+    }
+
     // Per meta key from any given file, synchronize reads for said block
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
-      metaLoads++;
-
       // Check cache for block.  If found return.
-      if (blockCache != null) {
-        HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey,
-            cacheBlock);
+      if (cacheConf.isBlockCacheEnabled()) {
+        HFileBlock cachedBlock =
+          (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
+              cacheConf.shouldCacheBlockOnRead(effectiveCategory));
         if (cachedBlock != null) {
-          cacheHits++;
-          getSchemaMetrics().updateOnCacheHit(BlockCategory.META, false);
+          getSchemaMetrics().updateOnCacheHit(effectiveCategory,
+              SchemaMetrics.NO_COMPACTION);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Cache Miss, please load.
@@ -245,8 +250,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
       getSchemaMetrics().updateOnCacheMiss(BlockCategory.META, false, delta);
 
       // Cache the block
-      if (cacheBlock && blockCache != null) {
-        blockCache.cacheBlock(cacheKey, hfileBlock, inMemory);
+      if (cacheBlock && cacheConf.shouldCacheBlockOnRead(effectiveCategory)) {
+        cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
+            cacheConf.isInMemory());
       }
 
       return hfileBlock.getBufferWithoutHeader();
@@ -281,15 +287,13 @@ public class HFileReaderV1 extends AbstractHFileReader {
     // the other choice is to duplicate work (which the cache would prevent you
     // from doing).
     synchronized (dataBlockIndexReader.getRootBlockKey(block)) {
-      blockLoads++;
-
       // Check cache for block.  If found return.
-      if (blockCache != null) {
-        HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey,
-            cacheBlock);
+      if (cacheConf.isBlockCacheEnabled()) {
+        HFileBlock cachedBlock =
+          (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
+              cacheConf.shouldCacheDataOnRead());
         if (cachedBlock != null) {
-          cacheHits++;
-          getSchemaMetrics().updateOnCacheHit(BlockCategory.DATA,
+          getSchemaMetrics().updateOnCacheHit(cachedBlock.getBlockType().getCategory(),
               isCompaction);
           return cachedBlock.getBufferWithoutHeader();
         }
@@ -323,8 +327,10 @@ public class HFileReaderV1 extends AbstractHFileReader {
           delta);
 
       // Cache the block
-      if (cacheBlock && blockCache != null) {
-        blockCache.cacheBlock(cacheKey, hfileBlock, inMemory);
+      if (cacheBlock && cacheConf.shouldCacheBlockOnRead(
+          hfileBlock.getBlockType().getCategory())) {
+        cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
+            cacheConf.isInMemory());
       }
 
       return buf;
@@ -351,18 +357,23 @@ public class HFileReaderV1 extends AbstractHFileReader {
    */
   @Override
   public byte[] midkey() throws IOException {
-    if (!isFileInfoLoaded() || dataBlockIndexReader.isEmpty()) {
-      return null;
-    }
+    Preconditions.checkState(isFileInfoLoaded(), "File info is not loaded");
+    Preconditions.checkState(!dataBlockIndexReader.isEmpty(),
+        "Data block index is not loaded or is empty");
     return dataBlockIndexReader.midkey();
   }
 
   @Override
   public void close() throws IOException {
-    if (evictOnClose && this.blockCache != null) {
+    close(cacheConf.shouldEvictOnClose());
+  }
+
+  @Override
+  public void close(boolean evictOnClose) throws IOException {
+    if (evictOnClose && cacheConf.isBlockCacheEnabled()) {
       int numEvicted = 0;
       for (int i = 0; i < dataBlockIndexReader.getRootBlockCount(); i++) {
-        if (blockCache.evictBlock(HFile.getBlockCacheKey(name,
+        if (cacheConf.getBlockCache().evictBlock(HFile.getBlockCacheKey(name,
             dataBlockIndexReader.getRootBlockOffset(i))))
           numEvicted++;
       }
@@ -400,10 +411,10 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
     @Override
     public ByteBuffer getKey() {
-      if (blockBuffer == null || currKeyLen == 0) {
-        throw new RuntimeException(
-            "you need to seekTo() before calling getKey()");
-      }
+      Preconditions.checkState(blockBuffer != null && currKeyLen > 0,
+
+          "you need to seekTo() before calling getKey()");
+
       ByteBuffer keyBuff = blockBuffer.slice();
       keyBuff.limit(currKeyLen);
       keyBuff.rewind();
@@ -429,8 +440,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
     @Override
     public boolean next() throws IOException {
-      // LOG.deug("rem:" + block.remaining() + " p:" + block.position() +
-      // " kl: " + currKeyLen + " kv: " + currValueLen);
+
       if (blockBuffer == null) {
         throw new IOException("Next called on non-seeked scanner");
       }
@@ -444,11 +454,11 @@ public class HFileReaderV1 extends AbstractHFileReader {
                   "; currValLen = " + currValueLen +
                   "; block limit = " + blockBuffer.limit() +
                   "; HFile name = " + reader.getName() +
-                  "; currBlock id = " + currBlock);
+                  "; currBlock id = " + currBlock, e);
         throw e;
       }
       if (blockBuffer.remaining() <= 0) {
-        // LOG.debug("Fetch next block");
+
         currBlock++;
         if (currBlock >= reader.getDataBlockIndexReader().getRootBlockCount()) {
           // damn we are at the end
@@ -495,7 +505,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
         ByteBuffer bb = getKey();
         int compared = reader.getComparator().compare(key, offset,
             length, bb.array(), bb.arrayOffset(), bb.limit());
-        if (compared < 1) {
+        if (compared <= 0) {
           // If the required key is less than or equal to current key, then
           // don't do anything.
           return compared;
@@ -664,7 +674,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
   @Override
   public DataInput getGeneralBloomFilterMetadata() throws IOException {
-    ByteBuffer buf = getMetaBlock(HFileWriterV1.BLOOM_FILTER_META_KEY, false);
+    // Always cache Bloom filter blocks.
+    ByteBuffer buf = getMetaBlock(HFileWriterV1.BLOOM_FILTER_META_KEY, true);
     if (buf == null)
       return null;
     ByteArrayInputStream bais = new ByteArrayInputStream(buf.array(),

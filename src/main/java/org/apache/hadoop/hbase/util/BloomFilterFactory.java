@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
@@ -78,10 +79,6 @@ public final class BloomFilterFactory {
    */
   public static final String IO_STOREFILE_BLOOM_BLOCK_SIZE =
       "io.storefile.bloom.block.size";
-
-  /** Whether to cache compound Bloom filter blocks on write */
-  public static final String IO_STOREFILE_BLOOM_CACHE_ON_WRITE =
-      "io.storefile.bloom.cacheonwrite";
 
   /** Maximum number of times a Bloom filter can be "folded" if oversized */
   private static final int MAX_ALLOWED_FOLD_FACTOR = 7;
@@ -152,11 +149,6 @@ public final class BloomFilterFactory {
     return conf.getInt(IO_STOREFILE_BLOOM_BLOCK_SIZE, 128 * 1024);
   }
 
-  /** @return whether to cache compound Bloom filter chunks on write */
-  public static boolean cacheChunksOnWrite(Configuration conf) {
-    return conf.getBoolean(IO_STOREFILE_BLOOM_CACHE_ON_WRITE, false);
-  }
-
   /**
   * @return max key for the Bloom filter from the configuration
   */
@@ -174,7 +166,9 @@ public final class BloomFilterFactory {
     toConf.setFloat(IO_STOREFILE_BLOOM_ERROR_RATE, getErrorRate(fromConf));
     toConf.setInt(IO_STOREFILE_BLOOM_MAX_FOLD, getMaxFold(fromConf));
     toConf.setInt(IO_STOREFILE_BLOOM_BLOCK_SIZE, getBloomBlockSize(fromConf));
-    toConf.setBoolean(IO_STOREFILE_BLOOM_CACHE_ON_WRITE, cacheChunksOnWrite(fromConf));
+    toConf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
+        fromConf.getBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
+            CacheConfig.DEFAULT_CACHE_BLOOMS_ON_WRITE));
     toConf.setInt(IO_STOREFILE_BLOOM_MAX_KEYS, getMaxKeys(fromConf));
   }
 
@@ -192,8 +186,8 @@ public final class BloomFilterFactory {
    *         or when failed to create one.
    */
   public static BloomFilterWriter createGeneralBloomAtWrite(
-      Configuration conf, BloomType bloomType, int maxKeys, HFile.Writer writer,
-      float bloomErrorRate) {
+      Configuration conf, CacheConfig cacheConf, BloomType bloomType,
+      int maxKeys, HFile.Writer writer, float bloomErrorRate) {
     if (!isGeneralBloomEnabled(conf)) {
       LOG.info("Bloom filters are disabled by configuration for "
           + writer.getPath()
@@ -218,7 +212,7 @@ public final class BloomFilterFactory {
       // In case of compound Bloom filters we ignore the maxKeys hint.
       CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(
           getBloomBlockSize(conf), bloomErrorRate, Hash.getHashType(conf), maxFold,
-          cacheChunksOnWrite(conf), bloomType == BloomType.ROWCOL
+          cacheConf.shouldCacheBloomsOnWrite(), bloomType == BloomType.ROWCOL
               ? KeyValue.KEY_COMPARATOR : Bytes.BYTES_RAWCOMPARATOR);
       writer.addInlineBlockWriter(bloomWriter);
       return bloomWriter;
@@ -232,7 +226,7 @@ public final class BloomFilterFactory {
             + ", not using Bloom filter");
         return null;
       } else if (maxKeys < tooBig) {
-        BloomFilterWriter bloom = new ByteBloomFilter((int) maxKeys, bloomErrorRate,
+        BloomFilterWriter bloom = new ByteBloomFilter(maxKeys, bloomErrorRate,
             Hash.getHashType(conf), maxFold);
         bloom.allocBloom();
         return bloom;
@@ -256,8 +250,8 @@ public final class BloomFilterFactory {
    *         or when failed to create one.
    */
   public static BloomFilterWriter createDeleteBloomAtWrite(
-      Configuration conf, int maxKeys, HFile.Writer writer,
-      float bloomErrorRate) {
+      Configuration conf, CacheConfig cacheConf, int maxKeys,
+      HFile.Writer writer, float bloomErrorRate) {
     if (!isDeleteFamilyBloomEnabled(conf)) {
       LOG.info("Delete Bloom filters are disabled by configuration for "
           + writer.getPath()
@@ -270,8 +264,8 @@ public final class BloomFilterFactory {
       // In case of compound Bloom filters we ignore the maxKeys hint.
       CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(
           getBloomBlockSize(conf), bloomErrorRate, Hash.getHashType(conf),
-          maxFold,
-          cacheChunksOnWrite(conf), Bytes.BYTES_RAWCOMPARATOR);
+          maxFold, cacheConf.shouldCacheBloomsOnWrite(),
+          Bytes.BYTES_RAWCOMPARATOR);
       writer.addInlineBlockWriter(bloomWriter);
       return bloomWriter;
     } else {

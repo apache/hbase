@@ -19,13 +19,14 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.net.URI;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-
-import java.net.URI;
 
 /**
  * Compression validation test.  Checks compression is working.  Be sure to run
@@ -73,7 +74,8 @@ public class CompressionTest {
       writer.appendFileInfo(Bytes.toBytes("infokey"), Bytes.toBytes("infoval"));
       writer.close();
 
-      HFile.Reader reader = HFile.createReader(dfs, path, null, false, false);
+      HFile.Reader reader =
+        HFile.createReader(dfs, path, new CacheConfig(conf));
       reader.loadFileInfo();
       byte[] key = reader.getFirstKey();
       boolean rc = Bytes.toString(key).equals("testkey");

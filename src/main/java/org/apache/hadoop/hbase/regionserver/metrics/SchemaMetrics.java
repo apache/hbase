@@ -171,6 +171,9 @@ public class SchemaMetrics {
   public static final String CF_UNKNOWN_PREFIX = CF_PREFIX + UNKNOWN + ".";
   public static final String CF_BAD_FAMILY_PREFIX = CF_PREFIX + "__badfamily.";
 
+  /** Use for readability when obtaining non-compaction counters */
+  public static final boolean NO_COMPACTION = false;
+
   /**
    * A special schema metric value that means "all tables aggregated" or
    * "all column families aggregated" when used as a table name or a column

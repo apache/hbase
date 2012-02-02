@@ -1,6 +1,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -17,15 +18,19 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-
 import org.junit.Test;
 
 public class TestBlocksRead extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestBlocksRead.class);
   static final String[] BLOOM_TYPE = new String[] { "ROWCOL", "ROW", "NONE" };
+
+  private static BlockCache blockCache;
 
   private HBaseConfiguration getConf() {
     HBaseConfiguration conf = new HBaseConfiguration();
@@ -75,6 +80,7 @@ public class TestBlocksRead extends HBaseTestCase {
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     Path path = new Path(DIR + callingMethod);
     region = HRegion.createHRegion(info, path, conf);
+    blockCache = new CacheConfig(conf).getBlockCache();
   }
 
   private void putData(String family, String row, String col, long version)
@@ -170,6 +176,10 @@ public class TestBlocksRead extends HBaseTestCase {
     return HRegion.getNumericMetric(SchemaMetrics.CF_PREFIX
         + Bytes.toString(cf) + "." + SchemaMetrics.BLOCK_TYPE_PREFIX
         + "Data.fsBlockReadCnt");
+  }
+
+  private static long getBlkCount() {
+    return blockCache.getBlockCount();
   }
 
   /**
@@ -347,5 +357,49 @@ public class TestBlocksRead extends HBaseTestCase {
     kvs = getData(FAMILY, "row", Arrays.asList("col99"), 2);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col99", 201);
+  }
+
+  /**
+   * Test # of blocks read to ensure disabling cache-fill on Scan works.
+   * @throws Exception
+   */
+  @Test
+  public void testBlocksStoredWhenCachingDisabled() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testBlocksReadWhenCachingDisabled");
+    String FAMILY = "cf1";
+
+    HBaseConfiguration conf = getConf();
+    initHRegion(TABLE, getName(), conf, FAMILY);
+
+    putData(FAMILY, "row", "col1", 1);
+    putData(FAMILY, "row", "col2", 2);
+    region.flushcache();
+
+    // Execute a scan with caching turned off
+    // Expected blocks stored: 0
+    long blocksStart = getBlkCount();
+    Scan scan = new Scan();
+    scan.setCacheBlocks(false);
+    InternalScanner rs = region.getScanner(scan);
+    List<KeyValue> result = new ArrayList<KeyValue>();
+    rs.next(result);
+    assertEquals(2 * BLOOM_TYPE.length, result.size());
+    rs.close();
+    long blocksEnd = getBlkCount();
+
+    assertEquals(blocksStart, blocksEnd);
+
+    // Execute with caching turned on
+    // Expected blocks stored: 2
+    blocksStart = blocksEnd;
+    scan.setCacheBlocks(true);
+    rs = region.getScanner(scan);
+    result = new ArrayList<KeyValue>(2);
+    rs.next(result);
+    assertEquals(2 * BLOOM_TYPE.length, result.size());
+    rs.close();
+    blocksEnd = getBlkCount();
+
+    assertEquals(2 * BLOOM_TYPE.length, blocksEnd - blocksStart);
   }
 }

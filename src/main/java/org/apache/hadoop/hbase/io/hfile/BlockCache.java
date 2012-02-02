@@ -72,4 +72,10 @@ public interface BlockCache {
    * Shutdown the cache.
    */
   public void shutdown();
+
+  /**
+   * Returns the number of blocks currently cached in the block cache.
+   * @return number of blocks in the cache
+   */
+  public long getBlockCount();
 }

@@ -36,9 +36,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.io.BytesWritable;
 
@@ -182,7 +182,8 @@ public class CreateRandomStoreFile {
     }
 
     StoreFile.Writer sfw = StoreFile.createWriter(fs, outputDir, blockSize,
-        compr, KeyValue.COMPARATOR, conf, bloomType, numKV);
+        compr, KeyValue.COMPARATOR, conf, new CacheConfig(conf), bloomType,
+        numKV);
 
     rand = new Random();
     LOG.info("Writing " + numKV + " key/value pairs");

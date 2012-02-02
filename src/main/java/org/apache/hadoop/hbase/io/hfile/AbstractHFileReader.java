@@ -74,18 +74,8 @@ public abstract class AbstractHFileReader extends SchemaConfigured
   /** Size of this file. */
   protected final long fileSize;
 
-  /** Block cache to use. */
-  protected final BlockCache blockCache;
-
-  public int cacheHits = 0;
-  public int blockLoads = 0;
-  public int metaLoads = 0;
-
-  /** Whether file is from in-memory store */
-  protected boolean inMemory = false;
-
-  /** Whether blocks of file should be evicted on close of file */
-  protected final boolean evictOnClose;
+  /** Block cache configuration. */
+  protected final CacheConfig cacheConf;
 
   /** Path of file */
   protected final Path path;
@@ -98,17 +88,14 @@ public abstract class AbstractHFileReader extends SchemaConfigured
   protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long fileSize,
       final boolean closeIStream,
-      final BlockCache blockCache, final boolean inMemory,
-      final boolean evictOnClose) {
+      final CacheConfig cacheConf) {
     super(null, path);  // We don't have configuration to pass to super.
     this.trailer = trailer;
     this.compressAlgo = trailer.getCompressionCodec();
-    this.blockCache = blockCache;
+    this.cacheConf = cacheConf;
     this.fileSize = fileSize;
     this.istream = fsdis;
     this.closeIStream = closeIStream;
-    this.inMemory = inMemory;
-    this.evictOnClose = evictOnClose;
     this.path = path;
     this.name = path.getName();
   }
@@ -135,7 +122,7 @@ public abstract class AbstractHFileReader extends SchemaConfigured
     return "reader=" + path.toString() +
         (!isFileInfoLoaded()? "":
           ", compression=" + compressAlgo.getName() +
-          ", inMemory=" + inMemory +
+          ", cacheConf=" + cacheConf +
           ", firstKey=" + toStringFirstKey() +
           ", lastKey=" + toStringLastKey()) +
           ", avgKeyLen=" + avgKeyLen +

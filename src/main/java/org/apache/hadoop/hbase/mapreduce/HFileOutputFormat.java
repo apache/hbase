@@ -32,6 +32,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
@@ -44,6 +46,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mapreduce.hadoopbackport.TotalOrderPartitioner;
@@ -58,9 +61,6 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Writes HFiles. Passed KeyValues must arrive in order.
@@ -185,7 +185,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
         /* new bloom filter does not require maxKeys. */
         int maxKeys = 0;
         wl.writer = StoreFile.createWriter(fs, familydir, blocksize,
-            compressionAlgo, KeyValue.COMPARATOR, conf, bloomType, maxKeys);
+            compressionAlgo, KeyValue.COMPARATOR, conf,
+            new CacheConfig(conf), bloomType, maxKeys);
         this.writers.put(family, wl);
         return wl;
       }

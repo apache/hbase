@@ -56,13 +56,13 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.hfile.AbstractHFileReader;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
@@ -317,7 +317,7 @@ public class HFileReadWriteTest {
 
     StoreFile.Writer writer = StoreFile.createWriter(fs, outputDir,
         blockSize,
-        compression, KeyValue.COMPARATOR, this.conf,
+        compression, KeyValue.COMPARATOR, this.conf, new CacheConfig(this.conf),
         bloomType, maxKeyCount);
 
     StatisticsPrinter statsPrinter = new StatisticsPrinter(getHFileReaders());
@@ -426,8 +426,8 @@ public class HFileReadWriteTest {
       throws IOException {
     // We are passing the ROWCOL Bloom filter type, but StoreFile will still
     // use the Bloom filter type specified in the HFile.
-    return new StoreFile(fs, filePath, blockCache, conf,
-        StoreFile.BloomType.ROWCOL, false);
+    return new StoreFile(fs, filePath, conf, new CacheConfig(this.conf),
+        StoreFile.BloomType.ROWCOL);
   }
 
   public static int charToHex(int c) {
@@ -780,7 +780,7 @@ public class HFileReadWriteTest {
       storeFile.closeReader();
       exec.shutdown();
 
-      LruBlockCache c = (LruBlockCache) StoreFile.getBlockCache(conf);
+      LruBlockCache c = (LruBlockCache) new CacheConfig(conf).getBlockCache();
       if (c != null)
         c.shutdown();
     }

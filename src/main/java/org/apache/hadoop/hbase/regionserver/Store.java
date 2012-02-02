@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -105,6 +106,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   private final HColumnDescriptor family;
   final FileSystem fs;
   final Configuration conf;
+  final CacheConfig cacheConf;
   // ttl in milliseconds.
   protected long ttl;
   long majorCompactionTime;
@@ -122,7 +124,6 @@ public class Store extends SchemaConfigured implements HeapSize {
   private final Object flushLock = new Object();
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final String storeNameStr;
-  private final boolean inMemory;
   private int peakStartHour;
   private int peakEndHour;
   private final static Calendar calendar = new GregorianCalendar();
@@ -196,8 +197,8 @@ public class Store extends SchemaConfigured implements HeapSize {
       conf.getInt("hbase.hstore.compaction.min",
         /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
 
-    // Check if this is in-memory store
-    this.inMemory = family.isInMemory();
+    // Setting up cache configuration for this family
+    this.cacheConf = new CacheConfig(conf, family);
 
     // By default we split region if a file > HConstants.DEFAULT_MAX_FILE_SIZE.
     long maxFileSize = info.getTableDesc().getMaxFileSize();
@@ -309,11 +310,12 @@ public class Store extends SchemaConfigured implements HeapSize {
         LOG.warn("Skipping " + p + " because its empty. HBASE-646 DATA LOSS?");
         continue;
       }
+
       // open each store file in parallel
       completionService.submit(new Callable<StoreFile>() {
         public StoreFile call() throws IOException {
-          StoreFile storeFile = new StoreFile(fs, p, blockcache, conf, family
-              .getBloomFilterType(), inMemory);
+          StoreFile storeFile = new StoreFile(fs, p, conf, cacheConf,
+              family.getBloomFilterType());
           storeFile.createReader();
           return storeFile;
         }
@@ -388,7 +390,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       LOG.info("Validating hfile at " + srcPath + " for inclusion in "
           + "store " + this + " region " + this.region);
       reader = HFile.createReader(srcPath.getFileSystem(conf),
-          srcPath, null, false, false);
+          srcPath, cacheConf);
       reader.loadFileInfo();
 
       byte[] firstKey = reader.getFirstRowKey();
@@ -428,8 +430,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     LOG.info("Renaming bulk load file " + srcPath + " to " + dstPath);
     StoreFile.rename(fs, srcPath, dstPath);
 
-    StoreFile sf = new StoreFile(fs, dstPath, blockcache,
-        this.conf, this.family.getBloomFilterType(), this.inMemory);
+    StoreFile sf = new StoreFile(fs, dstPath, this.conf, this.cacheConf,
+        this.family.getBloomFilterType());
     sf.createReader();
 
     LOG.info("Moved hfile " + srcPath + " into store directory " +
@@ -583,7 +585,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       synchronized (flushLock) {
         status.setStatus("Flushing " + this + ": creating writer");
         // A. Write the map out to the disk
-        writer = createWriterInTmp(snapshot.size(), true);
+        writer = createWriterInTmp(snapshot.size());
         writer.setTimeRangeTracker(snapshotTimeRangeTracker);
         fileName = writer.getPath().getName();
         int entries = 0;
@@ -630,8 +632,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     LOG.info("Renaming flushed file at " + writer.getPath() + " to " + dstPath);
     fs.rename(writer.getPath(), dstPath);
 
-    StoreFile sf = new StoreFile(this.fs, dstPath, blockcache,
-      this.conf, this.family.getBloomFilterType(), this.inMemory);
+    StoreFile sf = new StoreFile(this.fs, dstPath, this.conf, this.cacheConf,
+        this.family.getBloomFilterType());
     StoreFile.Reader r = sf.createReader();
     this.storeSize += r.length();
     // This increments the metrics associated with total flushed bytes for this
@@ -654,13 +656,12 @@ public class Store extends SchemaConfigured implements HeapSize {
   /*
    * @return Writer for a new StoreFile in the tmp dir.
    */
-  private StoreFile.Writer createWriterInTmp(long maxKeyCount,
-      boolean allowCacheOnWrite)
+  private StoreFile.Writer createWriterInTmp(long maxKeyCount)
   throws IOException {
     return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
-        this.compression, this.comparator, this.conf,
+        this.compression, this.comparator, this.conf, this.cacheConf,
         this.family.getBloomFilterType(), this.family.getBloomFilterErrorRate(),
-        maxKeyCount, region.getFavoredNodes(), allowCacheOnWrite);
+        maxKeyCount, region.getFavoredNodes());
   }
 
   /*
@@ -1294,7 +1295,7 @@ public class Store extends SchemaConfigured implements HeapSize {
           hasMore = scanner.next(kvs, 1);
           if (!kvs.isEmpty()) {
             if (writer == null) {
-              writer = createWriterInTmp(maxKeyCount, false);
+              writer = createWriterInTmp(maxKeyCount);
             }
             // output to writer:
             for (KeyValue kv : kvs) {
@@ -1347,8 +1348,8 @@ public class Store extends SchemaConfigured implements HeapSize {
       throws IOException {
     StoreFile storeFile = null;
     try {
-      storeFile = new StoreFile(this.fs, path, blockcache, this.conf,
-          this.family.getBloomFilterType(), this.inMemory);
+      storeFile = new StoreFile(this.fs, path, this.conf, this.cacheConf,
+          this.family.getBloomFilterType());
       storeFile.createReader();
     } catch (IOException e) {
       LOG.error("Failed to open store file : " + path
@@ -1398,8 +1399,8 @@ public class Store extends SchemaConfigured implements HeapSize {
         LOG.error("Failed move of compacted file " + origPath + " to " +
             dstPath);
       }
-      result = new StoreFile(this.fs, dstPath, blockcache, this.conf,
-          this.family.getBloomFilterType(), this.inMemory);
+      result = new StoreFile(this.fs, dstPath, this.conf, this.cacheConf,
+          this.family.getBloomFilterType());
       result.createReader();
     }
     try {
@@ -1929,8 +1930,8 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      new SchemaConfigured().heapSize() + (14 * ClassSize.REFERENCE) +
-      (7 * Bytes.SIZEOF_LONG) + (6 * Bytes.SIZEOF_INT) + (3 * Bytes.SIZEOF_BOOLEAN));
+      new SchemaConfigured().heapSize() + (15 * ClassSize.REFERENCE) +
+      (7 * Bytes.SIZEOF_LONG) + (6 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +

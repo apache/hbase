@@ -105,4 +105,11 @@ public class SimpleBlockCache implements BlockCache {
   public int evictBlocksByPrefix(String string) {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public long getBlockCount() {
+    // TODO: implement this if we ever actually use this block cache
+    return 0;
+  }
 }
+

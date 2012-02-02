@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.DataInput;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryUsage;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -48,14 +46,13 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilter;
@@ -65,7 +62,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -86,8 +82,6 @@ import com.google.common.collect.Ordering;
  */
 public class StoreFile {
   static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
-
-  static final String HFILE_BLOCK_CACHE_SIZE_KEY = "hfile.block.cache.size";
 
   public static enum BloomType {
     /**
@@ -131,9 +125,6 @@ public class StoreFile {
   // Need to make it 8k for testing.
   public static final int DEFAULT_BLOCKSIZE_SMALL = 8 * 1024;
 
-
-  private static BlockCache hfileBlockCache = null;
-
   private final FileSystem fs;
 
   // This file's path.
@@ -145,11 +136,8 @@ public class StoreFile {
   // If this StoreFile references another, this is the other files path.
   private Path referencePath;
 
-  // Should the block cache be used or not.
-  private boolean blockcache;
-
-  // Is this from an in-memory store
-  private boolean inMemory;
+  // Block cache configuration and reference.
+  private final CacheConfig cacheConf;
 
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
@@ -212,6 +200,7 @@ public class StoreFile {
    * @param p  The path of the file.
    * @param blockcache  <code>true</code> if the block cache is enabled.
    * @param conf  The current configuration.
+   * @param cacheConf  The cache configuration and block cache reference.
    * @param cfBloomType The bloom type to use for this store file as specified
    *          by column family configuration. This may or may not be the same
    *          as the Bloom filter type actually present in the HFile, because
@@ -221,16 +210,14 @@ public class StoreFile {
    */
   StoreFile(final FileSystem fs,
             final Path p,
-            final boolean blockcache,
             final Configuration conf,
-            final BloomType cfBloomType,
-            final boolean inMemory)
+            final CacheConfig cacheConf,
+            final BloomType cfBloomType)
       throws IOException {
     this.conf = conf;
     this.fs = fs;
     this.path = p;
-    this.blockcache = blockcache;
-    this.inMemory = inMemory;
+    this.cacheConf = cacheConf;
     if (isReference(p)) {
       this.reference = Reference.read(fs, p);
       this.referencePath = getReferredToFile(this.path);
@@ -400,40 +387,6 @@ public class StoreFile {
   }
 
   /**
-   * Returns the block cache or <code>null</code> in case none should be used.
-   *
-   * @param conf  The current configuration.
-   * @return The block cache or <code>null</code>.
-   */
-  public static synchronized BlockCache getBlockCache(Configuration conf) {
-    if (hfileBlockCache != null) return hfileBlockCache;
-
-    float cachePercentage = conf.getFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
-    // There should be a better way to optimize this. But oh well.
-    if (cachePercentage == 0L) return null;
-    if (cachePercentage > 1.0) {
-      throw new IllegalArgumentException(HFILE_BLOCK_CACHE_SIZE_KEY +
-        " must be between 0.0 and 1.0, not > 1.0");
-    }
-
-    // Calculate the amount of heap to give the heap.
-    MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    long cacheSize = (long)(mu.getMax() * cachePercentage);
-    LOG.info("Allocating LruBlockCache with maximum size " +
-      StringUtils.humanReadableInt(cacheSize));
-    hfileBlockCache = new LruBlockCache(cacheSize, DEFAULT_BLOCKSIZE_SMALL,
-        conf);
-    return hfileBlockCache;
-  }
-
-  /**
-   * @return the blockcache
-   */
-  public BlockCache getBlockCache() {
-    return blockcache ? getBlockCache(conf) : null;
-  }
-
-  /**
    * Opens reader on this store file.  Called by Constructor.
    * @return Reader for the store file.
    * @throws IOException
@@ -447,12 +400,10 @@ public class StoreFile {
 
     if (isReference()) {
       this.reader = new HalfStoreFileReader(this.fs, this.referencePath,
-          getBlockCache(), this.reference);
+          this.cacheConf, this.reference);
     } else {
       SchemaMetrics.configureGlobally(conf);
-      this.reader = new Reader(this.fs, this.path, getBlockCache(),
-          this.inMemory,
-          this.conf.getBoolean(HFile.EVICT_BLOCKS_ON_CLOSE_KEY, true));
+      this.reader = new Reader(this.fs, this.path, this.cacheConf);
     }
 
     // Load up indices and fileinfo. This also loads Bloom filter type.
@@ -617,21 +568,25 @@ public class StoreFile {
    * @throws IOException
    */
   public static Writer createWriter(final FileSystem fs, final Path dir,
-      final int blocksize, Configuration conf) throws IOException {
-    return createWriter(fs, dir, blocksize, null, null, conf, BloomType.NONE,
-        0);
+      final int blocksize, Configuration conf, CacheConfig cacheConf)
+  throws IOException {
+    return createWriter(fs, dir, blocksize, null, null, conf, cacheConf,
+        BloomType.NONE, 0);
   }
+
   public static StoreFile.Writer createWriter(final FileSystem fs,
           final Path dir,
           final int blocksize,
           final Compression.Algorithm algorithm,
           final KeyValue.KVComparator c,
           final Configuration conf,
+          final CacheConfig cacheConf,
           BloomType bloomType,
           long maxKeyCount)
   throws IOException {
-      return createWriter(fs, dir, blocksize, algorithm, c, conf, bloomType,
-        BloomFilterFactory.getErrorRate(conf), maxKeyCount, null, true);
+      return createWriter(fs, dir, blocksize, algorithm, c, conf, cacheConf,
+          bloomType, BloomFilterFactory.getErrorRate(conf), maxKeyCount,
+          null);
   }
 
   /**
@@ -644,6 +599,7 @@ public class StoreFile {
    * @param algorithm Pass null to get default.
    * @param c Pass null to get default.
    * @param conf HBase system configuration. used with bloom filters
+   * @param cacheConf Cache configuration and reference.
    * @param bloomType column family setting for bloom filters
    * @param bloomErrorRate column family setting for bloom filter error rate
    * @param maxKeyCount estimated maximum number of keys we expect to add
@@ -657,11 +613,11 @@ public class StoreFile {
                                               final Compression.Algorithm algorithm,
                                               final KeyValue.KVComparator c,
                                               final Configuration conf,
+                                              final CacheConfig cacheConf,
                                               BloomType bloomType,
                                               float bloomErrorRate,
                                               long maxKeyCount,
-                                              InetSocketAddress[] favoredNodes,
-                                              boolean allowCacheOnWrite)
+                                              InetSocketAddress[] favoredNodes)
       throws IOException {
 
     if (!fs.exists(dir)) {
@@ -674,8 +630,8 @@ public class StoreFile {
 
     return new Writer(fs, path, blocksize,
         algorithm == null? HFile.DEFAULT_COMPRESSION_ALGORITHM: algorithm,
-        conf, c == null ? KeyValue.COMPARATOR: c, bloomType, bloomErrorRate,
-        maxKeyCount, favoredNodes, allowCacheOnWrite);
+        conf, cacheConf, c == null ? KeyValue.COMPARATOR: c, bloomType,
+        bloomErrorRate, maxKeyCount, favoredNodes);
   }
 
   /**
@@ -782,18 +738,12 @@ public class StoreFile {
 
     public Writer(FileSystem fs, Path path, int blocksize,
             Compression.Algorithm compress, final Configuration conf,
+            CacheConfig cacheConf,
             final KVComparator comparator, BloomType bloomType,  long maxKeys)
             throws IOException {
-     this(fs, path, blocksize, compress, conf, comparator, bloomType,
-          BloomFilterFactory.getErrorRate(conf), maxKeys, null, true);
-    }
-
-    public Writer(FileSystem fs, Path path, int blocksize,
-        Compression.Algorithm compress, final Configuration conf,
-        final KVComparator comparator, BloomType bloomType,
-        float bloomErrorRate, long maxKeys) throws IOException {
-      this(fs, path, blocksize, compress, conf, comparator, bloomType,
-          bloomErrorRate, maxKeys, null, true);
+	this(fs, path, blocksize, compress, conf, cacheConf, comparator,
+	  bloomType, BloomFilterFactory.getErrorRate(conf), maxKeys,
+        null);
     }
 
     /**
@@ -803,6 +753,7 @@ public class StoreFile {
      * @param blocksize HDFS block size
      * @param compress HDFS block compression
      * @param conf user configuration
+     * @param cacheConf cache configuration
      * @param comparator key comparator
      * @param bloomType bloom filter setting
      * @param bloomErrorRate error rate for bloom filter
@@ -813,20 +764,20 @@ public class StoreFile {
      */
     public Writer(FileSystem fs, Path path, int blocksize,
         Compression.Algorithm compress, final Configuration conf,
+        final CacheConfig cacheConf,
         final KVComparator comparator, BloomType bloomType,
-        float bloomErrorRate, long maxKeys, InetSocketAddress[] favoredNodes,
-        boolean allowCacheOnWrite) throws IOException {
+        float bloomErrorRate, long maxKeys, InetSocketAddress[] favoredNodes)
+        throws IOException {
 
-      writer = HFile.getWriterFactory(conf).createWriter(
+      writer = HFile.getWriterFactory(conf, cacheConf).createWriter(
           fs, path, blocksize, HFile.getBytesPerChecksum(conf, fs.getConf()),
-          compress, comparator.getRawComparator(), favoredNodes,
-          allowCacheOnWrite);
+          compress, comparator.getRawComparator(), favoredNodes);
 
       this.kvComparator = comparator;
 
       generalBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(
-          conf, bloomType, (int) Math.min(maxKeys, Integer.MAX_VALUE), writer,
-          bloomErrorRate);
+          conf, cacheConf, bloomType,
+          (int) Math.min(maxKeys, Integer.MAX_VALUE), writer, bloomErrorRate);
 
       if (generalBloomFilterWriter != null) {
         this.bloomType = bloomType;
@@ -841,7 +792,7 @@ public class StoreFile {
       // filter
       if (this.bloomType != BloomType.ROWCOL) {
         this.deleteFamilyBloomFilterWriter = BloomFilterFactory
-            .createDeleteBloomAtWrite(conf,
+            .createDeleteBloomAtWrite(conf, cacheConf,
                 (int) Math.min(maxKeys, Integer.MAX_VALUE), writer,
                 bloomErrorRate);
       } else {
@@ -1109,11 +1060,9 @@ public class StoreFile {
       this.reader = reader;
     }
 
-    public Reader(FileSystem fs, Path path, BlockCache blockCache,
-        boolean inMemory, boolean evictOnClose)
+    public Reader(FileSystem fs, Path path, CacheConfig cacheConf)
         throws IOException {
-      this(HFile.createReader(fs, path, blockCache, inMemory,
-          evictOnClose));
+      this(HFile.createReader(fs, path, cacheConf));
       bloomFilterType = BloomType.NONE;
     }
 

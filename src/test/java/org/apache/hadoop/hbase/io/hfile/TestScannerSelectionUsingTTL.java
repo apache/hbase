@@ -129,7 +129,7 @@ public class TestScannerSelectionUsingTTL {
     Scan scan = new Scan();
     scan.setMaxVersions(Integer.MAX_VALUE);
     LruBlockCache cache = (LruBlockCache)
-        StoreFile.getBlockCache(TEST_UTIL.getConfiguration());
+        new CacheConfig(TEST_UTIL.getConfiguration()).getBlockCache();
     cache.clearCache();
     InternalScanner scanner = region.getScanner(scan);
     List<KeyValue> results = new ArrayList<KeyValue>();

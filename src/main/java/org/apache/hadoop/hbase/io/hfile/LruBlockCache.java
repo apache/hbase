@@ -550,6 +550,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
     return this.elements.get();
   }
 
+  @Override
+  public long getBlockCount() {
+    return this.elements.get();
+  }
+
   /**
    * Get the number of eviction runs that have occurred
    */
