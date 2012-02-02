@@ -453,7 +453,8 @@ public class TestSplitLogManager {
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 0);
     slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
     slm.finishInitialization();
-    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    MiniDFSCluster dfscluster = TEST_UTIL.startMiniDFSCluster(1);
+    FileSystem fs = dfscluster.getFileSystem();
     final Path logDir = new Path(fs.getWorkingDirectory(),
         UUID.randomUUID().toString());
     fs.mkdirs(logDir);
