@@ -777,7 +777,7 @@ public class HFileReadWriteTest {
 
       }
     } finally {
-      storeFile.closeReader();
+      storeFile.closeReader(true);
       exec.shutdown();
 
       LruBlockCache c = (LruBlockCache) new CacheConfig(conf).getBlockCache();

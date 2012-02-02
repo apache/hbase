@@ -267,7 +267,7 @@ public class TestCompoundBloomFilter {
       }
     }
 
-    r.close();
+    r.close(true); // end of test so evictOnClose
   }
 
   private boolean isInBloom(StoreFileScanner scanner, byte[] row, BloomType bt,

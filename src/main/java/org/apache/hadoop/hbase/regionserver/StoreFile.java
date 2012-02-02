@@ -492,12 +492,10 @@ public class StoreFile {
     return this.reader;
   }
 
-  /**
-   * @throws IOException
-   */
-  public synchronized void closeReader() throws IOException {
+  public synchronized void closeReader(boolean evictOnClose)
+      throws IOException {
     if (this.reader != null) {
-      this.reader.close();
+      this.reader.close(evictOnClose);
       this.reader = null;
     }
   }
@@ -507,7 +505,7 @@ public class StoreFile {
    * @throws IOException
    */
   public void deleteReader() throws IOException {
-    closeReader();
+    closeReader(true);
     this.fs.delete(getPath(), true);
   }
 
@@ -1134,6 +1132,10 @@ public class StoreFile {
     public HFileScanner getScanner(boolean cacheBlocks, boolean pread,
                                   boolean isCompaction) {
       return reader.getScanner(cacheBlocks, pread, isCompaction);
+    }
+
+    public void close(boolean evictOnClose) throws IOException {
+      reader.close(evictOnClose);
     }
 
     public void close() throws IOException {

@@ -326,10 +326,10 @@ public class TestStoreFile extends HBaseTestCase {
       assertTrue(count == 0);
     } finally {
       if (top != null) {
-        top.close();
+        top.close(true); // evict since we are about to delete the file
       }
       if (bottom != null) {
-        bottom.close();
+        bottom.close(true); // evict since we are about to delete the file
       }
       fs.delete(f.getPath(), true);
     }
@@ -375,7 +375,7 @@ public class TestStoreFile extends HBaseTestCase {
         if (exists) falsePos++;
       }
     }
-    reader.close();
+    reader.close(true); // evict because we are about to delete the file
     fs.delete(f, true);
     assertEquals("False negatives: " + falseNeg, 0, falseNeg);
     int maxFalsePos = (int) (2 * 2000 * err);
@@ -525,7 +525,7 @@ public class TestStoreFile extends HBaseTestCase {
           }
         }
       }
-      reader.close();
+      reader.close(true); // evict because we are about to delete the file
       fs.delete(f, true);
       System.out.println(bt[x].toString());
       System.out.println("  False negatives: " + falseNeg);
@@ -735,7 +735,7 @@ public class TestStoreFile extends HBaseTestCase {
     assertEquals(startEvicted, cs.getEvictedCount());
     startMiss += 3;
     scanner.close();
-    reader.close();
+    reader.close(cacheConf.shouldEvictOnClose());
 
     // Now write a StoreFile with three blocks, with cache on write on
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
@@ -755,7 +755,7 @@ public class TestStoreFile extends HBaseTestCase {
     assertEquals(startEvicted, cs.getEvictedCount());
     startHit += 3;
     scanner.close();
-    reader.close();
+    reader.close(cacheConf.shouldEvictOnClose());
 
     // Let's read back the two files to ensure the blocks exactly match
     hsf = new StoreFile(this.fs, pathCowOff, conf, cacheConf,
@@ -790,9 +790,9 @@ public class TestStoreFile extends HBaseTestCase {
     assertEquals(startEvicted, cs.getEvictedCount());
     startHit += 6;
     scannerOne.close();
-    readerOne.close();
+    readerOne.close(cacheConf.shouldEvictOnClose());
     scannerTwo.close();
-    readerTwo.close();
+    readerTwo.close(cacheConf.shouldEvictOnClose());
 
     // Let's close the first file with evict on close turned on
     conf.setBoolean("hbase.rs.evictblocksonclose", true);
@@ -800,7 +800,7 @@ public class TestStoreFile extends HBaseTestCase {
     hsf = new StoreFile(this.fs, pathCowOff, conf, cacheConf,
         StoreFile.BloomType.NONE);
     reader = hsf.createReader();
-    reader.close();
+    reader.close(cacheConf.shouldEvictOnClose());
 
     // We should have 3 new evictions
     assertEquals(startHit, cs.getHitCount());
@@ -814,7 +814,7 @@ public class TestStoreFile extends HBaseTestCase {
     hsf = new StoreFile(this.fs, pathCowOn, conf, cacheConf,
         StoreFile.BloomType.NONE);
     reader = hsf.createReader();
-    reader.close();
+    reader.close(cacheConf.shouldEvictOnClose());
 
     // We expect no changes
     assertEquals(startHit, cs.getHitCount());
