@@ -32,11 +32,13 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Joiner;
@@ -60,7 +62,8 @@ public class TestMemStore extends TestCase {
     super.setUp();
     this.rwcc = new ReadWriteConsistencyControl();
     this.memstore = new MemStore();
-  }
+		SchemaMetrics.configureGlobally(HBaseConfiguration.create());
+	}
 
   public void testPutSameKey() {
     byte [] bytes = Bytes.toBytes(getName());

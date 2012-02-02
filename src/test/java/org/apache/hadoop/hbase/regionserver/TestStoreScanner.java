@@ -20,29 +20,32 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import junit.framework.TestCase;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.mockito.Mockito;
-import org.mockito.stubbing.OngoingStubbing;
-
-import com.google.common.collect.Lists;
+import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
-import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
+
+import junit.framework.TestCase;
+
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestStoreScanner extends TestCase {
   private static final String CF_STR = "cf";
   final byte [] CF = Bytes.toBytes(CF_STR);
 
+  @Override
+  public void setUp() throws Exception {
+    SchemaMetrics.configureGlobally(HBaseConfiguration.create());
+  }
   /*
    * Test utility for building a NavigableSet for scanners.
    * @param strCols
