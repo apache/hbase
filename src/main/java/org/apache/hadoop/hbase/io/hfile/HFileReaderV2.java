@@ -196,7 +196,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset,
           blockSize, -1, true);
-      configureWithSchema(metaBlock);
+      passSchemaMetricsTo(metaBlock);
 
       long delta = System.currentTimeMillis() - now;
       HFile.readTime += delta;
@@ -246,7 +246,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
     IdLock.Entry lockEntry = offsetLock.getLockEntry(dataBlockOffset);
     try {
       // Check cache for block. If found return.
-      cacheBlock &= cacheConf.shouldCacheDataOnRead();
       if (cacheConf.isBlockCacheEnabled()) {
         HFileBlock cachedBlock =
           (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey, cacheBlock);
@@ -261,23 +260,24 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       // Load block from filesystem.
       long now = System.currentTimeMillis();
-      HFileBlock dataBlock = fsBlockReader.readBlockData(dataBlockOffset,
+      HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset,
           onDiskBlockSize, -1, pread);
-      configureWithSchema(dataBlock);
-      BlockCategory blockCategory = dataBlock.getBlockType().getCategory();
+      passSchemaMetricsTo(hfileBlock);
+      BlockCategory blockCategory = hfileBlock.getBlockType().getCategory();
 
       long delta = System.currentTimeMillis() - now;
       HFile.readTime += delta;
       HFile.readOps++;
       getSchemaMetrics().updateOnCacheMiss(blockCategory, isCompaction, delta);
 
-      // Cache the block
-      if (cacheBlock) {
-        cacheConf.getBlockCache().cacheBlock(cacheKey, dataBlock,
+      // Cache the block if necessary
+      if (cacheBlock && cacheConf.shouldCacheBlockOnRead(
+              hfileBlock.getBlockType().getCategory())) {
+        cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
             cacheConf.isInMemory());
       }
 
-      return dataBlock;
+      return hfileBlock;
     } finally {
       offsetLock.releaseLockEntry(lockEntry);
     }

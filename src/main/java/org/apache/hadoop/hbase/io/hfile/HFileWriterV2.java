@@ -257,7 +257,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     HFile.writeOps++;
 
     if (cacheConf.shouldCacheDataOnWrite()) {
-      cacheBlockOnWrite(lastDataBlockOffset);
+      doCacheOnWrite(lastDataBlockOffset);
     }
   }
 
@@ -274,17 +274,23 @@ public class HFileWriterV2 extends AbstractHFileWriter {
             fsBlockWriter.getUncompressedSizeWithoutHeader());
 
         if (cacheThisBlock) {
-          cacheBlockOnWrite(offset);
+          doCacheOnWrite(offset);
         }
       }
     }
   }
 
-  private void cacheBlockOnWrite(long offset) {
-    final HFileBlock cBlock = fsBlockWriter.getBlockForCaching();
-    configureWithSchema(cBlock);
-    cacheConf.getBlockCache().cacheBlock(HFile.getBlockCacheKey(name, offset),
-        cBlock);
+  /**
+   * Caches the last written HFile block.
+   * @param offset the offset of the block we want to cache. Used to determine
+   *          the cache key.
+   */
+  private void doCacheOnWrite(long offset) {
+    // Cache this block on write.
+    HFileBlock cacheFormatBlock = fsBlockWriter.getBlockForCaching();
+    passSchemaMetricsTo(cacheFormatBlock);
+    cacheConf.getBlockCache().cacheBlock(
+        HFile.getBlockCacheKey(name, offset), cacheFormatBlock);
   }
 
   /**

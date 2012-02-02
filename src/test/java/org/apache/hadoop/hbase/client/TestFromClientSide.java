@@ -69,8 +69,12 @@ import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
@@ -4115,6 +4119,103 @@ public class TestFromClientSide {
   @Test
   public void testCompactCFRegion() throws Exception {
     compactCFRegion(0);
+  }
+
+  @Test
+  public void testCacheOnWriteEvictOnClose() throws Exception {
+    byte [] tableName = Bytes.toBytes("testCOWEOCfromClient");
+    byte [] data = Bytes.toBytes("data");
+    HTable table = TEST_UTIL.createTable(tableName, new byte [][] {FAMILY});
+    // get the block cache and region
+    String regionName =
+        table.getRegionsInfo().firstKey().getRegionNameAsString();
+    HRegion region = TEST_UTIL.getRSForFirstRegionInTable(
+        tableName).getOnlineRegionByFullName(regionName);
+    Store store = region.getStores().values().iterator().next();
+    CacheConfig cacheConf = store.getCacheConfig();
+    cacheConf.setCacheDataOnWrite(true);
+    cacheConf.setEvictOnClose(true);
+    BlockCache cache = cacheConf.getBlockCache();
+
+    // establish baseline stats
+    long startBlockCount = cache.getBlockCount();
+    long startBlockHits = cache.getStats().getHitCount();
+    long startBlockMiss = cache.getStats().getMissCount();
+    // insert data
+    Put put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER, data);
+    table.put(put);
+    assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
+    // data was in memstore so don't expect any changes
+    assertEquals(startBlockCount, cache.getBlockCount());
+    assertEquals(startBlockHits, cache.getStats().getHitCount());
+    assertEquals(startBlockMiss, cache.getStats().getMissCount());
+    // flush the data
+    System.out.println("Flushing cache");
+    region.flushcache();
+    // expect one more block in cache, no change in hits/misses
+    long expectedBlockCount = startBlockCount + 1;
+    long expectedBlockHits = startBlockHits;
+    long expectedBlockMiss = startBlockMiss;
+    assertEquals(expectedBlockCount, cache.getBlockCount());
+    assertEquals(expectedBlockHits, cache.getStats().getHitCount());
+    assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
+    // read the data and expect same blocks, one new hit, no misses
+    assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
+    assertEquals(expectedBlockCount, cache.getBlockCount());
+    assertEquals(++expectedBlockHits, cache.getStats().getHitCount());
+    assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
+    // insert a second column, read the row, no new blocks, one new hit
+    byte [] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
+    byte [] data2 = Bytes.add(data, data);
+    put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER2, data2);
+    table.put(put);
+    Result r = table.get(new Get(ROW));
+    assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
+    assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER2), data2));
+    assertEquals(expectedBlockCount, cache.getBlockCount());
+    assertEquals(++expectedBlockHits, cache.getStats().getHitCount());
+    assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
+    // flush, one new block
+    System.out.println("Flushing cache");
+    region.flushcache();
+    assertEquals(++expectedBlockCount, cache.getBlockCount());
+    assertEquals(expectedBlockHits, cache.getStats().getHitCount());
+    assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
+    // compact, net minus two blocks, two hits, no misses
+    System.out.println("Compacting");
+    assertEquals(2, store.getNumberOfStoreFiles());
+    store.triggerMajorCompaction();
+    region.compactStores();
+    waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
+    assertEquals(1, store.getNumberOfStoreFiles());
+    expectedBlockCount -= 2; // evicted two blocks, cached none
+    assertEquals(expectedBlockCount, cache.getBlockCount());
+    expectedBlockHits += 2;
+    assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
+    assertEquals(expectedBlockHits, cache.getStats().getHitCount());
+    // read the row, this should be a cache miss because we don't cache data
+    // blocks on compaction
+    r = table.get(new Get(ROW));
+    assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
+    assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER2), data2));
+    expectedBlockCount += 1; // cached one data block
+    assertEquals(expectedBlockCount, cache.getBlockCount());
+    assertEquals(expectedBlockHits, cache.getStats().getHitCount());
+    assertEquals(++expectedBlockMiss, cache.getStats().getMissCount());
+  }
+
+  private void waitForStoreFileCount(Store store, int count, int timeout)
+  throws InterruptedException {
+    long start = System.currentTimeMillis();
+    while (start + timeout > System.currentTimeMillis() &&
+        store.getNumberOfStoreFiles() != count) {
+      Thread.sleep(100);
+    }
+    System.out.println("start=" + start + ", now=" +
+        System.currentTimeMillis() + ", cur=" + store.getNumberOfStoreFiles());
+    assertEquals(count, store.getNumberOfStoreFiles());
   }
 
   @Test

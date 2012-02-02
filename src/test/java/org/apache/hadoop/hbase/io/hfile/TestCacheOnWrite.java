@@ -20,11 +20,16 @@
 
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -33,25 +38,23 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileBlock;
-import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
-import org.apache.hadoop.hbase.io.hfile.HFileReaderV2;
-import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.io.hfile.TestHFileWriterV2;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.CreateRandomStoreFile;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import static org.junit.Assert.*;
 
 /**
  * Tests {@link HFile} cache-on-write functionality for the following block
@@ -78,6 +81,7 @@ public class TestCacheOnWrite {
   private static final int NUM_KV = 25000;
   private static final int INDEX_BLOCK_SIZE = 512;
   private static final int BLOOM_BLOCK_SIZE = 4096;
+  private static final BloomType BLOOM_TYPE = StoreFile.BloomType.ROWCOL;
 
   private static enum CacheOnWriteType {
     DATA_BLOCKS(BlockType.DATA, CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY),
@@ -152,7 +156,7 @@ public class TestCacheOnWrite {
   }
 
   @Test
-  public void testCacheOnWrite() throws IOException {
+  public void testStoreFileCacheOnWrite() throws IOException {
     writeStoreFile();
     readStoreFile();
   }
@@ -202,7 +206,7 @@ public class TestCacheOnWrite {
         "test_cache_on_write");
     StoreFile.Writer sfw = StoreFile.createWriter(fs, storeFileParentDir,
         DATA_BLOCK_SIZE, compress, KeyValue.COMPARATOR, conf,
-        cacheConf, StoreFile.BloomType.ROWCOL, NUM_KV);
+        cacheConf, BLOOM_TYPE, NUM_KV);
 
     final int rowLen = 32;
     for (int i = 0; i < NUM_KV; ++i) {
@@ -221,6 +225,56 @@ public class TestCacheOnWrite {
 
     sfw.close();
     storeFilePath = sfw.getPath();
+  }
+
+  @Test
+  public void testNotCachingDataBlocksDuringCompaction() throws IOException {
+    // TODO: need to change this test if we add a cache size threshold for
+    // compactions, or if we implement some other kind of intelligent logic for
+    // deciding what blocks to cache-on-write on compaction.
+    final String table = "CompactionCacheOnWrite";
+    final String cf = "myCF";
+    final byte[] cfBytes = Bytes.toBytes(cf);
+    final int maxVersions = 3;
+    HRegion region = TEST_UTIL.createTestRegion(table, cf, compress,
+        BLOOM_TYPE, maxVersions, HFile.DEFAULT_BLOCKSIZE);
+    int rowIdx = 0;
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    for (int iFile = 0; iFile < 5; ++iFile) {
+      for (int iRow = 0; iRow < 500; ++iRow) {
+        String rowStr = "" + (rowIdx * rowIdx * rowIdx) + "row" + iFile + "_" +
+            iRow;
+        Put p = new Put(Bytes.toBytes(rowStr));
+        ++rowIdx;
+        for (int iCol = 0; iCol < 10; ++iCol) {
+          String qualStr = "col" + iCol;
+          String valueStr = "value_" + rowStr + "_" + qualStr;
+          for (int iTS = 0; iTS < 5; ++iTS) {
+            p.add(cfBytes, Bytes.toBytes(qualStr), ts++,
+                Bytes.toBytes(valueStr));
+          }
+        }
+        region.put(p);
+      }
+      region.flushcache();
+    }
+    LruBlockCache blockCache =
+        (LruBlockCache) new CacheConfig(conf).getBlockCache();
+    blockCache.clearCache();
+    assertEquals(0, blockCache.getBlockTypeCountsForTest().size());
+    Map<String, Long> metricsBefore = SchemaMetrics.getMetricsSnapshot();
+    region.compactStores();
+    LOG.debug("compactStores() returned");
+    SchemaMetrics.validateMetricChanges(metricsBefore);
+    Map<String, Long> compactionMetrics = SchemaMetrics.diffMetrics(
+        metricsBefore, SchemaMetrics.getMetricsSnapshot());
+    LOG.debug(SchemaMetrics.formatMetrics(compactionMetrics));
+    Map<BlockType, Integer> blockTypesInCache =
+        blockCache.getBlockTypeCountsForTest();
+    LOG.debug("Block types in cache: " + blockTypesInCache);
+    assertNull(blockTypesInCache.get(BlockType.DATA));
+    region.close();
+    blockCache.shutdown();
   }
 
 }

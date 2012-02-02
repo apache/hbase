@@ -241,7 +241,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
       HFileBlock hfileBlock = fsBlockReader.readBlockData(offset,
           nextOffset - offset, metaBlockIndexReader.getRootBlockDataSize(block),
           true);
-      configureWithSchema(hfileBlock);
+      passSchemaMetricsTo(hfileBlock);
       hfileBlock.expectType(BlockType.META);
 
       long delta = System.currentTimeMillis() - now;
@@ -316,7 +316,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
       HFileBlock hfileBlock = fsBlockReader.readBlockData(offset, nextOffset
           - offset, dataBlockIndexReader.getRootBlockDataSize(block), pread);
-      configureWithSchema(hfileBlock);
+      passSchemaMetricsTo(hfileBlock);
       hfileBlock.expectType(BlockType.DATA);
       ByteBuffer buf = hfileBlock.getBufferWithoutHeader();
 

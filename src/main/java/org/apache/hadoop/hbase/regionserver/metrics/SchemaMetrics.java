@@ -208,9 +208,13 @@ public class SchemaMetrics {
       "hbase.metrics.showTableName";
 
   // Global variables
-  /** All instances of this class */
+  /**
+   * Maps a string key consisting of table name and column family name, with
+   * table name optionally replaced with {@link #TOTAL_KEY} if per-table
+   * metrics are disabled, to an instance of this class.
+   */
   private static final ConcurrentHashMap<String, SchemaMetrics>
-      cfToMetrics = new ConcurrentHashMap<String, SchemaMetrics>();
+      tableAndFamilyToMetrics = new ConcurrentHashMap<String, SchemaMetrics>();
 
   /** Metrics for all tables and column families. */
   // This has to be initialized after cfToMetrics.
@@ -306,14 +310,14 @@ public class SchemaMetrics {
     tableName = getEffectiveTableName(tableName);
 
     final String instanceKey = tableName + "\t" + cfName;
-    SchemaMetrics schemaMetrics = cfToMetrics.get(instanceKey);
+    SchemaMetrics schemaMetrics = tableAndFamilyToMetrics.get(instanceKey);
     if (schemaMetrics != null) {
       return schemaMetrics;
     }
 
     schemaMetrics = new SchemaMetrics(tableName, cfName);
-    SchemaMetrics existingMetrics = cfToMetrics.putIfAbsent(instanceKey,
-        schemaMetrics);
+    SchemaMetrics existingMetrics =
+        tableAndFamilyToMetrics.putIfAbsent(instanceKey, schemaMetrics);
     return existingMetrics != null ? existingMetrics : schemaMetrics;
   }
 
@@ -689,7 +693,7 @@ public class SchemaMetrics {
 
   public static Map<String, Long> getMetricsSnapshot() {
     Map<String, Long> metricsSnapshot = new TreeMap<String, Long>();
-    for (SchemaMetrics cfm : cfToMetrics.values()) {
+    for (SchemaMetrics cfm : tableAndFamilyToMetrics.values()) {
       for (String metricName : cfm.getAllMetricNames()) {
         long metricValue;
         if (isTimeVaryingKey(metricName)) {
@@ -746,7 +750,7 @@ public class SchemaMetrics {
     final Set<String> allKeys = new TreeSet<String>(oldMetrics.keySet());
     allKeys.addAll(newMetrics.keySet());
 
-    for (SchemaMetrics cfm : cfToMetrics.values()) {
+    for (SchemaMetrics cfm : tableAndFamilyToMetrics.values()) {
       for (String metricName : cfm.getAllMetricNames()) {
         if (metricName.startsWith(CF_PREFIX + CF_PREFIX)) {
           throw new AssertionError("Column family prefix used twice: " +
@@ -839,6 +843,18 @@ public class SchemaMetrics {
    */
   public static void setUseTableNameInTest(final boolean useTableNameNew) {
     useTableNameGlobally = useTableNameNew;
+  }
+
+  /** Formats the given map of metrics in a human-readable way. */
+  public static String formatMetrics(Map<String, Long> metrics) {
+    StringBuilder sb = new StringBuilder();
+    for (Map.Entry<String, Long> entry : metrics.entrySet()) {
+      if (sb.length() > 0) {
+        sb.append('\n');
+      }
+      sb.append(entry.getKey() + " : " + entry.getValue());
+    }
+    return sb.toString();
   }
 
 }

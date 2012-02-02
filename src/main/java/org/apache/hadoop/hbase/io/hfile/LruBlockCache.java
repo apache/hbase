@@ -20,15 +20,17 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.lang.ref.WeakReference;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -845,4 +847,14 @@ public class LruBlockCache implements BlockCache, HeapSize {
     return fileNames;
   }
 
+  Map<BlockType, Integer> getBlockTypeCountsForTest() {
+    Map<BlockType, Integer> counts =
+        new EnumMap<BlockType, Integer>(BlockType.class);
+    for (CachedBlock cb : map.values()) {
+      BlockType blockType = ((HFileBlock) cb.getBuffer()).getBlockType();
+      Integer count = counts.get(blockType);
+      counts.put(blockType, (count == null ? 0 : count) + 1);
+    }
+    return counts;
+  }
 }

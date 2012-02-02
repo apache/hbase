@@ -658,10 +658,34 @@ public class Store extends SchemaConfigured implements HeapSize {
    */
   private StoreFile.Writer createWriterInTmp(long maxKeyCount)
   throws IOException {
-    return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
-        this.compression, this.comparator, this.conf, this.cacheConf,
-        this.family.getBloomFilterType(), this.family.getBloomFilterErrorRate(),
-        maxKeyCount, region.getFavoredNodes());
+    return createWriterInTmp(maxKeyCount, this.compression, false);
+  }
+
+  /*
+   * @param maxKeyCount
+   * @param compression Compression algorithm to use
+   * @param isCompaction whether we are creating a new file in a compaction
+   * @return Writer for a new StoreFile in the tmp dir.
+   */
+  private StoreFile.Writer createWriterInTmp(long maxKeyCount,
+    Compression.Algorithm compression, boolean isCompaction)
+  throws IOException {
+    final CacheConfig writerCacheConf;
+    if (isCompaction) {
+      // Don't cache data on write on compactions.
+      writerCacheConf = new CacheConfig(cacheConf);
+      writerCacheConf.setCacheDataOnWrite(false);
+    } else {
+      writerCacheConf = cacheConf;
+    }
+    StoreFile.Writer w = StoreFile.createWriter(fs, region.getTmpDir(),
+        blocksize, compression, comparator, conf, writerCacheConf,
+        family.getBloomFilterType(), maxKeyCount);
+    // The store file writer's path does not include the CF name, so we need
+    // to configure the HFile writer directly.
+    SchemaConfigured sc = (SchemaConfigured) w.writer;
+    passSchemaMetricsTo(sc);
+    return w;
   }
 
   /*
@@ -1295,7 +1319,7 @@ public class Store extends SchemaConfigured implements HeapSize {
           hasMore = scanner.next(kvs, 1);
           if (!kvs.isEmpty()) {
             if (writer == null) {
-              writer = createWriterInTmp(maxKeyCount);
+              writer = createWriterInTmp(maxKeyCount, compression, true);
             }
             // output to writer:
             for (KeyValue kv : kvs) {
@@ -1724,7 +1748,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     return storeSize;
   }
 
-  void triggerMajorCompaction() {
+  public void triggerMajorCompaction() {
     this.forceMajor = true;
   }
 
@@ -1927,6 +1951,13 @@ public class Store extends SchemaConfigured implements HeapSize {
    */
   public boolean needsCompaction() {
     return (storefiles.size() - filesCompacting.size()) > minFilesToCompact;
+  }
+
+  /**
+   * Used for tests. Get the cache configuration for this Store.
+   */
+  public CacheConfig getCacheConfig() {
+    return this.cacheConf;
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(

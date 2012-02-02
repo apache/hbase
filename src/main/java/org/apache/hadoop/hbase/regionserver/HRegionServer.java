@@ -2604,6 +2604,11 @@ public class HRegionServer implements HRegionInterface,
     return sortedRegions;
   }
 
+  public HRegion getOnlineRegionByFullName(final String regionName) {
+    return this.onlineRegions.get(Bytes.mapKey(Bytes.toBytes(
+        regionName)));
+  }
+
   /**
    * @param regionName
    * @return HRegion for the passed <code>regionName</code> or null if named

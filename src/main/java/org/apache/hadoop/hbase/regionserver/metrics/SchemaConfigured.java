@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -123,7 +122,7 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
    * current table and column family name, and the associated collection of
    * metrics.
    */
-  public void configureWithSchema(SchemaConfigured block) {
+  public void passSchemaMetricsTo(SchemaConfigured block) {
     SchemaConfigured upcast = block;  // need this to assign private fields
     upcast.tableName = tableName;
     upcast.cfName = cfName;

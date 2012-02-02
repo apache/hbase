@@ -55,12 +55,15 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ReadWriteConsistencyControl;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -759,6 +762,30 @@ public class HBaseTestingUtility {
   }
 
   /**
+   * Tool to get the reference to the region server object that holds the
+   * region of the specified user table.
+   * It first searches for the meta rows that contain the region of the
+   * specified table, then gets the index of that RS, and finally retrieves
+   * the RS's reference.
+   * @param tableName user table to lookup in .META.
+   * @return region server that holds it, null if the row doesn't exist
+   * @throws IOException
+   */
+  public HRegionServer getRSForFirstRegionInTable(byte[] tableName)
+      throws IOException {
+    List<byte[]> metaRows = getMetaTableRows(tableName);
+    if (metaRows == null || metaRows.isEmpty()) {
+      return null;
+    }
+    LOG.debug("Found " + metaRows.size() + " rows for table " +
+      Bytes.toString(tableName));
+    byte [] firstrow = metaRows.get(0);
+    LOG.debug("FirstRow=" + Bytes.toString(firstrow));
+    int index = hbaseCluster.getServerWith(firstrow);
+    return hbaseCluster.getRegionServerThreads().get(index).getRegionServer();
+  }
+
+  /**
    * Starts a <code>MiniMRCluster</code> with a default number of
    * <code>TaskTracker</code>'s.
    *
@@ -1261,6 +1288,27 @@ public class HBaseTestingUtility {
       }
     } while (port == 0);
     return port;
+  }
+
+  public HRegion createTestRegion(String tableName, String cfName,
+      Compression.Algorithm comprAlgo, BloomType bloomType, int maxVersions,
+      int blockSize) throws IOException {
+    HColumnDescriptor hcd =
+      new HColumnDescriptor(Bytes.toBytes(cfName), maxVersions,
+          comprAlgo.getName(),
+          HColumnDescriptor.DEFAULT_IN_MEMORY,
+          HColumnDescriptor.DEFAULT_BLOCKCACHE,
+          HColumnDescriptor.DEFAULT_TTL,
+          bloomType.toString());
+    hcd.setBlocksize(HFile.DEFAULT_BLOCKSIZE);
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(hcd);
+    HRegionInfo info =
+        new HRegionInfo(htd, null, null, false);
+    HRegion region =
+        HRegion.createHRegion(info, getTestDir("test_region_" +
+            tableName), getConfiguration());
+    return region;
   }
 
 }

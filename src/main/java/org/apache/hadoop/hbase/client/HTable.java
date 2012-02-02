@@ -44,6 +44,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -380,8 +381,9 @@ public class HTable implements HTableInterface {
    * @return A map of HRegionInfo with it's server address
    * @throws IOException if a remote or network exception occurs
    */
-  public Map<HRegionInfo, HServerAddress> getRegionsInfo() throws IOException {
-    final Map<HRegionInfo, HServerAddress> regionMap =
+  public NavigableMap<HRegionInfo, HServerAddress> getRegionsInfo()
+      throws IOException {
+    final NavigableMap<HRegionInfo, HServerAddress> regionMap =
       new TreeMap<HRegionInfo, HServerAddress>();
 
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
