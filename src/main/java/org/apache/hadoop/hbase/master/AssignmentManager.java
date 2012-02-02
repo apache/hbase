@@ -1940,6 +1940,7 @@ public class AssignmentManager extends ZooKeeperListener {
           }
         }
       }
+      setAllRegionServersOffline(allRSsOffline);
       // Finish the work for regions in PENDING_CLOSE state
       for (HRegionInfo hri: unassigns) {
         unassign(hri, true);

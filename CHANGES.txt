@@ -42,6 +42,8 @@ Release 0.90.6 - Unreleased
    HBASE-5137  MasterFileSystem.splitLog() should abort even if waitOnSafeMode() throws IOException (Ram)
    HBASE-5271  Result.getValue and Result.getColumnLatest return the wrong column (Ghais Issa)
    HBASE-5153  Addendum for 0.90 branch (Jieshan)
+   HBASE-5321  this.allRegionServersOffline not set to false after one RS comes online and 
+               assignment is done in 0.90. (Ram)
 
   IMPROVEMENT
    HBASE-5102  Change the default value of the property "hbase.connection.per.config" to false in
