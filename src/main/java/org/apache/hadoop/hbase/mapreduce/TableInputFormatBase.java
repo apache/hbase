@@ -20,15 +20,19 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+
+import javax.naming.NamingException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -38,7 +42,7 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.net.DNS;
 
 /**
  * A base for {@link TableInputFormat}s. Receives a {@link HTable}, an
@@ -82,6 +86,13 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   /** The number of mappers to assign to each region. */
   private int numMappersPerRegion = 1;
 
+  /** The reverse DNS lookup cache mapping: IPAddress => HostName */
+  private HashMap<InetAddress, String> reverseDNSCacheMap =
+    new HashMap<InetAddress, String>();
+  
+  /** The NameServer address */
+  private String nameServer = null;
+  
   /**
    * Builds a TableRecordReader. If no TableRecordReader was provided, uses
    * the default.
@@ -125,6 +136,10 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException {
+    // Get the name server address and the default value is null.
+    this.nameServer =
+      context.getConfiguration().get("hbase.nameserver.address", null);
+    
     Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
     if (keys == null || keys.getFirst() == null ||
         keys.getFirst().length == 0) {
@@ -192,8 +207,19 @@ extends InputFormat<ImmutableBytesWritable, Result> {
           keys.getSecond()[i / numMappersPerRegion])) {
         continue;
       }
-      String regionLocation = table.getRegionLocation(splitKeys.getFirst()[i]).
-        getServerAddress().getHostname();
+      HServerAddress regionServerAddress = 
+        table.getRegionLocation(splitKeys.getFirst()[i]).getServerAddress();
+      InetAddress regionAddress =
+        regionServerAddress.getInetSocketAddress().getAddress();
+      String regionLocation;
+      try {
+        regionLocation = reverseDNS(regionAddress);
+      } catch (NamingException e) {
+        LOG.error("Cannot resolve the host name for " + regionAddress +
+            " because of " + e);
+        regionLocation = regionServerAddress.getHostname();
+      }
+      
       // determine if the given start an stop key fall into the region
       if ((startRow.length == 0 || splitKeys.getSecond()[i].length == 0 ||
           Bytes.compareTo(startRow, splitKeys.getSecond()[i]) < 0) &&
@@ -214,6 +240,16 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       }
     }
     return splits;
+  }
+  
+  private String reverseDNS(InetAddress ipAddress)
+  throws NamingException {
+    String hostName = this.reverseDNSCacheMap.get(ipAddress);
+    if (hostName == null) {
+      hostName = DNS.reverseDns(ipAddress, this.nameServer);
+      this.reverseDNSCacheMap.put(ipAddress, hostName);
+    }
+    return hostName;
   }
 
   /**
