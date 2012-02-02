@@ -165,6 +165,8 @@ public class HBaseFsckRepair {
         return false;
       } else if (inChar == 'y' || inChar == 'Y') {
         return true;
+      } else if (inChar == -1) {
+        throw new IOException("Lost interactive session");
       }
     }
   }
