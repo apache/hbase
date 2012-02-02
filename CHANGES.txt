@@ -12,6 +12,7 @@ Release 0.92.1 - Unreleased
    HBASE-5282  Possible file handle leak with truncated HLog file
    HBASE-5307  Unable to gracefully decommission a node because of script error
                (YiFeng Jiang)
+   HBASE-5212  Fix test TestTableMapReduce against 0.23 (Ted and Gregory)
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()

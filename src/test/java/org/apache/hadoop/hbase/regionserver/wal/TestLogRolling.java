@@ -335,13 +335,18 @@ public class TestLogRolling  {
     // We start 3 servers and then stop 2 to avoid a directory naming conflict
     //  when we stop/start a namenode later, as mentioned in HBASE-5163
     List<DataNode> existingNodes = dfsCluster.getDataNodes();
-    dfsCluster
-        .startDataNodes(TEST_UTIL.getConfiguration(), 3, true, null, null);
-    for (DataNode dn: existingNodes){
-      dfsCluster.stopDataNode( dn.dnRegistration.getName() );
+    int numDataNodes = 3;
+    dfsCluster.startDataNodes(TEST_UTIL.getConfiguration(), numDataNodes, true,
+        null, null);
+    List<DataNode> allNodes = dfsCluster.getDataNodes();
+    for (int i = allNodes.size()-1; i >= 0; i--) {
+      if (existingNodes.contains(allNodes.get(i))) {
+        dfsCluster.stopDataNode( i );
+      }
     }
 
-    assertTrue(
+    assertTrue("DataNodes " + dfsCluster.getDataNodes().size() +
+        " default replication " + fs.getDefaultReplication(),
       dfsCluster.getDataNodes().size() >= fs.getDefaultReplication() + 1);
 
     writeData(table, 2);

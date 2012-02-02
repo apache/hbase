@@ -1164,6 +1164,8 @@ public class HBaseTestingUtility {
     LOG.info("Mini mapreduce cluster started");
     c.set("mapred.job.tracker",
         mrCluster.createJobConf().get("mapred.job.tracker"));
+    /* this for mrv2 support */
+    conf.set("mapreduce.framework.name", "yarn");
   }
 
   /**
