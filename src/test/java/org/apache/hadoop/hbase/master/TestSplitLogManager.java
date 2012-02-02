@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog.TaskState;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
@@ -436,12 +437,14 @@ public class TestSplitLogManager {
     LOG.info("testEmptyLogDir");
     slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
     slm.finishInitialization();
-    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    MiniDFSCluster cluster = TEST_UTIL.startMiniDFSCluster(1);
+    FileSystem fs = cluster.getFileSystem();
     Path emptyLogDirPath = new Path(fs.getWorkingDirectory(),
         UUID.randomUUID().toString());
     fs.mkdirs(emptyLogDirPath);
     slm.splitLogDistributed(emptyLogDirPath);
     assertFalse(fs.exists(emptyLogDirPath));
+    cluster.shutdown();
   }
 
   @Test

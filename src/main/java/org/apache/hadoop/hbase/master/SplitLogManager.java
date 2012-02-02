@@ -275,17 +275,19 @@ public class SplitLogManager implements Watcher {
       for (Path logDir : logDirs) {
         status.setStatus("Cleaning up log directory...");
         try {
-          if (fs.exists(logDir) && !fs.delete(logDir, false)) {
-            LOG.warn("Unable to delete log src dir. Ignoring. " + logDir);
+          if (fs.exists(logDir)) {
+            FileStatus[] files = fs.listStatus(logDir);
+            if (files == null || files.length == 0) {
+              if (fs.delete(logDir, true) == false) {
+                LOG.warn("Unable to delete log src dir. Ignoring. " + logDir);
+              }
+            } else {
+              LOG.warn("returning success without actually splitting and " + 
+                  "deleting all the log files in path " + logDir);
+            }
           }
         } catch (IOException ioe) {
-          FileStatus[] files = fs.listStatus(logDir);
-          if (files != null && files.length > 0) {
-            LOG.warn("returning success without actually splitting and " +
-                "deleting all the log files in path " + logDir);
-          } else {
-            LOG.warn("Unable to delete log src dir. Ignoring. " + logDir, ioe);
-          }
+          LOG.warn("Unable to delete log src dir. Ignoring. " + logDir, ioe);
         }
       }
       tot_mgr_log_split_batch_success.incrementAndGet();
