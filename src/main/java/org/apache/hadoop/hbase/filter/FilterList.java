@@ -50,6 +50,7 @@ public class FilterList implements Filter {
   }
 
   private static final Configuration conf = HBaseConfiguration.create();
+  private static final int MAX_LOG_FILTERS = 5;
   private Operator operator = Operator.MUST_PASS_ALL;
   private List<Filter> filters = new ArrayList<Filter>();
 
@@ -252,5 +253,21 @@ public class FilterList implements Filter {
   @Override
   public KeyValue getNextKeyHint(KeyValue currentKV) {
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return toString(MAX_LOG_FILTERS);
+  }
+
+  protected String toString(int maxFilters) {
+    int endIndex = this.filters.size() < maxFilters
+        ? this.filters.size() : maxFilters;
+    return String.format("%s %s (%d/%d): %s",
+        this.getClass().getSimpleName(),
+        this.operator == Operator.MUST_PASS_ALL ? "AND" : "OR",
+        endIndex,
+        this.filters.size(),
+        this.filters.subList(0, endIndex).toString());
   }
 }

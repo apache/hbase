@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -103,9 +104,9 @@ public abstract class CompareFilter extends FilterBase {
   protected boolean doCompare(final CompareOp compareOp,
       final WritableByteArrayComparable comparator, final byte [] data,
       final int offset, final int length) {
-      if (compareOp == CompareOp.NO_OP) {
-	  return true;
-      }
+    if (compareOp == CompareOp.NO_OP) {
+      return true;
+    }
     int compareResult =
       comparator.compareTo(Arrays.copyOfRange(data, offset,
         offset + length));
@@ -159,5 +160,13 @@ public abstract class CompareFilter extends FilterBase {
     out.writeUTF(compareOp.name());
     HbaseObjectWritable.writeObject(out, comparator,
       WritableByteArrayComparable.class, null);
+  }
+
+  @Override
+  public String toString() {
+    return String.format("%s (%s, %s)",
+        this.getClass().getSimpleName(),
+        this.compareOp.name(),
+        Bytes.toStringBinary(this.comparator.getValue()));
   }
 }

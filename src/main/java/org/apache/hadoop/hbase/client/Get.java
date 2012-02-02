@@ -367,7 +367,7 @@ public class Get extends Operation implements Writable, Row, Comparable<Row> {
     }
     map.put("totalColumns", colCount);
     if (this.filter != null) {
-      map.put("Filter", this.filter.getClass().getName());
+      map.put("filter", this.filter.toString());
     }
     return map;
   }

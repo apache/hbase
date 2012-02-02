@@ -84,4 +84,9 @@ public class PrefixFilter extends FilterBase {
   public void readFields(DataInput in) throws IOException {
     this.prefix = Bytes.readByteArray(in);
   }
+
+  @Override
+  public String toString() {
+    return this.getClass().getSimpleName() + " " + Bytes.toStringBinary(this.prefix);
+  }
 }

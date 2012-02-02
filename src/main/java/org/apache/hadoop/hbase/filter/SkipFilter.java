@@ -98,4 +98,9 @@ public class SkipFilter extends FilterBase {
       throw new RuntimeException("Failed deserialize.", e);
     }
   }
+
+  @Override
+  public String toString() {
+    return this.getClass().getSimpleName() + " " + this.filter.toString();
+  }
 }

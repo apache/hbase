@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 public class TimestampsFilter extends FilterBase {
 
   TreeSet<Long> timestamps;
+  private static final int MAX_LOG_TIMESTAMPS = 5;
 
   // Used during scans to hint the scan to stop early
   // once the timestamps fall below the minTimeStamp.
@@ -115,5 +116,29 @@ public class TimestampsFilter extends FilterBase {
         .getRowLength(), kv.getBuffer(), kv.getFamilyOffset(), kv
         .getFamilyLength(), kv.getBuffer(), kv.getQualifierOffset(), kv
         .getQualifierLength(), nextTimestamp);
+  }
+
+  @Override
+  public String toString() {
+    return toString(MAX_LOG_TIMESTAMPS);
+  }
+
+  protected String toString(int maxTimestamps) {
+    StringBuilder tsList = new StringBuilder();
+
+    int count = 0;
+    for (Long ts : this.timestamps) {
+      if (count >= maxTimestamps) {
+        break;
+      }
+      ++count;
+      tsList.append(ts.toString());
+      if (count < this.timestamps.size() && count < maxTimestamps) {
+        tsList.append(", ");
+      }
+    }
+
+    return String.format("%s (%d/%d): [%s]", this.getClass().getSimpleName(),
+        count, this.timestamps.size(), tsList.toString());
   }
 }
