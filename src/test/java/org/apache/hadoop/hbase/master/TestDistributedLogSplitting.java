@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -149,50 +150,6 @@ public class TestDistributedLogSplitting {
         TEST_UTIL.countRows(ht));
   }
 
-  @Test(expected=OrphanHLogAfterSplitException.class)
-  public void testOrphanLogCreation() throws Exception {
-    LOG.info("testOrphanLogCreation");
-    startCluster(NUM_RS);
-    final SplitLogManager slm = master.getSplitLogManager();
-    final FileSystem fs = master.getFileSystem();
-
-    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
-    HRegionServer hrs = rsts.get(0).getRegionServer();
-    Path rootdir = FSUtils.getRootDir(conf);
-    final Path logDir = new Path(rootdir,
-        HLog.getHLogDirectoryName(hrs.getServerInfo().getServerName()));
-
-    installTable("table", "family", 40);
-
-    makeHLog(hrs.getLog(), hrs.getOnlineRegions(), "table",
-        1000, 100);
-
-    new Thread() {
-      public void run() {
-        while (true) {
-          int i = 0;
-          try {
-            while(ZKSplitLog.Counters.tot_mgr_log_split_batch_start.get() ==
-              0) {
-              Thread.yield();
-            }
-            fs.createNewFile(new Path(logDir, "foo" + i++));
-          } catch (Exception e) {
-            LOG.debug("file creation failed", e);
-            return;
-          }
-        }
-      }
-    }.start();
-    slm.splitLogDistributed(logDir);
-    FileStatus[] files = fs.listStatus(logDir);
-    if (files != null) {
-      for (FileStatus file : files) {
-        LOG.debug("file still there " + file.getPath());
-      }
-    }
-  }
-
   @Test
   public void testRecoveredEdits() throws Exception {
     LOG.info("testRecoveredEdits");
@@ -289,6 +246,45 @@ public class TestDistributedLogSplitting {
     assertEquals(1, batch.done);
     // fail("region server completed the split before aborting");
     return;
+  }
+
+  @Test
+  public void testDelayedDeleteOnFailure() throws Exception {
+    LOG.info("testDelayedDeleteOnFailure");
+    startCluster(1);
+    final SplitLogManager slm = master.splitLogManager;
+    final FileSystem fs = master.getFileSystem();
+    final Path logDir = new Path(FSUtils.getRootDir(conf), "x");
+    fs.mkdirs(logDir);
+    final Path corruptedLogFile = new Path(logDir, "x");
+    FSDataOutputStream out;
+    out = fs.create(corruptedLogFile);
+    out.write(0);
+    out.write(Bytes.toBytes("corrupted bytes"));
+    out.close();
+    slm.ignoreZKDeleteForTesting = true;
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        try {
+          slm.splitLogDistributed(logDir);
+        } catch (IOException ioe) {
+          try {
+            assertTrue(fs.exists(corruptedLogFile));
+            slm.splitLogDistributed(logDir);
+          } catch (IOException e) {
+            assertTrue(Thread.currentThread().isInterrupted());
+            return;
+          }
+          fail("did not get the expected IOException from the 2nd call");
+        }
+        fail("did not get the expected IOException from the 1st call");
+      }
+    };
+    t.start();
+    waitForCounter(tot_mgr_wait_for_zk_delete, 0, 1, 10000);
+    t.interrupt();
+    t.join();
   }
 
   HTable installTable(String tname, String fname, int nrs ) throws Exception {

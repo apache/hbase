@@ -214,6 +214,7 @@ public class ZKSplitLog {
     public static AtomicLong tot_mgr_node_create_retry = new AtomicLong(0);
     public static AtomicLong tot_mgr_get_data_queued = new AtomicLong(0);
     public static AtomicLong tot_mgr_get_data_result = new AtomicLong(0);
+    public static AtomicLong tot_mgr_get_data_nonode = new AtomicLong(0);
     public static AtomicLong tot_mgr_get_data_err = new AtomicLong(0);
     public static AtomicLong tot_mgr_get_data_retry = new AtomicLong(0);
     public static AtomicLong tot_mgr_node_delete_queued = new AtomicLong(0);
@@ -223,6 +224,7 @@ public class ZKSplitLog {
     public static AtomicLong tot_mgr_resubmit_failed = new AtomicLong(0);
     public static AtomicLong tot_mgr_null_data = new AtomicLong(0);
     public static AtomicLong tot_mgr_orphan_task_acquired = new AtomicLong(0);
+    public static AtomicLong tot_mgr_wait_for_zk_delete = new AtomicLong(0);
     public static AtomicLong tot_mgr_unacquired_orphan_done = new AtomicLong(0);
     public static AtomicLong tot_mgr_resubmit_threshold_reached =
       new AtomicLong(0);

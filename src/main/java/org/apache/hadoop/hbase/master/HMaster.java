@@ -1054,13 +1054,7 @@ public class HMaster extends Thread implements HMasterInterface,
       for (String realServerName : realServerNames) {
         splitLogManager.handleDeadWorker(realServerName);
       }
-      try {
-        splitLogManager.splitLogDistributed(logDirs);
-      } catch (OrphanHLogAfterSplitException e) {
-        LOG.warn("Retrying distributed splitting for " + serverNames
-            + "because of:", e);
-        splitLogManager.splitLogDistributed(logDirs);
-      }
+      splitLogManager.splitLogDistributed(logDirs);
     } else {
       // splitLogLock ensures that dead region servers' logs are processed
       // one at a time

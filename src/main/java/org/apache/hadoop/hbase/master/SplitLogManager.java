@@ -105,6 +105,7 @@ public class SplitLogManager implements Watcher {
   private long timeout;
   private long unassignedTimeout;
   private long lastNodeCreateTime = Long.MAX_VALUE;
+  public boolean ignoreZKDeleteForTesting = false;
 
   private ConcurrentMap<String, Task> tasks =
     new ConcurrentHashMap<String, Task>();
@@ -114,9 +115,11 @@ public class SplitLogManager implements Watcher {
   private Object deadWorkersLock = new Object();
 
   /**
-   * Its OK to construct this object even when region-servers are not online. It
-   * does lookup the orphan tasks in zk but it doesn't block for them to be
-   * done.
+   * Wrapper around {@link #SplitLogManager(ZooKeeperWatcher, Configuration,
+   * Stoppable, String, TaskFinisher)} that provides a task finisher for
+   * copying recovered edits to their final destination. The task finisher
+   * has to be robust because it can be arbitrarily restarted or called
+   * multiple times.
    *
    * @param zkw
    * @param conf
@@ -143,6 +146,18 @@ public class SplitLogManager implements Watcher {
     });
   }
 
+
+  /**
+   * Its OK to construct this object even when region-servers are not online. It
+   * does lookup the orphan tasks in zk but it doesn't block waiting for them
+   * to be done.
+   *
+   * @param zkw
+   * @param conf
+   * @param stopper
+   * @param serverName
+   * @param tf task finisher
+   */
   public SplitLogManager(ZooKeeperWrapper zkw, Configuration conf,
       AtomicBoolean stopper, String serverName, TaskFinisher tf) {
     this.watcher = zkw;
@@ -250,7 +265,7 @@ public class SplitLogManager implements Watcher {
       }
       waitTasks(batch, status);
       if (batch.done != batch.installed) {
-        stopTrackingTasks(batch);
+        batch.isDead = true;
         tot_mgr_log_split_batch_err.incrementAndGet();
         LOG.warn("error while splitting logs in " + logDirs + " installed = " +
             batch.installed + " but only " + batch.done + " done");
@@ -258,18 +273,19 @@ public class SplitLogManager implements Watcher {
             + logDirs + " Task = " + batch);
       }
       for (Path logDir : logDirs) {
-        if (!fs.exists(logDir)) {
-          continue;
-        }
-        if (anyNewLogFiles(logDir, logfiles)) {
-          tot_mgr_new_unexpected_hlogs.incrementAndGet();
-          LOG.warn("new hlogs were produced while logs in " + logDir +
-              " were being split");
-          throw new OrphanHLogAfterSplitException();
-        }
         status.setStatus("Cleaning up log directory...");
-        if (!fs.delete(logDir, true)) {
-          throw new IOException("Unable to delete src dir: " + logDir);
+        try {
+          if (fs.exists(logDir) && !fs.delete(logDir, false)) {
+            LOG.warn("Unable to delete log src dir. Ignoring. " + logDir);
+          }
+        } catch (IOException ioe) {
+          FileStatus[] files = fs.listStatus(logDir);
+          if (files != null && files.length > 0) {
+            LOG.warn("returning success without actually splitting and " +
+                "deleting all the log files in path " + logDir);
+          } else {
+            LOG.warn("Unable to delete log src dir. Ignoring. " + logDir, ioe);
+          }
         }
       }
       tot_mgr_log_split_batch_success.incrementAndGet();
@@ -293,8 +309,6 @@ public class SplitLogManager implements Watcher {
       createNode(path, zkretries);
       return true;
     }
-    LOG.warn(path + "is already being split. " +
-        "Two threads cannot wait for the same task");
     return false;
   }
 
@@ -321,15 +335,6 @@ public class SplitLogManager implements Watcher {
   }
 
   private void setDone(String path, TerminationStatus status) {
-    if (!ZKSplitLog.isRescanNode(watcher, path)) {
-      if (status == SUCCESS) {
-        tot_mgr_log_split_success.incrementAndGet();
-        LOG.info("Done splitting " + path);
-      } else {
-        tot_mgr_log_split_err.incrementAndGet();
-        LOG.warn("Error splitting " + path);
-      }
-    }
     Task task = tasks.get(path);
     if (task == null) {
       if (!ZKSplitLog.isRescanNode(watcher, path)) {
@@ -338,18 +343,24 @@ public class SplitLogManager implements Watcher {
       }
     } else {
       synchronized (task) {
-        task.deleted = true;
-        // if in stopTrackingTasks() we were to make tasks orphan instead of
-        // forgetting about them then we will have to handle the race when
-        // accessing task.batch here.
-        if (!task.isOrphan()) {
-          synchronized (task.batch) {
-            if (status == SUCCESS) {
-              task.batch.done++;
-            } else {
-              task.batch.error++;
+        if (task.status == IN_PROGRESS) {
+          if (status == SUCCESS) {
+            tot_mgr_log_split_success.incrementAndGet();
+            LOG.info("Done splitting " + path);
+          } else {
+            tot_mgr_log_split_err.incrementAndGet();
+            LOG.warn("Error splitting " + path);
+          }
+          task.status = status;
+          if (task.batch != null) {
+            synchronized (task.batch) {
+              if (status == SUCCESS) {
+                task.batch.done++;
+              } else {
+                task.batch.error++;
+              }
+              task.batch.notify();
             }
-            task.batch.notify();
           }
         }
       }
@@ -389,6 +400,11 @@ public class SplitLogManager implements Watcher {
 
   private void getDataSetWatchSuccess(String path, byte[] data, int version) {
     if (data == null) {
+      if (version == Integer.MIN_VALUE) {
+        // assume all done. The task znode suddenly disappeared.
+        setDone(path, SUCCESS);
+        return;
+      }
       tot_mgr_null_data.incrementAndGet();
       LOG.fatal("logic error - got null data " + path);
       setDone(path, FAILURE);
@@ -477,7 +493,7 @@ public class SplitLogManager implements Watcher {
       ResubmitDirective directive) {
     // its ok if this thread misses the update to task.deleted. It will
     // fail later
-    if (task.deleted) {
+    if (task.status != IN_PROGRESS) {
       return false;
     }
     int version;
@@ -487,7 +503,8 @@ public class SplitLogManager implements Watcher {
         return false;
       }
       if (task.unforcedResubmits >= resubmit_threshold) {
-        if (task.unforcedResubmits == resubmit_threshold) {
+        if (!task.resubmitThresholdReached) {
+          task.resubmitThresholdReached = true;
           tot_mgr_resubmit_threshold_reached.incrementAndGet();
           LOG.info("Skipping resubmissions of task " + path +
               " because threshold " + resubmit_threshold + " reached");
@@ -510,7 +527,9 @@ public class SplitLogManager implements Watcher {
         return false;
       }
     } catch (NoNodeException e) {
-      LOG.debug("failed to resubmit " + path + " task done");
+      LOG.warn("failed to resubmit because znode doesn't exist " + path +
+          " task done (or forced done by removing the znode)");
+      getDataSetWatchSuccess(path, null, Integer.MIN_VALUE);
       return false;
     } catch (KeeperException e) {
       tot_mgr_resubmit_failed.incrementAndGet();
@@ -536,11 +555,17 @@ public class SplitLogManager implements Watcher {
 
   private void deleteNode(String path, Long retries) {
     tot_mgr_node_delete_queued.incrementAndGet();
+    // Once a task znode is ready for delete, that is it is in the TASK_DONE
+    // state, then no one should be writing to it anymore. That is no one
+    // will be updating the znode version any more.
     this.watcher.getZooKeeper().delete(path, -1, new DeleteAsyncCallback(),
         retries);
   }
 
   private void deleteNodeSuccess(String path) {
+    if (ignoreZKDeleteForTesting) {
+      return;
+    }
     Task task;
     task = tasks.remove(path);
     if (task == null) {
@@ -551,6 +576,10 @@ public class SplitLogManager implements Watcher {
       tot_mgr_missing_state_in_delete.incrementAndGet();
       LOG.debug("deleted task without in memory state " + path);
       return;
+    }
+    synchronized (task) {
+      task.status = DELETED;
+      task.notify();
     }
     tot_mgr_task_deleted.incrementAndGet();
   }
@@ -597,61 +626,67 @@ public class SplitLogManager implements Watcher {
     Task oldtask;
     // batch.installed is only changed via this function and
     // a single thread touches batch.installed.
-    oldtask = tasks.putIfAbsent(path, new Task(batch));
-    if (oldtask != null) {
-      // new task was not used.
-      batch.installed--;
-      synchronized (oldtask) {
-        if (oldtask.isOrphan()) {
-          if (oldtask.deleted) {
-            // The task is already done. Do not install the batch for this
-            // task because it might be too late for setDone() to update
-            // batch.done. There is no need for the batch creator to wait for
-            // this task to complete.
-            return (null);
-          }
-          // have to synchronize with setDone() when setting the batch on
-          // the old task
-          oldtask.setBatch(batch);
-        }
-      }
-      LOG.info("Previously orphan task " + path +
-          " is now being waited upon");
-      return (null);
+    Task newtask = new Task();
+    newtask.batch = batch;
+    oldtask = tasks.putIfAbsent(path, newtask);
+    if (oldtask == null) {
+      batch.installed++;
+      return  null;
     }
-    return oldtask;
-  }
-
-  /**
-   * This function removes any knowledge of this batch's tasks from the
-   * manager. It doesn't actually stop the active tasks. If the tasks are
-   * resubmitted then the active tasks will be reacquired and monitored by the
-   * manager. It is important to call this function when batch processing
-   * terminates prematurely, otherwise if the tasks are re-submitted
-   * then they might fail.
-   * <p>
-   * there is a slight race here. even after a task has been removed from
-   * {@link #tasks} someone who had acquired a reference to it will continue to
-   * process the task. That is OK since we don't actually change the task and
-   * the batch objects.
-   * <p>
-   * TODO Its  probably better to convert these to orphan tasks but then we
-   * have to deal with race conditions as we nullify Task's batch pointer etc.
-   * <p>
-   * @param batch
-   */
-  void stopTrackingTasks(TaskBatch batch) {
-    for (Map.Entry<String, Task> e : tasks.entrySet()) {
-      String path = e.getKey();
-      Task t = e.getValue();
-      if (t.batch == batch) { // == is correct. equals not necessary.
-        tasks.remove(path);
+    // new task was not used.
+    synchronized (oldtask) {
+      if (oldtask.isOrphan()) {
+        if (oldtask.status == SUCCESS) {
+          // The task is already done. Do not install the batch for this
+          // task because it might be too late for setDone() to update
+          // batch.done. There is no need for the batch creator to wait for
+          // this task to complete.
+          return (null);
+        }
+        if (oldtask.status == IN_PROGRESS) {
+          oldtask.batch = batch;
+          batch.installed++;
+          LOG.debug("Previously orphan task " + path +
+              " is now being waited upon");
+          return null;
+        }
+        while (oldtask.status == FAILURE) {
+          LOG.debug("wait for status of task " + path +
+              " to change to DELETED");
+          tot_mgr_wait_for_zk_delete.incrementAndGet();
+          try {
+            oldtask.wait();
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOG.warn("Interrupted when waiting for znode delete callback");
+            // fall through to return failure
+            break;
+          }
+        }
+        if (oldtask.status != DELETED) {
+          LOG.warn("Failure because previously failed task" +
+              " state still present. Waiting for znode delete callback" +
+              " path=" + path);
+          return oldtask;
+        }
+        // reinsert the newTask and it must succeed this time
+        Task t = tasks.putIfAbsent(path, newtask);
+        if (t == null) {
+          batch.installed++;
+          return  null;
+        }
+        LOG.fatal("Logic error. Deleted task still present in tasks map");
+        assert false : "Deleted task still present in tasks map";
+        return t;
       }
+      LOG.warn("Failure because two threads can't wait for the same task. " +
+          " path=" + path);
+      return oldtask;
     }
   }
 
   Task findOrCreateOrphanTask(String path) {
-    Task orphanTask = new Task(null);
+    Task orphanTask = new Task();
     Task task;
     task = tasks.putIfAbsent(path, orphanTask);
     if (task == null) {
@@ -728,9 +763,10 @@ public class SplitLogManager implements Watcher {
    * All access is synchronized.
    */
   static class TaskBatch {
-    int installed;
-    int done;
-    int error;
+    int installed = 0;
+    int done = 0;
+    int error = 0;
+    volatile boolean isDead = false;
 
     @Override
     public String toString() {
@@ -743,45 +779,35 @@ public class SplitLogManager implements Watcher {
    * in memory state of an active task.
    */
   static class Task {
-    long last_update;
-    int last_version;
-    String cur_worker_name;
+    volatile long last_update;
+    volatile int last_version;
+    volatile String cur_worker_name;
     TaskBatch batch;
-    boolean deleted;
-    int incarnation;
-    int unforcedResubmits;
+    volatile TerminationStatus status;
+    volatile int incarnation;
+    volatile int unforcedResubmits;
+    volatile boolean resubmitThresholdReached;
 
     @Override
     public String toString() {
       return ("last_update = " + last_update +
           " last_version = " + last_version +
           " cur_worker_name = " + cur_worker_name +
-          " deleted = " + deleted +
+          " status = " + status +
           " incarnation = " + incarnation +
           " resubmits = " + unforcedResubmits +
           " batch = " + batch);
     }
 
-    Task(TaskBatch tb) {
+    Task() {
       incarnation = 0;
       last_version = -1;
-      deleted = false;
-      setBatch(tb);
+      status = IN_PROGRESS;
       setUnassigned();
     }
 
-    public void setBatch(TaskBatch batch) {
-      if (batch != null && this.batch != null) {
-        LOG.fatal("logic error - batch being overwritten");
-      }
-      this.batch = batch;
-      if (batch != null) {
-        batch.installed++;
-      }
-    }
-
     public boolean isOrphan() {
-      return (batch == null);
+      return (batch == null || batch.isDead);
     }
 
     public boolean isUnassigned() {
@@ -884,6 +910,16 @@ public class SplitLogManager implements Watcher {
       if (tot > 0 && !found_assigned_task &&
           ((EnvironmentEdgeManager.currentTimeMillis() - lastNodeCreateTime) >
           unassignedTimeout)) {
+        for (Map.Entry<String, Task> e : tasks.entrySet()) {
+          String path = e.getKey();
+          Task task = e.getValue();
+          // we have to do this check again because tasks might have
+          // been asynchronously assigned.
+          if (task.isUnassigned()) {
+            // We just touch the znode to make sure its still there
+            getDataSetWatch(path, zkretries);
+          }
+        }
         createRescanNode(Long.MAX_VALUE);
         tot_mgr_resubmit_unassigned.incrementAndGet();
         LOG.debug("resubmitting unassigned task(s) after timeout");
@@ -903,6 +939,12 @@ public class SplitLogManager implements Watcher {
       tot_mgr_node_create_result.incrementAndGet();
       if (rc != 0) {
         if (rc == KeeperException.Code.NODEEXISTS.intValue()) {
+          // What if there is a delete pending against this pre-existing
+          // znode? Then this soon-to-be-deleted task znode must be in TASK_DONE
+          // state. Only operations that will be carried out on this node by
+          // this manager are get-znode-data, task-finisher and delete-znode.
+          // And all code pieces correctly handle the case of suddenly
+          // disappearing task-znode.
           LOG.debug("found pre-existing znode " + path);
           tot_mgr_node_already_exists.incrementAndGet();
         } else {
@@ -936,6 +978,15 @@ public class SplitLogManager implements Watcher {
       byte[] newData = RecoverableZooKeeper.removeMetaData(data);
       tot_mgr_get_data_result.incrementAndGet();
       if (rc != 0) {
+        if (rc == KeeperException.Code.NONODE.intValue()) {
+          tot_mgr_get_data_nonode.incrementAndGet();
+          // The task znode has been deleted. Must be some pending delete
+          // that deleted the task. Assume success because a task-znode is
+          // is only deleted after TaskFinisher is successful.
+          LOG.warn("task znode " + path + " vanished.");
+          getDataSetWatchSuccess(path, null, Integer.MIN_VALUE);
+          return;
+        }
         Long retry_count = (Long) ctx;
         LOG.warn("getdata rc = " + KeeperException.Code.get(rc) + " " +
             path + " retry=" + retry_count);
@@ -977,9 +1028,10 @@ public class SplitLogManager implements Watcher {
           }
           return;
         } else {
-        LOG.debug(path
-            + " does not exist, either was never created or was deleted"
-            + " in earlier rounds, zkretries = " + (Long) ctx);
+        LOG.debug(path +
+            " does not exist. Either was created but deleted behind our" +
+            " back by another pending delete OR was deleted" +
+            " in earlier retry rounds. zkretries = " + (Long) ctx);
         }
       } else {
         LOG.debug("deleted " + path);
@@ -1017,46 +1069,10 @@ public class SplitLogManager implements Watcher {
   }
 
   /**
-   * checks whether any new files have appeared in logDir which were
-   * not present in the original logfiles set
-   * @param logdir
-   * @param logfiles
-   * @return True if a new log file is found
-   * @throws IOException
-   */
-  public boolean anyNewLogFiles(Path logdir, FileStatus[] logfiles)
-  throws IOException {
-    if (logdir == null) {
-      return false;
-    }
-    LOG.debug("re-listing " + logdir);
-    tot_mgr_relist_logdir.incrementAndGet();
-    FileStatus[] newfiles = fs.listStatus(logdir);
-    if (newfiles == null) {
-      return false;
-    }
-    boolean matched;
-    for (FileStatus newfile : newfiles) {
-      matched = false;
-      for (FileStatus origfile : logfiles) {
-        if (origfile.equals(newfile)) {
-          matched = true;
-          break;
-        }
-      }
-      if (matched == false) {
-        LOG.warn("Discovered orphan hlog " + newfile + " after split." +
-        " Maybe HRegionServer was not dead when we started");
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
    * {@link SplitLogManager} can use objects implementing this interface to
    * finish off a partially done task by {@link SplitLogWorker}. This provides
-   * a serialization point at the end of the task processing.
+   * a serialization point at the end of the task processing. Must be
+   * restartable and idempotent.
    */
   static public interface TaskFinisher {
     /**
@@ -1088,7 +1104,19 @@ public class SplitLogManager implements Watcher {
     FORCE();
   }
   enum TerminationStatus {
-    SUCCESS(),
-    FAILURE();
+    IN_PROGRESS("in_progress"),
+    SUCCESS("success"),
+    FAILURE("failure"),
+    DELETED("deleted");
+
+    String statusMsg;
+    TerminationStatus(String msg) {
+      statusMsg = msg;
+    }
+
+    @Override
+    public String toString() {
+      return statusMsg;
+    }
   }
 }

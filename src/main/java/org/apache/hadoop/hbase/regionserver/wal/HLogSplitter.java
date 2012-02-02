@@ -331,16 +331,21 @@ public class HLogSplitter {
       if (ZKSplitLog.isCorruptFlagFile(dst)) {
         continue;
       }
-      if (fs.exists(dst)) {
-        fs.delete(dst, false);
-      } else {
-        Path dstdir = dst.getParent();
-        if (!fs.exists(dstdir)) {
-          if (!fs.mkdirs(dstdir)) LOG.warn("mkdir failed on " + dstdir);
+      if (fs.exists(src)) {
+        if (fs.exists(dst)) {
+          fs.delete(dst, false);
+        } else {
+          Path dstdir = dst.getParent();
+          if (!fs.exists(dstdir)) {
+            if (!fs.mkdirs(dstdir)) LOG.warn("mkdir failed on " + dstdir);
+          }
         }
+        fs.rename(src, dst);
+        LOG.debug(" moved " + src + " => " + dst);
+      } else {
+        LOG.debug("Could not move recovered edits from " + src +
+            " as it doesn't exist");
       }
-      fs.rename(src, dst);
-      LOG.debug(" moved " + src + " => " + dst);
     }
     HLog.archiveLogs(corruptedLogs, processedLogs, oldLogDir, fs, conf);
     fs.delete(stagingDir, true);

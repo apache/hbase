@@ -1831,7 +1831,7 @@ public class HLog implements Syncable {
   static void archiveLogs(final List<Path> corruptedLogs,
       final List<Path> processedLogs, final Path oldLogDir,
       final FileSystem fs, final Configuration conf)
-  throws IOException{
+  throws IOException {
     final Path corruptDir = new Path(conf.get(HConstants.HBASE_DIR),
       conf.get("hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt"));
 
@@ -1841,21 +1841,27 @@ public class HLog implements Syncable {
     if (!fs.exists(oldLogDir) && !fs.mkdirs(oldLogDir)) {
       LOG.warn("Unable to mkdir " + oldLogDir);
     }
+    // this method can get restarted or called multiple times for archiving
+    // the same log files.
     for (Path corrupted: corruptedLogs) {
       Path p = new Path(corruptDir, corrupted.getName());
-      if (!fs.rename(corrupted, p)) {
-        LOG.warn("Unable to move corrupted log " + corrupted + " to " + p);
-      } else {
-        LOG.info("Moving corrupted log " + corrupted + " to " + p);
+      if (fs.exists(corrupted)) {
+        if (!fs.rename(corrupted, p)) {
+          LOG.warn("Unable to move corrupted log " + corrupted + " to " + p);
+        } else {
+          LOG.warn("Moving corrupted log " + corrupted + " to " + p);
+        }
       }
     }
 
     for (Path p: processedLogs) {
       Path newPath = getHLogArchivePath(oldLogDir, p);
-      if (!fs.rename(p, newPath)) {
-        LOG.warn("Unable to move processed log " + p + " to " + newPath);
-      } else {
-        LOG.info("Archived processed log " + p + " to " + newPath);
+      if (fs.exists(p)) {
+        if (!fs.rename(p, newPath)) {
+          LOG.warn("Unable to move  " + p + " to " + newPath);
+        } else {
+          LOG.debug("Archived processed log " + p + " to " + newPath);
+        }
       }
     }
   }
