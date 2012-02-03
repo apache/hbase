@@ -266,7 +266,10 @@ service Hbase {
     2:Text row,
 
     /** column name */
-    3:Text column
+    3:Text column,
+
+    /** Get attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /** 
@@ -286,7 +289,10 @@ service Hbase {
     3:Text column,
 
     /** number of versions to retrieve */
-    4:i32 numVersions
+    4:i32 numVersions,
+
+    /** Get attributes */
+    5:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /** 
@@ -310,7 +316,10 @@ service Hbase {
     4:i64 timestamp,
 
     /** number of versions to retrieve */
-    5:i32 numVersions
+    5:i32 numVersions,
+
+    /** Get attributes */
+    6:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /** 
@@ -324,7 +333,10 @@ service Hbase {
     1:Text tableName,
 
     /** row key */
-    2:Text row
+    2:Text row,
+
+    /** Get attributes */
+    3:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /** 
@@ -341,7 +353,10 @@ service Hbase {
     2:Text row,
 
     /** List of columns to return, null for all columns */
-    3:list<Text> columns
+    3:list<Text> columns,
+
+    /** Get attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /** 
@@ -358,7 +373,10 @@ service Hbase {
     2:Text row,
 
     /** timestamp */
-    3:i64 timestamp
+    3:i64 timestamp,
+
+    /** Get attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io)
     
   /** 
@@ -376,7 +394,10 @@ service Hbase {
 
     /** List of columns to return, null for all columns */
     3:list<Text> columns,
-    4:i64 timestamp
+    4:i64 timestamp,
+
+    /** Get attributes */
+    5:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /**
@@ -391,6 +412,9 @@ service Hbase {
 
     /** row keys */
     2:list<Text> rows
+
+    /** Get attributes */
+    3:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /**
@@ -404,10 +428,13 @@ service Hbase {
     1:Text tableName,
 
     /** row keys */
-    2:list<Text> rows
+    2:list<Text> rows,
 
     /** List of columns to return, null for all columns */
-    3:list<Text> columns
+    3:list<Text> columns,
+
+    /** Get attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /**
@@ -424,7 +451,10 @@ service Hbase {
     2:list<Text> rows
 
     /** timestamp */
-    3:i64 timestamp
+    3:i64 timestamp,
+
+    /** Get attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /**
@@ -442,7 +472,10 @@ service Hbase {
 
     /** List of columns to return, null for all columns */
     3:list<Text> columns,
-    4:i64 timestamp
+    4:i64 timestamp,
+
+    /** Get attributes */
+    5:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /** 
@@ -459,7 +492,10 @@ service Hbase {
     2:Text row,
 
     /** list of mutation commands */
-    3:list<Mutation> mutations
+    3:list<Mutation> mutations,
+
+    /** Mutation attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /** 
@@ -479,7 +515,10 @@ service Hbase {
     3:list<Mutation> mutations,
 
     /** timestamp */
-    4:i64 timestamp
+    4:i64 timestamp,
+
+    /** Mutation attributes */
+    5:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /** 
@@ -493,7 +532,10 @@ service Hbase {
     1:Text tableName,
 
     /** list of row batches */
-    2:list<BatchMutation> rowBatches
+    2:list<BatchMutation> rowBatches,
+
+    /** Mutation attributes */
+    3:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /** 
@@ -510,7 +552,10 @@ service Hbase {
     2:list<BatchMutation> rowBatches,
 
     /** timestamp */
-    3:i64 timestamp
+    3:i64 timestamp,
+
+    /** Mutation attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
@@ -541,7 +586,10 @@ service Hbase {
     2:Text row,
 
     /** name of column whose value is to be deleted */
-    3:Text column
+    3:Text column,
+
+    /** Delete attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /** 
@@ -559,7 +607,10 @@ service Hbase {
     3:Text column,
 
     /** timestamp */
-    4:i64 timestamp
+    4:i64 timestamp,
+
+    /** Delete attributes */
+    5:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /**
@@ -570,7 +621,10 @@ service Hbase {
     1:Text tableName,
 
     /** key of the row to be completely deleted. */
-    2:Text row
+    2:Text row,
+
+    /** Delete attributes */
+    3:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /**
@@ -585,7 +639,10 @@ service Hbase {
     2:Text row,
 
     /** timestamp */
-    3:i64 timestamp
+    3:i64 timestamp,
+
+    /** Delete attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /**
@@ -597,7 +654,10 @@ service Hbase {
     1:Text tableName,
 
     /** Scan instance */
-    2:TScan scan
+    2:TScan scan,
+
+    /** Scan attributes */
+    3:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /** 
@@ -621,7 +681,10 @@ service Hbase {
      * columns of the specified column family are returned. It's also possible
      * to pass a regex in the column qualifier.
      */
-    3:list<Text> columns
+    3:list<Text> columns,
+
+    /** Scan attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /** 
@@ -652,7 +715,10 @@ service Hbase {
      * columns of the specified column family are returned. It's also possible
      * to pass a regex in the column qualifier.
      */
-    4:list<Text> columns
+    4:list<Text> columns,
+
+    /** Scan attributes */
+    5:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /**
@@ -669,7 +735,10 @@ service Hbase {
     2:Text startAndPrefix,
 
     /** the columns you want returned */
-    3:list<Text> columns
+    3:list<Text> columns,
+
+    /** Scan attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /** 
@@ -697,7 +766,10 @@ service Hbase {
     3:list<Text> columns,
 
     /** timestamp */
-    4:i64 timestamp
+    4:i64 timestamp,
+
+    /** Scan attributes */
+    5:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /** 
@@ -732,7 +804,10 @@ service Hbase {
     4:list<Text> columns,
 
     /** timestamp */
-    5:i64 timestamp
+    5:i64 timestamp,
+
+    /** Scan attributes */
+    6:map<Text, Text> attributes
   ) throws (1:IOError io)
 
   /**
