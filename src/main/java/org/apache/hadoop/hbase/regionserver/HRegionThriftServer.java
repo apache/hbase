@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -113,8 +114,8 @@ public class HRegionThriftServer extends Thread {
     public List<TRowResult> getRowWithColumnsTs(ByteBuffer tableName,
                                                 ByteBuffer rowb,
                                                 List<ByteBuffer> columns,
-                                                long timestamp)
-      throws IOError {
+                                                long timestamp,
+      Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       try {
         byte [] row = rowb.array();
         HTable table = getTable(tableName.array());
@@ -146,7 +147,8 @@ public class HRegionThriftServer extends Thread {
           throw new IOError(e.getMessage());
         }
         LOG.debug("ThriftServer redirecting getRowWithColumnsTs");
-        return super.getRowWithColumnsTs(tableName, rowb, columns, timestamp);
+        return super.getRowWithColumnsTs(tableName, rowb, columns, timestamp,
+                                         attributes);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
