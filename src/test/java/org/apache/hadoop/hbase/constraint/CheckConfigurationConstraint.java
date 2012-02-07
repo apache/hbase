@@ -29,7 +29,7 @@ public class CheckConfigurationConstraint extends BaseConstraint {
   private static String value = "testValue";
 
   public static Configuration getConfiguration() {
-    Configuration conf = new Configuration();
+    Configuration conf = new Configuration(false);
     conf.set(key, value);
     return conf;
   }
@@ -47,6 +47,13 @@ public class CheckConfigurationConstraint extends BaseConstraint {
       if (val == null || !val.equals(value))
         throw new IllegalArgumentException(
             "Configuration was not passed correctly");
+      // and then check to make sure we got a fresh config by checking for a
+      // hadoop-based config value, and if we don't find it, its fine
+      if (conf.getRaw("fs.file.impl") != null)
+        throw new IllegalArgumentException(
+            "Configuration was created using 'new Configuration()', should be "
+                + "done via 'new Configuration(false) to exclude defaut hadoop "
+                + "configurations values.");
     }
   }
 

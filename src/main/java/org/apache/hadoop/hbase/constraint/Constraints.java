@@ -365,7 +365,7 @@ public final class Constraints {
   private static Configuration readConfiguration(byte[] bytes)
       throws IOException {
     ByteArrayInputStream is = new ByteArrayInputStream(bytes);
-    Configuration conf = new Configuration();
+    Configuration conf = new Configuration(false);
     conf.addResource(is);
     return conf;
   }
