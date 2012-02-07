@@ -19,16 +19,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.InterruptedIOException;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Arrays;
+import java.io.InterruptedIOException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -325,6 +326,8 @@ public class HBaseAdmin {
       this.master.createTable(desc, splitKeys);
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
+    } catch (SocketTimeoutException ste) {
+      LOG.warn("Creating " + desc.getNameAsString() + " took too long", ste);
     }
   }
 
