@@ -2430,9 +2430,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
 
     public void leaseExpired() {
-      LOG.info("Scanner " + this.scannerName + " lease expired");
       RegionScanner s = scanners.remove(this.scannerName);
       if (s != null) {
+        LOG.info("Scanner " + this.scannerName + " lease expired on region "
+            + s.getRegionInfo().getRegionNameAsString());
         try {
           HRegion region = getRegion(s.getRegionInfo().getRegionName());
           if (region != null && region.getCoprocessorHost() != null) {
@@ -2447,6 +2448,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           LOG.error("Closing scanner for "
               + s.getRegionInfo().getRegionNameAsString(), e);
         }
+      } else {
+        LOG.info("Scanner " + this.scannerName + " lease expired");
       }
     }
   }
