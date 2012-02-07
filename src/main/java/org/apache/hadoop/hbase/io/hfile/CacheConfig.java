@@ -329,7 +329,7 @@ public class CacheConfig {
     }
     if (cachePercentage > 1.0) {
       throw new IllegalArgumentException(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY +
-        " must be between 0.0 and 1.0, not > 1.0");
+        " must be between 0.0 and 1.0, and not > 1.0");
     }
 
     // Calculate the amount of heap to give the heap.
@@ -338,7 +338,7 @@ public class CacheConfig {
     int blockSize = conf.getInt("hbase.offheapcache.minblocksize",
         HFile.DEFAULT_BLOCKSIZE);
     long offHeapCacheSize =
-      (long) (conf.getFloat("hbase.offheapcache.percentage", (float) 0.95) *
+      (long) (conf.getFloat("hbase.offheapcache.percentage", (float) 0) *
           DirectMemoryUtils.getDirectMemorySize());
     LOG.info("Allocating LruBlockCache with maximum size " +
       StringUtils.humanReadableInt(cacheSize));

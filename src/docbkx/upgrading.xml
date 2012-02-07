@@ -171,7 +171,7 @@ The block size default size has been changed in 0.92.0 from 0.2 (20 percent of h
 </title>
 <para>
 A new cache was contributed to 0.92.0 to act as a solution between using the “on-heap” cache which is the current LRU cache the region servers have and the operating system cache which is out of our control. 
-To enable, set “-XX:MaxDirectMemorySize” in hbase-env.sh to the value that you want to dedicate to that cache. This should only be set for servers and not for clients; in fact, if you already had to add that configuration on for any reason and still use it today it’s going to enable this feature. Use at your own risk.
+To enable, set “-XX:MaxDirectMemorySize” in hbase-env.sh to the value for maximum direct memory size and specify hbase.offheapcache.percentage in hbase-site.xml with the percentage that you want to dedicate to off-heap cache. This should only be set for servers and not for clients. Use at your own risk.
 See this blog post for additional information on this new experimental feature: http://www.cloudera.com/blog/2012/01/caching-in-hbase-slabcache/
 </para>
 </section>
