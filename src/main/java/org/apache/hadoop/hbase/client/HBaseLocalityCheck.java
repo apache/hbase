@@ -1,13 +1,9 @@
 package org.apache.hadoop.hbase.client;
 
-import java.io.DataOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
@@ -17,19 +13,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseFsck.HbckInfo;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 public class HBaseLocalityCheck {
   private static final Log LOG = LogFactory.getLog(HBaseLocalityCheck.class
       .getName());
 
-  private Map<Writable, Writable> preferredRegionToRegionServerMapping = null;
+  private Map<String, Map<String, Float>> localityMap = null;
   private Configuration conf;
   /**
    * The table we want to get locality for, or null in case we wanted a check
@@ -61,81 +53,68 @@ public class HBaseLocalityCheck {
    * @throws IOException
    * @throws InterruptedException
    */
-  public void showTableLocality()
-      throws MasterNotRunningException, IOException, InterruptedException {
+  public void showTableLocality() throws MasterNotRunningException,
+      IOException, InterruptedException {
     // create a fsck object
     HBaseFsck fsck = new HBaseFsck(conf);
     fsck.initAndScanRootMeta();
     fsck.scanRegionServers();
     TreeMap<String, HbckInfo> regionInfo = fsck.getRegionInfo();
 
-    boolean localityMatch = false;
-    LOG.info("Locality information by region");
-
     // Get the locality info for each region by scanning the file system
-    preferredRegionToRegionServerMapping = HMaster.reevaluateRegionLocality(conf,
-        tableName,
-        conf.getInt("hbase.client.localityCheck.threadPoolSize", 2));
+    localityMap = FSUtils.getRegionDegreeLocalityMappingFromFS(conf);
 
-    Map<String, AtomicInteger> tableToRegionCountMap =
-      new HashMap<String, AtomicInteger>();
-    Map<String, AtomicInteger> tableToRegionsWithLocalityMap =
-      new HashMap<String, AtomicInteger>();
+    Map<String, Integer> tableToRegionCntMap =  new HashMap<String, Integer>();
+    Map<String, Float> tableToLocalityMap = new HashMap<String, Float>();
+    int numUnknownRegion = 0;
 
-    for (Map.Entry<Writable, Writable> entry :
-        preferredRegionToRegionServerMapping.entrySet()) {
-      // get region name and table
-      String name = ((Text)entry.getKey()).toString();
-      int spliterIndex =name.lastIndexOf(":");
-      String regionName = name.substring(spliterIndex+1);
-      String tableName = name.substring(0, spliterIndex);
-
-      //get region server hostname
-      String bestHostName = ((Text)entry.getValue()).toString();
-      localityMatch = false;
-      HbckInfo region = regionInfo.get(regionName);
-      if (region != null && region.deployedOn != null &&
-            region.deployedOn.size() != 0) {
-        String realHostName = null;
-        List<HServerAddress> serverList = region.deployedOn;
-        if (!tableToRegionCountMap.containsKey(tableName)){
-          tableToRegionCountMap.put(tableName, new AtomicInteger(1));
-          tableToRegionsWithLocalityMap.put(tableName, new AtomicInteger(0));
-        } else {
-          tableToRegionCountMap.get(tableName).incrementAndGet();
-        }
-
-        realHostName = serverList.get(0).getHostname();
-        if (realHostName.equalsIgnoreCase(bestHostName)) {
-          localityMatch = true;
-          tableToRegionsWithLocalityMap.get(tableName).incrementAndGet();
-        }
-
-        LOG.info("<table:region> : <" + name + "> is running on host: "
-            + realHostName + " \n and the prefered host is " + bestHostName +
-            " [" + (localityMatch ? "Matched]" : "NOT matched]"));
-
-      } else {
-        LOG.info("<table:region> : <" + name + "> no info obtained for this" +
-			" region from any of the region servers.");
+    for (Map.Entry<String, HbckInfo> entry : regionInfo.entrySet()) {
+      String regionEncodedName = entry.getKey();
+      Map<String, Float> localityInfo = localityMap.get(regionEncodedName);
+      HbckInfo hbckInfo = entry.getValue();
+      if (hbckInfo == null || hbckInfo.metaEntry == null
+          || localityInfo == null || hbckInfo.deployedOn == null
+          || hbckInfo.deployedOn.size() == 0) {
+        LOG.warn("<" + regionEncodedName + "> no info" +
+			" obtained for this region from any of the region servers.");
+        numUnknownRegion++;
         continue;
       }
+
+      String tableName = hbckInfo.metaEntry.getTableDesc().getNameAsString();
+      String realHostName = hbckInfo.deployedOn.get(0).getHostname();
+      Float localityPercentage = localityInfo.get(realHostName);
+      if (localityPercentage == null)
+        localityPercentage = new Float(0);
+
+      if (!tableToRegionCntMap.containsKey(tableName)) {
+        tableToRegionCntMap.put(tableName, new Integer(1));
+        tableToLocalityMap.put(tableName, localityPercentage);
+      } else {
+        tableToRegionCntMap.put(tableName,
+           (tableToRegionCntMap.get(tableName) + 1));
+        tableToLocalityMap.put(tableName,
+           (tableToLocalityMap.get(tableName) + localityPercentage));
+      }
+      LOG.info("<" + tableName + " : " + regionEncodedName +
+          "> is running on host: " + realHostName + " \n " +
+			"and the locality is " + localityPercentage);
     }
 
     LOG.info("======== Locality Summary ===============");
-    for(String tableName : tableToRegionCountMap.keySet()) {
-      int totalRegions = tableToRegionCountMap.get(tableName).get();
-      int totalRegionsWithLocality =
-        tableToRegionsWithLocalityMap.get(tableName).get();
+    for (String tableName : tableToRegionCntMap.keySet()) {
+      int totalRegions = tableToRegionCntMap.get(tableName).intValue();
+      float totalRegionsLocality = tableToLocalityMap.get(tableName)
+          .floatValue();
 
-      float rate = (totalRegionsWithLocality / (float) totalRegions) * 100;
-      LOG.info("For Table: "+tableName+" ; #Total Regions: " + totalRegions +
-          " ;" + " # Local Regions " + totalRegionsWithLocality + " rate = "
-          + rate + " %");
+      float averageLocality = (totalRegionsLocality / (float) totalRegions);
+      LOG.info("For Table: " + tableName + " ; #Total Regions: " + totalRegions
+          + " ; The average locality is " + averageLocality * 100 + " %");
     }
-
+    if (numUnknownRegion != 0) {
+      LOG.info("The number of unknow regions is " + numUnknownRegion);
+    }
   }
-
 
   public static void main(String[] args) throws IOException,
       InterruptedException {

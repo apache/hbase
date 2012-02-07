@@ -821,7 +821,7 @@ public class HBaseFsck {
   /**
    * Stores the entries scanned from META
    */
-  private static class MetaEntry extends HRegionInfo {
+  public static class MetaEntry extends HRegionInfo {
     HServerAddress regionServer;   // server hosting this region
     long modTime;          // timestamp of most recent modification metadata
 

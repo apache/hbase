@@ -17,7 +17,6 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -30,9 +29,6 @@ import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.MunkresAssignment;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.IPv4AddressTruncationMapping;
 
@@ -60,8 +56,7 @@ public class RegionPlacement {
   private Map<HServerInfo, String> rackCache;
   private final boolean enforceRackPolicy;
 
-  public RegionPlacement(Configuration conf, boolean enforceRackPolicy)
-  throws IOException {
+  public RegionPlacement(Configuration conf, boolean enforceRackPolicy) {
     this.conf = conf;
     this.switchMapping = new IPv4AddressTruncationMapping();
     this.rackCache = new HashMap<HServerInfo, String>();
@@ -108,8 +103,7 @@ public class RegionPlacement {
 
     // Get the locality for each region to each server.
     Map<String, Map<String, Float>> localityMap =
-        FSUtils.getRegionDegreeLocalityMappingFromFS(FileSystem.get(conf),
-            FSUtils.getRootDir(conf), 2, conf);
+        FSUtils.getRegionDegreeLocalityMappingFromFS(conf);
 
     // Transform the locality mapping into a 2D array, assuming that any
     // unspecified locality value is 0.
