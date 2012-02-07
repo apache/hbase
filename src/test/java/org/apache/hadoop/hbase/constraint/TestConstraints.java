@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.constraint;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.List;
 
@@ -82,11 +83,11 @@ public class TestConstraints {
 
     // check to make sure that we overwrite configurations
     Constraints.add(desc, new Pair<Class<? extends Constraint>, Configuration>(
-        CheckConfigurationConstraint.class, new Configuration()));
+        CheckConfigurationConstraint.class, new Configuration(false)));
 
     try {
       Constraints.getConstraints(desc, this.getClass().getClassLoader());
-      assertTrue("No exception thrown  - configuration not overwritten", false);
+      fail("No exception thrown  - configuration not overwritten");
     } catch (IllegalArgumentException e) {
       // expect to have the exception, so don't do anything
     }
