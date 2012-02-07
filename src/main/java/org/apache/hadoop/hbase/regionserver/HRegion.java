@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -290,6 +291,9 @@ public class HRegion implements HeapSize {
   // for simple numeric metrics (# of blocks read from block cache)
   public static final ConcurrentMap<String, AtomicLong>
     numericMetrics = new ConcurrentHashMap<String, AtomicLong>();
+
+  public static final String METRIC_GETSIZE = "getsize";
+  public static final String METRIC_NEXTSIZE = "nextsize";
 
   // for simple numeric metrics (current block cache size)
   // These ones are not reset to zero when queried, unlike the previous.
@@ -2930,6 +2934,12 @@ public class HRegion implements HeapSize {
     @Override
     public synchronized boolean next(List<KeyValue> outResults, int limit)
         throws IOException {
+      return next(outResults, limit, null);
+    }
+
+    @Override
+    public synchronized boolean next(List<KeyValue> outResults, int limit,
+        String metric) throws IOException {
       if (this.filterClosed) {
         throw new UnknownScannerException("Scanner was closed (timed out?) " +
             "after we renewed it. Could be caused by a very slow scanner " +
@@ -2945,7 +2955,7 @@ public class HRegion implements HeapSize {
       ReadWriteConsistencyControl.setThreadReadPoint(this.readPt);
 
       results.clear();
-      boolean returnResult = nextInternal(limit);
+      boolean returnResult = nextInternal(limit, metric);
 
       outResults.addAll(results);
       resetFilters();
@@ -2959,7 +2969,14 @@ public class HRegion implements HeapSize {
     public synchronized boolean next(List<KeyValue> outResults)
         throws IOException {
       // apply the batching limit by default
-      return next(outResults, batch);
+      return next(outResults, batch, null);
+    }
+
+    @Override
+    public synchronized boolean next(List<KeyValue> outResults, String metric)
+        throws IOException {
+      // apply the batching limit by default
+      return next(outResults, batch, metric);
     }
 
     /*
@@ -2969,7 +2986,7 @@ public class HRegion implements HeapSize {
       return this.filter != null && this.filter.filterAllRemaining();
     }
 
-    private boolean nextInternal(int limit) throws IOException {
+    private boolean nextInternal(int limit, String metric) throws IOException {
       while (true) {
         byte [] currentRow = peekRow();
         if (isStopRow(currentRow)) {
@@ -2986,7 +3003,7 @@ public class HRegion implements HeapSize {
         } else {
           byte [] nextRow;
           do {
-            this.storeHeap.next(results, limit - results.size());
+            this.storeHeap.next(results, limit - results.size(), metric);
             if (limit > 0 && results.size() == limit) {
               if (this.filter != null && filter.hasFilterRow()) throw new IncompatibleFilterException(
                   "Filter with filterRow(List<KeyValue>) incompatible with scan with limit!");
@@ -3586,7 +3603,7 @@ public class HRegion implements HeapSize {
     InternalScanner scanner = null;
     try {
       scanner = getScanner(scan);
-      scanner.next(results);
+      scanner.next(results, HRegion.METRIC_GETSIZE);
     } finally {
       if (scanner != null)
         scanner.close();

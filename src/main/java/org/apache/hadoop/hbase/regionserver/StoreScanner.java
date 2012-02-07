@@ -46,7 +46,7 @@ class StoreScanner extends NonLazyKeyValueScanner
   private boolean cacheBlocks;
   private int countPerRow = 0;
   private int storeLimit;
-  private String metricNameGetsize;
+  private String metricNamePrefix;
   // Used to indicate that the scanner has closed (see HBASE-1107)
   // Doesnt need to be volatile because it's always accessed via synchronized methods
   private boolean closing = false;
@@ -196,9 +196,8 @@ class StoreScanner extends NonLazyKeyValueScanner
       family = Bytes.toString(store.getFamily().getName());
     }
 
-    String mutationSignature = SchemaMetrics.generateSchemaMetricsPrefix(
-        tableName, family);
-    this.metricNameGetsize = mutationSignature + "getsize";
+    this.metricNamePrefix =
+        SchemaMetrics.generateSchemaMetricsPrefix(tableName, family);
   }
 
   /**
@@ -276,6 +275,18 @@ class StoreScanner extends NonLazyKeyValueScanner
    */
   @Override
   public synchronized boolean next(List<KeyValue> outResult, int limit) throws IOException {
+    return next(outResult, limit, null);
+  }
+
+  /**
+   * Get the next row of values from this Store.
+   * @param outResult
+   * @param limit
+   * @return true if there are more rows, false if scanner is done
+   */
+  @Override
+  public synchronized boolean next(List<KeyValue> outResult, int limit,
+      String metric) throws IOException {
 
     checkReseek();
 
@@ -331,7 +342,11 @@ class StoreScanner extends NonLazyKeyValueScanner
             break LOOP;
           }
 
-          HRegion.incrNumericMetric(this.metricNameGetsize, copyKv.getLength());
+          if (metric != null) {
+            HRegion.incrNumericMetric(this.metricNamePrefix + metric,
+                copyKv.getLength());
+          }
+
           results.add(copyKv);
 
           if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
@@ -410,7 +425,13 @@ class StoreScanner extends NonLazyKeyValueScanner
 
   @Override
   public synchronized boolean next(List<KeyValue> outResult) throws IOException {
-    return next(outResult, -1);
+    return next(outResult, -1, null);
+  }
+
+  @Override
+  public synchronized boolean next(List<KeyValue> outResult, String metric)
+      throws IOException {
+    return next(outResult, -1, metric);
   }
 
   // Implementation of ChangedReadersObserver

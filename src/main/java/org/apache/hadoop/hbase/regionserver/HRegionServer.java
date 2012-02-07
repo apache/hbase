@@ -2174,7 +2174,7 @@ public class HRegionServer implements HRegionInterface,
       for (int i = 0; i < nbRows && currentScanResultSize < maxScannerResultSize; i++) {
         requestCount.incrementAndGet();
         // Collect values to be returned here
-        boolean moreRows = s.next(values);
+        boolean moreRows = s.next(values, HRegion.METRIC_NEXTSIZE);
         if (!values.isEmpty()) {
           for (KeyValue kv : values) {
             currentScanResultSize += kv.heapSize();

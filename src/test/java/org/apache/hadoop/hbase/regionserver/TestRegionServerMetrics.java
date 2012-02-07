@@ -23,10 +23,19 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
     StoreMetricType;
@@ -54,7 +63,7 @@ public class TestRegionServerMetrics {
   private static final SchemaMetrics ALL_METRICS =
       SchemaMetrics.ALL_SCHEMA_METRICS;
 
-  private static final HBaseTestingUtility TEST_UTIL =
+  private final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
 
   private Map<String, Long> startingMetrics;
@@ -123,4 +132,79 @@ public class TestRegionServerMetrics {
         NUM_FLUSHES, HRegion.getNumericMetric(storeMetricName));
   }
 
+
+  private void assertSizeMetric(String table, String[] cfs, int[] metrics) {
+    // we have getsize & nextsize for each column family
+    assertEquals(cfs.length * 2, metrics.length);
+
+    for (int i =0; i < cfs.length; ++i) {
+      String prefix = SchemaMetrics.generateSchemaMetricsPrefix(table, cfs[i]);
+      String getMetric = prefix + HRegion.METRIC_GETSIZE;
+      String nextMetric = prefix + HRegion.METRIC_NEXTSIZE;
+
+      // verify getsize and nextsize matches
+      int getSize = HRegion.numericMetrics.containsKey(getMetric) ?
+          HRegion.numericMetrics.get(getMetric).intValue() : 0;
+      int nextSize = HRegion.numericMetrics.containsKey(nextMetric) ?
+          HRegion.numericMetrics.get(nextMetric).intValue() : 0;
+
+      assertEquals(metrics[i], getSize);
+      assertEquals(metrics[cfs.length + i], nextSize);
+    }
+  }
+
+  @Test
+  public void testGetNextSize() throws IOException, InterruptedException {
+    String rowName = "row1";
+    byte[] ROW = Bytes.toBytes(rowName);
+    String tableName = "SizeMetricTest";
+    byte[] TABLE = Bytes.toBytes(tableName);
+    String cf1Name = "cf1";
+    String cf2Name = "cf2";
+    String[] cfs = new String[] {cf1Name, cf2Name};
+    byte[] CF1 = Bytes.toBytes(cf1Name);
+    byte[] CF2 = Bytes.toBytes(cf2Name);
+
+    long ts = 1234;
+    HTable hTable = TEST_UTIL.createTable(TABLE, new byte[][]{CF1, CF2});
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+
+    Put p = new Put(ROW);
+    p.add(CF1, CF1, ts, CF1);
+    p.add(CF2, CF2, ts, CF2);
+    hTable.put(p);
+
+    KeyValue kv1 = new KeyValue(ROW, CF1, CF1, ts, CF1);
+    KeyValue kv2 = new KeyValue(ROW, CF2, CF2, ts, CF2);
+    int kvLength = kv1.getLength();
+    assertEquals(kvLength, kv2.getLength());
+
+    // only cf1.getsize is set on Get
+    hTable.get(new Get(ROW).addFamily(CF1));
+    assertSizeMetric(tableName, cfs, new int[] {kvLength, 0, 0, 0});
+
+    // only cf2.getsize is set on Get
+    hTable.get(new Get(ROW).addFamily(CF2));
+    assertSizeMetric(tableName, cfs, new int[] {kvLength, kvLength, 0, 0});
+
+    // only cf2.nextsize is set
+    for (Result res : hTable.getScanner(CF2)) {
+    }
+    assertSizeMetric(tableName, cfs,
+        new int[] {kvLength, kvLength, 0, kvLength});
+
+    // only cf2.nextsize is set
+    for (Result res : hTable.getScanner(CF1)) {
+    }
+    assertSizeMetric(tableName, cfs,
+        new int[] {kvLength, kvLength, kvLength, kvLength});
+
+    // getsize/nextsize should not be set on flush or compaction
+    for (HRegion hr : TEST_UTIL.getMiniHBaseCluster().getRegions(TABLE)) {
+      hr.flushcache();
+      hr.compactStores();
+    }
+    assertSizeMetric(tableName, cfs,
+        new int[] {kvLength, kvLength, kvLength, kvLength});
+  }
 }
