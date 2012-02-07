@@ -45,7 +45,7 @@ export HBASE_OPTS="-XX:+UseConcMarkSweepGC"
 
 # Uncomment below if you intend to use the EXPERIMENTAL off heap cache.
 # export HBASE_OPTS="$HBASE_OPTS -XX:MaxDirectMemorySize="
-# Set hbase.offheapcachesize in hbase-site.xml
+# Set hbase.offheapcache.percentage in hbase-site.xml to a nonzero value.
 
 
 # Uncomment and adjust to enable JMX exporting
