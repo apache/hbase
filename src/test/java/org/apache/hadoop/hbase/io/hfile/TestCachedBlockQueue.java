@@ -19,12 +19,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.nio.ByteBuffer;
-
-import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-
 import junit.framework.TestCase;
+
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 
 public class TestCachedBlockQueue extends TestCase {
 
@@ -61,16 +58,9 @@ public class TestCachedBlockQueue extends TestCase {
 
     assertEquals(queue.heapSize(), expectedSize);
 
-    org.apache.hadoop.hbase.io.hfile.CachedBlock [] blocks = queue.get();
-    assertEquals(blocks[0].getName(), "cb1");
-    assertEquals(blocks[1].getName(), "cb2");
-    assertEquals(blocks[2].getName(), "cb3");
-    assertEquals(blocks[3].getName(), "cb4");
-    assertEquals(blocks[4].getName(), "cb5");
-    assertEquals(blocks[5].getName(), "cb6");
-    assertEquals(blocks[6].getName(), "cb7");
-    assertEquals(blocks[7].getName(), "cb8");
-
+    for (int i = 1; i <= 8; i++) {
+      assertEquals(queue.pollLast().getCacheKey().getHfileName(), "cb"+i);
+    }
   }
 
   public void testQueueSmallBlockEdgeCase() throws Exception {
@@ -113,23 +103,15 @@ public class TestCachedBlockQueue extends TestCase {
 
     assertEquals(queue.heapSize(), expectedSize);
 
-    org.apache.hadoop.hbase.io.hfile.CachedBlock [] blocks = queue.get();
-    assertEquals(blocks[0].getName(), "cb0");
-    assertEquals(blocks[1].getName(), "cb1");
-    assertEquals(blocks[2].getName(), "cb2");
-    assertEquals(blocks[3].getName(), "cb3");
-    assertEquals(blocks[4].getName(), "cb4");
-    assertEquals(blocks[5].getName(), "cb5");
-    assertEquals(blocks[6].getName(), "cb6");
-    assertEquals(blocks[7].getName(), "cb7");
-    assertEquals(blocks[8].getName(), "cb8");
-
+    for (int i = 0; i <= 8; i++) {
+      assertEquals(queue.pollLast().getCacheKey().getHfileName(), "cb"+i);
+    }
   }
 
   private static class CachedBlock extends org.apache.hadoop.hbase.io.hfile.CachedBlock
   {
     public CachedBlock(final long heapSize, String name, long accessTime) {
-      super(name,
+      super(new BlockCacheKey(name, 0),
           new Cacheable() {
             @Override
             public long heapSize() {

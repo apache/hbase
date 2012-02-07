@@ -152,7 +152,8 @@ public class TestCacheOnWrite {
 
   @After
   public void tearDown() {
-    blockCache.evictBlocksByPrefix("");
+    cacheConf = new CacheConfig(conf);
+    blockCache = cacheConf.getBlockCache();
   }
 
   @Test
@@ -181,7 +182,7 @@ public class TestCacheOnWrite {
       // Flags: don't cache the block, use pread, this is not a compaction.
       HFileBlock block = reader.readBlock(offset, onDiskSize, false, true,
           false);
-      String blockCacheKey = HFile.getBlockCacheKey(reader.getName(), offset);
+      BlockCacheKey blockCacheKey = HFile.getBlockCacheKey(reader.getName(), offset);
       boolean isCached = blockCache.getBlock(blockCacheKey, true) != null;
       boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
       assertEquals(testName + " " + block, shouldBeCached, isCached);

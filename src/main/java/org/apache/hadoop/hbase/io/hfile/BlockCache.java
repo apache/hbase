@@ -19,48 +19,53 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 
 /**
- * Block cache interface.
- * TODO: Add filename or hash of filename to block cache key.
+ * Block cache interface. Anything that implements the {@link Cacheable}
+ * interface can be put in the cache.
  */
 public interface BlockCache {
   /**
    * Add block to cache.
-   * @param blockName Zero-based file block number.
+   * @param cacheKey The block's cache key.
    * @param buf The block contents wrapped in a ByteBuffer.
    * @param inMemory Whether block should be treated as in-memory
    */
-  public void cacheBlock(String blockName, Cacheable buf, boolean inMemory);
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory);
 
   /**
    * Add block to cache (defaults to not in-memory).
-   * @param blockName Zero-based file block number.
-   * @param buf The block contents wrapped in a ByteBuffer.
+   * @param cacheKey The block's cache key.
+   * @param buf The object to cache.
    */
-  public void cacheBlock(String blockName, Cacheable buf);
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf);
 
   /**
    * Fetch block from cache.
-   * @param blockName Block number to fetch.
-   * @param caching true if the caller caches blocks on a miss
+   * @param cacheKey Block to fetch.
+   * @param caching Whether this request has caching enabled (used for stats)
    * @return Block or null if block is not in the cache.
    */
-  public Cacheable getBlock(String blockName, boolean caching);
+  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching);
 
   /**
    * Evict block from cache.
-   * @param blockName Block name to evict
+   * @param cacheKey Block to evict
    * @return true if block existed and was evicted, false if not
    */
-  public boolean evictBlock(String blockName);
+  public boolean evictBlock(BlockCacheKey cacheKey);
 
   /**
-   * Evicts all blocks with the given prefix in the name
+   * Evicts all blocks for the given HFile.
+   *
    * @return the number of blocks evicted
    */
-  public int evictBlocksByPrefix(String string);
+  public int evictBlocksByHfileName(String hfileName);
 
   /**
    * Get the statistics for this block cache.
@@ -74,8 +79,47 @@ public interface BlockCache {
   public void shutdown();
 
   /**
+   * Returns the total size of the block cache, in bytes.
+   * @return size of cache, in bytes
+   */
+  public long size();
+
+  /**
+   * Returns the free size of the block cache, in bytes.
+   * @return free space in cache, in bytes
+   */
+  public long getFreeSize();
+
+  /**
+   * Returns the occupied size of the block cache, in bytes.
+   * @return occupied space in cache, in bytes
+   */
+  public long getCurrentSize();
+
+  /**
+   * Returns the number of evictions that have occurred.
+   * @return number of evictions
+   */
+  public long getEvictedCount();
+
+  /**
    * Returns the number of blocks currently cached in the block cache.
    * @return number of blocks in the cache
    */
   public long getBlockCount();
+
+  /**
+   * Performs a BlockCache summary and returns a List of BlockCacheColumnFamilySummary objects.
+   * This method could be fairly heavyweight in that it evaluates the entire HBase file-system
+   * against what is in the RegionServer BlockCache.
+   * <br><br>
+   * The contract of this interface is to return the List in sorted order by Table name, then
+   * ColumnFamily.
+   *
+   * @param conf HBaseConfiguration
+   * @return List of BlockCacheColumnFamilySummary
+   * @throws IOException exception
+   */
+  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(
+      Configuration conf) throws IOException;
 }

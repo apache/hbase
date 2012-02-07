@@ -215,7 +215,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
     long now = System.currentTimeMillis();
 
-    String cacheKey = HFile.getBlockCacheKey(name, offset);
+    BlockCacheKey cacheKey = HFile.getBlockCacheKey(name, offset);
 
     BlockCategory effectiveCategory = BlockCategory.META;
     if (metaBlockName.equals(HFileWriterV1.BLOOM_FILTER_META_KEY) ||
@@ -279,7 +279,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
     }
 
     long offset = dataBlockIndexReader.getRootBlockOffset(block);
-    String cacheKey = HFile.getBlockCacheKey(name, offset);
+    BlockCacheKey cacheKey = HFile.getBlockCacheKey(name, offset);
 
     // For any given block from any given file, synchronize reads for said
     // block.

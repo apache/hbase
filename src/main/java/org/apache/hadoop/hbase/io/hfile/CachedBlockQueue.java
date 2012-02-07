@@ -20,7 +20,8 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.LinkedList;
-import java.util.PriorityQueue;
+
+import com.google.common.collect.MinMaxPriorityQueue;
 
 import org.apache.hadoop.hbase.io.HeapSize;
 
@@ -39,7 +40,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
  */
 public class CachedBlockQueue implements HeapSize {
 
-  private PriorityQueue<CachedBlock> queue;
+  private MinMaxPriorityQueue<CachedBlock> queue;
 
   private long heapSize;
   private long maxSize;
@@ -51,7 +52,7 @@ public class CachedBlockQueue implements HeapSize {
   public CachedBlockQueue(long maxSize, long blockSize) {
     int initialSize = (int)(maxSize / blockSize);
     if(initialSize == 0) initialSize++;
-    queue = new PriorityQueue<CachedBlock>(initialSize);
+    queue = MinMaxPriorityQueue.expectedSize(initialSize).create();
     heapSize = 0;
     this.maxSize = maxSize;
   }
@@ -93,6 +94,14 @@ public class CachedBlockQueue implements HeapSize {
       blocks.addFirst(queue.poll());
     }
     return blocks.toArray(new CachedBlock[blocks.size()]);
+  }
+
+  /**
+   * @return The last element in this queue, or {@code null} if the queue is
+   * empty.
+   */
+  public CachedBlock pollLast() {
+    return queue.pollLast();
   }
 
   /**

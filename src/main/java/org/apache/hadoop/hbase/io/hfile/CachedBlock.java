@@ -52,28 +52,27 @@ public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
     MEMORY
   };
 
-  private final String blockName;
+  private final BlockCacheKey cacheKey;
   private final Cacheable buf;
   private volatile long accessTime;
   private long size;
   private BlockPriority priority;
 
-  public CachedBlock(String blockName, Cacheable buf, long accessTime) {
-    this(blockName, buf, accessTime, false);
+  public CachedBlock(BlockCacheKey cacheKey, Cacheable buf, long accessTime) {
+    this(cacheKey, buf, accessTime, false);
   }
 
-  public CachedBlock(String blockName, Cacheable buf, long accessTime,
+  public CachedBlock(BlockCacheKey cacheKey, Cacheable buf, long accessTime,
       boolean inMemory) {
-    this.blockName = blockName;
+    this.cacheKey = cacheKey;
     this.buf = buf;
     this.accessTime = accessTime;
     // We approximate the size of this class by the size of its name string
     // plus the size of its byte buffer plus the overhead associated with all
-    // the base classes. Strings have two bytes per character due to default
-    // Java unicode encoding (hence the times 2). We also include the base class
+    // the base classes. We also include the base class
     // sizes in the PER_BLOCK_OVERHEAD variable rather than align()ing them with
     // their buffer lengths. This variable is used elsewhere in unit tests.
-    this.size = ClassSize.align(2 * blockName.length())
+    this.size = ClassSize.align(cacheKey.heapSize())
         + ClassSize.align(buf.heapSize()) + PER_BLOCK_OVERHEAD;
     if(inMemory) {
       this.priority = BlockPriority.MEMORY;
@@ -105,12 +104,11 @@ public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
     return this.buf;
   }
 
-  public String getName() {
-    return this.blockName;
+  public BlockCacheKey getCacheKey() {
+    return this.cacheKey;
   }
 
   public BlockPriority getPriority() {
     return this.priority;
   }
 }
-

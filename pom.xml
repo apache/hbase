@@ -490,7 +490,7 @@
     <slf4j.version>1.5.8</slf4j.version>
     <stax-api>1.0.1</stax-api>
     <thrift.version>0.2.0</thrift.version>
-    <guava.version>r05</guava.version>
+    <guava.version>r09</guava.version>
   </properties>
 
   <dependencyManagement>

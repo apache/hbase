@@ -144,9 +144,6 @@ public class HFile {
   public final static String DEFAULT_COMPRESSION =
     DEFAULT_COMPRESSION_ALGORITHM.getName();
 
-  /** Separator between HFile name and offset in block cache key */
-  static final char CACHE_KEY_SEPARATOR = '_';
-
   /**
    *  ROOT_DIR/TABLE_NAME/REGION_NAME/CF_NAME/HFILE
    */
@@ -516,8 +513,8 @@ public class HFile {
     System.exit(prettyPrinter.run(args));
   }
 
-  public static String getBlockCacheKey(String hfileName, long offset) {
-    return hfileName + CACHE_KEY_SEPARATOR + offset;
+  public static BlockCacheKey getBlockCacheKey(String hfileName, long offset) {
+    return new BlockCacheKey(hfileName, offset);
   }
 
   /**

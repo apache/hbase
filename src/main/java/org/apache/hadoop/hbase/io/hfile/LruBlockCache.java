@@ -19,8 +19,13 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.SortedSet;
@@ -35,10 +40,13 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * A block cache implementation that is memory-aware using {@link HeapSize},
@@ -101,7 +109,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
   static final int statThreadPeriod = 60;
 
   /** Concurrent map (the cache) */
-  private final ConcurrentHashMap<String,CachedBlock> map;
+  private final ConcurrentHashMap<BlockCacheKey,CachedBlock> map;
 
   /** Eviction lock (locked when eviction in process) */
   private final ReentrantLock evictionLock = new ReentrantLock(true);
@@ -234,7 +242,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     }
     this.maxSize = maxSize;
     this.blockSize = blockSize;
-    map = new ConcurrentHashMap<String,CachedBlock>(mapInitialSize,
+    map = new ConcurrentHashMap<BlockCacheKey,CachedBlock>(mapInitialSize,
         mapLoadFactor, mapConcurrencyLevel);
     this.minFactor = minFactor;
     this.acceptableFactor = acceptableFactor;
@@ -270,18 +278,18 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * <p>
    * It is assumed this will NEVER be called on an already cached block.  If
    * that is done, an exception will be thrown.
-   * @param blockName block name
+   * @param cacheKey block's cache key
    * @param buf block buffer
    * @param inMemory if block is in-memory
    */
-  public void cacheBlock(String blockName, Cacheable buf, boolean inMemory) {
-    CachedBlock cb = map.get(blockName);
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+    CachedBlock cb = map.get(cacheKey);
     if(cb != null) {
       throw new RuntimeException("Cached an already cached block");
     }
-    cb = new CachedBlock(blockName, buf, count.incrementAndGet(), inMemory);
+    cb = new CachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
     long newSize = updateSizeMetrics(cb, false);
-    map.put(blockName, cb);
+    map.put(cacheKey, cb);
     elements.incrementAndGet();
     if(newSize > acceptableSize() && !evictionInProgress) {
       runEviction();
@@ -295,11 +303,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * that is done, it is assumed that you are reinserting the same exact
    * block due to a race condition and will update the buffer but not modify
    * the size of the cache.
-   * @param blockName block name
+   * @param cacheKey block's cache key
    * @param buf block buffer
    */
-  public void cacheBlock(String blockName, Cacheable buf) {
-    cacheBlock(blockName, buf, false);
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
+    cacheBlock(cacheKey, buf, false);
   }
 
   /**
@@ -326,13 +334,13 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
   /**
    * Get the buffer of the block with the specified name.
-   * @param blockName block name
+   * @param cacheKey block's cache key
    * @param caching true if the caller caches blocks on cache misses
-   * @return buffer of specified block name, or null if not in cache
+   * @return buffer of specified cache key, or null if not in cache
    */
   @Override
-  public Cacheable getBlock(String blockName, boolean caching) {
-    CachedBlock cb = map.get(blockName);
+  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching) {
+    CachedBlock cb = map.get(cacheKey);
     if(cb == null) {
       stats.miss(caching);
       return null;
@@ -343,25 +351,28 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public boolean evictBlock(String blockName) {
-    CachedBlock cb = map.get(blockName);
+  public boolean evictBlock(BlockCacheKey cacheKey) {
+    CachedBlock cb = map.get(cacheKey);
     if (cb == null) return false;
     evictBlock(cb);
     return true;
   }
 
   /**
-   * Evicts all blocks whose name starts with the given prefix. This is an
+   * Evicts all blocks for a specific HFile. This is an
    * expensive operation implemented as a linear-time search through all blocks
-   * in the cache.
+ * in the cache. Ideally this should be a search in a log-access-time map.
+   *
+   * <p>
+   * This is used for evict-on-close to remove all blocks of a specific HFile.
    *
    * @return the number of blocks evicted
    */
   @Override
-  public int evictBlocksByPrefix(String prefix) {
+  public int evictBlocksByHfileName(String hfileName) {
     int numEvicted = 0;
-    for (String key : map.keySet()) {
-      if (key.startsWith(prefix)) {
+    for (BlockCacheKey key : map.keySet()) {
+      if (key.getHfileName().equals(hfileName)) {
         if (evictBlock(key))
           ++numEvicted;
       }
@@ -370,7 +381,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
 
   protected long evictBlock(CachedBlock block) {
-    map.remove(block.getName());
+    map.remove(block.getCacheKey());
     updateSizeMetrics(block, true);
     elements.decrementAndGet();
     stats.evicted(block);
@@ -805,6 +816,40 @@ public class LruBlockCache implements BlockCache, HeapSize {
         (concurrency * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
   }
 
+  @Override
+  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(
+      Configuration conf) throws IOException {
+
+    Map<String, Path> sfMap = FSUtils.getTableStoreFilePathMap(
+        FileSystem.get(conf),
+        FSUtils.getRootDir(conf));
+
+    // quirky, but it's a compound key and this is a shortcut taken instead of
+    // creating a class that would represent only a key.
+    Map<BlockCacheColumnFamilySummary, BlockCacheColumnFamilySummary> bcs =
+      new HashMap<BlockCacheColumnFamilySummary, BlockCacheColumnFamilySummary>();
+
+    for (CachedBlock cb : map.values()) {
+      String sf = cb.getCacheKey().getHfileName();
+      Path path = sfMap.get(sf);
+      if ( path != null) {
+        BlockCacheColumnFamilySummary lookup =
+          BlockCacheColumnFamilySummary.createFromStoreFilePath(path);
+        BlockCacheColumnFamilySummary bcse = bcs.get(lookup);
+        if (bcse == null) {
+          bcse = BlockCacheColumnFamilySummary.create(lookup);
+          bcs.put(lookup,bcse);
+        }
+        bcse.incrementBlocks();
+        bcse.incrementHeapSize(cb.heapSize());
+      }
+    }
+    List<BlockCacheColumnFamilySummary> list =
+        new ArrayList<BlockCacheColumnFamilySummary>(bcs.values());
+    Collections.sort( list );
+    return list;
+  }
+
   // Simple calculators of sizes given factors and maxSize
 
   private long acceptableSize() {
@@ -838,11 +883,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
    */
   SortedSet<String> getCachedFileNamesForTest() {
     SortedSet<String> fileNames = new TreeSet<String>();
-    for (String cacheKey : map.keySet()) {
-      int sepIndex = cacheKey.indexOf(HFile.CACHE_KEY_SEPARATOR);
-      if (sepIndex != -1) {
-        fileNames.add(cacheKey.substring(0, sepIndex));
-      }
+    for (BlockCacheKey cacheKey : map.keySet()) {
+      fileNames.add(cacheKey.getHfileName());
     }
     return fileNames;
   }
