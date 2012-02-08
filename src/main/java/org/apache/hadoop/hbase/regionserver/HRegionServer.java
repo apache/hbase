@@ -3160,7 +3160,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       throws IOException {
     checkOpen();
     if (regionName == null) {
-      throw new IOException("Invalid arguments to atomicMutation " +
+      throw new IOException("Invalid arguments to mutateRow " +
       "regionName is null");
     }
     requestCount.incrementAndGet();
@@ -3169,7 +3169,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
       }
-      region.mutateRow(rm, null);
+      region.mutateRow(rm);
     } catch (IOException e) {
       checkFileSystem();
       throw e;

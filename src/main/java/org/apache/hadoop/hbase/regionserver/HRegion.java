@@ -4148,12 +4148,26 @@ public class HRegion implements HeapSize { // , Writable{
     return results;
   }
 
-  public void mutateRow(RowMutation rm,
-      Integer lockid) throws IOException {
+  public void mutateRow(RowMutation rm) throws IOException {
+    mutateRowsWithLocks(rm.getMutations(), Collections.singleton(rm.getRow()));
+  }
+
+  /**
+   * Perform atomic mutations within the region.
+   * @param mutations The list of mutations to perform.
+   * <code>mutations</code> can contain operations for multiple rows.
+   * Caller has to ensure that all rows are contained in this region.
+   * @param rowsToLock Rows to lock
+   * If multiple rows are locked care should be taken that
+   * <code>rowsToLock</code> is sorted in order to avoid deadlocks.
+   * @throws IOException
+   */
+  public void mutateRowsWithLocks(Collection<Mutation> mutations,
+      Collection<byte[]> rowsToLock) throws IOException {
     boolean flush = false;
 
     startRegionOperation();
-    Integer lid = null;
+    List<Integer> acquiredLocks = null;
     try {
       // 1. run all pre-hooks before the atomic operation
       // if any pre hook indicates "bypass", bypass the entire operation
@@ -4161,7 +4175,7 @@ public class HRegion implements HeapSize { // , Writable{
       // one WALEdit is used for all edits.
       WALEdit walEdit = new WALEdit();
       if (coprocessorHost != null) {
-        for (Mutation m : rm.getMutations()) {
+        for (Mutation m : mutations) {
           if (m instanceof Put) {
             if (coprocessorHost.prePut((Put) m, walEdit, m.getWriteToWAL())) {
               // by pass everything
@@ -4178,8 +4192,17 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
 
-      // 2. acquire the row lock
-      lid = getLock(lockid, rm.getRow(), true);
+      // 2. acquire the row lock(s)
+      acquiredLocks = new ArrayList<Integer>(rowsToLock.size());
+      for (byte[] row : rowsToLock) {
+        // attempt to lock all involved rows, fail if one lock times out
+        Integer lid = getLock(null, row, true);
+        if (lid == null) {
+          throw new IOException("Failed to acquire lock on "
+              + Bytes.toStringBinary(row));
+        }
+        acquiredLocks.add(lid);
+      }
 
       // 3. acquire the region lock
       this.updatesLock.readLock().lock();
@@ -4191,7 +4214,7 @@ public class HRegion implements HeapSize { // , Writable{
       byte[] byteNow = Bytes.toBytes(now);
       try {
         // 5. Check mutations and apply edits to a single WALEdit
-        for (Mutation m : rm.getMutations()) {
+        for (Mutation m : mutations) {
           if (m instanceof Put) {
             Map<byte[], List<KeyValue>> familyMap = m.getFamilyMap();
             checkFamilies(familyMap.keySet());
@@ -4218,7 +4241,7 @@ public class HRegion implements HeapSize { // , Writable{
 
         // 7. apply to memstore
         long addedSize = 0;
-        for (Mutation m : rm.getMutations()) {
+        for (Mutation m : mutations) {
           addedSize += applyFamilyMapToMemstore(m.getFamilyMap(), w);
         }
         flush = isFlushSize(this.addAndGetGlobalMemstoreSize(addedSize));
@@ -4231,7 +4254,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
       // 10. run all coprocessor post hooks, after region lock is released
       if (coprocessorHost != null) {
-        for (Mutation m : rm.getMutations()) {
+        for (Mutation m : mutations) {
           if (m instanceof Put) {
             coprocessorHost.postPut((Put) m, walEdit, m.getWriteToWAL());
           } else if (m instanceof Delete) {
@@ -4240,9 +4263,11 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
     } finally {
-      if (lid != null) {
+      if (acquiredLocks != null) {
         // 11. release the row lock
-        releaseRowLock(lid);
+        for (Integer lid : acquiredLocks) {
+          releaseRowLock(lid);
+        }
       }
       if (flush) {
         // 12. Flush cache if needed. Do it outside update lock.
