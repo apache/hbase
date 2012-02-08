@@ -14,6 +14,7 @@ Release 0.92.1 - Unreleased
                (YiFeng Jiang)
    HBASE-5212  Fix test TestTableMapReduce against 0.23 (Ted and Gregory)
    HBASE-5267  Add a configuration to disable the slab cache by default (Li Pi)
+   HBASE-5345  CheckAndPut doesn't work when value is empty byte[] (Evert Arckens)
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()

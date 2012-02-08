@@ -581,12 +581,22 @@ public class TestHRegion extends HBaseTestCase {
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, fam1);
-    //Putting data in key
+
+    //Putting empty data in key
     Put put = new Put(row1);
+    put.add(fam1, qf1, emptyVal);
+
+    //checkAndPut with empty value
+    boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+        new BinaryComparator(emptyVal), put, lockId, true);
+    assertTrue(res);
+    
+    //Putting data in key
+    put = new Put(row1);
     put.add(fam1, qf1, val1);
 
     //checkAndPut with correct value
-    boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+    res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
         new BinaryComparator(emptyVal), put, lockId, true);
     assertTrue(res);
 
