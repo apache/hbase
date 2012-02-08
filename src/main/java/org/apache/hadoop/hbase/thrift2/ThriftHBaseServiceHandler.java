@@ -19,7 +19,28 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.*;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deleteFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deletesFromHBase;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deletesFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getsFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.incrementFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.putFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.putsFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.resultFromHBase;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.resultsFromHBase;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.scanFromThrift;
+
+import java.io.IOException;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,6 +49,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
@@ -38,13 +60,6 @@ import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.thrift.TException;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * This class is a glue object that connects Thrift RPC calls to the HBase client API primarily defined in the
@@ -61,7 +76,49 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
   private final AtomicInteger nextScannerId = new AtomicInteger(0);
   private final Map<Integer, ResultScanner> scannerMap = new ConcurrentHashMap<Integer, ResultScanner>();
 
-  public ThriftHBaseServiceHandler(Configuration conf) {
+  public static THBaseService.Iface newInstance(
+      Configuration conf, ThriftMetrics metrics) {
+    THBaseService.Iface handler = new ThriftHBaseServiceHandler(conf);
+    return (THBaseService.Iface) Proxy.newProxyInstance(
+        handler.getClass().getClassLoader(),
+        handler.getClass().getInterfaces(),
+        new THBaseServiceMetricsProxy(handler, metrics));
+  }
+
+  private static class THBaseServiceMetricsProxy implements InvocationHandler {
+    private final THBaseService.Iface handler;
+    private final ThriftMetrics metrics;
+
+    private THBaseServiceMetricsProxy(
+        THBaseService.Iface handler, ThriftMetrics metrics) {
+      this.handler = handler;
+      this.metrics = metrics;
+    }
+
+    @Override
+    public Object invoke(Object proxy, Method m, Object[] args)
+        throws Throwable {
+      Object result;
+      try {
+        long start = now();
+        result = m.invoke(handler, args);
+        int processTime = (int)(now() - start);
+        metrics.incMethodTime(m.getName(), processTime);
+      } catch (InvocationTargetException e) {
+        throw e.getTargetException();
+      } catch (Exception e) {
+        throw new RuntimeException(
+            "unexpected invocation exception: " + e.getMessage());
+      }
+      return result;
+    }
+  }
+    
+  private static long now() {
+    return System.nanoTime();
+  }
+
+  ThriftHBaseServiceHandler(Configuration conf) {
     htablePool = new HTablePool(conf, Integer.MAX_VALUE);
   }
 

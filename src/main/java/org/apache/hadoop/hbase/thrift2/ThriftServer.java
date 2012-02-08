@@ -19,6 +19,15 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -29,7 +38,11 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.thrift.CallQueue;
+import org.apache.hadoop.hbase.thrift.CallQueue.Call;
+import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
@@ -46,19 +59,16 @@ import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportException;
 import org.apache.thrift.transport.TTransportFactory;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.util.List;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * ThriftServer - this class starts up a Thrift server which implements the HBase API specified in the
  * HbaseClient.thrift IDL file.
  */
 public class ThriftServer {
-  private static final Log log = LogFactory.getLog("ThriftServer");
+  private static final Log log = LogFactory.getLog(ThriftServer.class);
 
-  private static final String DEFAULT_LISTEN_PORT = "9090";
+  public static final String DEFAULT_LISTEN_PORT = "9090";
 
   public ThriftServer() {
   }
@@ -141,15 +151,31 @@ public class ThriftServer {
     return new TNonblockingServer(serverArgs);
   }
 
-  private static TServer getTHsHaServer(TProtocolFactory protocolFactory, THBaseService.Processor processor,
-      TTransportFactory transportFactory, InetSocketAddress inetSocketAddress) throws TTransportException {
+  private static TServer getTHsHaServer(TProtocolFactory protocolFactory,
+      THBaseService.Processor processor, TTransportFactory transportFactory,
+      InetSocketAddress inetSocketAddress, ThriftMetrics metrics)
+      throws TTransportException {
     TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(inetSocketAddress);
     log.info("starting HBase HsHA Thrift server on " + inetSocketAddress.toString());
     THsHaServer.Args serverArgs = new THsHaServer.Args(serverTransport);
+    ExecutorService executorService = createExecutor(
+        serverArgs.getWorkerThreads(), metrics);
+    serverArgs.executorService(executorService);
     serverArgs.processor(processor);
     serverArgs.transportFactory(transportFactory);
     serverArgs.protocolFactory(protocolFactory);
     return new THsHaServer(serverArgs);
+  }
+
+  private static ExecutorService createExecutor(
+      int workerThreads, ThriftMetrics metrics) {
+    CallQueue callQueue = new CallQueue(
+        new LinkedBlockingQueue<Call>(), metrics);
+    ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
+    tfb.setDaemon(true);
+    tfb.setNameFormat("thrift2-worker-%d");
+    return new ThreadPoolExecutor(workerThreads, workerThreads,
+            Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build());
   }
 
   private static TServer getTThreadPoolServer(TProtocolFactory protocolFactory, THBaseService.Processor processor,
@@ -195,10 +221,14 @@ public class ThriftServer {
       boolean nonblocking = cmd.hasOption("nonblocking");
       boolean hsha = cmd.hasOption("hsha");
 
+      Configuration conf = HBaseConfiguration.create();
+      ThriftMetrics metrics = new ThriftMetrics(
+          listenPort, conf, THBaseService.Iface.class);
+
       // Construct correct ProtocolFactory
       TProtocolFactory protocolFactory = getTProtocolFactory(cmd.hasOption("compact"));
-      THBaseService.Iface handler = new ThriftHBaseServiceHandler(
-          HBaseConfiguration.create());
+      THBaseService.Iface handler =
+          ThriftHBaseServiceHandler.newInstance(conf, metrics);
       THBaseService.Processor processor = new THBaseService.Processor(handler);
 
       boolean framed = cmd.hasOption("framed") || nonblocking || hsha;
@@ -217,7 +247,7 @@ public class ThriftServer {
       if (nonblocking) {
         server = getTNonBlockingServer(protocolFactory, processor, transportFactory, inetSocketAddress);
       } else if (hsha) {
-        server = getTHsHaServer(protocolFactory, processor, transportFactory, inetSocketAddress);
+        server = getTHsHaServer(protocolFactory, processor, transportFactory, inetSocketAddress, metrics);
       } else {
         server = getTThreadPoolServer(protocolFactory, processor, transportFactory, inetSocketAddress);
       }

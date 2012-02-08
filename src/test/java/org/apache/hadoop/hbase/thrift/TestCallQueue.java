@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
+import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -106,7 +107,8 @@ public class TestCallQueue {
   private static ThriftMetrics createMetrics() throws Exception {
     setupMetricsContext();
     Configuration conf = UTIL.getConfiguration();
-    return new ThriftMetrics(ThriftServerRunner.DEFAULT_LISTEN_PORT, conf);
+    return new ThriftMetrics(
+        ThriftServerRunner.DEFAULT_LISTEN_PORT, conf, Hbase.Iface.class);
   }
 
   private static void setupMetricsContext() throws Exception {
