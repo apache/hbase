@@ -11,6 +11,7 @@ Release 0.92.1 - Unreleased
                of the writer threads has exceptions. (Ram)
    HBASE-5243  LogSyncerThread not getting shutdown waiting for the interrupted flag (Ram)
    HBASE-5255  Use singletons for OperationStatus to save memory (Benoit)
+   HBASE-5345  CheckAndPut doesn't work when value is empty byte[] (Evert Arckens)
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()
