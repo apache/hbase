@@ -123,7 +123,6 @@ public class ThriftServerRunner implements Runnable {
   volatile TServer tserver;
   private final Hbase.Iface handler;
   private final ThriftMetrics metrics;
-  private CallQueue callQueue;
 
   /** An enum of server implementation selections */
   enum ImplType {
@@ -227,7 +226,7 @@ public class ThriftServerRunner implements Runnable {
   public ThriftServerRunner(Configuration conf, HBaseHandler handler) {
     this.conf = HBaseConfiguration.create(conf);
     this.listenPort = conf.getInt(PORT_CONF_KEY, DEFAULT_LISTEN_PORT);
-    this.metrics = new ThriftMetrics(listenPort, conf);
+    this.metrics = new ThriftMetrics(listenPort, conf, Hbase.Iface.class);
     this.handler = HbaseHandlerMetricsProxy.newInstance(handler, metrics, conf);
 
   }
@@ -305,9 +304,10 @@ public class ThriftServerRunner implements Runnable {
         tserver = new TNonblockingServer(serverArgs);
       } else if (implType == ImplType.HS_HA) {
         THsHaServer.Args serverArgs = new THsHaServer.Args(serverTransport);
-        this.callQueue = new CallQueue(new LinkedBlockingQueue<Call>(), metrics);
+        CallQueue callQueue =
+            new CallQueue(new LinkedBlockingQueue<Call>(), metrics);
         ExecutorService executorService = createExecutor(
-            this.callQueue, serverArgs.getWorkerThreads());
+            callQueue, serverArgs.getWorkerThreads());
         serverArgs.executorService(executorService)
                   .processor(processor)
                   .transportFactory(transportFactory)
@@ -316,9 +316,10 @@ public class ThriftServerRunner implements Runnable {
       } else { // THREADED_SELECTOR
         TThreadedSelectorServer.Args serverArgs =
             new HThreadedSelectorServerArgs(serverTransport, conf);
-        this.callQueue = new CallQueue(new LinkedBlockingQueue<Call>(), metrics);
+        CallQueue callQueue =
+            new CallQueue(new LinkedBlockingQueue<Call>(), metrics);
         ExecutorService executorService = createExecutor(
-            this.callQueue, serverArgs.getWorkerThreads());
+            callQueue, serverArgs.getWorkerThreads());
         serverArgs.executorService(executorService)
                   .processor(processor)
                   .transportFactory(transportFactory)
@@ -344,7 +345,6 @@ public class ThriftServerRunner implements Runnable {
           + "; " + serverArgs);
       TBoundedThreadPoolServer tserver =
           new TBoundedThreadPoolServer(serverArgs, metrics);
-      this.callQueue = tserver.getCallQueue();
       this.tserver = tserver;
     } else {
       throw new AssertionError("Unsupported Thrift server implementation: " +

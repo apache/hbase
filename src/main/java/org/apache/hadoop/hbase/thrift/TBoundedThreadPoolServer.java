@@ -157,13 +157,6 @@ public class TBoundedThreadPoolServer extends TServer {
     serverOptions = options;
   }
 
-  /**
-   * Return the server working queue
-   */
-  public CallQueue getCallQueue() {
-    return this.callQueue;
-  }
-
   public void serve() {
     try {
       serverTransport_.listen();

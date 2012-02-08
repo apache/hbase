@@ -19,6 +19,13 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -26,15 +33,22 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
+import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.thrift2.generated.TIOError;
 import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
@@ -42,6 +56,11 @@ import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.metrics.ContextFactory;
+import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.metrics.MetricsUtil;
+import org.apache.hadoop.metrics.spi.NoEmitMetricsContext;
+import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.apache.thrift.TException;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -49,13 +68,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.*;
-
 /**
  * Unit testing for ThriftServer.HBaseHandler, a part of the org.apache.hadoop.hbase.thrift2 package.
  */
 @Category(MediumTests.class)
 public class TestThriftHBaseServiceHandler {
+
+  public static final Log LOG = LogFactory.getLog(TestThriftHBaseServiceHandler.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   // Static names for tables, columns, rows, and values
@@ -511,6 +530,77 @@ public class TestThriftHBaseServiceHandler {
       fail("Scanner id should be invalid");
     } catch (TIllegalArgument e) {
     }
+  }
+
+  @Test
+  public void testMetrics() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    ThriftMetrics metrics = getMetrics(conf);
+    THBaseService.Iface handler =
+        ThriftHBaseServiceHandler.newInstance(conf, metrics);
+    byte[] rowName = "testMetrics".getBytes();
+    ByteBuffer table = ByteBuffer.wrap(tableAname);
+
+    TGet get = new TGet(ByteBuffer.wrap(rowName));
+    assertFalse(handler.exists(table, get));
+
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(new TColumnValue(ByteBuffer.wrap(familyAname),
+                                      ByteBuffer.wrap(qualifierAname),
+                                      ByteBuffer.wrap(valueAname)));
+    columnValues.add(new TColumnValue(ByteBuffer.wrap(familyBname),
+                                      ByteBuffer.wrap(qualifierBname),
+                                      ByteBuffer.wrap(valueBname)));
+    TPut put = new TPut(ByteBuffer.wrap(rowName), columnValues);
+    put.setColumnValues(columnValues);
+
+    handler.put(table, put);
+
+    assertTrue(handler.exists(table, get));
+    logMetrics(metrics);
+    verifyMetrics(metrics, "put_num_ops", 1);
+    verifyMetrics(metrics, "exists_num_ops", 2);
+  }
+ 
+  private static ThriftMetrics getMetrics(Configuration conf) throws Exception {
+    setupMetricsContext();
+    return new ThriftMetrics(Integer.parseInt(ThriftServer.DEFAULT_LISTEN_PORT),
+        conf, THBaseService.Iface.class);
+  }
+ 
+  private static void setupMetricsContext() throws IOException {
+    ContextFactory factory = ContextFactory.getFactory();
+    factory.setAttribute(ThriftMetrics.CONTEXT_NAME + ".class",
+        NoEmitMetricsContext.class.getName());
+    MetricsUtil.getContext(ThriftMetrics.CONTEXT_NAME)
+               .createRecord(ThriftMetrics.CONTEXT_NAME).remove();
+  }
+ 
+  private static void logMetrics(ThriftMetrics metrics) throws Exception {
+    if (LOG.isDebugEnabled()) {
+      return;
+    }
+    MetricsContext context = MetricsUtil.getContext( 
+        ThriftMetrics.CONTEXT_NAME); 
+    metrics.doUpdates(context); 
+    for (String key : context.getAllRecords().keySet()) {
+      for (OutputRecord record : context.getAllRecords().get(key)) {
+        for (String name : record.getMetricNames()) {
+          LOG.debug("metrics:" + name + " value:" +
+              record.getMetric(name).intValue());
+        }
+      }
+    }
+  }
+
+  private static void verifyMetrics(ThriftMetrics metrics, String name, int expectValue)
+      throws Exception { 
+    MetricsContext context = MetricsUtil.getContext( 
+        ThriftMetrics.CONTEXT_NAME); 
+    metrics.doUpdates(context); 
+    OutputRecord record = context.getAllRecords().get( 
+        ThriftMetrics.CONTEXT_NAME).iterator().next(); 
+    assertEquals(expectValue, record.getMetric(name).intValue()); 
   }
 
   @org.junit.Rule

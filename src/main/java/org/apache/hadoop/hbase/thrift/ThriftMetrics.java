@@ -61,7 +61,7 @@ public class ThriftMetrics implements Updater {
   private MetricsTimeVaryingRate slowThriftCall =
       new MetricsTimeVaryingRate("slowThriftCall", registry);
 
-  public ThriftMetrics(int port, Configuration conf) {
+  public ThriftMetrics(int port, Configuration conf, Class<?> iface) {
     slowResponseTime = conf.getLong(
         SLOW_RESPONSE_NANO_SEC, DEFAULT_SLOW_RESPONSE_NANO_SEC);
     context = MetricsUtil.getContext(CONTEXT_NAME);
@@ -73,7 +73,7 @@ public class ThriftMetrics implements Updater {
 
     context.registerUpdater(this);
 
-    createMetricsForMethods(Hbase.Iface.class);
+    createMetricsForMethods(iface);
   }
 
   public void incTimeInQueue(long time) {

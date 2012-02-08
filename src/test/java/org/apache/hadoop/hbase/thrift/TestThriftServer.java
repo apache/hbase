@@ -141,7 +141,7 @@ public class TestThriftServer {
 
   private static ThriftMetrics getMetrics(Configuration conf) throws Exception {
     setupMetricsContext();
-    return new ThriftMetrics(ThriftServerRunner.DEFAULT_LISTEN_PORT, conf);
+    return new ThriftMetrics(ThriftServerRunner.DEFAULT_LISTEN_PORT, conf, Hbase.Iface.class);
   }
 
   private static void setupMetricsContext() throws IOException {
