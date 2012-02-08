@@ -227,15 +227,13 @@ if [ ! -z $HADOOP_HOME ]; then
   if [ "`echo ${HADOOP_HOME}/hadoop-core*.jar`" != "${HADOOP_HOME}/hadoop-core*.jar" ] ; then
     HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" `ls ${HADOOP_HOME}/hadoop-core*.jar | head -1`)
   else
-    HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" `ls ${HADOOP_HOME}/share/hadoop/common/hadoop-common*.jar | head -1`)
-    HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" `ls ${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs*.jar | head -1`)
+    HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" `ls ${HADOOP_HOME}/hadoop-common*.jar | head -1`)
+    HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" `ls ${HADOOP_HOME}/hadoop-hdfs*.jar | head -1`)
+    HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" `ls ${HADOOP_HOME}/hadoop-mapred*.jar | head -1`)
   fi
   for i in "${HADOOP_HOME}/lib/"*.jar; do
     HADOOPCPPATH="${HADOOPCPPATH}:$i"
   done
-  if [ -d "${HADOOP_HOME}/share/hadoop/common/lib" ]; then
-    HADOOPCPPATH=${HADOOPCPPATH}:${HADOOP_HOME}/share/hadoop/common/lib'/*'
-  fi
   CLASSPATH=$(append_path "${CLASSPATH}" "${HADOOPCPPATH}")
   
   if [ -d "${HADOOP_HOME}/lib/native" ]; then
