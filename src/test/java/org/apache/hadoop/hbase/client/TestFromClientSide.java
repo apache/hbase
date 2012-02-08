@@ -36,7 +36,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -65,6 +64,9 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HTable.DaemonThreadFactory;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
+import org.apache.hadoop.hbase.coprocessor.MultiRowMutationProtocol;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -112,6 +114,9 @@ public class TestFromClientSide {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+        MultiRowMutationEndpoint.class.getName());
     // We need more than one region server in this test
     TEST_UTIL.startMiniCluster(SLAVES);
   }
@@ -4038,6 +4043,31 @@ public class TestFromClientSide {
 
     assertTrue(scan.getFamilyMap().get(FAMILY) == null);
     assertTrue(scan.getFamilyMap().containsKey(FAMILY));
+  }
+
+  @Test
+  public void testMultiRowMutation() throws Exception {
+    LOG.info("Starting testMultiRowMutation");
+    final byte [] TABLENAME = Bytes.toBytes("testMultiRowMutation");
+    final byte [] ROW1 = Bytes.toBytes("testRow1");
+
+    HTable t = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    List<Mutation> mrm = new ArrayList<Mutation>();
+    Put p = new Put(ROW);
+    p.add(FAMILY, QUALIFIER, VALUE);
+    mrm.add(p);
+    p = new Put(ROW1);
+    p.add(FAMILY, QUALIFIER, VALUE);
+    mrm.add(p);
+    MultiRowMutationProtocol mr = t.coprocessorProxy(
+        MultiRowMutationProtocol.class, ROW);
+    mr.mutateRows(mrm);
+    Get g = new Get(ROW);
+    Result r = t.get(g);
+    assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIER)));
+    g = new Get(ROW1);
+    r = t.get(g);
+    assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIER)));
   }
 
   @Test
