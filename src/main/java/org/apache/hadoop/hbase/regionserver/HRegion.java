@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
+import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -2274,6 +2275,9 @@ public class HRegion implements HeapSize { // , Writable{
           comparator.getValue().length == 0;
         boolean matches = false;
         if (result.size() == 0 && valueIsNull) {
+          matches = true;
+        } else if (result.size() > 0 && result.get(0).getValue().length == 0 &&
+            valueIsNull) {
           matches = true;
         } else if (result.size() == 1 && !valueIsNull) {
           KeyValue kv = result.get(0);
