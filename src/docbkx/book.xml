@@ -2165,15 +2165,15 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           Important knobs:
           <itemizedlist>
             <listitem><code>hbase.store.compaction.ratio</code> Ratio used in compaction
-            file selection algorithm.  (default 1.2F) </listitem>
+            file selection algorithm (default 1.2f). </listitem>
             <listitem><code>hbase.hstore.compaction.min</code> (.90 hbase.hstore.compactionThreshold) (files) Minimum number
-            of StoreFiles per Store to be selected for a compaction to occur.</listitem>
-            <listitem><code>hbase.hstore.compaction.max</code> (files) Maximum number of StoreFiles to compact per minor compaction.</listitem>
+            of StoreFiles per Store to be selected for a compaction to occur (default 2).</listitem>
+            <listitem><code>hbase.hstore.compaction.max</code> (files) Maximum number of StoreFiles to compact per minor compaction (default 10).</listitem>
             <listitem><code>hbase.hstore.compaction.min.size</code> (bytes) 
             Any StoreFile smaller than this setting with automatically be a candidate for compaction.  Defaults to 
-            regions' memstore flush size (134 mb). </listitem>
+            <code>hbase.hregion.memstore.flush.size</code> (64 mb). </listitem>
             <listitem><code>hbase.hstore.compaction.max.size</code> (.92) (bytes) 
-            Any StoreFile larger than this setting with automatically be excluded from compaction. </listitem>
+            Any StoreFile larger than this setting with automatically be excluded from compaction (default Long.MAX_VALUE). </listitem>
             </itemizedlist>
           </para>
           <para>The minor compaction StoreFile selection logic is size based, and selects a file for compaction when the file
@@ -2184,7 +2184,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           <title>Minor Compaction File Selection - Example #1 (Basic Example)</title>
           <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.
           <itemizedlist>
-            <listitem><code>hbase.store.compaction.ratio</code> = 1.0F </listitem>
+            <listitem><code>hbase.store.compaction.ratio</code> = 1.0f </listitem>
             <listitem><code>hbase.hstore.compaction.min</code> = 3 (files) </listitem>>
             <listitem><code>hbase.hstore.compaction.max</code> = 5 (files) </listitem>>        
             <listitem><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </listitem>>
@@ -2208,7 +2208,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           <title>Minor Compaction File Selection - Example #2 (Not Enough Files To Compact)</title>
           <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.
           <itemizedlist>
-            <listitem><code>hbase.store.compaction.ratio</code> = 1.0F </listitem>
+            <listitem><code>hbase.store.compaction.ratio</code> = 1.0f </listitem>
             <listitem><code>hbase.hstore.compaction.min</code> = 3 (files) </listitem>>
             <listitem><code>hbase.hstore.compaction.max</code> = 5 (files) </listitem>>        
             <listitem><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </listitem>>
@@ -2231,7 +2231,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           <title>Minor Compaction File Selection - Example #3 (Limiting Files To Compact)</title>
           <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.
           <itemizedlist>
-            <listitem><code>hbase.store.compaction.ratio</code> = 1.0F </listitem>
+            <listitem><code>hbase.store.compaction.ratio</code> = 1.0f </listitem>
             <listitem><code>hbase.hstore.compaction.min</code> = 3 (files) </listitem>>
             <listitem><code>hbase.hstore.compaction.max</code> = 5 (files) </listitem>>        
             <listitem><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </listitem>>
@@ -2254,13 +2254,13 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
         </section>
         <section xml:id="compaction.config.impact">
           <title>Impact of Key Configuration Options</title>
-          <para><code>hbase.store.compaction.ratio</code>.  A large ratio (e.g., 10F) will produce a single giant file.  Conversely, a value of .25F will
+          <para><code>hbase.store.compaction.ratio</code>.  A large ratio (e.g., 10) will produce a single giant file.  Conversely, a value of .25 will
           produce behavior similar to the BigTable compaction algorithm - resulting in 4 StoreFiles.
           </para>
-          <para><code>hbase.hstore.compaction.min.size</code>.  This defaults to <code>hbase.hregion.memstore.flush.size</code> (134 mb).  Because
+          <para><code>hbase.hstore.compaction.min.size</code>.  Because
           this limit represents the "automatic include" limit for all StoreFiles smaller than this value, this value may need to
           be adjusted downwards in write-heavy environments where many 1 or 2 mb StoreFiles are being flushed, because every file
-          will be targeted for compaction, and the resulting files may still be under the min-size and require further compaction, etc. 
+          will be targeted for compaction and the resulting files may still be under the min-size and require further compaction, etc. 
           </para>
         </section>
       </section>  <!--  compaction -->
