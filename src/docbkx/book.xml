@@ -2171,7 +2171,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
             <listitem><code>hbase.hstore.compaction.max</code> (files) Maximum number of StoreFiles to compact per minor compaction (default 10).</listitem>
             <listitem><code>hbase.hstore.compaction.min.size</code> (bytes) 
             Any StoreFile smaller than this setting with automatically be a candidate for compaction.  Defaults to 
-            <code>hbase.hregion.memstore.flush.size</code> (64 mb). </listitem>
+            <code>hbase.hregion.memstore.flush.size</code> (128 mb). </listitem>
             <listitem><code>hbase.hstore.compaction.max.size</code> (.92) (bytes) 
             Any StoreFile larger than this setting with automatically be excluded from compaction (default Long.MAX_VALUE). </listitem>
             </itemizedlist>
