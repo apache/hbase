@@ -283,7 +283,8 @@ try {
         <para>HBase does not modify data in place, and so deletes are handled by creating new markers called <emphasis>tombstones</emphasis>.
         These tombstones, along with the dead values, are cleaned up on major compactions.
         </para>
-        <para>See <xref linkend="version.delete"/> for more information on deleting versions of columns.         
+        <para>See <xref linkend="version.delete"/> for more information on deleting versions of columns, and see 
+        <xref linkend="compaction"/> for more information on compactions.         
         </para>
  
       </section>
@@ -588,10 +589,10 @@ admin.enableTable(table);
       HBase currently does not do well with anything above two or three column families so keep the number
       of column families in your schema low.  Currently, flushing and compactions are done on a per Region basis so
       if one column family is carrying the bulk of the data bringing on flushes, the adjacent families
-      will also be flushed though the amount of data they carry is small.  Compaction is currently triggered
-      by the total number of files under a column family.  Its not size based.  When many column families the
+      will also be flushed though the amount of data they carry is small.  When many column families the
       flushing and compaction interaction can make for a bunch of needless i/o loading (To be addressed by
-      changing flushing and compaction to work on a per column family basis).
+      changing flushing and compaction to work on a per column family basis).  For more information 
+      on compactions, see <xref linkend="compaction"/>.
     </para>
     <para>Try to make do with one column family if you can in your schemas.  Only introduce a
         second and third column family in the case where data access is usually column scoped;
@@ -2136,16 +2137,133 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
       <section xml:id="compaction">
         <title>Compaction</title>
         <para>There are two types of compactions:  minor and major.  Minor compactions will usually pick up a couple of the smaller adjacent
-         files and rewrite them as one.  Minors do not drop deletes or expired cells, only major compactions do this.  Sometimes a minor compaction
-         will pick up all  the files in the store and in this case it actually promotes itself to being a major compaction.  
-         For a description of how a minor compaction picks files to compact, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/regionserver/Store.html#836">ascii diagram in the Store source code.</link>
+         StoreFiles and rewrite them as one.  Minors do not drop deletes or expired cells, only major compactions do this.  Sometimes a minor compaction
+         will pick up all the StoreFiles in the Store and in this case it actually promotes itself to being a major compaction.  
          </para>
-         <para>After a major compaction runs there will be a single storefile per store, and this will help performance usually.  Caution:  major compactions rewrite all of the stores data and on a loaded system, this may not be tenable;
+         <para>After a major compaction runs there will be a single StoreFile per Store, and this will help performance usually.  Caution:  major compactions rewrite all of the Stores data and on a loaded system, this may not be tenable;
              major compactions will usually have to be done manually on large systems.  See <xref linkend="managed.compactions" />.
         </para>
         <para>Compactions will <emphasis>not</emphasis> perform region merges.  See <xref linkend="ops.regionmgt.merge"/> for more information on region merging.
         </para>
-      </section>
+        <section xml:id="compaction.file.selection">
+          <title>Compaction File Selection</title>
+          <para>To understand the core algorithm for StoreFile selection, there is some ASCII-art in the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/regionserver/Store.html#836">Store source code</link> that 
+          will serve as useful reference.  It has been copied below:
+<programlisting>
+/* normal skew:
+ *
+ *         older ----> newer
+ *     _
+ *    | |   _
+ *    | |  | |   _
+ *  --|-|- |-|- |-|---_-------_-------  minCompactSize
+ *    | |  | |  | |  | |  _  | |
+ *    | |  | |  | |  | | | | | |
+ *    | |  | |  | |  | | | | | |
+ */
+</programlisting>
+          Important knobs:
+          <itemizedlist>
+            <listitem><code>hbase.store.compaction.ratio</code> Ratio used in compaction
+            file selection algorithm.  (default 1.2F) </listitem>
+            <listitem><code>hbase.hstore.compaction.min</code> (.90 hbase.hstore.compactionThreshold) (files) Minimum number
+            of StoreFiles per Store to be selected for a compaction to occur.</listitem>
+            <listitem><code>hbase.hstore.compaction.max</code> (files) Maximum number of StoreFiles to compact per minor compaction.</listitem>
+            <listitem><code>hbase.hstore.compaction.min.size</code> (bytes) 
+            Any StoreFile smaller than this setting with automatically be a candidate for compaction.  Defaults to 
+            regions' memstore flush size (134 mb). </listitem>
+            <listitem><code>hbase.hstore.compaction.max.size</code> (.92) (bytes) 
+            Any StoreFile larger than this setting with automatically be excluded from compaction. </listitem>
+            </itemizedlist>
+          </para>
+          <para>The minor compaction StoreFile selection logic is size based, and selects a file for compaction when the file
+           &lt;= sum(smaller_files) * <code>hbase.hstore.compaction.ratio</code>.
+          </para>                
+        </section>
+        <section xml:id="compaction.file.selection.example1">
+          <title>Minor Compaction File Selection - Example #1 (Basic Example)</title>
+          <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.
+          <itemizedlist>
+            <listitem><code>hbase.store.compaction.ratio</code> = 1.0F </listitem>
+            <listitem><code>hbase.hstore.compaction.min</code> = 3 (files) </listitem>>
+            <listitem><code>hbase.hstore.compaction.max</code> = 5 (files) </listitem>>        
+            <listitem><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </listitem>>
+            <listitem><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </listitem>>
+          </itemizedlist>
+          The following StoreFiles exist: 100, 50, 23, 12, and 12 bytes apiece (oldest to newest).
+          With the above parameters, the files that would be selected for minor compaction are 23, 12, and 12.
+          </para>           
+          <para>Why?
+          <itemizedlist>
+            <listitem>100 --&gt;  No, because sum(50, 23, 12, 12) * 1.0 = 97. </listitem>
+            <listitem>50 --&gt;  No, because sum(23, 12, 12) * 1.0 = 47. </listitem>
+            <listitem>23 --&gt;  Yes, because sum(12, 12) * 1.0 = 24. </listitem>
+            <listitem>12 --&gt;  Yes, because sum(12) * 1.0 = 12. </listitem>
+            <listitem>12 --&gt;  Yes, because the previous file had been included, and this is included because this 
+          does not exceed the the max-file limit of 5.</listitem>
+          </itemizedlist>
+          </para>
+        </section>
+        <section xml:id="compaction.file.selection.example2">
+          <title>Minor Compaction File Selection - Example #2 (Not Enough Files To Compact)</title>
+          <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.
+          <itemizedlist>
+            <listitem><code>hbase.store.compaction.ratio</code> = 1.0F </listitem>
+            <listitem><code>hbase.hstore.compaction.min</code> = 3 (files) </listitem>>
+            <listitem><code>hbase.hstore.compaction.max</code> = 5 (files) </listitem>>        
+            <listitem><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </listitem>>
+            <listitem><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </listitem>>
+          </itemizedlist>
+          </para>          
+          <para>The following StoreFiles exist: 100, 25, 12, and 12 bytes apiece (oldest to newest).
+          With the above parameters, the files that would be selected for minor compaction are 23, 12, and 12.         
+          </para>  
+          <para>Why?
+          <itemizedlist>
+            <listitem>100 --&gt; No, because sum(25, 12, 12) * 1.0 = 47</listitem>
+            <listitem>25 --&gt;  No, because sum(12, 12) * 1.0 = 24</listitem>
+            <listitem>12 --&gt;  No. Candidate because sum(12) * 1.0 = 12, there are only 2 files to compact and that is less than the threshold of 3</listitem> 
+            <listitem>12 --&gt;  No. Candidate because the previous StoreFile was, but there are not enough files to compact</listitem>
+          </itemizedlist>
+          </para>
+        </section>
+        <section xml:id="compaction.file.selection.example2">
+          <title>Minor Compaction File Selection - Example #3 (Limiting Files To Compact)</title>
+          <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.
+          <itemizedlist>
+            <listitem><code>hbase.store.compaction.ratio</code> = 1.0F </listitem>
+            <listitem><code>hbase.hstore.compaction.min</code> = 3 (files) </listitem>>
+            <listitem><code>hbase.hstore.compaction.max</code> = 5 (files) </listitem>>        
+            <listitem><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </listitem>>
+            <listitem><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </listitem>>
+          </itemizedlist>
+          The following StoreFiles exist: 7, 6, 5, 4, 3, 2, and 1 bytes apiece (oldest to newest).
+          With the above parameters, the files that would be selected for minor compaction are 7, 6, 5, 4, 3.         
+          </para>  
+          <para>Why?
+          <itemizedlist>
+            <listitem>7 --&gt;  Yes, because sum(6, 5, 4, 3, 2, 1) * 1.0 = 21.  Also, 7 is less than the min-size</listitem>
+            <listitem>6 --&gt;  Yes, because sum(5, 4, 3, 2, 1) * 1.0 = 15.  Also, 6 is less than the min-size. </listitem>
+            <listitem>5 --&gt;  Yes, because sum(4, 3, 2, 1) * 1.0 = 10.  Also, 5 is less than the min-size. </listitem>
+            <listitem>4 --&gt;  Yes, because sum(3, 2, 1) * 1.0 = 6.  Also, 4 is less than the min-size. </listitem>
+            <listitem>3 --&gt;  Yes, because sum(2, 1) * 1.0 = 3.  Also, 3 is less than the min-size. </listitem>
+            <listitem>2 --&gt;  No.  Also, 2 is less than the min-size, the max-number of files to compact has been reached. </listitem>
+            <listitem>1 --&gt;  No.  Also, 1 is less than the min-size, the max-number of files to compact has been reached. </listitem>
+          </itemizedlist>
+          </para>
+        </section>
+        <section xml:id="compaction.config.impact">
+          <title>Impact of Key Configuration Options</title>
+          <para><code>hbase.store.compaction.ratio</code>.  A large ratio (e.g., 10F) will produce a single giant file.  Conversely, a value of .25F will
+          produce behavior similar to the BigTable compaction algorithm - resulting in 4 StoreFiles.
+          </para>
+          <para><code>hbase.hstore.compaction.min.size</code>.  This defaults to <code>hbase.hregion.memstore.flush.size</code> (134 mb).  Because
+          this limit represents the "automatic include" limit for all StoreFiles smaller than this value, this value may need to
+          be adjusted downwards in write-heavy environments where many 1 or 2 mb StoreFiles are being flushed, because every file
+          will be targeted for compaction, and the resulting files may still be under the min-size and require further compaction, etc. 
+          </para>
+        </section>
+      </section>  <!--  compaction -->
 
      </section>  <!--  store -->
       
