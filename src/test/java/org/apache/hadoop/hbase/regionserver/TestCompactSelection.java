@@ -196,7 +196,9 @@ public class TestCompactSelection extends TestCase {
     // don't exceed max file compact threshold
     assertEquals(maxFiles,
         store.compactSelection(sfCreate(7,6,5,4,3,2,1)).getFilesToCompact().size());
-
+    // note:  file selection starts with largest to smallest.
+    compactEquals(sfCreate(7, 6, 5, 4, 3, 2, 1), 7, 6, 5, 4, 3);
+    
     /* MAJOR COMPACTION */
     // if a major compaction has been forced, then compact everything
     compactEquals(sfCreate(50,25,12,12), true, 50, 25, 12, 12);
@@ -206,8 +208,7 @@ public class TestCompactSelection extends TestCase {
     compactEquals(sfCreate(tooBig, 12,12), true, tooBig, 12, 12);
     // don't exceed max file compact threshold, even with major compaction
     store.forceMajor = true;
-    assertEquals(maxFiles,
-        store.compactSelection(sfCreate(7,6,5,4,3,2,1)).getFilesToCompact().size());
+    compactEquals(sfCreate(7, 6, 5, 4, 3, 2, 1), 7, 6, 5, 4, 3);
     store.forceMajor = false;
 
     // if we exceed maxCompactSize, downgrade to minor
@@ -229,7 +230,9 @@ public class TestCompactSelection extends TestCase {
     // reference files should obey max file compact to avoid OOM
     assertEquals(maxFiles,
         store.compactSelection(sfCreate(true, 7,6,5,4,3,2,1)).getFilesToCompact().size());
-
+    // reference compaction
+    compactEquals(sfCreate(true, 7, 6, 5, 4, 3, 2, 1), 5, 4, 3, 2, 1);
+    
     // empty case
     compactEquals(new ArrayList<StoreFile>() /* empty */);
     // empty case (because all files are too big)
