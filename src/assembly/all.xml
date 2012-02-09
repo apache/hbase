@@ -45,6 +45,11 @@
       <directoryMode>0755</directoryMode>
     </fileSet>
     <fileSet>
+      <directory>security</directory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
+    <fileSet>
       <directory>conf</directory>
       <fileMode>0644</fileMode>
       <directoryMode>0755</directoryMode>
