@@ -27,7 +27,7 @@ public class HBaseLocalityCheck {
    * The table we want to get locality for, or null in case we wanted a check
    * over all
    */
-  private final String tableName;
+  private String tableName = null;
 
   /**
    * Default constructor
@@ -39,7 +39,8 @@ public class HBaseLocalityCheck {
    * @throws IOException
    *           in case of file system issues
    */
-  public HBaseLocalityCheck(Configuration conf, final String tableName) throws IOException {
+  public HBaseLocalityCheck(Configuration conf, final String tableName)
+  throws IOException {
     this.conf = conf;
     this.tableName = tableName;
   }
@@ -62,7 +63,7 @@ public class HBaseLocalityCheck {
     TreeMap<String, HbckInfo> regionInfo = fsck.getRegionInfo();
 
     // Get the locality info for each region by scanning the file system
-    localityMap = FSUtils.getRegionDegreeLocalityMappingFromFS(conf);
+    localityMap = FSUtils.getRegionDegreeLocalityMappingFromFS(conf, tableName);
 
     Map<String, Integer> tableToRegionCntMap =  new HashMap<String, Integer>();
     Map<String, Float> tableToLocalityMap = new HashMap<String, Float>();

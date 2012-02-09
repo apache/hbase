@@ -833,6 +833,28 @@ public class FSUtils {
    *
    * @param conf
    *          the configuration to use
+   * @param tableName
+   *          the table to be scanned
+   * @return the mapping from region encoded name to a map of server names to
+   *           locality fraction
+   * @throws IOException
+   *           in case of file system errors or interrupts
+   */
+  public static Map<String, Map<String, Float>> getRegionDegreeLocalityMappingFromFS(
+      final Configuration conf, String tableName) throws IOException {
+    return getRegionDegreeLocalityMappingFromFS(
+        conf, tableName,
+        conf.getInt("hbase.client.localityCheck.threadPoolSize", 2));
+
+  }
+
+  /**
+   * This function is to scan the root path of the file system to get the
+   * degree of locality for each region on each of the servers having at least
+   * one block of that region.
+   *
+   * @param conf
+   *          the configuration to use
    * @param desiredTable
    *          the table you wish to scan locality for
    * @param threadPoolSize
