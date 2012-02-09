@@ -1569,6 +1569,7 @@ of all regions.
       they occur.  They can be administered through the HBase shell, or via 
       <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html#majorCompact%28java.lang.String%29">HBaseAdmin</link>.
       </para>
+      <para>For more information about compactions and the compaction file selection process, see <xref linkend="compaction"/></para>
       </section>
       
       </section>
