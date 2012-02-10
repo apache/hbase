@@ -2082,7 +2082,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
       <section xml:id="keyvalue">
         <title>KeyValue</title>
         <para>The KeyValue class is the heart of data storage in HBase.  KeyValue wraps a byte array and takes offsets and lengths into passed array
-         at where to start interpreting the content as KeyValue.
+         at where to start interpreting the content as KeyValue.  
         </para>
         <para>The KeyValue format inside a byte array is:
            <itemizedlist>
@@ -2103,7 +2103,9 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
              <listitem>keytype (e.g., Put, Delete, DeleteColumn, DeleteFamily)</listitem>
            </itemizedlist>
         </para>
-        <para>For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/KeyValue.html">KeyValue source code</link>.
+        <para>KeyValue instances are <emphasis>not</emphasis> split across blocks.
+         For example, if there is an 8 MB KeyValue, even if the block-size is 64kb this KeyValue will be read
+         in as a coherent block.  For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/KeyValue.html">KeyValue source code</link>.
         </para>
         <section xml:id="keyvalue.example"><title>Example</title>
           <para>To emphasize the points above, examine what happens with two Puts for two different columns for the same row:</para>
