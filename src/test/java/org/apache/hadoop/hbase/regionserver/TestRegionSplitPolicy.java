@@ -79,8 +79,8 @@ public class TestRegionSplitPolicy {
   public void testCustomPolicy() throws IOException {
     HTableDescriptor myHtd = new HTableDescriptor();
     myHtd.setValue(HTableDescriptor.SPLIT_POLICY,
-        PrefixSplitKeyPolicy.class.getName());
-    myHtd.setValue(PrefixSplitKeyPolicy.PREFIX_LENGTH_KEY, String.valueOf(2));
+        KeyPrefixRegionSplitPolicy.class.getName());
+    myHtd.setValue(KeyPrefixRegionSplitPolicy.PREFIX_LENGTH_KEY, String.valueOf(2));
 
     HRegion myMockRegion = Mockito.mock(HRegion.class);
     Mockito.doReturn(myHtd).when(myMockRegion).getTableDesc();
@@ -92,7 +92,7 @@ public class TestRegionSplitPolicy {
     Mockito.doReturn(Bytes.toBytes("abcd")).when(mockStore).getSplitPoint();
     stores.put(new byte[] { 1 }, mockStore);
 
-    PrefixSplitKeyPolicy policy = (PrefixSplitKeyPolicy) RegionSplitPolicy
+    KeyPrefixRegionSplitPolicy policy = (KeyPrefixRegionSplitPolicy) RegionSplitPolicy
         .create(myMockRegion, conf);
 
     assertEquals("ab", Bytes.toString(policy.getSplitPoint()));
@@ -101,7 +101,7 @@ public class TestRegionSplitPolicy {
     Mockito.doReturn(Bytes.toBytes("efgh")).when(myMockRegion)
         .getExplicitSplitPoint();
 
-    policy = (PrefixSplitKeyPolicy) RegionSplitPolicy
+    policy = (KeyPrefixRegionSplitPolicy) RegionSplitPolicy
         .create(myMockRegion, conf);
 
     assertEquals("ef", Bytes.toString(policy.getSplitPoint()));
