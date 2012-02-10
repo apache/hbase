@@ -26,7 +26,7 @@ else
   MVN=$MAVEN_HOME/bin/mvn
 fi
 
-PROJECT_NAME=Hbase
+PROJECT_NAME=HBase
 JENKINS=false
 PATCH_DIR=/tmp
 SUPPORT_DIR=/tmp
@@ -249,6 +249,7 @@ setup () {
   echo ""
   echo ""
   echo "$MVN clean compile -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
+  export MAVEN_OPTS="${MAVEN_OPTS}"
   $MVN clean compile -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     echo "Trunk compilation is broken?"
@@ -357,6 +358,7 @@ checkJavadocWarnings () {
   echo ""
   echo ""
   echo "$MVN clean compile javadoc:javadoc -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1"
+  export MAVEN_OPTS="${MAVEN_OPTS}"
   $MVN clean compile javadoc:javadoc -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1
   javadocWarnings=`$GREP '\[WARNING\]' $PATCH_DIR/patchJavadocWarnings.txt | $AWK '/Javadoc Warnings/,EOF' | $GREP warning | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
   echo ""
@@ -389,6 +391,7 @@ checkJavacWarnings () {
   echo ""
   echo ""
   echo "$MVN clean compile -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
+  export MAVEN_OPTS="${MAVEN_OPTS}"
   $MVN clean compile -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
@@ -429,6 +432,7 @@ checkReleaseAuditWarnings () {
   echo ""
   echo ""
   echo "$MVN apache-rat:check -D${PROJECT_NAME}PatchProcess 2>&1"
+  export MAVEN_OPTS="${MAVEN_OPTS}"
   $MVN apache-rat:check -D${PROJECT_NAME}PatchProcess 2>&1
   find $BASEDIR -name rat.txt | xargs cat > $PATCH_DIR/patchReleaseAuditWarnings.txt
 
@@ -473,6 +477,7 @@ checkStyle () {
   echo ""
   echo ""
   echo "$MVN compile checkstyle:checkstyle -D${PROJECT_NAME}PatchProcess"
+  export MAVEN_OPTS="${MAVEN_OPTS}"
   $MVN compile checkstyle:checkstyle -D${PROJECT_NAME}PatchProcess
 
   JIRA_COMMENT_FOOTER="Checkstyle results: $BUILD_URL/artifact/trunk/build/test/checkstyle-errors.html
@@ -505,6 +510,7 @@ checkFindbugsWarnings () {
   echo ""
   echo ""
   echo "$MVN clean compile findbugs:findbugs -D${PROJECT_NAME}PatchProcess" 
+  export MAVEN_OPTS="${MAVEN_OPTS}"
   $MVN clean compile findbugs:findbugs -D${PROJECT_NAME}PatchProcess < /dev/null
 
   if [ $? != 0 ] ; then
@@ -568,6 +574,7 @@ runTests () {
   ### Kill any rogue build processes from the last attempt
   $PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
   echo "$MVN clean test -P runAllTests -D${PROJECT_NAME}PatchProcess -Dsurefire.secondPartThreadCount=4"
+  export MAVEN_OPTS="${MAVEN_OPTS}"
   ulimit -a
   $MVN clean test -P runAllTests -D${PROJECT_NAME}PatchProcess -Dsurefire.secondPartThreadCount=4
   if [[ $? != 0 ]] ; then
