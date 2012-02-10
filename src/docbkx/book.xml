@@ -861,7 +861,7 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
       <title>
        Coprocessor Secondary Index
       </title>
-      <para>Coprocessors act like RDBMS triggers.  These are currently on TRUNK.
+      <para>Coprocessors act like RDBMS triggers.  These were added in 0.92.  For more information, see <xref linkend="coprocessors"/>
       </para>
     </section>
   </section>
@@ -1722,6 +1722,12 @@ rs.close();
          </section>
        </section>
 
+       <section xml:id="coprocessors"><title>Coprocessors</title>
+         <para>Coprocessors were added in 0.92.  There is a thorough <link xlink:href="https://blogs.apache.org/hbase/entry/coprocessor_introduction">Blog Overview of CoProcessors</link>
+         posted.  Documentation will eventually move to this book, but the blog is the most current information available at this time.
+         </para>
+       </section>
+       
      <section xml:id="block.cache">
        <title>Block Cache</title>
        <section xml:id="block.cache.design">
@@ -2247,8 +2253,8 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
             <listitem>5 --&gt;  Yes, because sum(4, 3, 2, 1) * 1.0 = 10.  Also, 5 is less than the min-size. </listitem>
             <listitem>4 --&gt;  Yes, because sum(3, 2, 1) * 1.0 = 6.  Also, 4 is less than the min-size. </listitem>
             <listitem>3 --&gt;  Yes, because sum(2, 1) * 1.0 = 3.  Also, 3 is less than the min-size. </listitem>
-            <listitem>2 --&gt;  No.  Also, 2 is less than the min-size, the max-number of files to compact has been reached. </listitem>
-            <listitem>1 --&gt;  No.  Also, 1 is less than the min-size, the max-number of files to compact has been reached. </listitem>
+            <listitem>2 --&gt;  No.  Candidate because previous file was selected and 2 is less than the min-size, but the max-number of files to compact has been reached. </listitem>
+            <listitem>1 --&gt;  No.  Candidate because previous file was selected and 1 is less than the min-size, but max-number of files to compact has been reached. </listitem>
           </itemizedlist>
           </para>
         </section>
