@@ -16,6 +16,7 @@ Release 0.92.1 - Unreleased
    HBASE-5267  Add a configuration to disable the slab cache by default (Li Pi)
    HBASE-5345  CheckAndPut doesn't work when value is empty byte[] (Evert Arckens)
    HBASE-5288  Security source code dirs missing from 0.92.0 release tarballs
+   HBASE-5364  Fix source files missing licenses in 0.92 and trunk
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()
