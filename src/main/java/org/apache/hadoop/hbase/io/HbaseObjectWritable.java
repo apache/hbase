@@ -47,17 +47,17 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MultiAction;
-import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -82,8 +82,8 @@ import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
-import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -122,6 +122,10 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
   // Special code that means 'not-encoded'; in this case we do old school
   // sending of the class name using reflection, etc.
   private static final byte NOT_ENCODED = 0;
+  //Generic array means that the array type is not one of the pre-defined arrays
+  //in the CLASS_TO_CODE map, but we have to still encode the array since it's
+  //elements are serializable by this class.
+  private static final int GENERIC_ARRAY_CODE;
   static {
     ////////////////////////////////////////////////////////////////////////////
     // WARNING: Please do not insert, remove or swap any line in this static  //
@@ -244,10 +248,14 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(RegionOpeningState.class, code++);
 
     addToMap(HTableDescriptor[].class, code++);
-    
+
     addToMap(Append.class, code++);
 
     addToMap(RowMutation.class, code++);
+
+    //java.lang.reflect.Array is a placeholder for arrays not defined above
+    GENERIC_ARRAY_CODE = code++;
+    addToMap(Array.class, GENERIC_ARRAY_CODE);
   }
 
   private Class<?> declaredClass;
@@ -335,26 +343,33 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     }
   }
 
+  static Integer getClassCode(final Class<?> c)
+  throws IOException {
+    Integer code = CLASS_TO_CODE.get(c);
+    if (code == null ) {
+      if (List.class.isAssignableFrom(c)) {
+        code = CLASS_TO_CODE.get(List.class);
+      } else if (Writable.class.isAssignableFrom(c)) {
+        code = CLASS_TO_CODE.get(Writable.class);
+      } else if (c.isArray()) {
+        code = CLASS_TO_CODE.get(Array.class);
+      } else if (Serializable.class.isAssignableFrom(c)){
+        code = CLASS_TO_CODE.get(Serializable.class);
+      }
+    }
+    return code;
+  }
+
   /**
-   * Write out the code byte for passed Class.
+   * Write out the code for passed Class.
    * @param out
    * @param c
    * @throws IOException
    */
   static void writeClassCode(final DataOutput out, final Class<?> c)
-  throws IOException {
-    Integer code = CLASS_TO_CODE.get(c);
-    if (code == null ) {
-      if ( List.class.isAssignableFrom(c)) {
-        code = CLASS_TO_CODE.get(List.class);
-      }
-      else if (Writable.class.isAssignableFrom(c)) {
-        code = CLASS_TO_CODE.get(Writable.class);
-      }
-      else if (Serializable.class.isAssignableFrom(c)){
-        code = CLASS_TO_CODE.get(Serializable.class);
-      }
-    }
+      throws IOException {
+    Integer code = getClassCode(c);
+
     if (code == null) {
       LOG.error("Unsupported type " + c);
       StackTraceElement[] els = new Exception().getStackTrace();
@@ -365,7 +380,6 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     }
     WritableUtils.writeVInt(out, code);
   }
-
 
   public static long getWritableSize(Object instance, Class declaredClass,
                                      Configuration conf) {
@@ -418,11 +432,18 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       } else if(declClass.equals(Result [].class)) {
         Result.writeArray(out, (Result [])instanceObj);
       } else {
+        //if it is a Generic array, write the element's type
+        if (getClassCode(declaredClass) == GENERIC_ARRAY_CODE) {
+          Class<?> componentType = declaredClass.getComponentType();
+          writeClass(out, componentType);
+        }
+
         int length = Array.getLength(instanceObj);
         out.writeInt(length);
         for (int i = 0; i < length; i++) {
-          writeObject(out, Array.get(instanceObj, i),
-                    declClass.getComponentType(), conf);
+          Object item = Array.get(instanceObj, i);
+          writeObject(out, item,
+                    item.getClass(), conf);
         }
       }
     } else if (List.class.isAssignableFrom(declClass)) {
@@ -495,6 +516,36 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     }
   }
 
+  /** Writes the encoded class code as defined in CLASS_TO_CODE, or
+   * the whole class name if not defined in the mapping.
+   */
+  static void writeClass(DataOutput out, Class<?> c) throws IOException {
+    Integer code = CLASS_TO_CODE.get(c);
+    if (code == null) {
+      WritableUtils.writeVInt(out, NOT_ENCODED);
+      Text.writeString(out, c.getName());
+    } else {
+      WritableUtils.writeVInt(out, code);
+    }
+  }
+
+  /** Reads and returns the class as written by {@link #writeClass(DataOutput, Class)} */
+  static Class<?> readClass(Configuration conf, DataInput in) throws IOException {
+    Class<?> instanceClass = null;
+    int b = (byte)WritableUtils.readVInt(in);
+    if (b == NOT_ENCODED) {
+      String className = Text.readString(in);
+      try {
+        instanceClass = getClassByName(conf, className);
+      } catch (ClassNotFoundException e) {
+        LOG.error("Can't find class " + className, e);
+        throw new IOException("Can't find class " + className, e);
+      }
+    } else {
+      instanceClass = CODE_TO_CLASS.get(b);
+    }
+    return instanceClass;
+  }
 
   /**
    * Read a {@link Writable}, {@link String}, primitive type, or an array of
@@ -557,6 +608,13 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
         for (int i = 0; i < length; i++) {
           Array.set(instance, i, readObject(in, conf));
         }
+      }
+    } else if (declaredClass.equals(Array.class)) { //an array not declared in CLASS_TO_CODE
+      Class<?> componentType = readClass(conf, in);
+      int length = in.readInt();
+      instance = Array.newInstance(componentType, length);
+      for (int i = 0; i < length; i++) {
+        Array.set(instance, i, readObject(in, conf));
       }
     } else if (List.class.isAssignableFrom(declaredClass)) {            // List
       int length = in.readInt();
