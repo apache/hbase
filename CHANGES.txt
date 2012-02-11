@@ -44,6 +44,7 @@ Release 0.90.6 - Unreleased
    HBASE-5153  Addendum for 0.90 branch (Jieshan)
    HBASE-5321  this.allRegionServersOffline not set to false after one RS comes online and 
                assignment is done in 0.90. (Ram)
+   HBASE-5377  Fix licenses on the 0.90 branch.
 
   IMPROVEMENT
    HBASE-5102  Change the default value of the property "hbase.connection.per.config" to false in
