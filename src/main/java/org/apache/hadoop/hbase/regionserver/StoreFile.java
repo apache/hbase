@@ -273,7 +273,7 @@ public class StoreFile extends SchemaConfigured {
   /**
    * @return Path or null if this StoreFile was made with a Stream.
    */
-  Path getPath() {
+  public Path getPath() {
     return this.path;
   }
 

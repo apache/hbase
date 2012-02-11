@@ -54,9 +54,9 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
@@ -1271,6 +1271,18 @@ public class Store extends SchemaConfigured implements HeapSize {
 
     boolean forcemajor = this.forceMajor && filesCompacting.isEmpty();
     if (!forcemajor) {
+      // Delete the expired store files before the compaction selection.
+      if (conf.getBoolean("hbase.store.delete.expired.storefile", false)
+          && (ttl != Long.MAX_VALUE) && (this.scanInfo.minVersions == 0)) {
+        CompactSelection expiredSelection = compactSelection
+            .selectExpiredStoreFilesToCompact(
+                EnvironmentEdgeManager.currentTimeMillis() - this.ttl);
+
+        // If there is any expired store files, delete them  by compaction.
+        if (expiredSelection != null) {
+          return expiredSelection;
+        }
+      }
       // do not compact old files above a configurable threshold
       // save all references. we MUST compact them
       int pos = 0;
@@ -1650,7 +1662,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   /**
    * @return the number of files in this store
    */
-  public int getNumberOfstorefiles() {
+  public int getNumberOfStoreFiles() {
     return this.storefiles.size();
   }
 

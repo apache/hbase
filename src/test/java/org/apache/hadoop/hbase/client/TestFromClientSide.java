@@ -4521,11 +4521,11 @@ public class TestFromClientSide {
     assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
     // compact, net minus two blocks, two hits, no misses
     System.out.println("Compacting");
-    assertEquals(2, store.getNumberOfstorefiles());
+    assertEquals(2, store.getNumberOfStoreFiles());
     store.triggerMajorCompaction();
     region.compactStores();
     waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
-    assertEquals(1, store.getNumberOfstorefiles());
+    assertEquals(1, store.getNumberOfStoreFiles());
     expectedBlockCount -= 2; // evicted two blocks, cached none
     assertEquals(expectedBlockCount, cache.getBlockCount());
     expectedBlockHits += 2;
@@ -4546,12 +4546,12 @@ public class TestFromClientSide {
   throws InterruptedException {
     long start = System.currentTimeMillis();
     while (start + timeout > System.currentTimeMillis() &&
-        store.getNumberOfstorefiles() != count) {
+        store.getNumberOfStoreFiles() != count) {
       Thread.sleep(100);
     }
     System.out.println("start=" + start + ", now=" +
-        System.currentTimeMillis() + ", cur=" + store.getNumberOfstorefiles());
-    assertEquals(count, store.getNumberOfstorefiles());
+        System.currentTimeMillis() + ", cur=" + store.getNumberOfStoreFiles());
+    assertEquals(count, store.getNumberOfStoreFiles());
   }
 
   @Test
