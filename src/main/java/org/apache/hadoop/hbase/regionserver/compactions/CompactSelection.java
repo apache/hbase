@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -82,9 +81,46 @@ public class CompactSelection {
   }
 
   /**
-   * If the current hour falls in the off peak times and there are no
-   * outstanding off peak compactions, the current compaction is
-   * promoted to an off peak compaction. Currently only one off peak
+   * Select the expired store files to compact
+   * 
+   * @param maxExpiredTimeStamp
+   *          The store file will be marked as expired if its max time stamp is
+   *          less than this maxExpiredTimeStamp.
+   * @return A CompactSelection contains the expired store files as
+   *         filesToCompact
+   */
+  public CompactSelection selectExpiredStoreFilesToCompact(
+      long maxExpiredTimeStamp) {
+    if (filesToCompact == null || filesToCompact.size() == 0)
+      return null;
+    ArrayList<StoreFile> expiredStoreFiles = null;
+    boolean hasExpiredStoreFiles = false;
+    CompactSelection expiredSFSelection = null;
+
+    for (StoreFile storeFile : this.filesToCompact) {
+      if (storeFile.getReader().getMaxTimestamp() < maxExpiredTimeStamp) {
+        LOG.info("Deleting the expired store file by compaction: "
+            + storeFile.getPath() + " whose maxTimeStamp is "
+            + storeFile.getReader().getMaxTimestamp()
+            + " while the max expired timestamp is " + maxExpiredTimeStamp);
+        if (!hasExpiredStoreFiles) {
+          expiredStoreFiles = new ArrayList<StoreFile>();
+          hasExpiredStoreFiles = true;
+        }
+        expiredStoreFiles.add(storeFile);
+      }
+    }
+
+    if (hasExpiredStoreFiles) {
+      expiredSFSelection = new CompactSelection(conf, expiredStoreFiles);
+    }
+    return expiredSFSelection;
+  }
+
+  /**
+   * If the current hour falls in the off peak times and there are no 
+   * outstanding off peak compactions, the current compaction is 
+   * promoted to an off peak compaction. Currently only one off peak 
    * compaction is present in the compaction queue.
    *
    * @param currentHour

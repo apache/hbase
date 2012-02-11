@@ -43,10 +43,18 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -116,14 +124,19 @@ public class TestStore extends TestCase {
 
   private void init(String methodName, Configuration conf)
   throws IOException {
-    //Setting up a Store
-    Path basedir = new Path(DIR+methodName);
-    Path logdir = new Path(DIR+methodName+"/logs");
-    Path oldLogDir = new Path(basedir, HConstants.HREGION_OLDLOGDIR_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     // some of the tests write 4 versions and then flush
     // (with HBASE-4241, lower versions are collected on flush)
     hcd.setMaxVersions(4);
+    init(methodName, conf, hcd);
+  }
+  
+  private void init(String methodName, Configuration conf,
+      HColumnDescriptor hcd) throws IOException {
+    //Setting up a Store
+    Path basedir = new Path(DIR+methodName);
+    Path logdir = new Path(DIR+methodName+"/logs");
+    Path oldLogDir = new Path(basedir, HConstants.HREGION_OLDLOGDIR_NAME);
     FileSystem fs = FileSystem.get(conf);
 
     fs.delete(logdir, true);
@@ -135,6 +148,51 @@ public class TestStore extends TestCase {
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, htd, null);
 
     store = new Store(basedir, region, hcd, fs, conf);
+  }
+
+  public void testDeleteExpiredStoreFiles() throws Exception {
+    int storeFileNum = 4;
+    int ttl = 1;
+    
+    Configuration conf = HBaseConfiguration.create();
+    // Enable the expired store file deletion
+    conf.setBoolean("hbase.store.delete.expired.storefile", true);
+    HColumnDescriptor hcd = new HColumnDescriptor(family);
+    hcd.setTimeToLive(ttl);
+    init(getName(), conf, hcd);
+
+    long sleepTime = this.store.scanInfo.getTtl() / storeFileNum;
+    long timeStamp;
+    // There are 4 store files and the max time stamp difference among these
+    // store files will be (this.store.ttl / storeFileNum)
+    for (int i = 1; i <= storeFileNum; i++) {
+      LOG.info("Adding some data for the store file #" + i);
+      timeStamp = EnvironmentEdgeManager.currentTimeMillis();
+      this.store.add(new KeyValue(row, family, qf1, timeStamp, (byte[]) null));
+      this.store.add(new KeyValue(row, family, qf2, timeStamp, (byte[]) null));
+      this.store.add(new KeyValue(row, family, qf3, timeStamp, (byte[]) null));
+      flush(i);
+      Thread.sleep(sleepTime);
+    }
+
+    // Verify the total number of store files
+    assertEquals(storeFileNum, this.store.getStorefiles().size());
+
+    // Each compaction request will find one expired store file and delete it
+    // by the compaction.
+    for (int i = 1; i <= storeFileNum; i++) {
+      // verify the expired store file.
+      CompactionRequest cr = this.store.requestCompaction();
+      assertEquals(1, cr.getFiles().size());
+      assertTrue(cr.getFiles().get(0).getReader().getMaxTimestamp() < 
+          (System.currentTimeMillis() - this.store.scanInfo.getTtl()));
+      // Verify that the expired the store has been deleted.
+      this.store.compact(cr);
+      assertEquals(storeFileNum - i, this.store.getStorefiles().size());
+
+      // Let the next store file expired.
+      Thread.sleep(sleepTime);
+    }
   }
 
   public void testLowestModificationTime() throws Exception {
