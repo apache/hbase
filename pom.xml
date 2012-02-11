@@ -223,11 +223,30 @@
             </filesets>
           </configuration>
         </plugin>
-        <plugin>
-          <groupId>org.apache.rat</groupId>
-          <artifactId>apache-rat-plugin</artifactId>
-          <version>0.6</version>
-        </plugin>
+	<plugin> <!-- in plugin management section so excludes can be inherited -->
+	  <groupId>org.apache.rat</groupId>
+          <artifactId>apache-rat-plugin</artifactId>	  
+          <version>0.8</version>
+          <configuration>
+            <excludes>
+              <exclude>**/.*</exclude>
+              <exclude>**/.git/**</exclude>
+              <exclude>**/target/**</exclude>
+              <exclude>**/CHANGES.txt</exclude>
+              <exclude>**/generated/**</exclude>
+              <exclude>**/conf/*</exclude>
+              <exclude>**/*.avpr</exclude>
+              <exclude>**/*.svg</exclude> <!-- vector graphics --> 
+              <exclude>**/*.vm</exclude> <!-- apache doxia generated -->
+              <exclude>**/control</exclude>
+              <exclude>**/conffile</exclude>
+	      <exclude>docs/*</exclude> <!-- auto-gen docs -->
+              <!--It don't like freebsd license-->
+              <exclude>**/src/site/resources/css/freebsd_docbook.css</exclude>
+            </excludes>
+          </configuration>
+	</plugin>
+
       </plugins>
     </pluginManagement>
 
@@ -794,6 +813,28 @@
   $ mvn -s /my/path/settings.xml deploy
 
   -->
+  <profiles>
+    <!-- this profile should be activated for release builds -->
+    <profile>
+      <id>release</id>
+      <build>
+	<plugins>
+          <plugin>
+            <groupId>org.apache.rat</groupId>
+            <artifactId>apache-rat-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
   <reporting>
@@ -924,7 +965,7 @@
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
-        <version>0.6</version>
+        <version>0.8</version>
       </plugin>
     </plugins>
   </reporting>
