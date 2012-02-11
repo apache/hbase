@@ -23,7 +23,7 @@
   <modelVersion>4.0.0</modelVersion>
   <!--To build a release I do this:
 
-    $ mvn clean site install assembly:single
+    $ mvn clean site install assembly:single -Prelease
    -->
 
   <parent>
@@ -413,27 +413,6 @@
           </configuration>
         </plugin>
         <plugin>
-          <groupId>org.apache.rat</groupId>
-          <artifactId>apache-rat-plugin</artifactId>
-          <version>0.7</version>
-            <configuration>
-              <excludes>
-                <exclude>**/.*</exclude>
-                <exclude>**/target/**</exclude>
-                <exclude>**/CHANGES.txt</exclude>
-                <exclude>**/CHANGES.txt</exclude>
-                <exclude>**/generated/**</exclude>
-                <exclude>**/conf/*</exclude>
-                <exclude>**/*.avpr</exclude>
-                <exclude>**/control</exclude>
-                <exclude>**/conffile</exclude>
-                <exclude>**/8e8ab58dcf39412da19833fcd8f687ac</exclude>
-                <!--It don't like freebsd license-->
-                <exclude>src/site/resources/css/freebsd_docbook.css</exclude>
-              </excludes>
-            </configuration>
-        </plugin>
-        <plugin>
           <artifactId>maven-surefire-report-plugin</artifactId>
           <version>${surefire.version}</version>
         </plugin>
@@ -502,6 +481,30 @@
             </lifecycleMappingMetadata>
           </configuration>
         </plugin>
+	<plugin> <!-- in plugin management section so excludes can be inherited -->
+	  <groupId>org.apache.rat</groupId>
+          <artifactId>apache-rat-plugin</artifactId>	  
+          <version>0.8</version>
+          <configuration>
+            <excludes>
+              <exclude>**/.*</exclude>
+              <exclude>**/.git/**</exclude>
+              <exclude>**/target/**</exclude>
+              <exclude>**/CHANGES.txt</exclude>
+              <exclude>**/generated/**</exclude>
+              <exclude>**/conf/*</exclude>
+              <exclude>**/*.avpr</exclude>
+              <exclude>**/*.svg</exclude> <!-- vector graphics --> 
+              <exclude>**/*.vm</exclude> <!-- apache doxia generated -->
+              <exclude>**/control</exclude>
+              <exclude>**/conffile</exclude>
+	      <exclude>docs/*</exclude> <!-- auto-gen docs -->
+              <!--It don't like freebsd license-->
+              <exclude>**/src/site/resources/css/freebsd_docbook.css</exclude>
+            </excludes>
+          </configuration>
+	</plugin>
+
       </plugins>
     </pluginManagement>
 
@@ -1390,6 +1393,27 @@
         </properties>
     </profile>
 
+    <!-- this profile should be activated for release builds -->
+    <profile>
+      <id>release</id>
+      <build>
+	<plugins>
+	  <plugin>
+	    <groupId>org.apache.rat</groupId>
+            <artifactId>apache-rat-plugin</artifactId>
+	    <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
     <profile>
       <id>hadoop-snappy</id>
       <activation>
@@ -2223,7 +2247,7 @@
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
-        <version>0.7</version>
+        <version>0.8</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
