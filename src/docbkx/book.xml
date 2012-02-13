@@ -2206,8 +2206,9 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
             <listitem>100 --&gt;  No, because sum(50, 23, 12, 12) * 1.0 = 97. </listitem>
             <listitem>50 --&gt;  No, because sum(23, 12, 12) * 1.0 = 47. </listitem>
             <listitem>23 --&gt;  Yes, because sum(12, 12) * 1.0 = 24. </listitem>
-            <listitem>12 --&gt;  Yes, because sum(12) * 1.0 = 12. </listitem>
-            <listitem>12 --&gt;  Yes, because the previous file had been included, and this is included because this 
+            <listitem>12 --&gt;  Yes, because the previous file has been included, and because this 
+          does not exceed the the max-file limit of 5  </listitem>
+            <listitem>12 --&gt;  Yes, because the previous file had been included, and because this 
           does not exceed the the max-file limit of 5.</listitem>
           </itemizedlist>
           </para>
