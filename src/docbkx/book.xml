@@ -1378,6 +1378,9 @@ if (!b) {
          the client will requery the catalog tables to determine the new
          location of the user region. 
     </para>
+    <para>See <xref linkend="master.runtime"/> for more information about the impact of the Master on HBase Client
+    communication.
+    </para>
     <para>Administrative functions are handled through <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link>
     </para>
 	   <section xml:id="client.connections"><title>Connections</title>
@@ -1659,6 +1662,15 @@ rs.close();
          <para>If run in a multi-Master environment, all Masters compete to run the cluster.  If the active
          Master loses it's lease in ZooKeeper (or the Master shuts down), then then the remaining Masters jostle to 
          take over the Master role.
+         </para>
+       </section>
+       <section xml:id="master.runtime"><title>Runtime Impact</title>
+         <para>A common dist-list question is what happens to an HBase cluster when the Master goes down.  Because the
+         HBase client talks directly to the RegionServers, the cluster can still function in a "steady 
+         state."  Additionally, per <xref linkend="arch.catalog"/> ROOT and META exist as HBase tables (i.e., are
+         not resident in the Master).  However, the Master controls critical functions such as RegionServer failover and 
+         completing region splits.  So while the cluster can still run <emphasis>for a time</emphasis> without the Master, 
+         the Master should be restarted as soon as possible.     
          </para>
        </section>
        <section xml:id="master.api"><title>Interface</title>
