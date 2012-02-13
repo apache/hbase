@@ -19,6 +19,10 @@ Release 0.92.1 - Unreleased
    HBASE-5364  Fix source files missing licenses in 0.92 and trunk
    HBASE-5363  Automatically run rat check on mvn release builds
 
+  IMPROVEMENTS
+   HBASE-5197  [replication] Handle socket timeouts in ReplicationSource
+               to prevent DDOS
+
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()
 
