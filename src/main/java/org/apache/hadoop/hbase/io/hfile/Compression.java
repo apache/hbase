@@ -119,7 +119,7 @@ public final class Compression {
       @Override
       DefaultCodec getCodec(Configuration conf) {
         if (codec == null) {
-          codec = new GzipCodec();
+          codec = new ReusableStreamGzipCodec();
           codec.setConf(new Configuration(conf));
         }
 
@@ -213,7 +213,6 @@ public final class Compression {
     public OutputStream createCompressionStream(
         OutputStream downStream, Compressor compressor, int downStreamBufferSize)
         throws IOException {
-      CompressionCodec codec = getCodec(conf);
       OutputStream bos1 = null;
       if (downStreamBufferSize > 0) {
         bos1 = new BufferedOutputStream(downStream, downStreamBufferSize);
@@ -221,13 +220,23 @@ public final class Compression {
       else {
         bos1 = downStream;
       }
-      ((Configurable)codec).getConf().setInt("io.file.buffer.size", 32 * 1024);
       CompressionOutputStream cos =
-          codec.createOutputStream(bos1, compressor);
+          createPlainCompressionStream(bos1, compressor);
       BufferedOutputStream bos2 =
           new BufferedOutputStream(new FinishOnFlushCompressionStream(cos),
               DATA_OBUF_SIZE);
       return bos2;
+    }
+
+    /**
+     * Creates a compression stream without any additional wrapping into
+     * buffering streams.
+     */
+    CompressionOutputStream createPlainCompressionStream(
+        OutputStream downStream, Compressor compressor) throws IOException {
+      CompressionCodec codec = getCodec(conf);
+      ((Configurable)codec).getConf().setInt("io.file.buffer.size", 32 * 1024);
+      return codec.createOutputStream(downStream, compressor);
     }
 
     public Compressor getCompressor() {
