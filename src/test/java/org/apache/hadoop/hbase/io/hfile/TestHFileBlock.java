@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 
 import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.*;
@@ -74,9 +75,6 @@ public class TestHFileBlock {
 
   static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = {
       NONE, GZ };
-
-  // In case we need to temporarily switch some test cases to just test gzip.
-  static final Compression.Algorithm[] GZIP_ONLY  = { GZ };
 
   private static final int NUM_TEST_BLOCKS = 1000;
   private static final int NUM_READER_THREADS = 26;
@@ -206,14 +204,16 @@ public class TestHFileBlock {
     return headerAndData;
   }
 
-  public String createTestBlockStr(Compression.Algorithm algo)
-      throws IOException {
+  public String createTestBlockStr(Compression.Algorithm algo,
+      int correctLength) throws IOException {
     byte[] testV2Block = createTestV2Block(algo);
     int osOffset = HFileBlock.HEADER_SIZE + 9;
-    if (osOffset < testV2Block.length) {
+    if (testV2Block.length == correctLength) {
       // Force-set the "OS" field of the gzip header to 3 (Unix) to avoid
       // variations across operating systems.
       // See http://www.gzip.org/zlib/rfc-gzip.html for gzip format.
+      // We only make this change when the compressed block length matches.
+      // Otherwise, there are obviously other inconsistencies.
       testV2Block[osOffset] = 3;
     }
     return Bytes.toStringBinary(testV2Block);
@@ -226,7 +226,7 @@ public class TestHFileBlock {
 
   @Test
   public void testGzipCompression() throws IOException {
-    assertEquals(
+    final String correctTestBlockStr =
         "DATABLK*\\x00\\x00\\x00:\\x00\\x00\\x0F\\xA0\\xFF\\xFF\\xFF\\xFF"
             + "\\xFF\\xFF\\xFF\\xFF"
             // gzip-compressed block: http://www.gzip.org/zlib/rfc-gzip.html
@@ -240,8 +240,10 @@ public class TestHFileBlock {
             + "\\x03"
             + "\\xED\\xC3\\xC1\\x11\\x00 \\x08\\xC00DD\\xDD\\x7Fa"
             + "\\xD6\\xE8\\xA3\\xB9K\\x84`\\x96Q\\xD3\\xA8\\xDB\\xA8e\\xD4c"
-            + "\\xD46\\xEA5\\xEA3\\xEA7\\xE7\\x00LI\\s\\xA0\\x0F\\x00\\x00",
-        createTestBlockStr(GZ));
+            + "\\xD46\\xEA5\\xEA3\\xEA7\\xE7\\x00LI\\s\\xA0\\x0F\\x00\\x00";
+    final int correctGzipBlockLength = 82;
+    assertEquals(correctTestBlockStr, createTestBlockStr(GZ,
+        correctGzipBlockLength));
   }
 
   @Test

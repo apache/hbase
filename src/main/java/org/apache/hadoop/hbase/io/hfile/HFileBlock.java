@@ -28,7 +28,6 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -44,6 +43,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 
@@ -547,6 +547,12 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     /** Compressor, which is also reused between consecutive blocks. */
     private Compressor compressor;
 
+    /** Compression output stream */
+    private CompressionOutputStream compressionStream;
+    
+    /** Underlying stream to write compressed bytes to */
+    private ByteArrayOutputStream compressedByteStream;
+
     /**
      * Current block type. Set in {@link #startWriting(BlockType)}. Could be
      * changed in {@link #encodeDataBlockForDisk()} from {@link BlockType#DATA}
@@ -602,9 +608,19 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
 
       baosInMemory = new ByteArrayOutputStream();
-      if (compressAlgo != NONE)
+      if (compressAlgo != NONE) {
         compressor = compressionAlgorithm.getCompressor();
-
+        compressedByteStream = new ByteArrayOutputStream();
+        try {
+          compressionStream =
+              compressionAlgorithm.createPlainCompressionStream(
+                  compressedByteStream, compressor);
+        } catch (IOException e) {
+          throw new RuntimeException("Could not create compression stream " + 
+              "for algorithm " + compressionAlgorithm, e);
+        }
+      }
+      
       prevOffsetByType = new long[BlockType.values().length];
       for (int i = 0; i < prevOffsetByType.length; ++i)
         prevOffsetByType[i] = -1;
@@ -697,19 +713,18 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     private void doCompression() throws IOException {
       // do the compression
       if (compressAlgo != NONE) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        baos.write(DUMMY_HEADER);
+        compressedByteStream.reset();
+        compressedByteStream.write(DUMMY_HEADER);
 
-        // compress the data
-        OutputStream compressingOutputStream =
-            compressAlgo.createCompressionStream(baos, compressor, 0);
-        compressingOutputStream.write(uncompressedBytesWithHeader, HEADER_SIZE,
+        compressionStream.resetState();
+
+        compressionStream.write(uncompressedBytesWithHeader, HEADER_SIZE,
             uncompressedBytesWithHeader.length - HEADER_SIZE);
 
-        // finish compression stream
-        compressingOutputStream.flush();
+        compressionStream.flush();
+        compressionStream.finish();
 
-        onDiskBytesWithHeader = baos.toByteArray();
+        onDiskBytesWithHeader = compressedByteStream.toByteArray();
         putHeader(onDiskBytesWithHeader, 0, onDiskBytesWithHeader.length,
             uncompressedBytesWithHeader.length);
       } else {
