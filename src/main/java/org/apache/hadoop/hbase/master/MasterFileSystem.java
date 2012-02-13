@@ -87,8 +87,7 @@ public class MasterFileSystem {
     conf.set("fs.defaultFS", fsUri);
     // setup the filesystem variable
     // set up the archived logs path
-    this.oldLogDir = new Path(this.rootdir, HConstants.HREGION_OLDLOGDIR_NAME);
-    createInitialFileSystemLayout();
+    this.oldLogDir = createInitialFileSystemLayout();
   }
 
   /**
@@ -101,14 +100,18 @@ public class MasterFileSystem {
    * </ol>
    * Idempotent.
    */
-  private void createInitialFileSystemLayout() throws IOException {
+  private Path createInitialFileSystemLayout() throws IOException {
     // check if the root directory exists
     checkRootDir(this.rootdir, conf, this.fs);
 
+    Path oldLogDir = new Path(this.rootdir, HConstants.HREGION_OLDLOGDIR_NAME);
+
     // Make sure the region servers can archive their old logs
-    if(!this.fs.exists(this.oldLogDir)) {
-      this.fs.mkdirs(this.oldLogDir);
+    if(!this.fs.exists(oldLogDir)) {
+      this.fs.mkdirs(oldLogDir);
     }
+
+    return oldLogDir;
   }
 
   public FileSystem getFileSystem() {
@@ -247,21 +250,30 @@ public class MasterFileSystem {
     FSUtils.waitOnSafeMode(c, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000));
     // Filesystem is good. Go ahead and check for hbase.rootdir.
-    if (!fs.exists(rd)) {
-      fs.mkdirs(rd);
-      // DFS leaves safe mode with 0 DNs when there are 0 blocks.
-      // We used to handle this by checking the current DN count and waiting until
-      // it is nonzero. With security, the check for datanode count doesn't work --
-      // it is a privileged op. So instead we adopt the strategy of the jobtracker
-      // and simply retry file creation during bootstrap indefinitely. As soon as
-      // there is one datanode it will succeed. Permission problems should have
-      // already been caught by mkdirs above.
-      FSUtils.setVersion(fs, rd, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-        10 * 1000));
-    } else {
-      // as above
-      FSUtils.checkVersion(fs, rd, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-        10 * 1000));
+    try {
+      if (!fs.exists(rd)) {
+        fs.mkdirs(rd);
+        // DFS leaves safe mode with 0 DNs when there are 0 blocks.
+        // We used to handle this by checking the current DN count and waiting until
+        // it is nonzero. With security, the check for datanode count doesn't work --
+        // it is a privileged op. So instead we adopt the strategy of the jobtracker
+        // and simply retry file creation during bootstrap indefinitely. As soon as
+        // there is one datanode it will succeed. Permission problems should have
+        // already been caught by mkdirs above.
+        FSUtils.setVersion(fs, rd, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+          10 * 1000));
+      } else {
+        if (!fs.isDirectory(rd)) {
+          throw new IllegalArgumentException(rd.toString() + " is not a directory");
+        }
+        // as above
+        FSUtils.checkVersion(fs, rd, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+          10 * 1000));
+      }
+    } catch (IllegalArgumentException iae) {
+      LOG.fatal("Please fix invalid configuration for "
+        + HConstants.HBASE_DIR + " " + rd.toString(), iae);
+      throw iae;
     }
     // Make sure the root region directory exists!
     if (!FSUtils.rootRegionExists(fs, rd)) {
