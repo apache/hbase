@@ -30,7 +30,7 @@ EOF
       end
 
       def command(regex)
-        regex = /#{regex}/ unless regex.is_a?(Regexp)
+        regex = /^#{regex}$/ unless regex.is_a?(Regexp)
         list = admin.list.grep(regex)
         count = list.size
         list.each do |table|
