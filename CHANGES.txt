@@ -52,6 +52,7 @@ Release 0.90.6 - Unreleased
    HBASE-5327  Print a message when an invalid hbase.rootdir is passed (Jimmy Xiang)
    HBASE-5197  [replication] Handle socket timeouts in ReplicationSource
                to prevent DDOS
+   HBASE-5395  CopyTable needs to use GenericOptionsParser
 
 Release 0.90.5 - Dec 22, 2011
   BUG FIXES

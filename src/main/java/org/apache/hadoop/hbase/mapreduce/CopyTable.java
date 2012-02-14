@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.util.GenericOptionsParser;
 
 import java.io.IOException;
 
@@ -196,7 +197,9 @@ public class CopyTable {
    */
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    Job job = createSubmittableJob(conf, args);
+    String[] otherArgs =
+      new GenericOptionsParser(conf, args).getRemainingArgs();
+    Job job = createSubmittableJob(conf, otherArgs);
     if (job != null) {
       System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
