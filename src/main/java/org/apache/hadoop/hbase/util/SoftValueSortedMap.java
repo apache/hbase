@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -175,6 +176,32 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
     }
   }
 
+  /*
+   * retrieves the value associated with the greatest key strictly less than
+   *  the given key, or null if there is no such key
+   * @param key the key we're interested in
+   */
+  public synchronized V lowerValueByKey(K key) {
+    synchronized(sync) {
+      checkReferences();
+
+      Map.Entry<K,SoftValue<K,V>> entry =
+        ((NavigableMap<K, SoftValue<K,V>>) this.internalMap).lowerEntry(key);
+      if (entry==null) {
+        return null;
+      }
+      SoftValue<K,V> value=entry.getValue();
+      if (value==null) {
+        return null;
+      }
+      if (value.get() == null) {
+        this.internalMap.remove(key);
+        return null;
+      }
+      return value.get();
+    }
+  }
+  
   public boolean isEmpty() {
     synchronized(sync) {
       checkReferences();
