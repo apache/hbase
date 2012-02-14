@@ -520,9 +520,9 @@ public class HConnectionManager {
      * Map of table to table {@link HRegionLocation}s.  The table key is made
      * by doing a {@link Bytes#mapKey(byte[])} of the table's name.
      */
-    private final Map<Integer, SortedMap<byte [], HRegionLocation>>
+    private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>>
       cachedRegionLocations =
-        new HashMap<Integer, SortedMap<byte [], HRegionLocation>>();
+        new HashMap<Integer, SoftValueSortedMap<byte [], HRegionLocation>>();
 
     // The presence of a server in the map implies it's likely that there is an
     // entry in cachedRegionLocations that map to this server; but the absence
@@ -1058,7 +1058,7 @@ public class HConnectionManager {
      */
     HRegionLocation getCachedLocation(final byte [] tableName,
         final byte [] row) {
-      SortedMap<byte [], HRegionLocation> tableLocations =
+      SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
 
       // start to examine the cache. we can only do cache actions
@@ -1067,43 +1067,26 @@ public class HConnectionManager {
         return null;
       }
 
-      HRegionLocation rl = tableLocations.get(row);
-      if (rl != null) {
-        return rl;
+      HRegionLocation possibleRegion = tableLocations.get(row);
+      if (possibleRegion != null) {
+        return possibleRegion;
       }
 
-      // Cut the cache so that we only get the part that could contain
-      // regions that match our key
-      SortedMap<byte[], HRegionLocation> matchingRegions =
-        tableLocations.headMap(row);
+      possibleRegion = tableLocations.lowerValueByKey(row);
+      if (possibleRegion == null) {
+        return null;
+      }
 
-      // if that portion of the map is empty, then we're done. otherwise,
-      // we need to examine the cached location to verify that it is
-      // a match by end key as well.
-      if (!matchingRegions.isEmpty()) {
-        HRegionLocation possibleRegion = null;
-        try {
-          possibleRegion = matchingRegions.get(matchingRegions.lastKey());
-        } catch (NoSuchElementException nsee) {
-          LOG.warn("checkReferences() might have removed the key", nsee);
-        }
-
-        // there is a possibility that the reference was garbage collected
-        // in the instant since we checked isEmpty().
-        if (possibleRegion != null) {
-          byte[] endKey = possibleRegion.getRegionInfo().getEndKey();
-
-          // make sure that the end key is greater than the row we're looking
-          // for, otherwise the row actually belongs in the next region, not
-          // this one. the exception case is when the endkey is
-          // HConstants.EMPTY_START_ROW, signifying that the region we're
-          // checking is actually the last region in the table.
-          if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
-              KeyValue.getRowComparator(tableName).compareRows(endKey, 0, endKey.length,
-                  row, 0, row.length) > 0) {
-            return possibleRegion;
-          }
-        }
+      // make sure that the end key is greater than the row we're looking
+      // for, otherwise the row actually belongs in the next region, not
+      // this one. the exception case is when the endkey is
+      // HConstants.EMPTY_END_ROW, signifying that the region we're
+      // checking is actually the last region in the table.
+      byte[] endKey = possibleRegion.getRegionInfo().getEndKey();
+      if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
+          KeyValue.getRowComparator(tableName).compareRows(
+              endKey, 0, endKey.length, row, 0, row.length) > 0) {
+        return possibleRegion;
       }
 
       // Passed all the way through, so we got nothin - complete cache miss
@@ -1173,11 +1156,11 @@ public class HConnectionManager {
      * @param tableName
      * @return Map of cached locations for passed <code>tableName</code>
      */
-    private SortedMap<byte [], HRegionLocation> getTableLocations(
+    private SoftValueSortedMap<byte [], HRegionLocation> getTableLocations(
         final byte [] tableName) {
       // find the map of cached locations for this table
       Integer key = Bytes.mapKey(tableName);
-      SortedMap<byte [], HRegionLocation> result;
+      SoftValueSortedMap<byte [], HRegionLocation> result;
       synchronized (this.cachedRegionLocations) {
         result = this.cachedRegionLocations.get(key);
         // if tableLocations for this table isn't built yet, make one
