@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -95,13 +96,17 @@ public class OpenRegionHandler extends EventHandler {
       if (!transitionZookeeperOfflineToOpening(encodedName)) {
         LOG.warn("Region was hijacked? It no longer exists, encodedName=" +
           encodedName);
+        tryTransitionToFailedOpen(regionInfo);
         return;
       }
 
       // Open region.  After a successful open, failures in subsequent
       // processing needs to do a close as part of cleanup.
       region = openRegion();
-      if (region == null) return;
+      if (region == null) {
+        tryTransitionToFailedOpen(regionInfo);
+        return;
+      }
       boolean failed = true;
       if (tickleOpening("post_region_open")) {
         if (updateMeta(region)) failed = false;
@@ -110,10 +115,17 @@ public class OpenRegionHandler extends EventHandler {
       if (failed || this.server.isStopped() ||
           this.rsServices.isStopping()) {
         cleanupFailedOpen(region);
+        tryTransitionToFailedOpen(regionInfo);
         return;
       }
 
       if (!transitionToOpened(region)) {
+        // If we fail to transition to opened, it's because of one of two cases:
+        //    (a) we lost our ZK lease
+        // OR (b) someone else opened the region before us
+        // In either case, we don't need to transition to FAILED_OPEN state.
+        // In case (a), the Master will process us as a dead server. In case
+        // (b) the region is already being handled elsewhere anyway.
         cleanupFailedOpen(region);
         return;
       }
@@ -125,6 +137,35 @@ public class OpenRegionHandler extends EventHandler {
           remove(this.regionInfo.getEncodedNameAsBytes());
     }
   }
+  /**
+   * @param  Region we're working on.
+   * This is not guaranteed to succeed, we just do our best.
+   * @return whether znode is successfully transitioned to FAILED_OPEN state.
+   */
+  private boolean tryTransitionToFailedOpen(final HRegionInfo hri) {
+    boolean result = false;
+    final String name = hri.getRegionNameAsString();
+    try {
+      LOG.info("Opening of region " + hri
+          + " failed, marking as FAILED_OPEN in ZK");
+      if (ZKAssign.transitionNode(
+          this.server.getZooKeeper(), hri,
+          this.server.getServerName(),
+          EventType.RS_ZK_REGION_OPENING,
+          EventType.RS_ZK_REGION_FAILED_OPEN,
+          this.version) == -1) {
+        LOG.warn("Unable to mark region " + hri + " as FAILED_OPEN. " +
+            "It's likely that the master already timed out this open " +
+            "attempt, and thus another RS already has the region.");
+      } else {
+        result = true;
+      }
+    } catch (KeeperException e) {
+      LOG.error("Failed transitioning node " + name +
+        " from OPENING to FAILED_OPEN", e);
+    }
+    return result;
+  }
 
   /**
    * Update ZK, ROOT or META.  This can take a while if for example the
@@ -133,7 +174,7 @@ public class OpenRegionHandler extends EventHandler {
    * state meantime so master doesn't timeout our region-in-transition.
    * Caller must cleanup region if this fails.
    */
-  private boolean updateMeta(final HRegion r) {
+  boolean updateMeta(final HRegion r) {
     if (this.server.isStopped() || this.rsServices.isStopping()) {
       return false;
     }
@@ -285,11 +326,12 @@ public class OpenRegionHandler extends EventHandler {
             return tickleOpening("open_region_progress");
           }
         });
-    } catch (IOException e) {
-      // We failed open.  Let our znode expire in regions-in-transition and
-      // Master will assign elsewhere.  Presumes nothing to close.
+    } catch (Throwable t) {
+      // We failed open. Our caller will see the 'null' return value
+      // and transition the node back to FAILED_OPEN. If that fails,
+      // we rely on the Timeout Monitor in the master to reassign.
       LOG.error("Failed open of region=" +
-        this.regionInfo.getRegionNameAsString(), e);
+        this.regionInfo.getRegionNameAsString(), t);
     }
     return region;
   }

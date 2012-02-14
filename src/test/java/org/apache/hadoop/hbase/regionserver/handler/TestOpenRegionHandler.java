@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.handler;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -26,8 +28,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.executor.RegionTransitionData;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MockRegionServerServices;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -36,6 +41,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -44,13 +50,30 @@ import org.junit.Test;
  */
 public class TestOpenRegionHandler {
   private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static HTableDescriptor TEST_HTD;
+  private HRegionInfo TEST_HRI;
+  
+  private int testIndex = 0;
 
   @BeforeClass public static void before() throws Exception {
     HTU.startMiniZKCluster();
+    TEST_HTD = new HTableDescriptor("TestOpenRegionHandler.java");
   }
 
   @AfterClass public static void after() throws IOException {
+    TEST_HTD = null;
     HTU.shutdownMiniZKCluster();
+  }
+  /**
+   * Before each test, use a different HRI, so the different tests
+   * don't interfere with each other. This allows us to use just
+   * a single ZK cluster for the whole suite.
+   */
+  @Before
+  public void setupHRI() {
+    TEST_HRI = new HRegionInfo(TEST_HTD, Bytes.toBytes(testIndex), Bytes
+        .toBytes(testIndex + 1));
+    testIndex++;
   }
 
   /**
@@ -93,5 +116,56 @@ public class TestOpenRegionHandler {
     // Call process again but this time yank the zk znode out from under it
     // post OPENING; again will expect it to come back w/o NPE or exception.
     handler.process();
+  }
+  @Test
+  public void testFailedOpenRegion() throws Exception {
+    Server server = new MockServer();
+    RegionServerServices rsServices = new MockRegionServerServices();
+
+    // Create it OFFLINE, which is what it expects
+    ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server
+        .getServerName());
+
+    // Create the handler
+    OpenRegionHandler handler =
+      new OpenRegionHandler(server, rsServices, TEST_HRI) {
+        @Override
+        HRegion openRegion() {
+          // Fake failure of opening a region due to an IOE, which is caught
+          return null;
+        }
+    };
+    handler.process();
+
+    // Handler should have transitioned it to FAILED_OPEN
+    RegionTransitionData data =
+      ZKAssign.getData(server.getZooKeeper(), TEST_HRI.getEncodedName());
+    assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, data.getEventType());
+  }
+  
+  @Test
+  public void testFailedUpdateMeta() throws Exception {
+    Server server = new MockServer();
+    RegionServerServices rsServices = new MockRegionServerServices();
+
+    // Create it OFFLINE, which is what it expects
+    ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server
+        .getServerName());
+
+    // Create the handler
+    OpenRegionHandler handler =
+      new OpenRegionHandler(server, rsServices, TEST_HRI) {
+        @Override
+        boolean updateMeta(final HRegion r) {
+          // Fake failure of updating META
+          return false;
+        }
+    };
+    handler.process();
+
+    // Handler should have transitioned it to FAILED_OPEN
+    RegionTransitionData data =
+      ZKAssign.getData(server.getZooKeeper(), TEST_HRI.getEncodedName());
+    assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, data.getEventType());
   }
 }

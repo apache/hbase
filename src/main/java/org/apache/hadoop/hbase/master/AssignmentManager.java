@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -138,6 +139,10 @@ public class AssignmentManager extends ZooKeeperListener {
     new TreeMap<HRegionInfo,HServerInfo>();
 
   private final ExecutorService executorService;
+  
+  private List<EventType> ignoreStatesRSOffline = Arrays
+      .asList(new EventType[] { EventType.RS_ZK_REGION_FAILED_OPEN,
+          EventType.RS_ZK_REGION_CLOSED });
 
   /**
    * Constructs a new assignment manager.
@@ -346,6 +351,7 @@ public class AssignmentManager extends ZooKeeperListener {
         break;
 
       case RS_ZK_REGION_CLOSED:
+      case RS_ZK_REGION_FAILED_OPEN:
         // Region is closed, insert into RIT and handle it
         addToRITandCallClose(regionInfo, RegionState.State.CLOSED, data);
         break;
@@ -473,7 +479,8 @@ public class AssignmentManager extends ZooKeeperListener {
       }
       // Verify this is a known server
       if (!serverManager.isServerOnline(data.getServerName()) &&
-          !this.master.getServerName().equals(data.getServerName())) {
+          !this.master.getServerName().equals(data.getServerName())
+          && !ignoreStatesRSOffline.contains(data.getEventType())) {
         LOG.warn("Attempted to handle region transition for server but " +
           "server is not online: " + Bytes.toString(data.getRegionName()));
         return;
@@ -541,6 +548,20 @@ public class AssignmentManager extends ZooKeeperListener {
           // Transition to OPENING (or update stamp if already OPENING)
           regionState.update(RegionState.State.OPENING, data.getStamp());
           break;
+        case RS_ZK_REGION_FAILED_OPEN:
+        if (regionState == null
+            || (!regionState.isPendingOpen() && !regionState.isOpening())) {
+          LOG.warn("Received FAILED_OPEN for region " + prettyPrintedRegionName
+              + " from server " + data.getServerName() + " but region was in "
+              + " the state " + regionState
+              + " and not in PENDING_OPEN or OPENING");
+          return;
+        }
+        // Handle this the same as if it were opened and then closed.
+        regionState.update(RegionState.State.CLOSED, data.getStamp());
+        this.executorService.submit(new ClosedRegionHandler(master, this,
+            regionState.getRegion()));
+        break;
 
         case RS_ZK_REGION_OPENED:
           // Should see OPENED after OPENING but possible after PENDING_OPEN
@@ -1996,8 +2017,8 @@ public class AssignmentManager extends ZooKeeperListener {
               LOG.debug("Region has transitioned to OPENED, allowing " +
                   "watched event handlers to process");
               break;
-            } else if (data.getEventType() !=
-                EventType.RS_ZK_REGION_OPENING) {
+            } else if (data.getEventType() != EventType.RS_ZK_REGION_OPENING
+              && data.getEventType() != EventType.RS_ZK_REGION_FAILED_OPEN) {
               LOG.warn("While timing out a region in state OPENING, " +
                   "found ZK node in unexpected state: " +
                   data.getEventType());
