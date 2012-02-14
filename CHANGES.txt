@@ -18,6 +18,8 @@ Release 0.92.1 - Unreleased
    HBASE-5288  Security source code dirs missing from 0.92.0 release tarballs
    HBASE-5364  Fix source files missing licenses in 0.92 and trunk
    HBASE-5363  Automatically run rat check on mvn release builds
+   HBASE-5398  HBase shell disable_all/enable_all/drop_all promp wrong tables
+               for confirmation (Jimmy Xiang)
 
   IMPROVEMENTS
    HBASE-5197  [replication] Handle socket timeouts in ReplicationSource
