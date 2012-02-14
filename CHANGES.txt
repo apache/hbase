@@ -22,6 +22,7 @@ Release 0.92.1 - Unreleased
   IMPROVEMENTS
    HBASE-5197  [replication] Handle socket timeouts in ReplicationSource
                to prevent DDOS
+   HBASE-5395  CopyTable needs to use GenericOptionsParser
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()
