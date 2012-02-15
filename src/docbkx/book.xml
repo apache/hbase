@@ -290,16 +290,6 @@ try {
         </para>
  
       </section>
-      <section xml:id="dm.column.metadata">
-        <title>Column Metadata</title>
-        <para>There is no store of column metadata outside of the internal KeyValue instances for a ColumnFamily.
-        Thus, while HBase can support not only a wide number of columns per row, but a heterogenous set of columns 
-        between rows, it is your responsibility to keep track of the column names.        
-        </para>
-        <para>The only way to get a complete set of columns that exist for a ColumnFamily is to process all the rows. 
-       	For more information about how HBase stores data internally, see <xref linkend="keyvalue" />.
-	    </para>         
-      </section>
             
     </section>
 
@@ -536,6 +526,16 @@ htable.put(put);
             </footnote></quote></para>
         </section>
       </section>
+    </section>
+    <section xml:id="dm.column.metadata">
+      <title>Column Metadata</title>
+      <para>There is no store of column metadata outside of the internal KeyValue instances for a ColumnFamily.
+      Thus, while HBase can support not only a wide number of columns per row, but a heterogenous set of columns 
+      between rows as well, it is your responsibility to keep track of the column names.        
+      </para>
+      <para>The only way to get a complete set of columns that exist for a ColumnFamily is to process all the rows. 
+      For more information about how HBase stores data internally, see <xref linkend="keyvalue" />.
+	  </para>         
     </section>
     <section xml:id="joins"><title>Joins</title>
       <para>Whether HBase supports joins is a common question on the dist-list, and there is a simple answer:  it doesn't,
