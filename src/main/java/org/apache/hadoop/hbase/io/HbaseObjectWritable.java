@@ -22,11 +22,14 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.InputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -87,12 +90,15 @@ import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ProtoUtil;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableUtils;
+
+import com.google.protobuf.Message;
 
 /**
  * This is a customized version of the polymorphic hadoop
@@ -253,6 +259,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
 
     addToMap(RowMutation.class, code++);
 
+    addToMap(Message.class, code++);
+
     //java.lang.reflect.Array is a placeholder for arrays not defined above
     GENERIC_ARRAY_CODE = code++;
     addToMap(Array.class, GENERIC_ARRAY_CODE);
@@ -353,6 +361,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
         code = CLASS_TO_CODE.get(Writable.class);
       } else if (c.isArray()) {
         code = CLASS_TO_CODE.get(Array.class);
+      } else if (Message.class.isAssignableFrom(c)) {
+        code = CLASS_TO_CODE.get(Message.class);
       } else if (Serializable.class.isAssignableFrom(c)){
         code = CLASS_TO_CODE.get(Serializable.class);
       }
@@ -479,6 +489,10 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       }
     } else if (declClass.isEnum()) {         // enum
       Text.writeString(out, ((Enum)instanceObj).name());
+    } else if (Message.class.isAssignableFrom(declaredClass)) {
+      Text.writeString(out, instanceObj.getClass().getName());
+      ((Message)instance).writeDelimitedTo(
+          DataOutputOutputStream.constructOutputStream(out));
     } else if (Writable.class.isAssignableFrom(declClass)) { // Writable
       Class <?> c = instanceObj.getClass();
       Integer code = CLASS_TO_CODE.get(c);
@@ -627,6 +641,15 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     } else if (declaredClass.isEnum()) {         // enum
       instance = Enum.valueOf((Class<? extends Enum>) declaredClass,
         Text.readString(in));
+    } else if (declaredClass == Message.class) {
+      String className = Text.readString(in);
+      try {
+        declaredClass = getClassByName(conf, className);
+        instance = tryInstantiateProtobuf(declaredClass, in);
+      } catch (ClassNotFoundException e) {
+        LOG.error("Can't find class " + className, e);
+        throw new IOException("Can't find class " + className, e);
+      }
     } else {                                      // Writable or Serializable
       Class instanceClass = null;
       int b = (byte)WritableUtils.readVInt(in);
@@ -679,6 +702,67 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       objectWritable.instance = instance;
     }
     return instance;
+  }
+
+  /**
+   * Try to instantiate a protocol buffer of the given message class
+   * from the given input stream.
+   *
+   * @param protoClass the class of the generated protocol buffer
+   * @param dataIn the input stream to read from
+   * @return the instantiated Message instance
+   * @throws IOException if an IO problem occurs
+   */
+  private static Message tryInstantiateProtobuf(
+      Class<?> protoClass,
+      DataInput dataIn) throws IOException {
+
+    try {
+      if (dataIn instanceof InputStream) {
+        // We can use the built-in parseDelimitedFrom and not have to re-copy
+        // the data
+        Method parseMethod = getStaticProtobufMethod(protoClass,
+            "parseDelimitedFrom", InputStream.class);
+        return (Message)parseMethod.invoke(null, (InputStream)dataIn);
+      } else {
+        // Have to read it into a buffer first, since protobuf doesn't deal
+        // with the DataInput interface directly.
+
+        // Read the size delimiter that writeDelimitedTo writes
+        int size = ProtoUtil.readRawVarint32(dataIn);
+        if (size < 0) {
+          throw new IOException("Invalid size: " + size);
+        }
+
+        byte[] data = new byte[size];
+        dataIn.readFully(data);
+        Method parseMethod = getStaticProtobufMethod(protoClass,
+            "parseFrom", byte[].class);
+        return (Message)parseMethod.invoke(null, data);
+      }
+    } catch (InvocationTargetException e) {
+
+      if (e.getCause() instanceof IOException) {
+        throw (IOException)e.getCause();
+      } else {
+        throw new IOException(e.getCause());
+      }
+    } catch (IllegalAccessException iae) {
+      throw new AssertionError("Could not access parse method in " +
+          protoClass);
+    }
+  }
+
+  static Method getStaticProtobufMethod(Class<?> declaredClass, String method,
+      Class<?> ... args) {
+
+    try {
+      return declaredClass.getMethod(method, args);
+    } catch (Exception e) {
+      // This is a bug in Hadoop - protobufs should all have this static method
+      throw new AssertionError("Protocol buffer class " + declaredClass +
+          " does not have an accessible parseFrom(InputStream) method!");
+    }
   }
 
   @SuppressWarnings("unchecked")
