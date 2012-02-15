@@ -18,27 +18,30 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test the reading and writing of access permissions to and from zookeeper.
  */
+@Category(LargeTests.class)
 public class TestZKPermissionsWatcher {
   private static final Log LOG = LogFactory.getLog(TestZKPermissionsWatcher.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();

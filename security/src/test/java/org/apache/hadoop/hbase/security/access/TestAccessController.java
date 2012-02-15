@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -57,11 +58,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Performs authorization checks for common operations, according to different
  * levels of authorized users.
  */
+@Category(LargeTests.class)
 public class TestAccessController {
   private static Log LOG = LogFactory.getLog(TestAccessController.class);
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
