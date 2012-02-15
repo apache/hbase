@@ -648,15 +648,17 @@ admin.enableTable(table);
        <para>Most of the time small inefficiencies don't matter all that much.  Unfortunately,
          this is a case where they do.  Whatever patterns are selected for ColumnFamilies, attributes, and rowkeys they could be repeated
        several billion times in your data. </para>
-       <para>See <xref linkend="keyvalue"/> for more information on HBase stores data internally.</para>
+       <para>See <xref linkend="keyvalue"/> for more information on HBase stores data internally to see why this is important.</para>
        <section xml:id="keysize.cf"><title>Column Families</title>
          <para>Try to keep the ColumnFamily names as small as possible, preferably one character (e.g. "d" for data/default).
          </para> 
+       <para>See <xref linkend="keyvalue"/> for more information on HBase stores data internally to see why this is important.</para>
        </section>
        <section xml:id="keysize.atttributes"><title>Attributes</title>
          <para>Although verbose attribute names (e.g., "myVeryImportantAttribute") are easier to read, prefer shorter attribute names (e.g., "via")
          to store in HBase.
          </para> 
+       <para>See <xref linkend="keyvalue"/> for more information on HBase stores data internally to see why this is important.</para>
        </section>
        <section xml:id="keysize.row"><title>Rowkey Length</title>
          <para>Keep them as short as is reasonable such that they can still be useful for required data access (e.g., Get vs. Scan). 
@@ -692,6 +694,7 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
 </programlisting>               
          </para>
        </section>
+       
     </section>
     <section xml:id="reverse.timestamp"><title>Reverse Timestamps</title>
     <para>A common problem in database processing is quickly finding the most recent version of a value.  A technique using reverse timestamps
@@ -888,7 +891,7 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
   </section>
   <section xml:id="schema.ops"><title>Operational and Performance Configuration Options</title>
     <para>See the Performance section <xref linkend="perf.schema"/> for more information operational and performance
-    schema design options, such as Bloom Filters, Table-configured regionsizes, and blocksizes.
+    schema design options, such as Bloom Filters, Table-configured regionsizes, compression, and blocksizes.
     </para>
   </section>  
 
