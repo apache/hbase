@@ -176,6 +176,8 @@
     from time stamp <literal>t9</literal>, the value of 
     <varname>anchor:my.look.ca</varname> from time stamp <literal>t8</literal>.
 	</para>
+	<para>For more information about the internals of how HBase stores data, see <xref linkend="regions.arch" />.
+	</para>
 	</section>
 
     <section xml:id="table">
@@ -287,6 +289,16 @@ try {
         <xref linkend="compaction"/> for more information on compactions.         
         </para>
  
+      </section>
+      <section xml:id="dm.column.metadata">
+        <title>Column Metadata</title>
+        <para>There is no store of column metadata outside of the internal KeyValue instances for a ColumnFamily.
+        Thus, while HBase can support not only a wide number of columns per row, but a heterogenous set of columns 
+        between rows, it is your responsibility to keep track of the column names.        
+        </para>
+        <para>The only way to get a complete set of columns that exist for a ColumnFamily is to process all the rows. 
+       	For more information about how HBase stores data internally, see <xref linkend="keyvalue" />.
+	    </para>         
       </section>
             
     </section>
