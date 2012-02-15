@@ -527,6 +527,13 @@ htable.put(put);
         </section>
       </section>
     </section>
+    <section xml:id="dm.sort">
+      <title>Sort Order</title>
+      <para>All data model operations HBase return data in sorted order.  First by row, 
+      then by ColumnFamily, followed by column qualifier, and finally timestamp (sorted
+      in reverse, so newest records are returned first).
+      </para>
+    </section>
     <section xml:id="dm.column.metadata">
       <title>Column Metadata</title>
       <para>There is no store of column metadata outside of the internal KeyValue instances for a ColumnFamily.
