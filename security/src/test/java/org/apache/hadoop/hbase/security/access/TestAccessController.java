@@ -18,9 +18,14 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,7 +37,17 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -42,8 +57,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 /**
  * Performs authorization checks for common operations, according to different
@@ -126,6 +139,13 @@ public class TestAccessController {
     }
   }
 
+  public void verifyAllowed(PrivilegedExceptionAction action, User... users)
+    throws Exception {
+    for (User user : users) {
+      verifyAllowed(user, action);
+    }
+  }
+
   public void verifyDenied(User user, PrivilegedExceptionAction action)
     throws Exception {
     try {
@@ -150,6 +170,13 @@ public class TestAccessController {
       // expected result
     }
   }
+
+  public void verifyDenied(PrivilegedExceptionAction action, User... users)
+      throws Exception {
+      for (User user : users) {
+        verifyDenied(user, action);
+      }
+    }
 
   @Test
   public void testTableCreate() throws Exception {
@@ -976,5 +1003,194 @@ public class TestAccessController {
     // delete table
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
+  }
+
+  /** global operations*/
+  private void verifyGlobal(PrivilegedExceptionAction<?> action) throws Exception {
+    // should be allowed
+    verifyAllowed(SUPERUSER, action);
+
+    // should be denied
+    verifyDenied(USER_OWNER, action);
+    verifyDenied(USER_RW, action);
+    verifyDenied(USER_NONE, action);
+    verifyDenied(USER_RO, action);
+  }
+
+  public void checkGlobalPerms(Permission.Action... actions) throws IOException {
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    AccessControllerProtocol protocol =
+        acl.coprocessorProxy(AccessControllerProtocol.class, new byte[0]);
+
+    Permission[] perms = new Permission[actions.length];
+    for (int i=0; i < actions.length; i++) {
+      perms[i] = new Permission(actions[i]);
+    }
+
+    protocol.checkPermissions(perms);
+  }
+
+  public void checkTablePerms(byte[] table, byte[] family, byte[] column,
+      Permission.Action... actions) throws IOException {
+    Permission[] perms = new Permission[actions.length];
+    for (int i=0; i < actions.length; i++) {
+      perms[i] = new TablePermission(table, family, column, actions[i]);
+    }
+
+    checkTablePerms(table, perms);
+  }
+
+  public void checkTablePerms(byte[] table, Permission...perms) throws IOException {
+    HTable acl = new HTable(conf, table);
+    AccessControllerProtocol protocol =
+        acl.coprocessorProxy(AccessControllerProtocol.class, new byte[0]);
+
+    protocol.checkPermissions(perms);
+  }
+
+  public void grant(AccessControllerProtocol protocol, User user, byte[] t, byte[] f,
+      byte[] q, Permission.Action... actions) throws IOException {
+    protocol.grant(Bytes.toBytes(user.getShortName()), new TablePermission(t, f, q, actions));
+  }
+
+  @Test
+  public void testCheckPermissions() throws Exception {
+    final HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    final AccessControllerProtocol protocol =
+        acl.coprocessorProxy(AccessControllerProtocol.class, TEST_TABLE);
+
+    //--------------------------------------
+    //test global permissions
+    PrivilegedExceptionAction<Void> globalAdmin = new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkGlobalPerms(Permission.Action.ADMIN);
+        return null;
+      }
+    };
+    //verify that only superuser can admin
+    verifyGlobal(globalAdmin);
+
+    //--------------------------------------
+    //test multiple permissions
+    PrivilegedExceptionAction<Void> globalReadWrite = new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkGlobalPerms(Permission.Action.READ, Permission.Action.WRITE);
+        return null;
+      }
+    };
+
+    verifyGlobal(globalReadWrite);
+
+    //--------------------------------------
+    //table/column/qualifier level permissions
+    final byte[] TEST_Q1 = Bytes.toBytes("q1");
+    final byte[] TEST_Q2 = Bytes.toBytes("q2");
+
+    User userTable = User.createUserForTesting(conf, "user_check_perms_table", new String[0]);
+    User userColumn = User.createUserForTesting(conf, "user_check_perms_family", new String[0]);
+    User userQualifier = User.createUserForTesting(conf, "user_check_perms_q", new String[0]);
+
+    grant(protocol, userTable, TEST_TABLE, null, null, Permission.Action.READ);
+    grant(protocol, userColumn, TEST_TABLE, TEST_FAMILY, null, Permission.Action.READ);
+    grant(protocol, userQualifier, TEST_TABLE, TEST_FAMILY, TEST_Q1, Permission.Action.READ);
+
+    PrivilegedExceptionAction<Void> tableRead = new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTablePerms(TEST_TABLE, null, null, Permission.Action.READ);
+        return null;
+      }
+    };
+
+    PrivilegedExceptionAction<Void> columnRead = new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTablePerms(TEST_TABLE, TEST_FAMILY, null, Permission.Action.READ);
+        return null;
+      }
+    };
+
+    PrivilegedExceptionAction<Void> qualifierRead = new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTablePerms(TEST_TABLE, TEST_FAMILY, TEST_Q1, Permission.Action.READ);
+        return null;
+      }
+    };
+
+    PrivilegedExceptionAction<Void> multiQualifierRead = new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTablePerms(TEST_TABLE, new Permission[] {
+          new TablePermission(TEST_TABLE, TEST_FAMILY, TEST_Q1, Permission.Action.READ),
+          new TablePermission(TEST_TABLE, TEST_FAMILY, TEST_Q2, Permission.Action.READ),
+        });
+        return null;
+      }
+    };
+
+    PrivilegedExceptionAction<Void> globalAndTableRead = new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTablePerms(TEST_TABLE, new Permission[] {
+          new Permission(Permission.Action.READ),
+          new TablePermission(TEST_TABLE, null, (byte[])null, Permission.Action.READ),
+        });
+        return null;
+      }
+    };
+
+    PrivilegedExceptionAction<Void> noCheck = new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTablePerms(TEST_TABLE, new Permission[0]);
+        return null;
+      }
+    };
+
+    verifyAllowed(tableRead, SUPERUSER, userTable);
+    verifyDenied(tableRead, userColumn, userQualifier);
+
+    verifyAllowed(columnRead, SUPERUSER, userTable, userColumn);
+    verifyDenied(columnRead, userQualifier);
+
+    verifyAllowed(qualifierRead, SUPERUSER, userTable, userColumn, userQualifier);
+
+    verifyAllowed(multiQualifierRead, SUPERUSER, userTable, userColumn);
+    verifyDenied(multiQualifierRead, userQualifier);
+
+    verifyAllowed(globalAndTableRead, SUPERUSER);
+    verifyDenied(globalAndTableRead, userTable, userColumn, userQualifier);
+
+    verifyAllowed(noCheck, SUPERUSER, userTable, userColumn, userQualifier);
+
+    //--------------------------------------
+    //test family level multiple permissions
+    PrivilegedExceptionAction<Void> familyReadWrite = new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTablePerms(TEST_TABLE, TEST_FAMILY, null, Permission.Action.READ,
+            Permission.Action.WRITE);
+        return null;
+      }
+    };
+    // should be allowed
+    verifyAllowed(familyReadWrite, SUPERUSER, USER_OWNER, USER_RW);
+    // should be denied
+    verifyDenied(familyReadWrite, USER_NONE, USER_RO);
+
+    //--------------------------------------
+    //check for wrong table region
+    try {
+      //but ask for TablePermissions for TEST_TABLE
+      protocol.checkPermissions(new Permission[] {(Permission) new TablePermission(
+          TEST_TABLE, null, (byte[])null, Permission.Action.CREATE)});
+      fail("this should have thrown CoprocessorException");
+    } catch(CoprocessorException ex) {
+      //expected
+    }
+
   }
 }
