@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -69,8 +68,8 @@ import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
-import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
+import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
@@ -227,8 +226,8 @@ public class ThriftServerRunner implements Runnable {
     this.conf = HBaseConfiguration.create(conf);
     this.listenPort = conf.getInt(PORT_CONF_KEY, DEFAULT_LISTEN_PORT);
     this.metrics = new ThriftMetrics(listenPort, conf, Hbase.Iface.class);
+    handler.initMetrics(metrics);
     this.handler = HbaseHandlerMetricsProxy.newInstance(handler, metrics, conf);
-
   }
 
   /*
@@ -395,6 +394,7 @@ public class ThriftServerRunner implements Runnable {
     // nextScannerId and scannerMap are used to manage scanner state
     protected int nextScannerId = 0;
     protected HashMap<Integer, ResultScanner> scannerMap = null;
+    private ThriftMetrics metrics = null;
 
     private static ThreadLocal<Map<String, HTable>> threadLocalTables =
         new ThreadLocal<Map<String, HTable>>() {
@@ -773,6 +773,9 @@ public class ThriftServerRunner implements Runnable {
       try {
         List<Get> gets = new ArrayList<Get>(rows.size());
         HTable table = getTable(tableName);
+        if (metrics != null) {
+          metrics.incNumRowKeysInBatchGet(rows.size());
+        }
         for (ByteBuffer row : rows) {
           Get get = new Get(getBytes(row));
           addAttributes(get, attributes);
@@ -908,6 +911,9 @@ public class ThriftServerRunner implements Runnable {
 
         Delete delete = new Delete(getBytes(row));
         addAttributes(delete, attributes);
+        if (metrics != null) {
+          metrics.incNumRowKeysInBatchMutate(mutations.size());
+        }
 
         // I apologize for all this mess :)
         for (Mutation m : mutations) {
@@ -1314,6 +1320,10 @@ public class ThriftServerRunner implements Runnable {
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
+    }
+
+    private void initMetrics(ThriftMetrics metrics) {
+      this.metrics = metrics;
     }
   }
   /**

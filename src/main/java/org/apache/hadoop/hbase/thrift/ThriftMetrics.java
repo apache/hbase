@@ -54,6 +54,10 @@ public class ThriftMetrics implements Updater {
 
   private final MetricsIntValue callQueueLen =
       new MetricsIntValue("callQueueLen", registry);
+  private final MetricsTimeVaryingRate numRowKeysInBatchGet =
+      new MetricsTimeVaryingRate("numRowKeysInBatchGet", registry);
+  private final MetricsTimeVaryingRate numRowKeysInBatchMutate =
+      new MetricsTimeVaryingRate("numRowKeysInBatchMutate", registry);
   private final MetricsTimeVaryingRate timeInQueue =
       new MetricsTimeVaryingRate("timeInQueue", registry);
   private MetricsTimeVaryingRate thriftCall =
@@ -82,6 +86,14 @@ public class ThriftMetrics implements Updater {
 
   public void setCallQueueLen(int len) {
     callQueueLen.set(len);
+  }
+
+  public void incNumRowKeysInBatchGet(int diff) {
+    numRowKeysInBatchGet.inc(diff);
+  }
+
+  public void incNumRowKeysInBatchMutate(int diff) {
+    numRowKeysInBatchMutate.inc(diff);
   }
 
   public void incMethodTime(String name, int time) {
