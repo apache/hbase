@@ -659,9 +659,16 @@ stopping hbase...............</programlisting> Shutdown can take a moment to
                 only but in production it is recommended that you run a
                 ZooKeeper ensemble of 3, 5 or 7 machines; the more members an
                 ensemble has, the more tolerant the ensemble is of host
-                failures. Also, run an odd number of machines. There can be no
-                quorum if the number of members is an even number. Give each
-                ZooKeeper server around 1GB of RAM, and if possible, its own
+                failures. Also, run an odd number of machines. In ZooKeeper, 
+                an even number of peers is supported, but it is normally not used 
+                because an even sized ensemble requires, proportionally, more peers 
+                to form a quorum than an odd sized ensemble requires. For example, an 
+                ensemble with 4 peers requires 3 to form a quorum, while an ensemble with 
+                5 also requires 3 to form a quorum. Thus, an ensemble of 5 allows 2 peers to 
+                fail, and thus is more fault tolerant than the ensemble of 4, which allows 
+                only 1 down peer.                 
+                </para>
+                <para>Give each ZooKeeper server around 1GB of RAM, and if possible, its own
                 dedicated disk (A dedicated disk is the best thing you can do
                 to ensure a performant ZooKeeper ensemble). For very heavily
                 loaded clusters, run ZooKeeper servers on separate machines
