@@ -966,6 +966,27 @@ public class AssignmentManager extends ZooKeeperListener {
     LOG.debug("Bulk assigning done for " + destination.getServerName());
   }
 
+  public boolean isRegionOnline(HRegionInfo hri) {
+    HServerInfo hsi = null;
+    synchronized (this.regions) {
+      hsi = this.regions.get(hri);
+      if (hsi == null) {
+        return false;
+      }
+      if (this.isServerOnline(hsi.getServerName())) {
+        return true;
+      } else {
+        // Remove the assignment mapping for hsi.
+        Set<HRegionInfo> hriSet = this.servers.get(hsi);
+        if (hriSet != null) {
+          hriSet.remove(hri);
+        }
+        this.regions.remove(hri);
+        return false;
+      }
+    }
+  }
+  
   protected void setEnabledTable(String tableName) {
     try {
       this.zkTable.setEnabledTable(tableName);
@@ -2087,10 +2108,13 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * Process shutdown server removing any assignments.
+   * 
    * @param hsi Server that went down.
-   * @return list of regions in transition on this server
+   * @return list of regions in transition and region plans on this server
    */
-  public List<RegionState> processServerShutdown(final HServerInfo hsi) {
+  public RegionsOnDeadServer processServerShutdown(final HServerInfo hsi) {
+    RegionsOnDeadServer regionsOnDeadServer = new RegionsOnDeadServer();
+    Set<HRegionInfo> regionsFromRegionPlansForServer = new HashSet<HRegionInfo>();
     // Clean out any existing assignment plans for this server
     synchronized (this.regionPlans) {
       for (Iterator <Map.Entry<String, RegionPlan>> i =
@@ -2099,11 +2123,16 @@ public class AssignmentManager extends ZooKeeperListener {
         HServerInfo otherHsi = e.getValue().getDestination();
         // The HSI will be null if the region is planned for a random assign.
         if (otherHsi != null && otherHsi.equals(hsi)) {
+          // Store the related regions in regionPlans.
+          regionsFromRegionPlansForServer.add(e.getValue().getRegionInfo());
           // Use iterator's remove else we'll get CME
           i.remove();
         }
       }
     }
+    
+    regionsOnDeadServer
+        .setRegionsFromRegionPlansForServer(regionsFromRegionPlansForServer);
     // TODO: Do we want to sync on RIT here?
     // Remove this server from map of servers to regions, and remove all regions
     // of this server from online map of regions.
@@ -2112,8 +2141,9 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized (this.regions) {
       Set<HRegionInfo> assignedRegions = this.servers.remove(hsi);
       if (assignedRegions == null || assignedRegions.isEmpty()) {
+        regionsOnDeadServer.setRegionsInTransition(rits);
         // No regions on this server, we are done, return empty list of RITs
-        return rits;
+        return regionsOnDeadServer;
       }
       deadRegions = new TreeSet<HRegionInfo>(assignedRegions);
       for (HRegionInfo region : deadRegions) {
@@ -2130,7 +2160,8 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
-    return rits;
+    regionsOnDeadServer.setRegionsInTransition(rits);
+    return regionsOnDeadServer;
   }
 
   /**
@@ -2378,5 +2409,31 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public boolean isServerOnline(String serverName) {
     return this.serverManager.isServerOnline(serverName);
+  }
+
+  /**
+   * Store the related regions on a dead server, used by processServerShutdown.
+   */
+  public static class RegionsOnDeadServer {
+    // The regions which being processed on this dead server.
+    private Set<HRegionInfo> regionsFromRegionPlansForServer = null;
+    private List<RegionState> regionsInTransition = null;
+
+    public Set<HRegionInfo> getRegionsFromRegionPlansForServer() {
+      return regionsFromRegionPlansForServer;
+    }
+
+    public void setRegionsFromRegionPlansForServer(
+        Set<HRegionInfo> regionsFromRegionPlansForServer) {
+      this.regionsFromRegionPlansForServer = regionsFromRegionPlansForServer;
+    }
+
+    public List<RegionState> getRegionsInTransition() {
+      return regionsInTransition;
+    }
+
+    public void setRegionsInTransition(List<RegionState> regionsInTransition) {
+      this.regionsInTransition = regionsInTransition;
+    }
   }
 }

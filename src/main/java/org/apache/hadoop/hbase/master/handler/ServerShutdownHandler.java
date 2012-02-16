@@ -20,15 +20,17 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
@@ -38,6 +40,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionsOnDeadServer;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -158,9 +161,14 @@ public class ServerShutdownHandler extends EventHandler {
       // doing after log splitting.  Could do some states before -- OPENING?
       // OFFLINE? -- and then others after like CLOSING that depend on log
       // splitting.
-      List<RegionState> regionsInTransition =
-        this.services.getAssignmentManager().processServerShutdown(this.hsi);
-    
+      Set<HRegionInfo> regionsFromRegionPlansForServer = new HashSet<HRegionInfo>();
+      List<RegionState> regionsInTransition = new ArrayList<RegionState>();
+      RegionsOnDeadServer regionsOnDeadServer = this.services
+          .getAssignmentManager().processServerShutdown(this.hsi);
+      regionsFromRegionPlansForServer = regionsOnDeadServer
+          .getRegionsFromRegionPlansForServer();
+      regionsInTransition = regionsOnDeadServer.getRegionsInTransition();
+
       // Assign root and meta if we were carrying them.
       if (isCarryingRoot()) { // -ROOT-
         LOG.info("Server " + serverName + " was carrying ROOT. Trying to assign.");
@@ -207,32 +215,44 @@ public class ServerShutdownHandler extends EventHandler {
         " regions(s) that are already in transition)");
     
       // Iterate regions that were on this server and assign them
-      for (Map.Entry<HRegionInfo, Result> e : hris.entrySet()) {
-        if (processDeadRegion(e.getKey(), e.getValue(),
-            this.services.getAssignmentManager(),
-            this.server.getCatalogTracker())) {
-          RegionState rit = this.services.getAssignmentManager()
-              .isRegionInTransition(e.getKey());
-          Pair<HRegionInfo, HServerInfo> p =
-            this.services
-              .getAssignmentManager().getAssignment(
-                  e.getKey().getEncodedNameAsBytes());
-          
-          if (rit != null && !rit.isClosing() && !rit.isPendingClose()) {
-            // Skip regions that were in transition unless CLOSING or
-            // PENDING_CLOSE
-            LOG.info("Skip assigning region " + rit.toString());
-          } else if ((p != null) && (p.getSecond() != null)
-              && (p.getSecond().equals(this.hsi))) {
-            LOG.debug("Skip assigning region "
-                + e.getKey().getRegionNameAsString()
-                + " because it has been opened in "
-                + p.getSecond());
-          } else {
-            this.services.getAssignmentManager().assign(e.getKey(), true);
+      if (hris != null) {
+        for (Map.Entry<HRegionInfo, Result> e : hris.entrySet()) {
+          if (processDeadRegion(e.getKey(), e.getValue(),
+              this.services.getAssignmentManager(),
+              this.server.getCatalogTracker())) {
+            RegionState rit = this.services.getAssignmentManager()
+                .isRegionInTransition(e.getKey());
+            Pair<HRegionInfo, HServerInfo> p = this.services
+                .getAssignmentManager().getAssignment(
+                    e.getKey().getEncodedNameAsBytes());
+
+            if (rit != null && !rit.isClosing() && !rit.isPendingClose()
+                && !regionsFromRegionPlansForServer.contains(rit.getRegion())) {
+              // Skip regions that were in transition unless CLOSING or
+              // PENDING_CLOSE
+              LOG.info("Skip assigning region " + rit.toString());
+            } else if ((p != null) && (p.getSecond() != null)
+                && !(p.getSecond().equals(this.hsi))) {
+              LOG.debug("Skip assigning region "
+                  + e.getKey().getRegionNameAsString()
+                  + " because it has been opened in " + p.getSecond());
+            } else {
+              this.services.getAssignmentManager().assign(e.getKey(), true);
+              regionsFromRegionPlansForServer.remove(e.getKey());
+            }
           }
         }
       }
+      
+      int reassignedPlans = 0;
+      for (HRegionInfo hri : regionsFromRegionPlansForServer) {
+        if (!this.services.getAssignmentManager().isRegionOnline(hri)) {
+          this.services.getAssignmentManager().assign(hri, true);
+          reassignedPlans++;
+        }
+      }
+      LOG.info(reassignedPlans + " regions which planned to open on "
+          + this.hsi.getServerName() + " be re-assigned.");
     } finally {
       this.deadServers.finish(serverName);
     }

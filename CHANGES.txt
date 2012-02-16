@@ -47,6 +47,7 @@ Release 0.90.6 - Unreleased
    HBASE-5377  Fix licenses on the 0.90 branch.
    HBASE-5379  Backport HBASE-4287 to 0.90 - If region opening fails, try to transition region back to
                "offline" in ZK
+   HBASE-5396  Handle the regions in regionPlans while processing ServerShutdownHandler(Jieshan)
 
   IMPROVEMENT
    HBASE-5102  Change the default value of the property "hbase.connection.per.config" to false in
