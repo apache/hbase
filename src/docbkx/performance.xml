@@ -188,7 +188,12 @@
     </section>
 
   </section>
-
+  <section xml:id="perf.zookeeper">
+    <title>ZooKeeper</title>
+    <para>See <xref linkend="zookeeper"/> for information on configuring ZooKeeper, and see the part
+    about having a dedicated disk.
+    </para>
+  </section>
   <section xml:id="perf.schema">
       <title>Schema Design</title>
   
