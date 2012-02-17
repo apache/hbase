@@ -20,6 +20,10 @@
 
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -41,19 +45,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexChunk;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
-import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 public class TestHFileBlockIndex {
@@ -91,6 +91,8 @@ public class TestHFileBlockIndex {
   private static final int[] EXPECTED_NUM_LEVELS = { 2, 3, 4 };
   private static final int[] UNCOMPRESSED_INDEX_SIZES =
       { 19187, 21813, 23086 };
+
+  private static final boolean includesMemstoreTS = true;
 
   static {
     assert INDEX_CHUNK_SIZES.length == EXPECTED_NUM_LEVELS.length;
@@ -138,7 +140,8 @@ public class TestHFileBlockIndex {
 
     @Override
     public HFileBlock readBlock(long offset, long onDiskSize,
-        boolean cacheBlock, boolean pread, boolean isCompaction)
+        boolean cacheBlock, boolean pread, boolean isCompaction,
+        BlockType expectedBlockType)
         throws IOException {
       if (offset == prevOffset && onDiskSize == prevOnDiskSize &&
           pread == prevPread) {
@@ -210,13 +213,14 @@ public class TestHFileBlockIndex {
 
   private void writeWholeIndex() throws IOException {
     assertEquals(0, keys.size());
-    HFileBlock.Writer hbw = new HFileBlock.Writer(compr);
+    HFileBlock.Writer hbw = new HFileBlock.Writer(compr, null,
+        includesMemstoreTS);
     FSDataOutputStream outputStream = fs.create(path);
     HFileBlockIndex.BlockIndexWriter biw =
         new HFileBlockIndex.BlockIndexWriter(hbw, null, null);
 
     for (int i = 0; i < NUM_DATA_BLOCKS; ++i) {
-      hbw.startWriting(BlockType.DATA, false).write(
+      hbw.startWriting(BlockType.DATA).write(
           String.valueOf(rand.nextInt(1000)).getBytes());
       long blockOffset = outputStream.getPos();
       hbw.writeHeaderAndData(outputStream);
@@ -251,7 +255,7 @@ public class TestHFileBlockIndex {
       boolean isClosing) throws IOException {
     while (biw.shouldWriteBlock(isClosing)) {
       long offset = outputStream.getPos();
-      biw.writeInlineBlock(hbw.startWriting(biw.getInlineBlockType(), false));
+      biw.writeInlineBlock(hbw.startWriting(biw.getInlineBlockType()));
       hbw.writeHeaderAndData(outputStream);
       biw.blockWritten(offset, hbw.getOnDiskSizeWithHeader(),
           hbw.getUncompressedSizeWithoutHeader());
@@ -480,7 +484,7 @@ public class TestHFileBlockIndex {
         HFile.Writer writer =
           HFile.getWriterFactory(conf, cacheConf).createWriter(fs,
             hfilePath, SMALL_BLOCK_SIZE, HFile.DEFAULT_BYTES_PER_CHECKSUM,
-            compr, KeyValue.KEY_COMPARATOR);
+            compr, null, KeyValue.KEY_COMPARATOR, null);
         Random rand = new Random(19231737);
 
         for (int i = 0; i < NUM_KV; ++i) {

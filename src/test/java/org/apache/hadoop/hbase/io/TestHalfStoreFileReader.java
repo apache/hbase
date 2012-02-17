@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -95,8 +96,8 @@ public class TestHalfStoreFileReader {
   private void doTestOfScanAndReseek(Path p, FileSystem fs, Reference bottom,
       CacheConfig cacheConf)
       throws IOException {
-    final HalfStoreFileReader halfreader =
-        new HalfStoreFileReader(fs, p, cacheConf, bottom);
+    final HalfStoreFileReader halfreader = new HalfStoreFileReader(fs, p,
+        cacheConf, bottom, DataBlockEncoding.NONE);
     halfreader.loadFileInfo();
     final HFileScanner scanner = halfreader.getScanner(false, false);
 
@@ -131,7 +132,7 @@ public class TestHalfStoreFileReader {
 
   List<KeyValue> genSomeKeys() {
     List<KeyValue> ret = new ArrayList<KeyValue>(SIZE);
-    for (int i = 0 ; i < SIZE; i++) {
+    for (int i = 0; i < SIZE; i++) {
       KeyValue kv =
           new KeyValue(
               _b(String.format("row_%04d", i)),

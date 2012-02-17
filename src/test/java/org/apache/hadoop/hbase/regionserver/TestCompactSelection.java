@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -68,7 +69,7 @@ public class TestCompactSelection extends TestCase {
     this.conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 0);
     this.conf.setInt("hbase.hstore.compaction.min", minFiles);
     this.conf.setInt("hbase.hstore.compaction.max", maxFiles);
-    this.conf.setLong("hbase.hregion.memstore.flush.size", minSize);
+    this.conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, minSize);
     this.conf.setLong("hbase.hstore.compaction.max.size", maxSize);
     this.conf.setFloat("hbase.hstore.compaction.ratio", 1.0F);
 
@@ -100,7 +101,8 @@ public class TestCompactSelection extends TestCase {
     MockStoreFile(long length, boolean isRef) throws IOException {
       super(TEST_UTIL.getTestFileSystem(), TEST_FILE,
             TEST_UTIL.getConfiguration(),
-            new CacheConfig(TEST_UTIL.getConfiguration()), BloomType.NONE);
+            new CacheConfig(TEST_UTIL.getConfiguration()), BloomType.NONE,
+            NoOpDataBlockEncoder.INSTANCE);
       this.length = length;
       this.isRef  = isRef;
     }

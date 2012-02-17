@@ -466,8 +466,8 @@ public class HRegion implements HeapSize {
 
     long flushSize = regionInfo.getTableDesc().getMemStoreFlushSize();
     if (flushSize == HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE) {
-      flushSize = conf.getLong("hbase.hregion.memstore.flush.size",
-                      HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
+      flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
+         HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
     }
     this.memstoreFlushSize = flushSize;
     this.blockingMemStoreSize = this.memstoreFlushSize *

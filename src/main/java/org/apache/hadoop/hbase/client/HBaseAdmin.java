@@ -724,7 +724,6 @@ public class HBaseAdmin {
    * Asynchronous operation.
    *
    * @param tableName name of table
-   * @param columnName name of column to be modified
    * @param descriptor new column descriptor to use
    * @throws IOException if a remote or network exception occurs
    */
@@ -734,6 +733,12 @@ public class HBaseAdmin {
     alterTable(Bytes.toBytes(tableName), null, Arrays.asList(
           new Pair<byte [], HColumnDescriptor>(Bytes.toBytes(columnName),
             descriptor)), null);
+  }
+
+  public void modifyColumn(final String tableName,
+      HColumnDescriptor descriptor)
+  throws IOException {
+    modifyColumn(tableName, descriptor.getNameAsString(), descriptor);
   }
 
   /**

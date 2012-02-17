@@ -156,7 +156,7 @@ public class TestHFile extends HBaseTestCase {
     writeRecords(writer);
     fout.close();
     FSDataInputStream fin = fs.open(ncTFile);
-    Reader reader = HFile.createReader(ncTFile, fs.open(ncTFile),
+    Reader reader = HFile.createReaderFromStream(ncTFile, fs.open(ncTFile),
       fs.getFileStatus(ncTFile).getLen(), cacheConf);
     System.out.println(cacheConf.toString());
     // Load up the index.
@@ -234,7 +234,7 @@ public class TestHFile extends HBaseTestCase {
     writer.close();
     fout.close();
     FSDataInputStream fin = fs.open(mFile);
-    Reader reader = HFile.createReader(mFile, fs.open(mFile),
+    Reader reader = HFile.createReaderFromStream(mFile, fs.open(mFile),
         this.fs.getFileStatus(mFile).getLen(), cacheConf);
     reader.loadFileInfo();
     // No data -- this should return false.

@@ -298,7 +298,7 @@ public class TestHFilePerformance extends TestCase {
     FSDataInputStream fin = fs.open(path);
 
     if ("HFile".equals(fileType)){
-        HFile.Reader reader = HFile.createReader(path, fs.open(path),
+        HFile.Reader reader = HFile.createReaderFromStream(path, fs.open(path),
           fs.getFileStatus(path).getLen(), new CacheConfig(conf));
         reader.loadFileInfo();
         switch (method) {
@@ -309,7 +309,7 @@ public class TestHFilePerformance extends TestCase {
             {
               HFileScanner scanner = reader.getScanner(false, false);
               scanner.seekTo();
-              for (long l=0 ; l<rows ; l++ ) {
+              for (long l=0; l<rows; l++ ) {
                 key = scanner.getKey();
                 val = scanner.getValue();
                 totalBytesRead += key.limit() + val.limit();
@@ -331,7 +331,7 @@ public class TestHFilePerformance extends TestCase {
         BytesWritable keyBsw = new BytesWritable();
         BytesWritable valBsw = new BytesWritable();
 
-        for (long l=0 ; l<rows ; l++ ) {
+        for (long l=0; l<rows; l++ ) {
           reader.next(keyBsw, valBsw);
           totalBytesRead += keyBsw.getSize() + valBsw.getSize();
         }

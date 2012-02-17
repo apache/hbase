@@ -73,7 +73,8 @@ public class TestHFileWriterV2 {
 
     final Compression.Algorithm COMPRESS_ALGO = Compression.Algorithm.GZ;
     HFileWriterV2 writer = new HFileWriterV2(conf, new CacheConfig(conf), fs,
-        hfilePath, 4096, 512, COMPRESS_ALGO, KeyValue.KEY_COMPARATOR);
+        hfilePath, 4096, HFile.DEFAULT_BYTES_PER_CHECKSUM,
+        COMPRESS_ALGO, null, KeyValue.KEY_COMPARATOR);
 
     long totalKeyLength = 0;
     long totalValueLength = 0;
@@ -122,10 +123,12 @@ public class TestHFileWriterV2 {
         new HFileBlock.FSReaderV2(fsdis, COMPRESS_ALGO, fileSize);
     // Comparator class name is stored in the trailer in version 2.
     RawComparator<byte []> comparator = trailer.createComparator();
-    HFileBlockIndex.BlockIndexReader dataBlockIndexReader = new HFileBlockIndex.BlockIndexReader(comparator,
-        trailer.getNumDataIndexLevels());
-    HFileBlockIndex.BlockIndexReader metaBlockIndexReader = new HFileBlockIndex.BlockIndexReader(
-        Bytes.BYTES_RAWCOMPARATOR, 1);
+    HFileBlockIndex.BlockIndexReader dataBlockIndexReader =
+        new HFileBlockIndex.BlockIndexReader(comparator,
+            trailer.getNumDataIndexLevels());
+    HFileBlockIndex.BlockIndexReader metaBlockIndexReader =
+        new HFileBlockIndex.BlockIndexReader(
+            Bytes.BYTES_RAWCOMPARATOR, 1);
 
     HFileBlock.BlockIterator blockIter = blockReader.blockRange(
         trailer.getLoadOnOpenDataOffset(),
@@ -143,8 +146,10 @@ public class TestHFileWriterV2 {
     // File info
     FileInfo fileInfo = new FileInfo();
     fileInfo.readFields(blockIter.nextBlockAsStream(BlockType.FILE_INFO));
-    byte [] keyValueFormatVersion = fileInfo.get(HFileWriterV2.KEY_VALUE_VERSION);
-    boolean includeMemstoreTS = (keyValueFormatVersion != null && Bytes.toInt(keyValueFormatVersion) > 0);
+    byte [] keyValueFormatVersion = fileInfo.get(
+        HFileWriterV2.KEY_VALUE_VERSION);
+    boolean includeMemstoreTS = keyValueFormatVersion != null &&
+        Bytes.toInt(keyValueFormatVersion) > 0;
 
     // Counters for the number of key/value pairs and the number of blocks
     int entriesRead = 0;

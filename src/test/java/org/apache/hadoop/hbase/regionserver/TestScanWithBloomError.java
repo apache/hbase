@@ -20,7 +20,9 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
@@ -76,8 +78,10 @@ public class TestScanWithBloomError {
 
   @Test
   public void testThreeStoreFiles() throws IOException {
-    region = createRegion(TABLE_NAME, Compression.Algorithm.GZ, bloomType,
-        MAX_VERSIONS);
+    region = TEST_UTIL.createTestRegion(TABLE_NAME, FAMILY,
+        Compression.Algorithm.GZ, bloomType,
+        TestMultiColumnScanner.MAX_VERSIONS, HFile.DEFAULT_BLOCKSIZE,
+        DataBlockEncoding.NONE, true);
     createStoreFile(new int[] {1, 2, 6});
     createStoreFile(new int[] {1, 2, 3, 7});
     createStoreFile(new int[] {1, 9});

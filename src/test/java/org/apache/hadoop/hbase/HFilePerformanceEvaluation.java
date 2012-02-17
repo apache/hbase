@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -189,9 +190,11 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void setUp() throws Exception {
-      writer = HFile.getWriterFactory(conf).createWriter(this.fs, this.mf,
-          RFILE_BLOCKSIZE, HFile.DEFAULT_BYTES_PER_CHECKSUM,
-          (Compression.Algorithm) null, null);
+      writer =
+          HFile.getWriterFactory(conf).createWriter(this.fs, this.mf,
+              RFILE_BLOCKSIZE, HFile.DEFAULT_BYTES_PER_CHECKSUM,
+              (Compression.Algorithm) null, NoOpDataBlockEncoder.INSTANCE,
+              null, null);
     }
 
     @Override

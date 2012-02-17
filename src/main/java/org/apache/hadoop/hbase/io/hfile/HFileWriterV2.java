@@ -48,12 +48,12 @@ import org.apache.hadoop.io.WritableUtils;
 public class HFileWriterV2 extends AbstractHFileWriter {
   static final Log LOG = LogFactory.getLog(HFileWriterV2.class);
 
-  /** Max memstore (rwcc) timestamp in FileInfo */
-  public static final byte[] MAX_MEMSTORE_TS_KEY =
+  /** Max memstore (mvcc) timestamp in FileInfo */
+  public static final byte [] MAX_MEMSTORE_TS_KEY =
       Bytes.toBytes("MAX_MEMSTORE_TS_KEY");
 
   /** KeyValue version in FileInfo */
-  public static final byte[] KEY_VALUE_VERSION =
+  public static final byte [] KEY_VALUE_VERSION =
       Bytes.toBytes("KEY_VALUE_VERSION");
 
   /** Version for KeyValue which includes memstore timestamp */
@@ -97,18 +97,21 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     @Override
     public Writer createWriter(FileSystem fs, Path path, int blockSize,
         int bytesPerChecksum, Compression.Algorithm compress,
-        final KeyComparator comparator) throws IOException {
+        final KeyComparator comparator)
+        throws IOException {
       return new HFileWriterV2(conf, cacheConf, fs, path, blockSize,
-          bytesPerChecksum, compress, comparator);
+          bytesPerChecksum, compress, NoOpDataBlockEncoder.INSTANCE,
+          comparator);
     }
 
     @Override
     public Writer createWriter(FileSystem fs, Path path, int blockSize,
         int bytesPerChecksum, Compression.Algorithm compress,
+        HFileDataBlockEncoder blockEncoder,
         final KeyComparator comparator, InetSocketAddress[] favoredNodes)
         throws IOException {
       return new HFileWriterV2(conf, cacheConf, fs, path, blockSize,
-          bytesPerChecksum, compress, comparator, favoredNodes);
+          bytesPerChecksum, compress, blockEncoder, comparator, favoredNodes);
     }
 
     @Override
@@ -116,7 +119,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         int bytesPerChecksum, String compress, final KeyComparator comparator)
         throws IOException {
       return new HFileWriterV2(conf, cacheConf, fs, path, blockSize,
-          bytesPerChecksum, compress, comparator);
+          bytesPerChecksum, compress, NoOpDataBlockEncoder.INSTANCE,
+          comparator);
     }
 
     @Override
@@ -142,7 +146,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       throws IOException {
     this(conf, cacheConf, fs, path, HFile.DEFAULT_BLOCKSIZE,
         HFile.DEFAULT_BYTES_PER_CHECKSUM, HFile.DEFAULT_COMPRESSION_ALGORITHM,
-        null);
+        NoOpDataBlockEncoder.INSTANCE, null);
   }
 
   /**
@@ -151,28 +155,35 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    */
   public HFileWriterV2(Configuration conf, CacheConfig cacheConf, FileSystem fs,
       Path path, int blockSize, int bytesPerChecksum, String compressAlgoName,
+      HFileDataBlockEncoder blockEncoder,
       final KeyComparator comparator) throws IOException {
     this(conf, cacheConf, fs, path, blockSize, bytesPerChecksum,
-        compressionByName(compressAlgoName), comparator);
+        compressionByName(compressAlgoName), blockEncoder,
+        comparator);
   }
 
   /** Constructor that takes a path, creates and closes the output stream. */
   public HFileWriterV2(Configuration conf, CacheConfig cacheConf, FileSystem fs,
       Path path, int blockSize, int bytesPerChecksum,
-      Compression.Algorithm compressAlgo, final KeyComparator comparator)
+      Compression.Algorithm compressAlgo, HFileDataBlockEncoder blockEncoder,
+      final KeyComparator comparator)
   throws IOException {
     super(conf, cacheConf, createOutputStream(conf, fs, path,
-        bytesPerChecksum), path, blockSize, compressAlgo, comparator);
+        bytesPerChecksum), path, blockSize, compressAlgo,
+        blockEncoder,
+        comparator);
     finishInit(conf);
   }
 
   /** Constructor that takes a path, creates and closes the output stream. */
   public HFileWriterV2(Configuration conf, CacheConfig cacheConf,
       FileSystem fs, Path path, int blockSize, int bytesPerChecksum,
-      Compression.Algorithm compressAlgo, final KeyComparator comparator,
+      Compression.Algorithm compressAlgo, HFileDataBlockEncoder blockEncoder,
+      final KeyComparator comparator,
       InetSocketAddress[] favoredNodes) throws IOException {
     super(conf, cacheConf, createOutputStream(conf, fs, path, bytesPerChecksum,
-        favoredNodes), path, blockSize, compressAlgo, comparator);
+        favoredNodes), path, blockSize, compressAlgo,
+        blockEncoder, comparator);
     finishInit(conf);
   }
 
@@ -191,7 +202,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       final FSDataOutputStream outputStream, final int blockSize,
       final Compression.Algorithm compress, final KeyComparator comparator)
       throws IOException {
-    super(conf, cacheConf, outputStream, null, blockSize, compress, comparator);
+    super(conf, cacheConf, outputStream, null, blockSize, compress, null,
+        comparator);
     finishInit(conf);
   }
 
@@ -201,7 +213,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       throw new IllegalStateException("finishInit called twice");
 
     // HFile filesystem-level (non-caching) block writer
-    fsBlockWriter = new HFileBlock.Writer(compressAlgo);
+    fsBlockWriter = new HFileBlock.Writer(compressAlgo, blockEncoder,
+        includeMemstoreTS);
 
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
@@ -237,11 +250,12 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     if (!fsBlockWriter.isWriting() || fsBlockWriter.blockSizeWritten() == 0)
       return;
 
-    long now = System.currentTimeMillis();
+    long startTimeNs = System.nanoTime();
 
     // Update the first data block offset for scanning.
-    if (firstDataBlockOffset == -1)
+    if (firstDataBlockOffset == -1) {
       firstDataBlockOffset = outputStream.getPos();
+    }
 
     // Update the last data block offset
     lastDataBlockOffset = outputStream.getPos();
@@ -253,8 +267,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         onDiskSize);
     totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
 
-    HFile.writeTime += System.currentTimeMillis() - now;
-    HFile.writeOps++;
+    HFile.writeTimeNano.addAndGet(System.nanoTime() - startTimeNs);
+    HFile.writeOps.incrementAndGet();
 
     if (cacheConf.shouldCacheDataOnWrite()) {
       doCacheOnWrite(lastDataBlockOffset);
@@ -268,7 +282,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         long offset = outputStream.getPos();
         boolean cacheThisBlock = ibw.cacheOnWrite();
         ibw.writeInlineBlock(fsBlockWriter.startWriting(
-            ibw.getInlineBlockType(), cacheThisBlock));
+            ibw.getInlineBlockType()));
         fsBlockWriter.writeHeaderAndData(outputStream);
         ibw.blockWritten(offset, fsBlockWriter.getOnDiskSizeWithHeader(),
             fsBlockWriter.getUncompressedSizeWithoutHeader());
@@ -286,11 +300,15 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    *          the cache key.
    */
   private void doCacheOnWrite(long offset) {
-    // Cache this block on write.
-    HFileBlock cacheFormatBlock = fsBlockWriter.getBlockForCaching();
+    // We don't cache-on-write data blocks on compaction, so assume this is not
+    // a compaction.
+    final boolean isCompaction = false;
+    HFileBlock cacheFormatBlock = blockEncoder.diskToCacheFormat(
+        fsBlockWriter.getBlockForCaching(), isCompaction);
     passSchemaMetricsTo(cacheFormatBlock);
     cacheConf.getBlockCache().cacheBlock(
-        HFile.getBlockCacheKey(name, offset), cacheFormatBlock);
+        new BlockCacheKey(name, offset, blockEncoder.getEncodingInCache(),
+            cacheFormatBlock.getBlockType()), cacheFormatBlock);
   }
 
   /**
@@ -300,8 +318,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    */
   private void newBlock() throws IOException {
     // This is where the next block begins.
-    fsBlockWriter.startWriting(BlockType.DATA,
-        cacheConf.shouldCacheDataOnWrite());
+    fsBlockWriter.startWriting(BlockType.DATA);
     firstKeyInBlock = null;
   }
 
@@ -433,8 +450,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         // store the beginning offset
         long offset = outputStream.getPos();
         // write the metadata content
-        DataOutputStream dos = fsBlockWriter.startWriting(BlockType.META,
-            cacheConf.shouldCacheDataOnWrite());
+        DataOutputStream dos = fsBlockWriter.startWriting(BlockType.META);
         metaData.get(i).write(dos);
 
         fsBlockWriter.writeHeaderAndData(outputStream);
@@ -459,17 +475,17 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     // Meta block index.
     metaBlockIndexWriter.writeSingleLevelIndex(fsBlockWriter.startWriting(
-        BlockType.ROOT_INDEX, false), "meta");
+        BlockType.ROOT_INDEX), "meta");
     fsBlockWriter.writeHeaderAndData(outputStream);
 
     if (this.includeMemstoreTS) {
       appendFileInfo(MAX_MEMSTORE_TS_KEY, Bytes.toBytes(maxMemstoreTS));
-      appendFileInfo(KEY_VALUE_VERSION, Bytes.toBytes(KEY_VALUE_VER_WITH_MEMSTORE_TS));
+      appendFileInfo(KEY_VALUE_VERSION, Bytes.toBytes(
+          KEY_VALUE_VER_WITH_MEMSTORE_TS));
     }
 
     // File info
-    writeFileInfo(trailer, fsBlockWriter.startWriting(BlockType.FILE_INFO,
-        false));
+    writeFileInfo(trailer, fsBlockWriter.startWriting(BlockType.FILE_INFO));
     fsBlockWriter.writeHeaderAndData(outputStream);
 
     // Load-on-open data supplied by higher levels, e.g. Bloom filters.

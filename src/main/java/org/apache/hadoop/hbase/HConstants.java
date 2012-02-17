@@ -188,6 +188,10 @@ public final class HConstants {
   /** Used to construct the name of the compaction directory during compaction */
   public static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
 
+  /** Conf key for the max file size after which we split the region */
+  public static final String HREGION_MAX_FILESIZE =
+      "hbase.hregion.max.filesize";
+
   /** File Extension used while splitting an HLog into regions (HBASE-2312) */
   public static final String HLOG_SPLITTING_EXT = "-splitting";
 
@@ -206,6 +210,10 @@ public final class HConstants {
 
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
+
+  /** Conf key for the memstore size at which we flush the memstore */
+  public static final String HREGION_MEMSTORE_FLUSH_SIZE =
+      "hbase.hregion.memstore.flush.size";
 
   /** Default size of a reservation block   */
   public static final int DEFAULT_SIZE_RESERVATION_BLOCK = 1024 * 1024 * 5;

@@ -27,6 +27,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,6 +42,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -145,39 +148,52 @@ public class HFile {
     DEFAULT_COMPRESSION_ALGORITHM.getName();
 
   /**
-   *  ROOT_DIR/TABLE_NAME/REGION_NAME/CF_NAME/HFILE
+   * We assume that HFile path ends with
+   * ROOT_DIR/TABLE_NAME/REGION_NAME/CF_NAME/HFILE, so it has at least this
+   * many levels of nesting. This is needed for identifying table and CF name
+   * from an HFile path.
    */
-  public final static int HFILE_PATH_LENGTH = 5;
+  public final static int MIN_NUM_HFILE_PATH_LEVELS = 5;
 
-  // For measuring latency of "typical" reads and writes
-  static volatile int readOps;
-  static volatile long readTime;
-  static volatile int writeOps;
-  static volatile long writeTime;
+  // For measuring latency of "sequential" reads and writes
+  static final AtomicInteger readOps = new AtomicInteger();
+  static final AtomicLong readTimeNano = new AtomicLong();
+  static final AtomicInteger writeOps = new AtomicInteger();
+  static final AtomicLong writeTimeNano = new AtomicLong();
 
+  // For measuring latency of pread
+  static final AtomicInteger preadOps = new AtomicInteger();
+  static final AtomicLong preadTimeNano = new AtomicLong();
+
+  // for test purpose
+  public static volatile AtomicLong dataBlockReadCnt = new AtomicLong(0);
+
+  // number of sequential reads
   public static final int getReadOps() {
-    int ret = readOps;
-    readOps = 0;
-    return ret;
+    return readOps.getAndSet(0);
   }
 
-  public static final long getReadTime() {
-    long ret = readTime;
-    readTime = 0;
-    return ret;
+  public static final long getReadTimeMs() {
+    return readTimeNano.getAndSet(0) / 1000000;
+  }
+
+  // number of positional reads
+  public static final int getPreadOps() {
+    return preadOps.getAndSet(0);
+  }
+
+  public static final long getPreadTimeMs() {
+    return preadTimeNano.getAndSet(0) / 1000000;
   }
 
   public static final int getWriteOps() {
-    int ret = writeOps;
-    writeOps = 0;
-    return ret;
+    return writeOps.getAndSet(0);
   }
 
-  public static final long getWriteTime() {
-    long ret = writeTime;
-    writeTime = 0;
-    return ret;
+  public static final long getWriteTimeMs() {
+    return writeTimeNano.getAndSet(0) / 1000000;
   }
+
 
   /**
    * Get the configured bytes per checksum for HFile
@@ -256,6 +272,7 @@ public class HFile {
 
     public abstract Writer createWriter(FileSystem fs, Path path,
         int blockSize, int bytesPerChecksum, Compression.Algorithm compress,
+        HFileDataBlockEncoder dataBlockEncoder,
         final KeyComparator comparator, InetSocketAddress[] favoredNodes)
         throws IOException;
 
@@ -313,7 +330,8 @@ public class HFile {
   /** An abstraction used by the block index */
   public interface CachingBlockReader {
     HFileBlock readBlock(long offset, long onDiskBlockSize,
-        boolean cacheBlock, final boolean pread, final boolean isCompaction)
+        boolean cacheBlock, final boolean pread, final boolean isCompaction,
+        BlockType expectedBlockType)
         throws IOException;
   }
 
@@ -380,11 +398,14 @@ public class HFile {
 
     /** Close method with optional evictOnClose */
     void close(boolean evictOnClose) throws IOException;
+
+    DataBlockEncoding getEncodingOnDisk();
   }
 
   private static Reader pickReaderVersion(Path path, FSDataInputStream fsdis,
-      long size, boolean closeIStream, CacheConfig cacheConf)
-  throws IOException {
+      long size, boolean closeIStream, CacheConfig cacheConf,
+      DataBlockEncoding preferredEncodingInCache)
+      throws IOException {
     FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis, size);
     switch (trailer.getVersion()) {
     case 1:
@@ -392,23 +413,34 @@ public class HFile {
           cacheConf);
     case 2:
       return new HFileReaderV2(path, trailer, fsdis, size, closeIStream,
-          cacheConf);
+          cacheConf, preferredEncodingInCache);
     default:
       throw new IOException("Cannot instantiate reader for HFile version " +
           trailer.getVersion());
     }
   }
 
-  public static Reader createReader(FileSystem fs, Path path,
-      CacheConfig cacheConf) throws IOException {
+  public static Reader createReaderWithEncoding(
+      FileSystem fs, Path path, CacheConfig cacheConf,
+      DataBlockEncoding preferredEncodingInCache) throws IOException {
+    final boolean closeIStream = true;
     return pickReaderVersion(path, fs.open(path),
-        fs.getFileStatus(path).getLen(), true, cacheConf);
+        fs.getFileStatus(path).getLen(), closeIStream, cacheConf,
+        preferredEncodingInCache);
   }
 
-  public static Reader createReader(Path path, FSDataInputStream fsdis,
-      long size, CacheConfig cacheConf)
+  public static Reader createReader(
+      FileSystem fs, Path path, CacheConfig cacheConf) throws IOException {
+    return createReaderWithEncoding(fs, path, cacheConf,
+        DataBlockEncoding.NONE);
+  }
+
+  public static Reader createReaderFromStream(Path path,
+      FSDataInputStream fsdis, long size, CacheConfig cacheConf)
       throws IOException {
-    return pickReaderVersion(path, fsdis, size, false, cacheConf);
+    final boolean closeIStream = false;
+    return pickReaderVersion(path, fsdis, size, closeIStream, cacheConf,
+        DataBlockEncoding.NONE);
   }
 
   /*
@@ -511,10 +543,6 @@ public class HFile {
   public static void main(String[] args) throws IOException {
     HFilePrettyPrinter prettyPrinter = new HFilePrettyPrinter();
     System.exit(prettyPrinter.run(args));
-  }
-
-  public static BlockCacheKey getBlockCacheKey(String hfileName, long offset) {
-    return new BlockCacheKey(hfileName, offset);
   }
 
   /**

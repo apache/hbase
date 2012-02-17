@@ -43,10 +43,13 @@ import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.Reference.Range;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -269,9 +272,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     CacheConfig cacheConf = new CacheConfig(conf);
     HalfStoreFileReader halfReader = null;
     StoreFile.Writer halfWriter = null;
+    HFileDataBlockEncoder dataBlockEncoder = new HFileDataBlockEncoderImpl(
+        familyDescriptor.getDataBlockEncodingOnDisk(),
+        familyDescriptor.getDataBlockEncoding());
     try {
       halfReader = new HalfStoreFileReader(fs, inFile, cacheConf,
-          reference);
+          reference, DataBlockEncoding.NONE);
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
       int blocksize = familyDescriptor.getBlocksize();
@@ -280,7 +286,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
       float err = familyDescriptor.getBloomFilterErrorRate();
       halfWriter = new StoreFile.Writer(
-          fs, outFile, blocksize, compression, conf, cacheConf,
+          fs, outFile, blocksize, compression, dataBlockEncoder,
+          conf, cacheConf,
           KeyValue.COMPARATOR, bloomFilterType, err, 0, null);
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();
@@ -303,7 +310,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private static boolean shouldCopyHFileMetaKey(byte[] key) {
     return !HFile.isReservedFileInfoKey(key);
   }
-
 
   @Override
   public int run(String[] args) throws Exception {

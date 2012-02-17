@@ -677,6 +677,9 @@ public class MemStore implements HeapSize {
       ClassSize.COPYONWRITE_ARRAYSET + ClassSize.COPYONWRITE_ARRAYLIST +
       (2 * ClassSize.CONCURRENT_SKIPLISTMAP));
 
+  /** Used for readability when we don't store memstore timestamp in HFile */
+  public static final boolean NO_PERSISTENT_TS = false;
+
   /*
    * Calculate how the MemStore size has changed.  Includes overhead of the
    * backing Map.

@@ -108,7 +108,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
     conf.setInt("hbase.hregion.memstore.optionalflushcount", 2);
 
     // We flush the cache after every 8192 bytes
-    conf.setInt("hbase.hregion.memstore.flush.size", 8192);
+    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 8192);
 
     // Increase the amount of time between client retries
     conf.setLong("hbase.client.pause", 15 * 1000);

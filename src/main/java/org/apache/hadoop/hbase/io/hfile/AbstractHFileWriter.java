@@ -90,6 +90,12 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
   /** The compression algorithm used. NONE if no compression. */
   protected final Compression.Algorithm compressAlgo;
 
+  /**
+   * The data block encoding which will be used.
+   * {@link NoOpDataBlockEncoder#INSTANCE} if there is no encoding.
+   */
+  protected final HFileDataBlockEncoder blockEncoder;
+
   /** First key in a block. */
   protected byte[] firstKeyInBlock = null;
 
@@ -107,14 +113,18 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
 
   public AbstractHFileWriter(Configuration conf, CacheConfig cacheConf,
       FSDataOutputStream outputStream, Path path, int blockSize,
-      Compression.Algorithm compressAlgo, KeyComparator comparator) {
-    super(conf, path);
+      Compression.Algorithm compressAlgo,
+      HFileDataBlockEncoder dataBlockEncoder,
+      KeyComparator comparator) {
+    super(null, path);
     this.outputStream = outputStream;
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();
     this.blockSize = blockSize;
     this.compressAlgo = compressAlgo == null
         ? HFile.DEFAULT_COMPRESSION_ALGORITHM : compressAlgo;
+    this.blockEncoder = dataBlockEncoder != null
+        ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
     this.comparator = comparator != null ? comparator
         : Bytes.BYTES_RAWCOMPARATOR;
 

@@ -74,7 +74,7 @@ public class TestAcidGuarantees {
   public TestAcidGuarantees() {
     // Set small flush size for minicluster so we exercise reseeking scanners
     Configuration conf = HBaseConfiguration.create();
-    conf.set("hbase.hregion.memstore.flush.size", String.valueOf(128*1024));
+    conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(128*1024));
     util = new HBaseTestingUtility(conf);
   }
 

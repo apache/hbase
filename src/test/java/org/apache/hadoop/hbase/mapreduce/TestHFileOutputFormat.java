@@ -56,10 +56,12 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -857,7 +859,7 @@ public class TestHFileOutputFormat  {
             // configured bloom type.
             Path dataFilePath = fileSystem.listStatus(f.getPath())[0].getPath();
             StoreFile.Reader reader = new StoreFile.Reader(fileSystem,
-                dataFilePath, new CacheConfig(conf));
+                dataFilePath, new CacheConfig(conf), null);
             Map<byte[], byte[]> metadataMap = reader.loadFileInfo();
 
             assertTrue("timeRange is not set",

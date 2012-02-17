@@ -43,7 +43,9 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -112,6 +114,9 @@ public class TestSeekOptimizations {
 
   private long totalSeekDiligent, totalSeekLazy;
 
+  private final static HBaseTestingUtility TEST_UTIL =
+      new HBaseTestingUtility();
+
   @Parameters
   public static final Collection<Object[]> parameters() {
     return HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS;
@@ -131,9 +136,9 @@ public class TestSeekOptimizations {
 
   @Test
   public void testMultipleTimestampRanges() throws IOException {
-    region = TestMultiColumnScanner.createRegion(
-        TestSeekOptimizations.class.getName(), comprAlgo, bloomType,
-        Integer.MAX_VALUE);
+    region = TEST_UTIL.createTestRegion(TestSeekOptimizations.class.getName(),
+        FAMILY, comprAlgo, bloomType, Integer.MAX_VALUE,
+        HFile.DEFAULT_BLOCKSIZE, DataBlockEncoding.NONE, true);
 
     // Delete the given timestamp and everything before.
     final long latestDelTS = USE_MANY_STORE_FILES ? 1397 : -1;

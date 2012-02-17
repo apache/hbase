@@ -1,21 +1,18 @@
 /*
- * Copyright 2011 The Apache Software Foundation
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
 
@@ -25,9 +22,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutionException;
@@ -54,16 +49,19 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
+import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
@@ -72,6 +70,8 @@ import org.apache.hadoop.util.StringUtils;
  * Tests HFile read/write workloads, such as merging HFiles and random reads.
  */
 public class HFileReadWriteTest {
+
+  private static final String TABLE_NAME = "MyTable";
 
   private static enum Workload {
     MERGE("merge", "Merge the specified HFiles", 1, Integer.MAX_VALUE),
@@ -136,10 +136,18 @@ public class HFileReadWriteTest {
   private Workload workload;
   private FileSystem fs;
   private Configuration conf;
+
+
+  private CacheConfig cacheConf;
   private List<String> inputFileNames;
   private Path outputDir;
   private int numReadThreads;
   private int durationSec;
+
+  private DataBlockEncoding dataBlockEncoding;
+  private boolean encodeInCacheOnly;
+  private HFileDataBlockEncoder dataBlockEncoder =
+      NoOpDataBlockEncoder.INSTANCE;
 
   private StoreFile.BloomType bloomType = StoreFile.BloomType.NONE;
   private int blockSize;
@@ -158,8 +166,21 @@ public class HFileReadWriteTest {
   private SortedSet<String> keysRead = new ConcurrentSkipListSet<String>();
   private List<StoreFile> inputStoreFiles;
 
+  public static final String OPT_DATA_BLOCK_ENCODING =
+      HColumnDescriptor.DATA_BLOCK_ENCODING.toLowerCase();
+  public static final String OPT_DATA_BLOCK_ENCODING_USAGE =
+      "Encoding algorithm (e.g. prefix "
+          + "compression) to use for data blocks in the test column family, "
+          + "one of " + Arrays.toString(DataBlockEncoding.values()) + ".";
+  public static final String OPT_ENCODE_IN_CACHE_ONLY =
+      "encode_in_cache_only";
+  public static final String OPT_ENCODE_IN_CACHE_ONLY_USAGE =
+      "If this is specified, data blocks will only be encoded in block " +
+      "cache but not on disk";
+
   public HFileReadWriteTest() {
     conf = HBaseConfiguration.create();
+    cacheConf = new CacheConfig(conf);
   }
 
   @SuppressWarnings("unchecked")
@@ -177,11 +198,15 @@ public class HFileReadWriteTest {
     options.addOption(BLOCK_SIZE_OPTION, true, "HFile block size" +
         Workload.MERGE.onlyUsedFor());
     options.addOption(DURATION_OPTION, true, "The amount of time to run the " +
-		"random read workload for" + Workload.RANDOM_READS.onlyUsedFor());
+        "random read workload for" + Workload.RANDOM_READS.onlyUsedFor());
     options.addOption(NUM_THREADS_OPTION, true, "The number of random " +
         "reader threads" + Workload.RANDOM_READS.onlyUsedFor());
     options.addOption(NUM_THREADS_OPTION, true, "The number of random " +
         "reader threads" + Workload.RANDOM_READS.onlyUsedFor());
+    options.addOption(OPT_DATA_BLOCK_ENCODING, true,
+        OPT_DATA_BLOCK_ENCODING_USAGE);
+    options.addOption(OPT_ENCODE_IN_CACHE_ONLY, false,
+        OPT_ENCODE_IN_CACHE_ONLY_USAGE);
     options.addOptionGroup(Workload.getOptionGroup());
 
     if (args.length == 0) {
@@ -233,6 +258,25 @@ public class HFileReadWriteTest {
           BLOOM_FILTER_OPTION));
     }
 
+    encodeInCacheOnly =
+        cmdLine.hasOption(OPT_ENCODE_IN_CACHE_ONLY);
+
+    if (cmdLine.hasOption(OPT_DATA_BLOCK_ENCODING)) {
+      dataBlockEncoding = DataBlockEncoding.valueOf(
+          cmdLine.getOptionValue(OPT_DATA_BLOCK_ENCODING));
+      // Optionally encode on disk, always encode in cache.
+      dataBlockEncoder = new HFileDataBlockEncoderImpl(
+          encodeInCacheOnly ? DataBlockEncoding.NONE : dataBlockEncoding,
+          dataBlockEncoding);
+    } else {
+      if (encodeInCacheOnly) {
+        LOG.error("The -" + OPT_ENCODE_IN_CACHE_ONLY +
+            " option does not make sense without -" +
+            OPT_DATA_BLOCK_ENCODING);
+        return false;
+      }
+    }
+
     blockSize = conf.getInt("hfile.min.blocksize.size", 65536);
     if (cmdLine.hasOption(BLOCK_SIZE_OPTION))
       blockSize = Integer.valueOf(cmdLine.getOptionValue(BLOCK_SIZE_OPTION));
@@ -257,6 +301,7 @@ public class HFileReadWriteTest {
       numReadThreads = Integer.parseInt(
           cmdLine.getOptionValue(NUM_THREADS_OPTION));
     }
+
     Collections.sort(inputFileNames);
 
     return true;
@@ -292,7 +337,7 @@ public class HFileReadWriteTest {
     if (outputDir != null &&
         (!fs.exists(outputDir) || !fs.getFileStatus(outputDir).isDir())) {
       LOG.error(outputDir.toString() + " does not exist or is not a " +
-		"directory");
+          "directory");
       return false;
     }
 
@@ -304,23 +349,27 @@ public class HFileReadWriteTest {
 
     List<StoreFileScanner> scanners =
         StoreFileScanner.getScannersForStoreFiles(inputStoreFiles, false,
-            false, true);
+            false);
 
     HColumnDescriptor columnDescriptor = new HColumnDescriptor(
         HFileReadWriteTest.class.getSimpleName());
     columnDescriptor.setBlocksize(blockSize);
     columnDescriptor.setBloomFilterType(bloomType);
     columnDescriptor.setCompressionType(compression);
+
+    columnDescriptor.setDataBlockEncoding(dataBlockEncoding);
     HRegionInfo regionInfo = new HRegionInfo();
+    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     HRegion region = new HRegion(outputDir, null, fs, conf, regionInfo, null);
     Store store = new Store(outputDir, region, columnDescriptor, fs, conf);
 
-    StoreFile.Writer writer = StoreFile.createWriter(fs, outputDir,
-        blockSize,
-        compression, KeyValue.COMPARATOR, this.conf, new CacheConfig(this.conf),
-        bloomType, maxKeyCount);
+    StoreFile.Writer writer =
+        StoreFile.createWriter(fs, outputDir, blockSize, compression,
+            dataBlockEncoder, KeyValue.COMPARATOR, this.conf,
+            new CacheConfig(conf), bloomType, BloomFilterFactory.getErrorRate(conf),
+            maxKeyCount, null);
 
-    StatisticsPrinter statsPrinter = new StatisticsPrinter(getHFileReaders());
+    StatisticsPrinter statsPrinter = new StatisticsPrinter();
     statsPrinter.startThread();
 
     try {
@@ -426,8 +475,8 @@ public class HFileReadWriteTest {
       throws IOException {
     // We are passing the ROWCOL Bloom filter type, but StoreFile will still
     // use the Bloom filter type specified in the HFile.
-    return new StoreFile(fs, filePath, conf, new CacheConfig(this.conf),
-        StoreFile.BloomType.ROWCOL);
+    return new StoreFile(fs, filePath, conf, cacheConf,
+        StoreFile.BloomType.ROWCOL, dataBlockEncoder);
   }
 
   public static int charToHex(int c) {
@@ -590,12 +639,7 @@ public class HFileReadWriteTest {
 
     private volatile boolean stopRequested;
     private volatile Thread thread;
-    private Set<String> fsBlockReadMetrics = new TreeSet<String>();
-    private boolean isCompaction;
-
-    public StatisticsPrinter(HFile.Reader reader) {
-      this(new HFile.Reader[] { reader });
-    }
+    private long totalSeekAndReads, totalPositionalReads;
 
     /**
      * Run the statistics collector in a separate thread without an executor.
@@ -611,19 +655,6 @@ public class HFileReadWriteTest {
           }
         }
       }.start();
-    }
-
-    public StatisticsPrinter(HFile.Reader[] readers) {
-      isCompaction = workload == Workload.MERGE;
-      for (HFile.Reader reader : readers) {
-        fsBlockReadMetrics.add(
-            SchemaMetrics.ALL_SCHEMA_METRICS.getBlockMetricName(
-                BlockType.BlockCategory.ALL_CATEGORIES, isCompaction,
-                SchemaMetrics.BlockMetricType.READ_COUNT));
-      }
-
-      LOG.info("Using the following metrics for the number of data blocks " +
-          "read: " + fsBlockReadMetrics);
     }
 
     @Override
@@ -658,13 +689,19 @@ public class HFileReadWriteTest {
       double kvPerSec = kvCount / timeSec;
       long bytes = totalBytes.get();
       double bytesPerSec = bytes / timeSec;
-      long blocks = getTotalBlocksRead();
-      double blkReadPerSec = blocks / timeSec;
 
-      double seekReadPerSec = HFileBlock.getNumSeekAndReadOperations() /
-          timeSec;
-      double preadPerSec = HFileBlock.getNumPositionalReadOperations() /
-          timeSec;
+      // readOps and preadOps counters get reset on access, so we have to
+      // accumulate them here. HRegion metrics publishing thread should not
+      // be running in this tool, so no one else should be resetting these
+      // metrics.
+      totalSeekAndReads += HFile.getReadOps();
+      totalPositionalReads += HFile.getPreadOps();
+      long totalBlocksRead = totalSeekAndReads + totalPositionalReads;
+
+      double blkReadPerSec = totalBlocksRead / timeSec;
+
+      double seekReadPerSec = totalSeekAndReads / timeSec;
+      double preadPerSec = totalPositionalReads / timeSec;
 
       boolean isRead = workload == Workload.RANDOM_READS;
 
@@ -677,7 +714,7 @@ public class HFileReadWriteTest {
       sb.append(", blk/sec: " + (long) blkReadPerSec);
       sb.append(", total KV: " + numKV);
       sb.append(", total bytes: " + totalBytes);
-      sb.append(", total blk: " + blocks);
+      sb.append(", total blk: " + totalBlocksRead);
 
       sb.append(", seekRead/sec: " + (long) seekReadPerSec);
       sb.append(", pread/sec: " + (long) preadPerSec);
@@ -686,13 +723,6 @@ public class HFileReadWriteTest {
         sb.append(", unique keys: " + (long) keysRead.size());
 
       LOG.info(sb.toString());
-    }
-
-    private long getTotalBlocksRead() {
-      long totalBlocksRead = 0;
-      for (String metric : fsBlockReadMetrics)
-        return HRegion.getNumericMetric(metric);
-      return totalBlocksRead;
     }
 
     public void requestStop() {
@@ -750,7 +780,7 @@ public class HFileReadWriteTest {
       boolean pread = true;
       for (int i = 0; i < numReadThreads; ++i)
         ecs.submit(new RandomReader(i, reader, pread));
-      ecs.submit(new StatisticsPrinter(reader.getHFileReader()));
+      ecs.submit(new StatisticsPrinter());
       Future<Boolean> result;
       while (true) {
         try {
@@ -780,9 +810,10 @@ public class HFileReadWriteTest {
       storeFile.closeReader(true);
       exec.shutdown();
 
-      LruBlockCache c = (LruBlockCache) new CacheConfig(conf).getBlockCache();
-      if (c != null)
+      BlockCache c = cacheConf.getBlockCache();
+      if (c != null) {
         c.shutdown();
+      }
     }
     LOG.info("Worker threads completed: " + numCompleted);
     LOG.info("Worker threads failed: " + numFailed);

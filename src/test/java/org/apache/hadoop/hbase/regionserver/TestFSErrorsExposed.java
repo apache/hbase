@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -77,7 +78,9 @@ public class TestFSErrorsExposed {
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
     StoreFile sf = new StoreFile(fs, writer.getPath(),
-        util.getConfiguration(), cacheConf, StoreFile.BloomType.NONE);
+        util.getConfiguration(), cacheConf, StoreFile.BloomType.NONE,
+        NoOpDataBlockEncoder.INSTANCE);
+
     StoreFile.Reader reader = sf.createReader();
     HFileScanner scanner = reader.getScanner(false, true);
 
@@ -120,7 +123,8 @@ public class TestFSErrorsExposed {
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
     StoreFile sf = new StoreFile(fs, writer.getPath(), util.getConfiguration(),
-        cacheConf, BloomType.NONE);
+        cacheConf, BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
         Collections.singletonList(sf), false, true, false);
     KeyValueScanner scanner = scanners.get(0);

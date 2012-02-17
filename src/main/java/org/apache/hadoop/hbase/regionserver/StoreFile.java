@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
@@ -55,6 +57,8 @@ import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -80,7 +84,7 @@ import com.google.common.collect.Ordering;
  * The reason for this weird pattern where you use a different instance for the
  * writer and a reader is that we write once but read a lot more.
  */
-public class StoreFile {
+public class StoreFile extends SchemaConfigured {
   static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
 
   public static enum BloomType {
@@ -121,6 +125,10 @@ public class StoreFile {
   /** Key for Timerange information in metadata*/
   public static final byte[] TIMERANGE_KEY = Bytes.toBytes("TIMERANGE");
 
+  /** Type of encoding used for data blocks in HFile. Stored in file info. */
+  public static final byte[] DATA_BLOCK_ENCODING =
+      Bytes.toBytes("DATA_BLOCK_ENCODING");
+
   // Make default block size for StoreFiles 8k while testing.  TODO: FIX!
   // Need to make it 8k for testing.
   public static final int DEFAULT_BLOCKSIZE_SMALL = 8 * 1024;
@@ -138,6 +146,9 @@ public class StoreFile {
 
   // Block cache configuration and reference.
   private final CacheConfig cacheConf;
+
+  // What kind of data block encoding will be used
+  private final HFileDataBlockEncoder dataBlockEncoder;
 
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
@@ -206,18 +217,23 @@ public class StoreFile {
    *          as the Bloom filter type actually present in the HFile, because
    *          column family configuration might change. If this is
    *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
+   * @param dataBlockEncoder data block encoding algorithm.
    * @throws IOException When opening the reader fails.
    */
   StoreFile(final FileSystem fs,
             final Path p,
             final Configuration conf,
             final CacheConfig cacheConf,
-            final BloomType cfBloomType)
+            final BloomType cfBloomType,
+            final HFileDataBlockEncoder dataBlockEncoder)
       throws IOException {
     this.conf = conf;
     this.fs = fs;
     this.path = p;
     this.cacheConf = cacheConf;
+    this.dataBlockEncoder =
+        dataBlockEncoder == null ? NoOpDataBlockEncoder.INSTANCE
+            : dataBlockEncoder;
     if (isReference(p)) {
       this.reference = Reference.read(fs, p);
       this.referencePath = getReferredToFile(this.path);
@@ -400,10 +416,12 @@ public class StoreFile {
 
     if (isReference()) {
       this.reader = new HalfStoreFileReader(this.fs, this.referencePath,
-          this.cacheConf, this.reference);
+          this.cacheConf, this.reference,
+          dataBlockEncoder.getEncodingInCache());
     } else {
       SchemaMetrics.configureGlobally(conf);
-      this.reader = new Reader(this.fs, this.path, this.cacheConf);
+      this.reader = new Reader(this.fs, this.path, this.cacheConf,
+          dataBlockEncoder.getEncodingInCache());
     }
 
     // Load up indices and fileinfo. This also loads Bloom filter type.
@@ -492,6 +510,10 @@ public class StoreFile {
     return this.reader;
   }
 
+  /**
+   * @param evictOnClose whether to evict blocks belonging to this file
+   * @throws IOException
+   */
   public synchronized void closeReader(boolean evictOnClose)
       throws IOException {
     if (this.reader != null) {
@@ -568,8 +590,9 @@ public class StoreFile {
   public static Writer createWriter(final FileSystem fs, final Path dir,
       final int blocksize, Configuration conf, CacheConfig cacheConf)
   throws IOException {
-    return createWriter(fs, dir, blocksize, null, null, conf, cacheConf,
-        BloomType.NONE, 0);
+    return createWriter(fs, dir, blocksize, null,
+        NoOpDataBlockEncoder.INSTANCE, null, conf, cacheConf, BloomType.NONE,
+        0.0f, 0, null);
   }
 
   public static StoreFile.Writer createWriter(final FileSystem fs,
@@ -582,9 +605,9 @@ public class StoreFile {
           BloomType bloomType,
           long maxKeyCount)
   throws IOException {
-      return createWriter(fs, dir, blocksize, algorithm, c, conf, cacheConf,
-          bloomType, BloomFilterFactory.getErrorRate(conf), maxKeyCount,
-          null);
+    return createWriter(fs, dir, blocksize, algorithm,
+        NoOpDataBlockEncoder.INSTANCE, c, conf, cacheConf, bloomType,
+        BloomFilterFactory.getErrorRate(conf), maxKeyCount, null);
   }
 
   /**
@@ -594,8 +617,9 @@ public class StoreFile {
    * @param dir Path to family directory.  Makes the directory if doesn't exist.
    * Creates a file with a unique name in this directory.
    * @param blocksize
-   * @param algorithm Pass null to get default.
-   * @param c Pass null to get default.
+   * @param compressAlgo Compression algorithm. Pass null to get default.
+   * @param dataBlockEncoder Pass null to disable data block encoding.
+   * @param comparator Key-value comparator. Pass null to get default.
    * @param conf HBase system configuration. used with bloom filters
    * @param cacheConf Cache configuration and reference.
    * @param bloomType column family setting for bloom filters
@@ -606,16 +630,13 @@ public class StoreFile {
    * @throws IOException
    */
   public static StoreFile.Writer createWriter(final FileSystem fs,
-                                              final Path dir,
-                                              final int blocksize,
-                                              final Compression.Algorithm algorithm,
-                                              final KeyValue.KVComparator c,
-                                              final Configuration conf,
-                                              final CacheConfig cacheConf,
-                                              BloomType bloomType,
-                                              float bloomErrorRate,
-                                              long maxKeyCount,
-                                              InetSocketAddress[] favoredNodes)
+      final Path dir, final int blocksize,
+      Compression.Algorithm compressAlgo,
+      final HFileDataBlockEncoder dataBlockEncoder,
+      KeyValue.KVComparator comparator, final Configuration conf,
+      final CacheConfig cacheConf, BloomType bloomType, float bloomErrorRate,
+      long maxKeyCount,
+      InetSocketAddress[] favoredNodes)
       throws IOException {
 
     if (!fs.exists(dir)) {
@@ -626,10 +647,15 @@ public class StoreFile {
       bloomType = BloomType.NONE;
     }
 
-    return new Writer(fs, path, blocksize,
-        algorithm == null? HFile.DEFAULT_COMPRESSION_ALGORITHM: algorithm,
-        conf, cacheConf, c == null ? KeyValue.COMPARATOR: c, bloomType,
-        bloomErrorRate, maxKeyCount, favoredNodes);
+    if (compressAlgo == null) {
+      compressAlgo = HFile.DEFAULT_COMPRESSION_ALGORITHM;
+    }
+    if (comparator == null) {
+      comparator = KeyValue.COMPARATOR;
+    }
+    return new Writer(fs, path, blocksize, compressAlgo, dataBlockEncoder,
+        conf, cacheConf, comparator, bloomType, bloomErrorRate,
+        maxKeyCount, favoredNodes);
   }
 
   /**
@@ -723,6 +749,8 @@ public class StoreFile {
     private KeyValue lastDeleteFamilyKV = null;
     private long deleteFamilyCnt = 0;
 
+    protected HFileDataBlockEncoder dataBlockEncoder;
+
     TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
     /* isTimeRangeTrackerSet keeps track if the timeRange has already been set
      * When flushing a memstore, we set TimeRange and use this variable to
@@ -735,13 +763,12 @@ public class StoreFile {
     protected HFile.Writer writer;
 
     public Writer(FileSystem fs, Path path, int blocksize,
-            Compression.Algorithm compress, final Configuration conf,
-            CacheConfig cacheConf,
-            final KVComparator comparator, BloomType bloomType,  long maxKeys)
-            throws IOException {
-	this(fs, path, blocksize, compress, conf, cacheConf, comparator,
-	  bloomType, BloomFilterFactory.getErrorRate(conf), maxKeys,
-        null);
+        Compression.Algorithm compress, final Configuration conf,
+        CacheConfig cacheConf, final KVComparator comparator,
+        BloomType bloomType, long maxKeys) throws IOException {
+      this(fs, path, blocksize, compress, NoOpDataBlockEncoder.INSTANCE, conf,
+          cacheConf, comparator, bloomType,
+          BloomFilterFactory.getErrorRate(conf), maxKeys, null);
     }
 
     /**
@@ -761,15 +788,18 @@ public class StoreFile {
      * @throws IOException problem writing to FS
      */
     public Writer(FileSystem fs, Path path, int blocksize,
-        Compression.Algorithm compress, final Configuration conf,
-        final CacheConfig cacheConf,
-        final KVComparator comparator, BloomType bloomType,
-        float bloomErrorRate, long maxKeys, InetSocketAddress[] favoredNodes)
+        Compression.Algorithm compress,
+        HFileDataBlockEncoder dataBlockEncoder, final Configuration conf,
+        CacheConfig cacheConf, final KVComparator comparator,
+        BloomType bloomType, float bloomErrorRate, long maxKeys,
+        InetSocketAddress[] favoredNodes)
         throws IOException {
-
+      this.dataBlockEncoder = dataBlockEncoder != null ?
+          dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
       writer = HFile.getWriterFactory(conf, cacheConf).createWriter(
           fs, path, blocksize, HFile.getBytesPerChecksum(conf, fs.getConf()),
-          compress, comparator.getRawComparator(), favoredNodes);
+          compress, this.dataBlockEncoder, comparator.getRawComparator(),
+          favoredNodes);
 
       this.kvComparator = comparator;
 
@@ -873,7 +903,8 @@ public class StoreFile {
             newKey = false;
             break;
           default:
-            throw new IOException("Invalid Bloom filter type: " + bloomType);
+            throw new IOException("Invalid Bloom filter type: " + bloomType +
+                " (ROW or ROWCOL expected)");
           }
         }
         if (newKey) {
@@ -1015,6 +1046,9 @@ public class StoreFile {
     }
 
     public void close() throws IOException {
+      // Save data block encoder metadata in the file info.
+      dataBlockEncoder.saveMetadata(this);
+
       boolean hasGeneralBloom = this.closeGeneralBloomFilter();
       boolean hasDeleteFamilyBloom = this.closeDeleteFamilyBloomFilter();
 
@@ -1053,14 +1087,11 @@ public class StoreFile {
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
 
-    private Reader(HFile.Reader reader) {
-      super(reader);
-      this.reader = reader;
-    }
-
-    public Reader(FileSystem fs, Path path, CacheConfig cacheConf)
-        throws IOException {
-      this(HFile.createReader(fs, path, cacheConf));
+    public Reader(FileSystem fs, Path path, CacheConfig cacheConf,
+        DataBlockEncoding preferredEncodingInCache) throws IOException {
+      super(null, path);
+      reader = HFile.createReaderWithEncoding(fs, path, cacheConf,
+          preferredEncodingInCache);
       bloomFilterType = BloomType.NONE;
     }
 

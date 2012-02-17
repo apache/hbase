@@ -38,7 +38,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.CachingBlockReader;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompoundBloomFilterWriter;
@@ -205,8 +207,18 @@ public class HFileBlockIndex {
           // Call HFile's caching block reader API. We always cache index
           // blocks, otherwise we might get terrible performance.
           boolean shouldCache = cacheBlocks || (lookupLevel < searchTreeLevel);
-          block = cachingBlockReader.readBlock(currentOffset, currentOnDiskSize,
-              shouldCache, pread, isCompaction);
+          BlockType expectedBlockType;
+          if (lookupLevel < searchTreeLevel - 1) {
+            expectedBlockType = BlockType.INTERMEDIATE_INDEX;
+          } else if (lookupLevel == searchTreeLevel - 1) {
+            expectedBlockType = BlockType.LEAF_INDEX;
+          } else {
+            // this also accounts for ENCODED_DATA
+            expectedBlockType = BlockType.DATA;
+          }
+          block = cachingBlockReader.readBlock(currentOffset,
+              currentOnDiskSize, shouldCache, pread, isCompaction,
+              expectedBlockType);
         }
 
         if (block == null) {
@@ -215,7 +227,8 @@ public class HFileBlockIndex {
         }
 
         // Found a data block, break the loop and check our level in the tree.
-        if (block.getBlockType().equals(BlockType.DATA)) {
+        if (block.getBlockType().equals(BlockType.DATA) ||
+            block.getBlockType().equals(BlockType.ENCODED_DATA)) {
           break;
         }
 
@@ -272,7 +285,8 @@ public class HFileBlockIndex {
 
         // Caching, using pread, assuming this is not a compaction.
         HFileBlock midLeafBlock = cachingBlockReader.readBlock(
-            midLeafBlockOffset, midLeafBlockOnDiskSize, true, true, false);
+            midLeafBlockOffset, midLeafBlockOnDiskSize, true, true, false,
+            BlockType.LEAF_INDEX);
 
         ByteBuffer b = midLeafBlock.getBufferWithoutHeader();
         int numDataBlocks = b.getInt();
@@ -608,7 +622,8 @@ public class HFileBlockIndex {
    * index. However, in most practical cases we will only have leaf-level
    * blocks and the root index, or just the root index.
    */
-  public static class BlockIndexWriter implements InlineBlockWriter {
+  public static class BlockIndexWriter extends SchemaConfigured
+      implements InlineBlockWriter {
     /**
      * While the index is being written, this represents the current block
      * index referencing all leaf blocks, with one exception. If the file is
@@ -735,8 +750,8 @@ public class HFileBlockIndex {
       long rootLevelIndexPos = out.getPos();
 
       {
-        DataOutput blockStream = blockWriter.startWriting(BlockType.ROOT_INDEX,
-            false);
+        DataOutput blockStream =
+            blockWriter.startWriting(BlockType.ROOT_INDEX);
         rootChunk.writeRoot(blockStream);
         if (midKeyMetadata != null)
           blockStream.write(midKeyMetadata);
@@ -826,14 +841,17 @@ public class HFileBlockIndex {
         BlockIndexChunk parent, BlockIndexChunk curChunk) throws IOException {
       long beginOffset = out.getPos();
       DataOutputStream dos = blockWriter.startWriting(
-          BlockType.INTERMEDIATE_INDEX, cacheOnWrite());
+          BlockType.INTERMEDIATE_INDEX);
       curChunk.writeNonRoot(dos);
       byte[] curFirstKey = curChunk.getBlockKey(0);
       blockWriter.writeHeaderAndData(out);
 
       if (blockCache != null) {
-        blockCache.cacheBlock(HFile.getBlockCacheKey(nameForCaching,
-            beginOffset), blockWriter.getBlockForCaching());
+        HFileBlock blockForCaching = blockWriter.getBlockForCaching();
+        passSchemaMetricsTo(blockForCaching);
+        blockCache.cacheBlock(new BlockCacheKey(nameForCaching,
+            beginOffset, DataBlockEncoding.NONE,
+            blockForCaching.getBlockType()), blockForCaching);
       }
 
       // Add intermediate index block size

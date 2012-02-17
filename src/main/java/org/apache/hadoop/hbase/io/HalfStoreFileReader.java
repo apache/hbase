@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -60,9 +61,9 @@ public class HalfStoreFileReader extends StoreFile.Reader {
    * @throws IOException
    */
   public HalfStoreFileReader(final FileSystem fs, final Path p,
-      final CacheConfig cacheConf, final Reference r)
-  throws IOException {
-    super(fs, p, cacheConf);
+      final CacheConfig cacheConf, final Reference r,
+      DataBlockEncoding preferredEncodingInCache) throws IOException {
+    super(fs, p, cacheConf, preferredEncodingInCache);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't

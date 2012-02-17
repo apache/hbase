@@ -41,9 +41,29 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
   private String tableName = SchemaMetrics.UNKNOWN;
   private SchemaMetrics schemaMetrics;
 
+  /**
+   * Estimated heap size of this object. We don't count table name and column
+   * family name characters because these strings are shared among many
+   * objects. We need unaligned size to reuse this in subclasses.
+   */
+  public static final int SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE =
+      ClassSize.OBJECT + 3 * ClassSize.REFERENCE;
+
+  private static final int SCHEMA_CONFIGURED_ALIGNED_HEAP_SIZE =
+      ClassSize.align(SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE);
+
   /** A helper constructor that configures the "use table name" flag. */
   private SchemaConfigured(Configuration conf) {
       SchemaMetrics.configureGlobally(conf);
+  }
+
+  /**
+   * Creates an instance corresponding to an unknown table and column family.
+   * Used in unit tests.
+   */
+  public static SchemaConfigured createUnknown() {
+    return new SchemaConfigured(null, SchemaMetrics.UNKNOWN,
+        SchemaMetrics.UNKNOWN);
   }
 
   /**
@@ -64,7 +84,7 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
 
     if (path != null) {
       String splits[] = path.toString().split("/");
-      if (splits.length < HFile.HFILE_PATH_LENGTH) {
+      if (splits.length < HFile.MIN_NUM_HFILE_PATH_LEVELS) {
         LOG.warn("Could not determine table and column family of the HFile " +
             "path " + path);
       } else {
@@ -74,6 +94,15 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
     }
 
     initializeMetrics();
+  }
+
+  /**
+   * Used when we know an HFile path to deduce table and CF name from, but do
+   * not have a configuration.
+   * @param path an HFile path
+   */
+  public SchemaConfigured(Path path) {
+    this(null, path);
   }
 
   /**
@@ -131,9 +160,7 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
 
   @Override
   public long heapSize() {
-    // We don't count table name and column family name characters because
-    // these strings are shared among many objects.
-    return ClassSize.align(ClassSize.OBJECT + 3 * ClassSize.REFERENCE);
+    return SCHEMA_CONFIGURED_ALIGNED_HEAP_SIZE;
   }
 
 }

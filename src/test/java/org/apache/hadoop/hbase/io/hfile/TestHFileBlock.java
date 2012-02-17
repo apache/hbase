@@ -19,7 +19,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.*;
+import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.GZ;
+import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.NONE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -27,6 +31,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,15 +50,20 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.DoubleOutputStream;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.Compressor;
-
-import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.*;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 public class TestHFileBlock {
 
   private static final boolean[] BOOLEAN_VALUES = new boolean[] { false, true };
@@ -66,13 +77,28 @@ public class TestHFileBlock {
   static final Compression.Algorithm[] GZIP_ONLY  = { GZ };
 
   private static final int NUM_TEST_BLOCKS = 1000;
-
   private static final int NUM_READER_THREADS = 26;
+
+  // Used to generate KeyValues
+  private static int NUM_KEYVALUES = 50;
+  private static int FIELD_LENGTH = 10;
+  private static float CHANCE_TO_REPEAT = 0.6f;
 
   private static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
   private FileSystem fs;
   private int uncompressedSizeV1;
+
+  private final boolean includesMemstoreTS;
+
+  public TestHFileBlock(boolean includesMemstoreTS) {
+    this.includesMemstoreTS = includesMemstoreTS;
+  }
+
+  @Parameters
+  public static Collection<Object[]> parameters() {
+    return HBaseTestingUtility.BOOLEAN_PARAMETERIZED;
+  }
 
   @Before
   public void setUp() throws IOException {
@@ -84,6 +110,72 @@ public class TestHFileBlock {
     // This compresses really well.
     for (int i = 0; i < 1000; ++i)
       dos.writeInt(i / 100);
+  }
+
+  private int writeTestKeyValues(OutputStream dos, int seed)
+      throws IOException {
+    List<KeyValue> keyValues = new ArrayList<KeyValue>();
+    Random randomizer = new Random(42l + seed); // just any fixed number
+
+    // generate keyValues
+    for (int i = 0; i < NUM_KEYVALUES; ++i) {
+      byte[] row;
+      long timestamp;
+      byte[] family;
+      byte[] qualifier;
+      byte[] value;
+
+      // generate it or repeat, it should compress well
+      if (0 < i && randomizer.nextFloat() < CHANCE_TO_REPEAT) {
+        row = keyValues.get(randomizer.nextInt(keyValues.size())).getRow();
+      } else {
+        row = new byte[FIELD_LENGTH];
+        randomizer.nextBytes(row);
+      }
+      if (0 == i) {
+        family = new byte[FIELD_LENGTH];
+        randomizer.nextBytes(family);
+      } else {
+        family = keyValues.get(0).getFamily();
+      }
+      if (0 < i && randomizer.nextFloat() < CHANCE_TO_REPEAT) {
+        qualifier = keyValues.get(
+            randomizer.nextInt(keyValues.size())).getQualifier();
+      } else {
+        qualifier = new byte[FIELD_LENGTH];
+        randomizer.nextBytes(qualifier);
+      }
+      if (0 < i && randomizer.nextFloat() < CHANCE_TO_REPEAT) {
+        value = keyValues.get(randomizer.nextInt(keyValues.size())).getValue();
+      } else {
+        value = new byte[FIELD_LENGTH];
+        randomizer.nextBytes(value);
+      }
+      if (0 < i && randomizer.nextFloat() < CHANCE_TO_REPEAT) {
+        timestamp = keyValues.get(
+            randomizer.nextInt(keyValues.size())).getTimestamp();
+      } else {
+        timestamp = randomizer.nextLong();
+      }
+
+      keyValues.add(new KeyValue(row, family, qualifier, timestamp, value));
+    }
+
+    // sort it and write to stream
+    int totalSize = 0;
+    Collections.sort(keyValues, KeyValue.COMPARATOR);
+    DataOutputStream dataOutputStream = new DataOutputStream(dos);
+    for (KeyValue kv : keyValues) {
+      totalSize += kv.getLength();
+      dataOutputStream.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
+      if (includesMemstoreTS) {
+        long memstoreTS = randomizer.nextLong();
+        WritableUtils.writeVLong(dataOutputStream, memstoreTS);
+        totalSize += WritableUtils.getVIntSize(memstoreTS);
+      }
+    }
+
+    return totalSize;
   }
 
   public byte[] createTestV1Block(Compression.Algorithm algo)
@@ -103,8 +195,9 @@ public class TestHFileBlock {
   private byte[] createTestV2Block(Compression.Algorithm algo)
       throws IOException {
     final BlockType blockType = BlockType.DATA;
-    HFileBlock.Writer hbw = new HFileBlock.Writer(algo);
-    DataOutputStream dos = hbw.startWriting(blockType, false);
+    HFileBlock.Writer hbw = new HFileBlock.Writer(algo, null,
+        includesMemstoreTS);
+    DataOutputStream dos = hbw.startWriting(blockType);
     writeTestBlockContents(dos);
     byte[] headerAndData = hbw.getHeaderAndData();
     assertEquals(1000 * 4, hbw.getUncompressedSizeWithoutHeader());
@@ -175,10 +268,11 @@ public class TestHFileBlock {
         Path path = new Path(HBaseTestingUtility.getTestDir(), "blocks_v2_"
             + algo);
         FSDataOutputStream os = fs.create(path);
-        HFileBlock.Writer hbw = new HFileBlock.Writer(algo);
+        HFileBlock.Writer hbw = new HFileBlock.Writer(algo, null,
+            includesMemstoreTS);
         long totalSize = 0;
         for (int blockId = 0; blockId < 2; ++blockId) {
-          DataOutputStream dos = hbw.startWriting(BlockType.DATA, false);
+          DataOutputStream dos = hbw.startWriting(BlockType.DATA);
           for (int i = 0; i < 1234; ++i)
             dos.writeInt(i);
           hbw.writeHeaderAndData(os);
@@ -219,6 +313,136 @@ public class TestHFileBlock {
         }
       }
     }
+  }
+
+  /**
+   * Test encoding/decoding data blocks.
+   * @throws IOException a bug or a problem with temporary files.
+   */
+  @Test
+  public void testDataBlockEncoding() throws IOException {
+    final int numBlocks = 5;
+    for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
+      for (boolean pread : new boolean[] { false, true }) {
+        for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+          Path path = new Path(HBaseTestingUtility.getTestDir(), "blocks_v2_"
+              + algo + "_" + encoding.toString());
+          FSDataOutputStream os = fs.create(path);
+          HFileDataBlockEncoder dataBlockEncoder =
+              new HFileDataBlockEncoderImpl(encoding);
+          HFileBlock.Writer hbw = new HFileBlock.Writer(algo, dataBlockEncoder,
+              includesMemstoreTS);
+          long totalSize = 0;
+          final List<Integer> encodedSizes = new ArrayList<Integer>();
+          final List<ByteBuffer> encodedBlocks = new ArrayList<ByteBuffer>();
+          for (int blockId = 0; blockId < numBlocks; ++blockId) {
+            writeEncodedBlock(encoding, hbw, encodedSizes, encodedBlocks,
+                blockId);
+
+            hbw.writeHeaderAndData(os);
+            totalSize += hbw.getOnDiskSizeWithHeader();
+          }
+          os.close();
+
+          FSDataInputStream is = fs.open(path);
+          HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(is, algo,
+              totalSize);
+          hbr.setDataBlockEncoder(dataBlockEncoder);
+          hbr.setIncludesMemstoreTS(includesMemstoreTS);
+
+          HFileBlock b;
+          int pos = 0;
+          for (int blockId = 0; blockId < numBlocks; ++blockId) {
+            b = hbr.readBlockData(pos, -1, -1, pread);
+            b.sanityCheck();
+            pos += b.getOnDiskSizeWithHeader();
+
+            assertEquals((int) encodedSizes.get(blockId),
+                b.getUncompressedSizeWithoutHeader());
+            ByteBuffer actualBuffer = b.getBufferWithoutHeader();
+            if (encoding != DataBlockEncoding.NONE) {
+              // We expect a two-byte big-endian encoding id.
+              assertEquals(0, actualBuffer.get(0));
+              assertEquals(encoding.getId(), actualBuffer.get(1));
+              actualBuffer.position(2);
+              actualBuffer = actualBuffer.slice();
+            }
+
+            ByteBuffer expectedBuffer = encodedBlocks.get(blockId);
+            expectedBuffer.rewind();
+
+            // test if content matches, produce nice message
+            assertBuffersEqual(expectedBuffer, actualBuffer, algo, encoding,
+                pread);
+          }
+          is.close();
+        }
+      }
+    }
+  }
+
+  private void writeEncodedBlock(DataBlockEncoding encoding,
+      HFileBlock.Writer hbw, final List<Integer> encodedSizes,
+      final List<ByteBuffer> encodedBlocks, int blockId) throws IOException {
+    DataOutputStream dos = hbw.startWriting(BlockType.DATA);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DoubleOutputStream doubleOutputStream =
+        new DoubleOutputStream(dos, baos);
+
+    final int rawBlockSize = writeTestKeyValues(doubleOutputStream,
+        blockId);
+
+    ByteBuffer rawBuf = ByteBuffer.wrap(baos.toByteArray());
+    rawBuf.rewind();
+
+    final int encodedSize;
+    final ByteBuffer encodedBuf;
+    if (encoding == DataBlockEncoding.NONE) {
+      encodedSize = rawBlockSize;
+      encodedBuf = rawBuf;
+    } else {
+      ByteArrayOutputStream encodedOut = new ByteArrayOutputStream();
+      encoding.getEncoder().compressKeyValues(
+          new DataOutputStream(encodedOut),
+          rawBuf.duplicate(), includesMemstoreTS);
+      // We need to account for the two-byte encoding algorithm ID that
+      // comes after the 24-byte block header but before encoded KVs.
+      encodedSize = encodedOut.size() + DataBlockEncoding.ID_SIZE;
+      encodedBuf = ByteBuffer.wrap(encodedOut.toByteArray());
+    }
+    encodedSizes.add(encodedSize);
+    encodedBlocks.add(encodedBuf);
+  }
+
+  private void assertBuffersEqual(ByteBuffer expectedBuffer,
+      ByteBuffer actualBuffer, Compression.Algorithm compression,
+      DataBlockEncoding encoding, boolean pread) {
+    if (!actualBuffer.equals(expectedBuffer)) {
+      int prefix = 0;
+      int minLimit = Math.min(expectedBuffer.limit(), actualBuffer.limit());
+      while (prefix < minLimit &&
+          expectedBuffer.get(prefix) == actualBuffer.get(prefix)) {
+        prefix++;
+      }
+
+      fail(String.format(
+          "Content mismath for compression %s, encoding %s, " +
+          "pread %s, commonPrefix %d, expected %s, got %s",
+          compression, encoding, pread, prefix,
+          nextBytesToStr(expectedBuffer, prefix),
+          nextBytesToStr(actualBuffer, prefix)));
+    }
+  }
+
+  /**
+   * Convert a few next bytes in the given buffer at the given position to
+   * string. Used for error messages.
+   */
+  private static String nextBytesToStr(ByteBuffer buf, int pos) {
+    int maxBytes = buf.limit() - pos;
+    int numBytes = Math.min(16, maxBytes);
+    return Bytes.toStringBinary(buf.array(), buf.arrayOffset() + pos,
+        numBytes) + (numBytes < maxBytes ? "..." : "");
   }
 
   @Test
@@ -421,13 +645,17 @@ public class TestHFileBlock {
       boolean detailedLogging) throws IOException {
     boolean cacheOnWrite = expectedContents != null;
     FSDataOutputStream os = fs.create(path);
-    HFileBlock.Writer hbw = new HFileBlock.Writer(compressAlgo);
+    HFileBlock.Writer hbw = new HFileBlock.Writer(compressAlgo, null,
+        includesMemstoreTS);
     Map<BlockType, Long> prevOffsetByType = new HashMap<BlockType, Long>();
     long totalSize = 0;
     for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
       int blockTypeOrdinal = rand.nextInt(BlockType.values().length);
+      if (blockTypeOrdinal == BlockType.ENCODED_DATA.ordinal()) {
+        blockTypeOrdinal = BlockType.DATA.ordinal();
+      }
       BlockType bt = BlockType.values()[blockTypeOrdinal];
-      DataOutputStream dos = hbw.startWriting(bt, cacheOnWrite);
+      DataOutputStream dos = hbw.startWriting(bt);
       for (int j = 0; j < rand.nextInt(500); ++j) {
         // This might compress well.
         dos.writeShort(i + 1);
@@ -470,8 +698,7 @@ public class TestHFileBlock {
       byte[] byteArr = new byte[HFileBlock.HEADER_SIZE + size];
       ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
       HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-          true, -1);
-      assertEquals(80, HFileBlock.BYTE_BUFFER_HEAP_SIZE);
+          HFileBlock.FILL_HEADER, -1, includesMemstoreTS);
       long byteBufferExpectedSize =
           ClassSize.align(ClassSize.estimateBase(buf.getClass(), true)
               + HFileBlock.HEADER_SIZE + size);

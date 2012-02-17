@@ -306,7 +306,7 @@ public class RegionServerMetrics implements Updater {
       addHLogMetric(HLog.getGSyncTime(), this.fsGroupSyncLatency);
       // HFile metrics
       int ops = HFile.getReadOps();
-      if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTime());
+      if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTimeMs());
       /* NOTE: removed HFile write latency.  2 reasons:
        * 1) Mixing HLog latencies are far higher priority since they're
        *      on-demand and HFile is used in background (compact/flush)

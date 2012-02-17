@@ -54,7 +54,9 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -427,6 +429,19 @@ public class HBaseTestingUtility {
     clusterTestBuildDir = null;
     LOG.info("Minicluster is down");
     clusterTestBuildDir = null;
+  }
+
+  /**
+   * Shutdown HBase mini cluster.  Does not shutdown zk or dfs if running.
+   * @throws IOException
+   */
+  public void shutdownMiniHBaseCluster() throws IOException {
+    if (this.hbaseCluster != null) {
+      this.hbaseCluster.shutdown();
+      // Wait till hbase is down before going on to shutdown zk.
+      this.hbaseCluster.join();
+      this.hbaseCluster = null;
+    }
   }
 
   /**
@@ -1292,7 +1307,8 @@ public class HBaseTestingUtility {
 
   public HRegion createTestRegion(String tableName, String cfName,
       Compression.Algorithm comprAlgo, BloomType bloomType, int maxVersions,
-      int blockSize) throws IOException {
+      int blockSize, DataBlockEncoding encoding, boolean encodeOnDisk)
+      throws IOException {
     HColumnDescriptor hcd =
       new HColumnDescriptor(Bytes.toBytes(cfName), maxVersions,
           comprAlgo.getName(),
@@ -1301,6 +1317,8 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_TTL,
           bloomType.toString());
     hcd.setBlocksize(HFile.DEFAULT_BLOCKSIZE);
+    hcd.setDataBlockEncoding(encoding);
+    hcd.setEncodeOnDisk(encodeOnDisk);
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(hcd);
     HRegionInfo info =

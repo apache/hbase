@@ -344,4 +344,24 @@ public class TestKeyValue extends TestCase {
       }
     }
   }
+
+  public void testCreateKeyValueFromKey() {
+    KeyValue kv = new KeyValue(Bytes.toBytes("myRow"), Bytes.toBytes("myCF"),
+        Bytes.toBytes("myQualifier"), 12345L, Bytes.toBytes("myValue"));
+    int initialPadding = 10;
+    int endingPadding = 20;
+    int keyLen = kv.getKeyLength();
+    byte[] tmpArr = new byte[initialPadding + endingPadding + keyLen];
+    System.arraycopy(kv.getBuffer(), kv.getKeyOffset(), tmpArr,
+        initialPadding, keyLen);
+    KeyValue kvFromKey = KeyValue.createKeyValueFromKey(tmpArr, initialPadding,
+        keyLen);
+    assertEquals(keyLen, kvFromKey.getKeyLength());
+    assertEquals(KeyValue.ROW_OFFSET + keyLen, kvFromKey.getBuffer().length);
+    System.err.println("kv=" + kv);
+    System.err.println("kvFromKey=" + kvFromKey);
+    assertEquals(kvFromKey.toString(),
+        kv.toString().replaceAll("=[0-9]+$", "=0"));
+  }
+
 }
