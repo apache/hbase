@@ -1792,176 +1792,20 @@
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
+          <artifactId>hadoop-client</artifactId>
           <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <exclusions>
-            <!--Needs more work, tightening-->
-            <exclusion>
-              <groupId>hsqldb</groupId>
-              <artifactId>hsqldb</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.sf.kosmosfs</groupId>
-              <artifactId>kfs</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.eclipse.jdt</groupId>
-              <artifactId>core</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.java.dev.jets3t</groupId>
-              <artifactId>jets3t</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>oro</groupId>
-              <artifactId>oro</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>jdiff</groupId>
-              <artifactId>jdiff</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.apache.lucene</groupId>
-              <artifactId>lucene-core</artifactId>
-            </exclusion>
-          </exclusions>
         </dependency>
-        <!-- need the annotations to avoid compiler issues. This is
-             really an upstream issue with Hadoop -->
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-annotations</artifactId>
           <version>${hadoop.version}</version>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <exclusions>
-            <!--Needs more work, tightening-->
-            <exclusion>
-              <groupId>hsqldb</groupId>
-              <artifactId>hsqldb</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.sf.kosmosfs</groupId>
-              <artifactId>kfs</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.eclipse.jdt</groupId>
-              <artifactId>core</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.java.dev.jets3t</groupId>
-              <artifactId>jets3t</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>oro</groupId>
-              <artifactId>oro</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>jdiff</groupId>
-              <artifactId>jdiff</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.apache.lucene</groupId>
-              <artifactId>lucene-core</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <exclusions>
-            <!--Needs more work, tightening-->
-            <exclusion>
-              <groupId>hsqldb</groupId>
-              <artifactId>hsqldb</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.sf.kosmosfs</groupId>
-              <artifactId>kfs</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.eclipse.jdt</groupId>
-              <artifactId>core</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.java.dev.jets3t</groupId>
-              <artifactId>jets3t</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>oro</groupId>
-              <artifactId>oro</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>jdiff</groupId>
-              <artifactId>jdiff</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.apache.lucene</groupId>
-              <artifactId>lucene-core</artifactId>
-            </exclusion>
-          </exclusions>
         </dependency>
         <!-- test deps for hadoop-0.23 profile -->
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
+          <artifactId>hadoop-minicluster</artifactId>
           <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <type>test-jar</type>
-          <scope>test</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <type>test-jar</type>
-          <scope>test</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <scope>test</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <type>test-jar</type>
-          <scope>test</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-app</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <scope>test</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-hs</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <scope>test</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-yarn-server-tests</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <type>test-jar</type>
-          <scope>test</scope>
+          <scope>compile</scope>
         </dependency>
       </dependencies>
       <build>
