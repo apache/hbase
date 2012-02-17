@@ -397,9 +397,15 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
      lock.lock();
     }
     try {
-      if (region.flushcache()) {
+      boolean shouldCompact = region.flushcache();
+      // We just want to check the size
+      boolean shouldSplit = region.checkSplit() != null;
+      if (shouldSplit) {
+        this.server.compactSplitThread.requestSplit(region);
+      } else if (shouldCompact) {
         server.compactSplitThread.requestCompaction(region, getName());
       }
+
       server.getMetrics().addFlush(region.getRecentFlushInfo());
     } catch (DroppedSnapshotException ex) {
       // Cache flush can fail in a few places. If it fails in a critical
