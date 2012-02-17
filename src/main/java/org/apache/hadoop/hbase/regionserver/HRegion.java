@@ -4122,6 +4122,8 @@ public class HRegion implements HeapSize { // , Writable{
        }
     }
 
+    Scan scan = new Scan(get);
+
     RegionScanner scanner = null;
     try {
       scanner = getScanner(scan);
