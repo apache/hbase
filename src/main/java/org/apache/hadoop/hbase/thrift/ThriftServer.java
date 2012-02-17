@@ -205,7 +205,7 @@ public class ThriftServer {
     }
 
     /** Create a handler without metrics. Used by unit test only */
-    HBaseHandler(final Configuration c) throws IOException {
+    protected HBaseHandler(final Configuration c) throws IOException {
       this(c, null);
     }
 
