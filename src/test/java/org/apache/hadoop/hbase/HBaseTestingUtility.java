@@ -1316,9 +1316,14 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_BLOCKCACHE,
           HColumnDescriptor.DEFAULT_TTL,
           bloomType.toString());
-    hcd.setBlocksize(HFile.DEFAULT_BLOCKSIZE);
+    hcd.setBlocksize(blockSize);
     hcd.setDataBlockEncoding(encoding);
     hcd.setEncodeOnDisk(encodeOnDisk);
+    return createTestRegion(tableName, hcd);
+  }
+
+  public HRegion createTestRegion(String tableName, HColumnDescriptor hcd)
+      throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(hcd);
     HRegionInfo info =
