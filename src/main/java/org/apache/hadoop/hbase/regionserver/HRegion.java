@@ -4112,7 +4112,6 @@ public class HRegion implements HeapSize { // , Writable{
   private List<KeyValue> get(Get get, boolean withCoprocessor)
   throws IOException {
     long now = EnvironmentEdgeManager.currentTimeMillis();
-    Scan scan = new Scan(get);
 
     List<KeyValue> results = new ArrayList<KeyValue>();
 
@@ -4122,8 +4121,6 @@ public class HRegion implements HeapSize { // , Writable{
          return results;
        }
     }
-
-    Scan scan = new Scan(get);
 
     RegionScanner scanner = null;
     try {
