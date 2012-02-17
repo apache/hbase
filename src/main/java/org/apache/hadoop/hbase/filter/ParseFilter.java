@@ -23,12 +23,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
-import java.util.ArrayList;
-import java.util.EmptyStackException;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -43,6 +41,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Filter Language can be found at: https://issues.apache.org/jira/browse/HBASE-4176
  */
 public class ParseFilter {
+  private static final Log LOG = LogFactory.getLog(ParseFilter.class);
 
   private static HashMap<ByteBuffer, Integer> operatorPrecedenceHashMap;
   private static HashMap<String, String> filterHashMap;
@@ -831,5 +830,27 @@ public class ParseFilter {
  */
   public Set<String> getSupportedFilters () {
     return filterHashMap.keySet();
+  }
+
+  /**
+   * Returns all known filters
+   * @return an unmodifiable map of filters
+   */
+  public static Map<String, String> getAllFilters() {
+    return Collections.unmodifiableMap(filterHashMap);
+  }
+
+  /**
+   * Register a new filter with the parser.  If the filter is already registered,
+   * an IllegalArgumentException will be thrown.
+   *
+   * @param name a name for the filter
+   * @param filterClass fully qualified class name
+   */
+  public static void registerFilter(String name, String filterClass) {
+    if(LOG.isInfoEnabled())
+      LOG.info("Registering new filter " + name);
+
+    filterHashMap.put(name, filterClass);
   }
 }

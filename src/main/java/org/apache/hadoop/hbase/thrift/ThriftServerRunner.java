@@ -365,6 +365,8 @@ public class ThriftServerRunner implements Runnable {
       User.login(conf, "hbase.thrift.keytab.file",
           "hbase.thrift.kerberos.principal", machineName);
     }
+
+    registerFilters(conf);
   }
 
   ExecutorService createExecutor(BlockingQueue<Runnable> callQueue,
@@ -1338,6 +1340,20 @@ public class ThriftServerRunner implements Runnable {
       String name = Bytes.toStringBinary(entry.getKey());
       byte[] value =  Bytes.toBytes(entry.getValue());
       op.setAttribute(name, value);
+    }
+  }
+
+  public static void registerFilters(Configuration conf) {
+    String[] filters = conf.getStrings("hbase.thrift.filters");
+    if(filters != null) {
+      for(String filterClass: filters) {
+        String[] filterPart = filterClass.split(":");
+        if(filterPart.length != 2) {
+          LOG.warn("Invalid filter specification " + filterClass + " - skipping");
+        } else {
+          ParseFilter.registerFilter(filterPart[0], filterPart[1]);
+        }
+      }
     }
   }
 }

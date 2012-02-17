@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Collection;
 
+import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.junit.experimental.categories.Category;
 import org.junit.Test;
 import org.junit.BeforeClass;
@@ -102,6 +103,7 @@ public class TestThriftServer {
     doTestTableTimestampsAndColumns();
     doTestTableScanners();
     doTestGetTableRegions();
+    doTestFilterRegistration();
   }
 
   /**
@@ -427,6 +429,18 @@ public class TestThriftServer {
     regionCount = handler.getTableRegions(tableAname).size();
     assertEquals("non-existing table should have 0 region, " +
             "but found " + regionCount, regionCount, 0);
+  }
+  
+  public void doTestFilterRegistration() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    
+    conf.set("hbase.thrift.filters", "MyFilter:filterclass");
+
+    ThriftServerRunner.registerFilters(conf);
+    
+    Map<String, String> registeredFilters = ParseFilter.getAllFilters();
+    
+    assertEquals("filterclass", registeredFilters.get("MyFilter"));
   }
 
   /**
