@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.RowMutation;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -280,7 +280,7 @@ public class TestAtomicOperation extends HBaseTestCase {
                 region.flushcache();
               }
               long ts = timeStamps.incrementAndGet();
-              RowMutation rm = new RowMutation(row);
+              RowMutations rm = new RowMutations(row);
               if (op) {
                 Put p = new Put(row, ts);
                 p.add(fam1, qual1, value1);

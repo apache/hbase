@@ -83,7 +83,7 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.RowMutation;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -3156,7 +3156,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  public void mutateRow(byte[] regionName, RowMutation rm)
+  public void mutateRow(byte[] regionName, RowMutations rm)
       throws IOException {
     checkOpen();
     if (regionName == null) {
@@ -3321,8 +3321,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           } else if (action instanceof Append) {
             response.add(regionName, originalIndex,
                 append(regionName, (Append)action));
-          } else if (action instanceof RowMutation) {
-            mutateRow(regionName, (RowMutation)action);
+          } else if (action instanceof RowMutations) {
+            mutateRow(regionName, (RowMutations)action);
             response.add(regionName, originalIndex, new Result());
           } else {
             LOG.debug("Error: invalid Action, row must be a Get, Delete, " +
