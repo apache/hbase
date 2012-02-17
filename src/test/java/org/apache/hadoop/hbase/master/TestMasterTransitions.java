@@ -51,10 +51,9 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -63,18 +62,21 @@ import org.junit.Test;
  */
 public class TestMasterTransitions {
   private static final Log LOG = LogFactory.getLog(TestMasterTransitions.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String TABLENAME = "master_transitions";
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a"),
     Bytes.toBytes("b"), Bytes.toBytes("c")};
+
   static final int SERVER_DURATION = 3 * 1000;
   static final int CLOSE_DURATION = 1 * 1000;
+
+  private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   /**
    * Start up a mini cluster and put a small table of many empty regions into it.
    * @throws Exception
    */
-  @BeforeClass public static void beforeAllTests() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     // Parcel out the regions, don't give them out in big lumps.  We've only
     // a few in this test.  Let a couple of cycles pass is more realistic and
@@ -90,14 +92,12 @@ public class TestMasterTransitions {
     int countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
     TEST_UTIL.waitUntilAllRegionsAssigned(countOfRegions);
     addToEachStartKey(countOfRegions);
-  }
-
-  @AfterClass public static void afterAllTests() throws IOException {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @Before public void setup() throws IOException {
     TEST_UTIL.ensureSomeRegionServersAvailable(2);
+  }
+
+  @After
+  public void tearDown() throws IOException {
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   /**
@@ -462,8 +462,7 @@ public class TestMasterTransitions {
    * @return Count of regions in meta table.
    * @throws IOException
    */
-  private static int countOfMetaRegions()
-  throws IOException {
+  private int countOfMetaRegions() throws IOException {
     HTable meta = new HTable(TEST_UTIL.getConfiguration(),
       HConstants.META_TABLE_NAME);
     int rows = 0;
@@ -487,7 +486,7 @@ public class TestMasterTransitions {
    * @return
    * @throws IOException
    */
-  private static int addToEachStartKey(final int expected) throws IOException {
+  private int addToEachStartKey(final int expected) throws IOException {
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
     HTable meta = new HTable(TEST_UTIL.getConfiguration(),
         HConstants.META_TABLE_NAME);
@@ -516,7 +515,7 @@ public class TestMasterTransitions {
    * @return Count of rows in TABLENAME
    * @throws IOException
    */
-  private static int count() throws IOException {
+  private int count() throws IOException {
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
     int rows = 0;
     Scan scan = new Scan();
