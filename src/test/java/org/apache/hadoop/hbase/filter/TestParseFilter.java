@@ -650,6 +650,13 @@ public class TestParseFilter {
     FirstKeyOnlyFilter firstKeyOnlyFilter =
       doTestFilter(filterString, FirstKeyOnlyFilter.class);
   }
+  
+  @Test
+  public void testRegisterFilter() {
+    ParseFilter.registerFilter("MyFilter", "some.class");
+    
+    assertTrue(f.getSupportedFilters().contains("MyFilter"));
+  }
 
   private <T extends Filter> T doTestFilter(String filterString, Class<T> clazz) throws IOException {
     byte [] filterStringAsByteArray = Bytes.toBytes(filterString);
