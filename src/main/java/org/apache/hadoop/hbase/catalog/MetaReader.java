@@ -118,6 +118,8 @@ public class MetaReader {
         Pair<HRegionInfo, ServerName> region = parseCatalogResult(r);
         if (region == null) return true;
         HRegionInfo hri = region.getFirst();
+        if (hri  == null) return true;
+        if (hri.getTableNameAsString() == null) return true;
         if (disabledTables.contains(
             hri.getTableNameAsString())) return true;
         // Are we to include split parents in the list?

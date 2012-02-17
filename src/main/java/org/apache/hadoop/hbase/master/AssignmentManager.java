@@ -2188,6 +2188,7 @@ public class AssignmentManager extends ZooKeeperListener {
       if (region == null) continue;
       HRegionInfo regionInfo = region.getFirst();
       ServerName regionLocation = region.getSecond();
+      if (regionInfo == null) continue;
       String tableName = regionInfo.getTableNameAsString();
       if (regionLocation == null) {
         // regionLocation could be null if createTable didn't finish properly.

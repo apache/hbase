@@ -26,6 +26,8 @@ Release 0.92.1 - Unreleased
                TestHFileOutputFormat (Gregory Chanan)
    HBASE-5195  [Coprocessors] preGet hook does not allow overriding or
                wrapping filter on incoming Get
+   HBASE-5279  NPE in Master after upgrading to 0.92.0
+               (Tobias Herbert)
  
   IMPROVEMENTS
    HBASE-5197  [replication] Handle socket timeouts in ReplicationSource
