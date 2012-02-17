@@ -60,9 +60,11 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState.State;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
@@ -84,6 +86,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
 
@@ -1744,6 +1747,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // TODO: Method needs refactoring.  Ugly buried returns throughout.  Beware!
     LOG.debug("Starting unassignment of region " +
       region.getRegionNameAsString() + " (offlining)");
+
     synchronized (this.regions) {
       // Check if this region is currently assigned
       if (!regions.containsKey(region)) {
@@ -1811,11 +1815,29 @@ public class AssignmentManager extends ZooKeeperListener {
           "already in transition (" + state.getState() + ", force=" + force + ")");
         return;
       }
-    }
+    } 
     // Send CLOSE RPC
     ServerName server = null;
     synchronized (this.regions) {
       server = regions.get(region);
+    }
+    // ClosedRegionhandler can remove the server from this.regions
+    if (server == null) {
+      // Possibility of disable flow removing from RIT.
+      synchronized (regionsInTransition) {
+        state = regionsInTransition.get(encodedName);
+        if (state != null) {
+          // remove only if the state is PENDING_CLOSE or CLOSING
+          State presentState = state.getState();
+          if (presentState == State.PENDING_CLOSE
+              || presentState == State.CLOSING) {
+            this.regionsInTransition.remove(encodedName);
+          }
+        }
+      }
+      // delete the node. if no node exists need not bother.
+      deleteClosingOrClosedNode(region);
+      return;
     }
     try {
       // TODO: We should consider making this look more like it does for the
@@ -1852,6 +1874,7 @@ public class AssignmentManager extends ZooKeeperListener {
             synchronized (this.regions) {
               this.regions.remove(region);
             }
+            deleteClosingOrClosedNode(region);
           }
         }
         // RS is already processing this region, only need to update the timestamp
@@ -1863,6 +1886,30 @@ public class AssignmentManager extends ZooKeeperListener {
       LOG.info("Server " + server + " returned " + t + " for " +
         region.getEncodedName());
       // Presume retry or server will expire.
+    }
+  }
+  
+  private void deleteClosingOrClosedNode(HRegionInfo region) {
+    try {
+      if (!ZKAssign.deleteNode(master.getZooKeeper(), region.getEncodedName(),
+          EventHandler.EventType.M_ZK_REGION_CLOSING)) {
+        boolean deleteNode = ZKAssign.deleteNode(master.getZooKeeper(), region
+            .getEncodedName(), EventHandler.EventType.RS_ZK_REGION_CLOSED);
+        // TODO : We don't abort if the delete node returns false. Is there any
+        // such corner case?
+        if (!deleteNode) {
+          LOG.error("The deletion of the CLOSED node for the region "
+              + region.getEncodedName() + " returned " + deleteNode);
+        }
+      }
+    } catch (NoNodeException e) {
+      LOG.debug("CLOSING/CLOSED node for the region " + region.getEncodedName()
+          + " already deleted");
+    } catch (KeeperException ke) {
+      master.abort(
+          "Unexpected ZK exception deleting node CLOSING/CLOSED for the region "
+              + region.getEncodedName(), ke);
+      return;
     }
   }
 
