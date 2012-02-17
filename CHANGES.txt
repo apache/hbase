@@ -30,6 +30,8 @@ Release 0.92.1 - Unreleased
                to prevent DDOS
    HBASE-5395  CopyTable needs to use GenericOptionsParser
    HBASE-5393  Consider splitting after flushing
+   HBASE-5421  use hadoop-client/hadoop-minicluster artifacts for Hadoop
+               0.23 build (Shaneal Manek)
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()
