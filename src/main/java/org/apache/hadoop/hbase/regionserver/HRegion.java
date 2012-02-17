@@ -3677,8 +3677,6 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private List<KeyValue> get(Get get, boolean withCoprocessor)
   throws IOException {
-    Scan scan = new Scan(get);
-
     List<KeyValue> results = new ArrayList<KeyValue>();
 
     // pre-get CP hook
@@ -3687,6 +3685,8 @@ public class HRegion implements HeapSize { // , Writable{
          return results;
        }
     }
+
+    Scan scan = new Scan(get);
 
     RegionScanner scanner = null;
     try {

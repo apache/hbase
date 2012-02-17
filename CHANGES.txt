@@ -24,6 +24,8 @@ Release 0.92.1 - Unreleased
                (master's EnableTableHandler)  (Terry Zhang)
    HBASE-5317  Fix testColumnFamilyCompression and test_TIMERANGE in
                TestHFileOutputFormat (Gregory Chanan)
+   HBASE-5195  [Coprocessors] preGet hook does not allow overriding or
+               wrapping filter on incoming Get
  
   IMPROVEMENTS
    HBASE-5197  [replication] Handle socket timeouts in ReplicationSource
