@@ -1378,6 +1378,11 @@ public abstract class HBaseServer implements RpcServer {
             // rethrow if no handler
             throw e;
           }
+       } catch (ClosedChannelException cce) {
+          LOG.warn(getName() + " caught a ClosedChannelException, " +
+            "this means that the server was processing a " +
+            "request but the client went away. The error message was: " +
+            cce.getMessage());
         } catch (Exception e) {
           LOG.warn(getName() + " caught: " +
                    StringUtils.stringifyException(e));

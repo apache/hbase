@@ -888,7 +888,7 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
            as forward lookup. See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3431">HBASE 3431
            RegionServer is not using the name given it by the master; double entry in master listing of servers</link> for gorey details.
           </para>
-          </section>
+        </section>
         <section xml:id="trouble.rs.runtime.codecmsgs">
           <title>Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got
             brand-new compressor' messages</title>
@@ -897,6 +897,15 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
                     Copy the native libs from hadoop under hbase lib dir or
                     symlink them into place and the message should go away.
                 </para>
+        </section>
+        <section xml:id="trouble.rs.runtime.client_went_away">
+           <title>Server handler X on 60020 caught: java.nio.channels.ClosedChannelException</title>
+           <para>
+           If you see this type of message it means that the region server was trying to read/send data from/to a client but
+           it already went away. Typical causes for this are if the client was killed (you see a storm of messages like this when a MapReduce
+           job is killed or fails) or if the client receives a SocketTimeoutException. It's harmless, but you should consider digging in
+           a bit more if you aren't doing something to trigger them.
+           </para>
         </section>
 
       </section>    
