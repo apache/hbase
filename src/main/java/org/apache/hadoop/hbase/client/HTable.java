@@ -752,7 +752,7 @@ public class HTable implements HTableInterface {
    * {@inheritDoc}
    */
   @Override
-  public void mutateRow(final RowMutation rm) throws IOException {
+  public void mutateRow(final RowMutations rm) throws IOException {
     new ServerCallable<Void>(connection, tableName, rm.getRow(),
         operationTimeout) {
       public Void call() throws IOException {

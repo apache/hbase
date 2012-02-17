@@ -503,7 +503,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
 
       @Override
-      public void mutateRow(RowMutation rm) throws IOException {
+      public void mutateRow(RowMutations rm) throws IOException {
         table.mutateRow(rm);
       }
     }

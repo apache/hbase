@@ -4078,7 +4078,7 @@ public class TestFromClientSide {
     byte [][] QUALIFIERS = new byte [][] {
         Bytes.toBytes("a"), Bytes.toBytes("b")
     };
-    RowMutation arm = new RowMutation(ROW);
+    RowMutations arm = new RowMutations(ROW);
     Put p = new Put(ROW);
     p.add(FAMILY, QUALIFIERS[0], VALUE);
     arm.add(p);
@@ -4088,7 +4088,7 @@ public class TestFromClientSide {
     Result r = t.get(g);
     assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[0])));
 
-    arm = new RowMutation(ROW);
+    arm = new RowMutations(ROW);
     p = new Put(ROW);
     p.add(FAMILY, QUALIFIERS[1], VALUE);
     arm.add(p);

@@ -77,7 +77,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.RowMutation;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -4149,7 +4149,7 @@ public class HRegion implements HeapSize { // , Writable{
     return results;
   }
 
-  public void mutateRow(RowMutation rm) throws IOException {
+  public void mutateRow(RowMutations rm) throws IOException {
     mutateRowsWithLocks(rm.getMutations(), Collections.singleton(rm.getRow()));
   }
 

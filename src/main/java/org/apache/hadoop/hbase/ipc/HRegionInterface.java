@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.RowMutation;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -263,7 +263,7 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
       byte [] family, byte [] qualifier, long amount, boolean writeToWAL)
   throws IOException;
 
-  public void mutateRow(byte[] regionName, RowMutation rm)
+  public void mutateRow(byte[] regionName, RowMutations rm)
       throws IOException;
 
   /**

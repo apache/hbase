@@ -151,7 +151,7 @@ public class TestRegionObserverInterface {
     delete.deleteColumn(B, B);
     delete.deleteColumn(C, C);
 
-    RowMutation arm = new RowMutation(ROW);
+    RowMutations arm = new RowMutations(ROW);
     arm.add(put);
     arm.add(delete);
     table.mutateRow(arm);

@@ -272,7 +272,7 @@ public interface HTableInterface extends Closeable {
    * atomically
    * @throws IOException
    */
-  public void mutateRow(final RowMutation rm) throws IOException;
+  public void mutateRow(final RowMutations rm) throws IOException;
 
   /**
    * Appends values to one or more columns within a single row.
