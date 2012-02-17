@@ -253,6 +253,7 @@ public class TestImportTsv {
       }
       assertTrue(verified);
     } finally {
+      htu1.shutdownMiniMapReduceCluster();
       htu1.shutdownMiniCluster();
     }
   }

@@ -28,6 +28,8 @@ Release 0.92.1 - Unreleased
                wrapping filter on incoming Get
    HBASE-5279  NPE in Master after upgrading to 0.92.0
                (Tobias Herbert)
+   HBASE-5420  TestImportTsv does not shut down MR Cluster correctly (fails
+               against 0.23 hadoop) (Gregory Chanan)
  
   IMPROVEMENTS
    HBASE-5197  [replication] Handle socket timeouts in ReplicationSource
