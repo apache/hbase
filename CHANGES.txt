@@ -20,6 +20,8 @@ Release 0.92.1 - Unreleased
    HBASE-5363  Automatically run rat check on mvn release builds
    HBASE-5398  HBase shell disable_all/enable_all/drop_all promp wrong tables
                for confirmation (Jimmy Xiang)
+   HBASE-5425  Punt on the timeout doesn't work in BulkEnabler#waitUntilDone
+               (master's EnableTableHandler)  (Terry Zhang)
 
   IMPROVEMENTS
    HBASE-5197  [replication] Handle socket timeouts in ReplicationSource
