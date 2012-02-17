@@ -108,6 +108,8 @@ public class ThriftServer {
     protected int nextScannerId = 0;
     protected HashMap<Integer, ResultScanner> scannerMap = null;
 
+    final private ThriftMetrics metrics;
+
     private static ThreadLocal<Map<String, HTable>> threadLocalTables = new ThreadLocal<Map<String, HTable>>() {
       @Override
       protected Map<String, HTable> initialValue() {
@@ -187,16 +189,24 @@ public class ThriftServer {
     }
 
     /** Constructs a handler with configuration based on the given one. */
-    protected HBaseHandler(HBaseConfiguration conf) throws IOException {
-      this(HBaseConfiguration.create(conf));
+    protected HBaseHandler(
+        HBaseConfiguration conf, ThriftMetrics metrics) throws IOException {
+      this(HBaseConfiguration.create(conf), metrics);
       LOG.debug("Creating HBaseHandler with ZK client port " +
           conf.get(HConstants.ZOOKEEPER_CLIENT_PORT));
     }
 
-    protected HBaseHandler(final Configuration c) throws IOException {
+    protected HBaseHandler(
+        final Configuration c, ThriftMetrics metrics) throws IOException {
+      this.metrics = metrics;
       this.conf = c;
       admin = new HBaseAdmin(conf);
       scannerMap = new HashMap<Integer, ResultScanner>();
+    }
+
+    /** Create a handler without metrics. Used by unit test only */
+    HBaseHandler(final Configuration c) throws IOException {
+      this(c, null);
     }
 
     public void enableTable(final byte[] tableName) throws IOError {
@@ -469,6 +479,10 @@ public class ThriftServer {
       try {
         List<Get> gets = new ArrayList<Get>(rows.size());
         HTable table = getTable(tableName);
+        if (metrics != null) {
+          metrics.incNumBatchGetRowKeys(rows.size());
+        }
+
         // For now, don't support ragged gets, with different columns per row
         // Probably pretty sensible indefinitely anyways.
         for (byte[] row : rows) {
@@ -611,6 +625,9 @@ public class ThriftServer {
         throws IOError, IllegalArgument, TException {
       List<Put> puts = new ArrayList<Put>();
       List<Delete> deletes = new ArrayList<Delete>();
+      if (metrics != null) {
+        metrics.incNumBatchMutateRowKeys(rowBatches.size());
+      }
 
       for (BatchMutation batch : rowBatches) {
         byte[] row = batch.row;
@@ -1135,7 +1152,7 @@ public class ThriftServer {
     }
 
     ThriftMetrics metrics = new ThriftMetrics(listenPort, conf);
-    Hbase.Iface handler = new HBaseHandler(conf);
+    Hbase.Iface handler = new HBaseHandler(conf, metrics);
     handler = HbaseHandlerMetricsProxy.newInstance(handler, metrics, conf);
     Hbase.Processor processor = new Hbase.Processor(handler);
 

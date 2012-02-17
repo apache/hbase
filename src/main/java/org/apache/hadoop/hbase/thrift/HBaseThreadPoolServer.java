@@ -107,6 +107,8 @@ public class HBaseThreadPoolServer extends TServer {
 
   private final int KEEP_ALIVE_TIME_SEC = 60;
 
+  private final ThriftMetrics metrics;
+
   public HBaseThreadPoolServer(TProcessor processor,
       TServerTransport serverTransport,
       TTransportFactory transportFactory,
@@ -115,6 +117,8 @@ public class HBaseThreadPoolServer extends TServer {
       ThriftMetrics metrics) {
     super(new TProcessorFactory(processor), serverTransport, transportFactory,
         transportFactory, protocolFactory, protocolFactory);
+
+    this.metrics = metrics;
 
     BlockingQueue<Runnable> executorQueue;
     if (options.maxQueuedRequests > 0) {
@@ -155,6 +159,7 @@ public class HBaseThreadPoolServer extends TServer {
       TTransport client = null;
       try {
         client = serverTransport_.accept();
+        metrics.incNumConnections(1);
       } catch (TTransportException ttx) {
         if (!stopped) {
           LOG.warn("Transport error when accepting message", ttx);
@@ -176,6 +181,7 @@ public class HBaseThreadPoolServer extends TServer {
         } else {
           LOG.warn(QUEUE_FULL_MSG, rex);
         }
+        metrics.incNumConnections(-1);
         client.close();
       }
     }
@@ -277,6 +283,7 @@ public class HBaseThreadPoolServer extends TServer {
       if (outputTransport != null) {
         outputTransport.close();
       }
+      metrics.incNumConnections(-1);
     }
   }
 }

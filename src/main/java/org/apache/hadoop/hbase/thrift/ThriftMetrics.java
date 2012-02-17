@@ -33,7 +33,6 @@ import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 /**
@@ -54,6 +53,12 @@ public class ThriftMetrics implements Updater {
 
   private final MetricsIntValue callQueueLen =
       new MetricsIntValue("callQueueLen", registry);
+  private final MetricsTimeVaryingInt numConnections =
+      new MetricsTimeVaryingInt("numConnections", registry);
+  private final MetricsTimeVaryingRate numBatchGetRowKeys =
+      new MetricsTimeVaryingRate("numBatchGetRowKeys", registry);
+  private final MetricsTimeVaryingRate numBatchMutateRowKeys =
+      new MetricsTimeVaryingRate("numBatchMutateRowKeys", registry);
   private final MetricsTimeVaryingRate timeInQueue =
       new MetricsTimeVaryingRate("timeInQueue", registry);
   private MetricsTimeVaryingRate thriftCall =
@@ -82,6 +87,18 @@ public class ThriftMetrics implements Updater {
 
   public void setCallQueueLen(int len) {
     callQueueLen.set(len);
+  }
+
+  public void incNumConnections(int diff) {
+    numConnections.inc(diff);
+  }
+
+  public void incNumBatchGetRowKeys(int diff) {
+    numBatchGetRowKeys.inc(diff);
+  }
+
+  public void incNumBatchMutateRowKeys(int diff) {
+    numBatchMutateRowKeys.inc(diff);
   }
 
   public void incMethodTime(String name, int time) {
