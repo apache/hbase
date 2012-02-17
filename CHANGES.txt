@@ -22,7 +22,9 @@ Release 0.92.1 - Unreleased
                for confirmation (Jimmy Xiang)
    HBASE-5425  Punt on the timeout doesn't work in BulkEnabler#waitUntilDone
                (master's EnableTableHandler)  (Terry Zhang)
-
+   HBASE-5317  Fix testColumnFamilyCompression and test_TIMERANGE in
+               TestHFileOutputFormat (Gregory Chanan)
+ 
   IMPROVEMENTS
    HBASE-5197  [replication] Handle socket timeouts in ReplicationSource
                to prevent DDOS

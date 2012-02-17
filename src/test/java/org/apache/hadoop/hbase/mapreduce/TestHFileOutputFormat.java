@@ -272,15 +272,13 @@ public class TestHFileOutputFormat  {
       // verify that the file has the proper FileInfo.
       writer.close(context);
 
-      // the generated file lives 3 directories down and is the only file,
-      // so we traverse the dirs to get to the file
-      // ./_temporary/_attempt__0000_r_000000_0/b/1979617994050536795
+      // the generated file lives 1 directory down from the attempt directory 
+      // and is the only file, e.g.
+      // _attempt__0000_r_000000_0/b/1979617994050536795
       FileSystem fs = FileSystem.get(conf);
-      Path path = HFileOutputFormat.getOutputPath(job);
-      FileStatus[] sub1 = fs.listStatus(path);
-      FileStatus[] sub2 = fs.listStatus(sub1[0].getPath());
-      FileStatus[] sub3 = fs.listStatus(sub2[0].getPath());
-      FileStatus[] file = fs.listStatus(sub3[0].getPath());
+      Path attemptDirectory = hof.getDefaultWorkFile(context, "").getParent();
+      FileStatus[] sub1 = fs.listStatus(attemptDirectory);
+      FileStatus[] file = fs.listStatus(sub1[0].getPath());
 
       // open as HFile Reader and pull out TIMERANGE FileInfo.
       HFile.Reader rd = HFile.createReader(fs, file[0].getPath(),
@@ -600,6 +598,7 @@ public class TestHFileOutputFormat  {
       
       // commit so that the filesystem has one directory per column family
       hof.getOutputCommitter(context).commitTask(context);
+      hof.getOutputCommitter(context).commitJob(context);
       for (byte[] family : FAMILIES) {
         String familyStr = new String(family);
         boolean found = false;
