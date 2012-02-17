@@ -1049,7 +1049,7 @@ public class ThriftServer {
       System.exit(exitCode);
   }
 
-  private static final String DEFAULT_LISTEN_PORT = "9090";
+  static final String DEFAULT_LISTEN_PORT = "9090";
 
   /*
    * Start up the Thrift server.
@@ -1134,7 +1134,9 @@ public class ThriftServer {
       protocolFactory = new TBinaryProtocol.Factory();
     }
 
-    HBaseHandler handler = new HBaseHandler(conf);
+    ThriftMetrics metrics = new ThriftMetrics(listenPort, conf);
+    Hbase.Iface handler = new HBaseHandler(conf);
+    handler = HbaseHandlerMetricsProxy.newInstance(handler, metrics, conf);
     Hbase.Processor processor = new Hbase.Processor(handler);
 
     TServer server;
@@ -1188,7 +1190,7 @@ public class ThriftServer {
           + serverOptions.maxQueuedRequests);
 
       server = new HBaseThreadPoolServer(processor, serverTransport,
-          transportFactory, protocolFactory, serverOptions);
+          transportFactory, protocolFactory, serverOptions, metrics);
 
       if (server.getClass() != THREAD_POOL_SERVER_CLASS) {
         // A sanity check that we instantiated the right thing.

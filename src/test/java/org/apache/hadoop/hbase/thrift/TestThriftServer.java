@@ -19,16 +19,24 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
+import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.metrics.ContextFactory;
+import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.metrics.MetricsUtil;
+import org.apache.hadoop.metrics.spi.NoEmitMetricsContext;
+import org.apache.hadoop.metrics.spi.OutputRecord;
 
 /**
  * Unit testing for ThriftServer.HBaseHandler, a part of the
@@ -59,6 +67,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
   public void testAll() throws Exception {
     // Run all tests
     doTestTableCreateDrop();
+    doTestThriftMetrics();
     doTestTableMutations();
     doTestTableTimestampsAndColumns();
     doTestTableScanners();
@@ -94,6 +103,54 @@ public class TestThriftServer extends HBaseClusterTestCase {
     assertTrue(handler.isTableEnabled(tableAname));
     handler.disableTable(tableAname);
     handler.deleteTable(tableAname);
+  }
+
+  /**
+   * Tests if the metrics for thrift handler work correctly
+   */
+  public void doTestThriftMetrics() throws Exception {
+    ThriftMetrics metrics = getMetrics(conf);
+    Hbase.Iface handler = getHandler(metrics, conf);
+    handler.createTable(tableAname, getColumnDescriptors());
+    handler.disableTable(tableAname);
+    handler.deleteTable(tableAname);
+    handler.createTable(tableBname, getColumnDescriptors());
+    handler.disableTable(tableBname);
+    handler.deleteTable(tableBname);
+    verifyMetrics(metrics, "createTable_num_ops", 2);
+    verifyMetrics(metrics, "deleteTable_num_ops", 2);
+    verifyMetrics(metrics, "disableTable_num_ops", 2);
+  }
+
+  private static Hbase.Iface getHandler(ThriftMetrics metrics, Configuration conf)
+      throws Exception {
+    Hbase.Iface handler =
+      new ThriftServer.HBaseHandler(conf);
+    return HbaseHandlerMetricsProxy.newInstance(handler, metrics, conf);
+  }
+
+  private static ThriftMetrics getMetrics(Configuration conf) throws Exception {
+    setupMetricsContext();
+    return new ThriftMetrics(
+        Integer.parseInt(ThriftServer.DEFAULT_LISTEN_PORT), conf);
+  }
+
+  private static void setupMetricsContext() throws IOException {
+    ContextFactory factory = ContextFactory.getFactory();
+    factory.setAttribute(ThriftMetrics.CONTEXT_NAME + ".class",
+        NoEmitMetricsContext.class.getName());
+    MetricsUtil.getContext(ThriftMetrics.CONTEXT_NAME)
+               .createRecord(ThriftMetrics.CONTEXT_NAME).remove();
+  }
+
+  private static void verifyMetrics(ThriftMetrics metrics, String name, int expectValue)
+      throws Exception {
+    MetricsContext context = MetricsUtil.getContext(
+        ThriftMetrics.CONTEXT_NAME);
+    metrics.doUpdates(context);
+    OutputRecord record = context.getAllRecords().get(
+        ThriftMetrics.CONTEXT_NAME).iterator().next();
+    assertEquals(expectValue, record.getMetric(name).intValue());
   }
 
   /**

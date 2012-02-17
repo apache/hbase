@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.thrift.TException;
 import org.apache.thrift.TProcessor;
@@ -110,16 +111,18 @@ public class HBaseThreadPoolServer extends TServer {
       TServerTransport serverTransport,
       TTransportFactory transportFactory,
       TProtocolFactory protocolFactory,
-      Options options) {
+      Options options,
+      ThriftMetrics metrics) {
     super(new TProcessorFactory(processor), serverTransport, transportFactory,
         transportFactory, protocolFactory, protocolFactory);
 
     BlockingQueue<Runnable> executorQueue;
     if (options.maxQueuedRequests > 0) {
-      executorQueue = new LinkedBlockingQueue<Runnable>(
-          options.maxQueuedRequests);
+      executorQueue = new CallQueue(
+          new LinkedBlockingQueue<Call>(options.maxQueuedRequests), metrics);
     } else {
-      executorQueue = new SynchronousQueue<Runnable>();
+      executorQueue = new CallQueue(
+          new SynchronousQueue<Call>(), metrics);
     }
 
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
