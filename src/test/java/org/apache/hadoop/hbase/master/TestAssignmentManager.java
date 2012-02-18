@@ -59,6 +59,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.client.Get;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
@@ -127,9 +131,161 @@ public class TestAssignmentManager {
   }
 
   @After
-  public void after() {
-    if (this.watcher != null) this.watcher.close();
+    public void after() throws KeeperException {
+    if (this.watcher != null) {
+      // Clean up all znodes
+      ZKAssign.deleteAllNodes(this.watcher);
+      this.watcher.close();
+    }
   }
+
+  /**
+   * Test a balance going on at same time as a master failover
+   * 
+   * @throws IOException
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
+  @Test(timeout = 5000)
+  public void testBalanceOnMasterFailoverScenarioWithOpenedNode()
+      throws IOException, KeeperException, InterruptedException {
+    AssignmentManagerWithExtrasForTesting am =
+      setUpMockedAssignmentManager(this.server, this.serverManager);
+    try {
+      createRegionPlanAndBalance(am, SERVERNAME_A, SERVERNAME_B, REGIONINFO);
+      startFakeFailedOverMasterAssignmentManager(am, this.watcher);
+      while (!am.processRITInvoked) Thread.sleep(1);
+      // Now fake the region closing successfully over on the regionserver; the
+      // regionserver will have set the region in CLOSED state. This will
+      // trigger callback into AM. The below zk close call is from the RS close
+      // region handler duplicated here because its down deep in a private
+      // method hard to expose.
+      int versionid =
+        ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
+      assertNotSame(versionid, -1);
+      while (!ZKAssign.verifyRegionState(this.watcher, REGIONINFO,
+          EventType.M_ZK_REGION_OFFLINE)) {
+        Threads.sleep(1);
+      }
+      // Get current versionid else will fail on transition from OFFLINE to
+      // OPENING below
+      versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
+      assertNotSame(-1, versionid);
+      // This uglyness below is what the openregionhandler on RS side does.
+      versionid = ZKAssign.transitionNode(server.getZooKeeper(), REGIONINFO,
+        SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
+        EventType.RS_ZK_REGION_OPENING, versionid);
+      assertNotSame(-1, versionid);
+      // Move znode from OPENING to OPENED as RS does on successful open.
+      versionid = ZKAssign.transitionNodeOpened(this.watcher, REGIONINFO,
+        SERVERNAME_B, versionid);
+      assertNotSame(-1, versionid);
+      am.gate.set(false);
+      // Block here until our znode is cleared or until this test times out.
+      ZKAssign.blockUntilNoRIT(watcher);
+    } finally {
+      am.getExecutorService().shutdown();
+      am.shutdown();
+    }
+  }
+
+  @Test(timeout = 5000)
+  public void testBalanceOnMasterFailoverScenarioWithClosedNode()
+      throws IOException, KeeperException, InterruptedException {
+    AssignmentManagerWithExtrasForTesting am =
+      setUpMockedAssignmentManager(this.server, this.serverManager);
+    try {
+      createRegionPlanAndBalance(am, SERVERNAME_A, SERVERNAME_B, REGIONINFO);
+      startFakeFailedOverMasterAssignmentManager(am, this.watcher);
+      while (!am.processRITInvoked) Thread.sleep(1);
+      // Now fake the region closing successfully over on the regionserver; the
+      // regionserver will have set the region in CLOSED state. This will
+      // trigger callback into AM. The below zk close call is from the RS close
+      // region handler duplicated here because its down deep in a private
+      // method hard to expose.
+      int versionid =
+        ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
+      assertNotSame(versionid, -1);
+      am.gate.set(false);
+      while (!ZKAssign.verifyRegionState(this.watcher, REGIONINFO,
+          EventType.M_ZK_REGION_OFFLINE)) {
+        Threads.sleep(1);
+      }
+      // Get current versionid else will fail on transition from OFFLINE to
+      // OPENING below
+      versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
+      assertNotSame(-1, versionid);
+      // This uglyness below is what the openregionhandler on RS side does.
+      versionid = ZKAssign.transitionNode(server.getZooKeeper(), REGIONINFO,
+          SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
+          EventType.RS_ZK_REGION_OPENING, versionid);
+      assertNotSame(-1, versionid);
+      // Move znode from OPENING to OPENED as RS does on successful open.
+      versionid = ZKAssign.transitionNodeOpened(this.watcher, REGIONINFO,
+          SERVERNAME_B, versionid);
+      assertNotSame(-1, versionid);
+
+      // Block here until our znode is cleared or until this test timesout.
+      ZKAssign.blockUntilNoRIT(watcher);
+    } finally {
+      am.getExecutorService().shutdown();
+      am.shutdown();
+    }
+  }
+
+  @Test(timeout = 5000)
+  public void testBalanceOnMasterFailoverScenarioWithOfflineNode()
+      throws IOException, KeeperException, InterruptedException {
+    AssignmentManagerWithExtrasForTesting am =
+      setUpMockedAssignmentManager(this.server, this.serverManager);
+    try {
+      createRegionPlanAndBalance(am, SERVERNAME_A, SERVERNAME_B, REGIONINFO);
+      startFakeFailedOverMasterAssignmentManager(am, this.watcher);
+      while (!am.processRITInvoked) Thread.sleep(1);
+      // Now fake the region closing successfully over on the regionserver; the
+      // regionserver will have set the region in CLOSED state. This will
+      // trigger callback into AM. The below zk close call is from the RS close
+      // region handler duplicated here because its down deep in a private
+      // method hard to expose.
+      int versionid =
+        ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
+      assertNotSame(versionid, -1);
+      while (!ZKAssign.verifyRegionState(this.watcher, REGIONINFO,
+          EventType.M_ZK_REGION_OFFLINE)) {
+        Threads.sleep(1);
+      }
+      am.gate.set(false);
+      // Get current versionid else will fail on transition from OFFLINE to
+      // OPENING below
+      versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
+      assertNotSame(-1, versionid);
+      // This uglyness below is what the openregionhandler on RS side does.
+      versionid = ZKAssign.transitionNode(server.getZooKeeper(), REGIONINFO,
+          SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
+          EventType.RS_ZK_REGION_OPENING, versionid);
+      assertNotSame(-1, versionid);
+      // Move znode from OPENING to OPENED as RS does on successful open.
+      versionid = ZKAssign.transitionNodeOpened(this.watcher, REGIONINFO,
+          SERVERNAME_B, versionid);
+      assertNotSame(-1, versionid);
+      // Block here until our znode is cleared or until this test timesout.
+      ZKAssign.blockUntilNoRIT(watcher);
+    } finally {
+      am.getExecutorService().shutdown();
+      am.shutdown();
+    }
+  }
+
+  private void createRegionPlanAndBalance(final AssignmentManager am,
+      final ServerName from, final ServerName to, final HRegionInfo hri) {
+    // Call the balance function but fake the region being online first at
+    // servername from.
+    am.regionOnline(hri, from);
+    // Balance region from 'from' to 'to'. It calls unassign setting CLOSING state
+    // up in zk.  Create a plan and balance
+    am.balance(new RegionPlan(hri, from, to));
+  }
+
 
   /**
    * Tests AssignmentManager balance function.  Runs a balance moving a region
@@ -384,6 +540,137 @@ public class TestAssignmentManager {
     am.regionOnline(hri, sn);
     // Unassign region.
     am.unassign(hri);
+  }
+
+  /**
+   * Create an {@link AssignmentManagerWithExtrasForTesting} that has mocked
+   * {@link CatalogTracker} etc.
+   * @param server
+   * @param manager
+   * @return An AssignmentManagerWithExtras with mock connections, etc.
+   * @throws IOException
+   * @throws KeeperException
+   */
+  private AssignmentManagerWithExtrasForTesting setUpMockedAssignmentManager(final Server server,
+      final ServerManager manager)
+  throws IOException, KeeperException {
+    // We need a mocked catalog tracker. Its used by our AM instance.
+    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    // Make an RS Interface implementation. Make it so a scanner can go against
+    // it and a get to return the single region, REGIONINFO, this test is
+    // messing with. Needed when "new master" joins cluster. AM will try and
+    // rebuild its list of user regions and it will also get the HRI that goes
+    // with an encoded name by doing a Get on .META.
+    HRegionInterface ri = Mockito.mock(HRegionInterface.class);
+    // Get a meta row result that has region up on SERVERNAME_A for REGIONINFO
+    Result r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+    Mockito.when(ri .openScanner((byte[]) Mockito.any(), (Scan) Mockito.any())).
+      thenReturn(System.currentTimeMillis());
+    // Return good result 'r' first and then return null to indicate end of scan
+    Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt())).
+      thenReturn(new Result[] { r }, (Result[]) null);
+    // If a get, return the above result too for REGIONINFO
+    Mockito.when(ri.get((byte[]) Mockito.any(), (Get) Mockito.any())).
+      thenReturn(r);
+    // Get a connection w/ mocked up common methods.
+    HConnection connection = HConnectionTestingUtility.
+      getMockedConnectionAndDecorate(HTU.getConfiguration(), ri, SERVERNAME_B,
+        REGIONINFO);
+    // Make it so we can get the connection from our mocked catalogtracker
+    Mockito.when(ct.getConnection()).thenReturn(connection);
+    // Create and startup an executor. Used by AM handling zk callbacks.
+    ExecutorService executor = startupMasterExecutor("mockedAMExecutor");
+    AssignmentManagerWithExtrasForTesting am =
+      new AssignmentManagerWithExtrasForTesting(server, manager, ct, executor);
+    return am;
+  }
+
+  /**
+   * An {@link AssignmentManager} with some extra facility used testing
+   */
+  class AssignmentManagerWithExtrasForTesting extends AssignmentManager {
+    // Keep a reference so can give it out below in {@link #getExecutorService}
+    private final ExecutorService es;
+    // Ditto for ct
+    private final CatalogTracker ct;
+    boolean processRITInvoked = false;
+    AtomicBoolean gate = new AtomicBoolean(true);
+
+    public AssignmentManagerWithExtrasForTesting(final Server master,
+        final ServerManager serverManager,
+        final CatalogTracker catalogTracker, final ExecutorService service)
+    throws KeeperException, IOException {
+      super(master, serverManager, catalogTracker, service);
+      this.es = service;
+      this.ct = catalogTracker;
+    }
+
+    @Override
+    boolean processRegionInTransition(String encodedRegionName,
+        HRegionInfo regionInfo,
+        Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers)
+        throws KeeperException, IOException {
+      this.processRITInvoked = true;
+      return super.processRegionInTransition(encodedRegionName, regionInfo,
+          deadServers);
+    }
+    @Override
+    void processRegionsInTransition(final RegionTransitionData data,
+        final HRegionInfo regionInfo,
+        final Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers,
+        final int expectedVersion) throws KeeperException {
+      while (this.gate.get()) Threads.sleep(1);
+      super.processRegionsInTransition(data, regionInfo, deadServers, expectedVersion);
+    }
+
+    /**
+     * @return ExecutorService used by this instance.
+     */
+    ExecutorService getExecutorService() {
+      return this.es;
+    }
+
+    /**
+     * @return CatalogTracker used by this AM (Its a mock).
+     */
+    CatalogTracker getCatalogTracker() {
+      return this.ct;
+    }
+  }
+
+  /**
+   * Call joinCluster on the passed AssignmentManager.  Do it in a thread
+   * so it runs independent of what all else is going on.  Try to simulate
+   * an AM running insided a failed over master by clearing all in-memory
+   * AM state first.
+  */
+  private void startFakeFailedOverMasterAssignmentManager(final AssignmentManager am,
+      final ZooKeeperWatcher watcher) {
+    // Make sure our new AM gets callbacks; once registered, we can't unregister.
+    // Thats ok because we make a new zk watcher for each test.
+    watcher.registerListenerFirst(am);
+    Thread t = new Thread("RunAmJoinCluster") {
+      public void run() {
+        // Call the joinCluster function as though we were doing a master
+        // failover at this point. It will stall just before we go to add
+        // the RIT region to our RIT Map in AM at processRegionsInTransition.
+        // First clear any inmemory state from AM so it acts like a new master
+        // coming on line.
+        am.regionsInTransition.clear();
+        am.regionPlans.clear();
+        try {
+          am.joinCluster();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        } catch (KeeperException e) {
+          throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      };
+    };
+    t.start();
+    while (!t.isAlive()) Threads.sleep(1);
   }
 
   @org.junit.Rule
