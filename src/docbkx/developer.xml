@@ -128,6 +128,14 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
             snappy native libs into hbase.</para>
       </section>
 
+      <section xml:id="build.tgz">
+        <title>Building the HBase tarball</title>
+        <para>Do the following to build the HBase tarball.
+        Passing the -Drelease will generate javadoc and run the RAT plugin to verify licenses on source.
+        <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean site install assembly:single -Dmaven.test.skip -Prelease</programlisting>
+</para>
+      </section>
+
       <section xml:id="mvn_repo">
         <title>Adding an HBase release to Apache's Maven Repository</title>
         <para>Follow the instructions at
