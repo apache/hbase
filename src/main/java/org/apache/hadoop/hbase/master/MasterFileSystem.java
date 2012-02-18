@@ -337,14 +337,16 @@ public class MasterFileSystem {
         // there is one datanode it will succeed. Permission problems should have
         // already been caught by mkdirs above.
         FSUtils.setVersion(fs, rd, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-          10 * 1000));
+          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS, 
+        		  HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
       } else {
         if (!fs.isDirectory(rd)) {
           throw new IllegalArgumentException(rd.toString() + " is not a directory");
         }
         // as above
         FSUtils.checkVersion(fs, rd, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-          10 * 1000));
+          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS, 
+        		  HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
       }
     } catch (IllegalArgumentException iae) {
       LOG.fatal("Please fix invalid configuration for "

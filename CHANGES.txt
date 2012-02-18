@@ -34,6 +34,8 @@ Release 0.92.1 - Unreleased
                leaving the region assignment inconsistent
    HBASE-5432  Hunk missed applying 'hbase-5255 Use singletons for
                OperationStatus to save memory'
+   HBASE-5003  If the master is started with a wrong root dir, it gets stuck
+               and can't be killed (Shaneal Manek)
 
  
   IMPROVEMENTS

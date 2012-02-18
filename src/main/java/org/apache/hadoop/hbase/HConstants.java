@@ -151,7 +151,13 @@ public final class HConstants {
 
   /** Default value for thread wake frequency */
   public static final int DEFAULT_THREAD_WAKE_FREQUENCY = 10 * 1000;
+  
+  /** Parameter name for how often we should try to write a version file, before failing */
+  public static final String VERSION_FILE_WRITE_ATTEMPTS = "hbase.server.versionfile.writeattempts";
 
+  /** Parameter name for how often we should try to write a version file, before failing */
+  public static final int DEFAULT_VERSION_FILE_WRITE_ATTEMPTS = 3;
+  
   /** Parameter name for how often a region should should perform a major compaction */
   public static final String MAJOR_COMPACTION_PERIOD = "hbase.hregion.majorcompaction";
 
