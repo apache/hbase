@@ -30,6 +30,9 @@ Release 0.92.1 - Unreleased
                (Tobias Herbert)
    HBASE-5420  TestImportTsv does not shut down MR Cluster correctly (fails
                against 0.23 hadoop) (Gregory Chanan)
+   HBASE-5200  AM.ProcessRegionInTransition() and AM.handleRegion() race thus
+               leaving the region assignment inconsistent
+
  
   IMPROVEMENTS
    HBASE-5197  [replication] Handle socket timeouts in ReplicationSource
