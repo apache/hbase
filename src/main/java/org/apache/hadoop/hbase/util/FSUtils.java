@@ -204,7 +204,8 @@ public abstract class FSUtils {
    */
   public static void checkVersion(FileSystem fs, Path rootdir,
       boolean message) throws IOException {
-    checkVersion(fs, rootdir, message, 0);
+    checkVersion(fs, rootdir, message, 0, 
+    		HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
   }
 
   /**
@@ -213,19 +214,20 @@ public abstract class FSUtils {
    * @param fs file system
    * @param rootdir root directory of HBase installation
    * @param message if true, issues a message on System.out
-   * @param wait wait interval for retry if > 0
+   * @param wait wait interval
+   * @param retries number of times to retry
    *
    * @throws IOException e
    */
   public static void checkVersion(FileSystem fs, Path rootdir,
-      boolean message, int wait) throws IOException {
+      boolean message, int wait, int retries) throws IOException {
     String version = getVersion(fs, rootdir);
 
     if (version == null) {
       if (!rootRegionExists(fs, rootdir)) {
         // rootDir is empty (no version file and no root region)
         // just create new version file (HBASE-1195)
-        FSUtils.setVersion(fs, rootdir, wait);
+        FSUtils.setVersion(fs, rootdir, wait, retries);
         return;
       }
     } else if (version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0)
@@ -252,7 +254,8 @@ public abstract class FSUtils {
    */
   public static void setVersion(FileSystem fs, Path rootdir)
   throws IOException {
-    setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION, 0);
+    setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION, 0, 
+    		HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
   }
 
   /**
@@ -261,12 +264,14 @@ public abstract class FSUtils {
    * @param fs filesystem object
    * @param rootdir hbase root
    * @param wait time to wait for retry
+   * @param retries number of times to retry before failing
    * @throws IOException e
    */
-  public static void setVersion(FileSystem fs, Path rootdir, int wait)
+  public static void setVersion(FileSystem fs, Path rootdir, int wait, int retries)
   throws IOException {
-    setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION, wait);
+    setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION, wait, retries);
   }
+
 
   /**
    * Sets version of file system
@@ -275,10 +280,11 @@ public abstract class FSUtils {
    * @param rootdir hbase root directory
    * @param version version to set
    * @param wait time to wait for retry
+   * @param retries number of times to retry before throwing an IOException
    * @throws IOException e
    */
   public static void setVersion(FileSystem fs, Path rootdir, String version,
-      int wait) throws IOException {
+      int wait, int retries) throws IOException {
     Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
     while (true) {
       try {
@@ -289,15 +295,20 @@ public abstract class FSUtils {
         s.close();
         return;
       } catch (IOException e) {
-        if (wait > 0) {
+        if (retries > 0) {
           LOG.warn("Unable to create version file at " + rootdir.toString() +
               ", retrying: " + e.getMessage());
           fs.delete(versionFile, false);
           try {
-            Thread.sleep(wait);
+            if (wait > 0) {
+              Thread.sleep(wait);  						
+            }
           } catch (InterruptedException ex) {
             // ignore
           }
+          retries--;
+        } else {
+          throw e;
         }
       }
     }
