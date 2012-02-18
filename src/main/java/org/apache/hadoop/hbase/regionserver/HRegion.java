@@ -1862,8 +1862,7 @@ public class HRegion implements HeapSize { // , Writable{
           continue;
         }
         addedSize += applyFamilyMapToMemstore(familyMaps[i]);
-        batchOp.retCodeDetails[i] = new OperationStatus(
-            OperationStatusCode.SUCCESS);
+        batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
       }
 
       // ------------------------------------
