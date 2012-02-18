@@ -333,6 +333,15 @@
     </description>
   </property>
   <property>
+    <name>hbase.server.versionfile.writeattempts</name>
+    <value>3</value>
+    <description>
+    How many time to retry attempting to write a version file
+    before just aborting. Each attempt is seperated by the
+    hbase.server.thread.wakefrequency milliseconds.
+    </description>
+  </property>
+  <property>
     <name>hbase.hregion.memstore.flush.size</name>
     <value>134217728</value>
     <description>
