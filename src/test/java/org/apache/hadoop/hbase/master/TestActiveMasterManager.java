@@ -63,8 +63,7 @@ public class TestActiveMasterManager {
 
   @Test public void testRestartMaster() throws IOException, KeeperException {
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-      "testActiveMasterManagerFromZK", null);
-    ZKUtil.createAndFailSilent(zk, zk.baseZNode);
+      "testActiveMasterManagerFromZK", null, true);
     try {
       ZKUtil.deleteNode(zk, zk.masterAddressZNode);
     } catch(KeeperException.NoNodeException nne) {}
@@ -103,8 +102,7 @@ public class TestActiveMasterManager {
   @Test
   public void testActiveMasterManagerFromZK() throws Exception {
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-      "testActiveMasterManagerFromZK", null);
-    ZKUtil.createAndFailSilent(zk, zk.baseZNode);
+      "testActiveMasterManagerFromZK", null, true);
     try {
       ZKUtil.deleteNode(zk, zk.masterAddressZNode);
     } catch(KeeperException.NoNodeException nne) {}

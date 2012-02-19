@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -131,8 +132,16 @@ class ActiveMasterManager extends ZooKeeperListener {
     // Try to become the active master, watch if there is another master.
     // Write out our ServerName as versioned bytes.
     try {
+      String backupZNode = ZKUtil.joinZNode(
+          this.watcher.backupMasterAddressesZNode, this.sn.toString());
       if (ZKUtil.createEphemeralNodeAndWatch(this.watcher,
-          this.watcher.masterAddressZNode, sn.getVersionedBytes())) {
+          this.watcher.masterAddressZNode, this.sn.getVersionedBytes())) {
+        // If we were a backup master before, delete our ZNode from the backup
+        // master directory since we are the active now
+        LOG.info("Deleting ZNode for " + backupZNode +
+                 " from backup master directory");
+        ZKUtil.deleteNodeFailSilent(this.watcher, backupZNode);
+
         // We are the master, return
         startupStatus.setStatus("Successfully registered as active master.");
         this.clusterHasActiveMaster.set(true);
@@ -144,22 +153,41 @@ class ActiveMasterManager extends ZooKeeperListener {
       // There is another active master running elsewhere or this is a restart
       // and the master ephemeral node has not expired yet.
       this.clusterHasActiveMaster.set(true);
+
+      /*
+       * Add a ZNode for ourselves in the backup master directory since we are
+       * not the active master.
+       *
+       * If we become the active master later, ActiveMasterManager will delete
+       * this node explicitly.  If we crash before then, ZooKeeper will delete
+       * this node for us since it is ephemeral.
+       */
+      LOG.info("Adding ZNode for " + backupZNode +
+               " in backup master directory");
+      ZKUtil.createEphemeralNodeAndWatch(this.watcher, backupZNode,
+          HConstants.EMPTY_BYTE_ARRAY);
+
+      String msg;
       byte [] bytes =
         ZKUtil.getDataAndWatch(this.watcher, this.watcher.masterAddressZNode);
-      ServerName currentMaster = ServerName.parseVersionedServerName(bytes);
-      if (ServerName.isSameHostnameAndPort(currentMaster, this.sn)) {
-        String msg = ("Current master has this master's address, " + currentMaster +
-          "; master was restarted?  Waiting on znode to expire...");
-        LOG.info(msg);
-        startupStatus.setStatus(msg);
-        // Hurry along the expiration of the znode.
-        ZKUtil.deleteNode(this.watcher, this.watcher.masterAddressZNode);
+      if (bytes == null) {
+        msg = ("A master was detected, but went down before its address " +
+          "could be read.  Attempting to become the next active master");
       } else {
-        String msg = "Another master is the active master, " + currentMaster +
-        "; waiting to become the next active master";
-        LOG.info(msg);
-        startupStatus.setStatus(msg);
+        ServerName currentMaster = ServerName.parseVersionedServerName(bytes);
+        if (ServerName.isSameHostnameAndPort(currentMaster, this.sn)) {
+          msg = ("Current master has this master's address, " +
+            currentMaster + "; master was restarted?  Waiting on znode " +
+            "to expire...");
+          // Hurry along the expiration of the znode.
+          ZKUtil.deleteNode(this.watcher, this.watcher.masterAddressZNode);
+        } else {
+          msg = "Another master is the active master, " + currentMaster +
+          "; waiting to become the next active master";
+        }
       }
+      LOG.info(msg);
+      startupStatus.setStatus(msg);
     } catch (KeeperException ke) {
       master.abort("Received an unexpected KeeperException, aborting", ke);
       return false;
