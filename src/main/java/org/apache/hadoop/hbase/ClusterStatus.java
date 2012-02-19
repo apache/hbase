@@ -33,6 +33,7 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.VersionMismatchException;
 import org.apache.hadoop.io.VersionedWritable;
 
 /**
@@ -42,13 +43,15 @@ import org.apache.hadoop.io.VersionedWritable;
  * <ul>
  * <li>The count and names of region servers in the cluster.</li>
  * <li>The count and names of dead region servers in the cluster.</li>
+ * <li>The name of the active master for the cluster.</li>
+ * <li>The name(s) of the backup master(s) for the cluster, if they exist.</li>
  * <li>The average cluster load.</li>
  * <li>The number of regions deployed on the cluster.</li>
  * <li>The number of requests since last report.</li>
  * <li>Detailed region server loading and resource usage information,
  *  per server and per region.</li>
- *  <li>Regions in transition at master</li>
- *  <li>The unique cluster ID</li>
+ * <li>Regions in transition at master</li>
+ * <li>The unique cluster ID</li>
  * </ul>
  */
 public class ClusterStatus extends VersionedWritable {
@@ -56,16 +59,21 @@ public class ClusterStatus extends VersionedWritable {
    * Version for object serialization.  Incremented for changes in serialized
    * representation.
    * <dl>
-   *   <dt>0</dt> <dd>initial version</dd>
-   *   <dt>1</dt> <dd>added cluster ID</dd>
+   *   <dt>0</dt> <dd>Initial version</dd>
+   *   <dt>1</dt> <dd>Added cluster ID</dd>
    *   <dt>2</dt> <dd>Added Map of ServerName to ServerLoad</dd>
+   *   <dt>3</dt> <dd>Added master and backupMasters</dd>
    * </dl>
    */
+  private static final byte VERSION_MASTER_BACKUPMASTERS = 2;
   private static final byte VERSION = 2;
+  private static final String UNKNOWN_SERVERNAME = "unknown";
 
   private String hbaseVersion;
   private Map<ServerName, HServerLoad> liveServers;
   private Collection<ServerName> deadServers;
+  private ServerName master;
+  private Collection<ServerName> backupMasters;
   private Map<String, RegionState> intransition;
   private String clusterId;
   private String[] masterCoprocessors;
@@ -79,11 +87,16 @@ public class ClusterStatus extends VersionedWritable {
 
   public ClusterStatus(final String hbaseVersion, final String clusterid,
       final Map<ServerName, HServerLoad> servers,
-      final Collection<ServerName> deadServers, final Map<String, RegionState> rit,
+      final Collection<ServerName> deadServers,
+      final ServerName master,
+      final Collection<ServerName> backupMasters,
+      final Map<String, RegionState> rit,
       final String[] masterCoprocessors) {
     this.hbaseVersion = hbaseVersion;
     this.liveServers = servers;
     this.deadServers = deadServers;
+    this.master = master;
+    this.backupMasters = backupMasters;
     this.intransition = rit;
     this.clusterId = clusterid;
     this.masterCoprocessors = masterCoprocessors;
@@ -160,8 +173,11 @@ public class ClusterStatus extends VersionedWritable {
     return (getVersion() == ((ClusterStatus)o).getVersion()) &&
       getHBaseVersion().equals(((ClusterStatus)o).getHBaseVersion()) &&
       this.liveServers.equals(((ClusterStatus)o).liveServers) &&
-      deadServers.equals(((ClusterStatus)o).deadServers) &&
-      Arrays.equals(this.masterCoprocessors, ((ClusterStatus)o).masterCoprocessors);
+      this.deadServers.equals(((ClusterStatus)o).deadServers) &&
+      Arrays.equals(this.masterCoprocessors,
+                    ((ClusterStatus)o).masterCoprocessors) &&
+      this.master.equals(((ClusterStatus)o).master) &&
+      this.backupMasters.equals(((ClusterStatus)o).backupMasters);
   }
 
   /**
@@ -169,7 +185,8 @@ public class ClusterStatus extends VersionedWritable {
    */
   public int hashCode() {
     return VERSION + hbaseVersion.hashCode() + this.liveServers.hashCode() +
-      deadServers.hashCode();
+      this.deadServers.hashCode() + this.master.hashCode() +
+      this.backupMasters.hashCode();
   }
 
   /** @return the object version number */
@@ -193,6 +210,28 @@ public class ClusterStatus extends VersionedWritable {
 
   public Collection<ServerName> getServers() {
     return Collections.unmodifiableCollection(this.liveServers.keySet());
+  }
+
+  /**
+   * Returns detailed information about the current master {@link ServerName}.
+   * @return current master information if it exists
+   */
+  public ServerName getMaster() {
+    return this.master;
+  }
+
+  /**
+   * @return the number of backup masters in the cluster
+   */
+  public int getBackupMastersSize() {
+    return this.backupMasters.size();
+  }
+
+  /**
+   * @return the names of backup masters
+   */
+  public Collection<ServerName> getBackupMasters() {
+    return Collections.unmodifiableCollection(this.backupMasters);
   }
 
   /**
@@ -241,10 +280,26 @@ public class ClusterStatus extends VersionedWritable {
     for(String masterCoprocessor: masterCoprocessors) {
       out.writeUTF(masterCoprocessor);
     }
+    Bytes.writeByteArray(out, this.master.getVersionedBytes());
+    out.writeInt(this.backupMasters.size());
+    for (ServerName backupMaster: this.backupMasters) {
+      Bytes.writeByteArray(out, backupMaster.getVersionedBytes());
+    }
   }
 
   public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
+    int version = getVersion();
+    try {
+      super.readFields(in);
+    } catch (VersionMismatchException e) {
+      /*
+       * No API in VersionMismatchException to get the expected and found
+       * versions.  We use the only tool available to us: toString(), whose
+       * output has a dependency on hadoop-common.  Boo.
+       */
+      int startIndex = e.toString().lastIndexOf('v') + 1;
+      version = Integer.parseInt(e.toString().substring(startIndex));
+    }
     hbaseVersion = in.readUTF();
     int count = in.readInt();
     this.liveServers = new HashMap<ServerName, HServerLoad>(count);
@@ -272,6 +327,22 @@ public class ClusterStatus extends VersionedWritable {
     masterCoprocessors = new String[masterCoprocessorsLength];
     for(int i = 0; i < masterCoprocessorsLength; i++) {
       masterCoprocessors[i] = in.readUTF();
+    }
+    // Only read extra fields for master and backup masters if
+    // version indicates that we should do so, else use defaults
+    if (version >= VERSION_MASTER_BACKUPMASTERS) {
+      this.master = ServerName.parseVersionedServerName(
+                      Bytes.readByteArray(in));
+      count = in.readInt();
+      this.backupMasters = new ArrayList<ServerName>(count);
+      for (int i = 0; i < count; i++) {
+        this.backupMasters.add(ServerName.parseVersionedServerName(
+                                 Bytes.readByteArray(in)));
+      }
+    } else {
+      this.master = new ServerName(UNKNOWN_SERVERNAME, -1,
+                                   ServerName.NON_STARTCODE);
+      this.backupMasters = new ArrayList<ServerName>(0);
     }
   }
 }

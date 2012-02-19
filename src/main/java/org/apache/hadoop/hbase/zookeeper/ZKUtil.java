@@ -1030,8 +1030,13 @@ public class ZKUtil {
     StringBuilder sb = new StringBuilder();
     try {
       sb.append("HBase is rooted at ").append(zkw.baseZNode);
-      sb.append("\nMaster address: ").append(
+      sb.append("\nActive master address: ").append(
           ServerName.parseVersionedServerName(getData(zkw, zkw.masterAddressZNode)));
+      sb.append("\nBackup master addresses:");
+      for (String child : listChildrenNoWatch(zkw,
+                                              zkw.backupMasterAddressesZNode)) {
+        sb.append("\n ").append(child);
+      }
       sb.append("\nRegion server holding ROOT: ").append(
           Bytes.toStringBinary(getData(zkw, zkw.rootServerZNode)));
       sb.append("\nRegion servers:");

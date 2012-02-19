@@ -26,6 +26,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -96,6 +97,7 @@ import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -1215,10 +1217,27 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * @return cluster status
    */
   public ClusterStatus getClusterStatus() {
+    // Build Set of backup masters from ZK nodes
+    List<String> backupMasterStrings;
+    try {
+      backupMasterStrings = ZKUtil.listChildrenNoWatch(this.zooKeeper,
+                              this.zooKeeper.backupMasterAddressesZNode);
+    } catch (KeeperException e) {
+      LOG.warn(this.zooKeeper.prefix("Unable to list backup servers"), e);
+      backupMasterStrings = new ArrayList<String>(0);
+    }
+    List<ServerName> backupMasters = new ArrayList<ServerName>(
+                                          backupMasterStrings.size());
+    for (String s: backupMasterStrings) {
+      backupMasters.add(new ServerName(s));
+    }
+
     return new ClusterStatus(VersionInfo.getVersion(),
       this.fileSystemManager.getClusterId(),
       this.serverManager.getOnlineServers(),
       this.serverManager.getDeadServers(),
+      this.serverName,
+      backupMasters,
       this.assignmentManager.getRegionsInTransition(),
       this.getCoprocessors());
   }

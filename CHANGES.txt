@@ -45,6 +45,9 @@ Release 0.92.1 - Unreleased
    HBASE-5393  Consider splitting after flushing
    HBASE-5421  use hadoop-client/hadoop-minicluster artifacts for Hadoop
                0.23 build (Shaneal Manek)
+   HBASE-5209  HConnection/HMasterInterface should allow for way to get
+               hostname of currently active master in multi-master HBase
+               setup (David S. Wang)
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()
