@@ -119,25 +119,6 @@ public class Delete extends Mutation
   }
 
   /**
-   * Advanced use only. Create a Delete object based on a KeyValue
-   * of type "delete".
-   * @param kv
-   * @throws IOException
-   */
-  public Delete(KeyValue kv) throws IOException {
-    this(kv.getRow(), kv.getTimestamp(), null);
-    if (!kv.isDelete()) {
-      throw new IOException("The recently added KeyValue is not of type "
-          + "delete. Rowkey: " + Bytes.toStringBinary(this.row));
-    }
-    // can't use singletonList, because this might be modified at the server by
-    // coprocessors
-    ArrayList<KeyValue> list = new ArrayList<KeyValue>(1);
-    list.add(kv);
-    familyMap.put(kv.getFamily(), list);
-  }
-
-  /**
    * Advanced use only.
    * Add an existing delete marker to this Delete object.
    * @param kv An existing KeyValue of type "delete".

@@ -74,6 +74,7 @@ public class Import {
     private void writeResult(ImmutableBytesWritable key, Result result, Context context)
     throws IOException, InterruptedException {
       Put put = null;
+      Delete delete = null;
       for (KeyValue kv : result.raw()) {
         if(cfRenameMap != null) {
             // If there's a rename mapping for this CF, create a new KeyValue
@@ -95,13 +96,13 @@ public class Import {
                         kv.getValueLength());     // value length
             } 
         }
+        // Deletes and Puts are gathered and written when finished
         if (kv.isDelete()) {
-          // Deletes need to be written one-by-one,
-          // since family deletes overwrite column(s) deletes
-          context.write(key, new Delete(kv));
+          if (delete == null) {
+            delete = new Delete(key.get());
+          }
+          delete.addDeleteMarker(kv);
         } else {
-          // Puts are gathered into a single Put object
-          // and written when finished
           if (put == null) { 
             put = new Put(key.get());
           }
@@ -110,6 +111,9 @@ public class Import {
       }
       if (put != null) {
         context.write(key, put);
+      }
+      if (delete != null) {
+        context.write(key, delete);
       }
     }
 
