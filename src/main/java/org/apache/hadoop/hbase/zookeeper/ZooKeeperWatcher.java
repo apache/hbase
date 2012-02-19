@@ -90,6 +90,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   public String drainingZNode;
   // znode of currently active master
   public String masterAddressZNode;
+  // znode of this master in backup master directory, if not the active master
+  public String backupMasterAddressesZNode;
   // znode containing the current cluster state
   public String clusterStateZNode;
   // znode used for region transitioning and assignment
@@ -165,6 +167,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
       ZKUtil.createAndFailSilent(this, tableZNode);
       ZKUtil.createAndFailSilent(this, splitLogZNode);
       ZKUtil.createAndFailSilent(this, schemaZNode);
+      ZKUtil.createAndFailSilent(this, backupMasterAddressesZNode);
     } catch (KeeperException e) {
       throw new ZooKeeperConnectionException(
           prefix("Unexpected KeeperException creating base node"), e);
@@ -204,6 +207,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
         conf.get("zookeeper.znode.draining.rs", "draining"));
     masterAddressZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.master", "master"));
+    backupMasterAddressesZNode = ZKUtil.joinZNode(baseZNode,
+        conf.get("zookeeper.znode.backup.masters", "backup-masters"));
     clusterStateZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.state", "shutdown"));
     assignmentZNode = ZKUtil.joinZNode(baseZNode,

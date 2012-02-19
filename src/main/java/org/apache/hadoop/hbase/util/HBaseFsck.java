@@ -218,6 +218,18 @@ public class HBaseFsck {
       }
     }
 
+    // Print the current master name and state
+    errors.print("Master: " + status.getMaster());
+
+    // Print the list of all backup masters
+    Collection<ServerName> backupMasters = status.getBackupMasters();
+    errors.print("Number of backup masters: " + backupMasters.size());
+    if (details) {
+      for (ServerName name: backupMasters) {
+        errors.print("  " + name);
+      }
+    }
+
     // Determine what's deployed
     processRegionServers(regionServers);
 
