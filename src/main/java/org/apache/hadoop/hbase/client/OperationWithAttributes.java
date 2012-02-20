@@ -96,7 +96,7 @@ public abstract class OperationWithAttributes extends Operation implements Attri
   protected void readAttributes(final DataInput in) throws IOException {
     int numAttributes = in.readInt();
     if (numAttributes > 0) {
-      this.attributes = new HashMap<String, byte[]>();
+      this.attributes = new HashMap<String, byte[]>(numAttributes);
       for(int i=0; i<numAttributes; i++) {
         String name = WritableUtils.readString(in);
         byte[] value = Bytes.readByteArray(in);
