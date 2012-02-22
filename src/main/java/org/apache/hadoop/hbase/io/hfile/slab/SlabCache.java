@@ -111,9 +111,9 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
     // Proportions we allocate to each slab of the total size.
     String[] porportions = conf.getStrings(
         "hbase.offheapcache.slab.proportions", "0.80", "0.20");
-    String[] sizes = conf.getStrings("hbase.offheapcache.slab.sizes", new Long(
-        avgBlockSize * 11 / 10).toString(), new Long(avgBlockSize * 21 / 10)
-        .toString());
+    String[] sizes = conf.getStrings("hbase.offheapcache.slab.sizes",
+        Long.valueOf(avgBlockSize * 11 / 10).toString(),
+        Long.valueOf(avgBlockSize * 21 / 10).toString());
 
     if (porportions.length != sizes.length) {
       throw new IllegalArgumentException(
