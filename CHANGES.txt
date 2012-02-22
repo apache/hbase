@@ -36,6 +36,9 @@ Release 0.92.1 - Unreleased
                OperationStatus to save memory'
    HBASE-5003  If the master is started with a wrong root dir, it gets stuck
                and can't be killed (Shaneal Manek)
+   HBASE-5422  StartupBulkAssigner would cause a lot of timeout on RIT when
+               assigning large numbers of regions (timeout = 3 mins)
+               (Chunhui Shen)
 
  
   IMPROVEMENTS

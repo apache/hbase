@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.LogFactory;
@@ -58,12 +59,14 @@ public class BulkReOpen extends BulkAssigner {
     for (Map.Entry<ServerName, List<HRegionInfo>> e : rsToRegions
         .entrySet()) {
       final List<HRegionInfo> hris = e.getValue();
-      // add a plan for each of the regions that needs to be reopened
+      // add plans for the regions that need to be reopened
+      Map<String, RegionPlan> plans = new HashMap<String, RegionPlan>();
       for (HRegionInfo hri : hris) {
         RegionPlan reOpenPlan = new RegionPlan(hri, null,
             assignmentManager.getRegionServerOfRegion(hri));
-        assignmentManager.addPlan(hri.getEncodedName(), reOpenPlan);
+        plans.put(hri.getEncodedName(), reOpenPlan);
       }
+      assignmentManager.addPlans(plans);
       pool.execute(new Runnable() {
         public void run() {
           assignmentManager.unassign(hris);
