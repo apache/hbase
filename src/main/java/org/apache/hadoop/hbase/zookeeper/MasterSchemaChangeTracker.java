@@ -743,7 +743,7 @@ public class MasterSchemaChangeTracker extends ZooKeeperNodeTracker {
       LOG.debug("Removing RS " + schemaAlterStatus.getHostName()
           + " from schema change process.");
       hostsToProcess =
-          new String(hostsToProcess).replaceAll(schemaAlterStatus.getHostName(), "");
+          hostsToProcess.replaceAll(schemaAlterStatus.getHostName(), "");
       int ignoreRegionsCount = schemaAlterStatus.getNumberOfOnlineRegions();
       LOG.debug("Current number of regions processed = "
           + this.numberOfRegionsProcessed + " deducting ignored = "

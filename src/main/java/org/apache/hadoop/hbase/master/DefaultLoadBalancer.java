@@ -106,7 +106,7 @@ public class DefaultLoadBalancer implements LoadBalancer {
   * regions which were assigned to the server after some other region server
   * crashed.
   */
-   private class RegionInfoComparator implements Comparator<HRegionInfo> {
+   private static class RegionInfoComparator implements Comparator<HRegionInfo> {
        @Override
        public int compare(HRegionInfo l, HRegionInfo r) {
           long diff = r.getRegionId() - l.getRegionId();

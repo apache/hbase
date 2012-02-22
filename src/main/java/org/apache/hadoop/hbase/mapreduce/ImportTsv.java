@@ -198,8 +198,8 @@ public class ImportTsv {
     // by re-encoding the passed separator as a Base64 string.
     String actualSeparator = conf.get(SEPARATOR_CONF_KEY);
     if (actualSeparator != null) {
-      conf.set(SEPARATOR_CONF_KEY, new String(
-      Base64.encodeBytes(actualSeparator.getBytes())));
+      conf.set(SEPARATOR_CONF_KEY,
+               Base64.encodeBytes(actualSeparator.getBytes()));
     }
 
     // See if a non-default Mapper was set

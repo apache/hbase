@@ -91,13 +91,13 @@ public class SequenceFileLogWriter implements HLog.Writer {
             CompressionType.class, CompressionCodec.class, Metadata.class})
         .invoke(null, new Object[] {fs, conf, path, HLog.getKeyClass(conf),
             WALEdit.class,
-            new Integer(fs.getConf().getInt("io.file.buffer.size", 4096)),
-            new Short((short)
+            Integer.valueOf(fs.getConf().getInt("io.file.buffer.size", 4096)),
+            Short.valueOf((short)
               conf.getInt("hbase.regionserver.hlog.replication",
               fs.getDefaultReplication())),
-            new Long(conf.getLong("hbase.regionserver.hlog.blocksize",
+            Long.valueOf(conf.getLong("hbase.regionserver.hlog.blocksize",
                 fs.getDefaultBlockSize())),
-            new Boolean(false) /*createParent*/,
+            Boolean.valueOf(false) /*createParent*/,
             SequenceFile.CompressionType.NONE, new DefaultCodec(),
             new Metadata()
             });

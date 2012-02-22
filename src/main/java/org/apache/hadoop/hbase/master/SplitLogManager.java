@@ -608,7 +608,7 @@ public class SplitLogManager extends ZooKeeperListener {
       create(ZKSplitLog.getRescanNode(watcher),
         TaskState.TASK_DONE.get(serverName), Ids.OPEN_ACL_UNSAFE,
         CreateMode.EPHEMERAL_SEQUENTIAL,
-        new CreateRescanAsyncCallback(), new Long(retries));
+        new CreateRescanAsyncCallback(), Long.valueOf(retries));
   }
 
   private void createRescanSuccess(String path) {
