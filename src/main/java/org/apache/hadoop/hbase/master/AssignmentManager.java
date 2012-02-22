@@ -59,11 +59,12 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState.State;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
@@ -265,6 +266,15 @@ public class AssignmentManager extends ZooKeeperListener {
   public void addPlan(String encodedName, RegionPlan plan) {
     synchronized (regionPlans) {
       regionPlans.put(encodedName, plan);
+    }
+  }
+
+  /**
+   * Add a map of region plans.
+   */
+  public void addPlans(Map<String, RegionPlan> plans) {
+    synchronized (regionPlans) {
+      regionPlans.putAll(plans);
     }
   }
 
@@ -1341,6 +1351,15 @@ public class AssignmentManager extends ZooKeeperListener {
         states.add(forceRegionStateToOffline(region));
       }
     }
+    // Add region plans, so we can updateTimers when one region is opened so
+    // that unnecessary timeout on RIT is reduced.
+    Map<String, RegionPlan> plans=new HashMap<String, RegionPlan>();
+    for (HRegionInfo region : regions) {
+      plans.put(region.getEncodedName(), new RegionPlan(region, null,
+          destination));
+    }
+    this.addPlans(plans);
+    
     // Presumption is that only this thread will be updating the state at this
     // time; i.e. handlers on backend won't be trying to set it to OPEN, etc.
     AtomicInteger counter = new AtomicInteger(0);
