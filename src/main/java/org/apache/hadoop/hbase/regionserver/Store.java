@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Random;
 import java.util.SortedSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -115,7 +116,6 @@ public class Store extends SchemaConfigured implements HeapSize {
   final CacheConfig cacheConf;
   // ttl in milliseconds.
   private long ttl;
-  long majorCompactionTime;
   private final int minFilesToCompact;
   private final int maxFilesToCompact;
   private final long minCompactSize;
@@ -228,8 +228,6 @@ public class Store extends SchemaConfigured implements HeapSize {
     this.cacheConf = new CacheConfig(conf, family);
     this.blockingStoreFileCount =
       conf.getInt("hbase.hstore.blockingStoreFiles", 7);
-
-    this.majorCompactionTime = getNextMajorCompactTime();
 
     this.maxFilesToCompact = conf.getInt("hbase.hstore.compaction.max", 10);
     this.minCompactSize = conf.getLong("hbase.hstore.compaction.min.size",
@@ -1091,14 +1089,14 @@ public class Store extends SchemaConfigured implements HeapSize {
    */
   private boolean isMajorCompaction(final List<StoreFile> filesToCompact) throws IOException {
     boolean result = false;
-    if (filesToCompact == null || filesToCompact.isEmpty() ||
-        majorCompactionTime == 0) {
+    long mcTime = getNextMajorCompactTime();
+    if (filesToCompact == null || filesToCompact.isEmpty() || mcTime == 0) {
       return result;
-        }
+    }
     // TODO: Use better method for determining stamp of last major (HBASE-2990)
     long lowTimestamp = getLowestTimestamp(filesToCompact);
     long now = System.currentTimeMillis();
-    if (lowTimestamp > 0l && lowTimestamp < (now - this.majorCompactionTime)) {
+    if (lowTimestamp > 0l && lowTimestamp < (now - mcTime)) {
       // Major compaction time has elapsed.
       if (filesToCompact.size() == 1) {
         // Single file
@@ -1146,7 +1144,15 @@ public class Store extends SchemaConfigured implements HeapSize {
           0.20F);
       if (jitterPct > 0) {
         long jitter = Math.round(ret * jitterPct);
-        ret += jitter - Math.round(2L * jitter * Math.random());
+        // deterministic jitter avoids a major compaction storm on restart
+        ImmutableList<StoreFile> snapshot = storefiles; 
+        if (snapshot != null && !snapshot.isEmpty()) {
+          String seed = snapshot.get(0).getPath().getName();
+          double curRand = new Random(seed.hashCode()).nextDouble();
+          ret += jitter - Math.round(2L * jitter * curRand);
+        } else {
+          ret = 0; // no storefiles == no major compaction
+        }
       }
     }
     return ret;
@@ -1210,7 +1216,6 @@ public class Store extends SchemaConfigured implements HeapSize {
         if (isMajor) {
           // since we're enqueuing a major, update the compaction wait interval
           this.forceMajor = false;
-          this.majorCompactionTime = getNextMajorCompactTime();
         }
 
         // everything went better than expected. create a compaction request
@@ -2180,7 +2185,7 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   public static final long FIXED_OVERHEAD = 
       ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (19 * ClassSize.REFERENCE) + (7 * Bytes.SIZEOF_LONG)
+          + (19 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
           + (5 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
