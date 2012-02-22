@@ -38,6 +38,7 @@ import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
 import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
@@ -238,6 +239,12 @@ public class RegionServerMetrics implements Updater {
   
   public final MetricsTimeVaryingRate slowHLogAppendTime =
       new MetricsTimeVaryingRate("slowHLogAppendTime", registry);
+  
+  public final MetricsTimeVaryingLong regionSplitSuccessCount =
+      new MetricsTimeVaryingLong("regionSplitSuccessCount", registry);
+  
+  public final MetricsTimeVaryingLong regionSplitFailureCount =
+      new MetricsTimeVaryingLong("regionSplitFailureCount", registry);
 
   public RegionServerMetrics() {
     MetricsContext context = MetricsUtil.getContext("hbase");
@@ -354,6 +361,8 @@ public class RegionServerMetrics implements Updater {
       this.flushTime.pushMetric(this.metricsRecord);
       this.flushSize.pushMetric(this.metricsRecord);
       this.slowHLogAppendCount.pushMetric(this.metricsRecord);
+      this.regionSplitSuccessCount.pushMetric(this.metricsRecord);
+      this.regionSplitFailureCount.pushMetric(this.metricsRecord);
     }
     this.metricsRecord.update();
   }
@@ -410,6 +419,14 @@ public class RegionServerMetrics implements Updater {
    */
   public void incrementRequests(final int inc) {
     this.requests.inc(inc);
+  }
+  
+  public void incrementSplitSuccessCount() {
+    this.regionSplitSuccessCount.inc();
+  }
+  
+  public void incrementSplitFailureCount() {
+    this.regionSplitFailureCount.inc();
   }
 
   @Override
