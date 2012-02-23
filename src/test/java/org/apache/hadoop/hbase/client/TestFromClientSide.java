@@ -157,19 +157,8 @@ public class TestFromClientSide {
      final byte[] T1 = Bytes.toBytes("T1");
      final byte[] T2 = Bytes.toBytes("T2");
      final byte[] T3 = Bytes.toBytes("T3");
-     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY,
-         HColumnDescriptor.DEFAULT_MIN_VERSIONS,
-         HColumnDescriptor.DEFAULT_VERSIONS,
-         true,
-         HColumnDescriptor.DEFAULT_COMPRESSION,
-         HColumnDescriptor.DEFAULT_ENCODE_ON_DISK,
-         HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING,
-         HColumnDescriptor.DEFAULT_IN_MEMORY,
-         HColumnDescriptor.DEFAULT_BLOCKCACHE,
-         HColumnDescriptor.DEFAULT_BLOCKSIZE,
-         HColumnDescriptor.DEFAULT_TTL,
-         HColumnDescriptor.DEFAULT_BLOOMFILTER,
-         HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY)
+         .setKeepDeletedCells(true);
 
      HTableDescriptor desc = new HTableDescriptor(TABLENAME);
      desc.addFamily(hcd);

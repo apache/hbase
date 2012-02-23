@@ -1113,21 +1113,26 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /** Table descriptor for <core>-ROOT-</code> catalog table */
   public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
       HConstants.ROOT_TABLE_NAME,
-      new HColumnDescriptor[] { new HColumnDescriptor(HConstants.CATALOG_FAMILY,
-          10,  // Ten is arbitrary number.  Keep versions to help debugging.
-          Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
-          HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),  
-          HConstants.REPLICATION_SCOPE_LOCAL) });
+      new HColumnDescriptor[] {
+          new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+              // Ten is arbitrary number.  Keep versions to help debugging.
+              .setMaxVersions(10)
+              .setInMemory(true)
+              .setBlocksize(8 * 1024)
+              .setTimeToLive(HConstants.FOREVER)
+              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+      });
 
   /** Table descriptor for <code>.META.</code> catalog table */
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
-          new HColumnDescriptor(HConstants.CATALOG_FAMILY,
-            10, // Ten is arbitrary number.  Keep versions to help debugging.
-            Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
-            HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
-            HConstants.REPLICATION_SCOPE_LOCAL)});
-
+          new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+              // Ten is arbitrary number.  Keep versions to help debugging.
+              .setMaxVersions(10)
+              .setInMemory(true)
+              .setBlocksize(8 * 1024)
+              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+      });
 
   public void setOwner(User owner) {
     setOwnerString(owner != null ? owner.getShortName() : null);

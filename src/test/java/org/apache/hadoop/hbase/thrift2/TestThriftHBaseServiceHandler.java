@@ -87,8 +87,9 @@ public class TestThriftHBaseServiceHandler {
   private static byte[] valueBname = Bytes.toBytes("valueB");
   private static HColumnDescriptor[] families = new HColumnDescriptor[] {
       new HColumnDescriptor(familyAname),
-      new HColumnDescriptor(familyBname, 2, HColumnDescriptor.DEFAULT_COMPRESSION, HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE, HColumnDescriptor.DEFAULT_TTL, HColumnDescriptor.DEFAULT_BLOOMFILTER) };
+      new HColumnDescriptor(familyBname)
+          .setMaxVersions(2)
+  };
 
   public void assertTColumnValuesEqual(List<TColumnValue> columnValuesA, List<TColumnValue> columnValuesB) {
     assertEquals(columnValuesA.size(), columnValuesB.size());

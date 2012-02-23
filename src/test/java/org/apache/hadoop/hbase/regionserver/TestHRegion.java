@@ -3033,9 +3033,9 @@ public class TestHRegion extends HBaseTestCase {
     byte [] qf1  = Bytes.toBytes("col");
     byte [] val1  = Bytes.toBytes("value1");
     // Create Table
-    HColumnDescriptor hcd = new HColumnDescriptor(fam1, Integer.MAX_VALUE,
-        HColumnDescriptor.DEFAULT_COMPRESSION, false, true,
-        HColumnDescriptor.DEFAULT_TTL, "rowcol");
+    HColumnDescriptor hcd = new HColumnDescriptor(fam1)
+        .setMaxVersions(Integer.MAX_VALUE)
+        .setBloomFilterType(BloomType.ROWCOL);
 
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(hcd);
@@ -3089,13 +3089,9 @@ public class TestHRegion extends HBaseTestCase {
     byte [] FAMILY = Bytes.toBytes("family");
 
     //Create table
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY, Integer.MAX_VALUE,
-        HColumnDescriptor.DEFAULT_COMPRESSION,
-        HColumnDescriptor.DEFAULT_IN_MEMORY,
-        HColumnDescriptor.DEFAULT_BLOCKCACHE,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE, HColumnDescriptor.DEFAULT_TTL,
-        "rowcol",
-        HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY)
+        .setMaxVersions(Integer.MAX_VALUE)
+        .setBloomFilterType(BloomType.ROWCOL);
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
@@ -3138,9 +3134,9 @@ public class TestHRegion extends HBaseTestCase {
     byte [] familyName = Bytes.toBytes("familyName");
 
     // Create Table
-    HColumnDescriptor hcd = new HColumnDescriptor(familyName, Integer.MAX_VALUE,
-        HColumnDescriptor.DEFAULT_COMPRESSION, false, true,
-        HColumnDescriptor.DEFAULT_TTL, "rowcol");
+    HColumnDescriptor hcd = new HColumnDescriptor(familyName)
+        .setMaxVersions(Integer.MAX_VALUE)
+        .setBloomFilterType(BloomType.ROWCOL);
 
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(hcd);

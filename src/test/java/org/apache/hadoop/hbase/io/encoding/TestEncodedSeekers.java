@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -94,9 +95,12 @@ public class TestEncodedSeekers {
     new CacheConfig(testUtil.getConfiguration()).getBlockCache();
     cache.clearCache();
 
-    HRegion region = testUtil.createTestRegion(TABLE_NAME, CF_NAME,
-        Algorithm.NONE, BloomType.NONE, MAX_VERSIONS, HFile.DEFAULT_BLOCKSIZE,
-        encoding, encodeOnDisk);
+    HRegion region = testUtil.createTestRegion(
+        TABLE_NAME, new HColumnDescriptor(CF_NAME)
+            .setMaxVersions(MAX_VERSIONS)
+            .setDataBlockEncoding(encoding)
+            .setEncodeOnDisk(encodeOnDisk)
+    );
     LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(
         MIN_VALUE_SIZE, MAX_VALUE_SIZE);
 

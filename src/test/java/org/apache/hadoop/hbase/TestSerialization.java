@@ -558,21 +558,18 @@ public class TestSerialization {
   protected HTableDescriptor createTableDescriptor(final String name,
       final int versions) {
     HTableDescriptor htd = new HTableDescriptor(name);
-    htd.addFamily(new HColumnDescriptor(fam1, versions,
-      HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-      HColumnDescriptor.DEFAULT_BLOCKSIZE, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_BLOOMFILTER,
-      HConstants.REPLICATION_SCOPE_LOCAL));
-    htd.addFamily(new HColumnDescriptor(fam2, versions,
-        HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE, HConstants.FOREVER,
-        HColumnDescriptor.DEFAULT_BLOOMFILTER,
-        HConstants.REPLICATION_SCOPE_LOCAL));
-    htd.addFamily(new HColumnDescriptor(fam3, versions,
-        HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE,  HConstants.FOREVER,
-        HColumnDescriptor.DEFAULT_BLOOMFILTER,
-        HConstants.REPLICATION_SCOPE_LOCAL));
+    htd.addFamily(new HColumnDescriptor(fam1)
+        .setMaxVersions(versions)
+        .setBlockCacheEnabled(false)
+    );
+    htd.addFamily(new HColumnDescriptor(fam2)
+        .setMaxVersions(versions)
+        .setBlockCacheEnabled(false)
+    );
+    htd.addFamily(new HColumnDescriptor(fam3)
+        .setMaxVersions(versions)
+        .setBlockCacheEnabled(false)
+    );
     return htd;
   }
 

@@ -39,6 +39,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.MediumTests;
@@ -150,9 +151,13 @@ public class TestMultiColumnScanner {
 
   @Test
   public void testMultiColumnScanner() throws IOException {
-    HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME, FAMILY, comprAlgo,
-        bloomType, MAX_VERSIONS, HFile.DEFAULT_BLOCKSIZE,
-        dataBlockEncoding, true);
+    HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME,
+        new HColumnDescriptor(FAMILY)
+            .setCompressionType(comprAlgo)
+            .setBloomFilterType(bloomType)
+            .setMaxVersions(MAX_VERSIONS)
+            .setDataBlockEncoding(dataBlockEncoding)
+    );
     List<String> rows = sequentialStrings("row", NUM_ROWS);
     List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
     List<KeyValue> kvs = new ArrayList<KeyValue>();

@@ -67,11 +67,13 @@ public class TestScanner extends HBaseTestCase {
   static final HTableDescriptor TESTTABLEDESC =
     new HTableDescriptor("testscanner");
   static {
-    TESTTABLEDESC.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY,
-      10,  // Ten is arbitrary number.  Keep versions to help debuggging.
-      Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
-      HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
-      HConstants.REPLICATION_SCOPE_LOCAL));
+    TESTTABLEDESC.addFamily(
+        new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+            // Ten is an arbitrary number.  Keep versions to help debugging.
+            .setMaxVersions(10)
+            .setBlockCacheEnabled(false)
+            .setBlocksize(8 * 1024)
+    );
   }
   /** HRegionInfo for root region */
   public static final HRegionInfo REGION_INFO =

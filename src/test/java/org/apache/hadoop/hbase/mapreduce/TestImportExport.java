@@ -145,19 +145,10 @@ public class TestImportExport {
   public void testWithDeletes() throws Exception {
     String EXPORT_TABLE = "exportWithDeletes";
     HTableDescriptor desc = new HTableDescriptor(EXPORT_TABLE);
-    desc.addFamily(new HColumnDescriptor(FAMILYA,
-        HColumnDescriptor.DEFAULT_MIN_VERSIONS,
-        5, /* versions */
-        true /* keep deleted cells */,
-        HColumnDescriptor.DEFAULT_COMPRESSION,
-        HColumnDescriptor.DEFAULT_ENCODE_ON_DISK,
-        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING,
-        HColumnDescriptor.DEFAULT_IN_MEMORY,
-        HColumnDescriptor.DEFAULT_BLOCKCACHE,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE,
-        HColumnDescriptor.DEFAULT_TTL,
-        HColumnDescriptor.DEFAULT_BLOOMFILTER,
-        HConstants.REPLICATION_SCOPE_LOCAL));
+    desc.addFamily(new HColumnDescriptor(FAMILYA)
+        .setMaxVersions(5)
+        .setKeepDeletedCells(true)
+    );
     UTIL.getHBaseAdmin().createTable(desc);
     HTable t = new HTable(UTIL.getConfiguration(), EXPORT_TABLE);
 
@@ -193,19 +184,10 @@ public class TestImportExport {
 
     String IMPORT_TABLE = "importWithDeletes";
     desc = new HTableDescriptor(IMPORT_TABLE);
-    desc.addFamily(new HColumnDescriptor(FAMILYA,
-        HColumnDescriptor.DEFAULT_MIN_VERSIONS,
-        5, /* versions */
-        true /* keep deleted cells */,
-        HColumnDescriptor.DEFAULT_COMPRESSION,
-        HColumnDescriptor.DEFAULT_ENCODE_ON_DISK,
-        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING,
-        HColumnDescriptor.DEFAULT_IN_MEMORY,
-        HColumnDescriptor.DEFAULT_BLOCKCACHE,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE,
-        HColumnDescriptor.DEFAULT_TTL,
-        HColumnDescriptor.DEFAULT_BLOOMFILTER,
-        HConstants.REPLICATION_SCOPE_LOCAL));
+    desc.addFamily(new HColumnDescriptor(FAMILYA)
+        .setMaxVersions(5)
+        .setKeepDeletedCells(true)
+    );
     UTIL.getHBaseAdmin().createTable(desc);
     t.close();
     t = new HTable(UTIL.getConfiguration(), IMPORT_TABLE);
