@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +84,6 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
@@ -852,6 +853,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Wait till all regions are closed before going out.
     int lastCount = -1;
     long previousLogTime = 0;
+    Set<String> closedRegions = new HashSet<String>();
     while (!isOnlineRegionsEmpty()) {
       int count = getNumberOfOnlineRegions();
       // Only print a message if the count of regions has changed.
@@ -873,10 +875,19 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // iterator of onlineRegions to close all user regions.
       for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
         HRegionInfo hri = e.getValue().getRegionInfo();
-        if (!this.regionsInTransitionInRS.containsKey(hri.getEncodedNameAsBytes())) {
+        if (!this.regionsInTransitionInRS.containsKey(hri.getEncodedNameAsBytes())
+            && !closedRegions.contains(hri.getEncodedName())) {
+          closedRegions.add(hri.getEncodedName());
           // Don't update zk with this close transition; pass false.
           closeRegion(hri, abort, false);
         }
+      }
+      // No regions in RIT, we could stop waiting now.
+      if (this.regionsInTransitionInRS.isEmpty()) {
+        if (!isOnlineRegionsEmpty()) {
+          LOG.info("We were exiting though online regions are not empty, because some regions failed closing");
+        }
+        break;
       }
       Threads.sleep(200);
     }
