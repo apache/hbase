@@ -34,7 +34,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>0.92.1-SNAPSHOT</version>
+  <version>0.92.0-SNAPSHOT</version>
   <name>HBase</name>
   <description>
     HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
@@ -274,6 +274,14 @@
          can be overwritten here. -->
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-release-plugin</artifactId>
+          <version>${maven-release.version}</version>
+          <configuration>
+            <arguments>-Dmaven.test.skip</arguments>
+          </configuration>
+        </plugin>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
@@ -799,6 +807,7 @@
     <thrift.version>0.7.0</thrift.version>
     <zookeeper.version>3.4.2</zookeeper.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
+    <maven-release.version>2.2.2</maven-release.version>
 
     <package.prefix>/usr</package.prefix>	           
     <package.conf.dir>/etc/hbase</package.conf.dir>  
@@ -1099,7 +1108,14 @@
       <version>${commons-math.version}</version>
       <scope>test</scope>
     </dependency>
+    <!-- Publish dependencies -->
+    <dependency>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-release-plugin</artifactId>
+      <version>${maven-release.version}</version>
+    </dependency>
   </dependencies>
+  
 
   <!--
   To publish, use the following settings.xml file ( placed in ~/.m2/settings.xml )
