@@ -28,7 +28,14 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -36,7 +43,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.Test;
@@ -45,7 +52,8 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestBlocksRead extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestBlocksRead.class);
-  static final String[] BLOOM_TYPE = new String[] { "ROWCOL", "ROW", "NONE" };
+  static final BloomType[] BLOOM_TYPE = new BloomType[] { BloomType.ROWCOL,
+      BloomType.ROW, BloomType.NONE };
 
   private static BlockCache blockCache;
 
@@ -82,16 +90,10 @@ public class TestBlocksRead extends HBaseTestCase {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor familyDesc;
     for (int i = 0; i < BLOOM_TYPE.length; i++) {
-      String bloomType = BLOOM_TYPE[i];
-      familyDesc = new HColumnDescriptor(
-          Bytes.toBytes(family + "_" + bloomType),
-          HColumnDescriptor.DEFAULT_VERSIONS,
-          HColumnDescriptor.DEFAULT_COMPRESSION,
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          1, // small block size deliberate; each kv on its own block
-          HColumnDescriptor.DEFAULT_TTL, BLOOM_TYPE[i],
-          HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+      BloomType bloomType = BLOOM_TYPE[i];
+      familyDesc = new HColumnDescriptor(family + "_" + bloomType)
+          .setBlocksize(1)
+          .setBloomFilterType(BLOOM_TYPE[i]);
       htd.addFamily(familyDesc);
     }
 
@@ -138,7 +140,7 @@ public class TestBlocksRead extends HBaseTestCase {
     KeyValue[] kvs = null;
 
     for (int i = 0; i < BLOOM_TYPE.length; i++) {
-      String bloomType = BLOOM_TYPE[i];
+      BloomType bloomType = BLOOM_TYPE[i];
       byte[] cf = Bytes.toBytes(family + "_" + bloomType);
       long blocksStart = getBlkAccessCount(cf);
       Get get = new Get(Bytes.toBytes(row));

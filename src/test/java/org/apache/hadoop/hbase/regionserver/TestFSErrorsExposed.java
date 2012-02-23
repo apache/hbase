@@ -168,9 +168,10 @@ public class TestFSErrorsExposed {
 
       HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
       HTableDescriptor desc = new HTableDescriptor(tableName);
-      desc.addFamily(new HColumnDescriptor(
-          fam, 1, HColumnDescriptor.DEFAULT_COMPRESSION,
-          false, false, HConstants.FOREVER, "NONE"));
+      desc.addFamily(new HColumnDescriptor(fam)
+          .setMaxVersions(1)
+          .setBlockCacheEnabled(false)
+      );
       admin.createTable(desc);
       // Make it fail faster.
       util.getConfiguration().setInt("hbase.client.retries.number", 1);

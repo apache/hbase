@@ -99,12 +99,9 @@ public class TestScannerSelectionUsingTTL {
   @Test
   public void testScannerSelection() throws IOException {
     HColumnDescriptor hcd =
-      new HColumnDescriptor(FAMILY_BYTES, Integer.MAX_VALUE,
-          Compression.Algorithm.NONE.getName(),
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          TTL_SECONDS,
-          BloomType.NONE.toString());
+      new HColumnDescriptor(FAMILY_BYTES)
+          .setMaxVersions(Integer.MAX_VALUE)
+          .setTimeToLive(TTL_SECONDS);
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(Bytes.toBytes(TABLE));

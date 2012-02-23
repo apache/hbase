@@ -39,7 +39,7 @@ public class UnmodifyableHColumnDescriptor extends HColumnDescriptor {
    * @see org.apache.hadoop.hbase.HColumnDescriptor#setValue(byte[], byte[])
    */
   @Override
-  public void setValue(byte[] key, byte[] value) {
+  public HColumnDescriptor setValue(byte[] key, byte[] value) {
     throw new UnsupportedOperationException("HColumnDescriptor is read-only");
   }
 
@@ -47,7 +47,7 @@ public class UnmodifyableHColumnDescriptor extends HColumnDescriptor {
    * @see org.apache.hadoop.hbase.HColumnDescriptor#setValue(java.lang.String, java.lang.String)
    */
   @Override
-  public void setValue(String key, String value) {
+  public HColumnDescriptor setValue(String key, String value) {
     throw new UnsupportedOperationException("HColumnDescriptor is read-only");
   }
 
@@ -55,7 +55,7 @@ public class UnmodifyableHColumnDescriptor extends HColumnDescriptor {
    * @see org.apache.hadoop.hbase.HColumnDescriptor#setMaxVersions(int)
    */
   @Override
-  public void setMaxVersions(int maxVersions) {
+  public HColumnDescriptor setMaxVersions(int maxVersions) {
     throw new UnsupportedOperationException("HColumnDescriptor is read-only");
   }
 
@@ -63,7 +63,7 @@ public class UnmodifyableHColumnDescriptor extends HColumnDescriptor {
    * @see org.apache.hadoop.hbase.HColumnDescriptor#setInMemory(boolean)
    */
   @Override
-  public void setInMemory(boolean inMemory) {
+  public HColumnDescriptor setInMemory(boolean inMemory) {
     throw new UnsupportedOperationException("HColumnDescriptor is read-only");
   }
 
@@ -71,7 +71,7 @@ public class UnmodifyableHColumnDescriptor extends HColumnDescriptor {
    * @see org.apache.hadoop.hbase.HColumnDescriptor#setBlockCacheEnabled(boolean)
    */
   @Override
-  public void setBlockCacheEnabled(boolean blockCacheEnabled) {
+  public HColumnDescriptor setBlockCacheEnabled(boolean blockCacheEnabled) {
     throw new UnsupportedOperationException("HColumnDescriptor is read-only");
   }
 
@@ -79,7 +79,7 @@ public class UnmodifyableHColumnDescriptor extends HColumnDescriptor {
    * @see org.apache.hadoop.hbase.HColumnDescriptor#setTimeToLive(int)
    */
   @Override
-  public void setTimeToLive(int timeToLive) {
+  public HColumnDescriptor setTimeToLive(int timeToLive) {
     throw new UnsupportedOperationException("HColumnDescriptor is read-only");
   }
 
@@ -87,7 +87,7 @@ public class UnmodifyableHColumnDescriptor extends HColumnDescriptor {
    * @see org.apache.hadoop.hbase.HColumnDescriptor#setCompressionType(org.apache.hadoop.hbase.io.hfile.Compression.Algorithm)
    */
   @Override
-  public void setCompressionType(Compression.Algorithm type) {
+  public HColumnDescriptor setCompressionType(Compression.Algorithm type) {
     throw new UnsupportedOperationException("HColumnDescriptor is read-only");
   }
 }

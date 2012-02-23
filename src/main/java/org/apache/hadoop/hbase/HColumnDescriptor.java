@@ -244,7 +244,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
    * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
+   * @deprecated use {@link #HColumnDescriptor(String)} and setters
    */
+  @Deprecated
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
       final String compression, final boolean inMemory,
       final boolean blockCacheEnabled,
@@ -274,7 +276,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
    * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
+   * @deprecated use {@link #HColumnDescriptor(String)} and setters
    */
+  @Deprecated
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
       final String compression, final boolean inMemory,
       final boolean blockCacheEnabled, final int blocksize,
@@ -312,7 +316,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
    * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
+   * @deprecated use {@link #HColumnDescriptor(String)} and setters
    */
+  @Deprecated
   public HColumnDescriptor(final byte[] familyName, final int minVersions,
       final int maxVersions, final boolean keepDeletedCells,
       final String compression, final boolean encodeOnDisk,
@@ -427,10 +433,12 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @param key The key.
    * @param value The value.
+   * @return this (for chained invocation)
    */
-  public void setValue(byte[] key, byte[] value) {
+  public HColumnDescriptor setValue(byte[] key, byte[] value) {
     values.put(new ImmutableBytesWritable(key),
       new ImmutableBytesWritable(value));
+    return this;
   }
 
   /**
@@ -443,9 +451,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @param key The key.
    * @param value The value.
+   * @return this (for chained invocation)
    */
-  public void setValue(String key, String value) {
+  public HColumnDescriptor setValue(String key, String value) {
     setValue(Bytes.toBytes(key), Bytes.toBytes(value));
+    return this;
   }
 
   /** @return compression type being used for the column family */
@@ -474,10 +484,12 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   /**
    * @param maxVersions maximum number of versions
+   * @return this (for chained invocation)
    */
-  public void setMaxVersions(int maxVersions) {
+  public HColumnDescriptor setMaxVersions(int maxVersions) {
     setValue(HConstants.VERSIONS, Integer.toString(maxVersions));
     cachedMaxVersions = maxVersions;
+    return this;
   }
 
   /**
@@ -495,10 +507,12 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @param s Blocksize to use when writing out storefiles/hfiles on this
    * column family.
+   * @return this (for chained invocation)
    */
-  public void setBlocksize(int s) {
+  public HColumnDescriptor setBlocksize(int s) {
     setValue(BLOCKSIZE, Integer.toString(s));
     this.blocksize = null;
+    return this;
   }
 
   /**
@@ -514,8 +528,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * See <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a>
    * for how to enable it.
    * @param type Compression type setting.
+   * @return this (for chained invocation)
    */
-  public void setCompressionType(Compression.Algorithm type) {
+  public HColumnDescriptor setCompressionType(Compression.Algorithm type) {
     String compressionType;
     switch (type) {
       case LZO: compressionType = "LZO"; break;
@@ -523,7 +538,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       case SNAPPY: compressionType = "SNAPPY"; break;
       default: compressionType = "NONE"; break;
     }
-    setValue(COMPRESSION, compressionType);
+    return setValue(COMPRESSION, compressionType);
   }
 
   /** @return data block encoding algorithm used on disk */
@@ -546,9 +561,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * Set the flag indicating that we only want to encode data block in cache
    * but not on disk.
+   * @return this (for chained invocation)
    */
-  public void setEncodeOnDisk(boolean encodeOnDisk) {
-    setValue(ENCODE_ON_DISK, String.valueOf(encodeOnDisk));
+  public HColumnDescriptor setEncodeOnDisk(boolean encodeOnDisk) {
+    return setValue(ENCODE_ON_DISK, String.valueOf(encodeOnDisk));
   }
 
   /**
@@ -566,15 +582,16 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * Set data block encoding algorithm used in block cache.
    * @param type What kind of data block encoding will be used.
+   * @return this (for chained invocation)
    */
-  public void setDataBlockEncoding(DataBlockEncoding type) {
+  public HColumnDescriptor setDataBlockEncoding(DataBlockEncoding type) {
     String name;
     if (type != null) {
       name = type.toString();
     } else {
       name = DataBlockEncoding.NONE.toString();
     }
-    setValue(DATA_BLOCK_ENCODING, name);
+    return setValue(DATA_BLOCK_ENCODING, name);
   }
 
   /**
@@ -590,8 +607,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * See <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a>
    * for how to enable it.
    * @param type Compression type setting.
+   * @return this (for chained invocation)
    */
-  public void setCompactionCompressionType(Compression.Algorithm type) {
+  public HColumnDescriptor setCompactionCompressionType(
+      Compression.Algorithm type) {
     String compressionType;
     switch (type) {
       case LZO: compressionType = "LZO"; break;
@@ -599,7 +618,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       case SNAPPY: compressionType = "SNAPPY"; break;
       default: compressionType = "NONE"; break;
     }
-    setValue(COMPRESSION_COMPACT, compressionType);
+    return setValue(COMPRESSION_COMPACT, compressionType);
   }
 
   /**
@@ -615,9 +634,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @param inMemory True if we are to keep all values in the HRegionServer
    * cache
+   * @return this (for chained invocation)
    */
-  public void setInMemory(boolean inMemory) {
-    setValue(HConstants.IN_MEMORY, Boolean.toString(inMemory));
+  public HColumnDescriptor setInMemory(boolean inMemory) {
+    return setValue(HConstants.IN_MEMORY, Boolean.toString(inMemory));
   }
 
   public boolean getKeepDeletedCells() {
@@ -631,9 +651,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @param keepDeletedCells True if deleted rows should not be collected
    * immediately.
+   * @return this (for chained invocation)
    */
-  public void setKeepDeletedCells(boolean keepDeletedCells) {
-    setValue(KEEP_DELETED_CELLS, Boolean.toString(keepDeletedCells));
+  public HColumnDescriptor setKeepDeletedCells(boolean keepDeletedCells) {
+    return setValue(KEEP_DELETED_CELLS, Boolean.toString(keepDeletedCells));
   }
 
   /**
@@ -646,9 +667,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   /**
    * @param timeToLive Time-to-live of cell contents, in seconds.
+   * @return this (for chained invocation)
    */
-  public void setTimeToLive(int timeToLive) {
-    setValue(TTL, Integer.toString(timeToLive));
+  public HColumnDescriptor setTimeToLive(int timeToLive) {
+    return setValue(TTL, Integer.toString(timeToLive));
   }
 
   /**
@@ -662,9 +684,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @param minVersions The minimum number of versions to keep.
    * (used when timeToLive is set)
+   * @return this (for chained invocation)
    */
-  public void setMinVersions(int minVersions) {
-    setValue(MIN_VERSIONS, Integer.toString(minVersions));
+  public HColumnDescriptor setMinVersions(int minVersions) {
+    return setValue(MIN_VERSIONS, Integer.toString(minVersions));
   }
 
   /**
@@ -679,9 +702,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   /**
    * @param blockCacheEnabled True if MapFile blocks should be cached.
+   * @return this (for chained invocation)
    */
-  public void setBlockCacheEnabled(boolean blockCacheEnabled) {
-    setValue(BLOCKCACHE, Boolean.toString(blockCacheEnabled));
+  public HColumnDescriptor setBlockCacheEnabled(boolean blockCacheEnabled) {
+    return setValue(BLOCKCACHE, Boolean.toString(blockCacheEnabled));
   }
 
   /**
@@ -697,9 +721,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   /**
    * @param bt bloom filter type
+   * @return this (for chained invocation)
    */
-  public void setBloomFilterType(final StoreFile.BloomType bt) {
-    setValue(BLOOMFILTER, bt.toString());
+  public HColumnDescriptor setBloomFilterType(final StoreFile.BloomType bt) {
+    return setValue(BLOOMFILTER, bt.toString());
   }
 
    /**
@@ -715,9 +740,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
  /**
   * @param scope the scope tag
+  * @return this (for chained invocation)
   */
-  public void setScope(int scope) {
-    setValue(REPLICATION_SCOPE, Integer.toString(scope));
+  public HColumnDescriptor setScope(int scope) {
+    return setValue(REPLICATION_SCOPE, Integer.toString(scope));
   }
 
   /**

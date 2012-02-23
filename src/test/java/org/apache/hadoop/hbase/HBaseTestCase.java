@@ -220,33 +220,15 @@ public abstract class HBaseTestCase extends TestCase {
   protected HTableDescriptor createTableDescriptor(final String name,
       final int minVersions, final int versions, final int ttl, boolean keepDeleted) {
     HTableDescriptor htd = new HTableDescriptor(name);
-    htd.addFamily(new HColumnDescriptor(fam1, minVersions, versions,
-      keepDeleted,
-      HColumnDescriptor.DEFAULT_COMPRESSION, 
-      HColumnDescriptor.DEFAULT_ENCODE_ON_DISK,
-      HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING,
-      false, false,
-      HColumnDescriptor.DEFAULT_BLOCKSIZE, ttl,
-      HColumnDescriptor.DEFAULT_BLOOMFILTER,
-      HConstants.REPLICATION_SCOPE_LOCAL));
-    htd.addFamily(new HColumnDescriptor(fam2, minVersions, versions,
-        keepDeleted,
-        HColumnDescriptor.DEFAULT_COMPRESSION,
-        HColumnDescriptor.DEFAULT_ENCODE_ON_DISK,
-        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING,
-        false, false,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE, ttl,
-        HColumnDescriptor.DEFAULT_BLOOMFILTER,
-        HConstants.REPLICATION_SCOPE_LOCAL));
-    htd.addFamily(new HColumnDescriptor(fam3, minVersions, versions,
-        keepDeleted,
-        HColumnDescriptor.DEFAULT_COMPRESSION,
-        HColumnDescriptor.DEFAULT_ENCODE_ON_DISK,
-        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING,
-        false, false,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE,  ttl,
-        HColumnDescriptor.DEFAULT_BLOOMFILTER,
-        HConstants.REPLICATION_SCOPE_LOCAL));
+    for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
+      htd.addFamily(new HColumnDescriptor(cfName)
+          .setMinVersions(minVersions)
+          .setMaxVersions(versions)
+          .setKeepDeletedCells(keepDeleted)
+          .setBlockCacheEnabled(false)
+          .setTimeToLive(ttl)
+      );
+    }
     return htd;
   }
 

@@ -511,8 +511,11 @@ public class TestHFileOutputFormat  {
   {
     HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
     for (Entry<String, Compression.Algorithm> entry : familyToCompression.entrySet()) {
-      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey().getBytes(), 1, entry.getValue().getName(),
-                                                          false, false, 0, "none"));
+      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
+          .setMaxVersions(1)
+          .setCompressionType(entry.getValue())
+          .setBlockCacheEnabled(false)
+          .setTimeToLive(0));
     }
     Mockito.doReturn(mockTableDescriptor).when(table).getTableDescriptor();
   }
