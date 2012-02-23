@@ -81,7 +81,7 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     THBaseService.Iface handler = new ThriftHBaseServiceHandler(conf);
     return (THBaseService.Iface) Proxy.newProxyInstance(
         handler.getClass().getClassLoader(),
-        handler.getClass().getInterfaces(),
+        new Class[]{THBaseService.Iface.class},
         new THBaseServiceMetricsProxy(handler, metrics));
   }
 
