@@ -449,24 +449,26 @@ public class HTable implements HTableInterface {
 
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
       public boolean processRow(Result rowResult) throws IOException {
-        HRegionInfo info = Writables.getHRegionInfo(
+        HRegionInfo info = Writables.getHRegionInfoOrNull(
             rowResult.getValue(HConstants.CATALOG_FAMILY,
                 HConstants.REGIONINFO_QUALIFIER));
 
-        if (!(Bytes.equals(info.getTableName(), getTableName()))) {
-          return false;
-        }
+        if (info != null) {
+          if (!(Bytes.equals(info.getTableName(), getTableName()))) {
+            return false;
+          }
 
-        HServerAddress server = new HServerAddress();
-        byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
+          HServerAddress server = new HServerAddress();
+          byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
             HConstants.SERVER_QUALIFIER);
-        if (value != null && value.length > 0) {
-          String hostAndPort = Bytes.toString(value);
-          server = new HServerAddress(Addressing.createInetSocketAddressFromHostAndPortStr(hostAndPort));
-        }
+          if (value != null && value.length > 0) {
+            String hostAndPort = Bytes.toString(value);
+            server = new HServerAddress(Addressing.createInetSocketAddressFromHostAndPortStr(hostAndPort));
+          }
 
-        if (!(info.isOffline() || info.isSplit())) {
-          regionMap.put(new UnmodifyableHRegionInfo(info), server);
+          if (!(info.isOffline() || info.isSplit())) {
+            regionMap.put(new UnmodifyableHRegionInfo(info), server);
+          }
         }
         return true;
       }
