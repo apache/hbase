@@ -40,7 +40,7 @@
            </inlinemediaobject>
        </link>
     </subtitle>
-      <copyright><year>2011</year><holder>Apache Software Foundation</holder></copyright>
+      <copyright><year>2012</year><holder>Apache Software Foundation</holder></copyright>
       <abstract>
     <para>This is the official reference guide of
     <link xlink:href="http://www.hbase.org">Apache HBase</link>,
