@@ -46,7 +46,7 @@ public class HbaseHandlerMetricsProxy implements InvocationHandler {
                                         Configuration conf) {
     return (Hbase.Iface) Proxy.newProxyInstance(
         handler.getClass().getClassLoader(),
-        handler.getClass().getInterfaces(),
+        new Class[]{Hbase.Iface.class},
         new HbaseHandlerMetricsProxy(handler, metrics, conf));
   }
 

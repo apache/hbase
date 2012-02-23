@@ -115,6 +115,7 @@ public class ThriftMetrics implements Updater {
   }
 
   private void createMetricsForMethods(Class<?> iface) {
+    LOG.debug("Creating metrics for interface " + iface.toString());
     for (Method m : iface.getDeclaredMethods()) {
       if (getMethodTimeMetrics(m.getName()) == null)
         LOG.debug("Creating metrics for method:" + m.getName());
