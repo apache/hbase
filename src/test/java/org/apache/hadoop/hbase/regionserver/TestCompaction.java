@@ -275,6 +275,51 @@ public class TestCompaction extends HBaseTestCase {
     assertTrue("Should not see anything after TTL has expired", count == 0);
   }
 
+  public void testTimeBasedMajorCompaction() throws Exception {
+    // create 2 storefiles and force a major compaction to reset the time
+    int delay = 10 * 1000; // 10 sec
+    float jitterPct = 0.20f; // 20%
+    conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, delay);
+    conf.setFloat("hbase.hregion.majorcompaction.jitter", jitterPct);
+
+    Store s = r.getStore(COLUMN_FAMILY);
+    try {
+      createStoreFile(r);
+      createStoreFile(r);
+      r.compactStores(true);
+
+      // add one more file & verify that a regular compaction won't work
+      createStoreFile(r);
+      r.compactStores(false);
+      assertEquals(2, s.getStorefilesCount());
+
+      // ensure that major compaction time is deterministic
+      long mcTime = s.getNextMajorCompactTime();
+      for (int i = 0; i < 10; ++i) {
+        assertEquals(mcTime, s.getNextMajorCompactTime());
+      }
+
+      // ensure that the major compaction time is within the variance
+      long jitter = Math.round(delay * jitterPct);
+      assertTrue(delay - jitter <= mcTime && mcTime <= delay + jitter);
+
+      // wait until the time-based compaction interval
+      Thread.sleep(mcTime);
+
+      // trigger a compaction request and ensure that it's upgraded to major
+      r.compactStores(false);
+      assertEquals(1, s.getStorefilesCount());
+    } finally {
+      // reset the timed compaction settings
+      conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24);
+      conf.setFloat("hbase.hregion.majorcompaction.jitter", 0.20F);
+      // run a major to reset the cache
+      createStoreFile(r);
+      r.compactStores(true);
+      assertEquals(1, s.getStorefilesCount());
+    }
+  }
+
   public void testMinorCompactionWithDeleteRow() throws Exception {
     Delete deleteRow = new Delete(secondRowBytes);
     testMinorCompactionWithDelete(deleteRow);

@@ -211,12 +211,17 @@ public class TestCompactSelection extends TestCase {
     // if not, it creates a 'snowball effect' when files >> maxCompactSize:
     // the last file in compaction is the aggregate of all previous compactions
     compactEquals(sfCreate(100,50,23,12,12), true, 23, 12, 12);
-    // trigger an aged major compaction
-    store.majorCompactionTime = 1;
-    compactEquals(sfCreate(50,25,12,12), 50, 25, 12, 12);
-    // major sure exceeding maxCompactSize also downgrades aged minors
-    store.majorCompactionTime = 1;
-    compactEquals(sfCreate(100,50,23,12,12), 23, 12, 12);
+    conf.setInt(HConstants.MAJOR_COMPACTION_PERIOD, 1);
+    conf.setFloat("hbase.hregion.majorcompaction.jitter", 0);
+    try {
+      // trigger an aged major compaction
+      compactEquals(sfCreate(50,25,12,12), 50, 25, 12, 12);
+      // major sure exceeding maxCompactSize also downgrades aged minors
+      compactEquals(sfCreate(100,50,23,12,12), 23, 12, 12);
+    } finally {
+      conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24);
+      conf.setFloat("hbase.hregion.majorcompaction.jitter", 0.20F);
+    }
 
     /* REFERENCES == file is from a region that was split */
     // treat storefiles that have references like a major compaction
