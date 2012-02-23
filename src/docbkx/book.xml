@@ -30,7 +30,7 @@
   <info>
     
     <title><link xlink:href="http://www.hbase.org">
-    Apache HBase Book
+    Apache HBase Reference Guide
     </link></title>
     <subtitle><link xlink:href="http://www.hbase.org">
            <inlinemediaobject>
@@ -42,7 +42,7 @@
     </subtitle>
       <copyright><year>2011</year><holder>Apache Software Foundation</holder></copyright>
       <abstract>
-    <para>This is the official book of
+    <para>This is the official reference guide of
     <link xlink:href="http://www.hbase.org">Apache HBase</link>,
     a distributed, versioned, column-oriented database built on top of
     <link xlink:href="http://hadoop.apache.org/">Apache Hadoop</link> and
@@ -1758,7 +1758,7 @@ rs.close();
 
        <section xml:id="coprocessors"><title>Coprocessors</title>
          <para>Coprocessors were added in 0.92.  There is a thorough <link xlink:href="https://blogs.apache.org/hbase/entry/coprocessor_introduction">Blog Overview of CoProcessors</link>
-         posted.  Documentation will eventually move to this book, but the blog is the most current information available at this time.
+         posted.  Documentation will eventually move to this reference guide, but the blog is the most current information available at this time.
          </para>
        </section>
        
