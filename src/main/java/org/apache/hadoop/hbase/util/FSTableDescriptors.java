@@ -122,7 +122,7 @@ public class FSTableDescriptors implements TableDescriptors {
    */
   @Override
   public HTableDescriptor get(final byte [] tablename)
-  throws TableExistsException, FileNotFoundException, IOException {
+  throws FileNotFoundException, IOException {
     return get(Bytes.toString(tablename));
   }
 
@@ -131,7 +131,7 @@ public class FSTableDescriptors implements TableDescriptors {
    */
   @Override
   public HTableDescriptor get(final String tablename)
-  throws TableExistsException, FileNotFoundException, IOException {
+  throws FileNotFoundException, IOException {
     invocations++;
     if (HTableDescriptor.ROOT_TABLEDESC.getNameAsString().equals(tablename)) {
       cachehits++;
@@ -160,10 +160,12 @@ public class FSTableDescriptors implements TableDescriptors {
     }
     HTableDescriptor htd = getTableDescriptor(this.fs, this.rootdir, tablename);
     if (htd == null) {
-      // More likely is above will throw a FileNotFoundException
-      throw new TableExistsException("No descriptor for " + tablename);
+      LOG.warn("The following folder is in HBase's root directory and " +
+        "doesn't contain a table descriptor, " +
+        "do consider deleting it: " + tablename);
+    } else {
+      this.cache.put(tablename, new TableDescriptorModtime(modtime, htd));
     }
-    this.cache.put(tablename, new TableDescriptorModtime(modtime, htd));
     return htd;
   }
 
