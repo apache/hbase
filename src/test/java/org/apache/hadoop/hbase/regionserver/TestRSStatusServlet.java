@@ -19,17 +19,22 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.List;
 
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MasterAddressTracker;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
+import org.apache.hadoop.hbase.tmpl.regionserver.RSStatusTmpl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hbase.tmpl.regionserver.RSStatusTmpl;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -48,14 +53,14 @@ public class TestRSStatusServlet {
   static final int FAKE_WEB_PORT = 1586;
   
   @SuppressWarnings("deprecation")
-  private HServerAddress fakeAddress =
+  private final HServerAddress fakeAddress =
     new HServerAddress("localhost", FAKE_IPC_PORT);
   @SuppressWarnings("deprecation")
-  private HServerInfo fakeInfo =
+  private final HServerInfo fakeInfo =
     new HServerInfo(fakeAddress, FAKE_WEB_PORT);
-  private RegionServerMetrics metrics =
+  private final RegionServerMetrics metrics =
     new RegionServerMetrics();
-  private ServerName fakeMasterAddress =
+  private final ServerName fakeMasterAddress =
     new ServerName("localhost", 60010, 1212121212);
   
   @SuppressWarnings("deprecation")
