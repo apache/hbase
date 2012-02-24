@@ -43,6 +43,8 @@ Release 0.92.1 - Unreleased
                hbase.root.dir better
    HBASE-5466  Opening a table also opens the metatable and never closes it
                (Ashley Taylor)
+   HBASE-5317  Fix TestHFileOutputFormat to work against hadoop 0.23
+               (Gregory Taylor)
  
   IMPROVEMENTS
    HBASE-5197  [replication] Handle socket timeouts in ReplicationSource

@@ -601,6 +601,17 @@ public class HBaseTestingUtility {
   }
 
   /**
+   * Returns the path to the default root dir the minicluster uses.
+   * Note: this does not cause the root dir to be created.
+   * @return Fully qualified path for the default hbase root dir
+   * @throws IOException
+   */
+  public Path getDefaultRootDirPath() throws IOException {
+	FileSystem fs = FileSystem.get(this.conf);
+	return new Path(fs.makeQualified(fs.getHomeDirectory()),"hbase");
+  }
+
+  /**
    * Creates an hbase rootdir in user home directory.  Also creates hbase
    * version file.  Normally you won't make use of this method.  Root hbasedir
    * is created for you as part of mini cluster startup.  You'd only use this
@@ -610,7 +621,7 @@ public class HBaseTestingUtility {
    */
   public Path createRootDir() throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
-    Path hbaseRootdir = fs.makeQualified(fs.getHomeDirectory());
+    Path hbaseRootdir = getDefaultRootDirPath();
     this.conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);

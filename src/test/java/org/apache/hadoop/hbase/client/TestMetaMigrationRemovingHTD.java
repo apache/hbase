@@ -77,10 +77,10 @@ public class TestMetaMigrationRemovingHTD {
     Configuration conf = TEST_UTIL.getConfiguration();
     FsShell shell = new FsShell(conf);
     FileSystem fs = FileSystem.get(conf);
-    // Minihbase roots itself in user home directory up in minidfs.
-    Path homedir = fs.getHomeDirectory();
+    // find where hbase will root itself, so we can copy filesystem there
+    Path hbaseRootDir = TEST_UTIL.getDefaultRootDirPath();
     doFsCommand(shell,
-      new String [] {"-put", untar.toURI().toString(), homedir.toString()});
+      new String [] {"-put", untar.toURI().toString(), hbaseRootDir.toString()});
     // See whats in minihdfs.
     doFsCommand(shell, new String [] {"-lsr", "/"});
     TEST_UTIL.startMiniHBaseCluster(1, 1);

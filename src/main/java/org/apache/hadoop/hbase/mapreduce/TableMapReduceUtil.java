@@ -24,6 +24,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.Enumeration;
@@ -467,7 +469,7 @@ public class TableMapReduceUtil {
     for (Class clazz : classes) {
       if (clazz == null) continue;
 
-      String pathStr = findContainingJar(clazz);
+      String pathStr = findOrCreateJar(clazz);
       if (pathStr == null) {
         LOG.warn("Could not find jar for class " + clazz +
                  " in order to ship it to the cluster.");
@@ -487,7 +489,46 @@ public class TableMapReduceUtil {
              StringUtils.arrayToString(jars.toArray(new String[0])));
   }
 
-  /** 
+  /**
+   * If org.apache.hadoop.util.JarFinder is available (0.23+ hadoop),
+   * finds the Jar for a class or creates it if it doesn't exist. If
+   * the class is in a directory in the classpath, it creates a Jar
+   * on the fly with the contents of the directory and returns the path
+   * to that Jar. If a Jar is created, it is created in
+   * the system temporary directory.
+   *
+   * Otherwise, returns an existing jar that contains a class of the
+   * same name.
+   *
+   * @param my_class the class to find.
+   * @return a jar file that contains the class, or null.
+   * @throws IOException
+   */
+  private static String findOrCreateJar(Class my_class)
+  throws IOException {
+    try {
+      Class<?> jarFinder = Class.forName("org.apache.hadoop.util.JarFinder");
+      // hadoop-0.23 has a JarFinder class that will create the jar
+      // if it doesn't exist.  Note that this is needed to run the mapreduce
+      // unit tests post-0.23, because mapreduce v2 requires the relevant jars
+      // to be in the mr cluster to do output, split, etc.  At unit test time,
+      // the hbase jars do not exist, so we need to create some.  Note that we
+      // can safely fall back to findContainingJars for pre-0.23 mapreduce.
+      Method m = jarFinder.getMethod("getJar", Class.class);
+      return (String)m.invoke(null,my_class);
+    } catch (InvocationTargetException ite) {
+      // function was properly called, but threw it's own exception
+      throw new IOException(ite.getCause());
+    } catch (Exception e) {
+      // ignore all other exceptions. related to reflection failure
+  }
+
+  LOG.debug("New JarFinder: org.apache.hadoop.util.JarFinder.getJar " +
+	"not available.  Using old findContainingJar");
+  return findContainingJar(my_class);
+}
+
+  /**
    * Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing
    * on the class path that has a class with the same name.

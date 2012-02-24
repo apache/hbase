@@ -333,7 +333,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     
     // Set compression algorithms based on column families
     configureCompression(table, conf);
-    
+
+    TableMapReduceUtil.addDependencyJars(job);
     LOG.info("Incremental table output configured.");
   }
 
