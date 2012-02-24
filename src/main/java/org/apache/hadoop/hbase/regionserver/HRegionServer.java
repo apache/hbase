@@ -50,6 +50,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.management.ObjectName;
+
 import org.apache.commons.lang.mutable.MutableDouble;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -151,6 +153,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -341,6 +344,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   private static final String OPEN = "OPEN";
   private static final String CLOSE = "CLOSE";
+
+  /**
+   * MX Bean for RegionServerInfo
+   */
+  private ObjectName mxBean = null;
 
   /**
    * Starts a HRegionServer at the default location
@@ -648,6 +656,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   /**
    * The HRegionServer sticks in this loop until closed.
    */
+  @SuppressWarnings("deprecation")
   public void run() {
     try {
       // Do pre-registration initializations; zookeeper, lease threads, etc.
@@ -669,6 +678,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           break;
         }
       }
+      registerMBean();
 
       // We registered with the Master.  Go into run mode.
       long lastMsg = 0;
@@ -715,6 +725,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
     }
     // Run shutdown.
+    if (mxBean != null) {
+      MBeanUtil.unregisterMBean(mxBean);
+      mxBean = null;
+    }
     if (this.thriftServer != null) this.thriftServer.shutdown();
     this.leases.closeAfterLeasesExpire();
     this.rpcServer.stop();
@@ -3680,4 +3694,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     HServerLoad hsl = buildServerLoad();
     return hsl == null? null: hsl.getCoprocessors();
   }
+
+  /**
+   * Register bean with platform management server
+   */
+  @SuppressWarnings("deprecation")
+  void registerMBean() {
+    MXBeanImpl mxBeanInfo = MXBeanImpl.init(this);
+    mxBean = MBeanUtil.registerMBean("org.apache.hbase", "RegionServer",
+        mxBeanInfo);
+    LOG.info("Registered RegionServer MXBean");
+  }
+
 }
