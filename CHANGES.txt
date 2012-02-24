@@ -44,7 +44,10 @@ Release 0.92.1 - Unreleased
    HBASE-5466  Opening a table also opens the metatable and never closes it
                (Ashley Taylor)
    HBASE-5317  Fix TestHFileOutputFormat to work against hadoop 0.23
-               (Gregory Taylor)
+               (Gregory Chanan)
+   HBASE-5351  hbase completebulkload to a new table fails in a race
+               (Gregory Chanan)
+ 
  
   IMPROVEMENTS
    HBASE-5197  [replication] Handle socket timeouts in ReplicationSource

@@ -664,23 +664,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
     
     keys = LoadIncrementalHFiles.inferBoundaries(map);
-    try {    
-      this.hbAdmin.createTableAsync(htd, keys);
-    } catch (java.net.SocketTimeoutException e) {
-      System.err.println("Caught Socket timeout.. Mostly caused by a slow region assignment by master!");
-    }
+    this.hbAdmin.createTable(htd,keys);
 
-    HTable table = new HTable(this.cfg, tableName);
-
-    HConnection conn = table.getConnection();
-    int ctr = 0;
-    while (!conn.isTableAvailable(table.getTableName()) && (ctr<TABLE_CREATE_MAX_RETRIES)) {
-      LOG.info("Table " + tableName + "not yet available... Sleeping for 60 more seconds...");
-      /* Every TABLE_CREATE_SLEEP milliseconds, wakes up and checks if the table is available*/
-      Thread.sleep(TABLE_CREATE_SLEEP);
-      ctr++;
-    }
-    LOG.info("Table "+ tableName +" is finally available!!");
+    LOG.info("Table "+ tableName +" is available!!");
   }
 
   @Override

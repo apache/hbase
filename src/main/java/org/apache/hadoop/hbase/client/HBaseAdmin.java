@@ -420,7 +420,9 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   /**
    * Creates a new table but does not block and wait for it to come online.
-   * Asynchronous operation.
+   * Asynchronous operation.  To check if the table exists, use
+   * {@link: #isTableAvailable} -- it is not safe to create an HTable
+   * instance to this table before it is available.
    *
    * @param desc table descriptor for table
    *
