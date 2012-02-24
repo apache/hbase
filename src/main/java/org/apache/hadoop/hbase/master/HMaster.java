@@ -37,6 +37,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.management.ObjectName;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -69,7 +71,6 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
@@ -101,6 +102,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
@@ -123,7 +125,8 @@ import org.apache.zookeeper.Watcher;
  * @see Watcher
  */
 public class HMaster extends HasThread
-implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
+implements HMasterInterface, HMasterRegionInterface, MasterServices,
+Server {
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
   // MASTER is name of the webapp and the attribute name used stuffing this
@@ -202,6 +205,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private long masterStartTime;
   private long masterActiveTime;
   
+  /**
+   * MX Bean for MasterInfo
+   */
+  private ObjectName mxBean = null;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -515,6 +523,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.balancerChore = getAndStartBalancerChore(this);
     this.catalogJanitorChore = new CatalogJanitor(this, this);
     Threads.setDaemonThreadRunning(catalogJanitorChore.getThread());
+
+    registerMBean();
 
     status.markComplete("Initialization successful");
     LOG.info("Master has completed initialization");
@@ -1213,6 +1223,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.assignmentManager.clearRegionFromTransition(hri);
     }
   }
+
   /**
    * @return cluster status
    */
@@ -1270,7 +1281,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public long getMasterActiveTime() {
     return masterActiveTime;
   }
-  
+
   /**
    * @return array of coprocessor SimpleNames.
    */
@@ -1413,6 +1424,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     return rsFatals;
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public void shutdown() {
     if (cpHost != null) {
@@ -1421,6 +1433,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       } catch (IOException ioe) {
         LOG.error("Error call master coprocessor preShutdown()", ioe);
       }
+    }
+    if (mxBean != null) {
+      MBeanUtil.unregisterMBean(mxBean);
+      mxBean = null;
     }
     this.assignmentManager.shutdown();
     this.serverManager.shutdownCluster();
@@ -1619,5 +1635,15 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public static void main(String [] args) throws Exception {
 	VersionInfo.logVersion();
     new HMasterCommandLine(HMaster.class).doMain(args);
+  }
+
+  /**
+   * Register bean with platform management server
+   */
+  @SuppressWarnings("deprecation")
+  void registerMBean() {
+    MXBeanImpl mxBeanInfo = MXBeanImpl.init(this);
+    MBeanUtil.registerMBean("org.apache.hbase", "Master", mxBeanInfo);
+    LOG.info("Registered HMaster MXBean");
   }
 }

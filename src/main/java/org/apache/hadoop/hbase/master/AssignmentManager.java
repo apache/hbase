@@ -3048,6 +3048,10 @@ public class AssignmentManager extends ZooKeeperListener {
       return region;
     }
 
+    public ServerName getServerName() {
+      return serverName;
+    }
+
     public boolean isClosing() {
       return state == State.CLOSING;
     }
