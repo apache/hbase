@@ -132,6 +132,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
   //in the CLASS_TO_CODE map, but we have to still encode the array since it's
   //elements are serializable by this class.
   private static final int GENERIC_ARRAY_CODE;
+  private static final int NEXT_CLASS_CODE;
   static {
     ////////////////////////////////////////////////////////////////////////////
     // WARNING: Please do not insert, remove or swap any line in this static  //
@@ -264,6 +265,9 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     //java.lang.reflect.Array is a placeholder for arrays not defined above
     GENERIC_ARRAY_CODE = code++;
     addToMap(Array.class, GENERIC_ARRAY_CODE);
+
+    // make sure that this is the last statement in this static block
+    NEXT_CLASS_CODE = code;
   }
 
   private Class<?> declaredClass;
@@ -368,6 +372,13 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       }
     }
     return code;
+  }
+
+  /**
+   * @return the next object code in the list.  Used in testing to verify that additional fields are not added 
+   */
+  static int getNextClassCode(){
+    return NEXT_CLASS_CODE;
   }
 
   /**
