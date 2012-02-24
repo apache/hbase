@@ -546,6 +546,7 @@ public class RegionManager {
     // lookup hostname of addr if needed
     String hostName = null;
     RegionState rootState = null;
+    int nonPreferredAssignmentCount = 0;
     // Handle if root is unassigned... only assign root if root is offline.
     synchronized (this.regionsInTransition) {
       rootState = regionsInTransition.get(HRegionInfo.ROOT_REGIONINFO
@@ -608,14 +609,21 @@ public class RegionManager {
             if (hostName.startsWith(preferredHost)) {
               LOG.debug("Doing Preferred Region Assignment for : " + name +
                   " to the " + hostName);
+              // add the region to its preferred region server.
+              if (s.isUnassigned()) {
+                regionsToAssign.add(s);
+              }
+              continue;
             } else if (holdRegionForBestRegionserver ||
                 quickStartRegionServerSet.contains(preferredHost)) {
               continue;
             }
           }
         }
-
-        if (s.isUnassigned()) {
+        // Only assign a configured number unassigned region at one time in the
+        // non preferred assignment case.
+        if (s.isUnassigned() &&
+            (nonPreferredAssignmentCount++) < this.maxAssignInOneGo) {
           regionsToAssign.add(s);
         }
       }
