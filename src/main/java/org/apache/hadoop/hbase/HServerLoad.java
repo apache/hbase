@@ -276,10 +276,6 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       this.storefileSizeMB = in.readInt();
       this.memstoreSizeMB = in.readInt();
       this.storefileIndexSizeMB = in.readInt();
-      this.totalReadRequest = in.readLong();
-      this.readRequestPerSec = in.readInt();
-      this.totalWriteRequest = in.readLong();
-      this.writeRequestPerSec = in.readInt();
     }
 
     public void write(DataOutput out) throws IOException {
@@ -290,10 +286,6 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       out.writeInt(storefileSizeMB);
       out.writeInt(memstoreSizeMB);
       out.writeInt(storefileIndexSizeMB);
-      out.writeLong(this.totalReadRequest);
-      out.writeInt(this.readRequestPerSec);
-      out.writeLong(this.totalWriteRequest);
-      out.writeInt(this.writeRequestPerSec);
     }
 
     /**
