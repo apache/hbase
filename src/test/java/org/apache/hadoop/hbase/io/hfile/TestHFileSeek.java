@@ -121,9 +121,11 @@ public class TestHFileSeek extends TestCase {
     long totalBytes = 0;
     FSDataOutputStream fout = createFSOutput(path, fs);
     try {
-      Writer writer =
-        HFile.getWriterFactoryNoCache(conf).createWriter(fout,
-          options.minBlockSize, options.compress, null);
+      Writer writer = HFile.getWriterFactoryNoCache(conf)
+          .withOutputStream(fout)
+          .withBlockSize(options.minBlockSize)
+          .withCompression(options.compress)
+          .create();
       try {
         BytesWritable key = new BytesWritable();
         BytesWritable val = new BytesWritable();

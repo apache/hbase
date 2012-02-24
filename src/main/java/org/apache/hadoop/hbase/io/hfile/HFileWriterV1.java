@@ -82,100 +82,30 @@ public class HFileWriterV1 extends AbstractHFileWriter {
   private int blockNumber = 0;
 
   static class WriterFactoryV1 extends HFile.WriterFactory {
-
     WriterFactoryV1(Configuration conf, CacheConfig cacheConf) {
       super(conf, cacheConf);
     }
 
     @Override
-    public Writer createWriter(FileSystem fs, Path path) throws IOException {
-      return new HFileWriterV1(conf, cacheConf, fs, path);
-    }
-
-    @Override
-    public Writer createWriter(FileSystem fs, Path path, int blockSize,
+    public Writer createWriter(FileSystem fs, Path path,
+        FSDataOutputStream ostream, int blockSize,
         Algorithm compressAlgo, HFileDataBlockEncoder dataBlockEncoder,
         KeyComparator comparator)
         throws IOException {
-      return new HFileWriterV1(conf, cacheConf, fs, path, blockSize,
+      return new HFileWriterV1(conf, cacheConf, fs, path, ostream, blockSize,
           compressAlgo, dataBlockEncoder, comparator);
     }
-
-    @Override
-    public Writer createWriter(FileSystem fs, Path path, int blockSize,
-        String compressAlgoName, KeyComparator comparator)
-        throws IOException {
-      return new HFileWriterV1(conf, cacheConf, fs, path, blockSize,
-          compressAlgoName, comparator);
-    }
-
-    @Override
-    public Writer createWriter(final FSDataOutputStream ostream,
-        final int blockSize, final String compress,
-        final KeyComparator comparator) throws IOException {
-      return new HFileWriterV1(cacheConf, ostream, blockSize, compress,
-          comparator);
-    }
-
-    @Override
-    public Writer createWriter(final FSDataOutputStream ostream,
-        final int blockSize, final Compression.Algorithm compress,
-        final KeyComparator c) throws IOException {
-      return new HFileWriterV1(cacheConf, ostream, blockSize, compress,
-          NoOpDataBlockEncoder.INSTANCE, c);
-    }
-  }
-
-  /** Constructor that uses all defaults for compression and block size. */
-  public HFileWriterV1(Configuration conf, CacheConfig cacheConf,
-      FileSystem fs, Path path)
-      throws IOException {
-    this(conf, cacheConf, fs, path, HFile.DEFAULT_BLOCKSIZE,
-        HFile.DEFAULT_COMPRESSION_ALGORITHM,
-        NoOpDataBlockEncoder.INSTANCE, null);
-  }
-
-  /**
-   * Constructor that takes a path, creates and closes the output stream. Takes
-   * compression algorithm name as string.
-   */
-  public HFileWriterV1(Configuration conf, CacheConfig cacheConf, FileSystem fs,
-      Path path, int blockSize, String compressAlgoName,
-      final KeyComparator comparator) throws IOException {
-    this(conf, cacheConf, fs, path, blockSize,
-        compressionByName(compressAlgoName), NoOpDataBlockEncoder.INSTANCE,
-        comparator);
   }
 
   /** Constructor that takes a path, creates and closes the output stream. */
   public HFileWriterV1(Configuration conf, CacheConfig cacheConf,
-      FileSystem fs, Path path,
+      FileSystem fs, Path path, FSDataOutputStream ostream,
       int blockSize, Compression.Algorithm compress,
       HFileDataBlockEncoder blockEncoder,
       final KeyComparator comparator) throws IOException {
-    super(cacheConf, createOutputStream(conf, fs, path), path,
+    super(cacheConf, ostream == null ? createOutputStream(conf, fs, path) : ostream, path,
         blockSize, compress, blockEncoder, comparator);
     SchemaMetrics.configureGlobally(conf);
-  }
-
-  /** Constructor that takes a stream. */
-  public HFileWriterV1(CacheConfig cacheConf,
-      final FSDataOutputStream outputStream, final int blockSize,
-      final String compressAlgoName, final KeyComparator comparator)
-      throws IOException {
-    this(cacheConf, outputStream, blockSize,
-        Compression.getCompressionAlgorithmByName(compressAlgoName),
-        NoOpDataBlockEncoder.INSTANCE, comparator);
-  }
-
-  /** Constructor that takes a stream. */
-  public HFileWriterV1(CacheConfig cacheConf,
-      final FSDataOutputStream outputStream, final int blockSize,
-      final Compression.Algorithm compress,
-      HFileDataBlockEncoder blockEncoder, final KeyComparator comparator)
-      throws IOException {
-    super(cacheConf, outputStream, null, blockSize, compress,
-        blockEncoder, comparator);
   }
 
   /**

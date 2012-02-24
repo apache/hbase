@@ -294,9 +294,11 @@ public class TestCompoundBloomFilter {
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
     cacheConf = new CacheConfig(conf);
 
-    StoreFile.Writer w = StoreFile.createWriter(fs,
-        TEST_UTIL.getDataTestDir(), BLOCK_SIZES[t], null, null, null, conf,
-        cacheConf, bt, 0);
+    StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConf, fs,
+        BLOCK_SIZES[t])
+            .withOutputDir(TEST_UTIL.getDataTestDir())
+            .withBloomType(bt)
+            .build();
 
     assertTrue(w.hasGeneralBloom());
     assertTrue(w.getGeneralBloomWriter() instanceof CompoundBloomFilterWriter);

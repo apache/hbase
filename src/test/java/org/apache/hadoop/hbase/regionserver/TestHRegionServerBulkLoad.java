@@ -82,7 +82,11 @@ public class TestHRegionServerBulkLoad {
       byte[] qualifier, byte[] value, int numRows) throws IOException {
     HFile.Writer writer = HFile
         .getWriterFactory(conf, new CacheConfig(conf))
-        .createWriter(fs, path, BLOCKSIZE, COMPRESSION, KeyValue.KEY_COMPARATOR);
+        .withPath(fs, path)
+        .withBlockSize(BLOCKSIZE)
+        .withCompression(COMPRESSION)
+        .withComparator(KeyValue.KEY_COMPARATOR)
+        .create();
     long now = System.currentTimeMillis();
     try {
       // subtract 2 since iterateOnSplits doesn't include boundary keys

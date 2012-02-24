@@ -69,13 +69,14 @@ import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
  * are produced by flushing the memstore to disk.  To
- * create, call {@link #createWriter(FileSystem, Path, int, Configuration, CacheConfig)}
+ * create, instantiate a writer using {@link StoreFile#WriterBuilder}
  * and append data. Be sure to add any metadata before calling close on the
  * Writer (Use the appendMetadata convenience methods). On close, a StoreFile
  * is sitting in the Filesystem.  To refer to it, create a StoreFile instance
@@ -681,64 +682,122 @@ public class StoreFile extends SchemaConfigured {
     return tgt;
   }
 
-  /**
-   * Get a store file writer. Client is responsible for closing file when done.
-   *
-   * @param fs
-   * @param dir Path to family directory.  Makes the directory if doesn't exist.
-   * Creates a file with a unique name in this directory.
-   * @param blocksize size per filesystem block
-   * @return StoreFile.Writer
-   * @throws IOException
-   */
-  public static Writer createWriter(final FileSystem fs, final Path dir,
-      final int blocksize, Configuration conf, CacheConfig cacheConf)
-  throws IOException {
-    return createWriter(fs, dir, blocksize, null, NoOpDataBlockEncoder.INSTANCE,
-        null, conf, cacheConf, BloomType.NONE, 0);
-  }
+  public static class WriterBuilder {
+    private final Configuration conf;
+    private final CacheConfig cacheConf;
+    private final FileSystem fs;
+    private final int blockSize;
 
-  /**
-   * Create a store file writer. Client is responsible for closing file when done.
-   * If metadata, add BEFORE closing using appendMetadata()
-   * @param fs
-   * @param dir Path to family directory.  Makes the directory if doesn't exist.
-   * Creates a file with a unique name in this directory.
-   * @param blocksize
-   * @param compressAlgo Compression algorithm. Pass null to get default.
-   * @param dataBlockEncoder Pass null to disable data block encoding.
-   * @param comparator Key-value comparator. Pass null to get default.
-   * @param conf HBase system configuration. used with bloom filters
-   * @param cacheConf Cache configuration and reference.
-   * @param bloomType column family setting for bloom filters
-   * @param maxKeyCount estimated maximum number of keys we expect to add
-   * @return HFile.Writer
-   * @throws IOException
-   */
-  public static StoreFile.Writer createWriter(final FileSystem fs,
-      final Path dir, final int blocksize,
-      Compression.Algorithm compressAlgo,
-      final HFileDataBlockEncoder dataBlockEncoder,
-      KeyValue.KVComparator comparator, final Configuration conf,
-      final CacheConfig cacheConf, BloomType bloomType, long maxKeyCount)
-      throws IOException {
+    private Compression.Algorithm compressAlgo =
+        HFile.DEFAULT_COMPRESSION_ALGORITHM;
+    private HFileDataBlockEncoder dataBlockEncoder =
+        NoOpDataBlockEncoder.INSTANCE;
+    private KeyValue.KVComparator comparator = KeyValue.COMPARATOR;
+    private BloomType bloomType = BloomType.NONE;
+    private long maxKeyCount = 0;
+    private Path dir;
+    private Path filePath;
 
-    if (!fs.exists(dir)) {
-      fs.mkdirs(dir);
-    }
-    Path path = getUniqueFile(fs, dir);
-    if (!BloomFilterFactory.isGeneralBloomEnabled(conf)) {
-      bloomType = BloomType.NONE;
+    public WriterBuilder(Configuration conf, CacheConfig cacheConf,
+        FileSystem fs, int blockSize) {
+      this.conf = conf;
+      this.cacheConf = cacheConf;
+      this.fs = fs;
+      this.blockSize = blockSize;
     }
 
-    if (compressAlgo == null) {
-      compressAlgo = HFile.DEFAULT_COMPRESSION_ALGORITHM;
+    /**
+     * Use either this method or {@link #withFilePath}, but not both.
+     * @param dir Path to column family directory. The directory is created if
+     *          does not exist. The file is given a unique name within this
+     *          directory.
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder withOutputDir(Path dir) {
+      Preconditions.checkNotNull(dir);
+      this.dir = dir;
+      return this;
     }
-    if (comparator == null) {
-      comparator = KeyValue.COMPARATOR;
+
+    /**
+     * Use either this method or {@link #withOutputDir}, but not both.
+     * @param filePath the StoreFile path to write
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder withFilePath(Path filePath) {
+      Preconditions.checkNotNull(filePath);
+      this.filePath = filePath;
+      return this;
     }
-    return new Writer(fs, path, blocksize, compressAlgo, dataBlockEncoder,
-        conf, cacheConf, comparator, bloomType, maxKeyCount);
+
+    public WriterBuilder withCompression(Compression.Algorithm compressAlgo) {
+      Preconditions.checkNotNull(compressAlgo);
+      this.compressAlgo = compressAlgo;
+      return this;
+    }
+
+    public WriterBuilder withDataBlockEncoder(HFileDataBlockEncoder encoder) {
+      Preconditions.checkNotNull(encoder);
+      this.dataBlockEncoder = encoder;
+      return this;
+    }
+
+    public WriterBuilder withComparator(KeyValue.KVComparator comparator) {
+      Preconditions.checkNotNull(comparator);
+      this.comparator = comparator;
+      return this;
+    }
+
+    public WriterBuilder withBloomType(BloomType bloomType) {
+      Preconditions.checkNotNull(bloomType);
+      this.bloomType = bloomType;
+      return this;
+    }
+
+    /**
+     * @param maxKeyCount estimated maximum number of keys we expect to add
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder withMaxKeyCount(long maxKeyCount) {
+      this.maxKeyCount = maxKeyCount;
+      return this;
+    }
+
+    /**
+     * Create a store file writer. Client is responsible for closing file when
+     * done. If metadata, add BEFORE closing using
+     * {@link Writer#appendMetadata}.
+     */
+    public Writer build() throws IOException {
+      if ((dir == null ? 0 : 1) + (filePath == null ? 0 : 1) != 1) {
+        throw new IllegalArgumentException("Either specify parent directory " +
+            "or file path");
+      }
+
+      if (dir == null) {
+        dir = filePath.getParent();
+      }
+
+      if (!fs.exists(dir)) {
+        fs.mkdirs(dir);
+      }
+
+      if (filePath == null) {
+        filePath = getUniqueFile(fs, dir);
+        if (!BloomFilterFactory.isGeneralBloomEnabled(conf)) {
+          bloomType = BloomType.NONE;
+        }
+      }
+
+      if (compressAlgo == null) {
+        compressAlgo = HFile.DEFAULT_COMPRESSION_ALGORITHM;
+      }
+      if (comparator == null) {
+        comparator = KeyValue.COMPARATOR;
+      }
+      return new Writer(fs, filePath, blockSize, compressAlgo, dataBlockEncoder,
+          conf, cacheConf, comparator, bloomType, maxKeyCount);
+    }
   }
 
   /**
@@ -845,6 +904,7 @@ public class StoreFile extends SchemaConfigured {
     boolean isTimeRangeTrackerSet = false;
 
     protected HFile.Writer writer;
+
     /**
      * Creates an HFile.Writer that also write helpful meta data.
      * @param fs file system to write to
@@ -858,7 +918,7 @@ public class StoreFile extends SchemaConfigured {
      *        for Bloom filter size in {@link HFile} format version 1.
      * @throws IOException problem writing to FS
      */
-    public Writer(FileSystem fs, Path path, int blocksize,
+    private Writer(FileSystem fs, Path path, int blocksize,
         Compression.Algorithm compress,
         HFileDataBlockEncoder dataBlockEncoder, final Configuration conf,
         CacheConfig cacheConf,
@@ -866,9 +926,13 @@ public class StoreFile extends SchemaConfigured {
         throws IOException {
       this.dataBlockEncoder = dataBlockEncoder != null ?
           dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
-      writer = HFile.getWriterFactory(conf, cacheConf).createWriter(
-          fs, path, blocksize,
-          compress, this.dataBlockEncoder, comparator.getRawComparator());
+      writer = HFile.getWriterFactory(conf, cacheConf)
+          .withPath(fs, path)
+          .withBlockSize(blocksize)
+          .withCompression(compress)
+          .withDataBlockEncoder(dataBlockEncoder)
+          .withComparator(comparator.getRawComparator())
+          .create();
 
       this.kvComparator = comparator;
 

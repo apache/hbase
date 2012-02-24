@@ -284,9 +284,15 @@ public class TestCacheOnWrite {
   public void writeStoreFile() throws IOException {
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(),
         "test_cache_on_write");
-    StoreFile.Writer sfw = StoreFile.createWriter(fs, storeFileParentDir,
-        DATA_BLOCK_SIZE, compress, encoder, KeyValue.COMPARATOR, conf,
-        cacheConf, BLOOM_TYPE, NUM_KV);
+    StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf, cacheConf, fs,
+        DATA_BLOCK_SIZE)
+            .withOutputDir(storeFileParentDir)
+            .withCompression(compress)
+            .withDataBlockEncoder(encoder)
+            .withComparator(KeyValue.COMPARATOR)
+            .withBloomType(BLOOM_TYPE)
+            .withMaxKeyCount(NUM_KV)
+            .build();
 
     final int rowLen = 32;
     for (int i = 0; i < NUM_KV; ++i) {

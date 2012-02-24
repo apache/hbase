@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
@@ -50,6 +51,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
+
+import com.google.common.base.Preconditions;
 
 /**
  * File format for hbase.
@@ -232,33 +235,82 @@ public class HFile {
    * we want to be able to swap writer implementations.
    */
   public static abstract class WriterFactory {
-    protected Configuration conf;
-    protected CacheConfig cacheConf;
+    protected final Configuration conf;
+    protected final CacheConfig cacheConf;
+    protected FileSystem fs;
+    protected Path path;
+    protected FSDataOutputStream ostream;
+    protected int blockSize = HColumnDescriptor.DEFAULT_BLOCKSIZE;
+    protected Compression.Algorithm compression =
+        HFile.DEFAULT_COMPRESSION_ALGORITHM;
+    protected HFileDataBlockEncoder encoder = NoOpDataBlockEncoder.INSTANCE;
+    protected KeyComparator comparator;
 
     WriterFactory(Configuration conf, CacheConfig cacheConf) {
       this.conf = conf;
       this.cacheConf = cacheConf;
     }
 
-    public abstract Writer createWriter(FileSystem fs, Path path)
-        throws IOException;
+    public WriterFactory withPath(FileSystem fs, Path path) {
+      Preconditions.checkNotNull(fs);
+      Preconditions.checkNotNull(path);
+      this.fs = fs;
+      this.path = path;
+      return this;
+    }
 
-    public abstract Writer createWriter(FileSystem fs, Path path,
-        int blockSize, Compression.Algorithm compress,
+    public WriterFactory withOutputStream(FSDataOutputStream ostream) {
+      Preconditions.checkNotNull(ostream);
+      this.ostream = ostream;
+      return this;
+    }
+
+    public WriterFactory withBlockSize(int blockSize) {
+      this.blockSize = blockSize;
+      return this;
+    }
+
+    public WriterFactory withCompression(Compression.Algorithm compression) {
+      Preconditions.checkNotNull(compression);
+      this.compression = compression;
+      return this;
+    }
+
+    public WriterFactory withCompression(String compressAlgo) {
+      Preconditions.checkNotNull(compression);
+      this.compression = AbstractHFileWriter.compressionByName(compressAlgo);
+      return this;
+    }
+
+    public WriterFactory withDataBlockEncoder(HFileDataBlockEncoder encoder) {
+      Preconditions.checkNotNull(encoder);
+      this.encoder = encoder;
+      return this;
+    }
+
+    public WriterFactory withComparator(KeyComparator comparator) {
+      Preconditions.checkNotNull(comparator);
+      this.comparator = comparator;
+      return this;
+    }
+
+    public Writer create() throws IOException {
+      if ((path != null ? 1 : 0) + (ostream != null ? 1 : 0) != 1) {
+        throw new AssertionError("Please specify exactly one of " +
+            "filesystem/path or path");
+      }
+      if (path != null) {
+        ostream = AbstractHFileWriter.createOutputStream(conf, fs, path);
+      }
+      return createWriter(fs, path, ostream, blockSize,
+          compression, encoder, comparator);
+    }
+
+    protected abstract Writer createWriter(FileSystem fs, Path path,
+        FSDataOutputStream ostream, int blockSize,
+        Compression.Algorithm compress,
         HFileDataBlockEncoder dataBlockEncoder,
-        final KeyComparator comparator) throws IOException;
-
-    public abstract Writer createWriter(FileSystem fs, Path path,
-        int blockSize, String compress,
-        final KeyComparator comparator) throws IOException;
-
-    public abstract Writer createWriter(final FSDataOutputStream ostream,
-        final int blockSize, final String compress,
-        final KeyComparator comparator) throws IOException;
-
-    public abstract Writer createWriter(final FSDataOutputStream ostream,
-        final int blockSize, final Compression.Algorithm compress,
-        final KeyComparator c) throws IOException;
+        KeyComparator comparator) throws IOException;
   }
 
   /** The configuration key for HFile version to use for new files */
