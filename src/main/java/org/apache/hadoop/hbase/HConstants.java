@@ -227,6 +227,9 @@ public final class HConstants {
   public static final String HREGION_MAX_FILESIZE =
       "hbase.hregion.max.filesize";
 
+  /** Default maximum file size */
+  public static final long DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024;
+
   /**
    * The max number of threads used for opening and closing stores or store
    * files in parallel
@@ -240,8 +243,6 @@ public final class HConstants {
    */
   public static final int DEFAULT_HSTORE_OPEN_AND_CLOSE_THREADS_MAX = 1;
 
-  /** Default maximum file size */
-  public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
 
   /** Conf key for the memstore size at which we flush the memstore */
   public static final String HREGION_MEMSTORE_FLUSH_SIZE =

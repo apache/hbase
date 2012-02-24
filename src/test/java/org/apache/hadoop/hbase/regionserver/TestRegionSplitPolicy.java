@@ -17,14 +17,22 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,20 +46,78 @@ public class TestRegionSplitPolicy {
   private HTableDescriptor htd;
   private HRegion mockRegion;
   private TreeMap<byte[], Store> stores;
+  private static final byte [] TABLENAME = new byte [] {'t'};
 
   @Before
   public void setupMocks() {
     conf = HBaseConfiguration.create();
-
-    HRegionInfo hri = new HRegionInfo(Bytes.toBytes("testtable"));
-
-    htd = new HTableDescriptor();
+    HRegionInfo hri = new HRegionInfo(TABLENAME);
+    htd = new HTableDescriptor(TABLENAME);
     mockRegion = Mockito.mock(HRegion.class);
     Mockito.doReturn(htd).when(mockRegion).getTableDesc();
     Mockito.doReturn(hri).when(mockRegion).getRegionInfo();
 
     stores = new TreeMap<byte[], Store>(Bytes.BYTES_COMPARATOR);
     Mockito.doReturn(stores).when(mockRegion).getStores();
+  }
+
+  @Test
+  public void testIncreasingToUpperBoundRegionSplitPolicy() throws IOException {
+    // Configure IncreasingToUpperBoundRegionSplitPolicy as our split policy
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+      IncreasingToUpperBoundRegionSplitPolicy.class.getName());
+    // Now make it so the mock region has a RegionServerService that will
+    // return 'online regions'.
+    RegionServerServices rss = Mockito.mock(RegionServerServices.class);
+    final List<HRegion> regions = new ArrayList<HRegion>();
+    Mockito.when(rss.getOnlineRegions(TABLENAME)).thenReturn(regions);
+    Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
+    // Set max size for this 'table'.
+    long maxSplitSize = 1024L;
+    htd.setMaxFileSize(maxSplitSize);
+    // Set flush size to 1/4.  IncreasingToUpperBoundRegionSplitPolicy
+    // grows by the square of the number of regions times flushsize each time.
+    long flushSize = maxSplitSize/4;
+    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSize);
+    htd.setMemStoreFlushSize(flushSize);
+    // If RegionServerService with no regions in it -- 'online regions' == 0 --
+    // then IncreasingToUpperBoundRegionSplitPolicy should act like a
+    // ConstantSizePolicy
+    IncreasingToUpperBoundRegionSplitPolicy policy =
+      (IncreasingToUpperBoundRegionSplitPolicy)RegionSplitPolicy.create(mockRegion, conf);
+    doConstantSizePolicyTests(policy);
+
+    // Add a store in excess of split size.  Because there are "no regions"
+    // on this server -- rss.getOnlineRegions is 0 -- then we should split
+    // like a constantsizeregionsplitpolicy would
+    Store mockStore = Mockito.mock(Store.class);
+    Mockito.doReturn(2000L).when(mockStore).getSize();
+    Mockito.doReturn(true).when(mockStore).canSplit();
+    stores.put(new byte[]{1}, mockStore);
+    // It should split
+    assertTrue(policy.shouldSplit());
+
+    // Now test that we increase our split size as online regions for a table
+    // grows. With one region, split size should be flushsize.
+    regions.add(mockRegion);
+    Mockito.doReturn(flushSize/2).when(mockStore).getSize();
+    // Should not split since store is 1/2 flush size.
+    assertFalse(policy.shouldSplit());
+    // Set size of store to be > flush size and we should split
+    Mockito.doReturn(flushSize + 1).when(mockStore).getSize();
+    assertTrue(policy.shouldSplit());
+    // Add another region to the 'online regions' on this server and we should
+    // now be no longer be splittable since split size has gone up.
+    regions.add(mockRegion);
+    assertFalse(policy.shouldSplit());
+    // Quadruple (2 squared) the store size and make sure its just over; verify it'll split
+    Mockito.doReturn((flushSize * 2 * 2) + 1).when(mockStore).getSize();
+    assertTrue(policy.shouldSplit());
+
+    // Finally assert that even if loads of regions, we'll split at max size
+    assertEquals(maxSplitSize, policy.getSizeToCheck(1000));
+    // Assert same is true if count of regions is zero.
+    assertEquals(maxSplitSize, policy.getSizeToCheck(0));
   }
 
   @Test
@@ -110,10 +176,16 @@ public class TestRegionSplitPolicy {
   @Test
   public void testConstantSizePolicy() throws IOException {
     htd.setMaxFileSize(1024L);
-
     ConstantSizeRegionSplitPolicy policy =
       (ConstantSizeRegionSplitPolicy)RegionSplitPolicy.create(mockRegion, conf);
+    doConstantSizePolicyTests(policy);
+  }
 
+  /**
+   * Run through tests for a ConstantSizeRegionSplitPolicy
+   * @param policy
+   */
+  private void doConstantSizePolicyTests(final ConstantSizeRegionSplitPolicy policy) {
     // For no stores, should not split
     assertFalse(policy.shouldSplit());
 
@@ -141,6 +213,9 @@ public class TestRegionSplitPolicy {
     // Turn off forceSplit, should not split
     Mockito.doReturn(false).when(mockRegion).shouldForceSplit();
     assertFalse(policy.shouldSplit());
+
+    // Clear families we added above
+    stores.clear();
   }
 
   @Test
@@ -179,4 +254,3 @@ public class TestRegionSplitPolicy {
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
-

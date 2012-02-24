@@ -389,11 +389,11 @@
   </property>
   <property>
     <name>hbase.hregion.max.filesize</name>
-    <value>1073741824</value>
+    <value>10737418240</value>
     <description>
     Maximum HStoreFile size. If any one of a column families' HStoreFiles has
     grown to exceed this value, the hosting HRegion is split in two.
-    Default: 1G.
+    Default: 10G.
     </description>
   </property>
   <property>
