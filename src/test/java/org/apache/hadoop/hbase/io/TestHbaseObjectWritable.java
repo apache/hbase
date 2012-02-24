@@ -27,21 +27,70 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableSet;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.client.Action;
+import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.MultiAction;
+import org.apache.hadoop.hbase.client.MultiResponse;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.coprocessor.Exec;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.BitComparator;
+import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
+import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
+import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.DependentColumnFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.QualifierFilter;
+import org.apache.hadoop.hbase.filter.RandomRowFilter;
+import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.filter.SkipFilter;
+import org.apache.hadoop.hbase.filter.ValueFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparator;
@@ -49,6 +98,7 @@ import org.junit.Assert;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
+import com.google.protobuf.Message;
 
 @Category(SmallTests.class)
 public class TestHbaseObjectWritable extends TestCase {
@@ -358,6 +408,130 @@ public class TestHbaseObjectWritable extends TestCase {
     public void readFields(DataInput in) throws IOException {
       this.key = Text.readString(in);
     }
+  }
+
+  /**
+   * Test case to ensure ordering of CODE_TO_CLASS and CLASS_TO_CODE. In the
+   * past, and item was added in the middle of the static initializer, and that
+   * threw off all of the codes after the addition. This unintentionally broke
+   * the wire protocol for clients. The idea behind this test case is that if
+   * you unintentionally change the order, you will get a test failure. If you
+   * are actually intentionally change the order, just update the test case.
+   * This should be a clue to the reviewer that you are doing something to
+   * change the wire protocol.
+   */
+  public void testGetClassCode() throws IOException{
+    // Primitive types
+    assertEquals(1,HbaseObjectWritable.getClassCode(Boolean.TYPE).intValue());
+    assertEquals(2,HbaseObjectWritable.getClassCode(Byte.TYPE).intValue());
+    assertEquals(3,HbaseObjectWritable.getClassCode(Character.TYPE).intValue());
+    assertEquals(4,HbaseObjectWritable.getClassCode(Short.TYPE).intValue());
+    assertEquals(5,HbaseObjectWritable.getClassCode(Integer.TYPE).intValue());
+    assertEquals(6,HbaseObjectWritable.getClassCode(Long.TYPE).intValue());
+    assertEquals(7,HbaseObjectWritable.getClassCode(Float.TYPE).intValue());
+    assertEquals(8,HbaseObjectWritable.getClassCode(Double.TYPE).intValue());
+    assertEquals(9,HbaseObjectWritable.getClassCode(Void.TYPE).intValue());
+
+    // Other java types
+    assertEquals(10,HbaseObjectWritable.getClassCode(String.class).intValue());
+    assertEquals(11,HbaseObjectWritable.getClassCode(byte [].class).intValue());
+    assertEquals(12,HbaseObjectWritable.getClassCode(byte [][].class).intValue());
+
+    // Hadoop types
+    assertEquals(13,HbaseObjectWritable.getClassCode(Text.class).intValue());
+    assertEquals(14,HbaseObjectWritable.getClassCode(Writable.class).intValue());
+    assertEquals(15,HbaseObjectWritable.getClassCode(Writable [].class).intValue());
+    assertEquals(16,HbaseObjectWritable.getClassCode(HbaseMapWritable.class).intValue());
+    // 17 is NullInstance which isn't visible from here
+
+    // Hbase types
+    assertEquals(18,HbaseObjectWritable.getClassCode(HColumnDescriptor.class).intValue());
+    assertEquals(19,HbaseObjectWritable.getClassCode(HConstants.Modify.class).intValue());
+    // 20 and 21 are place holders for HMsg
+    assertEquals(22,HbaseObjectWritable.getClassCode(HRegion.class).intValue());
+    assertEquals(23,HbaseObjectWritable.getClassCode(HRegion[].class).intValue());
+    assertEquals(24,HbaseObjectWritable.getClassCode(HRegionInfo.class).intValue());
+    assertEquals(25,HbaseObjectWritable.getClassCode(HRegionInfo[].class).intValue());
+    assertEquals(26,HbaseObjectWritable.getClassCode(HServerAddress.class).intValue());
+    assertEquals(27,HbaseObjectWritable.getClassCode(HServerInfo.class).intValue());
+    assertEquals(28,HbaseObjectWritable.getClassCode(HTableDescriptor.class).intValue());
+    assertEquals(29,HbaseObjectWritable.getClassCode(MapWritable.class).intValue());
+
+    // HBASE-880
+    assertEquals(30,HbaseObjectWritable.getClassCode(ClusterStatus.class).intValue());
+    assertEquals(31,HbaseObjectWritable.getClassCode(Delete.class).intValue());
+    assertEquals(32,HbaseObjectWritable.getClassCode(Get.class).intValue());
+    assertEquals(33,HbaseObjectWritable.getClassCode(KeyValue.class).intValue());
+    assertEquals(34,HbaseObjectWritable.getClassCode(KeyValue[].class).intValue());
+    assertEquals(35,HbaseObjectWritable.getClassCode(Put.class).intValue());
+    assertEquals(36,HbaseObjectWritable.getClassCode(Put[].class).intValue());
+    assertEquals(37,HbaseObjectWritable.getClassCode(Result.class).intValue());
+    assertEquals(38,HbaseObjectWritable.getClassCode(Result[].class).intValue());
+    assertEquals(39,HbaseObjectWritable.getClassCode(Scan.class).intValue());
+
+    assertEquals(40,HbaseObjectWritable.getClassCode(WhileMatchFilter.class).intValue());
+    assertEquals(41,HbaseObjectWritable.getClassCode(PrefixFilter.class).intValue());
+    assertEquals(42,HbaseObjectWritable.getClassCode(PageFilter.class).intValue());
+    assertEquals(43,HbaseObjectWritable.getClassCode(InclusiveStopFilter.class).intValue());
+    assertEquals(44,HbaseObjectWritable.getClassCode(ColumnCountGetFilter.class).intValue());
+    assertEquals(45,HbaseObjectWritable.getClassCode(SingleColumnValueFilter.class).intValue());
+    assertEquals(46,HbaseObjectWritable.getClassCode(SingleColumnValueExcludeFilter.class).intValue());
+    assertEquals(47,HbaseObjectWritable.getClassCode(BinaryComparator.class).intValue());
+    assertEquals(48,HbaseObjectWritable.getClassCode(BitComparator.class).intValue());
+    assertEquals(49,HbaseObjectWritable.getClassCode(CompareFilter.class).intValue());
+    assertEquals(50,HbaseObjectWritable.getClassCode(RowFilter.class).intValue());
+    assertEquals(51,HbaseObjectWritable.getClassCode(ValueFilter.class).intValue());
+    assertEquals(52,HbaseObjectWritable.getClassCode(QualifierFilter.class).intValue());
+    assertEquals(53,HbaseObjectWritable.getClassCode(SkipFilter.class).intValue());
+    assertEquals(54,HbaseObjectWritable.getClassCode(WritableByteArrayComparable.class).intValue());
+    assertEquals(55,HbaseObjectWritable.getClassCode(FirstKeyOnlyFilter.class).intValue());
+    assertEquals(56,HbaseObjectWritable.getClassCode(DependentColumnFilter.class).intValue());
+
+    assertEquals(57,HbaseObjectWritable.getClassCode(Delete [].class).intValue());
+
+    assertEquals(58,HbaseObjectWritable.getClassCode(HLog.Entry.class).intValue());
+    assertEquals(59,HbaseObjectWritable.getClassCode(HLog.Entry[].class).intValue());
+    assertEquals(60,HbaseObjectWritable.getClassCode(HLogKey.class).intValue());
+
+    assertEquals(61,HbaseObjectWritable.getClassCode(List.class).intValue());
+
+    assertEquals(62,HbaseObjectWritable.getClassCode(NavigableSet.class).intValue());
+    assertEquals(63,HbaseObjectWritable.getClassCode(ColumnPrefixFilter.class).intValue());
+
+    // Multi
+    assertEquals(64,HbaseObjectWritable.getClassCode(Row.class).intValue());
+    assertEquals(65,HbaseObjectWritable.getClassCode(Action.class).intValue());
+    assertEquals(66,HbaseObjectWritable.getClassCode(MultiAction.class).intValue());
+    assertEquals(67,HbaseObjectWritable.getClassCode(MultiResponse.class).intValue());
+
+    // coprocessor execution
+    assertEquals(68,HbaseObjectWritable.getClassCode(Exec.class).intValue());
+    assertEquals(69,HbaseObjectWritable.getClassCode(Increment.class).intValue());
+
+    assertEquals(70,HbaseObjectWritable.getClassCode(KeyOnlyFilter.class).intValue());
+
+    // serializable
+    assertEquals(71,HbaseObjectWritable.getClassCode(Serializable.class).intValue());
+    assertEquals(72,HbaseObjectWritable.getClassCode(RandomRowFilter.class).intValue());
+    assertEquals(73,HbaseObjectWritable.getClassCode(CompareOp.class).intValue());
+    assertEquals(74,HbaseObjectWritable.getClassCode(ColumnRangeFilter.class).intValue());
+    assertEquals(75,HbaseObjectWritable.getClassCode(HServerLoad.class).intValue());
+    assertEquals(76,HbaseObjectWritable.getClassCode(RegionOpeningState.class).intValue());
+    assertEquals(77,HbaseObjectWritable.getClassCode(HTableDescriptor[].class).intValue());
+    assertEquals(78,HbaseObjectWritable.getClassCode(Append.class).intValue());
+    assertEquals(79,HbaseObjectWritable.getClassCode(RowMutations.class).intValue());
+    assertEquals(80,HbaseObjectWritable.getClassCode(Message.class).intValue());
+
+    assertEquals(81,HbaseObjectWritable.getClassCode(Array.class).intValue());
+  }
+
+  /**
+   * This test verifies that additional objects have not been added to the end of the list.
+   * If you are legitimately adding objects, this test will need to be updated, but see the
+   * note on the test above. 
+   */
+  public void testGetNextObjectCode(){
+    assertEquals(82,HbaseObjectWritable.getNextClassCode());
   }
 
   @org.junit.Rule
