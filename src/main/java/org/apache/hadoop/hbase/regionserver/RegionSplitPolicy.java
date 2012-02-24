@@ -33,8 +33,8 @@ import com.google.common.base.Preconditions;
  * {@see ConstantSizeRegionSplitPolicy}
  */
 public abstract class RegionSplitPolicy extends Configured {
-  private static final Class<ConstantSizeRegionSplitPolicy>
-    DEFAULT_SPLIT_POLICY_CLASS = ConstantSizeRegionSplitPolicy.class;
+  private static final Class<? extends RegionSplitPolicy>
+    DEFAULT_SPLIT_POLICY_CLASS = IncreasingToUpperBoundRegionSplitPolicy.class;
 
   /**
    * The region configured for this split policy.

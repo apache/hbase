@@ -780,6 +780,14 @@ public class HRegion implements HeapSize { // , Writable{
     return this.regionInfo;
   }
 
+  /**
+   * @return Instance of {@link RegionServerServices} used by this HRegion.
+   * Can be null.
+   */
+  RegionServerServices getRegionServerServices() {
+    return this.rsServices;
+  }
+
   /** @return requestsCount for this region */
   public long getRequestsCount() {
     return this.readRequestsCount.get() + this.writeRequestsCount.get();

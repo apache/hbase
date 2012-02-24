@@ -29,7 +29,7 @@ import org.apache.commons.logging.LogFactory;
  * This ensures that a region is not split "inside" a prefix of a row key.
  * I.e. rows can be co-located in a regionb by their prefix.
  */
-public class KeyPrefixRegionSplitPolicy extends ConstantSizeRegionSplitPolicy {
+public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
   private static final Log LOG = LogFactory
       .getLog(KeyPrefixRegionSplitPolicy.class);
   public static String PREFIX_LENGTH_KEY = "prefix_split_key_policy.prefix_length";

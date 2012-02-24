@@ -158,7 +158,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * Constant that denotes the maximum default size of the memstore after which 
    * the contents are flushed to the store files
    */
-  public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*64L;
+  public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*128L;
 
   private volatile Boolean meta = null;
   private volatile Boolean root = null;
