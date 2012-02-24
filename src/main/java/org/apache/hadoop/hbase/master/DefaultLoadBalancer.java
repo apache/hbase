@@ -687,17 +687,14 @@ public class DefaultLoadBalancer implements LoadBalancer {
       {
         tableDescriptor = this.services.getTableDescriptors().
           get(Bytes.toString(tableName));
-    }
-    } catch (TableExistsException tee) {
-      LOG.debug("TableExistsException during getTableDescriptors." +
-        " Current table name = " + tableName , tee);
+      }
     } catch (FileNotFoundException fnfe) {
       LOG.debug("FileNotFoundException during getTableDescriptors." +
         " Current table name = " + tableName , fnfe);
     }
 
     return tableDescriptor;
-    }
+  }
 
   /**
    * Map hostname to ServerName, The output ServerName list will have the same

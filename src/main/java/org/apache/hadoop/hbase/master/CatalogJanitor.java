@@ -321,7 +321,7 @@ class CatalogJanitor extends Chore {
   }
 
   private HTableDescriptor getTableDescriptor(byte[] tableName)
-  throws TableExistsException, FileNotFoundException, IOException {
+  throws FileNotFoundException, IOException {
     return this.services.getTableDescriptors().get(Bytes.toString(tableName));
   }
 }

@@ -34,7 +34,7 @@ public interface TableDescriptors {
    * @throws IOException
    */
   public HTableDescriptor get(final String tablename)
-  throws TableExistsException, FileNotFoundException, IOException;
+  throws FileNotFoundException, IOException;
 
   /**
    * @param tablename
@@ -44,7 +44,7 @@ public interface TableDescriptors {
    * @throws IOException
    */
   public HTableDescriptor get(final byte[] tablename)
-  throws TableExistsException, FileNotFoundException, IOException;
+  throws FileNotFoundException, IOException;
 
   /**
    * Get Map of all HTableDescriptors. Populates the descriptor cache as a
