@@ -204,14 +204,15 @@ public class TestFSTableDescriptors {
       htds.cachehits >= ((count * 2) + 1));
   }
 
-  @Test (expected=org.apache.hadoop.hbase.TableExistsException.class)
+  @Test
   public void testNoSuchTable() throws IOException {
     final String name = "testNoSuchTable";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detrius laying around.
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
     TableDescriptors htds = new FSTableDescriptors(fs, rootdir);
-    htds.get("NoSuchTable");
+    assertNull("There shouldn't be any HTD for this table",
+      htds.get("NoSuchTable"));
   }
 
   @Test

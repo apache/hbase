@@ -39,6 +39,8 @@ Release 0.92.1 - Unreleased
    HBASE-5422  StartupBulkAssigner would cause a lot of timeout on RIT when
                assigning large numbers of regions (timeout = 3 mins)
                (Chunhui Shen)
+   HBASE-5415  FSTableDescriptors should handle random folders in
+               hbase.root.dir better
 
  
   IMPROVEMENTS

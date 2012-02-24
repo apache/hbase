@@ -236,13 +236,13 @@ public class TestCatalogJanitor {
         
         @Override
         public HTableDescriptor get(byte[] tablename)
-        throws TableExistsException, FileNotFoundException, IOException {
+        throws FileNotFoundException, IOException {
           return get(Bytes.toString(tablename));
         }
         
         @Override
         public HTableDescriptor get(String tablename)
-        throws TableExistsException, FileNotFoundException, IOException {
+        throws FileNotFoundException, IOException {
           return createHTableDescriptor();
         }
         
