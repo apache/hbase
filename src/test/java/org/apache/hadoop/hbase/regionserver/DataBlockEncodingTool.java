@@ -18,7 +18,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -74,6 +73,10 @@ public class DataBlockEncodingTool {
    */
   public static int BENCHMARK_N_OMIT = 2;
 
+  /** Compression algorithm to use if not specified on the command line */
+  private static final Algorithm DEFAULT_COMPRESSION =
+      Compression.Algorithm.GZ;
+
   private List<EncodedDataBlock> codecs = new ArrayList<EncodedDataBlock>();
   private int totalPrefixLength = 0;
   private int totalKeyLength = 0;
@@ -96,6 +99,7 @@ public class DataBlockEncodingTool {
     this.compressor = this.compressionAlgorithm.getCompressor();
     this.decompressor = this.compressionAlgorithm.getDecompressor();
   }
+
   /**
    * Check statistics for given HFile for different data block encoders.
    * @param scanner Of file which will be compressed.
@@ -431,28 +435,42 @@ public class DataBlockEncodingTool {
    */
   public void displayStatistics() {
     int totalLength = totalPrefixLength + totalKeyLength + totalValueLength;
-    compressor.reset();
+    if (compressor != null) {  // might be null e.g. for pure-Java GZIP 
+      compressor.reset();
+    }
 
     for(EncodedDataBlock codec : codecs) {
       System.out.println(codec.toString());
       int saved = totalKeyLength + totalPrefixLength + totalValueLength
           - codec.getSize();
       System.out.println(
-          String.format("  Saved bytes:            %8d", saved));
+          String.format("  Saved bytes:                 %8d", saved));
       double keyRatio = (saved * 100.0) / (totalPrefixLength + totalKeyLength);
       double allRatio = (saved * 100.0) / totalLength;
       System.out.println(
           String.format("  Key compression ratio:        %.2f %%", keyRatio));
       System.out.println(
           String.format("  All compression ratio:        %.2f %%", allRatio));
-      int compressedSize = codec.checkCompressedSize(compressor);
-      System.out.println(
-          String.format("  %s compressed size:    %8d",
-              compressionAlgorithmName.toUpperCase(), compressedSize));
-      double lzoRatio = 100.0 * (1.0 - compressedSize / (0.0 + totalLength));
-      System.out.println(
-          String.format("  %s compression ratio:        %.2f %%",
-              compressionAlgorithmName.toUpperCase(), lzoRatio));
+
+      String compressedSizeCaption =
+          String.format("  %s compressed size:         ",
+              compressionAlgorithmName.toUpperCase());
+      String compressOnlyRatioCaption =
+          String.format("  %s compression ratio:        ",
+              compressionAlgorithmName.toUpperCase());
+
+      if (compressor != null) {
+        int compressedSize = codec.checkCompressedSize(compressor);
+        System.out.println(compressedSizeCaption +
+            String.format("%8d", compressedSize));
+        double compressOnlyRatio =
+            100.0 * (1.0 - compressedSize / (0.0 + totalLength));
+        System.out.println(compressOnlyRatioCaption
+            + String.format("%.2f %%", compressOnlyRatio));
+      } else {
+        System.out.println(compressedSizeCaption + "N/A");
+        System.out.println(compressOnlyRatioCaption + "N/A");
+      }
     }
 
     System.out.println(
@@ -475,12 +493,11 @@ public class DataBlockEncodingTool {
    * @param doVerify Verify correctness.
    * @throws IOException When pathName is incorrect.
    */
-  public static void testCodecs(int kvLimit, String hfilePath,
-      String compressionName, boolean doBenchmark, boolean doVerify)
-          throws IOException {
+  public static void testCodecs(Configuration conf, int kvLimit,
+      String hfilePath, String compressionName, boolean doBenchmark,
+      boolean doVerify) throws IOException {
     // create environment
     Path path = new Path(hfilePath);
-    Configuration conf = HBaseConfiguration.create();
     CacheConfig cacheConf = new CacheConfig(conf);
     FileSystem fs = FileSystem.get(conf);
     StoreFile hsf = new StoreFile(fs, path, conf, cacheConf,
@@ -564,22 +581,21 @@ public class DataBlockEncodingTool {
       System.exit(-1);
     }
 
-    if (!(new File(cmd.getOptionValue("f"))).exists()) {
-      System.err.println(String.format("ERROR: file '%s' doesn't exist!",
-          cmd.getOptionValue("f")));
-      printUsage(options);
-      System.exit(-1);
-    }
-
     String pathName = cmd.getOptionValue("f");
-    String compressionName = "gz";
+    String compressionName = DEFAULT_COMPRESSION.getName();
     if (cmd.hasOption("a")) {
-      compressionName = cmd.getOptionValue("a");
+      compressionName = cmd.getOptionValue("a").toLowerCase();
     }
     boolean doBenchmark = cmd.hasOption("b");
     boolean doVerify = !cmd.hasOption("c");
 
-    testCodecs(kvLimit, pathName, compressionName, doBenchmark, doVerify);
+    final Configuration conf = HBaseConfiguration.create();
+    try {
+      testCodecs(conf, kvLimit, pathName, compressionName, doBenchmark,
+          doVerify);
+    } finally {
+      (new CacheConfig(conf)).getBlockCache().shutdown();
+    }
   }
 
 }
