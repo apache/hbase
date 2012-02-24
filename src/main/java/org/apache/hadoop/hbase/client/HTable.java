@@ -19,6 +19,24 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -36,25 +54,6 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import java.io.DataInput;
-import java.io.DataOutput;
 
 /**
  * Used to communicate with a single HBase table.
@@ -151,20 +150,16 @@ public class HTable implements HTableInterface {
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
     this.maxKeyValueSize = conf.getInt("hbase.client.keyvalue.maxsize", -1);
 
-    int nrHRS = getCurrentNrHRS();
-    if (nrHRS == 0) {
-      // No servers running -- set default of 10 threads.
-      nrHRS = 10;
-    }
-    int nrThreads = conf.getInt("hbase.htable.threads.max", nrHRS);
-    // Unfortunately Executors.newCachedThreadPool does not allow us to
-    // set the maximum size of the pool, so we have to do it ourselves.
-    this.pool = new ThreadPoolExecutor(nrThreads, nrThreads,
-        60, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<Runnable>(),
-        new DaemonThreadFactory());
+    int maxThreads = conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE);
 
-    // allow the core pool threads timeout and terminate
+    // Using the "direct handoff" approach, new threads will only be created
+    // if it is necessary and will grow unbounded. This could be bad but in HCM
+    // we only create as many Runnables as there are region servers. It means
+    // it also scales when new region servers are added.
+    this.pool = new ThreadPoolExecutor(1, maxThreads,
+        60, TimeUnit.SECONDS,
+        new SynchronousQueue<Runnable>(),
+        new DaemonThreadFactory());
     ((ThreadPoolExecutor)this.pool).allowCoreThreadTimeOut(true);
   }
 
