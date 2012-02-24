@@ -543,10 +543,13 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       Algorithm compression = familyDescriptor.getCompression();
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
 
-      halfWriter = new StoreFile.Writer(
-          fs, outFile, blocksize, compression, dataBlockEncoder,
-          conf, cacheConf,
-          KeyValue.COMPARATOR, bloomFilterType, 0);
+      halfWriter = new StoreFile.WriterBuilder(conf, cacheConf,
+          fs, blocksize)
+              .withFilePath(outFile)
+              .withCompression(compression)
+              .withDataBlockEncoder(dataBlockEncoder)
+              .withBloomType(bloomFilterType)
+              .build();
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();
       do {

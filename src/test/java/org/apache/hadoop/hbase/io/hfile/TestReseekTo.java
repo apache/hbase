@@ -47,8 +47,10 @@ public class TestReseekTo {
     FSDataOutputStream fout = TEST_UTIL.getTestFileSystem().create(ncTFile);
     CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
     HFile.Writer writer = HFile.getWriterFactory(
-        TEST_UTIL.getConfiguration(), cacheConf).createWriter(
-            fout, 4000, "none", null);
+        TEST_UTIL.getConfiguration(), cacheConf)
+            .withOutputStream(fout)
+            .withBlockSize(4000)
+            .create();
     int numberOfKeys = 1000;
 
     String valueString = "Value";

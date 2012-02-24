@@ -265,8 +265,10 @@ public class TestStore extends TestCase {
     long seqid = f.getMaxSequenceId();
     Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
-    StoreFile.Writer w = StoreFile.createWriter(fs, storedir,
-        StoreFile.DEFAULT_BLOCKSIZE_SMALL, c, new CacheConfig(c));
+    StoreFile.Writer w = new StoreFile.WriterBuilder(c, new CacheConfig(c),
+        fs, StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+            .withOutputDir(storedir)
+            .build();
     w.appendMetadata(seqid + 1, false);
     w.close();
     this.store.close();

@@ -349,11 +349,14 @@ public class HFileReadWriteTest {
         null);
     Store store = new Store(outputDir, region, columnDescriptor, fs, conf);
 
-    StoreFile.Writer writer =
-        StoreFile.createWriter(fs, outputDir, blockSize, compression,
-            dataBlockEncoder, KeyValue.COMPARATOR, this.conf,
-            new CacheConfig(conf), bloomType,
-            maxKeyCount);
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf,
+        new CacheConfig(conf), fs, blockSize)
+            .withOutputDir(outputDir)
+            .withCompression(compression)
+            .withDataBlockEncoder(dataBlockEncoder)
+            .withBloomType(bloomType)
+            .withMaxKeyCount(maxKeyCount)
+            .build();
 
     StatisticsPrinter statsPrinter = new StatisticsPrinter();
     statsPrinter.startThread();

@@ -67,9 +67,11 @@ public class TestHalfStoreFileReader {
     FileSystem fs = FileSystem.get(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
 
-    HFile.Writer w =
-      HFile.getWriterFactory(conf, cacheConf).createWriter(fs, p, 1024,
-        "none", KeyValue.KEY_COMPARATOR);
+    HFile.Writer w = HFile.getWriterFactory(conf, cacheConf)
+        .withPath(fs, p)
+        .withBlockSize(1024)
+        .withComparator(KeyValue.KEY_COMPARATOR)
+        .create();
 
     // write some things.
     List<KeyValue> items = genSomeKeys();

@@ -173,10 +173,12 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
         Path familydir = new Path(outputdir, Bytes.toString(family));
         String compression = compressionMap.get(family);
         compression = compression == null ? defaultCompression : compression;
-        wl.writer =
-          HFile.getWriterFactoryNoCache(conf).createWriter(fs,
-          StoreFile.getUniqueFile(fs, familydir), blocksize,
-          compression, KeyValue.KEY_COMPARATOR);
+        wl.writer = HFile.getWriterFactoryNoCache(conf)
+            .withPath(fs, StoreFile.getUniqueFile(fs, familydir))
+            .withBlockSize(blocksize)
+            .withCompression(compression)
+            .withComparator(KeyValue.KEY_COMPARATOR)
+            .create();
         this.writers.put(family, wl);
         return wl;
       }

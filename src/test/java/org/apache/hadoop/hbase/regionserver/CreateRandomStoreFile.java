@@ -183,9 +183,13 @@ public class CreateRandomStoreFile {
           Integer.valueOf(cmdLine.getOptionValue(INDEX_BLOCK_SIZE_OPTION)));
     }
 
-    StoreFile.Writer sfw = StoreFile.createWriter(fs, outputDir, blockSize,
-        compr, null, KeyValue.COMPARATOR, conf, new CacheConfig(conf),
-        bloomType, numKV);
+    StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf,
+        new CacheConfig(conf), fs, blockSize)
+            .withOutputDir(outputDir)
+            .withCompression(compr)
+            .withBloomType(bloomType)
+            .withMaxKeyCount(numKV)
+            .build();
 
     rand = new Random();
     LOG.info("Writing " + numKV + " key/value pairs");

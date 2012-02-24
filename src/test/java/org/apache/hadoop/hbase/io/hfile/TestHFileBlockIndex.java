@@ -483,8 +483,12 @@ public class TestHFileBlockIndex {
       // Write the HFile
       {
         HFile.Writer writer =
-          HFile.getWriterFactory(conf, cacheConf).createWriter(fs,
-            hfilePath, SMALL_BLOCK_SIZE, compr, null, KeyValue.KEY_COMPARATOR);
+            HFile.getWriterFactory(conf, cacheConf)
+                .withPath(fs, hfilePath)
+                .withBlockSize(SMALL_BLOCK_SIZE)
+                .withCompression(compr)
+                .withComparator(KeyValue.KEY_COMPARATOR)
+                .create();
         Random rand = new Random(19231737);
 
         for (int i = 0; i < NUM_KV; ++i) {

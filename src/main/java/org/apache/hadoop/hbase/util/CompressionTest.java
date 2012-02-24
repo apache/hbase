@@ -105,9 +105,10 @@ public class CompressionTest {
   public static void doSmokeTest(FileSystem fs, Path path, String codec)
   throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    HFile.Writer writer =
-      HFile.getWriterFactoryNoCache(conf).createWriter(
-      fs, path, HFile.DEFAULT_BLOCKSIZE, codec, null);
+    HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
+        .withPath(fs, path)
+        .withCompression(codec)
+        .create();
     writer.append(Bytes.toBytes("testkey"), Bytes.toBytes("testval"));
     writer.appendFileInfo(Bytes.toBytes("infokey"), Bytes.toBytes("infoval"));
     writer.close();
