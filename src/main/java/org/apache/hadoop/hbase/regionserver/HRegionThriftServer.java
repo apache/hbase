@@ -144,12 +144,14 @@ public class HRegionThriftServer extends Thread {
         return ThriftUtilities.rowResultFromHBase(result);
       } catch (NotServingRegionException e) {
         if (!redirect) {
+          LOG.warn(e.getMessage(), e);
           throw new IOError(e.getMessage());
         }
         LOG.debug("ThriftServer redirecting getRowWithColumnsTs");
         return super.getRowWithColumnsTs(tableName, rowb, columns, timestamp,
                                          attributes);
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }

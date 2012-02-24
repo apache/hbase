@@ -500,6 +500,7 @@ public class ThriftServerRunner implements Runnable {
       try{
         admin.enableTable(getBytes(tableName));
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -509,6 +510,7 @@ public class ThriftServerRunner implements Runnable {
       try{
         admin.disableTable(getBytes(tableName));
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -518,6 +520,7 @@ public class ThriftServerRunner implements Runnable {
       try {
         return HTable.isTableEnabled(this.conf, getBytes(tableName));
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -529,6 +532,7 @@ public class ThriftServerRunner implements Runnable {
       } catch (InterruptedException e) {
         throw new IOError(e.getMessage());
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -538,8 +542,10 @@ public class ThriftServerRunner implements Runnable {
       try{
         admin.majorCompact(getBytes(tableNameOrRegionName));
       } catch (InterruptedException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -554,6 +560,7 @@ public class ThriftServerRunner implements Runnable {
         }
         return list;
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -578,6 +585,7 @@ public class ThriftServerRunner implements Runnable {
         }
         return regions;
       } catch (IOException e){
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -612,6 +620,7 @@ public class ThriftServerRunner implements Runnable {
         Result result = table.get(get);
         return ThriftUtilities.cellFromHBase(result.raw());
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -643,6 +652,7 @@ public class ThriftServerRunner implements Runnable {
         Result result = table.get(get);
         return ThriftUtilities.cellFromHBase(result.raw());
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -678,6 +688,7 @@ public class ThriftServerRunner implements Runnable {
         Result result = table.get(get);
         return ThriftUtilities.cellFromHBase(result.raw());
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -734,6 +745,7 @@ public class ThriftServerRunner implements Runnable {
         Result result = table.get(get);
         return ThriftUtilities.rowResultFromHBase(result);
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -798,6 +810,7 @@ public class ThriftServerRunner implements Runnable {
         Result[] result = table.get(gets);
         return ThriftUtilities.rowResultFromHBase(result);
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -829,6 +842,7 @@ public class ThriftServerRunner implements Runnable {
         table.delete(delete);
 
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -850,6 +864,7 @@ public class ThriftServerRunner implements Runnable {
         addAttributes(delete, attributes);
         table.delete(delete);
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -870,8 +885,10 @@ public class ThriftServerRunner implements Runnable {
         }
         admin.createTable(desc);
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       } catch (IllegalArgumentException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IllegalArgument(e.getMessage());
       }
     }
@@ -884,10 +901,11 @@ public class ThriftServerRunner implements Runnable {
       }
       try {
         if (!admin.tableExists(tableName)) {
-          throw new IOError("table does not exist");
+          throw new IOException("table does not exist");
         }
         admin.deleteTable(tableName);
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -945,8 +963,10 @@ public class ThriftServerRunner implements Runnable {
         if (!put.isEmpty())
           table.put(put);
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       } catch (IllegalArgumentException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IllegalArgument(e.getMessage());
       }
     }
@@ -1011,8 +1031,10 @@ public class ThriftServerRunner implements Runnable {
           table.delete(del);
         }
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       } catch (IllegalArgumentException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IllegalArgument(e.getMessage());
       }
     }
@@ -1039,6 +1061,7 @@ public class ThriftServerRunner implements Runnable {
         return table.incrementColumnValue(
             getBytes(row), family, qualifier, amount);
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -1047,6 +1070,8 @@ public class ThriftServerRunner implements Runnable {
       LOG.debug("scannerClose: id=" + id);
       ResultScanner scanner = getScanner(id);
       if (scanner == null) {
+        String message = "scanner ID is invalid";
+        LOG.warn(message);
         throw new IllegalArgument("scanner ID is invalid");
       }
       scanner.close();
@@ -1059,6 +1084,8 @@ public class ThriftServerRunner implements Runnable {
       LOG.debug("scannerGetList: id=" + id);
       ResultScanner scanner = getScanner(id);
       if (null == scanner) {
+        String message = "scanner ID is invalid";
+        LOG.warn(message);
         throw new IllegalArgument("scanner ID is invalid");
       }
 
@@ -1069,6 +1096,7 @@ public class ThriftServerRunner implements Runnable {
           return new ArrayList<TRowResult>();
         }
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
       return ThriftUtilities.rowResultFromHBase(results);
@@ -1115,6 +1143,7 @@ public class ThriftServerRunner implements Runnable {
         }
         return addScanner(table.getScanner(scan));
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -1139,6 +1168,7 @@ public class ThriftServerRunner implements Runnable {
         }
         return addScanner(table.getScanner(scan));
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -1164,6 +1194,7 @@ public class ThriftServerRunner implements Runnable {
         }
         return addScanner(table.getScanner(scan));
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -1193,6 +1224,7 @@ public class ThriftServerRunner implements Runnable {
         }
         return addScanner(table.getScanner(scan));
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -1218,6 +1250,7 @@ public class ThriftServerRunner implements Runnable {
         }
         return addScanner(table.getScanner(scan));
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -1245,6 +1278,7 @@ public class ThriftServerRunner implements Runnable {
         scan.setTimeRange(Long.MIN_VALUE, timestamp);
         return addScanner(table.getScanner(scan));
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -1265,6 +1299,7 @@ public class ThriftServerRunner implements Runnable {
         }
         return columns;
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -1277,6 +1312,7 @@ public class ThriftServerRunner implements Runnable {
         Result result = table.getRowOrBefore(getBytes(row), getBytes(family));
         return ThriftUtilities.cellFromHBase(result.raw());
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
@@ -1320,6 +1356,7 @@ public class ThriftServerRunner implements Runnable {
         }
         return region;
       } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
     }
