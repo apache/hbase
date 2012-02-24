@@ -48,15 +48,24 @@
 <h2>Online Regions</h2>
 <% if (onlineRegions != null && onlineRegions.size() > 0) { %>
 <table>
-<tr><th>Region Name</th><th>Start Key</th><th>End Key</th><th>Metrics</th></tr>
+<tr><th>Region Name</th>
+	<th>Read Requests/sec</th>
+	<th>Write Requests/sec</th>
+	<th>Start Key</th>
+	<th>End Key</th><th>Metrics</th></tr>
 <%   for (HRegionInfo r: onlineRegions) {
         HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getRegionName());
  %>
 <tr><td><%= r.getRegionNameAsString() %></td>
-    <td><%= Bytes.toStringBinary(r.getStartKey()) %></td><td><%= Bytes.toStringBinary(r.getEndKey()) %></td>
+	<td><%= load.getReadRequestPerSec() %></td>
+	<td><%= load.getWriteRequestPerSec() %></td>
+    <td><%= Bytes.toStringBinary(r.getStartKey()) %></td>
+	<td><%= Bytes.toStringBinary(r.getEndKey()) %></td>
     <td><%= load.toString() %></td>
-    </tr>
-<%   } %>
+</tr>
+<%
+     }
+%>
 </table>
 <p>Region names are made of the containing table's name, a comma,
 the start key, a comma, and a randomly generated region id.  To illustrate,

@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -67,12 +66,12 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -86,6 +85,7 @@ import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.metrics.RequestMetrics;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
@@ -178,6 +178,8 @@ public class HRegion implements HeapSize {
   // private byte [] name = null;
 
   protected final AtomicLong memstoreSize = new AtomicLong(0);
+  private RequestMetrics readRequests = null;
+  private RequestMetrics writeRequests = null;
 
   private HRegionServer regionServer = null;
 
@@ -473,6 +475,9 @@ public class HRegion implements HeapSize {
     this.blockingMemStoreSize = this.memstoreFlushSize *
       conf.getLong("hbase.hregion.memstore.block.multiplier", 2);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
+
+    this.readRequests =new RequestMetrics();
+    this.writeRequests =new RequestMetrics();
   }
 
   /**
@@ -1700,6 +1705,8 @@ public class HRegion implements HeapSize {
   public void delete(Map<byte[], List<KeyValue>> familyMap, boolean writeToWAL)
   throws IOException {
     long now = EnvironmentEdgeManager.currentTimeMillis();
+    this.writeRequests.incrTotalRequstCount();
+
     byte [] byteNow = Bytes.toBytes(now);
     boolean flush = false;
 
@@ -1822,6 +1829,7 @@ public class HRegion implements HeapSize {
    */
   public void put(Put put, Integer lockid, boolean writeToWAL)
   throws IOException {
+    this.writeRequests.incrTotalRequstCount();
     checkReadOnly();
 
     // Do a rough check that we have resources to accept a write.  The check is
@@ -1894,6 +1902,7 @@ public class HRegion implements HeapSize {
    * @throws IOException
    */
   public OperationStatusCode[] put(Pair<Put, Integer>[] putsAndLocks) throws IOException {
+    this.writeRequests.incrTotalRequstCount();
     BatchOperationInProgress<Pair<Put, Integer>> batchOp =
       new BatchOperationInProgress<Pair<Put,Integer>>(putsAndLocks);
 
@@ -2940,6 +2949,7 @@ public class HRegion implements HeapSize {
     @Override
     public synchronized boolean next(List<KeyValue> outResults, int limit,
         String metric) throws IOException {
+      readRequests.incrTotalRequstCount();
       if (this.filterClosed) {
         throw new UnknownScannerException("Scanner was closed (timed out?) " +
             "after we renewed it. Could be caused by a very slow scanner " +
@@ -3595,7 +3605,7 @@ public class HRegion implements HeapSize {
    */
   private List<KeyValue> get(final Get get) throws IOException {
     long now = EnvironmentEdgeManager.currentTimeMillis();
-
+    readRequests.incrTotalRequstCount();
     Scan scan = new Scan(get);
 
     List<KeyValue> results = new ArrayList<KeyValue>();
@@ -3633,6 +3643,7 @@ public class HRegion implements HeapSize {
   throws IOException {
     // to be used for metrics
     long before = EnvironmentEdgeManager.currentTimeMillis();
+    this.writeRequests.incrTotalRequstCount();
 
     checkRow(row);
     boolean flush = false;
@@ -3713,7 +3724,7 @@ public class HRegion implements HeapSize {
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (5 * Bytes.SIZEOF_LONG) + 2 * ClassSize.ARRAY +
-      (25 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
+      (27 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) +
@@ -3865,6 +3876,14 @@ public class HRegion implements HeapSize {
       }
     }
     return false;
+  }
+
+  public RequestMetrics getReadRequest() {
+    return this.readRequests;
+  }
+
+  public RequestMetrics getWriteRequest() {
+    return this.writeRequests;
   }
 
   /**
