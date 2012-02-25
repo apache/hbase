@@ -1,4 +1,8 @@
 HBase Change Log
+Release 0.90.7 - Unreleased
+  BUG FIXES
+    HBASE-5364 Fix source files missing licenses in 0.92 and trunk; Addendum
+               (Shaneal Manek)
 
 Release 0.90.6 - Unreleased
   INCOMPATIBLE CHANGES
