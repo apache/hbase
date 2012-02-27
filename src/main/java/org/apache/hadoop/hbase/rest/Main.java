@@ -39,7 +39,9 @@ import org.apache.hadoop.net.DNS;
 import java.util.List;
 import java.util.ArrayList;
 
+import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
+import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 
@@ -129,9 +131,14 @@ public class Main implements Constants {
 
     // set up Jetty and run the embedded server
 
-    int port = servlet.getConfiguration().getInt("hbase.rest.port", 8080);
+    Server server = new Server();
 
-    Server server = new Server(port);
+    Connector connector = new SelectChannelConnector();
+    connector.setPort(servlet.getConfiguration().getInt("hbase.rest.port", 8080));
+    connector.setHost(servlet.getConfiguration().get("hbase.rest.host", "0.0.0.0"));
+
+    server.addConnector(connector);
+
     server.setSendServerVersion(false);
     server.setSendDateHeader(false);
     server.setStopAtShutdown(true);
