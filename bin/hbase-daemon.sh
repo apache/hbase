@@ -131,8 +131,17 @@ case $startStop in
     mkdir -p "$HBASE_PID_DIR"
     if [ -f $pid ]; then
       if kill -0 `cat $pid` > /dev/null 2>&1; then
-        echo $command running as process `cat $pid`.  Stop it first.
-        exit 1
+        # On Linux, process pids and thread pids are indistinguishable to
+        # signals. It's possible that the pid in our pidfile is now a thread
+        # owned by another process. Let's check to make sure our pid is
+        # actually a running process.
+        ps -e -o pid | egrep "^`cat $pid`$" >/dev/null 2>&1
+        if [ $? -eq 0 ]; then
+          echo $command running as process `cat $pid`.  Stop it first.
+          exit 1
+        else
+          rm $pid
+        fi
       fi
     fi
 
