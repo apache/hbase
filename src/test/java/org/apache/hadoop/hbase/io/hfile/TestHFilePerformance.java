@@ -208,9 +208,11 @@ public class TestHFilePerformance extends TestCase {
 
     if ("HFile".equals(fileType)){
         System.out.println("HFile write method: ");
-        HFile.Writer writer =
-          HFile.getWriterFactory(conf).createWriter(fout,
-             minBlockSize, codecName, null);
+        HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
+            .withOutputStream(fout)
+            .withBlockSize(minBlockSize)
+            .withCompression(codecName)
+            .create();
 
         // Writing value in one shot.
         for (RawKeyValue rawKV : testKeyValues) {

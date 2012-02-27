@@ -72,9 +72,13 @@ public class TestHFileWriterV2 {
         "testHFileFormatV2");
 
     final Compression.Algorithm COMPRESS_ALGO = Compression.Algorithm.GZ;
-    HFileWriterV2 writer = new HFileWriterV2(conf, new CacheConfig(conf), fs,
-        hfilePath, 4096, HFile.DEFAULT_BYTES_PER_CHECKSUM,
-        COMPRESS_ALGO, null, KeyValue.KEY_COMPARATOR);
+    HFileWriterV2 writer = (HFileWriterV2)
+        new HFileWriterV2.WriterFactoryV2(conf, new CacheConfig(conf))
+            .withPath(fs, hfilePath)
+            .withBlockSize(4096)
+            .withCompression(COMPRESS_ALGO)
+            .withComparator(KeyValue.KEY_COMPARATOR)
+            .create();
 
     long totalKeyLength = 0;
     long totalValueLength = 0;

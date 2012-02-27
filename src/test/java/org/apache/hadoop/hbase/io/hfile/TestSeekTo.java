@@ -45,9 +45,10 @@ public class TestSeekTo extends HBaseTestCase {
     Path ncTFile = new Path(this.testDir, "basic.hfile");
     FSDataOutputStream fout = this.fs.create(ncTFile);
     int blocksize = toKV("a").getLength() * 3;
-    HFile.Writer writer =
-      HFile.getWriterFactory(conf).createWriter(fout,
-        blocksize, "none", null);
+    HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
+        .withOutputStream(fout)
+        .withBlockSize(blocksize)
+        .create();
     // 4 bytes * 3 * 2 for each key/value +
     // 3 for keys, 15 for values = 42 (woot)
     writer.append(toKV("c"));

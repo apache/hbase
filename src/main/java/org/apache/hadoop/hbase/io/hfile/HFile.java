@@ -39,16 +39,21 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.HFile.WriterFactory;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
+
+import com.google.common.base.Preconditions;
 
 /**
  * File format for hbase.
@@ -255,38 +260,86 @@ public class HFile {
    * we want to be able to swap writer implementations.
    */
   public static abstract class WriterFactory {
-    protected Configuration conf;
-    protected CacheConfig cacheConf;
+    protected final Configuration conf;
+    protected final CacheConfig cacheConf;
+    protected FileSystem fs;
+    protected Path path;
+    protected FSDataOutputStream ostream;
+    protected int blockSize = HColumnDescriptor.DEFAULT_BLOCKSIZE;
+    protected int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
+    protected Compression.Algorithm compression =
+        HFile.DEFAULT_COMPRESSION_ALGORITHM;
+    protected HFileDataBlockEncoder encoder = NoOpDataBlockEncoder.INSTANCE;
+    protected KeyComparator comparator;
+    protected InetSocketAddress[] favoredNodes;
 
     WriterFactory(Configuration conf, CacheConfig cacheConf) {
       this.conf = conf;
       this.cacheConf = cacheConf;
     }
 
-    public abstract Writer createWriter(FileSystem fs, Path path)
-        throws IOException;
+    public WriterFactory withPath(FileSystem fs, Path path) {
+      Preconditions.checkNotNull(fs);
+      Preconditions.checkNotNull(path);
+      this.fs = fs;
+      this.path = path;
+      return this;
+    }
 
-    public abstract Writer createWriter(FileSystem fs, Path path,
-        int blockSize, int bytesPerChecksum, Compression.Algorithm compress,
-        final KeyComparator comparator) throws IOException;
+    public WriterFactory withOutputStream(FSDataOutputStream ostream) {
+      Preconditions.checkNotNull(ostream);
+      this.ostream = ostream;
+      return this;
+    }
 
-    public abstract Writer createWriter(FileSystem fs, Path path,
-        int blockSize, int bytesPerChecksum, Compression.Algorithm compress,
-        HFileDataBlockEncoder dataBlockEncoder,
-        final KeyComparator comparator, InetSocketAddress[] favoredNodes)
-        throws IOException;
+    public WriterFactory withBlockSize(int blockSize) {
+      this.blockSize = blockSize;
+      return this;
+    }
 
-    public abstract Writer createWriter(FileSystem fs, Path path,
-        int blockSize, int bytesPerChecksum, String compress,
-        final KeyComparator comparator) throws IOException;
+    public WriterFactory withCompression(Compression.Algorithm compression) {
+      Preconditions.checkNotNull(compression);
+      this.compression = compression;
+      return this;
+    }
 
-    public abstract Writer createWriter(final FSDataOutputStream ostream,
-        final int blockSize, final String compress,
-        final KeyComparator comparator) throws IOException;
+    public WriterFactory withCompression(String compressAlgo) {
+      Preconditions.checkNotNull(compression);
+      this.compression = AbstractHFileWriter.compressionByName(compressAlgo);
+      return this;
+    }
 
-    public abstract Writer createWriter(final FSDataOutputStream ostream,
-        final int blockSize, final Compression.Algorithm compress,
-        final KeyComparator c) throws IOException;
+    public WriterFactory withDataBlockEncoder(HFileDataBlockEncoder encoder) {
+      Preconditions.checkNotNull(encoder);
+      this.encoder = encoder;
+      return this;
+    }
+
+    public WriterFactory withComparator(KeyComparator comparator) {
+      Preconditions.checkNotNull(comparator);
+      this.comparator = comparator;
+      return this;
+    }
+
+    public WriterFactory withFavoredNodes(InetSocketAddress[] favoredNodes) {
+      // Deliberately not checking for null here.
+      this.favoredNodes = favoredNodes;
+      return this;
+    }
+
+    public Writer create() throws IOException {
+      if ((path != null ? 1 : 0) + (ostream != null ? 1 : 0) != 1) {
+        throw new AssertionError("Please specify exactly one of " +
+            "filesystem/path or path");
+      }
+      if (path != null) {
+        ostream = AbstractHFileWriter.createOutputStream(conf, fs, path,
+            bytesPerChecksum, favoredNodes);
+      }
+      return createWriter();
+    }
+
+    protected abstract Writer createWriter() throws IOException;
   }
 
   /** The configuration key for HFile version to use for new files */
@@ -299,12 +352,15 @@ public class HFile {
   }
 
   /**
-   * Returns the factory to be used to create {@link HFile} writers. Should
-   * always be {@link HFileWriterV2#WRITER_FACTORY_V2} in production, but
-   * can also be {@link HFileWriterV1#WRITER_FACTORY_V1} in testing.
+   * Returns the factory to be used to create {@link HFile} writers.
+   * Disables block cache access for all writers created through the
+   * returned factory.
    */
-  public static final WriterFactory getWriterFactory(Configuration conf) {
-    return HFile.getWriterFactory(conf, new CacheConfig(conf));
+  public static final WriterFactory getWriterFactoryNoCache(Configuration
+      conf) {
+    Configuration tempConf = new Configuration(conf);
+    tempConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
+    return HFile.getWriterFactory(conf, new CacheConfig(tempConf));
   }
 
   /**

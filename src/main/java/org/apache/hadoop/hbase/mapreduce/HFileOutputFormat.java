@@ -50,8 +50,8 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mapreduce.hadoopbackport.TotalOrderPartitioner;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
@@ -174,9 +174,6 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
         Path familydir = new Path(outputdir, Bytes.toString(family));
         String compression = compressionMap.get(family);
         compression = compression == null ? defaultCompression : compression;
-        Compression.Algorithm compressionAlgo =
-          Compression.getCompressionAlgorithmByName(compression);
-
         BloomType bloomType = bloomTypeMap.get(family);
         if (bloomType == null) {
           bloomType = BloomType.NONE;
@@ -184,9 +181,13 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
 
         /* new bloom filter does not require maxKeys. */
         int maxKeys = 0;
-        wl.writer = StoreFile.createWriter(fs, familydir, blocksize,
-            compressionAlgo, KeyValue.COMPARATOR, conf,
-            new CacheConfig(conf), bloomType, maxKeys);
+        wl.writer = new StoreFile.WriterBuilder(conf, new CacheConfig(conf),
+            fs, blocksize)
+                .withOutputDir(familydir)
+                .withCompression(compression)
+                .withBloomType(bloomType)
+                .withMaxKeyCount(maxKeys)
+                .build();
         this.writers.put(family, wl);
         return wl;
       }

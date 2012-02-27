@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
-
 /**
  * Test cases that ensure that file system level errors are bubbled up
  * appropriately to clients, rather than swallowed.
@@ -72,8 +71,10 @@ public class TestFSErrorsExposed {
         "regionname"), "familyname");
     FaultyFileSystem fs = new FaultyFileSystem(util.getTestFileSystem());
     CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
-    StoreFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2*1024,
-        util.getConfiguration(), cacheConf);
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(
+        util.getConfiguration(), cacheConf, fs, 2*1024)
+            .withOutputDir(hfilePath)
+            .build();
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
@@ -117,8 +118,10 @@ public class TestFSErrorsExposed {
         "regionname"), "familyname");
     FaultyFileSystem fs = new FaultyFileSystem(util.getTestFileSystem());
     CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
-    StoreFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2 * 1024,
-        util.getConfiguration(), cacheConf);
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(
+        util.getConfiguration(), cacheConf, fs, 2 * 1024)
+            .withOutputDir(hfilePath)
+            .build();
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 

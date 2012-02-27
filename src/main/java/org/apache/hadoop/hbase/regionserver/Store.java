@@ -707,10 +707,15 @@ public class Store extends SchemaConfigured implements HeapSize {
     } else {
       writerCacheConf = cacheConf;
     }
-    StoreFile.Writer w = StoreFile.createWriter(fs, region.getTmpDir(),
-        blocksize, compression, dataBlockEncoder, comparator, conf,
-        writerCacheConf, family.getBloomFilterType(),
-        BloomFilterFactory.getErrorRate(conf), maxKeyCount, null);
+    StoreFile.Writer w = new StoreFile.WriterBuilder(conf, writerCacheConf,
+        fs, blocksize)
+            .withOutputDir(region.getTmpDir())
+            .withDataBlockEncoder(dataBlockEncoder)
+            .withComparator(comparator)
+            .withBloomType(family.getBloomFilterType())
+            .withMaxKeyCount(maxKeyCount)
+            .withFavoredNodes(region.getFavoredNodes())
+            .build();
     // The store file writer's path does not include the CF name, so we need
     // to configure the HFile writer directly.
     SchemaConfigured sc = (SchemaConfigured) w.writer;

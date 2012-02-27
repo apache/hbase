@@ -67,9 +67,10 @@ public class CompressionTest {
     try {
       DistributedFileSystem dfs = openConnection(args[0]);
       dfs.delete(path, false);
-      HFile.Writer writer = HFile.getWriterFactory(conf).createWriter(dfs,
-          path, HFile.DEFAULT_BLOCKSIZE, HFile.DEFAULT_BYTES_PER_CHECKSUM,
-          args[1], null);
+      HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
+          .withPath(dfs, path)
+          .withCompression(args[1])
+          .create();
       writer.append(Bytes.toBytes("testkey"), Bytes.toBytes("testval"));
       writer.appendFileInfo(Bytes.toBytes("infokey"), Bytes.toBytes("infoval"));
       writer.close();

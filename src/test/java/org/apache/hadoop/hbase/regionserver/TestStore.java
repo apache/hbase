@@ -125,7 +125,7 @@ public class TestStore extends TestCase {
     // with HBASE-4241, lower versions are collected on flush
     hcd.setMaxVersions(TestStore.MAX_VERSION);
     FileSystem fs = FileSystem.get(conf);
-    
+
     fs.delete(logdir, true);
 
     HTableDescriptor htd = new HTableDescriptor(table);
@@ -250,8 +250,10 @@ public class TestStore extends TestCase {
     long seqid = f.getMaxSequenceId();
     Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
-    StoreFile.Writer w = StoreFile.createWriter(fs, storedir,
-        StoreFile.DEFAULT_BLOCKSIZE_SMALL, c, new CacheConfig(c));
+    StoreFile.Writer w = new StoreFile.WriterBuilder(c, new CacheConfig(c),
+        fs, StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+            .withOutputDir(storedir)
+            .build();
     w.appendMetadata(seqid + 1, false);
     w.close();
     this.store.close();
@@ -595,7 +597,7 @@ public class TestStore extends TestCase {
       this.store.add(kv);
     }
 
-    assertEquals(Math.max(timestamps1.length, timestamps2.length), 
+    assertEquals(Math.max(timestamps1.length, timestamps2.length),
         TestStore.MAX_VERSION);
     List<KeyValue> result;
     Get get = new Get(Bytes.toBytes(1));

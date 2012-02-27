@@ -23,7 +23,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,15 +31,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.io.hfile.HFile.WriterFactory;
 import org.apache.hadoop.hbase.regionserver.MemStore;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -82,124 +79,21 @@ public class HFileWriterV1 extends AbstractHFileWriter {
   private int blockNumber = 0;
 
   static class WriterFactoryV1 extends HFile.WriterFactory {
-
     WriterFactoryV1(Configuration conf, CacheConfig cacheConf) {
       super(conf, cacheConf);
     }
 
     @Override
-    public Writer createWriter(FileSystem fs, Path path) throws IOException {
-      return new HFileWriterV1(conf, cacheConf, fs, path);
+    public Writer createWriter() throws IOException {
+      return new HFileWriterV1(this);
     }
-
-    @Override
-    public Writer createWriter(FileSystem fs, Path path, int blockSize,
-        int bytesPerChecksum, Algorithm compressAlgo,
-        final KeyComparator comparator)
-        throws IOException {
-      return new HFileWriterV1(conf, cacheConf, fs, path, blockSize,
-          bytesPerChecksum, compressAlgo, NoOpDataBlockEncoder.INSTANCE,
-          comparator);
-    }
-
-    @Override
-    public Writer createWriter(FileSystem fs, Path path, int blockSize,
-        int bytesPerChecksum, Compression.Algorithm compressAlgo,
-        HFileDataBlockEncoder dataBlockEncoder,
-        final KeyComparator comparator, InetSocketAddress[] favoredNodes)
-        throws IOException {
-      return new HFileWriterV1(conf, cacheConf, fs, path, blockSize,
-          bytesPerChecksum, compressAlgo, dataBlockEncoder,
-          comparator, favoredNodes);
-    }
-
-    @Override
-    public Writer createWriter(FileSystem fs, Path path, int blockSize,
-        int bytesPerChecksum, String compressAlgoName,
-        final KeyComparator comparator) throws IOException {
-      return new HFileWriterV1(conf, cacheConf, fs, path, blockSize,
-          bytesPerChecksum, compressAlgoName, comparator);
-    }
-
-    @Override
-    public Writer createWriter(final FSDataOutputStream ostream,
-        final int blockSize, final String compress,
-        final KeyComparator comparator) throws IOException {
-      return new HFileWriterV1(conf, cacheConf, ostream, blockSize, compress,
-          comparator);
-    }
-
-    @Override
-    public Writer createWriter(final FSDataOutputStream ostream,
-        final int blockSize, final Compression.Algorithm compress,
-        final KeyComparator c) throws IOException {
-      return new HFileWriterV1(conf, cacheConf, ostream, blockSize, compress,
-          NoOpDataBlockEncoder.INSTANCE, c);
-    }
-  }
-
-  /** Constructor that uses all defaults for compression and block size. */
-  public HFileWriterV1(Configuration conf, CacheConfig cacheConf, FileSystem fs,
-      Path path)
-      throws IOException {
-    this(conf, cacheConf, fs, path, HFile.DEFAULT_BLOCKSIZE,
-        HFile.DEFAULT_BYTES_PER_CHECKSUM, HFile.DEFAULT_COMPRESSION_ALGORITHM,
-        NoOpDataBlockEncoder.INSTANCE, null);
-  }
-
-  /**
-   * Constructor that takes a path, creates and closes the output stream. Takes
-   * compression algorithm name as string.
-   */
-  public HFileWriterV1(Configuration conf, CacheConfig cacheConf, FileSystem fs,
-      Path path, int blockSize, int bytesPerChecksum, String compressAlgoName,
-      final KeyComparator comparator) throws IOException {
-    this(conf, cacheConf, fs, path, blockSize, bytesPerChecksum,
-        compressionByName(compressAlgoName), NoOpDataBlockEncoder.INSTANCE,
-        comparator);
   }
 
   /** Constructor that takes a path, creates and closes the output stream. */
-  public HFileWriterV1(Configuration conf, CacheConfig cacheConf, FileSystem fs,
-      Path path, int blockSize, int bytesPerChecksum,
-      Compression.Algorithm compress,
-      HFileDataBlockEncoder blockEncoder,
-      final KeyComparator comparator)
-  throws IOException {
-    super(conf, cacheConf, createOutputStream(conf, fs, path, bytesPerChecksum),
-        path, blockSize, compress, blockEncoder, comparator);
-  }
-
-  /** Constructor that takes a path, creates and closes the output stream. */
-  public HFileWriterV1(Configuration conf,
-      CacheConfig cacheConf, FileSystem fs, Path path,
-      int blockSize, int bytesPerChecksum, Compression.Algorithm compress,
-      HFileDataBlockEncoder dataBlockEncoder,
-      final KeyComparator comparator, InetSocketAddress[] favoredNodes)
-      throws IOException {
-    super(conf, cacheConf, createOutputStream(conf, fs, path,
-        bytesPerChecksum, favoredNodes), path, blockSize, compress,
-        dataBlockEncoder, comparator);
-  }
-
-  /** Constructor that takes a stream. */
-  public HFileWriterV1(Configuration conf, CacheConfig cacheConf,
-      final FSDataOutputStream outputStream, final int blockSize,
-      final String compressAlgoName, final KeyComparator comparator)
-      throws IOException {
-    this(conf, cacheConf, outputStream, blockSize,
-        Compression.getCompressionAlgorithmByName(compressAlgoName),
-        NoOpDataBlockEncoder.INSTANCE, comparator);
-  }
-
-  /** Constructor that takes a stream. */
-  public HFileWriterV1(Configuration conf, CacheConfig cacheConf,
-      final FSDataOutputStream outputStream, final int blockSize,
-      final Compression.Algorithm compress,
-      HFileDataBlockEncoder blockEncoder, final KeyComparator comparator)
-      throws IOException {
-    super(conf, cacheConf, outputStream, null, blockSize, compress,
-        blockEncoder, comparator);
+  public HFileWriterV1(WriterFactory wf) throws IOException {
+    super(wf.conf, wf.cacheConf, wf.ostream, wf.path, wf.blockSize,
+        wf.compression, wf.encoder, wf.comparator);
+    SchemaMetrics.configureGlobally(wf.conf);
   }
 
   /**

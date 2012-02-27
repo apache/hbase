@@ -41,24 +41,23 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
+import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -68,13 +67,14 @@ import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
  * are produced by flushing the memstore to disk.  To
- * create, call {@link #createWriter(FileSystem, Path, int, Configuration)}
+ * create, instantiate a writer using {@link StoreFile#WriterBuilder}
  * and append data. Be sure to add any metadata before calling close on the
  * Writer (Use the appendMetadata convenience methods). On close, a StoreFile
  * is sitting in the Filesystem.  To refer to it, create a StoreFile instance
@@ -577,85 +577,141 @@ public class StoreFile extends SchemaConfigured {
     return tgt;
   }
 
-  /**
-   * Get a store file writer. Client is responsible for closing file when done.
-   *
-   * @param fs
-   * @param dir Path to family directory.  Makes the directory if doesn't exist.
-   * Creates a file with a unique name in this directory.
-   * @param blocksize size per filesystem block
-   * @return StoreFile.Writer
-   * @throws IOException
-   */
-  public static Writer createWriter(final FileSystem fs, final Path dir,
-      final int blocksize, Configuration conf, CacheConfig cacheConf)
-  throws IOException {
-    return createWriter(fs, dir, blocksize, null,
-        NoOpDataBlockEncoder.INSTANCE, null, conf, cacheConf, BloomType.NONE,
-        0.0f, 0, null);
-  }
+  public static class WriterBuilder {
+    private final Configuration conf;
+    private final CacheConfig cacheConf;
+    private final FileSystem fs;
+    private final int blockSize;
 
-  public static StoreFile.Writer createWriter(final FileSystem fs,
-          final Path dir,
-          final int blocksize,
-          final Compression.Algorithm algorithm,
-          final KeyValue.KVComparator c,
-          final Configuration conf,
-          final CacheConfig cacheConf,
-          BloomType bloomType,
-          long maxKeyCount)
-  throws IOException {
-    return createWriter(fs, dir, blocksize, algorithm,
-        NoOpDataBlockEncoder.INSTANCE, c, conf, cacheConf, bloomType,
-        BloomFilterFactory.getErrorRate(conf), maxKeyCount, null);
-  }
+    private Compression.Algorithm compressAlgo =
+        HFile.DEFAULT_COMPRESSION_ALGORITHM;
+    private HFileDataBlockEncoder dataBlockEncoder;
+    private KeyValue.KVComparator comparator = KeyValue.COMPARATOR;
+    private BloomType bloomType = BloomType.NONE;
+    private long maxKeyCount = 0;
+    private Path dir;
+    private Path filePath;
+    private InetSocketAddress[] favoredNodes;
+    private  float bloomErrorRate;
 
-  /**
-   * Create a store file writer. Client is responsible for closing file when done.
-   * If metadata, add BEFORE closing using appendMetadata()
-   * @param fs
-   * @param dir Path to family directory.  Makes the directory if doesn't exist.
-   * Creates a file with a unique name in this directory.
-   * @param blocksize
-   * @param compressAlgo Compression algorithm. Pass null to get default.
-   * @param dataBlockEncoder Pass null to disable data block encoding.
-   * @param comparator Key-value comparator. Pass null to get default.
-   * @param conf HBase system configuration. used with bloom filters
-   * @param cacheConf Cache configuration and reference.
-   * @param bloomType column family setting for bloom filters
-   * @param bloomErrorRate column family setting for bloom filter error rate
-   * @param maxKeyCount estimated maximum number of keys we expect to add
-   * @param favoredNodes if using DFS, try to place replicas on these nodes
-   * @return HFile.Writer
-   * @throws IOException
-   */
-  public static StoreFile.Writer createWriter(final FileSystem fs,
-      final Path dir, final int blocksize,
-      Compression.Algorithm compressAlgo,
-      final HFileDataBlockEncoder dataBlockEncoder,
-      KeyValue.KVComparator comparator, final Configuration conf,
-      final CacheConfig cacheConf, BloomType bloomType, float bloomErrorRate,
-      long maxKeyCount,
-      InetSocketAddress[] favoredNodes)
-      throws IOException {
-
-    if (!fs.exists(dir)) {
-      fs.mkdirs(dir);
-    }
-    Path path = getUniqueFile(fs, dir);
-    if (!BloomFilterFactory.isGeneralBloomEnabled(conf)) {
-      bloomType = BloomType.NONE;
+    public WriterBuilder(Configuration conf, CacheConfig cacheConf,
+        FileSystem fs, int blockSize) {
+      this.conf = conf;
+      this.cacheConf = cacheConf;
+      this.fs = fs;
+      this.blockSize = blockSize;
+      bloomErrorRate = BloomFilterFactory.getErrorRate(conf);
     }
 
-    if (compressAlgo == null) {
-      compressAlgo = HFile.DEFAULT_COMPRESSION_ALGORITHM;
+    /**
+     * Use either this method or {@link #withFilePath}, but not both.
+     * @param dir Path to column family directory. The directory is created if
+     *          does not exist. The file is given a unique name within this
+     *          directory.
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder withOutputDir(Path dir) {
+      Preconditions.checkNotNull(dir);
+      this.dir = dir;
+      return this;
     }
-    if (comparator == null) {
-      comparator = KeyValue.COMPARATOR;
+
+    /**
+     * Use either this method or {@link #withOutputDir}, but not both.
+     * @param filePath the StoreFile path to write
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder withFilePath(Path filePath) {
+      Preconditions.checkNotNull(filePath);
+      this.filePath = filePath;
+      return this;
     }
-    return new Writer(fs, path, blocksize, compressAlgo, dataBlockEncoder,
-        conf, cacheConf, comparator, bloomType, bloomErrorRate,
-        maxKeyCount, favoredNodes);
+
+    public WriterBuilder withCompression(Compression.Algorithm compressAlgo) {
+      Preconditions.checkNotNull(compressAlgo);
+      this.compressAlgo = compressAlgo;
+      return this;
+    }
+
+    public WriterBuilder withCompression(String compressionTypeStr) {
+      return withCompression(Compression.Algorithm.valueOf(
+          compressionTypeStr.toUpperCase()));
+    }
+
+    public WriterBuilder withDataBlockEncoder(HFileDataBlockEncoder encoder) {
+      Preconditions.checkNotNull(encoder);
+      this.dataBlockEncoder = encoder;
+      return this;
+    }
+
+    public WriterBuilder withComparator(KeyValue.KVComparator comparator) {
+      Preconditions.checkNotNull(comparator);
+      this.comparator = comparator;
+      return this;
+    }
+
+    public WriterBuilder withBloomType(BloomType bloomType) {
+      Preconditions.checkNotNull(bloomType);
+      this.bloomType = bloomType;
+      return this;
+    }
+
+    /**
+     * @param maxKeyCount estimated maximum number of keys we expect to add
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder withMaxKeyCount(long maxKeyCount) {
+      this.maxKeyCount = maxKeyCount;
+      return this;
+    }
+
+    /**
+     * @param err desired Bloom filter error rate
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder withBloomErrorRate(float err) {
+      bloomErrorRate = err;
+      return this;
+    }
+
+    /**
+     * @param favoredNodes an array of favored nodes or possibly null
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder withFavoredNodes(InetSocketAddress[] favoredNodes) {
+      this.favoredNodes = favoredNodes;
+      return this;
+    }
+
+    /**
+     * Create a store file writer. Client is responsible for closing file when
+     * done. If metadata, add BEFORE closing using
+     * {@link Writer#appendMetadata}.
+     */
+    public Writer build() throws IOException {
+      if ((dir == null ? 0 : 1) + (filePath == null ? 0 : 1) != 1) {
+        throw new IllegalArgumentException("Either specify parent directory " +
+            "or file path");
+      }
+
+      if (dir == null) {
+        dir = filePath.getParent();
+      }
+
+      if (!fs.exists(dir)) {
+        fs.mkdirs(dir);
+      }
+
+      if (filePath == null) {
+        filePath = getUniqueFile(fs, dir);
+      }
+
+      if (!BloomFilterFactory.isGeneralBloomEnabled(conf)) {
+        bloomType = BloomType.NONE;
+      }
+
+      return new Writer(this);
+    }
   }
 
   /**
@@ -744,12 +800,12 @@ public class StoreFile extends SchemaConfigured {
     private final BloomType bloomType;
     private byte[] lastBloomKey;
     private int lastBloomKeyOffset, lastBloomKeyLen;
-    private KVComparator kvComparator;
+    private final KVComparator kvComparator;
     private KeyValue lastKv = null;
     private KeyValue lastDeleteFamilyKV = null;
     private long deleteFamilyCnt = 0;
 
-    protected HFileDataBlockEncoder dataBlockEncoder;
+    protected final HFileDataBlockEncoder dataBlockEncoder;
 
     TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
     /* isTimeRangeTrackerSet keeps track if the timeRange has already been set
@@ -762,54 +818,30 @@ public class StoreFile extends SchemaConfigured {
 
     protected HFile.Writer writer;
 
-    public Writer(FileSystem fs, Path path, int blocksize,
-        Compression.Algorithm compress, final Configuration conf,
-        CacheConfig cacheConf, final KVComparator comparator,
-        BloomType bloomType, long maxKeys) throws IOException {
-      this(fs, path, blocksize, compress, NoOpDataBlockEncoder.INSTANCE, conf,
-          cacheConf, comparator, bloomType,
-          BloomFilterFactory.getErrorRate(conf), maxKeys, null);
-    }
-
-    /**
-     * Creates an HFile.Writer that also write helpful meta data.
-     * @param fs file system to write to
-     * @param path file name to create
-     * @param blocksize HDFS block size
-     * @param compress HDFS block compression
-     * @param conf user configuration
-     * @param cacheConf cache configuration
-     * @param comparator key comparator
-     * @param bloomType bloom filter setting
-     * @param bloomErrorRate error rate for bloom filter
-     * @param maxKeys the expected maximum number of keys to be added. Was used
-     *        for Bloom filter size in {@link HFile} format version 1.
-     * @param favoredNodes if using DFS, try to place replicas on these nodes
-     * @throws IOException problem writing to FS
-     */
-    public Writer(FileSystem fs, Path path, int blocksize,
-        Compression.Algorithm compress,
-        HFileDataBlockEncoder dataBlockEncoder, final Configuration conf,
-        CacheConfig cacheConf, final KVComparator comparator,
-        BloomType bloomType, float bloomErrorRate, long maxKeys,
-        InetSocketAddress[] favoredNodes)
+    private Writer(WriterBuilder wb)
         throws IOException {
-      this.dataBlockEncoder = dataBlockEncoder != null ?
-          dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
-      writer = HFile.getWriterFactory(conf, cacheConf).createWriter(
-          fs, path, blocksize, HFile.getBytesPerChecksum(conf, fs.getConf()),
-          compress, this.dataBlockEncoder, comparator.getRawComparator(),
-          favoredNodes);
+      this.dataBlockEncoder = wb.dataBlockEncoder != null ?
+          wb.dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
+      writer = HFile.getWriterFactory(wb.conf, wb.cacheConf)
+          .withPath(wb.fs, wb.filePath)
+          .withBlockSize(wb.blockSize)
+          .withCompression(wb.compressAlgo)
+          .withDataBlockEncoder(wb.dataBlockEncoder)
+          .withComparator(wb.comparator.getRawComparator())
+          .withFavoredNodes(wb.favoredNodes)
+          .create();
 
-      this.kvComparator = comparator;
+      this.kvComparator = wb.comparator;
 
       generalBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(
-          conf, cacheConf, bloomType,
-          (int) Math.min(maxKeys, Integer.MAX_VALUE), writer, bloomErrorRate);
+          wb.conf, wb.cacheConf, wb.bloomType,
+          (int) Math.min(wb.maxKeyCount, Integer.MAX_VALUE), writer,
+              wb.bloomErrorRate);
 
       if (generalBloomFilterWriter != null) {
-        this.bloomType = bloomType;
-        LOG.info("Bloom filter type for " + path + ": " + this.bloomType + ", "
+        this.bloomType = wb.bloomType;
+        LOG.info("Bloom filter type for " + wb.filePath + ": "
+            + this.bloomType + ", "
             + generalBloomFilterWriter.getClass().getSimpleName());
       } else {
         // Not using Bloom filters.
@@ -820,14 +852,14 @@ public class StoreFile extends SchemaConfigured {
       // filter
       if (this.bloomType != BloomType.ROWCOL) {
         this.deleteFamilyBloomFilterWriter = BloomFilterFactory
-            .createDeleteBloomAtWrite(conf, cacheConf,
-                (int) Math.min(maxKeys, Integer.MAX_VALUE), writer,
-                bloomErrorRate);
+            .createDeleteBloomAtWrite(wb.conf, wb.cacheConf,
+                (int) Math.min(wb.maxKeyCount, Integer.MAX_VALUE), writer,
+                wb.bloomErrorRate);
       } else {
         deleteFamilyBloomFilterWriter = null;
       }
       if (deleteFamilyBloomFilterWriter != null) {
-        LOG.info("Delete Family Bloom filter type for " + path + ": "
+        LOG.info("Delete Family Bloom filter type for " + wb.filePath + ": "
             + deleteFamilyBloomFilterWriter.getClass().getSimpleName());
       }
     }

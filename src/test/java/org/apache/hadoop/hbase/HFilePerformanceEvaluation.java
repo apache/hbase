@@ -191,10 +191,10 @@ public class HFilePerformanceEvaluation {
     @Override
     void setUp() throws Exception {
       writer =
-          HFile.getWriterFactory(conf).createWriter(this.fs, this.mf,
-              RFILE_BLOCKSIZE, HFile.DEFAULT_BYTES_PER_CHECKSUM,
-              (Compression.Algorithm) null, NoOpDataBlockEncoder.INSTANCE,
-              null, null);
+        HFile.getWriterFactoryNoCache(conf)
+            .withPath(fs, mf)
+            .withBlockSize(RFILE_BLOCKSIZE)
+            .create();
     }
 
     @Override

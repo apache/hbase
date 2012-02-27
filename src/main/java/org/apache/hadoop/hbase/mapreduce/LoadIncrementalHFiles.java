@@ -41,8 +41,8 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
-import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.Reference.Range;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
@@ -50,8 +50,8 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -283,12 +283,16 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       int blocksize = familyDescriptor.getBlocksize();
       Algorithm compression = familyDescriptor.getCompression();
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
-
       float err = familyDescriptor.getBloomFilterErrorRate();
-      halfWriter = new StoreFile.Writer(
-          fs, outFile, blocksize, compression, dataBlockEncoder,
-          conf, cacheConf,
-          KeyValue.COMPARATOR, bloomFilterType, err, 0, null);
+
+      halfWriter = new StoreFile.WriterBuilder(conf, cacheConf,
+          fs, blocksize)
+              .withFilePath(outFile)
+              .withCompression(compression)
+              .withDataBlockEncoder(dataBlockEncoder)
+              .withBloomType(bloomFilterType)
+              .withBloomErrorRate(err)
+              .build();
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();
       do {

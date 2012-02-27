@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.Assert.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,8 +29,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 /**
  * Test {@link HFileScanner#reseekTo(byte[])}
@@ -44,8 +44,10 @@ public class TestReseekTo {
     FSDataOutputStream fout = TEST_UTIL.getTestFileSystem().create(ncTFile);
     CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
     HFile.Writer writer = HFile.getWriterFactory(
-        TEST_UTIL.getConfiguration(), cacheConf).createWriter(
-            fout, 4000, "none", null);
+        TEST_UTIL.getConfiguration(), cacheConf)
+            .withOutputStream(fout)
+            .withBlockSize(4000)
+            .create();
     int numberOfKeys = 1000;
 
     String valueString = "Value";

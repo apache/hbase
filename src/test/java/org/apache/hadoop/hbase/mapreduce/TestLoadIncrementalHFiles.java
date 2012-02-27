@@ -174,10 +174,12 @@ public class TestLoadIncrementalHFiles {
       byte[] family, byte[] qualifier,
       byte[] startKey, byte[] endKey, int numRows) throws IOException
   {
-    HFile.Writer writer =
-      HFile.getWriterFactory(conf, new CacheConfig(conf)).createWriter(fs, path,
-        BLOCKSIZE, HFile.DEFAULT_BYTES_PER_CHECKSUM, COMPRESSION,
-        KeyValue.KEY_COMPARATOR);
+    HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf))
+        .withPath(fs, path)
+        .withBlockSize(BLOCKSIZE)
+        .withCompression(COMPRESSION)
+        .withComparator(KeyValue.KEY_COMPARATOR)
+        .create();
     long now = System.currentTimeMillis();
     try {
       // subtract 2 since iterateOnSplits doesn't include boundary keys

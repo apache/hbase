@@ -359,15 +359,17 @@ public class HFileReadWriteTest {
 
     columnDescriptor.setDataBlockEncoding(dataBlockEncoding);
     HRegionInfo regionInfo = new HRegionInfo();
-    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     HRegion region = new HRegion(outputDir, null, fs, conf, regionInfo, null);
     Store store = new Store(outputDir, region, columnDescriptor, fs, conf);
 
-    StoreFile.Writer writer =
-        StoreFile.createWriter(fs, outputDir, blockSize, compression,
-            dataBlockEncoder, KeyValue.COMPARATOR, this.conf,
-            new CacheConfig(conf), bloomType, BloomFilterFactory.getErrorRate(conf),
-            maxKeyCount, null);
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf,
+        new CacheConfig(conf), fs, blockSize)
+            .withOutputDir(outputDir)
+            .withCompression(compression)
+            .withDataBlockEncoder(dataBlockEncoder)
+            .withBloomType(bloomType)
+            .withMaxKeyCount(maxKeyCount)
+            .build();
 
     StatisticsPrinter statsPrinter = new StatisticsPrinter();
     statsPrinter.startThread();

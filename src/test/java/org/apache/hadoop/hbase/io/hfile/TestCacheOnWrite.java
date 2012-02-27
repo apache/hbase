@@ -44,8 +44,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.CreateRandomStoreFile;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -54,8 +54,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.junit.runners.Parameterized;
 
 /**
  * Tests {@link HFile} cache-on-write functionality for the following block
@@ -262,10 +262,15 @@ public class TestCacheOnWrite {
   public void writeStoreFile() throws IOException {
     Path storeFileParentDir = new Path(HBaseTestingUtility.getTestDir(),
         "test_cache_on_write");
-    StoreFile.Writer sfw = StoreFile.createWriter(fs, storeFileParentDir,
-        DATA_BLOCK_SIZE, compress, encoder, KeyValue.COMPARATOR, conf,
-        cacheConf, BLOOM_TYPE, BloomFilterFactory.getErrorRate(conf), NUM_KV,
-        null);
+    StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf, cacheConf, fs,
+        DATA_BLOCK_SIZE)
+            .withOutputDir(storeFileParentDir)
+            .withCompression(compress)
+            .withDataBlockEncoder(encoder)
+            .withComparator(KeyValue.COMPARATOR)
+            .withBloomType(BLOOM_TYPE)
+            .withMaxKeyCount(NUM_KV)
+            .build();
 
     final int rowLen = 32;
     for (int i = 0; i < NUM_KV; ++i) {
