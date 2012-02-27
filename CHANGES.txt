@@ -64,6 +64,8 @@ Release 0.92.1 - Unreleased
                setup (David S. Wang)
    HBASE-5325  Expose basic information about the master-status through
                jmx beans (Hitesh Shah)
+   HBASE-5483  Allow configurable host to bind to for starting REST
+               server from commandline (Dan Rosher)
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()
