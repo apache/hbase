@@ -48,6 +48,8 @@ Release 0.92.1 - Unreleased
    HBASE-5351  hbase completebulkload to a new table fails in a race
                (Gregory Chanan)
    HBASE-5473  Metrics does not push pread time (Dhruba)
+   HBASE-5481  Uncaught UnknownHostException prevents HBase from starting
+               (Benoît Sigoure)
  
  
   IMPROVEMENTS

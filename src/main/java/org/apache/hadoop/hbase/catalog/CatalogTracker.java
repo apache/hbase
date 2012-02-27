@@ -23,6 +23,7 @@ import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -653,6 +654,8 @@ public class CatalogTracker {
       // Pass
     } catch (ServerNotRunningYetException e) {
       // Pass -- remote server is not up so can't be carrying root
+    } catch (UnknownHostException e) {
+      // Pass -- server name doesn't resolve so it can't be assigned anything.
     }
     return (connection == null)? false:
       verifyRegionLocation(connection,
@@ -676,6 +679,8 @@ public class CatalogTracker {
       // Pass
     } catch (ServerNotRunningYetException e) {
       // Pass -- remote server is not up so can't be carrying .META.
+    } catch (UnknownHostException e) {
+      // Pass -- server name doesn't resolve so it can't be assigned anything.
     }
     return connection != null;
   }
