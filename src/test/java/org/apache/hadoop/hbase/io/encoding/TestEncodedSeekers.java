@@ -26,15 +26,13 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.junit.Test;
@@ -90,9 +88,12 @@ public class TestEncodedSeekers {
     new CacheConfig(testUtil.getConfiguration()).getBlockCache();
     cache.clearCache();
 
-    HRegion region = testUtil.createTestRegion(TABLE_NAME, CF_NAME,
-        Algorithm.NONE, BloomType.NONE, MAX_VERSIONS, HFile.DEFAULT_BLOCKSIZE,
-        encoding, encodeOnDisk);
+    HRegion region = testUtil.createTestRegion(
+        TABLE_NAME, new HColumnDescriptor(CF_NAME)
+            .setMaxVersions(MAX_VERSIONS)
+            .setDataBlockEncoding(encoding)
+            .setEncodeOnDisk(encodeOnDisk)
+    );
     LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(
         MIN_VALUE_SIZE, MAX_VALUE_SIZE);
 

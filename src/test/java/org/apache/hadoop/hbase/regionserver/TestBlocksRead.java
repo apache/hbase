@@ -21,6 +21,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
@@ -28,7 +29,8 @@ import org.junit.Test;
 
 public class TestBlocksRead extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestBlocksRead.class);
-  static final String[] BLOOM_TYPE = new String[] { "ROWCOL", "ROW", "NONE" };
+  static final BloomType[] BLOOM_TYPE = new BloomType[] { BloomType.ROWCOL,
+      BloomType.ROW, BloomType.NONE };
 
   private static BlockCache blockCache;
 
@@ -64,16 +66,10 @@ public class TestBlocksRead extends HBaseTestCase {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor familyDesc;
     for (int i = 0; i < BLOOM_TYPE.length; i++) {
-      String bloomType = BLOOM_TYPE[i];
-      familyDesc = new HColumnDescriptor(
-          Bytes.toBytes(family + "_" + bloomType),
-          HColumnDescriptor.DEFAULT_VERSIONS,
-          HColumnDescriptor.DEFAULT_COMPRESSION,
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          1, // small block size deliberate; each kv on its own block
-          HColumnDescriptor.DEFAULT_TTL, BLOOM_TYPE[i],
-          HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+      BloomType bloomType = BLOOM_TYPE[i];
+      familyDesc = new HColumnDescriptor(family + "_" + bloomType)
+          .setBlocksize(1)
+          .setBloomFilterType(BLOOM_TYPE[i]);
       htd.addFamily(familyDesc);
     }
 
@@ -119,7 +115,7 @@ public class TestBlocksRead extends HBaseTestCase {
     KeyValue[] kvs = null;
 
     for (int i = 0; i < BLOOM_TYPE.length; i++) {
-      String bloomType = BLOOM_TYPE[i];
+      BloomType bloomType = BLOOM_TYPE[i];
       byte[] cf = Bytes.toBytes(family + "_" + bloomType);
       long blocksStart = getBlkAccessCount(cf);
       Get get = new Get(Bytes.toBytes(row));

@@ -75,13 +75,10 @@ public class HBaseUtils {
       if (compressionType == null) {
         compressionType = "NONE";
       }
-      desc.addFamily(new HColumnDescriptor(Bytes
-          .toBytes(familyProperty.familyName), familyProperty.maxVersions,
-          compressionType,
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          HColumnDescriptor.DEFAULT_TTL,
-          bloomType));
+      desc.addFamily(new HColumnDescriptor(familyProperty.familyName)
+          .setMaxVersions(familyProperty.maxVersions)
+          .setCompressionType(compressionType)
+          .setBloomFilterType(bloomType));
     }
     try {
       HBaseAdmin admin = new HBaseAdmin(conf);

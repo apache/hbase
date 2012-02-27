@@ -192,33 +192,12 @@ public abstract class HBaseTestCase extends TestCase {
   protected HTableDescriptor createTableDescriptor(final String name,
       final int versions) {
     HTableDescriptor htd = new HTableDescriptor(name);
-    htd.addFamily(new HColumnDescriptor(fam1, versions,
-      HColumnDescriptor.DEFAULT_COMPRESSION,
-      HColumnDescriptor.DEFAULT_ENCODE_ON_DISK,
-      HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING,
-      false, false,
-      HColumnDescriptor.DEFAULT_BLOCKSIZE, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_BLOOMFILTER,
-      HConstants.REPLICATION_SCOPE_LOCAL,
-      HColumnDescriptor.DEFAULT_BLOOMFILTER_ERROR_RATE));
-    htd.addFamily(new HColumnDescriptor(fam2, versions,
-        HColumnDescriptor.DEFAULT_COMPRESSION,
-        HColumnDescriptor.DEFAULT_ENCODE_ON_DISK,
-        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING,
-        false, false,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE, HConstants.FOREVER,
-        HColumnDescriptor.DEFAULT_BLOOMFILTER,
-        HConstants.REPLICATION_SCOPE_LOCAL,
-        HColumnDescriptor.DEFAULT_BLOOMFILTER_ERROR_RATE));
-    htd.addFamily(new HColumnDescriptor(fam3, versions,
-        HColumnDescriptor.DEFAULT_COMPRESSION,
-        HColumnDescriptor.DEFAULT_ENCODE_ON_DISK,
-        HColumnDescriptor.DEFAULT_DATA_BLOCK_ENCODING,
-        false, false,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE, HConstants.FOREVER,
-        HColumnDescriptor.DEFAULT_BLOOMFILTER,
-        HConstants.REPLICATION_SCOPE_LOCAL,
-        HColumnDescriptor.DEFAULT_BLOOMFILTER_ERROR_RATE));
+    for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
+      htd.addFamily(new HColumnDescriptor(cfName)
+          .setMaxVersions(versions)
+          .setBlockCacheEnabled(false)
+      );
+    }
     return htd;
   }
 

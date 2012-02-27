@@ -539,4 +539,46 @@ public class TestSerialization extends HBaseTestCase {
     assertEquals(kv.getOffset(), deserializedKv.getOffset());
     assertEquals(kv.getLength(), deserializedKv.getLength());
   }
+
+  protected static final int MAXVERSIONS = 3;
+  protected final static byte [] fam1 = Bytes.toBytes("colfamily1");
+  protected final static byte [] fam2 = Bytes.toBytes("colfamily2");
+  protected final static byte [] fam3 = Bytes.toBytes("colfamily3");
+  protected static final byte [][] COLUMNS = {fam1, fam2, fam3};
+
+  /**
+   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * families.
+   * @param name Name to give table.
+   * @return Column descriptor.
+   */
+  protected HTableDescriptor createTableDescriptor(final String name) {
+    return createTableDescriptor(name, MAXVERSIONS);
+  }
+
+  /**
+   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * families.
+   * @param name Name to give table.
+   * @param versions How many versions to allow per column.
+   * @return Column descriptor.
+   */
+  protected HTableDescriptor createTableDescriptor(final String name,
+      final int versions) {
+    HTableDescriptor htd = new HTableDescriptor(name);
+    htd.addFamily(new HColumnDescriptor(fam1)
+        .setMaxVersions(versions)
+        .setBlockCacheEnabled(false)
+    );
+    htd.addFamily(new HColumnDescriptor(fam2)
+        .setMaxVersions(versions)
+        .setBlockCacheEnabled(false)
+    );
+    htd.addFamily(new HColumnDescriptor(fam3)
+        .setMaxVersions(versions)
+        .setBlockCacheEnabled(false)
+    );
+    return htd;
+  }
+
 }

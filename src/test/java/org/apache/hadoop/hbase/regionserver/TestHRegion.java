@@ -19,6 +19,17 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
@@ -48,10 +59,10 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
@@ -59,19 +70,7 @@ import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 
 /**
@@ -2758,9 +2757,9 @@ public class TestHRegion extends HBaseTestCase {
     byte [] qf1  = Bytes.toBytes("col");
     byte [] val1  = Bytes.toBytes("value1");
     // Create Table
-    HColumnDescriptor hcd = new HColumnDescriptor(fam1, Integer.MAX_VALUE,
-        HColumnDescriptor.DEFAULT_COMPRESSION, false, true,
-        HColumnDescriptor.DEFAULT_TTL, "rowcol");
+    HColumnDescriptor hcd = new HColumnDescriptor(fam1)
+        .setMaxVersions(Integer.MAX_VALUE)
+        .setBloomFilterType(BloomType.ROWCOL);
 
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(hcd);
@@ -2814,13 +2813,9 @@ public class TestHRegion extends HBaseTestCase {
     byte [] FAMILY = Bytes.toBytes("family");
 
     //Create table
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY, Integer.MAX_VALUE,
-        HColumnDescriptor.DEFAULT_COMPRESSION,
-        HColumnDescriptor.DEFAULT_IN_MEMORY,
-        HColumnDescriptor.DEFAULT_BLOCKCACHE,
-        Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL,
-        "rowcol",
-        HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY)
+        .setMaxVersions(Integer.MAX_VALUE)
+        .setBloomFilterType(BloomType.ROWCOL);
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
@@ -2862,9 +2857,9 @@ public class TestHRegion extends HBaseTestCase {
     byte [] familyName = Bytes.toBytes("familyName");
 
     // Create Table
-    HColumnDescriptor hcd = new HColumnDescriptor(familyName, Integer.MAX_VALUE,
-        HColumnDescriptor.DEFAULT_COMPRESSION, false, true,
-        HColumnDescriptor.DEFAULT_TTL, "rowcol");
+    HColumnDescriptor hcd = new HColumnDescriptor(familyName)
+        .setMaxVersions(Integer.MAX_VALUE)
+        .setBloomFilterType(BloomType.ROWCOL);
 
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(hcd);

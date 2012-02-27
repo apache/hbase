@@ -643,8 +643,11 @@ public class TestHFileOutputFormat  {
   {
     HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
     for (Entry<String, Compression.Algorithm> entry : familyToCompression.entrySet()) {
-      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey().getBytes(), 1, entry.getValue().getName(),
-                                                          false, false, 0, "none"));
+      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
+          .setMaxVersions(1)
+          .setCompressionType(entry.getValue())
+          .setBlockCacheEnabled(false)
+          .setTimeToLive(0));
     }
     Mockito.doReturn(mockTableDescriptor).when(table).getTableDescriptor();
   }
@@ -789,9 +792,11 @@ public class TestHFileOutputFormat  {
     HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
     for (Entry<String, BloomType> entry : familyToBloom.entrySet()) {
       mockTableDescriptor.addFamily(
-          new HColumnDescriptor(entry.getKey().getBytes(), 1,
-              Compression.Algorithm.NONE.getName(), false,
-              false, 0, entry.getValue().toString()));
+          new HColumnDescriptor(entry.getKey().getBytes())
+              .setMaxVersions(1)
+              .setBlockCacheEnabled(false)
+              .setTimeToLive(0)
+              .setBloomFilterType(entry.getValue()));
     }
     Mockito.doReturn(mockTableDescriptor).when(table).getTableDescriptor();
   }

@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -294,10 +295,15 @@ public class TestCacheOnWrite {
     final String cf = "myCF";
     final byte[] cfBytes = Bytes.toBytes(cf);
     final int maxVersions = 3;
-    HRegion region = TEST_UTIL.createTestRegion(table, cf, compress,
-        BLOOM_TYPE, maxVersions, HFile.DEFAULT_BLOCKSIZE,
-        encoder.getEncodingInCache(),
-        encoder.getEncodingOnDisk() != DataBlockEncoding.NONE);
+    HRegion region = TEST_UTIL.createTestRegion(table,
+        new HColumnDescriptor(cf)
+            .setCompressionType(compress)
+            .setBloomFilterType(BLOOM_TYPE)
+            .setMaxVersions(maxVersions)
+            .setDataBlockEncoding(encoder.getEncodingInCache())
+            .setEncodeOnDisk(encoder.getEncodingOnDisk() !=
+                DataBlockEncoding.NONE)
+    );
     int rowIdx = 0;
     long ts = EnvironmentEdgeManager.currentTimeMillis();
     for (int iFile = 0; iFile < 5; ++iFile) {

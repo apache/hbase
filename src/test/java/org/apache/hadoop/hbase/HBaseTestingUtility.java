@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -68,6 +67,9 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
@@ -479,13 +481,8 @@ public class HBaseTestingUtility {
   throws IOException{
     HTableDescriptor desc = new HTableDescriptor(tableName);
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family, numVersions,
-          HColumnDescriptor.DEFAULT_COMPRESSION,
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL,
-          HColumnDescriptor.DEFAULT_BLOOMFILTER,
-          HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+      HColumnDescriptor hcd = new HColumnDescriptor(family)
+          .setMaxVersions(numVersions);
       desc.addFamily(hcd);
     }
     (new HBaseAdmin(getConfiguration())).createTable(desc, startKey,
@@ -537,13 +534,29 @@ public class HBaseTestingUtility {
   throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family, numVersions,
-          HColumnDescriptor.DEFAULT_COMPRESSION,
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL,
-          HColumnDescriptor.DEFAULT_BLOOMFILTER,
-          HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+      HColumnDescriptor hcd = new HColumnDescriptor(family)
+          .setMaxVersions(numVersions);
+      desc.addFamily(hcd);
+    }
+    getHBaseAdmin().createTable(desc);
+    return new HTable(new Configuration(getConfiguration()), tableName);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @param numVersions
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(byte[] tableName, byte[][] families,
+    int numVersions, int blockSize) throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    for (byte[] family : families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family)
+          .setMaxVersions(numVersions)
+          .setBlocksize(blockSize);
       desc.addFamily(hcd);
     }
     (new HBaseAdmin(getConfiguration())).createTable(desc);
@@ -564,13 +577,8 @@ public class HBaseTestingUtility {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     int i = 0;
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family, numVersions[i],
-          HColumnDescriptor.DEFAULT_COMPRESSION,
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL,
-          HColumnDescriptor.DEFAULT_BLOOMFILTER,
-          HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+      HColumnDescriptor hcd = new HColumnDescriptor(family)
+          .setMaxVersions(numVersions[i]);
       desc.addFamily(hcd);
       i++;
     }
@@ -1303,23 +1311,6 @@ public class HBaseTestingUtility {
       }
     } while (port == 0);
     return port;
-  }
-
-  public HRegion createTestRegion(String tableName, String cfName,
-      Compression.Algorithm comprAlgo, BloomType bloomType, int maxVersions,
-      int blockSize, DataBlockEncoding encoding, boolean encodeOnDisk)
-      throws IOException {
-    HColumnDescriptor hcd =
-      new HColumnDescriptor(Bytes.toBytes(cfName), maxVersions,
-          comprAlgo.getName(),
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          HColumnDescriptor.DEFAULT_TTL,
-          bloomType.toString());
-    hcd.setBlocksize(blockSize);
-    hcd.setDataBlockEncoding(encoding);
-    hcd.setEncodeOnDisk(encodeOnDisk);
-    return createTestRegion(tableName, hcd);
   }
 
   public HRegion createTestRegion(String tableName, HColumnDescriptor hcd)

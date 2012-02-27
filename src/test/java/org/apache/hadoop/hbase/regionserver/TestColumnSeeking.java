@@ -60,12 +60,7 @@ public class TestColumnSeeking {
     String table = "TestDuplicateVersions";
 
     HColumnDescriptor hcd =
-        new HColumnDescriptor(familyBytes, 1000,
-            HColumnDescriptor.DEFAULT_COMPRESSION,
-            HColumnDescriptor.DEFAULT_IN_MEMORY,
-            HColumnDescriptor.DEFAULT_BLOCKCACHE,
-            HColumnDescriptor.DEFAULT_TTL,
-            HColumnDescriptor.DEFAULT_BLOOMFILTER);
+        new HColumnDescriptor(familyBytes).setMaxVersions(1000);
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);

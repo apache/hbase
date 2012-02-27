@@ -101,12 +101,10 @@ public class TestForceCacheImportantBlocks {
 
     SchemaMetrics.setUseTableNameInTest(false);
     HColumnDescriptor hcd =
-        new HColumnDescriptor(Bytes.toBytes(CF), MAX_VERSIONS,
-            COMPRESSION_ALGORITHM.getName(),
-            HColumnDescriptor.DEFAULT_IN_MEMORY,
-            HColumnDescriptor.DEFAULT_BLOCKCACHE,
-            HColumnDescriptor.DEFAULT_TTL,
-            BLOOM_TYPE.toString());
+        new HColumnDescriptor(Bytes.toBytes(CF))
+            .setMaxVersions(MAX_VERSIONS)
+            .setCompressionType(COMPRESSION_ALGORITHM)
+            .setBloomFilterType(BLOOM_TYPE);
     hcd.setBlocksize(BLOCK_SIZE);
     hcd.setBlockCacheEnabled(cfCacheEnabled);
     HRegion region = TEST_UTIL.createTestRegion(TABLE, hcd);

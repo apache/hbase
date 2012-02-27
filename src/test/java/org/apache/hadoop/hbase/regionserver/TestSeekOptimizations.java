@@ -38,6 +38,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
@@ -137,8 +138,10 @@ public class TestSeekOptimizations {
   @Test
   public void testMultipleTimestampRanges() throws IOException {
     region = TEST_UTIL.createTestRegion(TestSeekOptimizations.class.getName(),
-        FAMILY, comprAlgo, bloomType, Integer.MAX_VALUE,
-        HFile.DEFAULT_BLOCKSIZE, DataBlockEncoding.NONE, true);
+        new HColumnDescriptor(FAMILY)
+            .setCompressionType(comprAlgo)
+            .setBloomFilterType(bloomType)
+    );
 
     // Delete the given timestamp and everything before.
     final long latestDelTS = USE_MANY_STORE_FILES ? 1397 : -1;

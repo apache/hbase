@@ -707,23 +707,30 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /** Table descriptor for <core>-ROOT-</code> catalog table */
   public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
       HConstants.ROOT_TABLE_NAME,
-      new HColumnDescriptor[] { new HColumnDescriptor(HConstants.CATALOG_FAMILY,
-          10,  // Ten is arbitrary number.  Keep versions to help debuggging.
-          Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
-          HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),  
-          HConstants.REPLICATION_SCOPE_LOCAL) });
+      new HColumnDescriptor[] {
+          new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+              // Ten is arbitrary number.  Keep versions to help debugging.
+              .setMaxVersions(10)
+              .setInMemory(true)
+              .setBlocksize(8 * 1024)
+              .setTimeToLive(HConstants.FOREVER)
+              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+      });
 
   /** Table descriptor for <code>.META.</code> catalog table */
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
-          new HColumnDescriptor(HConstants.CATALOG_FAMILY,
-            10, // Ten is arbitrary number.  Keep versions to help debuggging.
-            Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
-            HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
-            HConstants.REPLICATION_SCOPE_LOCAL),
-          new HColumnDescriptor(HConstants.CATALOG_HISTORIAN_FAMILY,
-            HConstants.ALL_VERSIONS, Compression.Algorithm.NONE.getName(),
-            false, false,  8 * 1024,
-            HConstants.WEEK_IN_SECONDS,StoreFile.BloomType.NONE.toString(),
-            HConstants.REPLICATION_SCOPE_LOCAL)});
+          new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+              // Ten is arbitrary number.  Keep versions to help debugging.
+              .setMaxVersions(10)
+              .setInMemory(true)
+              .setBlocksize(8 * 1024)
+              .setScope(HConstants.REPLICATION_SCOPE_LOCAL),
+          new HColumnDescriptor(HConstants.CATALOG_HISTORIAN_FAMILY)
+              .setMaxVersions(HConstants.ALL_VERSIONS)
+              .setBlocksize(8 * 1024)
+              .setTimeToLive(HConstants.WEEK_IN_SECONDS)
+              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+      });
+
 }

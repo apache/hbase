@@ -56,16 +56,8 @@ public class TestScannerResets extends HBaseTestCase {
       HBaseConfiguration conf, String family) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor familyDesc;
-    familyDesc = new HColumnDescriptor(
-          Bytes.toBytes(family),
-          HColumnDescriptor.DEFAULT_VERSIONS,
-          HColumnDescriptor.DEFAULT_COMPRESSION,
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          1, // small block size deliberate; each kv on its own block
-          HColumnDescriptor.DEFAULT_TTL,
-          HColumnDescriptor.DEFAULT_BLOOMFILTER,
-          HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+    familyDesc = new HColumnDescriptor(Bytes.toBytes(family))
+        .setBlocksize(1);
     htd.addFamily(familyDesc);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     Path path = new Path(DIR + callingMethod);

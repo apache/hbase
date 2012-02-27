@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
@@ -193,9 +192,13 @@ public class TestMultiColumnScanner {
 
   @Test
   public void testMultiColumnScanner() throws IOException {
-    HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME, FAMILY, comprAlgo,
-        bloomType, MAX_VERSIONS, HFile.DEFAULT_BLOCKSIZE,
-        dataBlockEncoding, true);
+    HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME,
+        new HColumnDescriptor(FAMILY)
+            .setCompressionType(comprAlgo)
+            .setBloomFilterType(bloomType)
+            .setMaxVersions(MAX_VERSIONS)
+            .setDataBlockEncoding(dataBlockEncoding)
+    );
     List<String> rows = sequentialStrings("row", NUM_ROWS);
     List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
     List<KeyValue> kvs = new ArrayList<KeyValue>();
@@ -343,12 +346,10 @@ public class TestMultiColumnScanner {
       Compression.Algorithm comprAlgo, BloomType bloomType, int maxVersions)
       throws IOException {
     HColumnDescriptor hcd =
-      new HColumnDescriptor(FAMILY_BYTES, maxVersions,
-          comprAlgo.getName(),
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          HColumnDescriptor.DEFAULT_TTL,
-          bloomType.toString());
+      new HColumnDescriptor(FAMILY_BYTES)
+          .setMaxVersions(maxVersions)
+          .setCompressionType(comprAlgo)
+          .setBloomFilterType(bloomType);
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);

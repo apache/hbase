@@ -56,9 +56,13 @@ public class ThriftUtilities {
       throw new IllegalArgument("column name is empty");
     }
     byte [] parsedName = KeyValue.parseColumn(in.name)[0];
-    HColumnDescriptor col = new HColumnDescriptor(parsedName,
-        in.maxVersions, comp.getName(), in.inMemory, in.blockCacheEnabled,
-        in.timeToLive, bt.toString());
+    HColumnDescriptor col = new HColumnDescriptor(parsedName)
+        .setMaxVersions(in.maxVersions)
+        .setCompressionType(comp)
+        .setInMemory(in.inMemory)
+        .setBlockCacheEnabled(in.blockCacheEnabled)
+        .setTimeToLive(in.timeToLive)
+        .setBloomFilterType(bt);
     return col;
   }
 

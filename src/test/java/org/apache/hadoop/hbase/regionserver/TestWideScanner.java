@@ -51,21 +51,13 @@ public class TestWideScanner extends HBaseTestCase {
   static final HTableDescriptor TESTTABLEDESC =
     new HTableDescriptor("testwidescan");
   static {
-    TESTTABLEDESC.addFamily(new HColumnDescriptor(A,
-      100,  // Keep versions to help debuggging.
-      Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
-      HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
-      HColumnDescriptor.DEFAULT_REPLICATION_SCOPE));
-    TESTTABLEDESC.addFamily(new HColumnDescriptor(B,
-      100,  // Keep versions to help debuggging.
-      Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
-      HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
-      HColumnDescriptor.DEFAULT_REPLICATION_SCOPE));
-    TESTTABLEDESC.addFamily(new HColumnDescriptor(C,
-      100,  // Keep versions to help debuggging.
-      Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
-      HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
-      HColumnDescriptor.DEFAULT_REPLICATION_SCOPE));
+    for (byte[] cfName : new byte[][] { A, B, C }) {
+      TESTTABLEDESC.addFamily(new HColumnDescriptor(cfName)
+          // Keep versions to help debugging.
+          .setMaxVersions(100)
+          .setBlocksize(8 * 1024)
+      );
+    }
   }
 
   /** HRegionInfo for root region */
