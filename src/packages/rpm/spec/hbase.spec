@@ -86,28 +86,26 @@ if [ -d ${RPM_BUILD_DIR}%{_pid_dir} ]; then
 fi
 
 mkdir -p ${RPM_BUILD_DIR}%{_conf_dir}
-mkdir -p ${RPM_BUILD_DIR}%{_bin_dir}
-mkdir -p ${RPM_BUILD_DIR}%{_include_dir}
-mkdir -p ${RPM_BUILD_DIR}%{_lib_dir}
-mkdir -p ${RPM_BUILD_DIR}%{_libexec_dir}
 mkdir -p ${RPM_BUILD_DIR}%{_log_dir}
 mkdir -p ${RPM_BUILD_DIR}%{_conf_dir}
-mkdir -p ${RPM_BUILD_DIR}%{_man_dir}
 mkdir -p ${RPM_BUILD_DIR}%{_pid_dir}
-mkdir -p ${RPM_BUILD_DIR}%{_sbin_dir}
 mkdir -p ${RPM_BUILD_DIR}%{_share_dir}
-mkdir -p ${RPM_BUILD_DIR}%{_src_dir}
+mkdir -p ${RPM_BUILD_DIR}%{_share_dir}/sbin
+mkdir -p ${RPM_BUILD_DIR}/etc/rc.d/init.d
 
-cp ${RPM_BUILD_DIR}/%{_final_name}/src/packages/update-hbase-env.sh ${RPM_BUILD_DIR}/%{_final_name}/sbin/update-hbase-env.sh
-cp ${RPM_BUILD_DIR}/%{_final_name}/src/packages/rpm/init.d/hbase-master ${RPM_BUILD_DIR}/%{_final_name}/sbin/hbase-master
-cp ${RPM_BUILD_DIR}/%{_final_name}/src/packages/rpm/init.d/hbase-regionserver ${RPM_BUILD_DIR}/%{_final_name}/sbin/hbase-regionserver
-chmod 0755 ${RPM_BUILD_DIR}/%{_final_name}/sbin/*
-rm -f ${RPM_BUILD_DIR}/%{_final_name}/lib/hadoop-core*
-rm -f ${RPM_BUILD_DIR}/%{_final_name}/lib/zookeeper*
+cp ${RPM_BUILD_DIR}/%{_final_name}/src/packages/update-hbase-env.sh ${RPM_BUILD_DIR}%{_share_dir}/sbin/update-hbase-env.sh
+cp ${RPM_BUILD_DIR}/%{_final_name}/src/packages/rpm/init.d/hbase-master ${RPM_BUILD_DIR}%{_share_dir}/sbin/hbase-master
+cp ${RPM_BUILD_DIR}/%{_final_name}/src/packages/rpm/init.d/hbase-regionserver ${RPM_BUILD_DIR}%{_share_dir}/sbin/hbase-regionserver
+chmod 0755 ${RPM_BUILD_DIR}%{_share_dir}/sbin/*
+rm -f ${RPM_BUILD_DIR}/%{_final_name}/*.txt
+rm -f ${RPM_BUILD_DIR}/%{_final_name}/pom.xml
 mv -f ${RPM_BUILD_DIR}/%{_final_name}/conf/* ${RPM_BUILD_DIR}%{_conf_dir}
+rmdir ${RPM_BUILD_DIR}/%{_final_name}/conf
+rm -rf ${RPM_BUILD_DIR}/%{_final_name}/src
 mv -f ${RPM_BUILD_DIR}/%{_final_name}/* ${RPM_BUILD_DIR}%{_share_dir}
 
-rm -rf ${RPM_BUILD_DIR}/%{_final_name}
+%install
+cp -Rp ${RPM_BUILD_DIR} ${RPM_BUILD_ROOT}
 
 %preun
 ${RPM_INSTALL_PREFIX0}/share/hbase/sbin/update-hbase-env.sh \

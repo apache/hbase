@@ -108,8 +108,8 @@ if [ "${ARCH}" != "i386" ]; then
   LIB_DIR=${LIB_DIR}64
 fi
 
-. /etc/default/hadoop-env.sh
-. /etc/default/zookeeper-env.sh
+[ -f /etc/default/hadoop-env.sh ] && . /etc/default/hadoop-env.sh
+[ -f /etc/default/zookeeper-env.sh ] && . /etc/default/zookeeper-env.sh
 
 if [ "${UNINSTALL}" -eq "1" ]; then
   # Remove symlinks
@@ -149,11 +149,11 @@ else
   ln -sf ${CONF_DIR}/hbase-env.sh /etc/default/hbase-env.sh
   ln -sf ${CONF_DIR}/hbase-env.sh /etc/profile.d/hbase-env.sh
 
-  if [ -d ${HADOOP_HOME} ]; then
+  if [ -n "${HADOOP_HOME}" -a -d "${HADOOP_HOME}" ]; then
     HADOOP_JARS=`ls ${HADOOP_HOME}/*.jar | tr '\n' ':'`
   fi
 
-  if [ -d ${ZOOKEEPER_HOME}/share/zookeeper ]; then
+  if [ -n "${ZOOKEEPER_HOME}" -a -d "${ZOOKEEPER_HOME}/share/zookeeper" ]; then
     ZOOKEEPER_JARS=`ls ${ZOOKEEPER_HOME}/share/zookeeper/*.jar | tr '\n' ':'`
   fi
 
