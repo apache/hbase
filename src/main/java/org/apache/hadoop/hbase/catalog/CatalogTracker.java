@@ -662,6 +662,8 @@ public class CatalogTracker {
       // Pass
     } catch (ServerNotRunningYetException e) {
       // Pass -- remote server is not up so can't be carrying root
+    } catch (UnknownHostException e) {
+      // Pass -- server name doesn't resolve so it can't be assigned anything.
     }
     return (connection == null)? false:
       verifyRegionLocation(connection,
@@ -685,6 +687,8 @@ public class CatalogTracker {
       // Pass
     } catch (ServerNotRunningYetException e) {
       // Pass -- remote server is not up so can't be carrying .META.
+    } catch (UnknownHostException e) {
+      // Pass -- server name doesn't resolve so it can't be assigned anything.
     } catch (RetriesExhaustedException e) {
       // Pass -- failed after bunch of retries.
       LOG.debug("Failed verify meta region location after retries", e);
