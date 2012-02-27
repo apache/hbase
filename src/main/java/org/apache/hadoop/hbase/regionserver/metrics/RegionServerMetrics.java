@@ -310,7 +310,6 @@ public class RegionServerMetrics implements Updater {
       if (ops != 0) this.fsSyncLatency.inc(ops, HLog.getSyncTime());
 
       // push the result
-      this.fsPreadLatency.pushMetric(this.metricsRecord);
       this.fsReadLatency.pushMetric(this.metricsRecord);
       this.fsWriteLatency.pushMetric(this.metricsRecord);
       this.fsSyncLatency.pushMetric(this.metricsRecord);
