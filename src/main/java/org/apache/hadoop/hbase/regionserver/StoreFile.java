@@ -710,6 +710,10 @@ public class StoreFile extends SchemaConfigured {
         bloomType = BloomType.NONE;
       }
 
+      if (dataBlockEncoder == null) {
+        dataBlockEncoder = NoOpDataBlockEncoder.INSTANCE;
+      }
+
       return new Writer(this);
     }
   }
@@ -820,8 +824,7 @@ public class StoreFile extends SchemaConfigured {
 
     private Writer(WriterBuilder wb)
         throws IOException {
-      this.dataBlockEncoder = wb.dataBlockEncoder != null ?
-          wb.dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
+      this.dataBlockEncoder = wb.dataBlockEncoder;
       writer = HFile.getWriterFactory(wb.conf, wb.cacheConf)
           .withPath(wb.fs, wb.filePath)
           .withBlockSize(wb.blockSize)
