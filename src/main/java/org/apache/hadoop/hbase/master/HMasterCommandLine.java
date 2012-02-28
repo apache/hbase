@@ -126,9 +126,10 @@ public class HMasterCommandLine extends ServerCommandLine {
         zooKeeperCluster.setDefaultClientPort(zkClientPort);
         int clientPort = zooKeeperCluster.startup(zkDataPath);
         if (clientPort != zkClientPort) {
-          String errorMsg = "Couldnt start ZK at requested address of " +
-            zkClientPort + ", instead got: " + clientPort + ". Aborting. Why? " +
-            "Because clients (eg shell) wont be able to find this ZK quorum";
+          String errorMsg = "Could not start ZK at requested port of " +
+            zkClientPort + ".  ZK was started at port: " + clientPort +
+            ".  Aborting as clients (e.g. shell) will not be able to find " +
+            "this ZK quorum.";
           System.err.println(errorMsg);
           throw new IOException(errorMsg);
         }
