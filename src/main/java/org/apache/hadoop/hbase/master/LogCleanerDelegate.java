@@ -24,12 +24,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
 
 /**
- * Interface for the log cleaning function inside the master. By default, three
- * cleaners <code>TimeToLiveLogCleaner</code>,  <code>ReplicationLogCleaner</code>,
- * <code>SnapshotLogCleaner</code> are called in order. So if other effects are
- * needed, implement your own LogCleanerDelegate and add it to the configuration
- * "hbase.master.logcleaner.plugins", which is a comma-separated list of fully
- * qualified class names. LogsCleaner will add it to the chain.
+ * Interface for the log cleaning function inside the master. By default, two 
+ * cleaners: <code>TimeToLiveLogCleaner</code> and 
+ * <code>ReplicationLogCleaner</code> are called in order. So if other 
+ * effects are needed, implement your own LogCleanerDelegate and add it to the
+ * configuration "hbase.master.logcleaner.plugins", which is a comma-separated
+ * list of fully qualified class names. LogsCleaner will add it to the chain.
  *
  * <p>HBase ships with LogsCleaner as the default implementation.
  *
