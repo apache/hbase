@@ -71,8 +71,7 @@ public class LogCleaner extends Chore {
 
   /*
    * Initialize the chain of log cleaners from the configuration. The default
-   * three LogCleanerDelegates in this chain are: TimeToLiveLogCleaner,
-   * ReplicationLogCleaner and SnapshotLogCleaner.
+   * in this chain are: TimeToLiveLogCleaner and ReplicationLogCleaner.
    */
   private void initLogCleanersChain() {
     String[] logCleaners = conf.getStrings(HBASE_MASTER_LOGCLEANER_PLUGINS);
