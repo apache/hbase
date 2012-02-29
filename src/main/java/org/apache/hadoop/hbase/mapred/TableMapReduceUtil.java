@@ -262,6 +262,7 @@ public class TableMapReduceUtil {
       job,
       org.apache.zookeeper.ZooKeeper.class,
       com.google.common.base.Function.class,
+      com.google.protobuf.Message.class,
       job.getMapOutputKeyClass(),
       job.getMapOutputValueClass(),
       job.getOutputKeyClass(),
