@@ -2427,6 +2427,14 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                 </para>
             </answer>
         </qandaentry>
+        <qandaentry>
+                <question><para>How can I find examples of NoSQL/HBase?</para></question>
+            <answer>
+                <para>See the link to the BigTable paper in <xref linkend="other.info" /> in the appendix, as
+                well as the other papers.
+                </para>
+            </answer>
+        </qandaentry>
     </qandadiv>
     <qandadiv xml:id="faq.arch"><title>Architecture</title>
         <qandaentry xml:id="faq.arch.regions">
