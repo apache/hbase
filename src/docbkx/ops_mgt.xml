@@ -300,7 +300,7 @@ false
     </section>  <!--  node mgt -->
 
   <section xml:id="hbase_metrics">
-  <title>Metrics</title>
+  <title>HBase Metrics</title>
   <section xml:id="metric_setup">
   <title>Metric Setup</title>
   <para>See <link xlink:href="http://hbase.apache.org/metrics.html">Metrics</link> for
@@ -381,8 +381,37 @@ false
 
   <section xml:id="ops.monitoring">
     <title >HBase Monitoring</title>
-    <para>TODO
-    </para>
+    <section xml:id="ops.monitoring.overview">
+    <title>Overview</title>
+      <para>The following metrics are arguably the most important to monitor for each RegionServer for
+      "macro monitoring", preferably with a system like <link xlink:href="http://opentsdb.net/">OpenTSDB</link>.
+      If your cluster is having performance issues it's likely that you'll see something unusual with 
+      this group.
+      </para>
+      <para>HBase: 
+      <itemizedlist>
+      <listitem>Requests</listitem>
+      <listitem>Compactions queue</listitem>
+      </itemizedlist>
+      </para> 
+      <para>OS: 
+      <itemizedlist>
+      <listitem>IO Wait</listitem>
+      <listitem>User CPU</listitem>
+      </itemizedlist>
+      </para> 
+      <para>Java: 
+      <itemizedlist>
+      <listitem>GC</listitem>
+      </itemizedlist>
+      </para> 
+      <para>
+      </para>
+      <para>
+      For more information on HBase metrics, see <xref linkend="hbase_metrics"/>.
+      </para>
+    </section>
+    
     <section xml:id="ops.slow.query">
     <title>Slow Query Log</title>
 <para>The HBase slow query log consists of parseable JSON structures describing the properties of those client operations (Gets, Puts, Deletes, etc.) that either took too long to run, or produced too much output. The thresholds for "too long to run" and "too much output" are configurable, as described below. The output is produced inline in the main region server logs so that it is easy to discover further details from context with other logged events. It is also prepended with identifying tags <constant>(responseTooSlow)</constant>, <constant>(responseTooLarge)</constant>, <constant>(operationTooSlow)</constant>, and <constant>(operationTooLarge)</constant> in order to enable easy filtering with grep, in case the user desires to see only slow queries.
