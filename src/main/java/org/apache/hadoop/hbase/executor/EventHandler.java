@@ -107,7 +107,6 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     RS_ZK_REGION_CLOSED       (2),   // RS has finished closing a region
     RS_ZK_REGION_OPENING      (3),   // RS is in process of opening a region
     RS_ZK_REGION_OPENED       (4),   // RS has finished opening a region
-    RS_ZK_REGION_FAILED_OPEN  (5),   // RS failed to open a region
 
     // Messages originating from Master to RS
     M_RS_OPEN_REGION          (20),  // Master asking RS to open a region
@@ -132,7 +131,13 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
 
     // Master controlled events to be executed on the master
     M_SERVER_SHUTDOWN         (70),  // Master is processing shutdown of a RS
-    M_META_SERVER_SHUTDOWN    (72);  // Master is processing shutdown of RS hosting a meta region (-ROOT- or .META.).
+    M_META_SERVER_SHUTDOWN(72), // Master is processing shutdown of RS hosting a
+                                // meta region (-ROOT- or .META.).
+    
+    // Moving to the last to avoid rolling restart issues
+    // The integer passed in the constructor is not getting used while
+    // serialization.
+    RS_ZK_REGION_FAILED_OPEN(73); // RS failed to open a region
 
     /**
      * Constructor

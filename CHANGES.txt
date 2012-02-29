@@ -52,6 +52,8 @@ Release 0.90.6 - Unreleased
    HBASE-5379  Backport HBASE-4287 to 0.90 - If region opening fails, try to transition region back to
                "offline" in ZK
    HBASE-5396  Handle the regions in regionPlans while processing ServerShutdownHandler(Jieshan)
+   HBASE-5490  Move the enum RS_ZK_REGION_FAILED_OPEN to the last of the enum list in 0.90 EventHandler
+               (Ram)
 
   IMPROVEMENT
    HBASE-5102  Change the default value of the property "hbase.connection.per.config" to false in
