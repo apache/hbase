@@ -33,6 +33,7 @@
     <title>Non-Java Languages Talking to the JVM</title>
     <para>Currently the documentation on this topic in the 
       <link xlink:href="http://wiki.apache.org/hadoop/Hbase">HBase Wiki</link>.
+      See also the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/thrift/package-summary.html#package_description">Thrift API Javadoc</link>.
     </para>
   </section>
 
