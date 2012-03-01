@@ -506,12 +506,29 @@ to fix the failing tests.
               </programlisting>
            </para>
          </section>
+        </section>   <!--  unit tests  -->       
+
           <section xml:id="code.standards">
            <title>Code Standards</title>
            <para>See <xref linkend="eclipse.code.formatting"/> and <xref linkend="common.patch.feedback"/>.
            </para>
-           </section>
-        </section>   <!--  unit tests  -->       
+           <para>Also, please pay attention to the interface stability/audience classifications that you
+           will see all over our code base.   They look like this at the head of the class:
+           <programlisting>@InterfaceAudience.Public
+@InterfaceStability.Stable</programlisting>
+           </para>
+           <para>If the <classname>InterfaceAudience</classname> is <varname>Private</varname>,
+           we can change the class (and we do not need to include a <classname>InterfaceStability</classname> mark).
+           If a class is marked <varname>Public</varname> but its <classname>InterfaceStability</classname>
+           is marked <varname>Unstable</varname>, we can change it. If it's 
+           marked <varname>Public</varname>/<varname>Evolving</varname>, we're allowed to change it
+           but should try not to. If it's <varname>Public</varname> and <varname>Stable</varname>
+           we can't change it without a deprecation path or with a really GREAT reason.</para>
+           <para>When you add new classes, mark them with the annotations above if publically accessible.
+           If you are not cleared on how to mark your additions, ask up on the dev list.
+           </para>
+           <para>This convention comes from our parent project Hadoop.</para>
+           </section> <!-- code.standards -->
 
       </section>  <!--  developing -->
 
@@ -539,6 +556,10 @@ to fix the failing tests.
             <para>Yes, please.  Please try to include unit tests with every code patch (and especially new classes and large changes).
             Make sure unit tests pass locally before submitting the patch.</para>
             <para>Also, see <xref linkend="mockito"/>.</para>
+            <para>If you are creating a new unit test class, notice how other unit test classes have classification/sizing
+            annotations at the top and a static method on the end.  Be sure to include these in any new unit test files
+            you generate.  See <xref linkend="hbase.tests" /> for more on how the annotations work. 
+            </para>
           </section>
           <section xml:id="submitting.patches.jira">
             <title>Attach Patch to Jira</title>
@@ -687,5 +708,6 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
         </section>
 
        </section>   <!--  submitting patches -->
+       
     
     </chapter>
