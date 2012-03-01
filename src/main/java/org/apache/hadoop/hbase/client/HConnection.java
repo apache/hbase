@@ -19,6 +19,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -28,17 +35,11 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-
 /**
  * Cluster connection.
  * {@link HConnectionManager} manages instances of this class.
  */
-public interface HConnection {
+public interface HConnection extends Closeable {
   /**
    * Retrieve ZooKeeperWrapper used by the connection.
    * @return ZooKeeperWrapper handle being used by the connection.

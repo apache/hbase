@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -243,6 +244,8 @@ public class HLog implements Syncable {
    * Pattern used to validate a HLog file name
    */
   private static final Pattern pattern = Pattern.compile(".*\\.\\d*");
+
+  private static final FileStatus[] NO_FILES = new FileStatus[0];
 
   static byte [] COMPLETE_CACHE_FLUSH;
   static {
@@ -1354,6 +1357,9 @@ public class HLog implements Syncable {
       splits = splitLog(rootDir, srcDir, oldLogDir, logfiles, fs, conf, maxWriteTime);
       try {
         FileStatus[] files = fs.listStatus(srcDir);
+        if (files == null) {
+          files = NO_FILES;
+        }
         for(FileStatus file : files) {
           Path newPath = getHLogArchivePath(oldLogDir, file.getPath());
           LOG.info("Moving " +  FSUtils.getPath(file.getPath()) + " to " +
@@ -1509,7 +1515,12 @@ public class HLog implements Syncable {
           writeEditsBatchToRegions(editsByRegion, logWriters,
               rootDir, fs, conf);
         }
-        if (fs.listStatus(srcDir).length > processedLogs.size() +
+        Preconditions.checkNotNull(fs);
+        Preconditions.checkNotNull(srcDir);
+        Preconditions.checkNotNull(processedLogs);
+        Preconditions.checkNotNull(corruptedLogs);
+        FileStatus[] srcDirList = fs.listStatus(srcDir);
+        if (srcDirList != null && srcDirList.length > processedLogs.size() +
             corruptedLogs.size()) {
           status.abort("Discovered orphan hlog after split");
           throw new IOException("Discovered orphan hlog after split. Maybe " +

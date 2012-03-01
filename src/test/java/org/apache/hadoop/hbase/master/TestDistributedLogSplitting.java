@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -54,7 +55,6 @@ import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -91,7 +91,7 @@ public class TestDistributedLogSplitting {
     conf = HBaseConfiguration.create();
     conf.setInt("hbase.regionserver.info.port", -1);
     conf.setFloat("hbase.regions.slop", (float)100.0); // no load balancing
-    conf.setBoolean("hbase.master.distributed.log.splitting", true);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
     TEST_UTIL = new HBaseTestingUtility(conf);
     cluster = TEST_UTIL.startMiniCluster(num_rs);
     int live_rs;

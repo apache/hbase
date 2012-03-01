@@ -98,7 +98,6 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -212,6 +211,9 @@ public class HMaster extends Thread implements HMasterInterface,
 
   public ThreadPoolExecutor logSplitThreadPool;
 
+  /** Log directories split on startup for testing master failover */
+  private List<String> logDirsSplitOnStartup;
+
   /**
    * Constructor
    * @param conf configuration
@@ -262,7 +264,7 @@ public class HMaster extends Thread implements HMasterInterface,
     checkRootDir(this.rootdir, this.conf, this.fs);
 
     this.distributedLogSplitting = conf.getBoolean(
-        "hbase.master.distributed.log.splitting", false);
+        HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, false);
     this.splitLogManager = null;
 
     // Make sure the region servers can archive their old logs
@@ -955,7 +957,11 @@ public class HMaster extends Thread implements HMasterInterface,
         try {
           Path logsDirPath =
               new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
-          if (!this.fs.exists(logsDirPath)) return;
+          if (!this.fs.exists(logsDirPath)) {
+            LOG.debug("Log directory " + logsDirPath
+                + " does not exist, no logs to split");
+            return;
+          }
           FileStatus[] logFolders = this.fs.listStatus(logsDirPath);
           if (logFolders == null || logFolders.length == 0) {
             LOG.debug("No log files to split, proceeding...");
@@ -974,6 +980,7 @@ public class HMaster extends Thread implements HMasterInterface,
                   " belongs to an existing region server");
             }
           }
+          logDirsSplitOnStartup = serverNames;
 
           splitLog(serverNames);
           retrySplitting = false;
@@ -1977,6 +1984,10 @@ public class HMaster extends Thread implements HMasterInterface,
 
   public SplitLogManager getSplitLogManager() {
     return this.splitLogManager;
+  }
+
+  List<String> getLogDirsSplitOnStartup() {
+    return logDirsSplitOnStartup;
   }
 
 }

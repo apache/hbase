@@ -637,8 +637,9 @@ public class FSUtils {
     long startWaiting = System.currentTimeMillis();
 
     boolean discardlastBlock =  conf.getBoolean("hbase.regionserver.discardLastNonExistantBlock",
-        true);
-    LOG.info("Recovering file" + p + ", discard last block: " + discardlastBlock);
+                                                 true);
+    LOG.info("Recovering file " + p + ", discard last block: "
+        + discardlastBlock);
 
     // Trying recovery
     boolean recovered = false;

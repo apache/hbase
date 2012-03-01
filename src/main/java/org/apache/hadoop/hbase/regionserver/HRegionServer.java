@@ -715,8 +715,8 @@ public class HRegionServer implements HRegionInterface,
       this.hbaseMaster = null;
     }
 
+    this.zooKeeperWrapper.close();
     if (!killed) {
-      this.zooKeeperWrapper.close();
       join();
       if ((this.fs != null) && (stopRequested.get() || abortRequested)) {
         // Finally attempt to close the Filesystem, to flush out any open streams.

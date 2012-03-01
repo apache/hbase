@@ -446,6 +446,13 @@ public final class HConstants {
 
   public static final float HFILE_BLOCK_CACHE_SIZE_DEFAULT = 0.25f;
 
+  /** The delay when re-trying a socket operation in a loop (HBASE-4712) */
+  public static final int SOCKET_RETRY_WAIT_MS = 200;
+
+  /** Conf key that enables distributed log splitting */
+  public static final String DISTRIBUTED_LOG_SPLITTING_KEY =
+      "hbase.master.distributed.log.splitting";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

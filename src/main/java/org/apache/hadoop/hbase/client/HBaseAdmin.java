@@ -68,7 +68,6 @@ import org.apache.hadoop.ipc.RemoteException;
  */
 public class HBaseAdmin {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
-//  private final HConnection connection;
   final HConnection connection;
   private volatile Configuration conf;
   private final long pause;
@@ -1255,5 +1254,11 @@ public class HBaseAdmin {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
     copyOfConf.setInt("hbase.client.retries.number", 1);
     new HBaseAdmin(copyOfConf);
+  }
+
+  public void close() throws IOException {
+    if (this.connection != null) {
+      connection.close();
+    }
   }
 }

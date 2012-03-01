@@ -1563,6 +1563,10 @@ public class HConnectionManager {
       }
     }
 
+    public void close() {
+      close(true);
+    }
+
     /**
      * Process a batch of Puts on the given executor service.
      *
