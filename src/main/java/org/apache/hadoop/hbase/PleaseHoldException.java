@@ -22,9 +22,10 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 /**
- * This exception is thrown by the master when a region server was shut down
- * and restarted so fast that the master still hasn't processed the server
- * shutdown of the first instance.
+ * This exception is thrown by the master when a region server was shut down and
+ * restarted so fast that the master still hasn't processed the server shutdown
+ * of the first instance, or when master is initializing and client call admin
+ * operations
  */
 @SuppressWarnings("serial")
 public class PleaseHoldException extends IOException {
