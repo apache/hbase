@@ -52,7 +52,6 @@ import java.lang.reflect.Method;
  * @see org.apache.hadoop.hbase.client.HTable#coprocessorExec(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)
  */
 public class Exec extends Invocation implements Row {
-  private Configuration conf = HBaseConfiguration.create();
   /** Row key used as a reference for any region lookups */
   private byte[] referenceRow;
   private Class<? extends CoprocessorProtocol> protocol;

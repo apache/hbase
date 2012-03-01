@@ -51,6 +51,8 @@ Release 0.92.1 - Unreleased
    HBASE-5481  Uncaught UnknownHostException prevents HBase from starting
                (Benoît Sigoure)
    HBASE-5477  Cannot build RPM for hbase-0.92.0 (Benjamin Lee)
+   HBASE-5491  Remove HBaseConfiguration.create() call from coprocessor.Exec class
+               (Honghua Zhu)
  
  
   IMPROVEMENTS
