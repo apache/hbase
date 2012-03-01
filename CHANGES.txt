@@ -53,6 +53,9 @@ Release 0.92.1 - Unreleased
    HBASE-5477  Cannot build RPM for hbase-0.92.0 (Benjamin Lee)
    HBASE-5491  Remove HBaseConfiguration.create() call from coprocessor.Exec class
                (Honghua Zhu)
+   HBASE-5502  region_mover.rb fails to load regions back to original
+               server for regions only containing empty tables.
+               (James Page)
  
  
   IMPROVEMENTS
