@@ -348,12 +348,26 @@ public class HTable implements HTableInterface, Closeable {
    * @param row Row to find.
    * @return Location of the row.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated use {@link #getRegionLocation(byte [], boolean)} instead
    */
   public HRegionLocation getRegionLocation(final byte [] row)
   throws IOException {
     return connection.getRegionLocation(tableName, row, false);
   }
 
+  /**
+   * Finds the region on which the given row is being served.
+   * @param row Row to find.
+   * @param reload whether or not to reload information or just use cached
+   * information
+   * @return Location of the row.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HRegionLocation getRegionLocation(final byte [] row, boolean reload)
+  throws IOException {
+    return connection.getRegionLocation(tableName, row, reload);
+  }
+     
   /**
    * {@inheritDoc}
    */
@@ -512,6 +526,35 @@ public class HTable implements HTableInterface, Closeable {
    */
   public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
     return MetaScanner.allTableRegions(getConfiguration(), getTableName(), false);
+  }
+
+  /**
+   * Get the corresponding regions for an arbitrary range of keys.
+   * <p>
+   * @param startRow Starting row in range, inclusive
+   * @param endRow Ending row in range, inclusive
+   * @return A list of HRegionLocations corresponding to the regions that
+   * contain the specified range
+   * @throws IOException if a remote or network exception occurs
+   */
+  public List<HRegionLocation> getRegionsInRange(final byte [] startKey,
+    final byte [] endKey) throws IOException {
+    final boolean endKeyIsEndOfTable = Bytes.equals(endKey,
+                                                    HConstants.EMPTY_END_ROW);
+    if ((Bytes.compareTo(startKey, endKey) > 0) && !endKeyIsEndOfTable) {
+      throw new IllegalArgumentException(
+        "Invalid range: " + Bytes.toStringBinary(startKey) +
+        " > " + Bytes.toStringBinary(endKey));
+    }
+    final List<HRegionLocation> regionList = new ArrayList<HRegionLocation>();
+    byte [] currentKey = startKey;
+    do {
+      HRegionLocation regionLocation = getRegionLocation(currentKey, false);
+      regionList.add(regionLocation);
+      currentKey = regionLocation.getRegionInfo().getEndKey();
+    } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW) &&
+             (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0));
+    return regionList;
   }
 
   /**

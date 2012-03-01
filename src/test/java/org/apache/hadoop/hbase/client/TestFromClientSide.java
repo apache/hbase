@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -51,11 +52,14 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
@@ -65,10 +69,10 @@ import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -91,6 +95,7 @@ public class TestFromClientSide {
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte [] VALUE = Bytes.toBytes("testValue");
+  private static int SLAVES = 3;
 
   /**
    * @throws java.lang.Exception
@@ -98,7 +103,7 @@ public class TestFromClientSide {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // We need more than one region server in this test
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster(SLAVES);
   }
 
   /**
@@ -4307,5 +4312,116 @@ public class TestFromClientSide {
     System.out.println("start=" + start + ", now=" +
         System.currentTimeMillis() + ", cur=" + store.getNumberOfstorefiles());
     assertEquals(count, store.getNumberOfstorefiles());
+  }
+
+  @Test
+  /**
+   * Tests the non cached version of getRegionLocation by moving a region.
+   */
+  public void testNonCachedGetRegionLocation() throws Exception {
+    // Test Initialization.
+    String tableName = "testNonCachedGetRegionLocation";
+    byte [] TABLE = Bytes.toBytes(tableName);
+    byte [] family1 = Bytes.toBytes("f1");
+    byte [] family2 = Bytes.toBytes("f2");
+    HTable table = TEST_UTIL.createTable(TABLE, new byte[][] {family1, family2}, 10);
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Map <HRegionInfo, ServerName> regionsMap = table.getRegionLocations();
+    assertEquals(1, regionsMap.size());
+    HRegionInfo regionInfo = regionsMap.keySet().iterator().next();
+    ServerName addrBefore = regionsMap.get(regionInfo);
+    // Verify region location before move.
+    HServerAddress addrCache =
+      table.getRegionLocation(regionInfo.getStartKey(), false).getServerAddress();
+    HServerAddress addrNoCache =
+      table.getRegionLocation(regionInfo.getStartKey(),
+          true).getServerAddress();
+
+    assertEquals(addrBefore.getPort(), addrCache.getPort());
+    assertEquals(addrBefore.getPort(), addrNoCache.getPort());
+
+    ServerName addrAfter = null;
+    // Now move the region to a different server.
+    for (int i = 0; i < SLAVES; i++) {
+      HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(i);
+      ServerName addr = regionServer.getServerName();
+      if (addr.getPort() != addrBefore.getPort()) {
+        admin.move(regionInfo.getEncodedNameAsBytes(),
+            Bytes.toBytes(addr.toString()));
+        // Wait for the region to move.
+        Thread.sleep(5000);
+        addrAfter = addr;
+        break;
+      }
+    }
+
+    // Verify the region was moved.
+    addrCache =
+      table.getRegionLocation(regionInfo.getStartKey(), false).getServerAddress();
+    addrNoCache =
+      table.getRegionLocation(regionInfo.getStartKey(),
+          true).getServerAddress();
+    assertNotNull(addrAfter);
+    assertTrue(addrAfter.getPort() != addrCache.getPort());
+    assertEquals(addrAfter.getPort(), addrNoCache.getPort());
+  }  
+
+  @Test
+  /**
+   * Tests getRegionsInRange by creating some regions over which a range of
+   * keys spans; then changing the key range.
+   */
+  public void testGetRegionsInRange() throws Exception {
+    // Test Initialization.
+    byte [] startKey = Bytes.toBytes("ddc");
+    byte [] endKey = Bytes.toBytes("mmm");
+    byte [] TABLE = Bytes.toBytes("testGetRegionsInRange");
+    HTable table = TEST_UTIL.createTable(TABLE, new byte[][] {FAMILY}, 10);
+    int numOfRegions = TEST_UTIL.createMultiRegions(table, FAMILY);
+    assertEquals(25, numOfRegions);
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+
+    // Get the regions in this range
+    List<HRegionLocation> regionsList = table.getRegionsInRange(startKey,
+      endKey);
+    assertEquals(10, regionsList.size());
+
+    // Change the start key
+    startKey = Bytes.toBytes("fff");
+    regionsList = table.getRegionsInRange(startKey, endKey);
+    assertEquals(7, regionsList.size());
+
+    // Change the end key
+    endKey = Bytes.toBytes("nnn");
+    regionsList = table.getRegionsInRange(startKey, endKey);
+    assertEquals(8, regionsList.size());
+
+    // Empty start key
+    regionsList = table.getRegionsInRange(HConstants.EMPTY_START_ROW, endKey);
+    assertEquals(13, regionsList.size());
+
+    // Empty end key
+    regionsList = table.getRegionsInRange(startKey, HConstants.EMPTY_END_ROW);
+    assertEquals(20, regionsList.size());
+
+    // Both start and end keys empty
+    regionsList = table.getRegionsInRange(HConstants.EMPTY_START_ROW,
+      HConstants.EMPTY_END_ROW);
+    assertEquals(25, regionsList.size());
+
+    // Change the end key to somewhere in the last block
+    endKey = Bytes.toBytes("yyz");
+    regionsList = table.getRegionsInRange(startKey, endKey);
+    assertEquals(20, regionsList.size());
+
+    // Change the start key to somewhere in the first block
+    startKey = Bytes.toBytes("aac");
+    regionsList = table.getRegionsInRange(startKey, endKey);
+    assertEquals(25, regionsList.size());
+
+    // Make start and end key the same
+    startKey = endKey = Bytes.toBytes("ccc");
+    regionsList = table.getRegionsInRange(startKey, endKey);
+    assertEquals(1, regionsList.size());
   }
 }

@@ -56,6 +56,8 @@ Release 0.92.1 - Unreleased
    HBASE-5502  region_mover.rb fails to load regions back to original
                server for regions only containing empty tables.
                (James Page)
+   HBASE-5489  Add HTable accessor to get regions for a key range
+               (David S. Wang)
  
  
   IMPROVEMENTS
