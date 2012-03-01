@@ -93,9 +93,14 @@
       <para>Using 10Gbe links between racks will greatly increase performance, and assuming your switches support a 10Gbe uplink or allow for an expansion card will allow you to
       save your ports for machines as opposed to uplinks.
       </para>
-      
+    </section>
+    <section xml:id="perf.network.ints">
+      <title>Network Interfaces</title>
+      <para>Are all the network interfaces functioning correctly?  Are you sure?  See the Troubleshooting Case Study in <xref linkend="trouble.casestudy"/>.
+      </para>
     </section>
   </section>  <!-- network -->
+
   <section xml:id="jvm">
     <title>Java</title>
 
@@ -423,6 +428,13 @@ Deferred log flush can be configured on tables via <link
       If only a small number of the available attributes are to be processed, then only those attributes should be specified
       in the input scan because attribute over-selection is a non-trivial performance penalty over large datasets.
       </para>
+    </section>
+    <section xml:id="perf.hbase.mr.input">
+        <title>MapReduce - Input Splits</title>
+        <para>For MapReduce jobs that use HBase tables as a source, if there a pattern where the "slow" map tasks seem to 
+        have the same Input Split (i.e., the RegionServer serving the data), see the 
+        Troubleshooting Case Study in <xref linkend="trouble.casestudy"/>.
+        </para>
     </section>
 
     <section xml:id="perf.hbase.client.scannerclose">
